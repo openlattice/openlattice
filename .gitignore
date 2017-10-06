@@ -1,0 +1,12 @@
+.classpath
+.project
+.gradle/
+.settings/
+.idea/
+bin/
+build/
+artifacts/
+.DS_Store
+rethinkdb*
+*.iml
+*.swp
