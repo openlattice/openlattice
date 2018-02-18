@@ -1,0 +1,14 @@
+#
+# Rhizome Configuration
+#
+
+# Set to false to disable persistence
+enable-persistence: false
+session-clustering-enabled: false
+
+hazelcast:
+    server: false
+    group: "localv2"
+    password: "paynoattentiontothemanbehindthecurtain"
+    seed-nodes:
+        - "localhost"
