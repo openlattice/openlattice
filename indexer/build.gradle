@@ -1,0 +1,132 @@
+/*
+ * Copyright (C) 2018. OpenLattice, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ *
+ */
+
+plugins {
+    id "application"
+    id "java"
+    id "eclipse"
+    id "idea"
+    id "jacoco"
+}
+
+description = "Conductor Server"
+group = "com.openlattice"
+
+distTar {
+    archiveName "conductor.tgz"
+}
+
+ext.projectName = "conductor"
+ext.scmUrl = 'scm:git:https://github.com/openlattice/conductor.git'
+ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
+ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
+
+apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+
+def CONDUCTOR_XMS = "$System.env.CONDUCTOR_XMS"
+def CONDUCTOR_XMX = "$System.env.CONDUCTOR_XMX"
+def C_ARGS = "$System.env.CONDUCTOR_ARGS"
+def PARALLEL = "$System.env.PARALLELISM"
+def GC = "$System.env.GC"
+
+if (CONDUCTOR_XMS == 'null' || CONDUCTOR_XMS == null || CONDUCTOR_XMS == "") {
+    CONDUCTOR_XMS = '-Xms1g'
+}
+
+if (CONDUCTOR_XMX == 'null' || CONDUCTOR_XMX == null || CONDUCTOR_XMX == "") {
+    CONDUCTOR_XMX = '-Xms4g'
+}
+
+if (C_ARGS == 'null' || C_ARGS == null || C_ARGS == "") {
+    C_ARGS = 'local postgres'
+}
+
+if( PARALLEL == 'null' || PARALLEL == null || PARALLEL == "" ) {
+    PARALLEL = "-Djava.util.concurrent.ForkJoinPool.common.parallelism=" + Runtime.runtime.availableProcessors()
+}
+
+if (GC == 'null' || GC == null || GC == "") {
+    GC = "-XX:+UseG1GC"
+}
+
+
+mainClassName = "com.openlattice.Conductor"
+applicationDefaultJvmArgs = [CONDUCTOR_XMS, CONDUCTOR_XMX, "-server", GC, PARALLEL]
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+println "Using java args for running ${projectName}: " + Arrays.toString( applicationDefaultJvmArgs )
+
+run {
+    if (C_ARGS != null) {
+        args C_ARGS.split()
+    } else if (System.getProperty("exec.args") != null) {
+        args System.getProperty("exec.args").split()
+    }
+}
+
+println "Enabled profiles: " + Arrays.toString(run.args)
+
+configurations {
+    provided
+}
+
+configurations.all {
+    exclude module: 'slf4j-log4j12'
+    exclude group: 'asm', module: 'asm'
+}
+
+sourceSets {
+    main.compileClasspath += configurations.provided
+    test.compileClasspath += configurations.provided
+    test.runtimeClasspath += configurations.provided
+}
+
+dependencies {
+    compile "org.ow2.asm:asm:5.0.4"
+    if (project.hasProperty('developmentMode') && project.developmentMode) {
+        logger.quiet(project.name + " using project dependencies.")
+        compile project(":rhizome")
+        compile project(":conductor-client")
+        compile project(":scrunchie")
+        compile project(":courier")
+    } else {
+        logger.quiet(project.name + " using jar dependencies.")
+        compile "com.openlattice:rhizome:${rhizome_version}"
+        compile "com.openlattice:conductor-client:${conductor_client_version}"
+        compile "com.openlattice:scrunchie:${scrunchie_version}"
+        compile "com.openlattice:courier:${courier_version}"
+    }
+    /*
+     * TESTING
+     */
+    testCompile "junit:junit:${junit_version}"
+    testCompile "org.mockito:mockito-all:${mockito_version}"
+}
+
+eclipse {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+
+    ext.sourceCompatibility = JavaVersion.VERSION_1_8
+    ext.targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+eclipse.classpath.plusConfigurations += [configurations.provided]
