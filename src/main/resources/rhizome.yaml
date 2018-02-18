@@ -1,0 +1,35 @@
+##
+# Rhizome Bootstrap Configuration
+##
+
+# Set to false to disable persistence 
+enable-persistence:  false
+session-clustering-enabled: false
+
+cassandra:
+    embedded: false
+    random-ports: false
+    ssl-enabled: false
+    keyspace: "sparks"
+    replication-factor: 1
+    seed-nodes:
+        - "localhost"
+
+hazelcast:
+    server: false
+    group: "local"
+    password: "trellis"
+    seed-nodes: 
+        - "localhost"
+
+hikari:
+    jdbcUrl: "jdbc:postgresql://localhost/openlattice"
+    dataSourceClassName: "org.postgresql.ds.PGSimpleDataSource"
+    username: "mtamayo"
+    dataSource.user: "mtamayo"
+    dataSource.databaseName: "openlattice"
+    maximumPoolSize: 1
+
+#graphite:
+#    host: "jarvis"
+#    global-prefix: "datastore"

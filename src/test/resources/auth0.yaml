@@ -1,0 +1,20 @@
+domain: "openlattice.auth0.com"
+clientId: "KTzgyxs6KBcJHB872eSMe2cpTHzhxS99"
+clientSecret: "tjAwhBit0deVUor3lcd7YRlHRc_4FJwv_fcLp_ozO2-D2Lh38066IUoGPL4zx1vP"
+configurations:
+  - issuer: "https://openlattice.auth0.com/"
+    audience: "KTzgyxs6KBcJHB872eSMe2cpTHzhxS99"
+    secret: "ignored"
+    base64EncodedSecret: false
+    signingAlgorithm: "RS256"
+  - issuer: "https://openlattice.auth0.com/"
+    audience: "KTzgyxs6KBcJHB872eSMe2cpTHzhxS99"
+    secret: "tjAwhBit0deVUor3lcd7YRlHRc_4FJwv_fcLp_ozO2-D2Lh38066IUoGPL4zx1vP"
+    base64EncodedSecret: false
+    signingAlgorithm: "HS256"
+  - issuer: "https://openlattice.auth0.com/"
+    audience: "https://tests.openlattice.com"
+    secret: "MK4CrccqOqI6WVkOiSJX6n2h3MLgGri0"
+    base64EncodedSecret: false
+    signingAlgorithm: "HS256"
+token: "No token for you"
