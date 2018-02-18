@@ -1,0 +1,117 @@
+
+
+plugins {
+    id "java"
+    id "eclipse"
+    id "idea"
+    id "jacoco"
+    id 'com.github.johnrengelman.shadow' version '1.2.3'
+}
+
+description = "RPC Library"
+group = "com.openlattice"
+ext.projectName = "scrunchie"
+ext.scmUrl = 'scm:git:https://github.com/openlattice/scrunchie.git'
+ext.connectionUrl = 'scm:git:https://github.com/openlattice/scrunchie.git'
+ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/scrunchie.git'
+
+apply from: 'https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle'
+
+ext.sourceCompatibility=JavaVersion.VERSION_1_8
+ext.targetCompatibility=JavaVersion.VERSION_1_8
+
+configurations {
+    provided
+}
+
+sourceSets {
+    main.compileClasspath += configurations.provided
+    test.compileClasspath += configurations.provided
+    test.runtimeClasspath += configurations.provided
+}
+
+//configurations.all {
+//  resolutionStrategy {
+//    force 'com.fasterxml.jackson.core:jackson-core:2.6.5','com.fasterxml.jackson.core:jackson-databind:2.6.5','com.fasterxml.jackson.module:jackson-module-afterburner:2.6.5','com.fasterxml.jackson.datatype:jackson-datatype-guava:2.6.5','com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.6.5','com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.6.5','com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.6.5','com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.6.5'
+//  }
+//  exclude module: 'slf4j-log4j12'
+//}
+
+dependencies {
+
+	if (project.hasProperty("developmentMode") && project.developmentMode) {
+        logger.quiet(project.name + " using project dependencies.")
+        
+        compile( project(":api")  )
+
+        compile( project(":conductor-client") )
+
+        testCompile( project(path: ":rhizome", configuration: "tests"))
+        testCompile( project(":datastore"))
+        testCompile( project(path: ":rhizome-client", configuration: "tests"))
+        
+    }
+    else {
+        logger.quiet(project.name + " using jar dependencies.")
+
+        compile ("com.openlattice:api:${api_version}")
+
+        compile ("com.openlattice:conductor-client:${conductor_client_version}")
+        
+        testCompile ("com.openlattice:rhizome:${rhizome_version}:tests")
+        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+    } 
+
+     /**
+      * Cassandra
+      */
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-mapping', version: "${cassandra_driver_version}"
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-extras', version: "${cassandra_driver_version}"
+    
+   	 /*
+      * ELASTICSEARCH
+      */
+     compile ("org.elasticsearch:elasticsearch:${elastic_version}") {
+     	exclude module: 'slf4j-log4j12'
+     }
+
+     compile ("org.elasticsearch.client:transport:${elastic_version}") {
+     	exclude module: 'slf4j-log4j12'
+     }
+     
+    /*
+     * DEEPLEARNING4J
+     */
+    compile("org.deeplearning4j:deeplearning4j-core:0.9.1") {
+            exclude module: 'guava'
+    }
+    
+    compile("org.nd4j:nd4j-native-platform:0.9.1") {
+            exclude module: 'guava'
+    }
+
+    /*
+     * TESTING
+     */
+    testCompile "junit:junit:${junit_version}"
+    testCompile "org.mockito:mockito-core:2.2.7";
+ }
+
+eclipse {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+    ext.sourceCompatibility=JavaVersion.VERSION_1_8
+    ext.targetCompatibility=JavaVersion.VERSION_1_8
+}
+
+idea {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+    ext.sourceCompatibility = JavaVersion.VERSION_1_8
+    ext.targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+shadowJar{
+    zip64 true
+}
+eclipse.classpath.plusConfigurations += [configurations.provided] 

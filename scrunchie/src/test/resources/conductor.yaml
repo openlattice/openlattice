@@ -1,0 +1,9 @@
+#
+# Conductor Server Configuration
+#
+reportEmailAddress: support@openlattice.com
+
+searchConfiguration:
+  elasticsearchUrl: localhost
+  elasticsearchCluster: openlattice
+  elasticsearchPort: 9300
