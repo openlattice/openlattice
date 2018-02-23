@@ -1,0 +1,90 @@
+/*
+ * Copyright (C) 2018. OpenLattice, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ */
+
+plugins {
+    id "java"
+    id "eclipse"
+    id "idea"
+    id "jacoco"
+    id 'checkstyle'
+    id 'findbugs'
+}
+
+description = "Integration Tests"
+group = "com.openlattice"
+
+apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+
+sourceCompatibility=JavaVersion.VERSION_1_8
+
+def versions = [
+  checkstyle: '7.4',
+]
+
+checkstyle {
+  toolVersion = "${versions.checkstyle}"
+}
+
+tasks.withType(FindBugs) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+dependencies { 
+    if( project.hasProperty('developmentMode') && project.developmentMode ) {
+        logger.quiet(project.name + " using project dependencies.")
+        testCompile project(":conductor")
+        testCompile project(":datastore")
+        testCompile( project(path: ":api", configuration: "tests"))
+        testCompile( project(path: ":rhizome", configuration: "tests"))
+        testCompile( project(path: ":rhizome-client", configuration: "tests"))
+    } else {
+        logger.quiet(project.name + " using jar dependencies.")
+        testCompile "com.openlattice:api:${api_version}"
+        testCompile "com.openlattice:rhizome:${rhizome_version}"
+
+        testCompile "com.openlattice:api:${api_version}:tests"
+        testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
+        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+    }
+
+    testCompile "junit:junit:${junit_version}"
+    testCompile( "org.mockito:mockito-all:${mockito_version}" ) {
+        exclude module : 'hamcrest'
+        exclude module : 'hamcrest-core'
+    }
+}
+
+install {
+	configuration = configurations.published
+}
+
+eclipse {
+    ext.downloadSources = true
+    ext.downloadJavadoc = true
+    ext.sourceCompatibility=JavaVersion.VERSION_1_8
+}
