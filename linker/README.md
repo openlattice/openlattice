@@ -1,8 +1,9 @@
 Conductor
 =======================
 
+In-Memory Data Grid and Execution Engine
 
-Distributed Configuration and Deployment Services.
+Conductor provides and in-memory cache and other distributed data structures for processing data requests.
 
 ## Setup
 1. Install elasticsearch and its analysis-phonetic plugin
