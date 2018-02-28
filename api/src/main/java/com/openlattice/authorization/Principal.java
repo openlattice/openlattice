@@ -24,9 +24,14 @@ import static com.google.common.base.Preconditions.checkState;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 import org.apache.commons.lang3.StringUtils;
 
-public class Principal implements Comparable<Principal> {
+/**
+ * This class represents a principal in the OpenLattice system. It is only serializable because it is used
+ * as an internal member of {@link SystemRole} enum members.
+ */
+public class Principal implements Comparable<Principal>, Serializable {
 
     private final PrincipalType type;
 
