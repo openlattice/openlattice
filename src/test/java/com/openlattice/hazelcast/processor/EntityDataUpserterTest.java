@@ -246,7 +246,7 @@ public class EntityDataUpserterTest {
         Assert.assertEquals( lastWrite, propertyMetadata.get( 1L ).getLastWrite() );
     }
 
-    private class MockEntry implements Entry<EntityDataKey, EntityDataValue> {
+    private static class MockEntry implements Entry<EntityDataKey, EntityDataValue> {
         private final EntityDataKey   edk;
         private       EntityDataValue edv;
 
