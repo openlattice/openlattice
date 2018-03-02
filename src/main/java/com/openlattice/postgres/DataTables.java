@@ -170,7 +170,13 @@ public class DataTables {
                 .name( quote( idxPrefix + "_owners_idx" ) )
                 .ifNotExists();
 
-        ptd.addIndexes( valueIndex, versionIndex, versionsIndex, readersIndex, writersIndex, ownersIndex );
+        ptd.addIndexes( valueIndex,
+                versionIndex,
+                versionsIndex,
+                lastWriteIndex,
+                readersIndex,
+                writersIndex,
+                ownersIndex );
 
         return ptd;
     }

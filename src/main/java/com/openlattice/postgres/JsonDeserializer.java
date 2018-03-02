@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -41,7 +42,7 @@ public class JsonDeserializer {
 
         return normalizedPropertyValues;
     }
-
+    @SuppressFBWarnings(value="SF_SWITCH_FALLTHROUGH", justification = "by design")
     public static Object validateFormatAndNormalize(
             EdmPrimitiveTypeKind dataType,
             UUID propertyTypeId,
@@ -123,6 +124,7 @@ public class JsonDeserializer {
             /**
              * Jackson binds to Integer, Long, or BigInteger
              */
+
             case Byte:
             case SByte:
                 return Byte.parseByte( value.toString() );

@@ -204,8 +204,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .collect( Collectors.toSet() );
         Map<EntityDataKey, EntityDataValue> entityData = entities.getAll( dataKeys );
 
-        Predicate entitiesFilter = EntitySets.getEntities( entityKeyIdToEntitySetId.keySet() );
-        Entities entities = data.aggregate( new EntitiesAggregator(), entitiesFilter );
+//        Predicate entitiesFilter = EntitySets.getEntities( entityKeyIdToEntitySetId.keySet() );
+//        Entities entities = data.aggregate( new EntitiesAggregator(), entitiesFilter );
 
         return entityData.entrySet()
                 .stream()
@@ -231,7 +231,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             SetMultimap<UUID, Object> entityDetails,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
             OffsetDateTime lastWrite ) {
-        EntityDataValue edv = fromSetMultimap( entityDetails );
+//        EntityDataValue edv = fromSetMultimap( entityDetails );
         return new ListenableHazelcastFuture<>( entities
                 .submitToKey( entityDataKey, new EntityDataUpserter( entityDetails, OffsetDateTime.now() ) ) );
 

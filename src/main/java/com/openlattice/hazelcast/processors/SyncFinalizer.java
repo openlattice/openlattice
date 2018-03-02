@@ -26,7 +26,8 @@ public class SyncFinalizer extends AbstractRhizomeEntryProcessor<EntityDataKey, 
             return null;
         }
 
-        final OffsetDateTime entityLastWrite = entityDataValue.getLastWrite();
+        //TODO: Double check why this isn't used.
+        //final OffsetDateTime entityLastWrite = entityDataValue.getLastWrite();
         final long nextDeleteVersion = -( entityDataValue.getVersion() + 1 );
         final Map<UUID, Map<Object, PropertyMetadata>> propertiesByType = entityDataValue.getProperties();
 
