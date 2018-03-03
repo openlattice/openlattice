@@ -1,5 +1,4 @@
 Datastore
 =======================
 
-
-Responsible for managing dynamic entity data model and handling oData CRUD.
+Datastore implements API endpoints for managing the data model, permissions, performing access checks, and data CRUD.
