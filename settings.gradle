@@ -1,0 +1,17 @@
+rootProject.name='openlattice'
+
+include 'api'
+include 'conductor'
+include 'conductor-client'
+include 'courier'
+include 'datastore'
+include 'mechanic'
+include 'neuron'
+include 'rhizome'
+include 'rhizome-client'
+include 'rehearsal'
+include 'scrunchie'
+include 'shuttle'
+include 'scribe'
+include 'socrates'
+

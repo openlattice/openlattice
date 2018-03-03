@@ -1,3 +1,4 @@
+logging/
 .classpath
 .project
 .gradle/
@@ -7,6 +8,5 @@ bin/
 build/
 artifacts/
 .DS_Store
-rethinkdb*
 *.iml
 *.swp

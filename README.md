@@ -14,8 +14,7 @@ Getting started
         git clone ssh://git@github.com/openlattice/openlattice.git --recurse-submodules
 
 * Install and start Postgresql (`brew install postgres` and `brew services start postgres`)
-* Install and start ElasticSearch 5.x (`brew install elasticsearch` and `elasticsearch -E cluster.name=openlattice_development` on OS X)
-* Install and start Cassandra 3.10 (`brew install cassandra` and `cassandra` on OS X)
+* Install and start ElasticSearch 5.x (`brew install elasticsearch` and `elasticsearch -E cluster.name=openlattice` on OS X)
 
 Eclipse environment setup
 ==============================
