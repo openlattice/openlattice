@@ -42,7 +42,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Ensures that the logic of the {@link EntityDataUpserter} works correctly.
  */
 public class EntityDataUpserterTest {
 
@@ -158,8 +158,6 @@ public class EntityDataUpserterTest {
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId3 ) );
 
-        Map<Object, PropertyMetadata> propertyMetadata = mockProperties.get( propertyTypeId );
-
         checkCorrectMetdata( mockProperties, propertyTypeId, value, version, Arrays.asList( version ), preLastWrite );
         checkCorrectMetdata( mockProperties, propertyTypeId2, value2, version, Arrays.asList( version ), preLastWrite );
         checkCorrectMetdata( mockProperties,
@@ -180,7 +178,6 @@ public class EntityDataUpserterTest {
         OffsetDateTime preLastWrite = edv.getLastWrite();
 
         SetMultimap<UUID, Object> properties = HashMultimap.create();
-        Map<UUID, Map<Object, PropertyMetadata>> mockMap = edv.getProperties();
 
         final Object value = 1L;
         final Object value2 = 2L;
@@ -203,30 +200,13 @@ public class EntityDataUpserterTest {
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
 
         checkCorrectMetdata( mockProperties, propertyTypeId, value, version, Arrays.asList( version ), preLastWrite );
-        checkCorrectMetdata( mockProperties, propertyTypeId2, value2, version+1, Arrays.asList( version+1 ), lastWrite );
+        checkCorrectMetdata( mockProperties,
+                propertyTypeId2,
+                value2,
+                version + 1,
+                Arrays.asList( version + 1 ),
+                lastWrite );
 
-//        Map<Object, PropertyMetadata> propertyMetadata = mockProperties.get( propertyTypeId );
-//
-//        //Check that first value inserted is there
-//        Assert.assertTrue( propertyMetadata.containsKey( value ) );
-//        //Check that version for first property has not increased
-//        Assert.assertEquals( version + 1, propertyMetadata.get( value ).getVersion() );
-//        //Check that metadata version list for first property is only the original version
-//        Assert.assertEquals( Lists.newArrayList( version ),
-//                propertyMetadata.get( value ).getVersions() );
-//        //Check that last write is set correctly
-//        Assert.assertEquals( lastWrite2, propertyMetadata.get( value ).getLastWrite() );
-//
-//        propertyMetadata = mockProperties.get( propertyTypeId2 );
-//        //Check that second value is inserted
-//        Assert.assertTrue( propertyMetadata.containsKey( value2 ) );
-//        //Check that version for second property is version + 1
-//        Assert.assertEquals( version + 1, propertyMetadata.get( value2 ).getVersion() );
-//        //Check that second value is inserted with correct version numbers
-//        Assert.assertEquals( Lists.newArrayList( version + 1 ),
-//                propertyMetadata.get( value2 ).getVersions() );
-//        //Check that last write is set correctly.
-//        Assert.assertEquals( lastWrite2, propertyMetadata.get( value2 ).getLastWrite() );
     }
 
     @Test
@@ -248,13 +228,7 @@ public class EntityDataUpserterTest {
         upserter.process( mockEntry );
 
         Map<UUID, Map<Object, PropertyMetadata>> mockProperties = mockEntry.getValue().getProperties();
-        checkCorrectMetdata( mockProperties, propertyTypeId,value, 0L, Arrays.asList(0L), lastWrite );
-//        Assert.assertTrue( mockProperties.containsKey( propertyTypeId ) );
-//        Map<Object, PropertyMetadata> propertyMetadata = mockProperties.get( propertyTypeId );
-//        Assert.assertTrue( propertyMetadata.containsKey( value ) );
-//        Assert.assertEquals( 0, propertyMetadata.get( 1L ).getVersion() );
-//        Assert.assertEquals( Lists.newArrayList( 0L ), propertyMetadata.get( 1L ).getVersions() );
-//        Assert.assertEquals( lastWrite, propertyMetadata.get( 1L ).getLastWrite() );
+        checkCorrectMetdata( mockProperties, propertyTypeId, value, 0L, Arrays.asList( 0L ), lastWrite );
     }
 
     public static MockEntry newMockEntry( OffsetDateTime lastWrite ) {
