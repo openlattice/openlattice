@@ -196,7 +196,7 @@ public class PostgresDataMapstoreProxy implements TestableSelfRegisteringMapStor
 
     @Override public void store( EntityDataKey key, EntityDataValue value ) {
         final UUID entitySetId = key.getEntitySetId();
-        final UUID entityKeyId = key.getEntityKeyId();
+//        final UUID entityKeyId = key.getEntityKeyId();
 
         try ( Connection conn = hds.getConnection(); PreparedStatement ps = prepareEntityInsertQuery( conn, entitySetId ) ) {
 
@@ -250,7 +250,7 @@ public class PostgresDataMapstoreProxy implements TestableSelfRegisteringMapStor
 
     @Override public EntityDataValue load( EntityDataKey key ) {
         final UUID entitySetId = key.getEntitySetId();
-        final UUID entityKeyId = key.getEntityKeyId();
+//        final UUID entityKeyId = key.getEntityKeyId();
         final EntitySet es = entitySets.load( entitySetId );
 
         //If entity set is not found return immediately.
