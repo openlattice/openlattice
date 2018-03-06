@@ -81,7 +81,12 @@ class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<UUID, Ob
     }
 
     @Override protected List<PostgresColumnDefinition> initValueColumns() {
-        return ImmutableList.of( valueColumn, VERSION, VERSIONS, LAST_WRITE );
+        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
+            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
+                return ImmutableList.of( pcd, VERSION, VERSIONS, LAST_WRITE );
+            }
+        }
+        throw new IllegalStateException( "No matching value column for initialization." );
         //        return ImmutableList.copyOf( Sets.difference( table.getColumns(), ImmutableSet.of( ID_VALUE ) ) );
     }
 

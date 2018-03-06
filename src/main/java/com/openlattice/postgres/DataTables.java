@@ -152,8 +152,7 @@ public class DataTables {
         PostgresIndexDefinition versionsIndex = new PostgresIndexDefinition( ptd, VERSIONS )
                 .name( quote( idxPrefix + "_versions_idx" ) )
                 .method( IndexMethod.GIN )
-                .ifNotExists()
-                .desc();
+                .ifNotExists();
 
         PostgresIndexDefinition lastWriteIndex = new PostgresIndexDefinition( ptd, LAST_WRITE )
                 .name( quote( idxPrefix + "_last_write_idx" ) )
