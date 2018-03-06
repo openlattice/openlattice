@@ -66,27 +66,37 @@ class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<UUID, Ob
     }
 
     @Override protected List<PostgresColumnDefinition> initKeyColumns() {
-        return ImmutableList.of( ID_VALUE );
-    }
-
-    @Override protected Optional<String> buildOnConflictQuery() {
-        return Optional.of( ( " ON CONFLICT ("
-                + keyColumns().stream()
-                .map( PostgresColumnDefinition::getName )
-                .collect( Collectors.joining( ", " ) )
-                + ") DO "
-                + table.updateQuery( ImmutableList.of( ID_VALUE, valueColumn ),
-                ImmutableList.of( VERSION, VERSIONS, LAST_WRITE ),
-                false ) ) );
-    }
-
-    @Override protected List<PostgresColumnDefinition> initValueColumns() {
         for ( PostgresColumnDefinition pcd : table.getColumns() ) {
             if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
-                return ImmutableList.of( pcd, VERSION, VERSIONS, LAST_WRITE );
+                return ImmutableList.of( ID_VALUE, pcd );
             }
         }
         throw new IllegalStateException( "No matching value column for initialization." );
+    }
+
+    @Override protected Optional<String> buildOnConflictQuery() {
+        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
+            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
+                return Optional.of( ( " ON CONFLICT ("
+                        + keyColumns().stream()
+                        .map( PostgresColumnDefinition::getName )
+                        .collect( Collectors.joining( ", " ) )
+                        + ") DO "
+                        + table.updateQuery( ImmutableList.of( ID_VALUE, pcd ),
+                        ImmutableList.of( VERSION, VERSIONS, LAST_WRITE ),
+                        false ) ) );
+            }
+        }
+        throw new IllegalStateException( "No matching value column for initialization." );
+    }
+
+    @Override protected List<PostgresColumnDefinition> initValueColumns() {
+//        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
+//            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
+                return ImmutableList.of( VERSION, VERSIONS, LAST_WRITE );
+//            }
+//        }
+//        throw new IllegalStateException( "No matching value column for initialization." );
         //        return ImmutableList.copyOf( Sets.difference( table.getColumns(), ImmutableSet.of( ID_VALUE ) ) );
     }
 
