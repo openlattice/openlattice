@@ -18,6 +18,8 @@
 
 package com.openlattice.directory.pojo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,6 +50,7 @@ public class Auth0UserBasic {
     private final String       username;
     private final Set<String>  roles;
     private final Set<String>  organizations;
+    private final OffsetDateTime loadTime = OffsetDateTime.now();
 
     @SuppressWarnings( "unchecked" )
     @JsonCreator
@@ -120,6 +123,11 @@ public class Auth0UserBasic {
     @JsonProperty( ORGANIZATIONS_FIELD )
     public Set<String> getOrganizations() {
         return Collections.unmodifiableSet( organizations );
+    }
+
+    @JsonIgnore
+    public OffsetDateTime getLoadTime() {
+        return loadTime;
     }
 
     @Override

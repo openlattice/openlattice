@@ -3,12 +3,13 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath('io.swagger:swagger-codegen:2.3.0')
+        classpath('io.swagger:swagger-codegen:3.0.0-rc0')
     }
 }
 
 plugins {
     id 'java'
+    id "org.jetbrains.kotlin.jvm"
     id 'eclipse'
     id 'idea'
     id 'jacoco'
@@ -18,13 +19,13 @@ plugins {
 
 description = "OpenLattice REST APIs"
 group = "com.openlattice"
-
 ext.projectName = 'api'
 ext.scmUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply plugin: 'kotlin'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 
@@ -50,6 +51,7 @@ tasks.withType(Checkstyle) {
     }
 }
 
+//TODO: Once Swagger 3.0 has working OpenAPI support finish wiring all this in.
 
 import io.swagger.codegen.DefaultGenerator
 import io.swagger.codegen.config.CodegenConfigurator
@@ -63,7 +65,7 @@ task swaggerDocs {
         def config = new CodegenConfigurator()
         config.setInputSpec(swaggerInput)
         config.setOutputDir(swaggerOutputDir.path)
-        config.setLang('html2')
+        config.setLang('java')
         config.setAdditionalProperties([
                 'invokerPackage': 'com.openlattice.client',
                 'modelPackage'  : 'com.openlattice.client.model',
@@ -157,6 +159,7 @@ dependencies {
     compile "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:${jackson_version}"
     compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jackson_version}"
     compile "org.yaml:snakeyaml:${snakeyaml_version}"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     if (project.hasProperty('developmentMode') && project.developmentMode) {
         logger.quiet(project.name + " using project dependencies.")
@@ -188,5 +191,16 @@ eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true
     ext.sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
 }
 
