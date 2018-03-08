@@ -20,7 +20,6 @@
 
 package com.openlattice.postgres.mapstores.data;
 
-import com.openlattice.hazelcast.HazelcastMap;
 import com.dataloom.streams.StreamUtil;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
@@ -34,6 +33,7 @@ import com.openlattice.data.PropertyMetadata;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresTableDefinition;
 import com.zaxxer.hikari.HikariDataSource;
@@ -48,9 +48,9 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<EntityDataKey, EntityDataValue> {
-    public static final String VERSION    = "version";
-    public static final String LAST_WRITE = "lastWrite";
-    public static final String LAST_INDEX = "lastIndex";
+    public static final String VERSION           = "version";
+    public static final String LAST_WRITE        = "lastWrite";
+    public static final String LAST_INDEX        = "lastIndex";
     public static final String KEY_ENTITY_SET_ID = "key#entitySetId";
 
     private final Map<UUID, EntityDataMapstore>              entitySetMapstores; //Entity Set ID -> Mapstore for Entity Set Table
@@ -78,6 +78,12 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
 
     public EntityDataMapstore getMapstore( UUID entitySetId ) {
         return entitySetMapstores.computeIfAbsent( entitySetId, this::newEntitySetMapStore );
+    }
+
+    public PropertyDataMapstore getPropertyMapstore( UUID entitySetId, UUID propertyTypeId ) {
+        return propertyDataMapstores
+                .computeIfAbsent( entitySetId, esId -> new HashMap<>() )
+                .computeIfAbsent( propertyTypeId, ptId -> newPropertyDataMapstore( entitySetId, ptId ) );
     }
 
     protected EntityDataMapstore newEntitySetMapStore( UUID entitySetId ) {
@@ -113,7 +119,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
     public MapConfig getMapConfig() {
         return new MapConfig( getMapName() )
                 .setMapStoreConfig( getMapStoreConfig() )
-                .addMapIndexConfig( new MapIndexConfig( KEY_ENTITY_SET_ID,false ) )
+                .addMapIndexConfig( new MapIndexConfig( KEY_ENTITY_SET_ID, false ) )
                 .addMapIndexConfig( new MapIndexConfig( VERSION, true ) )
                 .addMapIndexConfig( new MapIndexConfig( LAST_WRITE, true ) )
                 .addMapIndexConfig( new MapIndexConfig( LAST_INDEX, true ) );
@@ -131,9 +137,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
         final Map<UUID, Map<Object, PropertyMetadata>> properties = value.getProperties();
         for ( Entry<UUID, Map<Object, PropertyMetadata>> propertyEntry : properties.entrySet() ) {
             final UUID propertyTypeId = propertyEntry.getKey();
-            final PropertyDataMapstore propertyDataMapstore = propertyDataMapstores
-                    .computeIfAbsent( entitySetId, esId -> new HashMap<>() )
-                    .computeIfAbsent( propertyTypeId, ptId -> newPropertyDataMapstore( entitySetId, ptId ) );
+            final PropertyDataMapstore propertyDataMapstore = getPropertyMapstore( entitySetId, propertyTypeId );
             propertyDataMapstore.store( entityKeyId, propertyEntry.getValue() );
         }
 
