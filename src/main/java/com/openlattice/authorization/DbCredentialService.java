@@ -24,7 +24,6 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.zaxxer.hikari.HikariDataSource;
 import java.security.SecureRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,11 +46,11 @@ public class DbCredentialService {
     private static final SecureRandom r = new SecureRandom();
 
     private final IMap<String, String>     dbcreds;
-    private final DbCredentialQueryService dcqs;
+    private final PostgresUserApi dcqs;
 
-    public DbCredentialService( HazelcastInstance hazelcastInstance, HikariDataSource hds ) {
+    public DbCredentialService( HazelcastInstance hazelcastInstance, PostgresUserApi pgUserApi ) {
         this.dbcreds = hazelcastInstance.getMap( HazelcastMap.DB_CREDS.name() );
-        this.dcqs = new DbCredentialQueryService( hds );
+        this.dcqs = pgUserApi;
     }
 
     public String getDbCredential( String userId ) {
@@ -79,10 +78,11 @@ public class DbCredentialService {
 
     public String setDbCredential( String userId ) {
         String cred = generateCredential();
-        if ( dcqs.setCredential( userId, cred ) ) {
+        if( dcqs.setUserCredential( userId, cred ) ) {
             dbcreds.set( userId, cred );
+            return cred;
         }
-        return cred;
+        throw new IllegalStateException( "Failed to set user credential." );
     }
 
     private String generateCredential() {
