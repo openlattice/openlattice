@@ -39,7 +39,7 @@ public class PostgresUserApiTests extends HzAuthzTest {
 
     @Test
     public void testCreateUser() {
-        //Ensure user doesn't exist
+        //Ensure user doesn't exists
         deleteUser();
         //Create the user
         Assert.assertTrue( "User must be created.", createUser() );
@@ -68,7 +68,19 @@ public class PostgresUserApiTests extends HzAuthzTest {
     public void testDeleteUserTwice() {
         createUser();
         Assert.assertTrue( "User must be deleted.", deleteUser() );
-        Assert.assertFalse( "User doesn't exist and should not be deletable.", deleteUser() );
+        Assert.assertFalse( "User doesn't exists and should not be deletable.", deleteUser() );
+    }
+
+    @Test
+    public void testExists() {
+        deleteUser();
+        Assert.assertFalse( "User must not exist", userExists() );
+        Assert.assertTrue( "User must be created", createUser() );
+        Assert.assertTrue( "User must exist", userExists() );
+    }
+
+    private static boolean userExists() {
+        return api.exists( USERNAME );
     }
 
     private static boolean createUser() {

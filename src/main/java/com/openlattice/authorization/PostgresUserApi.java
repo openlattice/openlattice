@@ -30,6 +30,8 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
  */
 public interface PostgresUserApi {
 
+    @SqlQuery("select count(*)=1 from pg_roles where rolname=:id")
+    boolean exists( @Bind("id") String userId );
     /**
      *
      * @param userId

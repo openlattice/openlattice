@@ -45,8 +45,8 @@ public class DbCredentialService {
 
     private static final SecureRandom r = new SecureRandom();
 
-    private final IMap<String, String>     dbcreds;
-    private final PostgresUserApi dcqs;
+    private final IMap<String, String> dbcreds;
+    private final PostgresUserApi      dcqs;
 
     public DbCredentialService( HazelcastInstance hazelcastInstance, PostgresUserApi pgUserApi ) {
         this.dbcreds = hazelcastInstance.getMap( HazelcastMap.DB_CREDS.name() );
@@ -58,8 +58,20 @@ public class DbCredentialService {
     }
 
     public String createUserIfNotExists( String userId ) {
-        if ( !userExists( userId ) ) {
-            return createUser( userId );
+        if ( !userExistsInMap( userId ) ) {
+            if ( dcqs.exists( userId ) ) {
+                /*
+                 * User exists but is not registered in mapstore.
+                 * Since we don't know credentials for user we generate new ones
+                 * and update.
+                 */
+                return setNewDbCredential( userId );
+            } else {
+                /*
+                 * User doesn't exist in database or map. Create it.
+                 */
+                return createUser( userId );
+            }
         }
         return null;
     }
@@ -72,13 +84,15 @@ public class DbCredentialService {
         if ( dcqs.createUser( userId, cred ) ) {
             //User with cred was successfully created so store credentials in db.
             dbcreds.putIfAbsent( userId, cred );
+        } else {
+            //User wasn't created so let's
         }
         return cred;
     }
 
-    public String setDbCredential( String userId ) {
+    public String setNewDbCredential( String userId ) {
         String cred = generateCredential();
-        if( dcqs.setUserCredential( userId, cred ) ) {
+        if ( dcqs.setUserCredential( userId, cred ) ) {
             dbcreds.set( userId, cred );
             return cred;
         }
@@ -93,7 +107,7 @@ public class DbCredentialService {
         return new String( cred );
     }
 
-    public boolean userExists( String userId ) {
+    public boolean userExistsInMap( String userId ) {
         return dbcreds.containsKey( userId );
     }
 }
