@@ -147,11 +147,12 @@ public class DataTables {
                 .ifNotExists()
                 .desc();
 
-        PostgresIndexDefinition versionsIndex = new PostgresIndexDefinition( ptd, LAST_WRITE )
+        //TODO: Re-consider the value of having gin index on versions field. Checking if a value was written
+        //in a specific ersion seems like a rare operations
+        PostgresIndexDefinition versionsIndex = new PostgresIndexDefinition( ptd, VERSIONS )
                 .name( quote( idxPrefix + "_versions_idx" ) )
                 .method( IndexMethod.GIN )
-                .ifNotExists()
-                .desc();
+                .ifNotExists();
 
         PostgresIndexDefinition lastWriteIndex = new PostgresIndexDefinition( ptd, LAST_WRITE )
                 .name( quote( idxPrefix + "_last_write_idx" ) )

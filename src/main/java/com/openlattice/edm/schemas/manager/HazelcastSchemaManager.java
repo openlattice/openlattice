@@ -74,78 +74,78 @@ public class HazelcastSchemaManager {
     }
 
     public void addPropertyTypesToSchema( Set<UUID> propertyTypeUuids, FullQualifiedName schemaName ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeUuids ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeUuids ), "Some properties do not exists." );
         Preconditions.checkArgument( checkSchemaExists( schemaName ),
-                "Schema %s does not exist.",
+                "Schema %s does not exists.",
                 schemaName.getFullQualifiedNameAsString() );
         addTypesToSchema( propertyTypes, propertyTypeUuids, ImmutableList.of( schemaName ) );
     }
 
     public void addEntityTypesToSchema( Set<UUID> entityTypeUuids, FullQualifiedName schemaName ) {
-        Preconditions.checkArgument( checkEntityTypesExist( entityTypeUuids ), "Some entity types do not exist." );
+        Preconditions.checkArgument( checkEntityTypesExist( entityTypeUuids ), "Some entity types do not exists." );
         Preconditions.checkArgument( checkSchemaExists( schemaName ),
-                "Schema %s does not exist.",
+                "Schema %s does not exists.",
                 schemaName.getFullQualifiedNameAsString() );
         addTypesToSchema( entityTypes, entityTypeUuids, ImmutableList.of( schemaName ) );
     }
 
     public void removePropertyTypesFromSchema( Set<UUID> propertyTypeUuids, FullQualifiedName schemaName ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeUuids ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeUuids ), "Some properties do not exists." );
         Preconditions.checkArgument( checkSchemaExists( schemaName ),
-                "Schema %s does not exist.",
+                "Schema %s does not exists.",
                 schemaName.getFullQualifiedNameAsString() );
         removeTypesFromSchema( propertyTypes, propertyTypeUuids, ImmutableList.of( schemaName ) );
     }
 
     public void removeEntityTypesFromSchema( Set<UUID> entityTypeUuids, FullQualifiedName schemaName ) {
-        Preconditions.checkArgument( checkEntityTypesExist( entityTypeUuids ), "Some entity types do not exist." );
+        Preconditions.checkArgument( checkEntityTypesExist( entityTypeUuids ), "Some entity types do not exists." );
         Preconditions.checkArgument( checkSchemaExists( schemaName ),
-                "Schema %s does not exist.",
+                "Schema %s does not exists.",
                 schemaName.getFullQualifiedNameAsString() );
         removeTypesFromSchema( entityTypes, entityTypeUuids, ImmutableList.of( schemaName ) );
     }
 
     public Consumer<FullQualifiedName> propertyTypesSchemaAdder( Set<UUID> propertyTypeUuids ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeUuids ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeUuids ), "Some properties do not exists." );
         return schema -> addPropertyTypesToSchema( propertyTypeUuids, schema );
     }
 
     public Consumer<FullQualifiedName> entityTypesSchemaAdder( Set<UUID> entityTypeUuids ) {
-        Preconditions.checkArgument( checkEntityTypesExist( entityTypeUuids ), "Some entity types do not exist." );
+        Preconditions.checkArgument( checkEntityTypesExist( entityTypeUuids ), "Some entity types do not exists." );
         return schema -> addPropertyTypesToSchema( entityTypeUuids, schema );
     }
 
     public Consumer<FullQualifiedName> propertyTypesSchemaAdder( UUID... propertyTypeUuids ) {
         Set<UUID> properties = ImmutableSet.copyOf( propertyTypeUuids );
-        Preconditions.checkArgument( checkPropertyTypesExist( properties ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( properties ), "Some properties do not exists." );
         return schema -> addPropertyTypesToSchema( properties, schema );
     }
 
     public Consumer<FullQualifiedName> entityTypesSchemaAdder( UUID... entityTypeUuids ) {
         Set<UUID> types = ImmutableSet.copyOf( entityTypeUuids );
-        Preconditions.checkArgument( checkEntityTypesExist( types ), "Some entity types do not exist." );
+        Preconditions.checkArgument( checkEntityTypesExist( types ), "Some entity types do not exists." );
         return schema -> addEntityTypesToSchema( types, schema );
     }
 
     public Consumer<FullQualifiedName> propertyTypesSchemaRemover( Set<UUID> propertyTypeUuids ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeUuids ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeUuids ), "Some properties do not exists." );
         return schema -> removePropertyTypesFromSchema( propertyTypeUuids, schema );
     }
 
     public Consumer<FullQualifiedName> entityTypesSchemaRemover( Set<UUID> entityTypeUuids ) {
-        Preconditions.checkArgument( checkEntityTypesExist( entityTypeUuids ), "Some entity types do not exist." );
+        Preconditions.checkArgument( checkEntityTypesExist( entityTypeUuids ), "Some entity types do not exists." );
         return schema -> removePropertyTypesFromSchema( entityTypeUuids, schema );
     }
 
     public Consumer<FullQualifiedName> propertyTypesSchemaRemover( UUID... propertyTypeUuids ) {
         Set<UUID> properties = ImmutableSet.copyOf( propertyTypeUuids );
-        Preconditions.checkArgument( checkPropertyTypesExist( properties ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( properties ), "Some properties do not exists." );
         return schema -> removePropertyTypesFromSchema( properties, schema );
     }
 
     public Consumer<FullQualifiedName> entityTypesSchemaRemover( UUID... entityTypeUuids ) {
         Set<UUID> types = ImmutableSet.copyOf( entityTypeUuids );
-        Preconditions.checkArgument( checkEntityTypesExist( types ), "Some entity types do not exist." );
+        Preconditions.checkArgument( checkEntityTypesExist( types ), "Some entity types do not exists." );
         return schema -> removeEntityTypesFromSchema( types, schema );
     }
 

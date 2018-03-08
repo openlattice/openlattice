@@ -34,6 +34,7 @@ import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AclKeySet;
+import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
@@ -100,6 +101,8 @@ import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.UUID;
 import javax.inject.Inject;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -116,6 +119,18 @@ public class MapstoresPod {
 
     @Inject
     private Auth0Configuration auth0Configuration;
+
+    @Bean
+    public Jdbi mapstoreJdbi() {
+        Jdbi jdbi = Jdbi.create( hikariDataSource );
+        jdbi.installPlugin( new SqlObjectPlugin() );
+        return jdbi;
+    }
+
+    @Bean
+    public PostgresUserApi pgUserApi() {
+        return mapstoreJdbi().onDemand( PostgresUserApi.class );
+    }
 
     @Bean
     public SelfRegisteringMapStore<EdgeKey, Edge> edgesMapstore() throws SQLException {
@@ -301,7 +316,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
-        return new PostgresCredentialMapstore( hikariDataSource );
+        return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
     }
 
     @Bean

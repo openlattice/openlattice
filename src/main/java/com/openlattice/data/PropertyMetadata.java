@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -66,5 +67,11 @@ public class PropertyMetadata {
 
     public void incrementVersion() {
         ++version;
+    }
+
+    public static PropertyMetadata newPropertyMetadata( long version, OffsetDateTime lastWrite ) {
+        List<Long> versions = new ArrayList<>( 1 );
+        versions.add( version );
+        return new PropertyMetadata( version, versions, lastWrite );
     }
 }

@@ -20,13 +20,11 @@
 
 package com.openlattice.authorization.mapstores;
 
-import com.openlattice.hazelcast.HazelcastMap;
-import com.google.common.collect.ImmutableList;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
-import com.openlattice.authorization.DbCredentialQueryService;
+import com.openlattice.authorization.PostgresUserApi;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresColumn;
-import com.openlattice.postgres.PostgresColumnDefinition;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.zaxxer.hikari.HikariDataSource;
@@ -34,20 +32,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang.RandomStringUtils;
 
 /**
  * This mapstore assumes that initial first time creation of user in postgres is handled externally.
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<String, String> {
-    private final DbCredentialQueryService dcqs;
+    private final PostgresUserApi dcqs;
 
-    public PostgresCredentialMapstore( HikariDataSource hds ) {
+    public PostgresCredentialMapstore( HikariDataSource hds, PostgresUserApi pgUserApi ) {
         super( HazelcastMap.DB_CREDS.name(), PostgresTable.DB_CREDS, hds );
-        this.dcqs = new DbCredentialQueryService( hds );
+        this.dcqs = pgUserApi;
     }
 
     @Override public String generateTestKey() {
@@ -58,9 +56,8 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
         return RandomStringUtils.random( 5 );
     }
 
-
     @Override protected void bind( PreparedStatement ps, String key, String value ) throws SQLException {
-        bind( ps, key,1 );
+        bind( ps, key, 1 );
         ps.setString( 2, value );
 
         ps.setString( 3, value );
@@ -73,22 +70,22 @@ public class PostgresCredentialMapstore extends AbstractBasePostgresMapstore<Str
 
     @Override public void store( String key, String value ) {
         super.store( key, value );
-        dcqs.setCredential( key, value );
+        dcqs.setUserCredential( key, value );
     }
 
     @Override public void storeAll( Map<String, String> map ) {
         super.storeAll( map );
-        map.entrySet().forEach( p -> dcqs.setCredential( p.getKey(), p.getValue() ) );
+        map.entrySet().forEach( p -> dcqs.setUserCredential( p.getKey(), p.getValue() ) );
     }
 
     @Override public void delete( String key ) {
+        dcqs.deleteUser( key );
         super.delete( key );
-        dcqs.deleteCredential( key );
     }
 
     @Override public void deleteAll( Collection<String> keys ) {
+        keys.forEach( u -> dcqs.deleteUser( u ) );
         super.deleteAll( keys );
-        keys.forEach( u -> dcqs.deleteCredential( u ) );
     }
 
     @Override protected String mapToValue( ResultSet rs ) throws SQLException {

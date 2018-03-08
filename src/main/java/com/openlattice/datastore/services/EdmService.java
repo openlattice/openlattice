@@ -229,7 +229,7 @@ public class EdmService implements EdmManager {
         }
 
         /*
-         * Create property type if it doesn't exist. The reserveAclKeyAndValidateType call should ensure that
+         * Create property type if it doesn't exists. The reserveAclKeyAndValidateType call should ensure that
          */
 
         PropertyType dbRecord = propertyTypes.putIfAbsent( propertyType.getId(), propertyType );
@@ -576,7 +576,7 @@ public class EdmService implements EdmManager {
     public EntityType getEntityType( FullQualifiedName typeFqn ) {
         UUID entityTypeId = getTypeAclKey( typeFqn );
         Preconditions.checkNotNull( entityTypeId,
-                "Entity type %s does not exist.",
+                "Entity type %s does not exists.",
                 typeFqn.getFullQualifiedNameAsString() );
         return getEntityType( entityTypeId );
     }
@@ -585,7 +585,7 @@ public class EdmService implements EdmManager {
     public EntityType getEntityType( UUID entityTypeId ) {
         return Preconditions.checkNotNull(
                 getEntityTypeSafe( entityTypeId ),
-                "Entity type of id %s does not exist.",
+                "Entity type of id %s does not exists.",
                 entityTypeId.toString() );
     }
 
@@ -635,7 +635,7 @@ public class EdmService implements EdmManager {
     public PropertyType getPropertyType( FullQualifiedName propertyType ) {
         return Preconditions.checkNotNull(
                 Util.getSafely( propertyTypes, Util.getSafely( aclKeys, Util.fqnToString( propertyType ) ) ),
-                "Property type %s does not exist",
+                "Property type %s does not exists",
                 propertyType.getFullQualifiedNameAsString() );
     }
 
@@ -651,7 +651,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void addPropertyTypesToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
         Stream<UUID> childrenIds = entityTypeManager.getEntityTypeChildrenIdsDeep( entityTypeId );
         Map<UUID, Boolean> childrenIdsToLocks = childrenIds
                 .collect( Collectors.toMap( Functions.<UUID>identity()::apply, propertyTypes::tryLock ) );
@@ -708,7 +708,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void removePropertyTypesFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
 
         List<UUID> childrenIds = entityTypeManager.getEntityTypeChildrenIdsDeep( entityTypeId )
                 .collect( Collectors.<UUID>toList() );
@@ -725,7 +725,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void forceRemovePropertyTypesFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
         EntityType entityType = getEntityType( entityTypeId );
         if ( entityType.getBaseType().isPresent() ) {
             EntityType baseType = getEntityType( entityType.getBaseType().get() );
@@ -773,7 +773,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void addPrimaryKeysToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
         EntityType entityType = entityTypes.get( entityTypeId );
         Preconditions.checkNotNull( entityType, "No entity type with id {}", entityTypeId );
         Preconditions.checkArgument( entityType.getProperties().containsAll( propertyTypeIds ),
@@ -791,7 +791,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void removePrimaryKeysFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
         EntityType entityType = entityTypes.get( entityTypeId );
         Preconditions.checkNotNull( entityType, "No entity type with id {}", entityTypeId );
         Preconditions.checkArgument( entityType.getProperties().containsAll( propertyTypeIds ),
@@ -998,7 +998,7 @@ public class EdmService implements EdmManager {
     public AssociationType getAssociationType( UUID associationTypeId ) {
         AssociationType associationDetails = Preconditions.checkNotNull(
                 Util.getSafely( associationTypes, associationTypeId ),
-                "Association type of id %s does not exist.",
+                "Association type of id %s does not exists.",
                 associationTypeId.toString() );
         Optional<EntityType> entityType = Optional.fromNullable(
                 Util.getSafely( entityTypes, associationTypeId ) );
