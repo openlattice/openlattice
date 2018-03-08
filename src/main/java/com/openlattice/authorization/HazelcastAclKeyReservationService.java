@@ -46,7 +46,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class HazelcastAclKeyReservationService {
-    public static final  String                               LOOM_NAMESPACE        = "loom";
+    public static final  String                               PRIVATE_NAMESPACE     = "_private";
     /**
      * This keeps mapping between SecurableObjectTypes that aren't associated to names and their placeholder names.
      */
@@ -227,6 +227,6 @@ public class HazelcastAclKeyReservationService {
     }
 
     private static String getPlaceholder( String objName ) {
-        return LOOM_NAMESPACE + "." + objName;
+        return PRIVATE_NAMESPACE + "." + objName;
     }
 }

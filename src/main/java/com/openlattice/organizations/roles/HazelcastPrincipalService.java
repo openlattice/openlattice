@@ -93,7 +93,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         try {
             createSecurablePrincipal( owner, principal );
         } catch ( TypeExistsException e ) {
-            logger.warn( "Securable Principal {} already exists", principal, e );
+            logger.warn( "Securable Principal {} already exists", principal );
+            logger.debug( "Stack trace for securable principal already exists.", e );
         }
     }
 

@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization.mapstores;
 
+import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -40,6 +41,7 @@ import retrofit2.Retrofit;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class UserMapstore implements TestableSelfRegisteringMapStore<String, Auth0UserBasic> {
+    public static final String LOAD_TIME_INDEX = "loadTime";
     private static final Logger logger            = LoggerFactory.getLogger( UserMapstore.class );
     private static final int    DEFAULT_PAGE_SIZE = 100;
     private static final int    TTL_SECONDS       = 60;
@@ -73,6 +75,7 @@ public class UserMapstore implements TestableSelfRegisteringMapStore<String, Aut
     @Override public MapConfig getMapConfig() {
         return new MapConfig( getMapName() )
                 .setTimeToLiveSeconds( TTL_SECONDS )
+                .addMapIndexConfig( new MapIndexConfig( LOAD_TIME_INDEX, true ) )
                 .setMapStoreConfig( getMapStoreConfig() );
     }
 
