@@ -16,6 +16,18 @@
  * You can contact the owner of the copyright at support@openlattice.com
  */
 
+buildscript {
+    ext.kotlin_version = '1.2.30'
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
 plugins {
     id "java"
     id "eclipse"
@@ -23,7 +35,7 @@ plugins {
     id "jacoco"
     id 'checkstyle'
     id 'findbugs'
-    id "org.jetbrains.kotlin.jvm"
+    //id "org.jetbrains.kotlin.jvm" version "1.2.30"
 }
 
 description = "Conductor Client"
