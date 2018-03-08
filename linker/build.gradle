@@ -17,13 +17,13 @@
  * You can contact the owner of the copyright at support@openlattice.com
  *
  */
-
 plugins {
     id "application"
     id "java"
     id "eclipse"
     id "idea"
     id "jacoco"
+    id "org.jetbrains.kotlin.jvm"
 }
 
 description = "Conductor Server"
@@ -39,6 +39,7 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply plugin: 'kotlin'
 
 def CONDUCTOR_XMS = "$System.env.CONDUCTOR_XMS"
 def CONDUCTOR_XMX = "$System.env.CONDUCTOR_XMX"
@@ -119,6 +120,7 @@ dependencies {
      */
     testCompile "junit:junit:${junit_version}"
     testCompile "org.mockito:mockito-all:${mockito_version}"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 eclipse {
@@ -130,3 +132,14 @@ eclipse {
 }
 
 eclipse.classpath.plusConfigurations += [configurations.provided]
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
