@@ -76,7 +76,7 @@ public class MultipleAuthenticatedUsersBase extends BootstrapDatastoreWithCassan
         // update Api instances involved
         Retrofit currentRetrofit = retrofitMap.get( user );
         if ( currentRetrofit == null ) {
-            throw new IllegalArgumentException( "User does not exist in Retrofit map." );
+            throw new IllegalArgumentException( "User does not exists in Retrofit map." );
         }
         edmApi = currentRetrofit.create( EdmApi.class );
         permissionsApi = currentRetrofit.create( PermissionsApi.class );
