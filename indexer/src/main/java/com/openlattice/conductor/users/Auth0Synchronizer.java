@@ -29,6 +29,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IAtomicLong;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.IQueue;
+import com.hazelcast.query.Predicates;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.DbCredentialService;
@@ -43,8 +44,9 @@ import com.openlattice.datastore.services.Auth0ManagementApi;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,7 +111,7 @@ public class Auth0Synchronizer {
                             .parallelStream()
                             .forEach( user -> {
                                 String userId = user.getUserId();
-                                users.set( userId, user, -1, TimeUnit.MINUTES );
+                                users.set( userId, user );
                                 if ( dbCredentialService.createUserIfNotExists( userId ) != null ) {
                                     createPrincipal( user, userId );
                                 }
@@ -120,13 +122,20 @@ public class Auth0Synchronizer {
                 logger.info( "Scheduling next refresh." );
                 memberIds.add( localMemberId );
                 nextTime.set( System.currentTimeMillis() + REFRESH_INTERVAL_MILLIS );
+                /*
+                 * If we did not see a user in any of the pages we should delete that user.
+                 * In the future we should consider persisting users to our own database so that we
+                 * don't have to load all of them at startup.
+                 */
+                users.removeAll(
+                        Predicates.lessThan( UserMapstore.LOAD_TIME_INDEX,
+                                OffsetDateTime.now().minus( REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS ) ) );
             }
         } else {
             logger.info( "Not elected to refresh users." );
             //Ensure that every active member is registered for selection.
             memberIds.add( localMemberId );
         }
-
 
     }
 
