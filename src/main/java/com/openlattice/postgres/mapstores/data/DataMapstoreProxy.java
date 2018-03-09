@@ -186,7 +186,6 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
         }
 
         return new EntityDataValue( metadata, properties );
-
     }
 
     @Override public Map<EntityDataKey, EntityDataValue> loadAll( Collection<EntityDataKey> keys ) {

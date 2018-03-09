@@ -150,7 +150,7 @@ public class ODataStorageService {
             Entity requestEntity ) {
         // PreparedStatement createQuery = Preconditions.checkNotNull(
         // tableManager.getInsertEntityPreparedStatement( entityFqn ),
-        // "Insert data prepared statement does not exist." );
+        // "Insert data prepared statement does not exists." );
 
         // PreparedStatement entityIdTypenameLookupQuery = Preconditions.checkNotNull(
         // tableManager.getUpdateEntityIdTypenamePreparedStatement( entityFqn ),

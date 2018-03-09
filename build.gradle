@@ -23,6 +23,7 @@ plugins {
     id "jacoco"
     id 'checkstyle'
     id 'findbugs'
+    id "org.jetbrains.kotlin.jvm"
 }
 
 description = "Conductor Client"
@@ -34,6 +35,7 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply plugin: 'kotlin'
 
 sourceCompatibility=JavaVersion.VERSION_1_8
 
@@ -90,7 +92,7 @@ dependencies {
     compile "net.jpountz.lz4:lz4:${lz4_version}"
     compile 'com.google.code.findbugs:findbugs:3.0.1'
     compile 'de.javakaffee:kryo-serializers:0.42'
-    
+
     if( project.hasProperty('developmentMode') && project.developmentMode ) {
         logger.quiet(project.name + " using project dependencies.")
         compile project(":api")
@@ -111,12 +113,12 @@ dependencies {
     /*
      * TESTING
      */
-    testCompile "org.cassandraunit:cassandra-unit:3.1.3.2"
     testCompile "junit:junit:${junit_version}"
     testCompile( "org.mockito:mockito-all:${mockito_version}" ) {
         exclude module : 'hamcrest'
         exclude module : 'hamcrest-core'
     }
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }
 
 install {
@@ -127,4 +129,15 @@ eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true
     ext.sourceCompatibility=JavaVersion.VERSION_1_8
+}
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
 }

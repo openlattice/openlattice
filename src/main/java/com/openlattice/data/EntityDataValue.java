@@ -85,7 +85,7 @@ public class EntityDataValue {
         metadata.setLastWrite( lastWrite );
     }
 
-    public void incrementVersion() {
-        metadata.incrementVersion();
+    public long incrementVersion() {
+        return metadata.incrementVersion();
     }
 }

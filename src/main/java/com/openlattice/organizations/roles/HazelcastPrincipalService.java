@@ -93,7 +93,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         try {
             createSecurablePrincipal( owner, principal );
         } catch ( TypeExistsException e ) {
-            logger.warn( "Securable Principal {} already exists", principal, e );
+            logger.warn( "Securable Principal {} already exists", principal );
+            logger.debug( "Stack trace for securable principal already exists.", e );
         }
     }
 
@@ -284,13 +285,13 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     private void ensurePrincipalsExist( AclKey... aclKeys ) {
-        ensurePrincipalsExist( "All principals must exist!", aclKeys );
+        ensurePrincipalsExist( "All principals must exists!", aclKeys );
     }
 
     private void ensurePrincipalsExist( String msg, AclKey... aclKeys ) {
         checkState( Stream.of( aclKeys )
                 .filter( aclKey -> !principals.containsKey( aclKey ) )
-                .peek( aclKey -> logger.error( "Principal with acl key {} does not exist!", aclKey ) )
+                .peek( aclKey -> logger.error( "Principal with acl key {} does not exists!", aclKey ) )
                 .count() == 0, msg );
     }
 
