@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization.mapstores;
 
+import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -36,6 +37,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Retrofit;
 
+import static com.openlattice.auth0.Auth0TokenProvider.AUTH0_MANAGEMENT_API_V2_URL;
+
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
@@ -46,11 +49,9 @@ public class UserMapstore implements TestableSelfRegisteringMapStore<String, Aut
     private final Retrofit           retrofit;
     private final Auth0ManagementApi auth0ManagementApi;
 
-    public UserMapstore( String token ) {
-        retrofit = RetrofitFactory.newClient( "https://openlattice.auth0.com/api/v2/", () -> token );
-
+    public UserMapstore( Auth0TokenProvider auth0TokenProvider ) {
+        retrofit = RetrofitFactory.newClient( AUTH0_MANAGEMENT_API_V2_URL, auth0TokenProvider::getToken );
         auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
-
     }
 
     @Override public String getMapName() {

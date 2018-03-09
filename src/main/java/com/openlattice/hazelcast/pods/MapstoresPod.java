@@ -29,6 +29,7 @@ import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.auth0.Auth0Pod;
+import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
@@ -311,7 +312,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<String, Auth0UserBasic> userMapstore() {
-        return new UserMapstore( auth0Configuration.getToken() );
+        return new UserMapstore( auth0TokenProvider() );
     }
 
     @Bean
@@ -346,6 +347,11 @@ public class MapstoresPod {
                 propertyTypeMapstore(),
                 entitySetMapstore(),
                 entityTypeMapstore() );
+    }
+
+    @Bean
+    public Auth0TokenProvider auth0TokenProvider() {
+        return new Auth0TokenProvider( auth0Configuration );
     }
 
 }

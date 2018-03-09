@@ -23,6 +23,7 @@
 package com.openlattice.directory;
 
 import com.codahale.metrics.annotation.Timed;
+import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -44,6 +45,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Retrofit;
 
+import static com.openlattice.auth0.Auth0TokenProvider.AUTH0_MANAGEMENT_API_V2_URL;
+
 public class UserDirectoryService {
     private static final Logger logger            = LoggerFactory.getLogger( UserDirectoryService.class );
     private static final int    DEFAULT_PAGE_SIZE = 100;
@@ -53,16 +56,10 @@ public class UserDirectoryService {
     private       Retrofit                     retrofit;
     private       Auth0ManagementApi           auth0ManagementApi;
 
-    public UserDirectoryService( String token, HazelcastInstance hazelcastInstance ) {
-        retrofit = RetrofitFactory.newClient( "https://openlattice.auth0.com/api/v2/", () -> token );
+    public UserDirectoryService( Auth0TokenProvider auth0TokenProvider, HazelcastInstance hazelcastInstance ) {
+        retrofit = RetrofitFactory.newClient( AUTH0_MANAGEMENT_API_V2_URL, auth0TokenProvider::getToken );
         auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
         users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
-    }
-
-    public UserDirectoryService( String token ) {
-        retrofit = RetrofitFactory.newClient( "https://openlattice.auth0.com/api/v2/", () -> token );
-        auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
-        users = null;
     }
 
     @Timed
