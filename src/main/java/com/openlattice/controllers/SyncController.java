@@ -57,7 +57,7 @@ public class SyncController implements SyncApi, AuthorizingComponent {
             return datasourceManager.createNewSyncIdForEntitySet( entitySetId );
         } else {
             throw new ForbiddenException(
-                    "Insufficient permissions to acquire a sync id for this entity set or it doesn't exist." );
+                    "Insufficient permissions to acquire a sync id for this entity set or it doesn't exists." );
         }
     }
 
@@ -72,7 +72,7 @@ public class SyncController implements SyncApi, AuthorizingComponent {
             return datasourceManager.getCurrentSyncId( entitySetId );
         } else {
             throw new ForbiddenException(
-                    "Insufficient permissions to read the sync id of the entity set or it doesn't exist." );
+                    "Insufficient permissions to read the sync id of the entity set or it doesn't exists." );
         }
     }
 
@@ -88,7 +88,7 @@ public class SyncController implements SyncApi, AuthorizingComponent {
             return null;
         } else {
             throw new ForbiddenException(
-                    "Insufficient permissions to set the current sync id of the entity set or it doesn't exist." );
+                    "Insufficient permissions to set the current sync id of the entity set or it doesn't exists." );
         }
     }
 
@@ -103,7 +103,7 @@ public class SyncController implements SyncApi, AuthorizingComponent {
             return datasourceManager.getLatestSyncId( entitySetId );
         } else {
             throw new ForbiddenException(
-                    "Insufficient permissions to read the latest sync id of the entity set or it doesn't exist." );
+                    "Insufficient permissions to read the latest sync id of the entity set or it doesn't exists." );
         }
     }
 

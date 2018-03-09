@@ -42,6 +42,7 @@ plugins {
     id 'eclipse'
     id 'idea'
     id 'jacoco'
+    id "org.jetbrains.kotlin.jvm" version "1.2.30"
 }
 
 description = "Datastore"
@@ -56,6 +57,7 @@ distTar {
 }
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply plugin: 'kotlin'
 
 mainClassName = "com.openlattice.datastore.Datastore"
 
@@ -128,11 +130,12 @@ dependencies {
         testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
 
-    //compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: "${cassandra_driver_version}"
     compile "org.apache.olingo:odata-server-api:${odata_version}"
     compile "org.apache.olingo:odata-server-core:${odata_version}"
     compile "org.apache.olingo:odata-commons-api:${odata_version}"
     compile "org.apache.olingo:odata-commons-core:${odata_version}"
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     /*
      * TESTING
@@ -151,4 +154,15 @@ eclipse {
 
     ext.sourceCompatibility = JavaVersion.VERSION_1_8
     ext.targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
 }

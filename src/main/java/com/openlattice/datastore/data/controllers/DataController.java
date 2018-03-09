@@ -187,7 +187,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 EnumSet.of( Permission.READ ) ) ) {
             return loadNormalEntitySetData( entitySetId, syncId, selectedProperties );
         } else {
-            throw new ForbiddenException( "Insufficient permissions to read the entity set or it doesn't exist." );
+            throw new ForbiddenException( "Insufficient permissions to read the entity set or it doesn't exists." );
         }
     }
 
@@ -262,7 +262,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
             }
         } else {
-            throw new ForbiddenException( "Insufficient permissions to write to the entity set or it doesn't exist." );
+            throw new ForbiddenException( "Insufficient permissions to write to the entity set or it doesn't exists." );
         }
         return null;
     }
@@ -313,7 +313,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                         "Insufficient permissions to write to some of the key property types of the entity set." );
             }
         } else {
-            throw new ForbiddenException( "Insufficient permissions to write to the entity set or it doesn't exist." );
+            throw new ForbiddenException( "Insufficient permissions to write to the entity set or it doesn't exists." );
         }
     }
 
@@ -406,7 +406,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
             }
         } else {
-            throw new ForbiddenException( "Insufficient permissions to write to the entity set or it doesn't exist." );
+            throw new ForbiddenException( "Insufficient permissions to write to the entity set or it doesn't exists." );
         }
         return null;
     }

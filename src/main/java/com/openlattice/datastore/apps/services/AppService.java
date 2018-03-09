@@ -197,7 +197,7 @@ public class AppService {
 
     public void installApp( UUID appId, UUID organizationId, String prefix, Principal principal ) {
         App app = getApp( appId );
-        Preconditions.checkNotNull( app, "The requested app with id %s does not exist.", appId.toString() );
+        Preconditions.checkNotNull( app, "The requested app with id %s does not exists.", appId.toString() );
 
         Map<Permission, Principal> appRoles = getOrCreateRolesForAppPermission( app,
                 organizationId,
