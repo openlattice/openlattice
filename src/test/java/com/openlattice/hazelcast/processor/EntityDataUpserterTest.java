@@ -281,7 +281,6 @@ public class EntityDataUpserterTest {
 
         syncFinalizer.process( mockEntry );
 
-        final long nextDeleteVersion = -lastWrite.toInstant().toEpochMilli();
         final long syncDeleteVersion = mockEntry.getValue().getProperties().get( propertyTypeId ).get( value )
                 .getVersion();
         final long syncVersion = mockEntry.getValue().getProperties().get( propertyTypeId2 ).get( value2 ).getVersion();
