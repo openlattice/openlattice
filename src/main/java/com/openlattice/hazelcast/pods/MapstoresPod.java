@@ -103,6 +103,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.UUID;
 import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
@@ -135,13 +136,14 @@ public class MapstoresPod {
 
     @Bean
     public PostgresUserApi pgUserApi() {
-        try ( Connection conn = hikariDataSource.getConnection() ) {
+        try ( Connection conn = hikariDataSource.getConnection(); Statement stmt = conn.createStatement(); ) {
             String createUserSql = Resources.toString( Resources.getResource( "create_user.sql" ), Charsets.UTF_8 );
             String alterUserSql = Resources.toString( Resources.getResource( "alter_user.sql" ), Charsets.UTF_8 );
             String deleteUserSql = Resources.toString( Resources.getResource( "delete_user.sql" ), Charsets.UTF_8 );
-            conn.createStatement().execute( createUserSql );
-            conn.createStatement().execute( alterUserSql );
-            conn.createStatement().execute( deleteUserSql );
+            stmt.addBatch( createUserSql );
+            stmt.addBatch( alterUserSql );
+            stmt.addBatch( deleteUserSql );
+            stmt.executeBatch();
         } catch ( SQLException | IOException e ) {
             logger.error( "Unable to configure postgres functions for user management." );
         }
