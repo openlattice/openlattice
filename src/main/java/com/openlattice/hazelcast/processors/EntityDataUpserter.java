@@ -15,7 +15,8 @@ import java.util.UUID;
 
 /**
  * Update or creates properties for an entity. All the properties provided are inserted with the specified writeTime.
- * I think we need to do th
+ * We do not set the entity wide write time as that is used by the {@link SyncFinalizer} to determine which properties
+ * were deleted (i.e any properties without a newer write time than than entity write time are deleted).
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
@@ -30,14 +31,15 @@ public class EntityDataUpserter extends AbstractRhizomeEntryProcessor<EntityData
 
     @Override public Void process( Entry<EntityDataKey, EntityDataValue> entry ) {
         EntityDataValue existing = entry.getValue();
-        final long nextVersion;
+        final long nextVersion = writeTime.toInstant().toEpochMilli();
 
+        /*
+         *  This ensures that new entities are created with a entity metadata version that is on or after write time.
+         *  As the pre-conditions for sync finalization are met this will properly handle syncs and updates.
+         */
         if ( existing == null ) {
             EntityDataMetadata metadata = EntityDataMetadata.newEntityDataMetadata( writeTime );
             existing = new EntityDataValue( metadata, new HashMap<>( properties.keySet().size() ) );
-            nextVersion = 0;
-        } else {
-            nextVersion = existing.incrementVersion();
         }
 
         Map<UUID, Map<Object, PropertyMetadata>> existingProperties = existing.getProperties();
@@ -52,7 +54,9 @@ public class EntityDataUpserter extends AbstractRhizomeEntryProcessor<EntityData
                 PropertyMetadata propertyMetadata = existingEntries
                         .computeIfAbsent( propertyValue, v -> PropertyMetadata
                                 .newPropertyMetadata( nextVersion, writeTime ) );
-
+                if( propertyMetadata.getVersion() < 0 ) {
+                    propertyMetadata.setNextVersion( nextVersion );
+                }
                 //TODO: Consider having another field indicating the property was updated. For the moment.
                 //we aren't updating on non-mutating writes to the same property since purpose of last write time
                 //is mainly for indexing.

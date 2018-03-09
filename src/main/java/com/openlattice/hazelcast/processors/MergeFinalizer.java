@@ -7,6 +7,8 @@ import java.time.OffsetDateTime;
 import java.util.Map.Entry;
 
 /**
+ * The merge finalizer simply sets the version on an object so newly written values are visible.
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class MergeFinalizer extends AbstractRhizomeEntryProcessor<EntityDataKey, EntityDataValue, Void> {
@@ -24,7 +26,7 @@ public class MergeFinalizer extends AbstractRhizomeEntryProcessor<EntityDataKey,
         }
 
         entityDataValue.setLastWrite( lastWrite );
-        entityDataValue.incrementVersion();
+        entityDataValue.setVersion( lastWrite.toInstant().toEpochMilli() );
         entry.setValue( entityDataValue );
         return null;
     }
