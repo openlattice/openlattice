@@ -21,6 +21,7 @@
 package com.openlattice.conductor.users;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.openlattice.auth0.Auth0TokenProvider.AUTH0_MANAGEMENT_API_V2_URL;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Optional;
@@ -28,6 +29,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IAtomicLong;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.IQueue;
+import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.DbCredentialService;
 import com.openlattice.authorization.Principal;
@@ -73,11 +75,12 @@ public class Auth0Synchronizer {
             HazelcastInstance hazelcastInstance,
             SecurePrincipalsManager spm,
             DbCredentialService dbCredentialService,
-            String token ) {
+            Auth0TokenProvider auth0TokenProvider
+    ) {
         this.users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
         this.memberIds = hazelcastInstance.getQueue( Auth0Synchronizer.class.getCanonicalName() );
         this.nextTime = hazelcastInstance.getAtomicLong( UserMapstore.class.getCanonicalName() );
-        this.retrofit = RetrofitFactory.newClient( "https://openlattice.auth0.com/api/v2/", () -> token );
+        this.retrofit = RetrofitFactory.newClient( AUTH0_MANAGEMENT_API_V2_URL, auth0TokenProvider::getToken );
         this.auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
         this.hazelcastInstance = hazelcastInstance;
         this.localMemberId = checkNotNull( hazelcastInstance.getLocalEndpoint().getUuid() );
