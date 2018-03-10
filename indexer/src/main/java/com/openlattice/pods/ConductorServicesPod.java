@@ -39,6 +39,7 @@ import com.openlattice.authorization.AuthorizationQueryService;
 import com.openlattice.authorization.DbCredentialService;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
@@ -51,6 +52,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import javax.inject.Inject;
+import org.jdbi.v3.core.Jdbi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +75,9 @@ public class ConductorServicesPod {
 
     @Inject
     private HikariDataSource hikariDataSource;
+
+    @Inject
+    private PostgresUserApi pgUserApi;
 
     @Inject
     private EventBus eventBus;
@@ -111,7 +116,7 @@ public class ConductorServicesPod {
 
     @Bean
     public DbCredentialService dbcs() {
-        return new DbCredentialService( hazelcastInstance, hikariDataSource );
+        return new DbCredentialService(hazelcastInstance, pgUserApi );
     }
 
     @Bean
