@@ -145,7 +145,11 @@ public class CassandraSerDesFactory {
              * validateFormatAndNormalize binds to String
              */
             case Date:
-                return LocalDate.parse( TypeCodec.varchar().deserialize( bytes, protocolVersion ) );
+                String dateStr = TypeCodec.varchar().deserialize( bytes, protocolVersion );
+                if ( dateStr.length() == 10 ) {
+                    return LocalDate.parse( dateStr );
+                }
+                return OffsetDateTime.parse( dateStr );
             case DateTimeOffset:
                 return OffsetDateTime.parse( TypeCodec.varchar().deserialize( bytes, protocolVersion ) );
             case Duration:
