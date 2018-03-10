@@ -784,7 +784,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     public UUID getEntitySetId( @PathVariable( NAME ) String entitySetName ) {
         EntitySet es = entitySetManager.getEntitySet( entitySetName );
-        Preconditions.checkNotNull( es, "Entity Set %s does not exist.", entitySetName );
+        Preconditions.checkNotNull( es, "Entity Set %s does not exists.", entitySetName );
         return es.getId();
     }
 
@@ -796,7 +796,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public UUID getPropertyTypeId( @PathVariable( NAMESPACE ) String namespace, @PathVariable( NAME ) String name ) {
         FullQualifiedName fqn = new FullQualifiedName( namespace, name );
         return Preconditions.checkNotNull( modelService.getTypeAclKey( fqn ),
-                "Property Type %s does not exist.",
+                "Property Type %s does not exists.",
                 fqn.getFullQualifiedNameAsString() );
     }
 
@@ -808,7 +808,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public UUID getEntityTypeId( @PathVariable( NAMESPACE ) String namespace, @PathVariable( NAME ) String name ) {
         FullQualifiedName fqn = new FullQualifiedName( namespace, name );
         return Preconditions.checkNotNull( modelService.getTypeAclKey( fqn ),
-                "Entity Type %s does not exist.",
+                "Entity Type %s does not exists.",
                 fqn.getFullQualifiedNameAsString() );
     }
 
@@ -854,12 +854,12 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     private void ensureValidEntityType( EntityType entityType ) {
         Preconditions.checkArgument( modelService.checkPropertyTypesExist( entityType.getProperties() ),
-                "Some properties do not exist" );
+                "Some properties do not exists" );
     }
 
     private void ensureValidEntitySet( EntitySet entitySet ) {
         Preconditions.checkArgument( modelService.checkEntityTypeExists( entitySet.getEntityTypeId() ),
-                "Entity Set Type does not exist." );
+                "Entity Set Type does not exists." );
     }
 
     @Override

@@ -306,7 +306,7 @@ public class DatastoreTests extends BootstrapDatastoreWithCassandra {
         expected = IllegalArgumentException.class )
     public void testAddPhantomPropertyTypeToEntityType() {
         // Action: Add Property EMPLOYEE_HEIGHT to ENTITY_TYPE (Employees)
-        // Desired result: Since property does not exist, Bad Request Exception should be thrown
+        // Desired result: Since property does not exists, Bad Request Exception should be thrown
 
         EdmManager dms = ds.getContext().getBean( EdmManager.class );
 
