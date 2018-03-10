@@ -133,8 +133,8 @@ public class DataTables {
         PostgresTableDefinition ptd = new PostgresTableDefinition(
                 quote( propertyTableName( entitySetId, propertyType.getId() ) ) )
                 .addColumns( ID_VALUE, valueColumn, VERSION, VERSIONS, LAST_WRITE, READERS, WRITERS, OWNERS )
-                .primaryKey( ID_VALUE, valueColumn )
-                .setUnique( valueColumn );
+                .primaryKey( ID_VALUE, valueColumn );
+//                .setUnique( valueColumn );
 
         String idxPrefix = propertyTableName( entitySetId, propertyType.getId() );
 
