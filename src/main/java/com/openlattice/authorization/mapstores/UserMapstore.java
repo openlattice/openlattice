@@ -20,22 +20,25 @@
 
 package com.openlattice.authorization.mapstores;
 
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
+import com.hazelcast.config.MapStoreConfig;
+import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore;
+import com.openlattice.auth0.Auth0TokenProvider;
+import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.client.RetrofitFactory;
+import com.openlattice.datastore.services.Auth0ManagementApi;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapStoreConfig;
-import com.openlattice.datastore.services.Auth0ManagementApi;
-import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore;
-import java.util.Collection;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Retrofit;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -48,11 +51,9 @@ public class UserMapstore implements TestableSelfRegisteringMapStore<String, Aut
     private final Retrofit           retrofit;
     private final Auth0ManagementApi auth0ManagementApi;
 
-    public UserMapstore( String token ) {
-        retrofit = RetrofitFactory.newClient( "https://openlattice.auth0.com/api/v2/", () -> token );
-
+    public UserMapstore( Auth0Configuration auth0Configuration, Auth0TokenProvider auth0TokenProvider ) {
+        retrofit = RetrofitFactory.newClient( auth0Configuration.getManagementApiUrl(), auth0TokenProvider::getToken );
         auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
-
     }
 
     @Override public String getMapName() {

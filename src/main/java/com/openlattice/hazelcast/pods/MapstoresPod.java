@@ -345,12 +345,8 @@ public class MapstoresPod {
     }
 
     @Bean
-    public Auth0TokenProvider auth0TokenProvider() {
-        return new Auth0TokenProvider( auth0Configuration );
-    }
-    @Bean
     public SelfRegisteringMapStore<String, Auth0UserBasic> userMapstore() {
-        return new UserMapstore( auth0TokenProvider().getToken() );
+        return new UserMapstore( auth0Configuration, auth0TokenProvider() );
     }
 
     @Bean
@@ -385,6 +381,11 @@ public class MapstoresPod {
                 propertyTypeMapstore(),
                 entitySetMapstore(),
                 entityTypeMapstore() );
+    }
+
+    @Bean
+    public Auth0TokenProvider auth0TokenProvider() {
+        return new Auth0TokenProvider( auth0Configuration );
     }
 
 }
