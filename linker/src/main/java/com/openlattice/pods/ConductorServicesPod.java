@@ -32,6 +32,7 @@ import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.openlattice.ResourceConfigurationLoader;
+import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
@@ -142,7 +143,7 @@ public class ConductorServicesPod {
 
     @Bean
     public UserDirectoryService userDirectoryService() {
-        return new UserDirectoryService( auth0Configuration.getToken(), hazelcastInstance );
+        return new UserDirectoryService( auth0Configuration, auth0TokenProvider(), hazelcastInstance );
     }
 
     @Bean
@@ -170,12 +171,17 @@ public class ConductorServicesPod {
 
     @Bean
     public Auth0Synchronizer auth0Refresher() {
-        return new Auth0Synchronizer( hazelcastInstance, principalService(), dbcs(), auth0Configuration.getToken() );
+        return new Auth0Synchronizer( hazelcastInstance, principalService(), dbcs(), auth0TokenProvider() );
     }
 
     @Bean
     public Auth0SyncDriver auth0RefreshDriver() {
         return new Auth0SyncDriver( auth0Refresher() );
+    }
+
+    @Bean
+    public Auth0TokenProvider auth0TokenProvider() {
+        return new Auth0TokenProvider( auth0Configuration );
     }
 
 }
