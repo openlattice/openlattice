@@ -55,11 +55,10 @@ public class UserDirectoryService {
     private       Auth0ManagementApi           auth0ManagementApi;
 
     public UserDirectoryService(
-            Auth0Configuration auth0Configuration,
             Auth0TokenProvider auth0TokenProvider,
             HazelcastInstance hazelcastInstance
     ) {
-        retrofit = RetrofitFactory.newClient( auth0Configuration.getManagementApiUrl(), auth0TokenProvider::getToken );
+        retrofit = RetrofitFactory.newClient( auth0TokenProvider.getManagementApiUrl(), auth0TokenProvider::getToken );
         auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
         users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
     }

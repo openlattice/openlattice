@@ -51,8 +51,8 @@ public class UserMapstore implements TestableSelfRegisteringMapStore<String, Aut
     private final Retrofit           retrofit;
     private final Auth0ManagementApi auth0ManagementApi;
 
-    public UserMapstore( Auth0Configuration auth0Configuration, Auth0TokenProvider auth0TokenProvider ) {
-        retrofit = RetrofitFactory.newClient( auth0Configuration.getManagementApiUrl(), auth0TokenProvider::getToken );
+    public UserMapstore( Auth0TokenProvider auth0TokenProvider ) {
+        retrofit = RetrofitFactory.newClient( auth0TokenProvider.getManagementApiUrl(), auth0TokenProvider::getToken );
         auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
     }
 
