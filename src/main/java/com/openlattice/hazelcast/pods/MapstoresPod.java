@@ -327,7 +327,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<String, Auth0UserBasic> userMapstore() {
-        return new UserMapstore( auth0Configuration, auth0TokenProvider() );
+        return new UserMapstore( auth0TokenProvider() );
     }
 
     @Bean

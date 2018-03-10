@@ -28,7 +28,6 @@ import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.roles.Role;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -46,8 +45,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Retrofit;
 
-import static com.openlattice.auth0.Auth0TokenProvider.AUTH0_MANAGEMENT_API_V2_URL;
-
 public class UserDirectoryService {
     private static final Logger logger            = LoggerFactory.getLogger( UserDirectoryService.class );
     private static final int    DEFAULT_PAGE_SIZE = 100;
@@ -58,11 +55,10 @@ public class UserDirectoryService {
     private       Auth0ManagementApi           auth0ManagementApi;
 
     public UserDirectoryService(
-            Auth0Configuration auth0Configuration,
             Auth0TokenProvider auth0TokenProvider,
             HazelcastInstance hazelcastInstance
     ) {
-        retrofit = RetrofitFactory.newClient( auth0Configuration.getManagementApiUrl(), auth0TokenProvider::getToken );
+        retrofit = RetrofitFactory.newClient( auth0TokenProvider.getManagementApiUrl(), auth0TokenProvider::getToken );
         auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
         users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
     }
