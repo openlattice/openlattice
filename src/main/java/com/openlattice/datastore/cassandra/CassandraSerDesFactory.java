@@ -29,6 +29,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.Collection;
@@ -144,6 +145,7 @@ public class CassandraSerDesFactory {
              * validateFormatAndNormalize binds to String
              */
             case Date:
+                return LocalDate.parse( TypeCodec.varchar().deserialize( bytes, protocolVersion ) );
             case DateTimeOffset:
                 return OffsetDateTime.parse( TypeCodec.varchar().deserialize( bytes, protocolVersion ) );
             case Duration:
