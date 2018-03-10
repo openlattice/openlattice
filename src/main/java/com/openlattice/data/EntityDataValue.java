@@ -50,8 +50,16 @@ public class EntityDataValue {
         return metadata.getVersion();
     }
 
+    public void setVersion( long version ) {
+        metadata.setVersion( version );
+    }
+
     public OffsetDateTime getLastWrite() {
         return metadata.getLastWrite();
+    }
+
+    public void setLastWrite( OffsetDateTime lastWrite ) {
+        metadata.setLastWrite( lastWrite );
     }
 
     public OffsetDateTime getLastIndex() {
@@ -81,11 +89,7 @@ public class EntityDataValue {
                 '}';
     }
 
-    public void setLastWrite( OffsetDateTime lastWrite ) {
-        metadata.setLastWrite( lastWrite );
-    }
-
-    public long incrementVersion() {
-        return metadata.incrementVersion();
+    public long updateVersion() {
+        return metadata.updateVersion();
     }
 }

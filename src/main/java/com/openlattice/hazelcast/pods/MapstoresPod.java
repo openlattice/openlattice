@@ -22,6 +22,8 @@
 
 package com.openlattice.hazelcast.pods;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 import com.kryptnostic.rhizome.mapstores.SelfRegisteringMapStore;
 import com.kryptnostic.rhizome.pods.hazelcast.QueueConfigurer;
 import com.openlattice.apps.App;
@@ -98,12 +100,17 @@ import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.zaxxer.hikari.HikariDataSource;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.UUID;
 import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -111,7 +118,7 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @Import( { PostgresPod.class, Auth0Pod.class } )
 public class MapstoresPod {
-
+    private static final Logger logger = LoggerFactory.getLogger( MapstoresPod.class );
     @Inject
     private HikariDataSource hikariDataSource;
 
@@ -130,6 +137,18 @@ public class MapstoresPod {
 
     @Bean
     public PostgresUserApi pgUserApi() {
+        try ( Connection conn = hikariDataSource.getConnection(); Statement stmt = conn.createStatement(); ) {
+            String createUserSql = Resources.toString( Resources.getResource( "create_user.sql" ), Charsets.UTF_8 );
+            String alterUserSql = Resources.toString( Resources.getResource( "alter_user.sql" ), Charsets.UTF_8 );
+            String deleteUserSql = Resources.toString( Resources.getResource( "delete_user.sql" ), Charsets.UTF_8 );
+            stmt.addBatch( createUserSql );
+            stmt.addBatch( alterUserSql );
+            stmt.addBatch( deleteUserSql );
+            stmt.executeBatch();
+        } catch ( SQLException | IOException e ) {
+            logger.error( "Unable to configure postgres functions for user management." );
+        }
+
         return mapstoreJdbi().onDemand( PostgresUserApi.class );
     }
 

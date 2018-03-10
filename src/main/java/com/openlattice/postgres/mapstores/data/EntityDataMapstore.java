@@ -42,7 +42,7 @@ import java.util.UUID;
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class EntityDataMapstore extends AbstractBasePostgresMapstore<UUID, EntityDataMetadata> {
+public class EntityDataMapstore extends AbstractBasePostgresMapstore<UUID, EntityDataMetadata> {
 
     public EntityDataMapstore( HikariDataSource hds, PostgresTableDefinition table ) {
         super( "edms", table, hds );

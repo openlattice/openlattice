@@ -90,11 +90,11 @@ public class EntityDataMetadata {
                 '}';
     }
 
-    public long incrementVersion() {
-        return ++version;
+    public long updateVersion() {
+        return ( version = System.currentTimeMillis() );
     }
 
     public static EntityDataMetadata newEntityDataMetadata( OffsetDateTime lastWrite ) {
-        return new EntityDataMetadata( 0, lastWrite, MIN );
+        return new EntityDataMetadata( lastWrite.toInstant().toEpochMilli(), lastWrite, MIN );
     }
 }

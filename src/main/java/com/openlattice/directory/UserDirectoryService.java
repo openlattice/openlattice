@@ -23,17 +23,17 @@
 package com.openlattice.directory;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.auth0.Auth0TokenProvider;
-import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.client.RetrofitFactory;
-import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.organization.roles.Role;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.openlattice.auth0.Auth0TokenProvider;
+import com.openlattice.authentication.Auth0Configuration;
+import com.openlattice.client.RetrofitFactory;
 import com.openlattice.datastore.services.Auth0ManagementApi;
+import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.organization.roles.Role;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;

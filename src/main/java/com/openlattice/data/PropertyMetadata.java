@@ -49,8 +49,9 @@ public class PropertyMetadata {
         return version;
     }
 
-    public void setVersion( long version ) {
+    public void setNextVersion( long version ) {
         this.version = version;
+        this.versions.add( version );
     }
 
     public List<Long> getVersions() {
@@ -65,8 +66,8 @@ public class PropertyMetadata {
         this.lastWrite = lastWrite;
     }
 
-    public void incrementVersion() {
-        ++version;
+    public static PropertyMetadata newPropertyMetadata( OffsetDateTime lastWrite ) {
+        return newPropertyMetadata( lastWrite.toInstant().toEpochMilli(), lastWrite );
     }
 
     public static PropertyMetadata newPropertyMetadata( long version, OffsetDateTime lastWrite ) {

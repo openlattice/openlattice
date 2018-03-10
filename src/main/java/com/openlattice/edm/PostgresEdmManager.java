@@ -22,10 +22,10 @@ package com.openlattice.edm;
 
 import com.codahale.metrics.annotation.ExceptionMetered;
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresTableDefinition;
@@ -35,6 +35,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -64,6 +65,34 @@ public class PostgresEdmManager implements DbEdmManager {
             createPropertyTypeTableIfNotExist( entitySet, pt );
         }
         //Method is idempotent and should be re-executable in case of a failure.
+    }
+
+    @Override public void deleteEntitySet(
+            EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
+        PostgresTableDefinition ptd = DataTables.buildEntitySetTableDefinition( entitySet );
+        dropTable( ptd.getName() );
+        removePropertiesFromEntitySet( entitySet, propertyTypes );
+
+    }
+
+    @Override public void removePropertiesFromEntitySet( EntitySet entitySet, PropertyType... propertyTypes ) {
+        removePropertiesFromEntitySet( entitySet, Arrays.asList( propertyTypes ) );
+    }
+
+    @Override public void removePropertiesFromEntitySet(
+            EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
+        for ( PropertyType propertyType : propertyTypes ) {
+            PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( entitySet, propertyType );
+            dropTable( ptd.getName() );
+        }
+    }
+
+    public void dropTable( String table ) {
+        try ( Connection conn = hds.getConnection(); Statement s = conn.createStatement() ) {
+            s.execute( "DROP TABLE " + table );
+        } catch ( SQLException e ) {
+            logger.error( "Encountered exception while dropping table: {}", table, e );
+        }
     }
 
     @Override

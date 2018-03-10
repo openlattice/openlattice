@@ -22,7 +22,6 @@ package com.openlattice.hazelcast.processor;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.EntityDataKey;
@@ -30,6 +29,8 @@ import com.openlattice.data.EntityDataMetadata;
 import com.openlattice.data.EntityDataValue;
 import com.openlattice.data.PropertyMetadata;
 import com.openlattice.hazelcast.processors.EntityDataUpserter;
+import com.openlattice.hazelcast.processors.MergeFinalizer;
+import com.openlattice.hazelcast.processors.SyncFinalizer;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -47,97 +48,117 @@ import org.junit.Test;
 public class EntityDataUpserterTest {
 
     @Test
-    public void createNewPropertiesOnNonEmptyEntity() {
-        EntityDataKey edk = new EntityDataKey( UUID.randomUUID(), UUID.randomUUID() );
-        EntityDataMetadata metadata = new EntityDataMetadata(
-                0,
-                OffsetDateTime.now().minus( 1, ChronoUnit.DAYS ),
-                OffsetDateTime.MIN );
+    public void overwritePropertiesOnNonEmptyEntityAndSync() {
+        final OffsetDateTime lastWrite = OffsetDateTime.now();
+        final MockEntry mockEntry = newMockEntry( lastWrite );
+        final EntityDataValue edv = mockEntry.getValue();
+        final long version = edv.getVersion();
+        final OffsetDateTime preLastWrite = edv.getLastWrite();
 
-        OffsetDateTime lastWrite = OffsetDateTime.now();
         SetMultimap<UUID, Object> properties = HashMultimap.create();
-        UUID propertyTypeId = UUID.randomUUID();
         Object value = 1L;
-
-        UUID propertyTypeId2 = UUID.randomUUID();
         Object value2 = 2L;
+
+        UUID propertyTypeId = addProperty( value, edv.getProperties(), preLastWrite );
+        UUID propertyTypeId2 = addProperty( value2, edv.getProperties(), preLastWrite );
 
         properties.put( propertyTypeId, value );
         properties.put( propertyTypeId2, value2 );
 
-        Map<UUID, Map<Object, PropertyMetadata>> mockMap = new HashMap<>();
-
-        mockMap.put( propertyTypeId,
-                Maps.newHashMap( ImmutableMap.of(
-                        propertyTypeId,
-                        new PropertyMetadata( 0,
-                                Lists.newArrayList( 0L ),
-                                lastWrite.minus( 1, ChronoUnit.DAYS ) ) ) ) );
-        mockMap.put( propertyTypeId2,
-                Maps.newHashMap( ImmutableMap.of(
-                        propertyTypeId2,
-                        new PropertyMetadata( 0,
-                                Lists.newArrayList( 0L ),
-                                lastWrite.minus( 1, ChronoUnit.DAYS ) ) ) ) );
-
-        EntityDataValue edv = new EntityDataValue( metadata, mockMap );
-        MockEntry mockEntry = new MockEntry( edk, edv );
-
         EntityDataUpserter upserter = new EntityDataUpserter( properties, lastWrite );
 
-        upserter.process( mockEntry );
-
         Map<UUID, Map<Object, PropertyMetadata>> mockProperties = mockEntry.getValue().getProperties();
+
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId ) );
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
 
-        Map<Object, PropertyMetadata> propertyMetadata = mockProperties.get( propertyTypeId );
+        upserter.process( mockEntry );
 
-        Assert.assertTrue( propertyMetadata.containsKey( value ) );
-        Assert.assertEquals( 1, propertyMetadata.get( value ).getVersion() );
-        Assert.assertEquals( Lists.newArrayList( metadata.getVersion() ),
-                propertyMetadata.get( value ).getVersions() );
-        Assert.assertEquals( lastWrite, propertyMetadata.get( value ).getLastWrite() );
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId ) );
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
 
-        propertyMetadata = mockProperties.get( propertyTypeId2 );
+        checkCorrectMetdata( mockProperties, propertyTypeId, value, version, Arrays.asList( version ), preLastWrite );
+        checkCorrectMetdata( mockProperties, propertyTypeId2, value2, version, Arrays.asList( version ), preLastWrite );
 
-        Assert.assertTrue( propertyMetadata.containsKey( value2 ) );
-        Assert.assertEquals( 1, propertyMetadata.get( value2 ).getVersion() );
-        Assert.assertEquals( Lists.newArrayList( metadata.getVersion() ),
-                propertyMetadata.get( value2 ).getVersions() );
-        Assert.assertEquals( lastWrite, propertyMetadata.get( value2 ).getLastWrite() );
+        SyncFinalizer syncFinalizer = new SyncFinalizer( preLastWrite );
+
+        syncFinalizer.process( mockEntry );
+
+        final long syncVersion = mockEntry.getValue().getProperties().get( propertyTypeId ).get( value ).getVersion();
+        final long syncVersion2 = mockEntry.getValue().getProperties().get( propertyTypeId2 ).get( value2 )
+                .getVersion();
+
+        Assert.assertEquals( version, syncVersion );
+        Assert.assertEquals( version, syncVersion2 );
+
+        //Since it wasn't a delete the last write timestamp doesn't need to be updated.
+        checkCorrectMetdata( mockProperties, propertyTypeId, value, version, Arrays.asList( version ), preLastWrite );
+        checkCorrectMetdata( mockProperties, propertyTypeId2, value2, version, Arrays.asList( version ), preLastWrite );
+
+        Assert.assertTrue( mockEntry.getValue().getVersion() >= preLastWrite.toInstant().toEpochMilli() );
     }
 
     @Test
-    public void createOneNewPropertyOnEntityWithTwo() {
-        EntityDataKey edk = new EntityDataKey( UUID.randomUUID(), UUID.randomUUID() );
-        long version = 0;
-
-        OffsetDateTime lastWrite = OffsetDateTime.now();
-        OffsetDateTime preLastWrite = lastWrite.minus( 1, ChronoUnit.DAYS );
-
-        EntityDataMetadata metadata = new EntityDataMetadata(
-                version,
-                preLastWrite,
-                OffsetDateTime.MIN );
+    public void overwritePropertiesOnNonEmptyEntityAndMerge() {
+        final OffsetDateTime lastWrite = OffsetDateTime.now();
+        final MockEntry mockEntry = newMockEntry( lastWrite );
+        final EntityDataValue edv = mockEntry.getValue();
+        final long version = edv.getVersion();
+        final OffsetDateTime preLastWrite = edv.getLastWrite();
 
         SetMultimap<UUID, Object> properties = HashMultimap.create();
         Object value = 1L;
         Object value2 = 2L;
+
+        UUID propertyTypeId = addProperty( value, edv.getProperties(), preLastWrite );
+        UUID propertyTypeId2 = addProperty( value2, edv.getProperties(), preLastWrite );
+
+        properties.put( propertyTypeId, value );
+        properties.put( propertyTypeId2, value2 );
+
+        EntityDataUpserter upserter = new EntityDataUpserter( properties, lastWrite );
+
+        Map<UUID, Map<Object, PropertyMetadata>> mockProperties = mockEntry.getValue().getProperties();
+
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId ) );
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
+
+        upserter.process( mockEntry );
+
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId ) );
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
+
+        checkCorrectMetdata( mockProperties, propertyTypeId, value, version, Arrays.asList( version ), preLastWrite );
+        checkCorrectMetdata( mockProperties, propertyTypeId2, value2, version, Arrays.asList( version ), preLastWrite );
+
+        OffsetDateTime entityWrite = OffsetDateTime.now().plus( 1, ChronoUnit.SECONDS );
+        MergeFinalizer mergeFinalizer = new MergeFinalizer( entityWrite );
+
+        mergeFinalizer.process( mockEntry );
+
+        Assert.assertEquals( mockEntry.getValue().getVersion(), entityWrite.toInstant().toEpochMilli() );
+    }
+
+    @Test
+    public void createOneNewPropertyOnEntityWithTwo() {
+        final OffsetDateTime lastWrite = OffsetDateTime.now();
+        final MockEntry mockEntry = newMockEntry( lastWrite );
+        final EntityDataValue edv = mockEntry.getValue();
+        final long version = edv.getVersion();
+        final OffsetDateTime preLastWrite = edv.getLastWrite();
+
+        SetMultimap<UUID, Object> properties = HashMultimap.create();
+
+        Object value = 1L;
+        Object value2 = 2L;
         Object value3 = 3L;
 
-        Map<UUID, Map<Object, PropertyMetadata>> mockMap = new HashMap<>();
-        UUID propertyTypeId = addProperty( value, mockMap, preLastWrite );
-        UUID propertyTypeId2 = addProperty( value2, mockMap, preLastWrite );
-        UUID propertyTypeId3 = UUID.randomUUID();
-
-        //        properties.put( propertyTypeId, value );
-        //        properties.put( propertyTypeId2, value2 );
+        final Map<UUID, Map<Object, PropertyMetadata>> mockMap = edv.getProperties();
+        final UUID propertyTypeId = addProperty( value, mockMap, preLastWrite );
+        final UUID propertyTypeId2 = addProperty( value2, mockMap, preLastWrite );
+        final UUID propertyTypeId3 = UUID.randomUUID();
 
         properties.put( propertyTypeId3, value3 );
-
-        EntityDataValue edv = new EntityDataValue( metadata, mockMap );
-        MockEntry mockEntry = new MockEntry( edk, edv );
 
         EntityDataUpserter upserter = new EntityDataUpserter( properties, lastWrite );
 
@@ -158,18 +179,20 @@ public class EntityDataUpserterTest {
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId3 ) );
 
+        final long expectedVersion = lastWrite.toInstant().toEpochMilli();
+
         checkCorrectMetdata( mockProperties, propertyTypeId, value, version, Arrays.asList( version ), preLastWrite );
         checkCorrectMetdata( mockProperties, propertyTypeId2, value2, version, Arrays.asList( version ), preLastWrite );
         checkCorrectMetdata( mockProperties,
                 propertyTypeId3,
                 value3,
-                version + 1,
-                Arrays.asList( version + 1 ),
+                expectedVersion,
+                Arrays.asList( expectedVersion ),
                 lastWrite );
     }
 
     @Test
-    public void createNewPropertyOnNonEmptyEntity() {
+    public void createNewPropertyOnNonEmptyEntityAndMergeFinalize() {
         //Setup mock entry for testing.
         OffsetDateTime lastWrite = OffsetDateTime.now();
         MockEntry mockEntry = newMockEntry( lastWrite );
@@ -203,14 +226,89 @@ public class EntityDataUpserterTest {
         checkCorrectMetdata( mockProperties,
                 propertyTypeId2,
                 value2,
-                version + 1,
-                Arrays.asList( version + 1 ),
+                lastWrite.toInstant().toEpochMilli(),
+                Arrays.asList( lastWrite.toInstant().toEpochMilli() ),
                 lastWrite );
 
+        OffsetDateTime entityWrite = OffsetDateTime.now().plus( 1, ChronoUnit.SECONDS );
+        MergeFinalizer mergeFinalizer = new MergeFinalizer( entityWrite );
+
+        mergeFinalizer.process( mockEntry );
+
+        Assert.assertEquals( mockEntry.getValue().getVersion(), entityWrite.toInstant().toEpochMilli() );
     }
 
     @Test
-    public void addProperties() {
+    public void createNewPropertyOnNonEmptyEntityAndSyncFinalize() {
+        //Setup mock entry for testing.
+        OffsetDateTime lastWrite = OffsetDateTime.now();
+        MockEntry mockEntry = newMockEntry( lastWrite );
+        EntityDataValue edv = mockEntry.getValue();
+        long version = edv.getVersion();
+        OffsetDateTime preLastWrite = edv.getLastWrite();
+
+        SetMultimap<UUID, Object> properties = HashMultimap.create();
+
+        final Object value = 1L;
+        final Object value2 = 2L;
+
+        final UUID propertyTypeId = addProperty( value, edv.getProperties(), preLastWrite );
+
+        final UUID propertyTypeId2 = UUID.randomUUID();
+        properties.put( propertyTypeId2, value2 );
+
+        //Setup property that we will use to add non-empty entry.
+        EntityDataUpserter upserter = new EntityDataUpserter( properties, lastWrite );
+        final Map<UUID, Map<Object, PropertyMetadata>> mockProperties = mockEntry.getValue().getProperties();
+
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId ) );
+        Assert.assertFalse( mockProperties.containsKey( propertyTypeId2 ) );
+
+        upserter.process( mockEntry );
+
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId ) );
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
+
+        checkCorrectMetdata( mockProperties, propertyTypeId, value, version, Arrays.asList( version ), preLastWrite );
+        checkCorrectMetdata( mockProperties,
+                propertyTypeId2,
+                value2,
+                lastWrite.toInstant().toEpochMilli(),
+                Arrays.asList( lastWrite.toInstant().toEpochMilli() ),
+                lastWrite );
+
+        SyncFinalizer syncFinalizer = new SyncFinalizer( lastWrite );
+
+        syncFinalizer.process( mockEntry );
+
+        final long syncDeleteVersion = mockEntry.getValue().getProperties().get( propertyTypeId ).get( value )
+                .getVersion();
+        final long syncVersion = mockEntry.getValue().getProperties().get( propertyTypeId2 ).get( value2 ).getVersion();
+
+        Assert.assertTrue(
+                syncVersion >= lastWrite.toInstant().toEpochMilli() && syncVersion <= System.currentTimeMillis() );
+        Assert.assertTrue( Math.abs( syncDeleteVersion ) >= lastWrite.toInstant().toEpochMilli()
+                && Math.abs( syncDeleteVersion ) <= System.currentTimeMillis() );
+
+        checkCorrectMetdata( mockProperties,
+                propertyTypeId,
+                value,
+                syncDeleteVersion,
+                Arrays.asList( version, syncDeleteVersion ),
+                lastWrite );
+
+        checkCorrectMetdata( mockProperties,
+                propertyTypeId2,
+                value2,
+                lastWrite.toInstant().toEpochMilli(),
+                Arrays.asList( lastWrite.toInstant().toEpochMilli() ),
+                lastWrite );
+
+        Assert.assertTrue( mockEntry.getValue().getVersion() >= lastWrite.toInstant().toEpochMilli() );
+    }
+
+    @Test
+    public void addPropertiesAndMergeFinalize() {
         EntityDataKey edk = new EntityDataKey( UUID.randomUUID(), UUID.randomUUID() );
         SetMultimap<UUID, Object> properties = HashMultimap.create();
         UUID propertyTypeId = UUID.randomUUID();
@@ -227,20 +325,29 @@ public class EntityDataUpserterTest {
 
         upserter.process( mockEntry );
 
+        final long expectedVersion = lastWrite.toInstant().toEpochMilli();
         Map<UUID, Map<Object, PropertyMetadata>> mockProperties = mockEntry.getValue().getProperties();
-        checkCorrectMetdata( mockProperties, propertyTypeId, value, 0L, Arrays.asList( 0L ), lastWrite );
+        checkCorrectMetdata( mockProperties,
+                propertyTypeId,
+                value,
+                expectedVersion,
+                Arrays.asList( expectedVersion ),
+                lastWrite );
+
+        OffsetDateTime entityWrite = OffsetDateTime.now().plus( 1, ChronoUnit.SECONDS );
+        MergeFinalizer mergeFinalizer = new MergeFinalizer( entityWrite );
+
+        mergeFinalizer.process( mockEntry );
+
+        Assert.assertEquals( mockEntry.getValue().getVersion(), entityWrite.toInstant().toEpochMilli() );
     }
 
     public static MockEntry newMockEntry( OffsetDateTime lastWrite ) {
         EntityDataKey edk = new EntityDataKey( UUID.randomUUID(), UUID.randomUUID() );
-        long version = 0;
 
         OffsetDateTime preLastWrite = lastWrite.minus( 1, ChronoUnit.DAYS );
 
-        EntityDataMetadata metadata = new EntityDataMetadata(
-                version,
-                preLastWrite,
-                OffsetDateTime.MIN );
+        EntityDataMetadata metadata = EntityDataMetadata.newEntityDataMetadata( preLastWrite );
 
         EntityDataValue edv = new EntityDataValue( metadata, new HashMap<>() );
         return new MockEntry( edk, edv );
@@ -252,7 +359,7 @@ public class EntityDataUpserterTest {
             OffsetDateTime writeTime ) {
         UUID propertyTypeId = UUID.randomUUID();
         PropertyMetadata
-                pm = PropertyMetadata.newPropertyMetadata( 0, writeTime );
+                pm = PropertyMetadata.newPropertyMetadata( writeTime );
         m.put( propertyTypeId, Maps.newHashMap( ImmutableMap.of( value, pm ) ) );
         return propertyTypeId;
     }
