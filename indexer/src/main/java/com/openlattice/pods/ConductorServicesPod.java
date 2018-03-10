@@ -143,7 +143,7 @@ public class ConductorServicesPod {
 
     @Bean
     public UserDirectoryService userDirectoryService() {
-        return new UserDirectoryService( auth0Configuration, auth0TokenProvider(), hazelcastInstance );
+        return new UserDirectoryService( auth0TokenProvider(), hazelcastInstance );
     }
 
     @Bean
