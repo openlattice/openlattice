@@ -24,6 +24,7 @@ package com.openlattice.directory;
 
 import com.codahale.metrics.annotation.Timed;
 import com.openlattice.auth0.Auth0TokenProvider;
+import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -56,8 +57,12 @@ public class UserDirectoryService {
     private       Retrofit                     retrofit;
     private       Auth0ManagementApi           auth0ManagementApi;
 
-    public UserDirectoryService( Auth0TokenProvider auth0TokenProvider, HazelcastInstance hazelcastInstance ) {
-        retrofit = RetrofitFactory.newClient( AUTH0_MANAGEMENT_API_V2_URL, auth0TokenProvider::getToken );
+    public UserDirectoryService(
+            Auth0Configuration auth0Configuration,
+            Auth0TokenProvider auth0TokenProvider,
+            HazelcastInstance hazelcastInstance
+    ) {
+        retrofit = RetrofitFactory.newClient( auth0Configuration.getManagementApiUrl(), auth0TokenProvider::getToken );
         auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
         users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
     }
