@@ -21,7 +21,6 @@
 package com.openlattice.conductor.users;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.openlattice.auth0.Auth0TokenProvider.AUTH0_MANAGEMENT_API_V2_URL;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Optional;
@@ -82,7 +81,8 @@ public class Auth0Synchronizer {
         this.users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
         this.memberIds = hazelcastInstance.getQueue( Auth0Synchronizer.class.getCanonicalName() );
         this.nextTime = hazelcastInstance.getAtomicLong( UserMapstore.class.getCanonicalName() );
-        this.retrofit = RetrofitFactory.newClient( AUTH0_MANAGEMENT_API_V2_URL, auth0TokenProvider::getToken );
+        this.retrofit = RetrofitFactory
+                .newClient( auth0TokenProvider.getManagementApiUrl(), auth0TokenProvider::getToken );
         this.auth0ManagementApi = retrofit.create( Auth0ManagementApi.class );
         this.hazelcastInstance = hazelcastInstance;
         this.localMemberId = checkNotNull( hazelcastInstance.getLocalEndpoint().getUuid() );
