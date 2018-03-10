@@ -45,6 +45,12 @@ public interface DbEdmManager {
      */
     void createEntitySet( EntitySet entitySet, Collection<PropertyType> propertyTypes ) throws Exception;
 
+    void deleteEntitySet( EntitySet entitySet, Collection<PropertyType> propertyTypes );
+
+    void removePropertiesFromEntitySet( EntitySet entitySet, PropertyType... propertyTypes );
+
+    void removePropertiesFromEntitySet( EntitySet entitySet, Collection<PropertyType> propertyType );
+
     /**
      * Grants {@code permissions} on an entity sets property types for a given principal.
      *

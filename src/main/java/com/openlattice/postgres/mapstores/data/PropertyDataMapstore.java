@@ -50,7 +50,7 @@ import org.apache.commons.lang.RandomStringUtils;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<UUID, Object, PropertyMetadata> {
+public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<UUID, Object, PropertyMetadata> {
     private final PostgresColumnDefinition valueColumn;
 
     public PropertyDataMapstore( PostgresTableDefinition table, HikariDataSource hds ) {

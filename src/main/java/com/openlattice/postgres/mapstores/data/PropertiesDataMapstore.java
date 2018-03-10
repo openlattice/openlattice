@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class PropertiesDataMapstore extends AbstractBasePostgresMapstore<PropertyValueKey, PropertyMetadata> {
+public class PropertiesDataMapstore extends AbstractBasePostgresMapstore<PropertyValueKey, PropertyMetadata> {
     private final PostgresColumnDefinition valueColumn;
 
     public PropertiesDataMapstore( PostgresTableDefinition table, HikariDataSource hds ) {

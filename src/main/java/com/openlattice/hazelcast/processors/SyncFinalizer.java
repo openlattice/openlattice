@@ -13,10 +13,10 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class SyncFinalizer extends AbstractRhizomeEntryProcessor<EntityDataKey, EntityDataValue, Void> {
-    private final OffsetDateTime lastWrite;
+    private final OffsetDateTime syncStart;
 
-    public SyncFinalizer( OffsetDateTime lastWrite ) {
-        this.lastWrite = lastWrite;
+    public SyncFinalizer( OffsetDateTime syncStart ) {
+        this.syncStart = syncStart;
     }
 
     @Override public Void process( Entry<EntityDataKey, EntityDataValue> entry ) {
@@ -26,24 +26,40 @@ public class SyncFinalizer extends AbstractRhizomeEntryProcessor<EntityDataKey, 
             return null;
         }
 
+        /*
+         * syncStart must be at or before the present time in millis. If for some reason reason current time is faulty
+         * the logic below will prevent data written after the syncStart from being deleted, even if it is not visible.
+         *
+         * TODO: Fix this by marking all sync associated writes to be on or after syncStart.
+         */
+
+        final long syncStartMillis = syncStart.toInstant().toEpochMilli();
+        final long currentMillis = System.currentTimeMillis();
+        final long nextVersion = syncStartMillis <= currentMillis ? currentMillis : syncStartMillis;
+
         //TODO: Double check why this isn't used.
         //final OffsetDateTime entityLastWrite = entityDataValue.getLastWrite();
-        final long nextDeleteVersion = -( entityDataValue.getVersion() + 1 );
+
+        //The delete time stamp is simply the negative of the current version.
+        final long nextDeleteVersion = -nextVersion;
         final Map<UUID, Map<Object, PropertyMetadata>> propertiesByType = entityDataValue.getProperties();
 
         propertiesByType
                 .values()
                 .forEach( p ->
                         p.values().forEach( v -> {
-                            if ( v.getVersion() > 0 ) {
-                                v.setVersion( nextDeleteVersion );
+                            if ( v.getVersion() < syncStartMillis ) {
+
+                                v.setNextVersion( nextDeleteVersion );
+                                v.setLastWrite( syncStart ); //TODO: Consider impact of setting to now()
                             }
-                            v.setLastWrite( lastWrite );
                         } ) );
-        entityDataValue.setLastWrite( lastWrite );
-        entityDataValue.incrementVersion();
+        //
+        entityDataValue.setLastWrite( syncStart );
+        entityDataValue.setVersion( nextVersion );
 
         entry.setValue( entityDataValue );
+
         return null;
     }
 }
