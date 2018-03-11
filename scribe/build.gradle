@@ -20,10 +20,10 @@
 
 plugins {
     id "java"
+    id 'org.jetbrains.kotlin.jvm' version '1.2.30'
     id "eclipse"
     id "idea"
     id "jacoco"
-    id "org.jetbrains.kotlin.jvm"
 }
 
 description = "Scribe renders is templated render system for e-mails"
