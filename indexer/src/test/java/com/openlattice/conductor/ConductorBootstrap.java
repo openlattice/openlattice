@@ -34,8 +34,7 @@ public class ConductorBootstrap {
 
     static {
         conductor = new Conductor();
-        //TODO: Fix this to be bamboo.openlattice.com as servers may not always be co-resident.
-        if ( NetworkUtils.isRunningOnHost( "artifactory.openlattice.com" ) ) {
+        if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
             LoggerFactory.getLogger( ConductorBootstrap.class ).info("Running on bamboo!");
             conductor.sprout( "awstest", "postgres" );
         } else {
