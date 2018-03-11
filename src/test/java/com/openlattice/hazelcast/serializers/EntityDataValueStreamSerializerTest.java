@@ -28,7 +28,6 @@ import static com.openlattice.hazelcast.processor.EntityDataUpserterTest.newMock
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDataValue;
 import com.openlattice.data.PropertyMetadata;
 import com.openlattice.hazelcast.processor.EntityDataUpserterTest.MockEntry;
@@ -37,12 +36,12 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.Assert;
 
-public class EntityDataValueStreamSerializerTest extends AbstractStreamSerializerTest<EntityDataValueStreamSerializer, EntityDataValue>
+public class EntityDataValueStreamSerializerTest
+        extends AbstractStreamSerializerTest<EntityDataValueStreamSerializer, EntityDataValue>
         implements Serializable {
     private static final long serialVersionUID = 8869472746330274551L;
 
@@ -62,6 +61,10 @@ public class EntityDataValueStreamSerializerTest extends AbstractStreamSerialize
         Object value4 = "for the horde!";
         Object value5 = 12;
         Object value6 = 13L;
+        Object value7 = "12345678123456781234567812345678";
+        Object value8 = "123456781234567812345678123456781234567812345678123456781234567";
+        Object value9 = "1234567812345678123456781234567812345678123456781234567812345678";
+        Object value10 = "1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678123456781234567812345678123456781234567812345678123456781234567812345678123456781234567812345678123456781234567812345678123456781234567812345678123456781234567812345678";
 
         final Map<UUID, Map<Object, PropertyMetadata>> mockMap = edv.getProperties();
         final UUID propertyTypeId = addProperty( value, mockMap, preLastWrite );
@@ -70,6 +73,10 @@ public class EntityDataValueStreamSerializerTest extends AbstractStreamSerialize
         addProperty( value4, mockMap, preLastWrite );
         addProperty( value5, mockMap, preLastWrite );
         addProperty( value6, mockMap, preLastWrite );
+        addProperty( value7, mockMap, preLastWrite );
+        addProperty( value8, mockMap, preLastWrite );
+        addProperty( value9, mockMap, preLastWrite );
+        addProperty( value10, mockMap, preLastWrite );
         addProperty( LocalTime.now(), mockMap, preLastWrite );
         addProperty( LocalTime.now(), mockMap, preLastWrite );
 
@@ -83,7 +90,6 @@ public class EntityDataValueStreamSerializerTest extends AbstractStreamSerialize
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId ) );
         Assert.assertTrue( mockProperties.containsKey( propertyTypeId2 ) );
         Assert.assertFalse( mockProperties.containsKey( propertyTypeId3 ) );
-
 
         upserter.process( mockEntry );
 
