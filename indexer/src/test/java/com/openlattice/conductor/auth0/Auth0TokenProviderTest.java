@@ -29,7 +29,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * In order to pass this you must have an auth0.yaml file with correct information for client credentials grants.
  */
 public class Auth0TokenProviderTest extends ConductorBootstrap {
     @Test
