@@ -28,6 +28,8 @@ allprojects {
   apply plugin: "jacoco"
   if ( !ext.has("jars") ){
     ext.developmentMode = true
+  } else {
+    ext.developmentMode = false
   }
 }
 
