@@ -19,24 +19,30 @@
  *
  */
 
-package com.openlattice.conductor.test.com.openlattice.authentication;
+package com.openlattice.conductor;
 
-import com.openlattice.ResourceConfigurationLoader;
-import com.openlattice.auth0.Auth0TokenProvider;
-import com.openlattice.authentication.Auth0Configuration;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import com.geekbeast.rhizome.NetworkUtils;
+import com.openlattice.Conductor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Auth0TokenProviderTest {
-    @Test
-    public void testAuth0TokenProvider() {
-        Auth0Configuration configuration = ResourceConfigurationLoader.loadConfiguration( Auth0Configuration.class );
-        Auth0TokenProvider provider = new Auth0TokenProvider( configuration );
-        Assert.assertTrue( StringUtils.isNotBlank( provider.getToken() ) );
+public class ConductorBootstrap {
+    protected static final Conductor conductor;
+
+    static {
+        conductor = new Conductor();
+        if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
+            LoggerFactory.getLogger( ConductorBootstrap.class ).info("Running on bamboo!");
+            conductor.sprout( "awstest", "postgres" );
+        } else {
+            LoggerFactory.getLogger( ConductorBootstrap.class ).info("Not running on bamboo!");
+            conductor.sprout( "local", "postgres" );
+        }
     }
+
+    protected final Logger logger = LoggerFactory.getLogger( getClass() );
+
 }
