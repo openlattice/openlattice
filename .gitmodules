@@ -40,3 +40,6 @@
 [submodule "mechanic"]
 	path = mechanic
 	url = git@github.com:openlattice/mechanic.git
+[submodule "launchpad"]
+	path = launchpad
+	url = git@github.com:openlattice/launchpad.git
