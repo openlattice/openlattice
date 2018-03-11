@@ -2,6 +2,7 @@
 artifacts/
 bin/
 build/
+logging/
 out/
 src/main/webapp/auth/
 target/
