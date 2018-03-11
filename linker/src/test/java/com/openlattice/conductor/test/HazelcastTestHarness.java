@@ -20,12 +20,6 @@
 
 package com.openlattice.conductor.test;
 
-import java.util.Map.Entry;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import com.hazelcast.config.Config;
 import com.hazelcast.config.GroupConfig;
 import com.hazelcast.config.JoinConfig;
@@ -35,47 +29,53 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.AbstractEntryProcessor;
+import java.util.Map.Entry;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
+@Ignore
 public class HazelcastTestHarness {
 
-	protected static HazelcastInstance hazelcast = null;
+    protected static HazelcastInstance hazelcast = null;
 
-	@BeforeClass
-	public static final void initHazelcast() {
-		if (hazelcast == null) {
-			Config config = new Config("test");
-			config.setGroupConfig(new GroupConfig("test", "osterone"));
-			config.setNetworkConfig(new NetworkConfig().setPort(5801).setPortAutoIncrement(true)
-					.setJoin(new JoinConfig().setMulticastConfig(new MulticastConfig().setEnabled(false))));
+    @Test
+    public void simpleTest() {
+        IMap<String, String> test = hazelcast.getMap( "test" );
 
-			hazelcast = Hazelcast.newHazelcastInstance(config);
-		}
+        test.put( "world", "hello" );
+        test.put( "hello", "world" );
+        test.put( "bye", "sam" );
 
-	}
+        test.executeOnEntries( new AbstractEntryProcessor<String, String>() {
+            private static final long serialVersionUID = 1L;
 
-	@AfterClass
-	public static final void shutdownHazelcast() {
-		hazelcast.shutdown();
-		hazelcast = null;
-	}
+            @Override
+            public Object process( Entry<String, String> entry ) {
+                System.out.println( entry.getValue() );
+                return null;
+            }
 
-	@Test
-	public void simpleTest() {
-		IMap<String, String> test = hazelcast.getMap("test");
+        } );
+    }
 
-		test.put("world", "hello");
-		test.put("hello", "world");
-		test.put("bye", "sam");
+    @BeforeClass
+    public static final void initHazelcast() {
+        if ( hazelcast == null ) {
+            Config config = new Config( "test" );
+            config.setGroupConfig( new GroupConfig( "test", "osterone" ) );
+            config.setNetworkConfig( new NetworkConfig().setPort( 5801 ).setPortAutoIncrement( true )
+                    .setJoin( new JoinConfig().setMulticastConfig( new MulticastConfig().setEnabled( false ) ) ) );
 
-		test.executeOnEntries(new AbstractEntryProcessor<String, String>() {
-			private static final long serialVersionUID = 1L;
+            hazelcast = Hazelcast.newHazelcastInstance( config );
+        }
 
-			@Override
-			public Object process(Entry<String, String> entry) {
-				System.out.println(entry.getValue());
-				return null;
-			}
+    }
 
-		});
-	}
+    @AfterClass
+    public static final void shutdownHazelcast() {
+        hazelcast.shutdown();
+        hazelcast = null;
+    }
 }
