@@ -24,6 +24,10 @@ import com.openlattice.hazelcast.serializers.KryoSetMultimapStreamSerializer;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -41,6 +45,11 @@ public class KryoSetMultmapStreamSerializerTest
         SetMultimap m = HashMultimap.create();
         m.put( UUID.randomUUID(), RandomStringUtils.random( 10 ) );
         m.put( UUID.randomUUID(), RandomStringUtils.random( 10 ) );
+        m.put( UUID.randomUUID(), OffsetDateTime.now() );
+        m.put( UUID.randomUUID(), LocalDateTime.now() );
+        m.put( UUID.randomUUID(), LocalDate.now() );
+        m.put( UUID.randomUUID(), LocalTime.now() );
+
         return m;
     }
 }
