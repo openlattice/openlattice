@@ -39,6 +39,7 @@ import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.HazelcastAbstractSecurableObjectResolveTypeService;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.clustering.DistributedClusterer;
 import com.openlattice.data.DataGraphManager;
@@ -79,6 +80,7 @@ import com.openlattice.requests.RequestQueryService;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+import org.jdbi.v3.core.Jdbi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -92,22 +94,24 @@ import org.springframework.context.annotation.Import;
 public class DatastoreServicesPod {
 
     @Inject
+    Jdbi jdbi;
+    @Inject
     private HazelcastInstance hazelcastInstance;
-
     @Inject
     private HikariDataSource hikariDataSource;
-
     @Inject
     private Auth0Configuration auth0Configuration;
-
     @Inject
     private ListeningExecutorService executor;
-
     @Inject
     private EventBus eventBus;
-
     @Inject
     private Neuron neuron;
+
+    @Bean
+    public PostgresUserApi pgUserApi() {
+        return jdbi.onDemand( PostgresUserApi.class );
+    }
 
     @Bean
     public ObjectMapper defaultObjectMapper() {
@@ -309,7 +313,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public DbCredentialService dcs() {
-        return new DbCredentialService( hazelcastInstance, hikariDataSource );
+        return new DbCredentialService( hazelcastInstance, pgUserApi() );
     }
 
     @Bean
