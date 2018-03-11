@@ -11,9 +11,9 @@ Conductor provides and in-memory cache and other distributed data structures for
 brew install elasticsearch
 elasticsearch-plugin install analysis-phonetic
 ```
-2. Run elasticsearch with cluster name "loom_development"
+2. Run elasticsearch with cluster name "openlattice"
 ```
-elasticsearch -E cluster.name=loom_development
+elasticsearch -E cluster.name=openlattice
 ```
 
 ## Cleanup
