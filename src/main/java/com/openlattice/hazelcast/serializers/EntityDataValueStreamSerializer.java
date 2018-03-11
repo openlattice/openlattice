@@ -63,7 +63,7 @@ public class EntityDataValueStreamSerializer implements SelfRegisteringStreamSer
 
     @Override
     public int getTypeId() {
-        return StreamSerializerTypeIds.ENTITY_DATA_KEY.ordinal();
+        return StreamSerializerTypeIds.ENTITY_DATA_VALUE.ordinal();
     }
 
     @Override

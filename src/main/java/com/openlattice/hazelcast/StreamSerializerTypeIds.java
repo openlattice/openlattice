@@ -48,6 +48,7 @@ public enum StreamSerializerTypeIds {
     EMPLOYEE,
     ENTITY_KEY,
     ENTITY_DATA_KEY,
+    ENTITY_DATA_VALUE,
     ENTITY_SET,
     ENTITY_TYPE,
     COMPLEX_TYPE,
