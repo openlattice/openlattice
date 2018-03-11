@@ -22,6 +22,7 @@ package com.openlattice.data;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -66,22 +67,6 @@ public class EntityDataValue {
         return metadata.getLastIndex();
     }
 
-    @Override public boolean equals( Object o ) {
-        if ( this == o ) { return true; }
-        if ( !( o instanceof EntityDataValue ) ) { return false; }
-
-        EntityDataValue that = (EntityDataValue) o;
-
-        if ( !metadata.equals( that.metadata ) ) { return false; }
-        return properties.equals( that.properties );
-    }
-
-    @Override public int hashCode() {
-        int result = metadata.hashCode();
-        result = 31 * result + properties.hashCode();
-        return result;
-    }
-
     @Override public String toString() {
         return "EntityDataValue{" +
                 "metadata=" + metadata +
@@ -91,5 +76,18 @@ public class EntityDataValue {
 
     public long updateVersion() {
         return metadata.updateVersion();
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof EntityDataValue ) ) { return false; }
+        EntityDataValue that = (EntityDataValue) o;
+        return Objects.equals( metadata, that.metadata ) &&
+                Objects.equals( properties, that.properties );
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( metadata, properties );
     }
 }
