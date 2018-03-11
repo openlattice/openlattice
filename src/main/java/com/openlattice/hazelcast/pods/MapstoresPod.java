@@ -108,7 +108,6 @@ import java.sql.Statement;
 import java.util.UUID;
 import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -128,12 +127,8 @@ public class MapstoresPod {
     @Inject
     private Auth0Configuration auth0Configuration;
 
-    @Bean
-    public Jdbi mapstoreJdbi() {
-        Jdbi jdbi = Jdbi.create( hikariDataSource );
-        jdbi.installPlugin( new SqlObjectPlugin() );
-        return jdbi;
-    }
+    @Inject
+    private Jdbi jdbi;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -149,7 +144,7 @@ public class MapstoresPod {
             logger.error( "Unable to configure postgres functions for user management." );
         }
 
-        return mapstoreJdbi().onDemand( PostgresUserApi.class );
+        return jdbi.onDemand( PostgresUserApi.class );
     }
 
     @Bean
