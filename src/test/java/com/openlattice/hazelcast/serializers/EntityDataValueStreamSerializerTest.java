@@ -52,7 +52,6 @@ public class EntityDataValueStreamSerializerTest extends AbstractStreamSerialize
         final OffsetDateTime lastWrite = OffsetDateTime.now();
         final MockEntry mockEntry = newMockEntry( lastWrite );
         final EntityDataValue edv = mockEntry.getValue();
-        final long version = edv.getVersion();
         final OffsetDateTime preLastWrite = edv.getLastWrite();
 
         SetMultimap<UUID, Object> properties = HashMultimap.create();
