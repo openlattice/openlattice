@@ -52,7 +52,6 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import javax.inject.Inject;
-import org.jdbi.v3.core.Jdbi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,7 +101,7 @@ public class ConductorServicesPod {
     }
 
     @Bean( name = "conductorConfiguration" )
-    @Profile( Profiles.AWS_CONFIGURATION_PROFILE )
+    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
     public ConductorConfiguration getAwsConductorConfiguration() throws IOException {
 
         ConductorConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
