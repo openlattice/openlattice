@@ -26,6 +26,7 @@ import com.openlattice.client.serialization.SerializationConstants;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -74,5 +75,19 @@ public class PropertyMetadata {
         List<Long> versions = new ArrayList<>( 1 );
         versions.add( version );
         return new PropertyMetadata( version, versions, lastWrite );
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof PropertyMetadata ) ) { return false; }
+        PropertyMetadata that = (PropertyMetadata) o;
+        return version == that.version &&
+                Objects.equals( versions, that.versions ) &&
+                Objects.equals( lastWrite, that.lastWrite );
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( versions, version, lastWrite );
     }
 }
