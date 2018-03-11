@@ -274,9 +274,7 @@ public class EdmService implements EdmManager {
                 .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet.of( propertyTypeId ) );
         if ( entityTypes
                 .allMatch( et -> Iterables.isEmpty( entitySetManager.getAllEntitySetsForType( et.getId() ) ) ) ) {
-            propertyTypes.delete( propertyTypeId );
-            aclKeyReservations.release( propertyTypeId );
-            eventBus.post( new PropertyTypeDeletedEvent( propertyTypeId ) );
+            forceDeletePropertyType( propertyTypeId );
         } else {
             throw new IllegalArgumentException(
                     "Unable to delete property type because it is associated with an entity set." );
