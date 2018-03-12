@@ -18,9 +18,11 @@
 
 package com.openlattice.directory;
 
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.authorization.AclKey;
+import java.util.Collection;
 import java.util.Map;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
@@ -88,5 +90,5 @@ public interface PrincipalApi {
      * @return Nothing
      */
     @POST( BASE + USERS )
-    Void activateUser( @Body String accessToken );
+    Collection<SecurablePrincipal> activateUser( @Body String accessToken );
 }

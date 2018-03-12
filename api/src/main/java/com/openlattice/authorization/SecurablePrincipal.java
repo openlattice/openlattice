@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -35,6 +36,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY, property="@class")
 public class SecurablePrincipal extends AbstractSecurableObject {
     private final AclKey    aclKey;
     private final Principal principal;
