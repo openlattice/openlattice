@@ -23,12 +23,10 @@ hazelcast:
         - "localhost"
 
 hikari:
-    jdbcUrl: "jdbc:postgresql://localhost/openlattice"
-    dataSourceClassName: "org.postgresql.ds.PGSimpleDataSource"
-    username: "mtamayo"
-    dataSource.user: "mtamayo"
-    dataSource.databaseName: "openlattice"
-    maximumPoolSize: 1
+    jdbcUrl: "jdbc:postgresql://localhost:5432/openlattice"
+    username: "oltest"
+    password: "test"
+    maximumPoolSize: 3
 
 #graphite:
 #    host: "jarvis"

@@ -35,12 +35,15 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.SystemRole;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.function.Function;
@@ -63,19 +66,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class PrincipalDirectoryController implements PrincipalApi, AuthorizingComponent {
 
     @Inject
-    private DbCredentialService dbCredService;
-
+    private DbCredentialService     dbCredService;
     @Inject
-    private UserDirectoryService userDirectoryService;
-
+    private UserDirectoryService    userDirectoryService;
     @Inject
     private SecurePrincipalsManager spm;
-
     @Inject
-    private AuthorizationManager authorizations;
-
+    private AuthorizationManager    authorizations;
     @Inject
-    private AuthAPI authApi;
+    private AuthAPI                 authApi;
 
     @Override
     @RequestMapping(
@@ -115,8 +114,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = USERS,
             method = RequestMethod.POST,
             consumes = MediaType.TEXT_PLAIN_VALUE )
-    @ResponseStatus( HttpStatus.OK )
-    public Void activateUser( @RequestBody String accessToken ) {
+    public Collection<SecurablePrincipal> activateUser( @RequestBody String accessToken ) {
         Principal principal = checkNotNull( Principals.getCurrentUser() );
 
         UserInfo userInfo;
@@ -161,7 +159,22 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
             dbCredService.createUserIfNotExists( userId );
         }
-        return null;
+
+        AclKey userAclKey = spm.lookup( principal );
+
+        AclKey userRoleAclKey = spm.lookup( AuthorizationBootstrap.GLOBAL_USER_ROLE.getPrincipal() );
+        AclKey adminRoleAclKey = spm.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() );
+        Auth0UserBasic user = userDirectoryService.getUser( userId );
+
+        if ( user.getRoles().contains( SystemRole.AUTHENTICATED_USER.getName() ) ) {
+            spm.addPrincipalToPrincipal( userRoleAclKey, userAclKey );
+        }
+
+        if ( user.getRoles().contains( SystemRole.ADMIN.getName() ) ) {
+            spm.addPrincipalToPrincipal( adminRoleAclKey, userAclKey );
+        }
+
+        return spm.getAllPrincipals( spm.getSecurablePrincipal( userAclKey ) );
     }
 
     @Override
