@@ -21,15 +21,20 @@
 
 package com.openlattice.rehearsal;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import com.auth0.json.auth.TokenHolder;
 import com.google.common.util.concurrent.RateLimiter;
 import com.openlattice.authentication.AuthenticationTest;
 import com.openlattice.authentication.AuthenticationTestRequestOptions;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import java.util.Collection;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.security.core.Authentication;
@@ -89,23 +94,32 @@ public class SetupEnvironment {
         retrofit2 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser2 );
         retrofit3 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser3 );
 
-        PrincipalApi pApi = retrofit.create( PrincipalApi.class );
 
         String idAdmin = (String) jwtAdmin.getPrincipal();
         String idUser1 = (String) jwtUser1.getPrincipal();
         String idUser2 = (String) jwtUser2.getPrincipal();
         String idUser3 = (String) jwtUser3.getPrincipal();
 
-        pApi.activateUser( thAdmin.getAccessToken() );
-        pApi.activateUser( thUser1.getAccessToken() );
-        pApi.activateUser( thUser2.getAccessToken() );
-        pApi.activateUser( thUser3.getAccessToken() );
+        Collection<SecurablePrincipal> rolesAdmin = retrofit.create( PrincipalApi.class ).activateUser( thAdmin.getAccessToken() );
+        Collection<SecurablePrincipal> rolesUser1 = retrofit1.create( PrincipalApi.class ).activateUser( thUser1.getAccessToken() );
+        Collection<SecurablePrincipal> rolesUser2 = retrofit2.create( PrincipalApi.class ).activateUser( thUser2.getAccessToken() );
+        Collection<SecurablePrincipal> rolesUser3 = retrofit3.create( PrincipalApi.class ).activateUser( thUser3.getAccessToken() );
+
+        ensurePrincipalHasPrincipalsWithName( rolesAdmin, "admin" );
+
+        ensurePrincipalHasPrincipalsWithName( rolesAdmin, "AuthenticatedUser" );
+        ensurePrincipalHasPrincipalsWithName( rolesUser1, "AuthenticatedUser" );
+        ensurePrincipalHasPrincipalsWithName( rolesUser2, "AuthenticatedUser" );
+        ensurePrincipalHasPrincipalsWithName( rolesUser3, "AuthenticatedUser" );
+
+
 
         admin = toPrincipal( idAdmin );
         user1 = toPrincipal( idUser1 );
         user2 = toPrincipal( idUser2 );
         user3 = toPrincipal( idUser3 );
     }
+
 
     @Test
     public void testLoadUser() {
@@ -114,7 +128,9 @@ public class SetupEnvironment {
         Assert.assertTrue(adminUser.getRoles().contains( "admin" ) );
     }
 
-
+    public static void ensurePrincipalHasPrincipalsWithName( Collection<SecurablePrincipal> principals, String principalId ){
+        checkState( principals.stream().anyMatch( sp -> sp.getPrincipal().getId().equals( principalId ) ) );
+    }
     private static Principal toPrincipal( String principalId ) {
         return Principals.getUserPrincipal( principalId );
     }
