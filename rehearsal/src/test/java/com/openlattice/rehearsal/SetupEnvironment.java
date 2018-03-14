@@ -30,10 +30,10 @@ import com.openlattice.authentication.AuthenticationTestRequestOptions;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.edm.EdmApi;
 import java.util.Collection;
 import org.junit.Assert;
 import org.junit.Test;
@@ -83,7 +83,6 @@ public class SetupEnvironment {
         TokenHolder thUser2 = AuthenticationTest.tokenHolder( authOptions2 );
         TokenHolder thUser3 = AuthenticationTest.tokenHolder( authOptions3 );
 
-
         String tokenAdmin = (String) jwtAdmin.getCredentials();
         String tokenUser1 = (String) jwtUser1.getCredentials();
         String tokenUser2 = (String) jwtUser2.getCredentials();
@@ -94,16 +93,19 @@ public class SetupEnvironment {
         retrofit2 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser2 );
         retrofit3 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser3 );
 
-
         String idAdmin = (String) jwtAdmin.getPrincipal();
         String idUser1 = (String) jwtUser1.getPrincipal();
         String idUser2 = (String) jwtUser2.getPrincipal();
         String idUser3 = (String) jwtUser3.getPrincipal();
 
-        Collection<SecurablePrincipal> rolesAdmin = retrofit.create( PrincipalApi.class ).activateUser( thAdmin.getAccessToken() );
-        Collection<SecurablePrincipal> rolesUser1 = retrofit1.create( PrincipalApi.class ).activateUser( thUser1.getAccessToken() );
-        Collection<SecurablePrincipal> rolesUser2 = retrofit2.create( PrincipalApi.class ).activateUser( thUser2.getAccessToken() );
-        Collection<SecurablePrincipal> rolesUser3 = retrofit3.create( PrincipalApi.class ).activateUser( thUser3.getAccessToken() );
+        Collection<SecurablePrincipal> rolesAdmin = retrofit.create( PrincipalApi.class )
+                .activateUser( thAdmin.getAccessToken() );
+        Collection<SecurablePrincipal> rolesUser1 = retrofit1.create( PrincipalApi.class )
+                .activateUser( thUser1.getAccessToken() );
+        Collection<SecurablePrincipal> rolesUser2 = retrofit2.create( PrincipalApi.class )
+                .activateUser( thUser2.getAccessToken() );
+        Collection<SecurablePrincipal> rolesUser3 = retrofit3.create( PrincipalApi.class )
+                .activateUser( thUser3.getAccessToken() );
 
         ensurePrincipalHasPrincipalsWithName( rolesAdmin, "admin" );
 
@@ -112,25 +114,43 @@ public class SetupEnvironment {
         ensurePrincipalHasPrincipalsWithName( rolesUser2, "AuthenticatedUser" );
         ensurePrincipalHasPrincipalsWithName( rolesUser3, "AuthenticatedUser" );
 
-
-
         admin = toPrincipal( idAdmin );
         user1 = toPrincipal( idUser1 );
         user2 = toPrincipal( idUser2 );
         user3 = toPrincipal( idUser3 );
-    }
 
+        TestEdmConfigurer.setupDatamodel( retrofit.create( EdmApi.class ) );
+    }
 
     @Test
     public void testLoadUser() {
         PrincipalApi pApi = retrofit.create( PrincipalApi.class );
         Auth0UserBasic adminUser = pApi.getUser( admin.getId() );
-        Assert.assertTrue(adminUser.getRoles().contains( "admin" ) );
+        Assert.assertTrue( adminUser.getRoles().contains( "admin" ) );
     }
 
-    public static void ensurePrincipalHasPrincipalsWithName( Collection<SecurablePrincipal> principals, String principalId ){
+    public static void ensurePrincipalHasPrincipalsWithName(
+            Collection<SecurablePrincipal> principals,
+            String principalId ) {
         checkState( principals.stream().anyMatch( sp -> sp.getPrincipal().getId().equals( principalId ) ) );
     }
+
+    protected static <T> T getApiAdmin( Class<T> clazz ) {
+        return retrofit.create( clazz );
+    }
+
+    protected static <T> T getApiUser1( Class<T> clazz ) {
+        return retrofit1.create( clazz );
+    }
+
+    protected static <T> T getApiUser2( Class<T> clazz ) {
+        return retrofit2.create( clazz );
+    }
+
+    protected static <T> T getApiUser3( Class<T> clazz ) {
+        return retrofit3.create( clazz );
+    }
+
     private static Principal toPrincipal( String principalId ) {
         return Principals.getUserPrincipal( principalId );
     }
