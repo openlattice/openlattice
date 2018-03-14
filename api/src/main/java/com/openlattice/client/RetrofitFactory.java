@@ -23,9 +23,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import com.dataloom.mappers.ObjectMappers;
-import com.dataloom.retrofit.LoomByteConverterFactory;
-import com.dataloom.retrofit.LoomCallAdapterFactory;
-import com.dataloom.retrofit.LoomJacksonConverterFactory;
+import com.openlattice.retrofit.LoomByteConverterFactory;
+import com.openlattice.retrofit.LoomCallAdapterFactory;
+import com.openlattice.retrofit.LoomJacksonConverterFactory;
 
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;

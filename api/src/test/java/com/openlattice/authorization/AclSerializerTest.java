@@ -18,8 +18,7 @@
 
 package com.openlattice.authorization;
 
-import com.dataloom.serializer.AbstractJacksonSerializationTest;
-import com.openlattice.authorization.Acl;
+import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import org.junit.BeforeClass;
 
 import com.openlattice.data.serializers.FullQualifedNameJacksonDeserializer;

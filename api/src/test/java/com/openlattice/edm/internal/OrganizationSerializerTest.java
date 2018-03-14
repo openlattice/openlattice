@@ -18,7 +18,7 @@
 
 package com.openlattice.edm.internal;
 
-import com.dataloom.serializer.AbstractJacksonSerializationTest;
+import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import org.junit.BeforeClass;
 
 import com.openlattice.data.serializers.FullQualifedNameJacksonDeserializer;

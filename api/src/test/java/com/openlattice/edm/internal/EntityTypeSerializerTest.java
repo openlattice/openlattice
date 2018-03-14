@@ -28,7 +28,7 @@ import com.openlattice.data.serializers.FullQualifedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifedNameJacksonSerializer;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.mapstores.TestDataFactory;
-import com.dataloom.serializer.AbstractJacksonSerializationTest;
+import com.openlattice.serializer.AbstractJacksonSerializationTest;
 
 public class EntityTypeSerializerTest extends AbstractJacksonSerializationTest<EntityType> {
 
