@@ -372,7 +372,9 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<EntityDataKey, EntityDataValue> entityDataMapstore() {
-        return new DataMapstoreProxy( hikariDataSource,
+        return new DataMapstoreProxy(
+                ptMgr,
+                hikariDataSource,
                 propertyTypeMapstore(),
                 entitySetMapstore(),
                 entityTypeMapstore() );
