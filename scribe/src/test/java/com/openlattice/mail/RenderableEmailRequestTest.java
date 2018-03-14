@@ -22,7 +22,7 @@ package com.openlattice.mail;
 
 import java.util.Map;
 
-import com.dataloom.serializer.AbstractJacksonSerializationTest;
+import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
