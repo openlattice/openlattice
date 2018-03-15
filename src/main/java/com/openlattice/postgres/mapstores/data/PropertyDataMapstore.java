@@ -65,13 +65,19 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
         throw new IllegalStateException( "Value column was not assigned." );
     }
 
+
     @Override protected List<PostgresColumnDefinition> initKeyColumns() {
-        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
-            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
-                return ImmutableList.of( ID_VALUE, pcd );
-            }
-        }
-        throw new IllegalStateException( "No matching value column for initialization." );
+//        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
+//            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
+//                return ImmutableList.of( ID_VALUE, pcd );
+//            }
+//        }
+//        throw new IllegalStateException( "No matching value column for initialization." );
+        return ImmutableList.of(ID_VALUE);
+    }
+
+    @Override protected String buildInsertQuery() {
+        return super.buildInsertQuery();
     }
 
     @Override protected Optional<String> buildOnConflictQuery() {
@@ -91,12 +97,12 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
     }
 
     @Override protected List<PostgresColumnDefinition> initValueColumns() {
-//        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
-//            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
-                return ImmutableList.of( VERSION, VERSIONS, LAST_WRITE );
-//            }
-//        }
-//        throw new IllegalStateException( "No matching value column for initialization." );
+        //        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
+        //            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
+        return ImmutableList.of( VERSION, VERSIONS, LAST_WRITE );
+        //            }
+        //        }
+        //        throw new IllegalStateException( "No matching value column for initialization." );
         //        return ImmutableList.copyOf( Sets.difference( table.getColumns(), ImmutableSet.of( ID_VALUE ) ) );
     }
 

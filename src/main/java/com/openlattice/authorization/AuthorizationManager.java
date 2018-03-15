@@ -95,6 +95,7 @@ public interface AuthorizationManager {
 
     Acl getAllSecurableObjectPermissions( AclKey key );
 
+    
     Stream<AclKey> getAuthorizedObjectsOfType(
             Principal principal,
             SecurableObjectType objectType,
