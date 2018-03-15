@@ -30,19 +30,19 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
-public class FullQualifedNameJacksonSerializer extends StdSerializer<FullQualifiedName> {
+public class FullQualifiedNameJacksonSerializer extends StdSerializer<FullQualifiedName> {
     private static final long         serialVersionUID = 642017294181795076L;
     private static final SimpleModule module           = new SimpleModule();
 
     static {
-        module.addSerializer( FullQualifiedName.class, new FullQualifedNameJacksonSerializer() );
+        module.addSerializer( FullQualifiedName.class, new FullQualifiedNameJacksonSerializer() );
     }
 
-    public FullQualifedNameJacksonSerializer() {
+    public FullQualifiedNameJacksonSerializer() {
         this( FullQualifiedName.class );
     }
 
-    public FullQualifedNameJacksonSerializer( Class<FullQualifiedName> clazz ) {
+    public FullQualifiedNameJacksonSerializer( Class<FullQualifiedName> clazz ) {
         super( clazz );
     }
 

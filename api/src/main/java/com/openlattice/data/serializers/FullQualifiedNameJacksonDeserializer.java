@@ -31,20 +31,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 
-public class FullQualifedNameJacksonDeserializer extends StdDeserializer<FullQualifiedName> {
+public class FullQualifiedNameJacksonDeserializer extends StdDeserializer<FullQualifiedName> {
     private static final long serialVersionUID = 4245054290957537357L;
 
-    protected FullQualifedNameJacksonDeserializer() {
+    protected FullQualifiedNameJacksonDeserializer() {
         this( null );
     }
 
-    public FullQualifedNameJacksonDeserializer( Class<FullQualifiedName> clazz ) {
+    public FullQualifiedNameJacksonDeserializer( Class<FullQualifiedName> clazz ) {
         super( clazz );
     }
 
     public static void registerWithMapper( ObjectMapper mapper ) {
         SimpleModule module = new SimpleModule();
-        module.addDeserializer( FullQualifiedName.class, new FullQualifedNameJacksonDeserializer() );
+        module.addDeserializer( FullQualifiedName.class, new FullQualifiedNameJacksonDeserializer() );
         mapper.registerModule( module );
     }
 

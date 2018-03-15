@@ -18,8 +18,10 @@
 
 package com.openlattice.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.client.serialization.SerializableSupplier;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.dataloom.mappers.ObjectMappers;
@@ -35,6 +37,8 @@ public final class RetrofitFactory {
     private static final String STAGING_BASE_URL = "https://api.staging.openlattice.com/";
     private static final String LOCAL_BASE_URL   = "http://localhost:8080/";
     private static final String TESTING_BASE_URL = "http://localhost:8080/";
+
+    private static final ObjectMapper jsonMapper = ObjectMappers.getJsonMapper();
 
     private RetrofitFactory() {}
 
@@ -91,7 +95,7 @@ public final class RetrofitFactory {
 
     public static final Retrofit.Builder decorateWithLoomFactories( Retrofit.Builder builder ) {
         return builder.addConverterFactory( new LoomByteConverterFactory() )
-                .addConverterFactory( new LoomJacksonConverterFactory( ObjectMappers.getJsonMapper() ) )
+                .addConverterFactory( new LoomJacksonConverterFactory( jsonMapper ) )
                 .addCallAdapterFactory( new LoomCallAdapterFactory() );
     }
     public static final OkHttpClient.Builder okhttpClientWithLoomAuth( Supplier<String> jwtToken ) {
@@ -104,4 +108,7 @@ public final class RetrofitFactory {
                 .connectTimeout( 0, TimeUnit.MILLISECONDS );
     }
 
+    public static void configureObjectMapper( Consumer<ObjectMapper> c ) {
+        c.accept( jsonMapper );
+    }
 }

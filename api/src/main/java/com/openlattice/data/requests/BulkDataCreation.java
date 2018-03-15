@@ -20,8 +20,8 @@ package com.openlattice.data.requests;
 
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
-import com.openlattice.data.serializers.FullQualifedNameJacksonDeserializer;
-import com.openlattice.data.serializers.FullQualifedNameJacksonSerializer;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.dataloom.mappers.ObjectMappers;
 import com.esotericsoftware.kryo.Kryo;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -54,8 +54,8 @@ public class BulkDataCreation implements Serializable {
     } );
 
     static {
-        FullQualifedNameJacksonSerializer.registerWithMapper( ObjectMappers.getJsonMapper() );
-        FullQualifedNameJacksonDeserializer.registerWithMapper( ObjectMappers.getJsonMapper() );
+        FullQualifiedNameJacksonSerializer.registerWithMapper( ObjectMappers.getJsonMapper() );
+        FullQualifiedNameJacksonDeserializer.registerWithMapper( ObjectMappers.getJsonMapper() );
     }
 
     private Set<UUID>        tickets;
