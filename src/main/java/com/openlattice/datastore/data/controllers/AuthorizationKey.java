@@ -20,19 +20,16 @@
 
 package com.openlattice.datastore.data.controllers;
 
-import java.util.UUID;
-
 import com.openlattice.authorization.Principal;
+import java.util.UUID;
 
 public class AuthorizationKey {
     private final Principal user;
     private final UUID      entitySetId;
-    private final UUID      syncId;
 
-    public AuthorizationKey( Principal user, UUID entitySetId, UUID syncId ) {
+    public AuthorizationKey( Principal user, UUID entitySetId ) {
         this.user = user;
         this.entitySetId = entitySetId;
-        this.syncId = syncId;
     }
 
     public Principal getUser() {
@@ -41,10 +38,6 @@ public class AuthorizationKey {
 
     public UUID getEntitySetId() {
         return entitySetId;
-    }
-
-    public UUID getSyncId() {
-        return syncId;
     }
 
 }

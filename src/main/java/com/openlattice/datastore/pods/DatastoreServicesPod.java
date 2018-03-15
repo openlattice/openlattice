@@ -46,8 +46,8 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.ids.HazelcastEntityKeyIdService;
-import com.openlattice.data.serializers.FullQualifedNameJacksonDeserializer;
-import com.openlattice.data.serializers.FullQualifedNameJacksonSerializer;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.AnalysisService;
@@ -116,8 +116,8 @@ public class DatastoreServicesPod {
     @Bean
     public ObjectMapper defaultObjectMapper() {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
-        FullQualifedNameJacksonSerializer.registerWithMapper( mapper );
-        FullQualifedNameJacksonDeserializer.registerWithMapper( mapper );
+        FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
+        FullQualifiedNameJacksonDeserializer.registerWithMapper( mapper );
         return mapper;
     }
 

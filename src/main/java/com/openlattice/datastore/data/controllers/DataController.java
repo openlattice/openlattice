@@ -53,6 +53,7 @@ import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.processors.EdmPrimitiveTypeKindGetter;
 import com.openlattice.edm.type.PropertyType;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -231,24 +232,23 @@ public class DataController implements DataApi, AuthorizingComponent {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.WRITE ) ) ) {
-            // To avoid re-doing authz check more of than once every 250 ms during an integration we cache the
-            // results.cd ../
-            AuthorizationKey ak = new AuthorizationKey( Principals.getCurrentUser(), entitySetId, syncId );
+            AuthorizationKey ak = new AuthorizationKey( Principals.getCurrentUser(), entitySetId );
 
-            Set<UUID> authorizedProperties = authorizedPropertyCache.getUnchecked( ak );
+            authzHelper.getAuthorizedPropertiesOnEntitySet( entitySetId, EnumSet.of( Permission.WRITE ) );
 
+            //Check authz
+            Set<UUID> authorizedProperties = authzHelper
+                    .getAuthorizedPropertiesOnEntitySet( entitySetId, EnumSet.of( Permission.WRITE ) );
             Set<UUID> keyProperties = dms.getEntityTypeByEntitySetId( entitySetId ).getKey();
 
             if ( !authorizedProperties.containsAll( keyProperties ) ) {
-                throw new ForbiddenException(
-                        "Insufficient permissions to write to some of the key property types of the entity set." );
+                throw new ForbiddenException( "You shall not pass" );
             }
 
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType;
 
             try {
-                authorizedPropertiesWithDataType = primitiveTypeKinds
-                        .getAll( authorizedProperties );
+                authorizedPropertiesWithDataType = primitiveTypeKinds.getAll( authorizedProperties );
             } catch ( ExecutionException e ) {
                 logger.error(
                         "Unable to load data types for authorized properties for user " + Principals.getCurrentUser()
@@ -262,7 +262,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
             }
         } else {
-            throw new ForbiddenException( "Insufficient permissions to write to the entity set or it doesn't exists." );
+            throw new ForbiddenException( "You shall not pass!" );
         }
         return null;
     }
@@ -301,8 +301,9 @@ public class DataController implements DataApi, AuthorizingComponent {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.WRITE ) ) ) {
-            AuthorizationKey ak = new AuthorizationKey( Principals.getCurrentUser(), entitySetId, syncId );
-            Set<UUID> authorizedProperties = authorizedPropertyCache.getUnchecked( ak );
+            //            AuthorizationKey ak = new AuthorizationKey( Principals.getCurrentUser(), entitySetId, syncId );
+            Set<UUID> authorizedProperties = authzHelper
+                    .getAuthorizedPropertiesOnEntitySet( entitySetId, EnumSet.of( Permission.WRITE ) );
 
             Set<UUID> keyProperties = dms.getEntityTypeByEntitySetId( entitySetId ).getKey();
 
@@ -377,9 +378,10 @@ public class DataController implements DataApi, AuthorizingComponent {
                 EnumSet.of( Permission.WRITE ) ) ) {
             // To avoid re-doing authz check more of than once every 250 ms during an integration we cache the
             // results.cd ../
-            AuthorizationKey ak = new AuthorizationKey( Principals.getCurrentUser(), entitySetId, syncId );
-
-            Set<UUID> authorizedProperties = authorizedPropertyCache.getUnchecked( ak );
+            //            AuthorizationKey ak = new AuthorizationKey( Principals.getCurrentUser(), entitySetId, syncId );
+            //problem is that we are checking all properties
+            Set<UUID> authorizedProperties = authzHelper
+                    .getAuthorizedPropertiesOnEntitySet( entitySetId, EnumSet.of( Permission.WRITE ) );
 
             Set<UUID> keyProperties = dms.getEntityTypeByEntitySetId( entitySetId ).getKey();
 
@@ -584,5 +586,9 @@ public class DataController implements DataApi, AuthorizingComponent {
             response.setHeader( "Content-Disposition",
                     "attachment; filename=" + fileName + "." + fileType.toString() );
         }
+    }
+
+    private static Set<UUID> requiredPropertyAuthorizations( Collection<SetMultimap<UUID, Object>> entities ) {
+        return entities.stream().map( SetMultimap::keySet ).flatMap( Set::stream ).collect( Collectors.toSet() );
     }
 }

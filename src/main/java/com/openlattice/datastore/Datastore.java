@@ -28,8 +28,8 @@ import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.conductor.codecs.pods.TypeCodecsPod;
-import com.openlattice.data.serializers.FullQualifedNameJacksonDeserializer;
-import com.openlattice.data.serializers.FullQualifedNameJacksonSerializer;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.datastore.pods.DatastoreSecurityPod;
 import com.openlattice.datastore.pods.DatastoreServicesPod;
 import com.openlattice.datastore.pods.DatastoreServletsPod;
@@ -57,8 +57,8 @@ public class Datastore extends BaseRhizomeServer {
     };
 
     static {
-        ObjectMappers.foreach( FullQualifedNameJacksonSerializer::registerWithMapper );
-        ObjectMappers.foreach( FullQualifedNameJacksonDeserializer::registerWithMapper );
+        ObjectMappers.foreach( FullQualifiedNameJacksonSerializer::registerWithMapper );
+        ObjectMappers.foreach( FullQualifiedNameJacksonDeserializer::registerWithMapper );
         ObjectMappers.foreach( mapper -> mapper.disable( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS ) );
     }
 
