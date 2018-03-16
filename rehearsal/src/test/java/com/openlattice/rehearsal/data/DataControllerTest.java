@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
+import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.mapstores.TestDataFactory;
@@ -53,8 +54,9 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         dataApi.createEntityData( es.getId(),
                 syncId,
                 TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ) );
-
-        Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi.loadEntitySetData( es.getId(), null, "" );
+        EntitySetSelection ess = new EntitySetSelection( Optional.of( syncId ), Optional.of( et.getProperties() ) );
+        Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi
+                .loadEntitySetData( es.getId(), ess, FileType.json );
         Assert.assertEquals( numberOfEntries, Iterables.size( results ) );
     }
 

@@ -31,6 +31,8 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.client.RetrofitFactory;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.EdmApi;
@@ -44,7 +46,7 @@ import retrofit2.Retrofit;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class SetupEnvironment {
-    protected static final AuthenticationTestRequestOptions authOptions = new AuthenticationTestRequestOptions()
+    protected static final AuthenticationTestRequestOptions authOptions  = new AuthenticationTestRequestOptions()
             .setUsernameOrEmail( "tests@openlattice.com" )
             .setPassword( "openlattice" );
     protected static final AuthenticationTestRequestOptions authOptions1 = new AuthenticationTestRequestOptions()
@@ -87,6 +89,9 @@ public class SetupEnvironment {
         String tokenUser1 = (String) jwtUser1.getCredentials();
         String tokenUser2 = (String) jwtUser2.getCredentials();
         String tokenUser3 = (String) jwtUser3.getCredentials();
+
+        RetrofitFactory.configureObjectMapper( FullQualifiedNameJacksonSerializer::registerWithMapper );
+        RetrofitFactory.configureObjectMapper( FullQualifiedNameJacksonDeserializer::registerWithMapper );
 
         retrofit = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenAdmin );
         retrofit1 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser1 );
