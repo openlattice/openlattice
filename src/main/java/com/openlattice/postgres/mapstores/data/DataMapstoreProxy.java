@@ -21,6 +21,7 @@
 package com.openlattice.postgres.mapstores.data;
 
 import com.dataloom.streams.StreamUtil;
+import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
@@ -56,7 +57,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
     public static final  String VERSION           = "version";
     public static final  String LAST_WRITE        = "lastWrite";
     public static final  String LAST_INDEX        = "lastIndex";
-    public static final  String KEY_ENTITY_SET_ID = "key#entitySetId";
+    public static final  String KEY_ENTITY_SET_ID = "__key#entitySetId";
     private static final Logger logger            = LoggerFactory.getLogger( DataMapstoreProxy.class );
     private final Map<UUID, EntityDataMapstore>              entitySetMapstores; //Entity Set ID -> Mapstore for Entity Set Table
     private final Map<UUID, Map<UUID, PropertyDataMapstore>> propertyDataMapstores;
@@ -214,7 +215,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
                     .computeIfAbsent( entitySetId, esId -> new HashMap<>() )
                     .computeIfAbsent( propertyTypeId, ptId -> newPropertyDataMapstore( entitySetId, ptId ) );
             final Map<Object, PropertyMetadata> propertiesOfType = propertyDataMapstore.load( entityKeyId );
-            properties.put( propertyTypeId, propertiesOfType );
+            properties.put( propertyTypeId, propertiesOfType == null ? new HashMap<>() : propertiesOfType );
         }
 
         return new EntityDataValue( metadata, properties );
