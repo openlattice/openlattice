@@ -23,6 +23,7 @@ package com.openlattice.rehearsal.data;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.EntitySet;
@@ -50,14 +51,14 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         EntityType et = createEntityType();
         EntitySet es = createEntitySet( et );
         UUID syncId = syncApi.getCurrentSyncId( es.getId() );
-
-        dataApi.createEntityData( es.getId(),
-                syncId,
-                TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ) );
+        Map<String, SetMultimap<UUID, Object>> testData = TestDataFactory
+                .randomStringEntityData( numberOfEntries, et.getProperties() );
+        dataApi.createEntityData( es.getId(), syncId, testData );
         EntitySetSelection ess = new EntitySetSelection( Optional.of( syncId ), Optional.of( et.getProperties() ) );
-        Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi
-                .loadEntitySetData( es.getId(), ess, FileType.json );
-        Assert.assertEquals( numberOfEntries, Iterables.size( results ) );
+        Set<SetMultimap<FullQualifiedName, Object>> results = Sets.newHashSet( dataApi
+                .loadEntitySetData( es.getId(), ess, FileType.json ) );
+
+        Assert.assertEquals( numberOfEntries, results.size() );
     }
 
     @Test

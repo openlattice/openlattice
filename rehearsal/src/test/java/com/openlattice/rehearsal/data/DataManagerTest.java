@@ -66,6 +66,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+//TODO: Make these tests useful.
 public class DataManagerTest extends SetupEnvironment {
     protected static final Set<String> PROFILES = Sets.newHashSet( "local", "cassandra" );
 
@@ -102,6 +103,7 @@ public class DataManagerTest extends SetupEnvironment {
     }
 
     @Test
+    @Ignore
     public void testWriteAndRead() {
         final UUID entitySetId = UUID.randomUUID();
         final UUID syncId = UUIDs.timeBased();
@@ -133,6 +135,7 @@ public class DataManagerTest extends SetupEnvironment {
     }
 
     @Test
+    @Ignore
     public void testWriteAndDelete() {
         final UUID entitySetId = UUID.randomUUID();
         final UUID firstSyncId = UUIDs.timeBased();
@@ -155,10 +158,16 @@ public class DataManagerTest extends SetupEnvironment {
         edmApi.deleteEntitySet( entitySetId );
         //        dataService.deleteEntitySetData( entitySetId );
 
-        Assert.assertEquals( 0, testReadData( secondSyncId,
-                entitySetId,
-                orderedPropertyNames,
-                propertyTypes ).size() );
+        Assert.assertNull( dataApi.loadEntitySetData( entitySetId,
+                new EntitySetSelection( Optional.of( firstSyncId ), Optional.of( propertyTypes.keySet() ) ),
+                FileType.json ) );
+        Assert.assertNull( dataApi.loadEntitySetData( entitySetId,
+                new EntitySetSelection( Optional.of( secondSyncId ), Optional.of( propertyTypes.keySet() ) ),
+                FileType.json ) );
+//        Assert.assertEquals( 0, testReadData( secondSyncId,
+//                entitySetId,
+//                orderedPropertyNames,
+//                propertyTypes ).size() );
     }
 
     @Ignore
