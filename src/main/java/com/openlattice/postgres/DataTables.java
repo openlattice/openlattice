@@ -33,6 +33,10 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.PostgresEdmTypeConverter;
 import com.openlattice.edm.type.PropertyType;
+import io.netty.buffer.ByteBuf;
+import java.nio.ByteBuffer;
+import java.util.Base64;
+import java.util.Base64.Encoder;
 import java.util.Map;
 import java.util.UUID;
 
@@ -57,13 +61,23 @@ public class DataTables {
             "owners",
             PostgresDatatype.UUID );
     private static final Map<UUID, PostgresTableDefinition> ES_TABLES   = Maps.newConcurrentMap();
-
+    private static final Encoder encoder = Base64.getEncoder();
     public static String propertyTableName( UUID entitySetId, UUID propertyTypeId ) {
-        return entitySetId.toString() + "_" + propertyTypeId.toString();
+        ByteBuffer buffer = ByteBuffer.wrap( new byte[32] );
+        buffer.putLong( entitySetId.getLeastSignificantBits() );
+        buffer.putLong( entitySetId.getMostSignificantBits() );
+        buffer.putLong( propertyTypeId.getLeastSignificantBits() );
+        buffer.putLong( propertyTypeId.getMostSignificantBits() );
+        return encoder.encodeToString( buffer.array() );
+//        return entitySetId.toString() + "_" + propertyTypeId.toString();
     }
 
     public static String entityTableName( UUID entitySetId ) {
-        return entitySetId.toString();
+        ByteBuffer buffer = ByteBuffer.wrap( new byte[16] );
+        buffer.putLong( entitySetId.getLeastSignificantBits() );
+        buffer.putLong( entitySetId.getMostSignificantBits() );
+        return encoder.encodeToString( buffer.array() );
+//        return entitySetId.toString();
     }
 
     public static String quote( String s ) {
@@ -148,7 +162,7 @@ public class DataTables {
                 .desc();
 
         //TODO: Re-consider the value of having gin index on versions field. Checking if a value was written
-        //in a specific ersion seems like a rare operations
+        //in a specific version seems like a rare operations
         PostgresIndexDefinition versionsIndex = new PostgresIndexDefinition( ptd, VERSIONS )
                 .name( quote( idxPrefix + "_versions_idx" ) )
                 .method( IndexMethod.GIN )

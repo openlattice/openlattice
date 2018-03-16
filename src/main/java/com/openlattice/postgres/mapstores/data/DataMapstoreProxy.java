@@ -21,7 +21,6 @@
 package com.openlattice.postgres.mapstores.data;
 
 import com.dataloom.streams.StreamUtil;
-import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
@@ -109,7 +108,9 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
         //        logger.info( "Finished with table creation for entity set: {}", es.getName() );
         PostgresTableDefinition table = DataTables.buildEntitySetTableDefinition( entitySetId );
         try {
-            pgTableMgr.registerTables( table );
+            synchronized ( pgTableMgr ) {
+                pgTableMgr.registerTables( table );
+            }
         } catch ( SQLException e ) {
             logger.error( "Unable to register entity set table {}", table, e );
         }
@@ -244,7 +245,9 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
         PropertyType propertyType = propertyTypes.load( propertyTypeId );
         PostgresTableDefinition table = DataTables.buildPropertyTableDefinition( entitySetId, propertyType );
         try {
-            pgTableMgr.registerTables( table );
+            synchronized ( pgTableMgr ) {
+                pgTableMgr.registerTables( table );
+            }
         } catch ( SQLException e ) {
             logger.error( "Unable to register property type table {}.", table, e );
         }

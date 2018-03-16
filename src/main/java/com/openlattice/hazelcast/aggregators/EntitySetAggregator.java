@@ -5,16 +5,22 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDataValue;
 import com.openlattice.hazelcast.stream.HazelcastStreamSink;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class EntitySetAggregator extends HazelcastStreamSink<EntityDataKey, EntityDataValue, Long, EntityDataValue> {
-    private long count = 0;
+    private long count;
 
     public EntitySetAggregator( UUID streamId ) {
+        this( streamId,0 );
+    }
+
+    public EntitySetAggregator( UUID streamId, long count ) {
         super( streamId );
+        this.count = count;
     }
 
     @Override public void accumulate( Entry<EntityDataKey, EntityDataValue> input ) {
@@ -26,7 +32,30 @@ public class EntitySetAggregator extends HazelcastStreamSink<EntityDataKey, Enti
         count += ( (EntitySetAggregator) aggregator ).count;
     }
 
-    @Override public Long aggregate() {
+    public long getCount() {
         return count;
+    }
+
+    @Override public Long aggregate() {
+        close();
+        return count;
+    }
+
+    @Override public String toString() {
+        return "EntitySetAggregator{" +
+                "count=" + count +
+                '}';
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof EntitySetAggregator ) ) { return false; }
+        EntitySetAggregator that = (EntitySetAggregator) o;
+        return count == that.count;
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( count );
     }
 }

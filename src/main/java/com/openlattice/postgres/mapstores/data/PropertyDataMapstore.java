@@ -54,14 +54,7 @@ import org.apache.commons.lang.RandomStringUtils;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<UUID, Object, PropertyMetadata> {
-    private final Supplier<PostgresColumnDefinition> valueColumn = Suppliers.memoize( () -> {
-        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
-            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
-                return pcd;
-            }
-        }
-        throw new IllegalStateException( "No matching value column for initialization." );
-    } );
+    private Supplier<PostgresColumnDefinition> valueColumn;
 
     public PropertyDataMapstore( PostgresTableDefinition table, HikariDataSource hds ) {
         //Table name doesn't matter as these aer used for configuring maps.
@@ -69,13 +62,18 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
 
     }
 
-    @Override protected List<PostgresColumnDefinition> initKeyColumns() {
-        //        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
-        //            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
-        //                return ImmutableList.of( ID_VALUE, pcd );
-        //            }
-        //        }
+    @Override protected void initMapstore() {
+        valueColumn = Suppliers.memoize( () -> {
+            for ( PostgresColumnDefinition pcd : table.getColumns() ) {
+                if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
+                    return pcd;
+                }
+            }
+            throw new IllegalStateException( "No matching value column for initialization." );
+        } );
+    }
 
+    @Override protected List<PostgresColumnDefinition> initKeyColumns() {
         return ImmutableList.of( ID_VALUE );
     }
 
@@ -95,13 +93,7 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
     }
 
     @Override protected List<PostgresColumnDefinition> initValueColumns() {
-        for ( PostgresColumnDefinition pcd : table.getColumns() ) {
-            if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
-                return ImmutableList.of( pcd, VERSION, VERSIONS, LAST_WRITE );
-            }
-        }
-        throw new IllegalStateException( "No matching value column for initialization." );
-        //        return ImmutableList.copyOf( Sets.difference( table.getColumns(), ImmutableSet.of( ID_VALUE ) ) );
+        return ImmutableList.of( valueColumn.get(), VERSION, VERSIONS, LAST_WRITE );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, Object subKey, PropertyMetadata value )

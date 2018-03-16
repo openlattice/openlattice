@@ -8,6 +8,7 @@ import com.hazelcast.query.Predicate;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDataValue;
 import com.openlattice.hazelcast.aggregators.EntitySetAggregator;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -22,6 +23,7 @@ public class EntitySetHazelcastStream extends HazelcastStream<EntityDataValue, E
             ListeningExecutorService executorService,
             IMap<EntityDataKey, EntityDataValue> map,
             Predicate p ) {
-        return executorService.submit( () -> map.aggregate( new EntitySetAggregator( getStreamId() ), p ) );
+        final UUID streamId = getStreamId();
+        return executorService.submit( () -> map.aggregate( new EntitySetAggregator( streamId ), p ) );
     }
 }
