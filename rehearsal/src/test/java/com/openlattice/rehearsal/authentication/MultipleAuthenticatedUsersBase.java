@@ -107,6 +107,24 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
      * Helper methods for EdmApi
      */
 
+    public static PropertyType createDatePropertyType() {
+        PropertyType pt = TestDataFactory.datePropertyType();
+        UUID propertyTypeId = edmApi.createPropertyType( pt );
+
+        Assert.assertNotNull( "Property type creation returned null value.", propertyTypeId );
+
+        return pt;
+    }
+
+    public static PropertyType createDateTimePropertyType() {
+        PropertyType pt = TestDataFactory.dateTimePropertyType();
+        UUID propertyTypeId = edmApi.createPropertyType( pt );
+
+        Assert.assertNotNull( "Property type creation returned null value.", propertyTypeId );
+
+        return pt;
+    }
+
     public static PropertyType createPropertyType() {
         PropertyType pt = TestDataFactory.propertyType();
         UUID propertyTypeId = edmApi.createPropertyType( pt );

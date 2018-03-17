@@ -21,6 +21,8 @@
 package com.openlattice.rehearsal.data;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -28,14 +30,19 @@ import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -59,6 +66,43 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
                 .loadEntitySetData( es.getId(), ess, FileType.json ) );
 
         Assert.assertEquals( numberOfEntries, results.size() );
+    }
+
+    @Test
+    public void testDateTypes() {
+        PropertyType p1 = createDateTimePropertyType();
+        PropertyType k = createPropertyType();
+        PropertyType p2 = createDatePropertyType();
+
+        EntityType et = TestDataFactory.entityType( k );
+
+        et.removePropertyTypes( et.getProperties() );
+        et.addPropertyTypes( ImmutableSet.of( k.getId(), p1.getId(), p2.getId() ) );
+
+        UUID entityTypeId = edmApi.createEntityType( et );
+        Assert.assertNotNull( "Entity type creation shouldn't return null UUID.", entityTypeId );
+
+        EntitySet es = createEntitySet( et );
+        UUID syncId = syncApi.getCurrentSyncId( es.getId() );
+
+        Map<String, SetMultimap<UUID, Object>> testData = new HashMap<>();
+        LocalDate d = LocalDate.now();
+        OffsetDateTime odt = OffsetDateTime.now();
+        testData.put( UUID.randomUUID().toString(),
+                ImmutableSetMultimap
+                        .of( p1.getId(), odt, p2.getId(), d, k.getId(), RandomStringUtils.randomAlphanumeric( 5 ) ) );
+        dataApi.createEntityData( es.getId(), syncId, testData );
+        EntitySetSelection ess = new EntitySetSelection( Optional.of( syncId ), Optional.of( et.getProperties() ) );
+        Set<SetMultimap<FullQualifiedName, Object>> results = Sets.newHashSet( dataApi
+                .loadEntitySetData( es.getId(), ess, FileType.json ) );
+
+        Assert.assertEquals( testData.size(), results.size() );
+        SetMultimap<FullQualifiedName, Object> result = results.iterator().next();
+        OffsetDateTime p1v = OffsetDateTime.parse( (CharSequence) result.get( p1.getType() ) );
+        LocalDate p2v = LocalDate.parse( (CharSequence) result.get( p2.getType() ) );
+
+        Assert.assertEquals( odt, p1v );
+        Assert.assertEquals( d, p2v );
     }
 
     @Test
