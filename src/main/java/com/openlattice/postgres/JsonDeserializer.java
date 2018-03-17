@@ -85,7 +85,7 @@ public class JsonDeserializer {
                         dataType,
                         propertyTypeId,
                         value.getClass() );
-                OffsetDateTime.parse( (String) value );
+                return OffsetDateTime.parse( (String) value );
             case Duration:
                 checkState( value instanceof String,
                         "Expected string for property type %s with data %s,  received %s",
