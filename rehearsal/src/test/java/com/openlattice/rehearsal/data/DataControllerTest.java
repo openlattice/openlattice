@@ -98,8 +98,8 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
 
         Assert.assertEquals( testData.size(), results.size() );
         SetMultimap<FullQualifiedName, Object> result = results.iterator().next();
-        OffsetDateTime p1v = OffsetDateTime.parse( (CharSequence) result.get( p1.getType() ) );
-        LocalDate p2v = LocalDate.parse( (CharSequence) result.get( p2.getType() ) );
+        OffsetDateTime p1v = OffsetDateTime.parse( (CharSequence) result.get( p1.getType() ).iterator().next() );
+        LocalDate p2v = LocalDate.parse( (CharSequence) result.get( p2.getType() ).iterator().next() );
 
         Assert.assertEquals( odt, p1v );
         Assert.assertEquals( d, p2v );
