@@ -177,7 +177,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Collection<UUID> ids,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         Map<UUID, EntityKey> entityKeyIds = idService.getEntityKeys( ImmutableSet.copyOf( ids ) );
-        Predicate entitiesPredicate = EntitySetPredicates.entities( ids );
+        //Predicate entitiesPredicate = EntitySetPredicates.entities( ids );
 
         return ids.stream()
                 .map( id -> {
