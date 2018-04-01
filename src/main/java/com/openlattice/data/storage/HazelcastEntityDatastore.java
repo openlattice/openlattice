@@ -28,6 +28,7 @@ import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -36,7 +37,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.query.Predicate;
 import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
@@ -46,14 +46,10 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.data.PropertyMetadata;
-import com.openlattice.data.aggregators.EntitiesAggregator;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
-import com.openlattice.data.hazelcast.DataKey;
-import com.openlattice.data.hazelcast.Entities;
 import com.openlattice.data.hazelcast.EntityKeyHazelcastStream;
-import com.openlattice.data.hazelcast.EntitySets;
 import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.type.PropertyType;
@@ -90,7 +86,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private final DatasourceManager dsm;
 
     private final HazelcastInstance                    hazelcastInstance;
-    private final IMap<DataKey, ByteBuffer>            data;
     private final IMap<EntityDataKey, EntityDataValue> entities;
     private final EntityKeyIdService                   idService;
     private final ListeningExecutorService             executor;
@@ -104,7 +99,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             ObjectMapper mapper,
             EntityKeyIdService idService,
             DatasourceManager dsm ) {
-        this.data = hazelastInstance.getMap( HazelcastMap.DATA.name() );
         this.entities = hazelastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
 
         this.mapper = mapper;
@@ -181,13 +175,15 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     public Stream<SetMultimap<Object, Object>> getEntities(
             Collection<UUID> ids,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        Predicate entitiesFilter = EntitySets.getEntities( ids );
-        Entities entities = data.aggregate( new EntitiesAggregator(), entitiesFilter );
+        Map<UUID, EntityKey> entityKeyIds = idService.getEntityKeys( ImmutableSet.copyOf( ids ) );
 
         return ids.stream()
                 .map( id -> {
-                    SetMultimap<Object, Object> entity = untypedFromEntityBytes( id,
-                            entities.get( id ),
+                    final EntityKey entityKey = entityKeyIds.get( id );
+                    final EntityDataKey entityDataKey = new EntityDataKey( entityKey.getEntitySetId(), id );
+                    EntityDataValue edv = entities.get( entityDataKey );
+                    SetMultimap<Object, Object> entity = fromEntityDataValue( entityDataKey,
+                            edv,
                             authorizedPropertyTypes );
                     entity.put( "id", id.toString() );
                     return entity;
@@ -203,9 +199,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .map( e -> new EntityDataKey( e.getValue(), e.getKey() ) )
                 .collect( Collectors.toSet() );
         Map<EntityDataKey, EntityDataValue> entityData = entities.getAll( dataKeys );
-
-//        Predicate entitiesFilter = EntitySets.getEntities( entityKeyIdToEntitySetId.keySet() );
-//        Entities entities = data.aggregate( new EntitiesAggregator(), entitiesFilter );
 
         return entityData.entrySet()
                 .stream()
@@ -231,7 +224,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             SetMultimap<UUID, Object> entityDetails,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
             OffsetDateTime lastWrite ) {
-//        EntityDataValue edv = fromSetMultimap( entityDetails );
+        //        EntityDataValue edv = fromSetMultimap( entityDetails );
         return new ListenableHazelcastFuture<>( entities
                 .submitToKey( entityDataKey, new EntityDataUpserter( entityDetails, OffsetDateTime.now() ) ) );
 
@@ -451,14 +444,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         EntityDataKey edk = new EntityDataKey( entitySetId, id );
         EntityDataUpserter entityDataUpserter =
                 new EntityDataUpserter( normalizedPropertyValues, OffsetDateTime.now() );
-
-        /*
-        authorizedPropertiesWithDataType.entrySet().forEach( entry -> {
-            if ( entry.getValue().equals( EdmPrimitiveTypeKind.Binary ) ) {
-                normalizedPropertyValues.removeAll( entry.getKey() );
-            }
-        } );*/
-
+        
         eventBus.post( new EntityDataCreatedEvent(
                 entitySetId,
                 Optional.of( syncId ),
@@ -491,14 +477,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     public ListenableFuture<?> asyncDeleteEntitySet( UUID entitySetId ) {
-        return executor.submit( () -> StreamUtil.stream( dsm.getAllSyncIds( entitySetId ) )
-                .parallel()
-                .flatMap( syncId -> getEntityKeysForEntitySet( entitySetId, syncId ) )
-                .forEach( data::delete ) );
+        return executor.submit( () -> entities.removeAll( EntitySetPredicates.entitySet( entitySetId ) ) );
     }
 
     public ListenableFuture<?> asyncDeleteEntity( UUID entitySetId, String entityId, UUID syncId ) {
-        return executor.submit( () -> data.removeAll( EntitySets.getEntity( entitySetId, syncId, entityId ) ) );
+        EntityDataKey edk = new EntityDataKey( entitySetId,
+                idService.getEntityKeyId( new EntityKey( entitySetId, entityId, syncId ) ) );
+        return new ListenableHazelcastFuture<>( entities.removeAsync( edk ) );
     }
 
     @Override
@@ -536,6 +521,15 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         SetMultimap entityData = fromEntityDataValue( dataValue, propertyTypes );
         entityData.put( "id", dataKey.getEntityKeyId() );
         entityData.put( "count", count );
+        return entityData;
+    }
+
+    public static SetMultimap<Object, Object> fromEntityDataValue(
+            EntityDataKey dataKey,
+            EntityDataValue dataValue,
+            Map<UUID, PropertyType> propertyTypes ) {
+        SetMultimap entityData = fromEntityDataValue( dataValue, propertyTypes );
+        entityData.put( "id", dataKey.getEntityKeyId() );
         return entityData;
     }
 
