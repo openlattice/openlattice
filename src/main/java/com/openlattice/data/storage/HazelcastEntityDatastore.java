@@ -37,7 +37,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.query.Predicate;
 import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
@@ -177,7 +176,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Collection<UUID> ids,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         Map<UUID, EntityKey> entityKeyIds = idService.getEntityKeys( ImmutableSet.copyOf( ids ) );
-        //Predicate entitiesPredicate = EntitySetPredicates.entities( ids );
 
         return ids.stream()
                 .map( id -> {
@@ -201,9 +199,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .map( e -> new EntityDataKey( e.getValue(), e.getKey() ) )
                 .collect( Collectors.toSet() );
         Map<EntityDataKey, EntityDataValue> entityData = entities.getAll( dataKeys );
-
-        //        Predicate entitiesFilter = EntitySets.getEntities( entityKeyIdToEntitySetId.keySet() );
-        //        Entities entities = data.aggregate( new EntitiesAggregator(), entitiesFilter );
 
         return entityData.entrySet()
                 .stream()
@@ -449,14 +444,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         EntityDataKey edk = new EntityDataKey( entitySetId, id );
         EntityDataUpserter entityDataUpserter =
                 new EntityDataUpserter( normalizedPropertyValues, OffsetDateTime.now() );
-
-        /*
-        authorizedPropertiesWithDataType.entrySet().forEach( entry -> {
-            if ( entry.getValue().equals( EdmPrimitiveTypeKind.Binary ) ) {
-                normalizedPropertyValues.removeAll( entry.getKey() );
-            }
-        } );*/
-
+        
         eventBus.post( new EntityDataCreatedEvent(
                 entitySetId,
                 Optional.of( syncId ),
