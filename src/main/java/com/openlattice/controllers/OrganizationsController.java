@@ -113,7 +113,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 org.getSecurablePrincipal(),
                 org.getAutoApprovedEmails(),
                 org.getMembers(),
-                authorizedRoles );
+                authorizedRoles,
+                org.getApps() );
     }
 
     @Override
