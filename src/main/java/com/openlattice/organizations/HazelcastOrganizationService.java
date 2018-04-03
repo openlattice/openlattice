@@ -154,7 +154,7 @@ public class HazelcastOrganizationService {
 
         OrganizationPrincipal principal = (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrgs );
         Set<Role> roles = getRoles( organizationId );
-        Set<java.util.UUID> apps = getOrganizationApps(organizationId);
+        Set<UUID> apps = getOrganizationApps(organizationId);
         try {
             return new Organization(
                     principal,
