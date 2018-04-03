@@ -451,14 +451,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         EntityDataKey edk = new EntityDataKey( entitySetId, id );
         EntityDataUpserter entityDataUpserter =
                 new EntityDataUpserter( normalizedPropertyValues, OffsetDateTime.now() );
-
-        /*
-        authorizedPropertiesWithDataType.entrySet().forEach( entry -> {
-            if ( entry.getValue().equals( EdmPrimitiveTypeKind.Binary ) ) {
-                normalizedPropertyValues.removeAll( entry.getKey() );
-            }
-        } );*/
-
+        
         eventBus.post( new EntityDataCreatedEvent(
                 entitySetId,
                 Optional.of( syncId ),
