@@ -45,7 +45,6 @@ public class TestDataSerialization {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
         LocalDate date = LocalDate.now();
         String expected = "\"" + date.format( DateTimeFormatter.ISO_LOCAL_DATE ) + "\"";
-        mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false );
         String actual = mapper.writeValueAsString( date );
         Assert.assertEquals( expected, actual );
         logger.info( "Serialized value {}", mapper.writeValueAsString( date ) );
@@ -56,7 +55,6 @@ public class TestDataSerialization {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
         OffsetDateTime date = OffsetDateTime.now();
         String expected = "\"" + date.format( DateTimeFormatter.ISO_OFFSET_DATE_TIME ) + "\"";
-        mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false );
         String actual = mapper.writeValueAsString( date );
         Assert.assertEquals( expected, actual );
         logger.info( "Serialized value {}", mapper.writeValueAsString( date ) );
@@ -67,7 +65,6 @@ public class TestDataSerialization {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
         LocalTime date = LocalTime.now();
         String expected = "\"" + date.format( DateTimeFormatter.ISO_LOCAL_TIME ) + "\"";
-        mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false );
         String actual = mapper.writeValueAsString( date );
         Assert.assertEquals( expected, actual );
         logger.info( "Serialized value {}", mapper.writeValueAsString( date ) );
