@@ -17,13 +17,12 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class HazelcastStreamSink<K, V, R, E> extends Aggregator<Entry<K, V>, R>
         implements HazelcastInstanceAware {
+    public static final  Eof                   EOF             = new Eof();
     private static final Map<Class<?>, Logger> subclassLoggers = new HashMap<>();
-    public static        Eof                   EOF             = new Eof();
-
     private final Logger logger = subclassLoggers.computeIfAbsent( getClass(), LoggerFactory::getLogger );
 
     private final     UUID              streamId;
-    private transient          HazelcastInstance hazelcastInstance;
+    private transient HazelcastInstance hazelcastInstance;
     private transient IQueue            stream;
 
     protected HazelcastStreamSink( UUID streamId ) {

@@ -24,6 +24,7 @@ package com.openlattice.organizations;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.openlattice.apps.App;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.directory.UserDirectoryService;
@@ -153,12 +154,14 @@ public class HazelcastOrganizationService {
 
         OrganizationPrincipal principal = (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrgs );
         Set<Role> roles = getRoles( organizationId );
+        Set<UUID> apps = getOrganizationApps(organizationId);
         try {
             return new Organization(
                     principal,
                     autoApprovedEmailDomains.get(),
                     members.get(),
-                    roles );
+                    roles,
+                    apps);
         } catch ( InterruptedException | ExecutionException e ) {
             logger.error( "Unable to load organization. {}", organizationId, e );
             return null;
