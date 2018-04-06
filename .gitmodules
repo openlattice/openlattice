@@ -43,3 +43,6 @@
 [submodule "launchpad"]
 	path = launchpad
 	url = git@github.com:openlattice/launchpad.git
+[submodule "shuttle"]
+	path = shuttle
+	url = git@github.com:openlattice/shuttle.git
