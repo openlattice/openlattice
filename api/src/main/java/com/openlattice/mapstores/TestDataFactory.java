@@ -171,6 +171,30 @@ public final class TestDataFactory {
                 ImmutableSet.of( email(), email() ) );
     }
 
+    public static PropertyType datePropertyType() {
+        return new PropertyType(
+                UUID.randomUUID(),
+                fqn(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                ImmutableSet.of(),
+                EdmPrimitiveTypeKind.Date,
+                Optional.of( r.nextBoolean() ),
+                Optional.of( Analyzer.STANDARD ) );
+    }
+
+    public static PropertyType dateTimePropertyType() {
+        return new PropertyType(
+                UUID.randomUUID(),
+                fqn(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                ImmutableSet.of(),
+                EdmPrimitiveTypeKind.DateTimeOffset,
+                Optional.of( r.nextBoolean() ),
+                Optional.of( Analyzer.STANDARD ) );
+    }
+
     public static PropertyType propertyType() {
         return new PropertyType(
                 UUID.randomUUID(),
