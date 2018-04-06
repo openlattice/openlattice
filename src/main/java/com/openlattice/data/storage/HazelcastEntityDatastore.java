@@ -451,7 +451,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         EntityDataKey edk = new EntityDataKey( entitySetId, id );
         EntityDataUpserter entityDataUpserter =
                 new EntityDataUpserter( normalizedPropertyValues, OffsetDateTime.now() );
-        
+
         eventBus.post( new EntityDataCreatedEvent(
                 entitySetId,
                 Optional.of( syncId ),
