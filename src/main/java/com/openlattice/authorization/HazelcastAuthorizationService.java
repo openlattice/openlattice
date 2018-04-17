@@ -263,7 +263,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 .and( hasPrincipal( principal ), hasType( objectType ), hasExactPermissions( permissions ) );
         return this.aces.keySet( p )
                 .stream()
-                .map( AceKey::getAclKey );
+                .map( AceKey::getAclKey )
+                .distinct();
     }
 
     @Timed
@@ -276,7 +277,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 .and( hasAnyPrincipals( principals ), hasType( objectType ), hasExactPermissions( permissions ) );
         return this.aces.keySet( p )
                 .stream()
-                .map( AceKey::getAclKey );
+                .map( AceKey::getAclKey )
+                .distinct();
     }
 
     @Timed
