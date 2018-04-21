@@ -46,22 +46,6 @@ public class TestDataSerialization {
         testTimeSerialization( ObjectMappers.getJsonMapper() );
     }
 
-//TODO: Figure out how to test SMILE serialization
-//    @Test
-//    public void testSmileDateSerialization() throws JsonProcessingException {
-//        testDateSerialization( ObjectMappers.getSmileMapper() );
-//        testDateTimeSerialization( ObjectMappers.getSmileMapper() );
-//        testTimeSerialization( ObjectMappers.getSmileMapper() );
-//    }
-
-//TODO: Figure out how to test YAML serialization
-//    @Test
-//    public void testYamlDateSerialization() throws JsonProcessingException {
-//        testDateSerialization( ObjectMappers.getYamlMapper() );
-//        testDateTimeSerialization( ObjectMappers.getYamlMapper() );
-//        testTimeSerialization( ObjectMappers.getYamlMapper() );
-//    }
-
     public void testTimeSerialization( ObjectMapper mapper ) throws JsonProcessingException {
         LocalTime date = LocalTime.now();
         String expected = "\"" + date.format( DateTimeFormatter.ISO_LOCAL_TIME ) + "\"";
