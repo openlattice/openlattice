@@ -125,7 +125,7 @@ public class DataGraphService implements DataGraphManager {
     public SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         EntityKey entityKey = idService.getEntityKey( entityKeyId );
-        return eds.getEntity( entityKeyId, entityKey.getSyncId(), entityKey.getEntityId(), authorizedPropertyTypes );
+        return eds.getEntity( entityKey.getEntitySetId(), entityKey.getSyncId(), entityKey.getEntityId(), authorizedPropertyTypes );
     }
 
     @Override

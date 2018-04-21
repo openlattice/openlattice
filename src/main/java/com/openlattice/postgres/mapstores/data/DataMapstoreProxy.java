@@ -57,6 +57,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
     public static final  String LAST_WRITE        = "lastWrite";
     public static final  String LAST_INDEX        = "lastIndex";
     public static final  String KEY_ENTITY_SET_ID = "__key#entitySetId";
+    public static final  String KEY_ENTITY_KEY_ID = "__key#entityKeyId";
     private static final Logger logger            = LoggerFactory.getLogger( DataMapstoreProxy.class );
     private final Map<UUID, EntityDataMapstore>              entitySetMapstores; //Entity Set ID -> Mapstore for Entity Set Table
     private final Map<UUID, Map<UUID, PropertyDataMapstore>> propertyDataMapstores;
@@ -146,6 +147,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
         return new MapConfig( getMapName() )
                 .setMapStoreConfig( getMapStoreConfig() )
                 .addMapIndexConfig( new MapIndexConfig( KEY_ENTITY_SET_ID, false ) )
+                .addMapIndexConfig( new MapIndexConfig( KEY_ENTITY_KEY_ID, false ) )
                 .addMapIndexConfig( new MapIndexConfig( VERSION, true ) )
                 .addMapIndexConfig( new MapIndexConfig( LAST_WRITE, true ) )
                 .addMapIndexConfig( new MapIndexConfig( LAST_INDEX, true ) );
