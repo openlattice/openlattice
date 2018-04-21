@@ -119,10 +119,6 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
     @Override protected Map<Object, PropertyMetadata> mapToValue( ResultSet rs ) throws SQLException {
         final Map<Object, PropertyMetadata> value = new HashMap<>();
 
-        if ( !rs.next() ) {
-            return null;
-        }
-
         do {
             Object key = ResultSetAdapters.propertyValue( rs );
             PropertyMetadata metadata = ResultSetAdapters.propertyMetadata( rs );
