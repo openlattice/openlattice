@@ -24,7 +24,6 @@ package com.openlattice.kindling.search;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -41,8 +40,37 @@ public class TestDataSerialization {
     private static Logger logger = LoggerFactory.getLogger( TestDataSerialization.class );
 
     @Test
-    public void testDateSerialization() throws JsonProcessingException {
-        ObjectMapper mapper = ObjectMappers.getJsonMapper();
+    public void testJsonDateSerialization() throws JsonProcessingException {
+        testDateSerialization( ObjectMappers.getJsonMapper() );
+        testDateTimeSerialization( ObjectMappers.getJsonMapper() );
+        testTimeSerialization( ObjectMappers.getJsonMapper() );
+    }
+
+//TODO: Figure out how to test SMILE serialization
+//    @Test
+//    public void testSmileDateSerialization() throws JsonProcessingException {
+//        testDateSerialization( ObjectMappers.getSmileMapper() );
+//        testDateTimeSerialization( ObjectMappers.getSmileMapper() );
+//        testTimeSerialization( ObjectMappers.getSmileMapper() );
+//    }
+
+//TODO: Figure out how to test YAML serialization
+//    @Test
+//    public void testYamlDateSerialization() throws JsonProcessingException {
+//        testDateSerialization( ObjectMappers.getYamlMapper() );
+//        testDateTimeSerialization( ObjectMappers.getYamlMapper() );
+//        testTimeSerialization( ObjectMappers.getYamlMapper() );
+//    }
+
+    public void testTimeSerialization( ObjectMapper mapper ) throws JsonProcessingException {
+        LocalTime date = LocalTime.now();
+        String expected = "\"" + date.format( DateTimeFormatter.ISO_LOCAL_TIME ) + "\"";
+        String actual = mapper.writeValueAsString( date );
+        Assert.assertEquals( expected, actual );
+        logger.info( "Serialized value {}", mapper.writeValueAsString( date ) );
+    }
+
+    public static void testDateSerialization( ObjectMapper mapper ) throws JsonProcessingException {
         LocalDate date = LocalDate.now();
         String expected = "\"" + date.format( DateTimeFormatter.ISO_LOCAL_DATE ) + "\"";
         String actual = mapper.writeValueAsString( date );
@@ -50,21 +78,9 @@ public class TestDataSerialization {
         logger.info( "Serialized value {}", mapper.writeValueAsString( date ) );
     }
 
-    @Test
-    public void testDateTimeSerialization() throws JsonProcessingException {
-        ObjectMapper mapper = ObjectMappers.getJsonMapper();
+    public static void testDateTimeSerialization( ObjectMapper mapper ) throws JsonProcessingException {
         OffsetDateTime date = OffsetDateTime.now();
         String expected = "\"" + date.format( DateTimeFormatter.ISO_OFFSET_DATE_TIME ) + "\"";
-        String actual = mapper.writeValueAsString( date );
-        Assert.assertEquals( expected, actual );
-        logger.info( "Serialized value {}", mapper.writeValueAsString( date ) );
-    }
-
-    @Test
-    public void testTimeSerialization() throws JsonProcessingException {
-        ObjectMapper mapper = ObjectMappers.getJsonMapper();
-        LocalTime date = LocalTime.now();
-        String expected = "\"" + date.format( DateTimeFormatter.ISO_LOCAL_TIME ) + "\"";
         String actual = mapper.writeValueAsString( date );
         Assert.assertEquals( expected, actual );
         logger.info( "Serialized value {}", mapper.writeValueAsString( date ) );
