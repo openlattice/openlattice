@@ -137,6 +137,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
     @Override
     public MapStoreConfig getMapStoreConfig() {
         return new MapStoreConfig()
+                .setInitialLoadMode( MapStoreConfig.InitialLoadMode.EAGER )
                 .setImplementation( this )
                 .setEnabled( true )
                 .setWriteDelaySeconds( 5 );
