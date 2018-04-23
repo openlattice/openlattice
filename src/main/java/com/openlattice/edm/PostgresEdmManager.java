@@ -81,10 +81,10 @@ public class PostgresEdmManager implements DbEdmManager {
 
     @Override public void removePropertiesFromEntitySet(
             EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
-        for ( PropertyType propertyType : propertyTypes ) {
-            PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( entitySet, propertyType );
-            dropTable( ptd.getName() );
-        }
+//        for ( PropertyType propertyType : propertyTypes ) {
+//            PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( entitySet, propertyType );
+//            dropTable( ptd.getName() );
+//        }
     }
 
     public void dropTable( String table ) {
