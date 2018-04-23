@@ -152,7 +152,7 @@ public class PostgresDataMapstoreProxy implements TestableSelfRegisteringMapStor
         Map<UUID, String> queryMap = propertyInsertQueries
                 .computeIfAbsent( entitySetId, esId -> Maps.newConcurrentMap() );
         PostgresTableDefinition propTable = DataTables
-                .buildPropertyTableDefinition( entitySetId, propertyTypes.load( propertyTypeId ) );
+                .buildPropertyTableDefinition( propertyTypes.load( propertyTypeId ) );
         List<PostgresColumnDefinition> propTableCols = getValueColumns( propTable );
         //This will create an on conflict do update query.
         return queryMap.computeIfAbsent( propertyTypeId,
@@ -303,7 +303,7 @@ public class PostgresDataMapstoreProxy implements TestableSelfRegisteringMapStor
 
     protected PropertyDataMapstore newPropertyDataMapstore( UUID entitySetId, UUID propertyTypeId ) {
         PropertyType propertyType = propertyTypes.load( propertyTypeId );
-        PostgresTableDefinition table = DataTables.buildPropertyTableDefinition( entitySetId, propertyType );
+        PostgresTableDefinition table = DataTables.buildPropertyTableDefinition( propertyType );
         return new PropertyDataMapstore( table, hds );
     }
 }

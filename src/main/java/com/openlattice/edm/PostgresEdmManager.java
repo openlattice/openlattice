@@ -111,7 +111,7 @@ public class PostgresEdmManager implements DbEdmManager {
         tables.add( DataTables.entityTableName( entitySet.getId() ) );
 
         for ( PropertyType pt : propertyTypes ) {
-            tables.add( DataTables.propertyTableName( entitySet.getId(), pt.getId() ) );
+            tables.add( DataTables.propertyTableName( pt.getId() ) );
         }
 
         String principalId = principal.getId();
