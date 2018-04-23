@@ -20,44 +20,51 @@
 
 package com.openlattice.ids;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * TODO: Implement stream serializer if this is ever used for id generation
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class Range {
     private static final Logger logger = LoggerFactory.getLogger( Range.class );
 
-    private long mask;
-    private long base;
+    private final long bandwidth;
+    private final long base;
 
     private long msb;
     private long lsb;
 
-    public Range( long mask, long base, long msb, long lsb ) {
-        this.mask = mask;
+    public Range( long bandwidth, long base, long msb, long lsb ) {
+        this.bandwidth = bandwidth;
         this.base = base;
         this.msb = msb;
         this.lsb = lsb;
     }
 
+    /**
+     * Generates the next id by incrementing the least significant bit
+     */
     public UUID getNextId() {
         lsb++;
 
+        //When Java overflows, it starts from Long#MIN_VALUE so we check for a full cycle back to zero
         if ( lsb == 0 ) {
             msb++;
         }
 
-        if ( ( msb & mask ) == 0 ) {
-            //We've exhausted ids in this range.
-            logger.error( "Uh-oh we ran out ids in a range. That's a lot of objects" );
-            return null;
+        //If mask has
+        if ( ( msb * bandwidth ) == 0 ) {
+            logger.error( "Exhausted id in range with bandwidth {} and base {}", bandwidth, base );
+            throw new IllegalStateException( "Exhausted available ids in range!" );
         }
 
-        return new UUID( msb | base, lsb );
+        return new UUID( msb * base, lsb );
     }
 
     public long getBase() {

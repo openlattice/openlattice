@@ -41,7 +41,7 @@ public class SqlQueryFactory {
                 .collect( Collectors.joining( ", " ) );
         String tableSql = propertyTypesForEntitySet
                 .stream()
-                .map( propertyType -> DataTables.propertyTableName( entitySetId, propertyType.getId() ) )
+                .map( propertyType -> DataTables.propertyTableName( propertyType.getId() ) )
                 .collect( Collectors.joining( ", " ) );
         String joinSql = propertyTypesForEntitySet
                 .stream()
@@ -51,12 +51,12 @@ public class SqlQueryFactory {
     }
 
     private static String columnSql( UUID entitySetId, UUID propertyTypeId, FullQualifiedName fqn ) {
-        return DataTables.propertyTableName( entitySetId, propertyTypeId ) + ".value as " + fqn
+        return DataTables.propertyTableName( propertyTypeId ) + ".value as " + fqn
                 .getFullQualifiedNameAsString();
     }
 
     private static String idColumn( UUID entitySetId, UUID propertyTypeId ) {
-        return DataTables.propertyTableName( entitySetId, propertyTypeId ) + ".id";
+        return DataTables.propertyTableName( propertyTypeId ) + ".id";
     }
 
     private static String idColumn( UUID entitySetId ) {

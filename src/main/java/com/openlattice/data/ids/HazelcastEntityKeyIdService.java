@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class HazelcastEntityKeyIdService implements EntityKeyIdService {
+public class    HazelcastEntityKeyIdService implements EntityKeyIdService {
     private static final Logger logger = LoggerFactory.getLogger( HazelcastEntityKeyIdService.class );
     private final ListeningExecutorService executor;
 
