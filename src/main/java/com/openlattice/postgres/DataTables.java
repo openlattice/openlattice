@@ -76,7 +76,7 @@ public class DataTables {
 
     public static PostgresColumnDefinition value( PropertyType pt ) {
         //We name the column after the full qualified name of the property so that in joins it transfers cleanly
-        return new PostgresColumnDefinition( pt.getType().getFullQualifiedNameAsString(),
+        return new PostgresColumnDefinition( quote( pt.getType().getFullQualifiedNameAsString() ),
                 PostgresEdmTypeConverter.map( pt.getDatatype() ) );
 
     }
