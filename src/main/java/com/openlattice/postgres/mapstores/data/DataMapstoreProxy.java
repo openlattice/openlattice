@@ -251,6 +251,6 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
             logger.error( "Unable to register property type table {}.", table, e );
         }
         ;
-        return new PropertyDataMapstore( table, hds );
+        return new PropertyDataMapstore( DataTables.value( propertyType ), table, hds );
     }
 }

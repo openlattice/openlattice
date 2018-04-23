@@ -301,9 +301,9 @@ public class PostgresDataMapstoreProxy implements TestableSelfRegisteringMapStor
 
     }
 
-    protected PropertyDataMapstore newPropertyDataMapstore( UUID entitySetId, UUID propertyTypeId ) {
+    protected PropertyDataMapstore newPropertyDataMapstore(  UUID propertyTypeId ) {
         PropertyType propertyType = propertyTypes.load( propertyTypeId );
         PostgresTableDefinition table = DataTables.buildPropertyTableDefinition( propertyType );
-        return new PropertyDataMapstore( table, hds );
+        return new PropertyDataMapstore( DataTables.value( propertyType ),table, hds );
     }
 }
