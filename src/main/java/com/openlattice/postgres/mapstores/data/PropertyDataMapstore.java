@@ -21,6 +21,7 @@
 package com.openlattice.postgres.mapstores.data;
 
 import static com.openlattice.postgres.DataTables.LAST_WRITE;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.VERSION;
 import static com.openlattice.postgres.PostgresColumn.VERSIONS;
@@ -29,6 +30,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.PropertyMetadata;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresArrays;
@@ -53,11 +55,12 @@ import org.apache.commons.lang.RandomStringUtils;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<UUID, Object, PropertyMetadata> {
+public class PropertyDataMapstore
+        extends AbstractBaseSplitKeyPostgresMapstore<EntityDataKey, Object, PropertyMetadata> {
     private Supplier<PostgresColumnDefinition> valueColumn;
 
     public PropertyDataMapstore( PostgresTableDefinition table, HikariDataSource hds ) {
-        //Table name doesn't matter as these aer used for configuring maps.
+        //Table name doesn't matter as these are used for configuring maps.
         super( "pdms", table, hds );
 
     }
@@ -74,7 +77,7 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
     }
 
     @Override protected List<PostgresColumnDefinition> initKeyColumns() {
-        return ImmutableList.of( ID_VALUE );
+        return ImmutableList.of( ENTITY_SET_ID, ID_VALUE );
     }
 
     @Override protected String buildInsertQuery() {
@@ -84,7 +87,7 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
     @Override protected Optional<String> buildOnConflictQuery() {
         return Optional.of( ( " ON CONFLICT ("
                 + Stream
-                .of( ID_VALUE.getName(), valueColumn.get().getName() )
+                .of( ENTITY_SET_ID.getName(), ID_VALUE.getName(), valueColumn.get().getName() )
                 .collect( Collectors.joining( ", " ) )
                 + ") DO "
                 + table.updateQuery( ImmutableList.of( ID_VALUE, valueColumn.get() ),
@@ -96,7 +99,7 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
         return ImmutableList.of( valueColumn.get(), VERSION, VERSIONS, LAST_WRITE );
     }
 
-    @Override protected void bind( PreparedStatement ps, UUID key, Object subKey, PropertyMetadata value )
+    @Override protected void bind( PreparedStatement ps, EntityDataKey key, Object subKey, PropertyMetadata value )
             throws SQLException {
         int parameterIndex = bind( ps, key, 1 );
         ps.setObject( parameterIndex++, subKey );
@@ -111,8 +114,9 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
         ps.setObject( parameterIndex++, value.getLastWrite() );
     }
 
-    @Override protected int bind( PreparedStatement ps, UUID key, int offset ) throws SQLException {
-        ps.setObject( offset++, key );
+    @Override protected int bind( PreparedStatement ps, EntityDataKey key, int offset ) throws SQLException {
+        ps.setObject( offset++, key.getEntitySetId() );
+        ps.setObject( offset++, key.getEntityKeyId() );
         return offset;
     }
 
@@ -128,12 +132,12 @@ public class PropertyDataMapstore extends AbstractBaseSplitKeyPostgresMapstore<U
         return value;
     }
 
-    @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
-        return ResultSetAdapters.id( rs );
+    @Override protected EntityDataKey mapToKey( ResultSet rs ) throws SQLException {
+        return ResultSetAdapters.entityDataKey( rs );
     }
 
-    @Override public UUID generateTestKey() {
-        return UUID.randomUUID();
+    @Override public EntityDataKey generateTestKey() {
+        return new EntityDataKey( UUID.randomUUID(), UUID.randomUUID() );
     }
 
     @Override public Map<Object, PropertyMetadata> generateTestValue() {

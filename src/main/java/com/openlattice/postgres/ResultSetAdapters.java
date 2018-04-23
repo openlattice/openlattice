@@ -76,6 +76,7 @@ import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.linking.LinkingVertex;
@@ -135,6 +136,10 @@ import org.slf4j.LoggerFactory;
  */
 public final class ResultSetAdapters {
     private static final Logger logger = LoggerFactory.getLogger( ResultSetAdapters.class );
+
+    public static EntityDataKey entityDataKey( ResultSet rs ) throws SQLException {
+        return new EntityDataKey( entitySetId( rs ), id( rs ) );
+    }
 
     public static PropertyValueKey propertyValueKey( ResultSet rs ) throws SQLException {
         UUID entityKeyId = id( rs );

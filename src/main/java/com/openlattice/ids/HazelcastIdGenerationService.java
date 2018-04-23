@@ -24,6 +24,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.openlattice.hazelcast.HazelcastMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ *
  */
 public class HazelcastIdGenerationService {
     /*
@@ -41,13 +42,13 @@ public class HazelcastIdGenerationService {
     public static final int  NUM_PARTITIONS = 1 << MASK_LENGTH; //65536
     public static final long MASK           = ( -1L ) >>> MASK_LENGTH; //
     /*
-     * Each range owns a portion of the unassigned keyspace. It can be split
+     * Each range owns a portion of the keyspace. The mask determines the
      */
     private final IMap<Integer, Range> scrolls;
     private final AtomicInteger rangeIndex = new AtomicInteger();
 
     public HazelcastIdGenerationService( HazelcastInstance hazelcastInstance ) {
-        this.scrolls = hazelcastInstance.getMap( "" );
+        this.scrolls = hazelcastInstance.getMap( HazelcastMap.ID_GENERATION.name() );
         if ( scrolls.isEmpty() ) {
             initializeRanges();
         }

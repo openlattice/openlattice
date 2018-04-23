@@ -20,6 +20,7 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.LAST_INDEX_FIELD;
@@ -33,8 +34,6 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.PostgresEdmTypeConverter;
 import com.openlattice.edm.type.PropertyType;
-import io.netty.buffer.ByteBuf;
-import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Map;
@@ -61,23 +60,14 @@ public class DataTables {
             "owners",
             PostgresDatatype.UUID );
     private static final Map<UUID, PostgresTableDefinition> ES_TABLES   = Maps.newConcurrentMap();
-    private static final Encoder encoder = Base64.getEncoder();
-    public static String propertyTableName( UUID entitySetId, UUID propertyTypeId ) {
-        ByteBuffer buffer = ByteBuffer.wrap( new byte[32] );
-        buffer.putLong( entitySetId.getLeastSignificantBits() );
-        buffer.putLong( entitySetId.getMostSignificantBits() );
-        buffer.putLong( propertyTypeId.getLeastSignificantBits() );
-        buffer.putLong( propertyTypeId.getMostSignificantBits() );
-        return encoder.encodeToString( buffer.array() );
-//        return entitySetId.toString() + "_" + propertyTypeId.toString();
+    private static final Encoder                            encoder     = Base64.getEncoder();
+
+    public static String propertyTableName( UUID propertyTypeId ) {
+        return "pt_" + propertyTypeId.toString();
     }
 
     public static String entityTableName( UUID entitySetId ) {
-        ByteBuffer buffer = ByteBuffer.wrap( new byte[16] );
-        buffer.putLong( entitySetId.getLeastSignificantBits() );
-        buffer.putLong( entitySetId.getMostSignificantBits() );
-        return encoder.encodeToString( buffer.array() );
-//        return entitySetId.toString();
+        return "es_" + entitySetId.toString();
     }
 
     public static String quote( String s ) {
@@ -85,7 +75,9 @@ public class DataTables {
     }
 
     public static PostgresColumnDefinition value( PropertyType pt ) {
-        return new PostgresColumnDefinition( VALUE_FIELD, PostgresEdmTypeConverter.map( pt.getDatatype() ) );
+        //We name the column after the full qualified name of the property so that in joins it transfers cleanly
+        return new PostgresColumnDefinition( pt.getType().getFullQualifiedNameAsString(),
+                PostgresEdmTypeConverter.map( pt.getDatatype() ) );
 
     }
 
@@ -137,20 +129,36 @@ public class DataTables {
     public static PostgresTableDefinition buildPropertyTableDefinition(
             EntitySet entitySet,
             PropertyType propertyType ) {
-        return buildPropertyTableDefinition( entitySet.getId(), propertyType );
+        return buildPropertyTableDefinition( propertyType );
     }
 
     public static PostgresTableDefinition buildPropertyTableDefinition(
-            UUID entitySetId,
             PropertyType propertyType ) {
+        final String idxPrefix = propertyTableName( propertyType.getId() );
+
         PostgresColumnDefinition valueColumn = value( propertyType );
         PostgresTableDefinition ptd = new PostgresTableDefinition(
-                quote( propertyTableName( entitySetId, propertyType.getId() ) ) )
-                .addColumns( ID_VALUE, valueColumn, VERSION, VERSIONS, LAST_WRITE, READERS, WRITERS, OWNERS )
-                .primaryKey( ID_VALUE, valueColumn );
-//                .setUnique( valueColumn );
+                quote( idxPrefix ) )
+                .addColumns(
+                        ENTITY_SET_ID,
+                        ID_VALUE,
+                        valueColumn,
+                        VERSION,
+                        VERSIONS,
+                        LAST_WRITE,
+                        READERS,
+                        WRITERS,
+                        OWNERS )
+                .primaryKey( ENTITY_SET_ID, ID_VALUE, valueColumn );
+        //                .setUnique( valueColumn );
 
-        String idxPrefix = propertyTableName( entitySetId, propertyType.getId() );
+        PostgresIndexDefinition idIndex = new PostgresIndexDefinition( ptd, valueColumn )
+                .name( quote( idxPrefix + "_id_idx" ) )
+                .ifNotExists();
+
+        PostgresIndexDefinition entitySetIdIndex = new PostgresIndexDefinition( ptd, valueColumn )
+                .name( quote( idxPrefix + "_entity_set_id_idx" ) )
+                .ifNotExists();
 
         PostgresIndexDefinition valueIndex = new PostgresIndexDefinition( ptd, valueColumn )
                 .name( quote( idxPrefix + "_value_idx" ) )
@@ -185,7 +193,10 @@ public class DataTables {
                 .name( quote( idxPrefix + "_owners_idx" ) )
                 .ifNotExists();
 
-        ptd.addIndexes( valueIndex,
+        ptd.addIndexes(
+                entitySetIdIndex,
+                idIndex,
+                valueIndex,
                 versionIndex,
                 versionsIndex,
                 lastWriteIndex,
