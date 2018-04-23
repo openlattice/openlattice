@@ -30,6 +30,7 @@ import com.google.common.collect.SetMultimap;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.Collection;
@@ -148,8 +149,11 @@ public class CassandraSerDesFactory {
                 String dateStr = TypeCodec.varchar().deserialize( bytes, protocolVersion );
                 if ( dateStr.length() == 10 ) {
                     return LocalDate.parse( dateStr );
+                } else if ( dateStr.contains( "+" ) || dateStr.contains( "-" ) ) {
+                    return OffsetDateTime.parse( dateStr ).toLocalDate();
+                } else {
+                    return LocalDateTime.parse( dateStr ).toLocalDate();
                 }
-                return OffsetDateTime.parse( dateStr );
             case DateTimeOffset:
                 return OffsetDateTime.parse( TypeCodec.varchar().deserialize( bytes, protocolVersion ) );
             case Duration:
