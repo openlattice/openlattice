@@ -116,6 +116,7 @@ public final class SerializationConstants {
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";
     public static final String MISSING                          = "missing";
+    public static final String MULTI_VALUED                     = "multiValued";
     public static final String NAME                             = "name";
     public static final String NAMESPACE                        = "namespace";
     public static final String NAMESPACE_FIELD                  = "namespace";
