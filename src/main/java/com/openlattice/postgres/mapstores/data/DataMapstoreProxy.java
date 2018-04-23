@@ -164,7 +164,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
         for ( Entry<UUID, Map<Object, PropertyMetadata>> propertyEntry : properties.entrySet() ) {
             final UUID propertyTypeId = propertyEntry.getKey();
             final PropertyDataMapstore propertyDataMapstore = getPropertyMapstore( propertyTypeId );
-            propertyDataMapstore.store( entityKeyId, propertyEntry.getValue() );
+            propertyDataMapstore.store( key, propertyEntry.getValue() );
         }
 
     }
@@ -214,7 +214,7 @@ public class DataMapstoreProxy implements TestableSelfRegisteringMapStore<Entity
         for ( UUID propertyTypeId : propertyTypes ) {
             final PropertyDataMapstore propertyDataMapstore = propertyDataMapstores
                     .computeIfAbsent( propertyTypeId, ptId -> newPropertyDataMapstore( ptId ) );
-            final Map<Object, PropertyMetadata> propertiesOfType = propertyDataMapstore.load( entityKeyId );
+            final Map<Object, PropertyMetadata> propertiesOfType = propertyDataMapstore.load( key );
             properties.put( propertyTypeId, propertiesOfType == null ? new HashMap<>() : propertiesOfType );
         }
 
