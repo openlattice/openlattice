@@ -312,7 +312,7 @@ public class AppService {
     }
 
     public void updateAppConfigEntitySetId( UUID organizationId, UUID appId, UUID appTypeId, UUID entitySetId ) {
-        AppConfigKey key = new AppConfigKey( organizationId, appId, appTypeId );
+        AppConfigKey key = new AppConfigKey( appId, organizationId, appTypeId );
         appConfigs.executeOnKey( key, new UpdateAppConfigEntitySetProcessor( entitySetId ) );
     }
 
