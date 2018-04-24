@@ -71,7 +71,7 @@ public interface EntityDatastore {
     // TODO remove vertices too
     void deleteEntitySetData( UUID entitySetId );
 
-    void deleteEntity( EntityKey entityKey );
+    void deleteEntity( EntityDataKey entityDataKey );
 
     Stream<SetMultimap<Object, Object>> getEntities(
             Collection<UUID> ids, Map<UUID, PropertyType> authorizedPropertyTypes );

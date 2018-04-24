@@ -11,14 +11,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.conductor.rpc.EntityDataLambdas;
-import java.io.IOException;
-import java.util.UUID;
+import com.openlattice.data.EntityDataKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.UUID;
+
 public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLambdas> {
     private static final Logger        logger = LoggerFactory.getLogger( EntityDataLambdasStreamSerializer.class );
-    private              TypeReference ref    = new TypeReference<SetMultimap<UUID, Object>>() {};
+    private              TypeReference ref    = new TypeReference<SetMultimap<UUID, Object>>() {
+    };
 
     private ObjectMapper mapper;
 
@@ -40,9 +43,8 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
     @Override
     public void write(
             Kryo kryo, Output output, EntityDataLambdas object ) {
-        writeUUID( output, object.getEntitySetId() );
-        writeUUID( output, object.getSyncId() );
-        output.writeString( object.getEntityId() );
+        writeUUID( output, object.getEntityDataKey().getEntitySetId() );
+        writeUUID( output, object.getEntityDataKey().getEntityKeyId() );
         output.writeBoolean( object.getShouldUpdate() );
 
         try {
@@ -50,7 +52,7 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
             output.writeInt( bytes.length );
             output.writeBytes( bytes );
         } catch ( JsonProcessingException e ) {
-            logger.debug( "Unable to serialize entity with id: {}", object.getEntityId() );
+            logger.debug( "Unable to serialize entity with id: {}", object.getEntityDataKey().getEntityKeyId() );
         }
     }
 
@@ -58,18 +60,18 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
     public EntityDataLambdas read(
             Kryo kryo, Input input, Class<EntityDataLambdas> type ) {
         UUID entitySetId = readUUID( input );
-        UUID syncId = readUUID( input );
-        String entityId = input.readString();
+        UUID entityKeyId = readUUID( input );
+        EntityDataKey edk = new EntityDataKey( entitySetId, entityKeyId );
         boolean shouldUpdate = input.readBoolean();
 
         int numBytes = input.readInt();
         SetMultimap<UUID, Object> propertyValues = HashMultimap.create();
         try {
-            propertyValues = mapper.readValue(input.readBytes( numBytes ), ref );
+            propertyValues = mapper.readValue( input.readBytes( numBytes ), ref );
         } catch ( IOException e ) {
-            logger.debug( "Unable to deserialize entity with id: {}", entityId );
+            logger.debug( "Unable to deserialize entity with id: {}", entityKeyId );
         }
 
-        return new EntityDataLambdas( entitySetId, syncId, entityId, propertyValues, shouldUpdate );
+        return new EntityDataLambdas( edk, propertyValues, shouldUpdate );
     }
 }

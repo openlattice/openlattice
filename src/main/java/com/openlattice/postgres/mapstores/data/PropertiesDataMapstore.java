@@ -49,6 +49,8 @@ import java.util.stream.Collectors;
  */
 public class PropertiesDataMapstore extends AbstractBasePostgresMapstore<PropertyValueKey, PropertyMetadata> {
     private final PostgresColumnDefinition valueColumn;
+    private final String valueColumnName;
+
 
     public PropertiesDataMapstore( PostgresTableDefinition table, HikariDataSource hds ) {
         //Table name doesn't matter as these aer used for configuring maps.
@@ -56,6 +58,7 @@ public class PropertiesDataMapstore extends AbstractBasePostgresMapstore<Propert
         for ( PostgresColumnDefinition pcd : table.getColumns() ) {
             if ( pcd.getName().equals( DataTables.VALUE_FIELD ) ) {
                 valueColumn = pcd;
+                valueColumnName = valueColumn.getName().replace( "\"", "" );
                 return;
             }
         }
@@ -107,7 +110,7 @@ public class PropertiesDataMapstore extends AbstractBasePostgresMapstore<Propert
     }
 
     @Override protected PropertyValueKey mapToKey( ResultSet rs ) throws SQLException {
-        return ResultSetAdapters.propertyValueKey( rs );
+        return ResultSetAdapters.propertyValueKey( valueColumnName, rs );
     }
 
     @Override public PropertyValueKey generateTestKey() {

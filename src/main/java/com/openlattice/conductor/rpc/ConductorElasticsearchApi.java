@@ -24,12 +24,14 @@ package com.openlattice.conductor.rpc;
 
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
+import com.openlattice.search.requests.EntityKeyIdSearchResult;
 import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
 import com.google.common.base.Optional;
@@ -122,7 +124,6 @@ public interface ConductorElasticsearchApi {
     final String TYPE_FIELD     = "_type";
     final String ENTITY_SET     = "entitySet";
     final String ENTITY_SET_ID  = "entitySetId";
-    final String SYNC_ID        = "syncId";
     final String PROPERTY_TYPES = "propertyTypes";
     final String ACLS           = "acls";
     final String NAME           = "name";
@@ -138,11 +139,9 @@ public interface ConductorElasticsearchApi {
 
     boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes );
 
-    boolean createSecurableObjectIndex( UUID entitySetId, UUID syncId, List<PropertyType> propertyTypes );
+    boolean createSecurableObjectIndex( UUID entitySetId, List<PropertyType> propertyTypes );
 
     boolean deleteEntitySet( UUID entitySetId );
-
-    boolean deleteEntitySetForSyncId( UUID entitySetId, UUID syncId );
 
     SearchResult executeEntitySetMetadataSearch(
             Optional<String> optionalSearchTerm,
@@ -169,36 +168,30 @@ public interface ConductorElasticsearchApi {
     boolean updateOrganization( UUID id, Optional<String> optionalTitle, Optional<String> optionalDescription );
 
     boolean createEntityData(
-            UUID entitySetId,
-            UUID syncId,
-            String entityId,
+            EntityDataKey edk,
             SetMultimap<UUID, Object> propertyValues );
 
     boolean updateEntityData(
-            UUID entitySetId,
-            UUID syncId,
-            String entityId,
+            EntityDataKey edk,
             SetMultimap<UUID, Object> propertyValues );
 
-    boolean deleteEntityData( UUID entitySetId, UUID syncId, String entityId );
+    boolean deleteEntityData( EntityDataKey edk );
 
-    SearchResult executeEntitySetDataSearch(
+    EntityKeyIdSearchResult executeEntitySetDataSearch(
             UUID entitySetId,
-            UUID syncId,
             String searchTerm,
             int start,
             int maxHits,
             Set<UUID> authorizedPropertyTypes );
 
-    List<EntityKey> executeEntitySetDataSearchAcrossIndices(
-            Map<UUID, UUID> entitySetAndSyncIds,
+    List<UUID> executeEntitySetDataSearchAcrossIndices(
+            Iterable<UUID> entitySetIds,
             Map<UUID, DelegatedStringSet> fieldSearches,
             int size,
             boolean explain );
 
-    SearchResult executeAdvancedEntitySetDataSearch(
+    EntityKeyIdSearchResult executeAdvancedEntitySetDataSearch(
             UUID entitySetId,
-            UUID syncId,
             List<SearchDetails> searches,
             int start,
             int maxHits,

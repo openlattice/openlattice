@@ -20,24 +20,19 @@
 
 package com.openlattice.matching;
 
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.SetMultimap;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ICountDownLatch;
+import com.hazelcast.core.IMap;
 import com.openlattice.blocking.BlockingAggregator;
 import com.openlattice.blocking.GraphEntityPair;
 import com.openlattice.blocking.LinkingEntity;
 import com.openlattice.blocking.LoadingAggregator;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.hazelcast.EntitySets;
-import com.openlattice.data.hazelcast.DataKey;
-import com.openlattice.data.hazelcast.EntitySets;
-import com.openlattice.edm.type.PropertyType;
-import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.linking.HazelcastLinkingGraphs;
-import com.openlattice.linking.predicates.LinkingPredicates;
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.SetMultimap;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ICountDownLatch;
-import com.hazelcast.core.IMap;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.linking.predicates.LinkingPredicates;
@@ -55,7 +50,7 @@ public class DistributedMatcher {
     private EdmManager dms;
 
     private       SetMultimap<UUID, UUID>              linkIndexedByEntitySets;
-    private       Map<UUID, UUID>                      linkingEntitySetsWithSyncId;
+    private       Iterable<UUID>                       linkingEntitySetIds;
     private       Map<FullQualifiedName, UUID>         propertyTypeIdIndexedByFqn;
     private final IMap<DataKey, ByteBuffer>            data;
     private final IMap<GraphEntityPair, LinkingEntity> linkingEntities;
@@ -80,10 +75,10 @@ public class DistributedMatcher {
 
         Stopwatch s = Stopwatch.createStarted();
 
-        graphs.initializeLinking( graphId, linkingEntitySetsWithSyncId );
+        graphs.initializeLinking( graphId, linkingEntitySetIds );
 
         int numEntities = data.aggregate( new LoadingAggregator( graphId, authorizedPropertyTypes ),
-                EntitySets.filterByEntitySetIdAndSyncIdPairs( linkingEntitySetsWithSyncId ) );
+                EntitySets.filterByEntitySetIds( linkingEntitySetIds ) );
         System.out.println( "t1: " + String.valueOf( s.elapsed( TimeUnit.MILLISECONDS ) ) );
         s.reset();
         s.start();
@@ -92,7 +87,7 @@ public class DistributedMatcher {
         latch.trySetCount( numEntities );
 
         linkingEntities
-                .aggregate( new BlockingAggregator( graphId, linkingEntitySetsWithSyncId, propertyTypeIdIndexedByFqn ),
+                .aggregate( new BlockingAggregator( graphId, linkingEntitySetIds, propertyTypeIdIndexedByFqn ),
                         LinkingPredicates.graphId( graphId ) );
         System.out.println( "t2: " + String.valueOf( s.elapsed( TimeUnit.MILLISECONDS ) ) );
         cleanLinkingEntitiesMap( graphId );
@@ -106,11 +101,11 @@ public class DistributedMatcher {
     }
 
     public void setLinking(
-            Map<UUID, UUID> linkingEntitySetsWithSyncId,
+            Iterable<UUID> linkingEntitySetIds,
             SetMultimap<UUID, UUID> linkIndexedByPropertyTypes,
             SetMultimap<UUID, UUID> linkIndexedByEntitySets ) {
+        this.linkingEntitySetIds = linkingEntitySetIds;
         this.linkIndexedByEntitySets = linkIndexedByEntitySets;
-        this.linkingEntitySetsWithSyncId = linkingEntitySetsWithSyncId;
         this.propertyTypeIdIndexedByFqn = getPropertyTypeIdIndexedByFqn( linkIndexedByPropertyTypes.keySet() );
 
     }

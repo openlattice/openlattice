@@ -26,15 +26,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
+import com.openlattice.search.requests.EntityKeyIdSearchResult;
 import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
 
 public class AdvancedSearchEntitySetDataLambda
-        implements Function<ConductorElasticsearchApi, SearchResult>, Serializable {
+        implements Function<ConductorElasticsearchApi, EntityKeyIdSearchResult>, Serializable {
     private static final long serialVersionUID = 8549826561713602245L;
 
     private UUID                entitySetId;
-    private UUID                syncId;
     private List<SearchDetails> searches;
     private int                 start;
     private int                 maxHits;
@@ -42,13 +42,11 @@ public class AdvancedSearchEntitySetDataLambda
 
     public AdvancedSearchEntitySetDataLambda(
             UUID entitySetId,
-            UUID syncId,
             List<SearchDetails> searches,
             int start,
             int maxHits,
             Set<UUID> authorizedPropertyTypes ) {
         this.entitySetId = entitySetId;
-        this.syncId = syncId;
         this.searches = searches;
         this.start = start;
         this.maxHits = maxHits;
@@ -56,9 +54,8 @@ public class AdvancedSearchEntitySetDataLambda
     }
 
     @Override
-    public SearchResult apply( ConductorElasticsearchApi api ) {
+    public EntityKeyIdSearchResult apply( ConductorElasticsearchApi api ) {
         return api.executeAdvancedEntitySetDataSearch( entitySetId,
-                syncId,
                 searches,
                 start,
                 maxHits,

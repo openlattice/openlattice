@@ -36,6 +36,7 @@ import com.openlattice.blocking.GraphEntityPair;
 import com.openlattice.blocking.LinkingEntity;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphService;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.aggregators.EntitiesAggregator;
@@ -227,9 +228,7 @@ public class HazelcastMergingService {
             }
         } );
 
-        elasticsearchApi.updateEntityData( graphId,
-                syncId,
-                entityId,
+        elasticsearchApi.updateEntityData( new EntityDataKey( graphId, id ),
                 normalizedPropertyValues );
 
         return futures;

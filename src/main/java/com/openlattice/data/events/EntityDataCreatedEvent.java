@@ -22,42 +22,28 @@
 
 package com.openlattice.data.events;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.EntityDataKey;
 
 import java.util.UUID;
 
 public class EntityDataCreatedEvent {
 
-    private UUID                      entitySetId;
-    private Optional<UUID>            syncId;
-    private String                    entityId;
+    private EntityDataKey             edk;
     private SetMultimap<UUID, Object> propertyValues;
     private boolean                   shouldUpdate;
 
     public EntityDataCreatedEvent(
-            UUID entitySetId,
-            Optional<UUID> syncId,
-            String entityId,
+            EntityDataKey edk,
             SetMultimap<UUID, Object> propertyValues,
             boolean shouldUpdate ) {
-        this.entitySetId = entitySetId;
-        this.syncId = syncId;
-        this.entityId = entityId;
+        this.edk = edk;
         this.propertyValues = propertyValues;
         this.shouldUpdate = shouldUpdate;
     }
 
-    public UUID getEntitySetId() {
-        return entitySetId;
-    }
-
-    public Optional<UUID> getOptionalSyncId() {
-        return syncId;
-    }
-
-    public String getEntityId() {
-        return entityId;
+    public EntityDataKey getEntityDataKey() {
+        return edk;
     }
 
     public SetMultimap<UUID, Object> getPropertyValues() {

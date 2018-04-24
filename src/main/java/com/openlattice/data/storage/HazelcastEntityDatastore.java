@@ -26,26 +26,14 @@ import com.codahale.metrics.annotation.Timed;
 import com.dataloom.hazelcast.ListenableHazelcastFuture;
 import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.authorization.ForbiddenException;
-import com.openlattice.data.DatasourceManager;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDataValue;
-import com.openlattice.data.EntityDatastore;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.EntityKeyIdService;
-import com.openlattice.data.EntitySetData;
-import com.openlattice.data.PropertyMetadata;
+import com.openlattice.data.*;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
@@ -61,22 +49,20 @@ import com.openlattice.hazelcast.processors.SyncFinalizer;
 import com.openlattice.hazelcast.stream.EntitySetHazelcastStream;
 import com.openlattice.postgres.JsonDeserializer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.nio.ByteBuffer;
-import java.time.OffsetDateTime;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.inject.Inject;
+import javafx.util.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.nio.ByteBuffer;
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class HazelcastEntityDatastore implements EntityDatastore {
     private static final Logger logger = LoggerFactory
@@ -100,6 +86,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             EntityKeyIdService idService,
             DatasourceManager dsm ) {
         this.entities = hazelastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
+        this.entities.loadAll( true );
 
         this.mapper = mapper;
         this.dsm = dsm;
@@ -445,12 +432,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         EntityDataUpserter entityDataUpserter =
                 new EntityDataUpserter( normalizedPropertyValues, OffsetDateTime.now() );
 
-        eventBus.post( new EntityDataCreatedEvent(
-                entitySetId,
-                Optional.of( syncId ),
-                entityId,
-                normalizedPropertyValues,
-                true ) );
+        eventBus.post( new EntityDataCreatedEvent( edk, normalizedPropertyValues, true ) );
         return Stream.of( new ListenableHazelcastFuture( entities.submitToKey( edk, entityDataUpserter ) ) );
     }
 
@@ -480,24 +462,19 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return executor.submit( () -> entities.removeAll( EntitySetPredicates.entitySet( entitySetId ) ) );
     }
 
-    public ListenableFuture<?> asyncDeleteEntity( UUID entitySetId, String entityId, UUID syncId ) {
-        EntityDataKey edk = new EntityDataKey( entitySetId,
-                idService.getEntityKeyId( new EntityKey( entitySetId, entityId, syncId ) ) );
+    public ListenableFuture<?> asyncDeleteEntity( EntityDataKey edk ) {
         return new ListenableHazelcastFuture<>( entities.removeAsync( edk ) );
     }
 
     @Override
-    public void deleteEntity( EntityKey entityKey ) {
+    public void deleteEntity( EntityDataKey entityDataKey ) {
         try {
-            asyncDeleteEntity( entityKey.getEntitySetId(), entityKey.getEntityId(), entityKey.getSyncId() ).get();
+            asyncDeleteEntity( entityDataKey ).get();
         } catch ( InterruptedException | ExecutionException e ) {
-            logger.error( "Unable to delete entity {}", entityKey );
+            logger.error( "Unable to delete entity {}", entityDataKey );
         }
 
-        eventBus.post( new EntityDataDeletedEvent(
-                entityKey.getEntitySetId(),
-                entityKey.getEntityId(),
-                Optional.of( entityKey.getSyncId() ) ) );
+        eventBus.post( new EntityDataDeletedEvent( entityDataKey ) );
     }
 
     @Override

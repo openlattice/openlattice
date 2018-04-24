@@ -20,32 +20,17 @@
 
 package com.openlattice.data.events;
 
-import com.google.common.base.Optional;
-
-import java.util.UUID;
+import com.openlattice.data.EntityDataKey;
 
 public class EntityDataDeletedEvent {
 
-    private final UUID           entitySetId;
-    private final String         entityId;
-    private final Optional<UUID> syncId;
+    private final EntityDataKey edk;
 
-    public EntityDataDeletedEvent( UUID entitySetId, String entityId, Optional<UUID> syncId ) {
-        this.entitySetId = entitySetId;
-        this.entityId = entityId;
-        this.syncId = syncId;
+    public EntityDataDeletedEvent( EntityDataKey edk ) {
+        this.edk = edk;
     }
 
-    public UUID getEntitySetId() {
-        return entitySetId;
+    public EntityDataKey getEntityDataKey() {
+        return edk;
     }
-
-    public String getEntityId() {
-        return entityId;
-    }
-
-    public Optional<UUID> getSyncId() {
-        return syncId;
-    }
-
 }

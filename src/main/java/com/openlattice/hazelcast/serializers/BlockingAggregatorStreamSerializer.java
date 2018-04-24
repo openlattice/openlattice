@@ -20,19 +20,21 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.util.Preconditions;
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.blocking.BlockingAggregator;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.linking.HazelcastBlockingService;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.springframework.stereotype.Component;
 
 @Component
 public class BlockingAggregatorStreamSerializer implements SelfRegisteringStreamSerializer<BlockingAggregator> {
@@ -45,12 +47,7 @@ public class BlockingAggregatorStreamSerializer implements SelfRegisteringStream
 
     @Override public void write( ObjectDataOutput out, BlockingAggregator object ) throws IOException {
         UUIDStreamSerializer.serialize( out, object.getGraphId() );
-
-        out.writeInt( object.getEntitySetIdsToSyncIds().size() );
-        for ( Map.Entry<UUID, UUID> entry : object.getEntitySetIdsToSyncIds().entrySet() ) {
-            UUIDStreamSerializer.serialize( out, entry.getKey() );
-            UUIDStreamSerializer.serialize( out, entry.getValue() );
-        }
+        SetStreamSerializers.fastUUIDSetSerialize( out, object.getEntitySetIds() );
 
         out.writeInt( object.getPropertyTypesIndexedByFqn().size() );
         for ( Map.Entry<FullQualifiedName, UUID> entry : object.getPropertyTypesIndexedByFqn().entrySet() ) {
@@ -61,14 +58,7 @@ public class BlockingAggregatorStreamSerializer implements SelfRegisteringStream
 
     @Override public BlockingAggregator read( ObjectDataInput in ) throws IOException {
         UUID graphId = UUIDStreamSerializer.deserialize( in );
-
-        Map<UUID, UUID> entitySetIdsToSyncIds = Maps.newHashMap();
-        int esMapSize = in.readInt();
-        for ( int i = 0; i < esMapSize; i++ ) {
-            UUID entitySetId = UUIDStreamSerializer.deserialize( in );
-            UUID syncId = UUIDStreamSerializer.deserialize( in );
-            entitySetIdsToSyncIds.put( entitySetId, syncId );
-        }
+        Iterable<UUID> entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize( in );
 
         Map<FullQualifiedName, UUID> propertyTypeIdIndexedByFqn = Maps.newHashMap();
         int fqnMapSize = in.readInt();
@@ -78,7 +68,7 @@ public class BlockingAggregatorStreamSerializer implements SelfRegisteringStream
             propertyTypeIdIndexedByFqn.put( fqn, id );
         }
 
-        return new BlockingAggregator( graphId, entitySetIdsToSyncIds, propertyTypeIdIndexedByFqn, blockingService );
+        return new BlockingAggregator( graphId, entitySetIds, propertyTypeIdIndexedByFqn, blockingService );
     }
 
     @Override public int getTypeId() {

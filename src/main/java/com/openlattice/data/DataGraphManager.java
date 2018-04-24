@@ -66,7 +66,7 @@ public interface DataGraphManager {
             SetMultimap<UUID, Object> entityDetails,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
 
-    void deleteEntity( UUID elementId );
+    void deleteEntity( EntityDataKey edk );
 
     void deleteAssociation( EdgeKey key );
 
@@ -90,7 +90,7 @@ public interface DataGraphManager {
             throws ExecutionException, InterruptedException;
 
     void replaceEntity(
-            UUID entityKeyId,
+            EntityDataKey edk,
             SetMultimap<UUID, Object> entity,
             Map<UUID, EdmPrimitiveTypeKind> propertyTypes );
 

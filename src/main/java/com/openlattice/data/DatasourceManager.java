@@ -38,9 +38,12 @@ import com.openlattice.neuron.audit.AuditEntitySetUtils;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
-import com.openlattice.sync.events.CurrentSyncUpdatedEvent;
-import com.openlattice.sync.events.SyncIdCreatedEvent;
 import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+
+import javax.inject.Inject;
 import java.nio.ByteBuffer;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -51,10 +54,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 
 public class DatasourceManager {
     private static final Logger logger = LoggerFactory.getLogger( DatasourceManager.class );
@@ -89,16 +88,17 @@ public class DatasourceManager {
         String SYNC_ID = PostgresColumn.SYNC_ID.getName();
         String CURRENT_SYNC_ID = PostgresColumn.CURRENT_SYNC_ID.getName();
 
-        this.mostRecentSyncIdSql = "SELECT ".concat( SYNC_ID ).concat( " FROM " ).concat( SYNC_IDS ).concat( " WHERE " )
+        this.mostRecentSyncIdSql = "SELECT " .concat( SYNC_ID ).concat( " FROM " ).concat( SYNC_IDS )
+                .concat( " WHERE " )
                 .concat( ENTITY_SET_ID ).concat( " = ? ORDER BY " ).concat( SYNC_ID ).concat( " DESC LIMIT 1;" );
-        this.writeSyncIdsSql = "INSERT INTO ".concat( SYNC_IDS ).concat( " (" ).concat( ENTITY_SET_ID ).concat( ", " )
+        this.writeSyncIdsSql = "INSERT INTO " .concat( SYNC_IDS ).concat( " (" ).concat( ENTITY_SET_ID ).concat( ", " )
                 .concat( SYNC_ID ).concat( ", " ).concat( CURRENT_SYNC_ID ).concat( ") VALUES ( ?, ?, ? );" );
-        this.allSyncIdsSql = "SELECT ".concat( SYNC_ID ).concat( " FROM " ).concat( SYNC_IDS )
+        this.allSyncIdsSql = "SELECT " .concat( SYNC_ID ).concat( " FROM " ).concat( SYNC_IDS )
                 .concat( " WHERE " ).concat( ENTITY_SET_ID ).concat( " = ?;" );
-        this.allPreviousEntitySetsAndSyncIdsSql = "SELECT ".concat( ENTITY_SET_ID ).concat( ", " ).concat( SYNC_ID )
+        this.allPreviousEntitySetsAndSyncIdsSql = "SELECT " .concat( ENTITY_SET_ID ).concat( ", " ).concat( SYNC_ID )
                 .concat( " FROM " ).concat( SYNC_IDS ).concat( " WHERE " )
                 .concat( ENTITY_SET_ID ).concat( " = ? AND " ).concat( SYNC_ID ).concat( " < ?;" );
-        this.allCurrentSyncIdsSql = "SELECT DISTINCT ".concat( ENTITY_SET_ID ).concat( ", " ).concat( CURRENT_SYNC_ID )
+        this.allCurrentSyncIdsSql = "SELECT DISTINCT " .concat( ENTITY_SET_ID ).concat( ", " ).concat( CURRENT_SYNC_ID )
                 .concat( " FROM " ).concat( SYNC_IDS ).concat( ";" );
     }
 
@@ -117,14 +117,11 @@ public class DatasourceManager {
         if ( entitySetId.equals( AuditEntitySetUtils.getId() ) ) {
             AuditEntitySetUtils.setSyncId( syncId );
         }
-
-        eventBus.post( new CurrentSyncUpdatedEvent( entitySetId, syncId ) );
     }
 
     public UUID createNewSyncIdForEntitySet( UUID entitySetId ) {
         UUID newSyncId = new UUID( System.currentTimeMillis(), 0 );
         addSyncIdToEntitySet( entitySetId, newSyncId );
-        eventBus.post( new SyncIdCreatedEvent( entitySetId, newSyncId ) );
         return newSyncId;
     }
 

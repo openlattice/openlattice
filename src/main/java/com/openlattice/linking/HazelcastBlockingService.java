@@ -20,17 +20,14 @@
 
 package com.openlattice.linking;
 
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
 import com.openlattice.blocking.GraphEntityPair;
 import com.openlattice.blocking.LinkingEntity;
-import com.openlattice.data.EntityKey;
+import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.linking.predicates.LinkingPredicates;
 import com.openlattice.matching.FeatureExtractionAggregator;
-import com.google.common.collect.Sets;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.linking.predicates.LinkingPredicates;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.scheduling.annotation.Async;
 
@@ -47,12 +44,10 @@ public class HazelcastBlockingService {
     private static final boolean explain   = false;
 
     private IMap<GraphEntityPair, LinkingEntity> linkingEntities;
-    private IMap<EntityKey, UUID>                ids;
     private HazelcastInstance                    hazelcastInstance;
 
     public HazelcastBlockingService( HazelcastInstance hazelcastInstance ) {
         this.linkingEntities = hazelcastInstance.getMap( HazelcastMap.LINKING_ENTITIES.name() );
-        this.ids = hazelcastInstance.getMap( HazelcastMap.IDS.name() );
         this.hazelcastInstance = hazelcastInstance;
     }
 
@@ -60,13 +55,13 @@ public class HazelcastBlockingService {
     public void blockAndMatch(
             GraphEntityPair graphEntityPair,
             LinkingEntity linkingEntity,
-            Map<UUID, UUID> entitySetIdsToSyncIds,
+            Iterable<UUID> entitySetIds,
             Map<FullQualifiedName, UUID> propertyTypeIdIndexedByFqn ) {
-        UUID[] entityKeyIds = ids.getAll( Sets.newHashSet( elasticsearchApi
-                .executeEntitySetDataSearchAcrossIndices( entitySetIdsToSyncIds,
+        UUID[] entityKeyIds = elasticsearchApi
+                .executeEntitySetDataSearchAcrossIndices( entitySetIds,
                         linkingEntity.getEntity(),
                         blockSize,
-                        explain ) ) ).values().toArray( new UUID[] {} );
+                        explain ).toArray( new UUID[] {} );
         linkingEntities.aggregate( new FeatureExtractionAggregator( graphEntityPair,
                         linkingEntity,
                         propertyTypeIdIndexedByFqn ),

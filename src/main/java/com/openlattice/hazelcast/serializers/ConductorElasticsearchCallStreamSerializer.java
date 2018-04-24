@@ -20,10 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.ClosureSerializer;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -32,21 +29,17 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.serializers.AclKeyKryoSerializer;
 import com.openlattice.authorization.serializers.EntityDataLambdasStreamSerializer;
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.conductor.rpc.ConductorElasticsearchCall;
-import com.openlattice.conductor.rpc.ElasticsearchLambdas;
-import com.openlattice.conductor.rpc.EntityDataLambdas;
-import com.openlattice.conductor.rpc.SearchEntitySetDataLambda;
+import com.openlattice.conductor.rpc.*;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.organization.Organization;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.objenesis.strategy.StdInstantiatorStrategy;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.invoke.SerializedLambda;
 import java.util.UUID;
 import java.util.function.Function;
-import org.objenesis.strategy.StdInstantiatorStrategy;
-import org.springframework.stereotype.Component;
 
 @SuppressWarnings( "rawtypes" )
 @Component
@@ -92,9 +85,7 @@ public class ConductorElasticsearchCallStreamSerializer
     @SuppressFBWarnings
     public void write( ObjectDataOutput out, ConductorElasticsearchCall object ) throws IOException {
         UUIDStreamSerializer.serialize( out, object.getUserId() );
-        Output output = new Output( (OutputStream) out );
-        kryoThreadLocal.get().writeClassAndObject( output, object.getFunction() );
-        output.flush();
+        Jdk8StreamSerializers.serializeWithKryo( kryoThreadLocal.get(), out, object.getFunction(), 32 );
     }
 
     @Override
@@ -102,9 +93,8 @@ public class ConductorElasticsearchCallStreamSerializer
     @SuppressFBWarnings
     public ConductorElasticsearchCall read( ObjectDataInput in ) throws IOException {
         UUID userId = UUIDStreamSerializer.deserialize( in );
-        Input input = new Input( (InputStream) in );
-        Function<ConductorElasticsearchApi, ?> f = (Function<ConductorElasticsearchApi, ?>) kryoThreadLocal.get()
-                .readClassAndObject( input );
+        Function<ConductorElasticsearchApi, ?> f = (Function<ConductorElasticsearchApi, ?>) Jdk8StreamSerializers
+                .deserializeWithKryo( kryoThreadLocal.get(), in, 32 );
         return new ConductorElasticsearchCall( userId, f, api );
     }
 
