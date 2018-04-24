@@ -8,6 +8,7 @@ import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.KeyIterator;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +57,7 @@ public class PostgresDataManager {
                 .append( ";" ).toString();
     }
 
+    @SuppressFBWarnings( value = "ODR_OPEN_DATABASE_RESOURCE", justification = "Connection handled by CountdownConnectionCloser" )
     public Stream<Entity> getEntitiesInEntitySet( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes ) {
         Set<UUID> authorizedPropertyTypeIds = authorizedPropertyTypes.stream().map( PropertyType::getId )
                 .collect( Collectors.toSet() );

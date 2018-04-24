@@ -24,6 +24,7 @@ package com.openlattice.conductor.rpc;
 
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.EntityDataKey;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -32,6 +33,7 @@ import java.util.function.Function;
 public class EntityDataLambdas implements Function<ConductorElasticsearchApi, Boolean>, Serializable {
     private static final long serialVersionUID = -1071651645473672891L;
 
+    @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented")
     private EntityDataKey             edk;
     private SetMultimap<UUID, Object> propertyValues;
     private boolean                   shouldUpdate;
