@@ -23,48 +23,23 @@ package com.openlattice.datastore.services;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
-import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
-import com.openlattice.authorization.AccessCheck;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDatastore;
-import com.openlattice.data.EntityKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
+import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.events.AppCreatedEvent;
-import com.openlattice.edm.events.AppDeletedEvent;
-import com.openlattice.edm.events.AppTypeCreatedEvent;
-import com.openlattice.edm.events.AppTypeDeletedEvent;
-import com.openlattice.edm.events.AssociationTypeCreatedEvent;
-import com.openlattice.edm.events.AssociationTypeDeletedEvent;
-import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
-import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
-import com.openlattice.edm.events.EntityTypeCreatedEvent;
-import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
+import com.openlattice.edm.events.*;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -74,27 +49,16 @@ import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.openlattice.search.requests.AdvancedSearch;
-import com.openlattice.search.requests.DataSearchResult;
-import com.openlattice.search.requests.SearchDetails;
-import com.openlattice.search.requests.SearchResult;
-import com.openlattice.search.requests.SearchTerm;
-import com.openlattice.sync.events.CurrentSyncUpdatedEvent;
-import com.openlattice.sync.events.SyncIdCreatedEvent;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
+import com.openlattice.search.requests.*;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
@@ -129,6 +93,9 @@ public class SearchService {
     @Inject
     private EntityKeyIdService entityKeyService;
 
+    @Inject
+    private PostgresDataManager postgresDataManager;
+
     @PostConstruct
     public void initializeBus() {
         eventBus.register( this );
@@ -161,27 +128,8 @@ public class SearchService {
     }
 
     @Subscribe
-    public void createSecurableObjectIndexForSyncId( SyncIdCreatedEvent event ) {
-        UUID entitySetId = event.getEntitySetId();
-        List<PropertyType> propertyTypes = Lists.newArrayList( dataModelService.getPropertyTypes(
-                dataModelService.getEntityType( dataModelService.getEntitySet( entitySetId ).getEntityTypeId() )
-                        .getProperties() ) );
-        elasticsearchApi.createSecurableObjectIndex( entitySetId,
-                event.getSyncId(),
-                propertyTypes );
-    }
-
-    @Subscribe
     public void deleteEntitySet( EntitySetDeletedEvent event ) {
         elasticsearchApi.deleteEntitySet( event.getEntitySetId() );
-    }
-
-    @Subscribe
-    public void deleteIndicesBeforeCurrentSync( CurrentSyncUpdatedEvent event ) {
-        UUID entitySetId = event.getEntitySetId();
-        datasourceManager.getAllPreviousSyncIds( entitySetId, event.getCurrentSyncId() ).forEach( syncId -> {
-            elasticsearchApi.deleteEntitySetForSyncId( entitySetId, syncId );
-        } );
     }
 
     @Subscribe
@@ -216,22 +164,19 @@ public class SearchService {
 
     @Subscribe
     public void createEntityData( EntityDataCreatedEvent event ) {
-        UUID entitySetId = event.getEntitySetId();
-        UUID syncId = ( event.getOptionalSyncId().isPresent() ) ? event.getOptionalSyncId().get()
-                : datasourceManager.getCurrentSyncId( event.getEntitySetId() );
-        String entityId = event.getEntityId();
+        EntityDataKey edk = event.getEntityDataKey();
         SetMultimap<UUID, Object> entity = event.getPropertyValues();
         if ( event.getShouldUpdate() ) {
-            elasticsearchApi.updateEntityData( entitySetId, syncId, entityId, entity );
-        } else { elasticsearchApi.createEntityData( entitySetId, syncId, entityId, entity ); }
+            elasticsearchApi.updateEntityData( edk, entity );
+        } else {
+            elasticsearchApi.createEntityData( edk, entity );
+        }
     }
 
     @Subscribe
     public void deleteEntityData( EntityDataDeletedEvent event ) {
-        Iterable<UUID> syncIds = ( event.getSyncId().isPresent() ) ? Lists.newArrayList( event.getSyncId().get() )
-                : datasourceManager.getAllSyncIds( event.getEntitySetId() );
-        syncIds.forEach(
-                syncId -> elasticsearchApi.deleteEntityData( event.getEntitySetId(), syncId, event.getEntityId() ) );
+        EntityDataKey edk = event.getEntityDataKey();
+        elasticsearchApi.deleteEntityData( edk );
     }
 
     @Timed
@@ -239,9 +184,7 @@ public class SearchService {
             UUID entitySetId,
             SearchTerm searchTerm,
             Set<UUID> authorizedProperties ) {
-        UUID syncId = datasourceManager.getCurrentSyncId( entitySetId );
-        SearchResult result = elasticsearchApi.executeEntitySetDataSearch( entitySetId,
-                syncId,
+        EntityKeyIdSearchResult result = elasticsearchApi.executeEntitySetDataSearch( entitySetId,
                 searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
                 searchTerm.getMaxHits(),
@@ -249,17 +192,16 @@ public class SearchService {
         Map<UUID, PropertyType> authorizedPropertyTypes = dataModelService
                 .getPropertyTypesAsMap( authorizedProperties );
 
-        List<SetMultimap<Object, Object>> results = getResults( entitySetId, syncId, result, authorizedPropertyTypes );
+        List<SetMultimap<Object, Object>> results = getResults( result, authorizedPropertyTypes );
 
         return new DataSearchResult( result.getNumHits(), results );
     }
 
     @Timed
     public long getEntitySetSize( UUID entitySetId ) {
-        UUID syncId = datasourceManager.getCurrentSyncId( entitySetId );
         Set<UUID> properties = Sets
                 .newHashSet( dataModelService.getEntityTypeByEntitySetId( entitySetId ).getProperties() );
-        return elasticsearchApi.executeEntitySetDataSearch( entitySetId, syncId, "*", 0, 0, properties ).getNumHits();
+        return elasticsearchApi.executeEntitySetDataSearch( entitySetId, "*", 0, 0, properties ).getNumHits();
     }
 
     @Subscribe
@@ -274,12 +216,12 @@ public class SearchService {
     }
 
     @Timed
-    public List<EntityKey> executeEntitySetDataSearchAcrossIndices(
-            Map<UUID, UUID> entitySetAndSyncIds,
+    public List<UUID> executeEntitySetDataSearchAcrossIndices(
+            Iterable<UUID> entitySetIds,
             Map<UUID, DelegatedStringSet> fieldSearches,
             int size,
             boolean explain ) {
-        return elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetAndSyncIds,
+        return elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetIds,
                 fieldSearches,
                 size,
                 explain );
@@ -298,9 +240,7 @@ public class SearchService {
         } );
 
         if ( !authorizedSearches.isEmpty() ) {
-            UUID syncId = datasourceManager.getCurrentSyncId( entitySetId );
-            SearchResult result = elasticsearchApi.executeAdvancedEntitySetDataSearch( entitySetId,
-                    syncId,
+            EntityKeyIdSearchResult result = elasticsearchApi.executeAdvancedEntitySetDataSearch( entitySetId,
                     authorizedSearches,
                     search.getStart(),
                     search.getMaxHits(),
@@ -309,10 +249,7 @@ public class SearchService {
             Map<UUID, PropertyType> authorizedPropertyTypes = dataModelService
                     .getPropertyTypesAsMap( authorizedProperties );
 
-            List<SetMultimap<Object, Object>> results = getResults( entitySetId,
-                    syncId,
-                    result,
-                    authorizedPropertyTypes );
+            List<SetMultimap<Object, Object>> results = getResults( result, authorizedPropertyTypes );
             return new DataSearchResult( result.getNumHits(), results );
         }
 
@@ -559,15 +496,10 @@ public class SearchService {
     }
 
     private List<SetMultimap<Object, Object>> getResults(
-            UUID entitySetId,
-            UUID syncId,
-            SearchResult result,
+            EntityKeyIdSearchResult result,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        Collection<UUID> ids = entityKeyService.getEntityKeyIds( result.getHits().parallelStream()
-                .map( hit -> (String) hit.get( "id" ) )
-                .map( id -> new EntityKey( entitySetId, id, syncId ) )
-                .collect( Collectors.toSet() ) ).values();
-        return dataManager.getEntities( ids, authorizedPropertyTypes ).collect( Collectors.toList() );
+        return dataManager.getEntities( result.getEntityKeyIds(), authorizedPropertyTypes )
+                .collect( Collectors.toList() );
     }
 
     @Subscribe
@@ -600,32 +532,20 @@ public class SearchService {
         Set<UUID> propertyTypeIds = dataModelService.getEntityTypeByEntitySetId( entitySetId ).getProperties();
         Map<UUID, PropertyType> propertyTypes = dataModelService.getPropertyTypesAsMap( propertyTypeIds );
         List<PropertyType> propertyTypeList = Lists.newArrayList( propertyTypes.values() );
-        UUID syncId = datasourceManager.getCurrentSyncId( entitySetId );
 
         elasticsearchApi.deleteEntitySet( entitySetId );
         elasticsearchApi.saveEntitySetToElasticsearch( dataModelService.getEntitySet( entitySetId ), propertyTypeList );
-        elasticsearchApi.createSecurableObjectIndex( entitySetId, syncId, propertyTypeList );
 
-        Map<FullQualifiedName, UUID> propertyIdsByFqn = propertyTypes.values().stream()
-                .collect( Collectors.toMap( pt -> pt.getType(), pt -> pt.getId() ) );
+        Set<PropertyType> propertyTypesToLoad = propertyTypeList.stream()
+                .filter( pt -> !pt.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ).collect(
+                        Collectors.toSet() );
 
-        Set<FullQualifiedName> ignore = propertyTypeList.stream()
-                .filter( pt -> pt.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) )
-                .map( pt -> pt.getType() )
-                .collect( Collectors.toSet() );
-
-        dataManager.getEntityKeysForEntitySet( entitySetId, syncId )
+        postgresDataManager.getEntitiesInEntitySet( entitySetId, propertyTypesToLoad )
                 .parallel()
-                .forEach( entityKey -> {
-                    String entityId = entityKey.getEntityId();
-                    SetMultimap<UUID, Object> entity = HashMultimap.create();
-                    dataManager
-                            .getEntity( entitySetId, syncId, entityId, propertyTypes )
-                            .entries().stream()
-                            .filter( entry -> !ignore.contains( entry.getKey() ) )
-                            .forEach( entry -> entity.put( propertyIdsByFqn.get( entry.getKey() ), entry.getValue() ) );
-                    elasticsearchApi
-                            .createEntityData( entitySetId, syncId, entityId, entity );
+                .forEach( entity -> {
+                    EntityDataKey edk = new EntityDataKey( entitySetId, entity.getEntityKeyId() );
+                    SetMultimap<UUID, Object> values = entity.getProperties();
+                    elasticsearchApi.createEntityData( edk, values );
                 } );
     }
 
