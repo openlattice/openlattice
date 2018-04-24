@@ -20,10 +20,11 @@
 
 package com.openlattice.kindling.search;
 
-import com.openlattice.authorization.Principal;
 import com.google.common.base.Optional;
 import com.google.common.collect.*;
 import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Principal;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -39,8 +40,6 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
     public static void createIndicesAndData() {
         elasticsearchApi.saveEntitySetToElasticsearch( chicagoEmployees, propertyTypesList );
         elasticsearchApi.saveEntitySetToElasticsearch( entitySet2, propertyTypesList );
-        elasticsearchApi.createSecurableObjectIndex( chicagoEmployeesEntitySetId, SYNC_ID, propertyTypesList );
-        elasticsearchApi.createSecurableObjectIndex( entitySet2Id, SYNC_ID2, propertyTypesList );
         elasticsearchApi.createOrganization( organization );
         createEntityData();
     }
@@ -64,24 +63,18 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
         propertyValues3.put( employeeDeptPropertyId, Sets.newHashSet( "POLICE" ) );
         propertyValues3.put( salaryPropertyId, Sets.newHashSet( "93240" ) );
         propertyValues3.put( employeeIdPropertyId, Sets.newHashSet( "12347" ) );
-        elasticsearchApi.createEntityData( chicagoEmployeesEntitySetId,
-                SYNC_ID,
-                UUID.randomUUID().toString(),
+        elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
                 propertyValues1 );
-        elasticsearchApi.createEntityData( chicagoEmployeesEntitySetId,
-                SYNC_ID,
-                UUID.randomUUID().toString(),
+        elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
                 propertyValues2 );
-        elasticsearchApi.createEntityData( chicagoEmployeesEntitySetId,
-                SYNC_ID,
-                UUID.randomUUID().toString(),
+        elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
                 propertyValues3 );
 
         SetMultimap<UUID, Object> entitySet2PropertyValues = HashMultimap.create();
         entitySet2PropertyValues.put( employeeDeptPropertyId, Sets.newHashSet( "POLICE" ) );
         entitySet2PropertyValues.put( employeeIdPropertyId, Sets.newHashSet( "12347" ) );
         elasticsearchApi
-                .createEntityData( entitySet2Id, SYNC_ID, UUID.randomUUID().toString(), entitySet2PropertyValues );
+                .createEntityData( new EntityDataKey( entitySet2Id, UUID.randomUUID() ), entitySet2PropertyValues );
     }
 
     @Test
@@ -113,7 +106,6 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
         authorizedPropertyTypes.add( salaryPropertyId );
         authorizedPropertyTypes.add( employeeIdPropertyId );
         elasticsearchApi.executeEntitySetDataSearch( chicagoEmployeesEntitySetId,
-                SYNC_ID,
                 "police",
                 0,
                 50,
@@ -122,12 +114,10 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
 
     @Test
     public void testSearchAcrossIndices() {
-        Map<UUID, UUID> entitySetsAndSyncIds = Maps.newHashMap();
-        entitySetsAndSyncIds.put( chicagoEmployeesEntitySetId, SYNC_ID );
-        entitySetsAndSyncIds.put( entitySet2Id, SYNC_ID2 );
+        Set<UUID> entitySetIds = ImmutableSet.of( chicagoEmployeesEntitySetId, entitySet2Id);
         Map<UUID, DelegatedStringSet> fieldSearches = Maps.newHashMap();
         fieldSearches.put( employeeIdPropertyId, DelegatedStringSet.wrap( Sets.newHashSet( "12347" ) ) );
-        elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetsAndSyncIds, fieldSearches, 50, true );
+        elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetIds, fieldSearches, 50, true );
     }
 
     @Test
