@@ -76,7 +76,9 @@ import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 
-import com.openlattice.data.EntityDataKey;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
+import com.openlattice.data.*;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.linking.LinkingVertex;
@@ -97,10 +99,6 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.EntityDataMetadata;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.PropertyMetadata;
-import com.openlattice.data.PropertyValueKey;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -141,14 +139,14 @@ public final class ResultSetAdapters {
         return new EntityDataKey( entitySetId( rs ), id( rs ) );
     }
 
-    public static PropertyValueKey propertyValueKey( ResultSet rs ) throws SQLException {
+    public static PropertyValueKey propertyValueKey( String propertyName, ResultSet rs ) throws SQLException {
         UUID entityKeyId = id( rs );
-        Object value = propertyValue( rs );
+        Object value = propertyValue( propertyName, rs );
         return new PropertyValueKey( entityKeyId, value );
     }
 
-    public static Object propertyValue( ResultSet rs ) throws SQLException {
-        return rs.getObject( DataTables.VALUE_FIELD );
+    public static Object propertyValue( String propertyName, ResultSet rs ) throws SQLException {
+        return rs.getObject( propertyName );
     }
 
     public static PropertyMetadata propertyMetadata( ResultSet rs ) throws SQLException {
@@ -604,6 +602,18 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.fromNullable( description( rs ) );
         UUID entityTypeId = entityTypeId( rs );
         return new AppType( id, type, title, description, entityTypeId );
+    }
+
+    public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
+        UUID entityKeyId = id( rs );
+        SetMultimap<UUID, Object> data = HashMultimap.create();
+        for (UUID ptId : authorizedPropertyTypeIds) {
+            Array valuesArr = rs.getArray( DataTables.propertyTableName( ptId ) );
+            if (valuesArr != null) {
+                data.putAll( ptId, Arrays.asList( valuesArr.getArray() ) );
+            }
+        }
+        return new Entity( entityKeyId, data );
     }
 
 }

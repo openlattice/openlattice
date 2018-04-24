@@ -1,10 +1,10 @@
 package com.openlattice.blocking;
 
-import com.openlattice.linking.HazelcastBlockingService;
 import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.core.ICountDownLatch;
+import com.openlattice.linking.HazelcastBlockingService;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.util.Map;
@@ -14,9 +14,9 @@ public class BlockingAggregator extends Aggregator<Map.Entry<GraphEntityPair, Li
         implements HazelcastInstanceAware {
     private static final long serialVersionUID = 2884032395472384002L;
 
-    private transient HazelcastBlockingService blockingService;
+    private transient HazelcastBlockingService     blockingService;
     private           UUID                         graphId;
-    private           Map<UUID, UUID>              entitySetIdsToSyncIds;
+    private           Iterable<UUID>               entitySetIds;
     private           Map<FullQualifiedName, UUID> propertyTypesIndexedByFqn;
     private transient ICountDownLatch              countDownLatch;
 
@@ -24,18 +24,18 @@ public class BlockingAggregator extends Aggregator<Map.Entry<GraphEntityPair, Li
 
     public BlockingAggregator(
             UUID graphId,
-            Map<UUID, UUID> entitySetIdsToSyncIds,
+            Iterable<UUID> entitySetIds,
             Map<FullQualifiedName, UUID> propertyTypesIndexedByFqn ) {
-        this( graphId, entitySetIdsToSyncIds, propertyTypesIndexedByFqn, null );
+        this( graphId, entitySetIds, propertyTypesIndexedByFqn, null );
     }
 
     public BlockingAggregator(
             UUID graphId,
-            Map<UUID, UUID> entitySetIdsToSyncIds,
+            Iterable<UUID> entitySetIds,
             Map<FullQualifiedName, UUID> propertyTypesIndexedByFqn,
             HazelcastBlockingService blockingService ) {
         this.graphId = graphId;
-        this.entitySetIdsToSyncIds = entitySetIdsToSyncIds;
+        this.entitySetIds = entitySetIds;
         this.propertyTypesIndexedByFqn = propertyTypesIndexedByFqn;
         this.blockingService = blockingService;
     }
@@ -44,7 +44,7 @@ public class BlockingAggregator extends Aggregator<Map.Entry<GraphEntityPair, Li
         GraphEntityPair graphEntityPair = input.getKey();
         LinkingEntity linkingEntity = input.getValue();
         blockingService
-                .blockAndMatch( graphEntityPair, linkingEntity, entitySetIdsToSyncIds, propertyTypesIndexedByFqn );
+                .blockAndMatch( graphEntityPair, linkingEntity, entitySetIds, propertyTypesIndexedByFqn );
     }
 
     @Override public void combine( Aggregator aggregator ) {
@@ -80,8 +80,8 @@ public class BlockingAggregator extends Aggregator<Map.Entry<GraphEntityPair, Li
         return graphId;
     }
 
-    public Map<UUID, UUID> getEntitySetIdsToSyncIds() {
-        return entitySetIdsToSyncIds;
+    public Iterable<UUID> getEntitySetIds() {
+        return entitySetIds;
     }
 
     public Map<FullQualifiedName, UUID> getPropertyTypesIndexedByFqn() {
@@ -98,12 +98,12 @@ public class BlockingAggregator extends Aggregator<Map.Entry<GraphEntityPair, Li
 
         if ( !graphId.equals( that.graphId ) )
             return false;
-        return entitySetIdsToSyncIds.equals( that.entitySetIdsToSyncIds );
+        return entitySetIds.equals( that.entitySetIds );
     }
 
     @Override public int hashCode() {
         int result = graphId.hashCode();
-        result = 31 * result + entitySetIdsToSyncIds.hashCode();
+        result = 31 * result + entitySetIds.hashCode();
         return result;
     }
 }

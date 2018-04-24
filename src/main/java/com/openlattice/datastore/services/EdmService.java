@@ -24,6 +24,7 @@ package com.openlattice.datastore.services;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import com.dataloom.streams.StreamUtil;
 import com.openlattice.edm.events.AssociationTypeCreatedEvent;
 import com.openlattice.edm.events.AssociationTypeDeletedEvent;
 import com.openlattice.edm.events.ClearAllDataEvent;
@@ -1175,6 +1176,7 @@ public class EdmService implements EdmManager {
         Map<UUID, EntityType> entityTypesById = Maps.newHashMap();
         Map<UUID, AssociationType> associationTypesById = Maps.newHashMap();
 
+
         diff.getDiff().getPropertyTypes().forEach( pt -> {
             idToType.put( pt.getId(), SecurableObjectType.PropertyTypeInEntitySet );
             propertyTypesById.put( pt.getId(), pt );
@@ -1211,6 +1213,10 @@ public class EdmService implements EdmManager {
 
         } );
 
+        diff.getDiff().getSchemas().forEach( schema -> {
+            schemaManager.createOrUpdateSchemas( schema );
+        } );
+
         diff.getDiff().getPropertyTypes().forEach( pt -> {
             if ( !updatedIds.contains( pt.getId() ) ) { createOrUpdatePropertyType( pt ); }
         } );
@@ -1222,24 +1228,6 @@ public class EdmService implements EdmManager {
         diff.getDiff().getAssociationTypes().forEach( at -> {
             if ( !updatedIds.contains( at.getAssociationEntityType().getId() ) ) {
                 createOrUpdateAssociationType( at );
-            }
-        } );
-
-        diff.getDiff().getSchemas().forEach( schema -> {
-            if ( schemaManager.checkSchemaExists( schema.getFqn() ) ) {
-                Schema existing = schemaManager.getSchema( schema.getFqn().getNamespace(), schema.getFqn().getName() );
-                if ( !existing.getEntityTypes().equals( schema.getEntityTypes() ) ) {
-                    schemaManager.addEntityTypesToSchema( schema.getEntityTypes().stream().map( et -> {
-                        return et.getId();
-                    } ).collect( Collectors.toSet() ), schema.getFqn() );
-                }
-                if ( !existing.getPropertyTypes().equals( schema.getPropertyTypes() ) ) {
-                    schemaManager.addPropertyTypesToSchema( schema.getPropertyTypes().stream().map( pt -> {
-                        return pt.getId();
-                    } ).collect( Collectors.toSet() ), schema.getFqn() );
-                }
-            } else {
-                schemaManager.createOrUpdateSchemas( schema );
             }
         } );
     }

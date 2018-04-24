@@ -23,6 +23,7 @@
 package com.openlattice.conductor.rpc;
 
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.EntityDataKey;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -31,21 +32,15 @@ import java.util.function.Function;
 public class EntityDataLambdas implements Function<ConductorElasticsearchApi, Boolean>, Serializable {
     private static final long serialVersionUID = -1071651645473672891L;
 
-    private UUID                      entitySetId;
-    private UUID                      syncId;
-    private String                    entityId;
+    private EntityDataKey             edk;
     private SetMultimap<UUID, Object> propertyValues;
     private boolean                   shouldUpdate;
 
     public EntityDataLambdas(
-            UUID entitySetId,
-            UUID syncId,
-            String entityId,
+            EntityDataKey edk,
             SetMultimap<UUID, Object> propertyValues,
             boolean shouldUpdate ) {
-        this.entitySetId = entitySetId;
-        this.syncId = syncId;
-        this.entityId = entityId;
+        this.edk = edk;
         this.propertyValues = propertyValues;
         this.shouldUpdate = shouldUpdate;
     }
@@ -53,20 +48,12 @@ public class EntityDataLambdas implements Function<ConductorElasticsearchApi, Bo
     @Override
     public Boolean apply( ConductorElasticsearchApi api ) {
         return shouldUpdate ?
-                api.updateEntityData( entitySetId, syncId, entityId, propertyValues ) :
-                api.createEntityData( entitySetId, syncId, entityId, propertyValues );
+                api.updateEntityData( edk, propertyValues ) :
+                api.createEntityData( edk, propertyValues );
     }
 
-    public UUID getEntitySetId() {
-        return entitySetId;
-    }
-
-    public UUID getSyncId() {
-        return syncId;
-    }
-
-    public String getEntityId() {
-        return entityId;
+    public EntityDataKey getEntityDataKey() {
+        return edk;
     }
 
     public SetMultimap<UUID, Object> getPropertyValues() {

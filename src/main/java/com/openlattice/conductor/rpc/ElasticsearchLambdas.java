@@ -22,6 +22,7 @@ package com.openlattice.conductor.rpc;
 
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -47,10 +48,9 @@ public class ElasticsearchLambdas implements Serializable {
 
     public static Function<ConductorElasticsearchApi, Boolean> createSecurableObjectIndex(
             UUID entitySetId,
-            UUID syncId,
             List<PropertyType> propertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .createSecurableObjectIndex( entitySetId, syncId, propertyTypes );
+                .createSecurableObjectIndex( entitySetId, propertyTypes );
     }
 
     public static Function<ConductorElasticsearchApi, SearchResult> executeEntitySetMetadataQuery(
@@ -72,13 +72,6 @@ public class ElasticsearchLambdas implements Serializable {
     public static Function<ConductorElasticsearchApi, Boolean> deleteEntitySet( UUID entitySetId ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .deleteEntitySet( entitySetId );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> deleteEntitySetForSyncId(
-            UUID entitySetId,
-            UUID syncId ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteEntitySetForSyncId( entitySetId, syncId );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> createOrganization( Organization organization ) {
@@ -228,12 +221,9 @@ public class ElasticsearchLambdas implements Serializable {
                 .executeFQNPropertyTypeSearch( namespace, name, start, maxHits );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> deleteEntityData(
-            UUID entitySetId,
-            UUID syncId,
-            String entityId ) {
+    public static Function<ConductorElasticsearchApi, Boolean> deleteEntityData( EntityDataKey edk ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteEntityData( entitySetId, syncId, entityId );
+                .deleteEntityData( edk );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> clearAllData() {

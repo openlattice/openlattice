@@ -20,7 +20,6 @@
 
 package com.openlattice.data;
 
-import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -46,19 +45,16 @@ import com.openlattice.graph.core.Graph;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.hazelcast.HazelcastMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -125,7 +121,10 @@ public class DataGraphService implements DataGraphManager {
     public SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         EntityKey entityKey = idService.getEntityKey( entityKeyId );
-        return eds.getEntity( entityKey.getEntitySetId(), entityKey.getSyncId(), entityKey.getEntityId(), authorizedPropertyTypes );
+        return eds.getEntity( entityKey.getEntitySetId(),
+                entityKey.getSyncId(),
+                entityKey.getEntityId(),
+                authorizedPropertyTypes );
     }
 
     @Override
@@ -146,17 +145,16 @@ public class DataGraphService implements DataGraphManager {
     }
 
     @Override
-    public void deleteEntity( UUID elementId ) {
-        EntityKey entityKey = idService.getEntityKey( elementId );
-        lm.deleteVertex( elementId );
-        eds.deleteEntity( entityKey );
+    public void deleteEntity( EntityDataKey edk ) {
+        lm.deleteVertex( edk.getEntityKeyId() );
+        eds.deleteEntity( edk );
     }
 
     @Override
     public void deleteAssociation( EdgeKey key ) {
         EntityKey entityKey = idService.getEntityKey( key.getEdgeEntityKeyId() );
         lm.deleteEdge( key );
-        eds.deleteEntity( entityKey );
+        eds.deleteEntity( new EntityDataKey( entityKey.getEntitySetId(), key.getEdgeEntityKeyId() ) );
     }
 
     @Override
@@ -201,22 +199,18 @@ public class DataGraphService implements DataGraphManager {
     }
 
     public void replaceEntity(
-            UUID entityKeyId,
+            EntityDataKey edk,
             SetMultimap<UUID, Object> entity,
             Map<UUID, EdmPrimitiveTypeKind> propertyTypes ) {
-        EntityKey key = idService.getEntityKey( entityKeyId );
-        eds.deleteEntity( key );
+        EntityKey key = idService.getEntityKey( edk.getEntityKeyId() );
+        eds.deleteEntity( edk );
         eds.updateEntityAsync( key, entity, propertyTypes ).forEach( DataGraphService::tryGetAndLogErrors );
 
         propertyTypes.entrySet().forEach( entry -> {
             if ( entry.getValue().equals( EdmPrimitiveTypeKind.Binary ) ) { entity.removeAll( entry.getKey() ); }
         } );
 
-        eventBus.post( new EntityDataCreatedEvent( key.getEntitySetId(),
-                Optional.of( key.getSyncId() ),
-                key.getEntityId(),
-                entity,
-                false ) );
+        eventBus.post( new EntityDataCreatedEvent( edk, entity, false ) );
     }
 
     @Override

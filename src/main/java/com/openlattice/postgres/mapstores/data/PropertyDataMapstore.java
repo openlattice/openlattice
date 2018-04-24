@@ -58,6 +58,7 @@ import org.apache.commons.lang.RandomStringUtils;
 public class PropertyDataMapstore
         extends AbstractBaseSplitKeyPostgresMapstore<EntityDataKey, Object, PropertyMetadata> {
     private static final Map<String, PostgresColumnDefinition> valueColumns = Maps.newConcurrentMap();
+    private final String valueColumnName;
 
     public PropertyDataMapstore(
             PostgresColumnDefinition valueColumn,
@@ -65,7 +66,7 @@ public class PropertyDataMapstore
             HikariDataSource hds ) {
         //Table name doesn't matter as these are used for configuring maps.
         super( "pdms", table, hds, valueColumns.putIfAbsent( table.getName(), valueColumn ) );
-
+        valueColumnName = valueColumn.getName().replace( "\"", "" );
     }
 
     @Override protected List<PostgresColumnDefinition> initKeyColumns() {
@@ -120,7 +121,7 @@ public class PropertyDataMapstore
         final Map<Object, PropertyMetadata> value = new HashMap<>();
 
         do {
-            Object key = ResultSetAdapters.propertyValue( rs );
+            Object key = ResultSetAdapters.propertyValue( valueColumnName, rs );
             PropertyMetadata metadata = ResultSetAdapters.propertyMetadata( rs );
             value.put( key, metadata );
         } while ( rs.next() );

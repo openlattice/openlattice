@@ -22,32 +22,30 @@
 
 package com.openlattice.conductor.rpc;
 
+import com.openlattice.search.requests.EntityKeyIdSearchResult;
+
 import java.io.Serializable;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
-import com.openlattice.search.requests.SearchResult;
-
-public class SearchEntitySetDataLambda implements Function<ConductorElasticsearchApi, SearchResult>, Serializable {
+public class SearchEntitySetDataLambda
+        implements Function<ConductorElasticsearchApi, EntityKeyIdSearchResult>, Serializable {
     private static final long serialVersionUID = -3273005291047567056L;
 
-    private UUID              entitySetId;
-    private UUID              syncId;
-    private String            searchTerm;
-    private int               start;
-    private int               maxHits;
-    private Set<UUID>         authorizedProperties;
+    private UUID      entitySetId;
+    private String    searchTerm;
+    private int       start;
+    private int       maxHits;
+    private Set<UUID> authorizedProperties;
 
     public SearchEntitySetDataLambda(
             UUID entitySetId,
-            UUID syncId,
             String searchTerm,
             int start,
             int maxHits,
             Set<UUID> authorizedProperties ) {
         this.entitySetId = entitySetId;
-        this.syncId = syncId;
         this.searchTerm = searchTerm;
         this.start = start;
         this.maxHits = maxHits;
@@ -55,8 +53,8 @@ public class SearchEntitySetDataLambda implements Function<ConductorElasticsearc
     }
 
     @Override
-    public SearchResult apply( ConductorElasticsearchApi api ) {
-        return api.executeEntitySetDataSearch( entitySetId, syncId, searchTerm, start, maxHits, authorizedProperties );
+    public EntityKeyIdSearchResult apply( ConductorElasticsearchApi api ) {
+        return api.executeEntitySetDataSearch( entitySetId, searchTerm, start, maxHits, authorizedProperties );
     }
 
 }
