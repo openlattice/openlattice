@@ -38,6 +38,7 @@ import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -150,11 +151,13 @@ public class DataTables {
                         WRITERS,
                         OWNERS )
                 .primaryKey( ENTITY_SET_ID, ID_VALUE, valueColumn );
-        //                .setUnique( valueColumn );
 
-        PostgresIndexDefinition idIndex = new PostgresIndexDefinition( ptd, valueColumn )
-                .name( quote( idxPrefix + "_id_idx" ) )
-                .ifNotExists();
+        //Byte arrays are generally to large to be indexed by postgres
+        if( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary )) {
+            PostgresIndexDefinition idIndex = new PostgresIndexDefinition( ptd, valueColumn )
+                    .name( quote( idxPrefix + "_id_idx" ) )
+                    .ifNotExists();
+        }
 
         PostgresIndexDefinition entitySetIdIndex = new PostgresIndexDefinition( ptd, valueColumn )
                 .name( quote( idxPrefix + "_entity_set_id_idx" ) )
