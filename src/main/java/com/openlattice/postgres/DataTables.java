@@ -153,8 +153,9 @@ public class DataTables {
                 .primaryKey( ENTITY_SET_ID, ID_VALUE, valueColumn );
 
         //Byte arrays are generally to large to be indexed by postgres
+        PostgresIndexDefinition idIndex = null;
         if( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary )) {
-            PostgresIndexDefinition idIndex = new PostgresIndexDefinition( ptd, valueColumn )
+            idIndex = new PostgresIndexDefinition( ptd, valueColumn )
                     .name( quote( idxPrefix + "_id_idx" ) )
                     .ifNotExists();
         }
@@ -196,9 +197,12 @@ public class DataTables {
                 .name( quote( idxPrefix + "_owners_idx" ) )
                 .ifNotExists();
 
+        if ( idIndex != null ) {
+            ptd.addIndexes( idIndex );
+        }
+        
         ptd.addIndexes(
                 entitySetIdIndex,
-                idIndex,
                 valueIndex,
                 versionIndex,
                 versionsIndex,
