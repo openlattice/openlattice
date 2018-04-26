@@ -94,7 +94,7 @@ public class LinkingService {
 
         // Warning: We assume that the restrictions on links are enforced/validated as specified in LinkingApi. In
         // particular, from now on we work on the assumption that only identical property types are linked on.
-        initializeComponents( dsm.getCurrentSyncId( linkIndexedByEntitySets.keySet() ),
+        initializeComponents( linkIndexedByEntitySets.keySet(),
                 linkIndexedByPropertyTypes,
                 linkIndexedByEntitySets );
 
@@ -126,10 +126,10 @@ public class LinkingService {
     }
 
     private void initializeComponents(
-            Map<UUID, UUID> linkingEntitySetsWithSyncIds,
+            Iterable<UUID> linkingEntitySetsIds,
             SetMultimap<UUID, UUID> linkIndexedByPropertyTypes,
             SetMultimap<UUID, UUID> linkIndexedByEntitySets ) {
-        matcher.setLinking( linkingEntitySetsWithSyncIds, linkIndexedByPropertyTypes, linkIndexedByEntitySets );
+        matcher.setLinking( linkingEntitySetsIds, linkIndexedByPropertyTypes, linkIndexedByEntitySets );
     }
 
     /**

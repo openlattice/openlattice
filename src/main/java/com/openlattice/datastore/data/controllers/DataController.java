@@ -37,10 +37,7 @@ import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
-import com.openlattice.data.DataApi;
-import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.DatasourceManager;
-import com.openlattice.data.EntitySetData;
+import com.openlattice.data.*;
 import com.openlattice.data.requests.Association;
 import com.openlattice.data.requests.BulkDataCreation;
 import com.openlattice.data.requests.EntitySetSelection;
@@ -506,7 +503,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             ensureWriteAccess( new AclKey( entitySetId, propertyTypeId ) );
         } );
 
-        dgm.deleteEntity( entityKeyId );
+        dgm.deleteEntity( new EntityDataKey( entitySetId, entityKeyId ) );
         return null;
     }
 
@@ -525,7 +522,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 } ).map( propertyTypeId -> dms.getPropertyType( propertyTypeId ) ).collect( Collectors
                         .toMap( propertyType -> propertyType.getId(), propertyType -> propertyType.getDatatype() ) );
 
-        dgm.replaceEntity( entityKeyId, entity, propertyTypes );
+        dgm.replaceEntity( new EntityDataKey( entitySetId, entityKeyId ), entity, propertyTypes );
         return null;
     }
 

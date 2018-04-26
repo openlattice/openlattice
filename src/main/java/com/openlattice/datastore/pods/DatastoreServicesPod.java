@@ -49,6 +49,7 @@ import com.openlattice.data.ids.HazelcastEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.AnalysisService;
 import com.openlattice.datastore.services.EdmManager;
@@ -191,6 +192,11 @@ public class DatastoreServicesPod {
         return new ODataStorageService(
                 hazelcastInstance,
                 dataModelService() );
+    }
+
+    @Bean
+    public PostgresDataManager postgresDataManager() {
+        return new PostgresDataManager( hikariDataSource );
     }
 
     @Bean
