@@ -42,6 +42,7 @@ public final class PostgresEdmTypeConverter {
             case Guid:
                 return PostgresDatatype.UUID;
             case Byte:
+            case SByte:
             case Binary:
                 return PostgresDatatype.BYTEA;
             case Int16:

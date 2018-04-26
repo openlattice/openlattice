@@ -30,15 +30,19 @@ import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.Permission;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.PostgresEdmTypeConverter;
 import com.openlattice.edm.type.PropertyType;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -62,6 +66,11 @@ public class DataTables {
             PostgresDatatype.UUID );
     private static final Map<UUID, PostgresTableDefinition> ES_TABLES   = Maps.newConcurrentMap();
     private static final Encoder                            encoder     = Base64.getEncoder();
+
+    private static Set<FullQualifiedName> unindexedProperties = Sets
+            .newConcurrentHashSet( Arrays
+                    .asList( new FullQualifiedName( "person.picture" ),
+                            new FullQualifiedName( "person.mugshot" ) ) );
 
     public static String propertyTableName( UUID propertyTypeId ) {
         return "pt_" + propertyTypeId.toString();
@@ -154,10 +163,11 @@ public class DataTables {
 
         //Byte arrays are generally to large to be indexed by postgres
         PostgresIndexDefinition idIndex = null;
-        if( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary )) {
+        if ( unindexedProperties.contains( propertyType.getDatatype().getFullQualifiedName() ) {
             idIndex = new PostgresIndexDefinition( ptd, valueColumn )
                     .name( quote( idxPrefix + "_id_idx" ) )
                     .ifNotExists();
+            ptd.addIndexes( idIndex );
         }
 
         PostgresIndexDefinition entitySetIdIndex = new PostgresIndexDefinition( ptd, valueColumn )
@@ -197,10 +207,8 @@ public class DataTables {
                 .name( quote( idxPrefix + "_owners_idx" ) )
                 .ifNotExists();
 
-        if ( idIndex != null ) {
-            ptd.addIndexes( idIndex );
-        }
-        
+
+
         ptd.addIndexes(
                 entitySetIdIndex,
                 valueIndex,
