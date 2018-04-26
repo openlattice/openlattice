@@ -28,13 +28,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -48,17 +41,9 @@ public class TestDataSerialization {
 
     @Test
     public void testJsonDateSerialization() throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule( new Jdk8Module() );
-        mapper.registerModule( new JavaTimeModule() );
-        mapper.registerModule( new GuavaModule() );
-        mapper.registerModule( new JodaModule() );
-        mapper.registerModule( new AfterburnerModule() );
-        mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false );
-
-        testDateSerialization( mapper );
-        testDateTimeSerialization( mapper );
-        testTimeSerialization( mapper );
+        testDateSerialization( ObjectMappers.getJsonMapper() );
+        testDateTimeSerialization( ObjectMappers.getJsonMapper() );
+        testTimeSerialization( ObjectMappers.getJsonMapper() );
     }
 
     public void testTimeSerialization( ObjectMapper mapper ) throws JsonProcessingException {
