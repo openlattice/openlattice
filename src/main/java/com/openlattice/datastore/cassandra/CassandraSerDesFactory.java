@@ -151,9 +151,9 @@ public class CassandraSerDesFactory {
                 String dateStr = TypeCodec.varchar().deserialize( bytes, protocolVersion );
                 if ( dateStr.length() == 10 ) {
                     return LocalDate.parse( dateStr );
-                } else if( dateStr.length() == 23 ) {
+                } else if( dateStr.length() >= 21 || dateStr.length() <= 23  ) {
                     return LocalDateTime.parse( dateStr ).toLocalDate();
-                } else if ( dateStr.contains( "+" ) || dateStr.contains( "-" ) ) {
+                } else if ( dateStr.contains( "+" ) || dateStr.lastIndexOf( "-" ) > 18 ) {
                     return OffsetDateTime.parse( dateStr ).toLocalDate();
                 } else {
                     return LocalDateTime.parse( dateStr ).toLocalDate();
