@@ -62,7 +62,7 @@ public final class PostgresEdmTypeConverter {
             case TimeOfDay:
                 return PostgresDatatype.TIMETZ;
             default:
-                throw new NotImplementedException( "Don't know how to convert {}", edmType.name() );
+                throw new NotImplementedException( "Don't know how to convert " + edmType.name() );
         }
     }
 
@@ -91,7 +91,7 @@ public final class PostgresEdmTypeConverter {
             case Binary:
                 //TODO: Find out of if there are arrays of byte arrays in Postgres.
             default:
-                throw new NotImplementedException( "Don't know how to convert {} to array type", edmType.name() );
+                throw new NotImplementedException( "Don't know how to convert " + edmType.name() + " to array type" );
         }
     }
 }
