@@ -37,6 +37,7 @@ public final class PostgresEdmTypeConverter {
 
     public static PostgresDatatype map( EdmPrimitiveTypeKind edmType ) {
         switch ( edmType ) {
+            case GeographyPoint:
             case String:
                 return PostgresDatatype.TEXT;
             case Guid:
