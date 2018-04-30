@@ -59,6 +59,10 @@ public class ApiUtil {
         return ( entityId.length() == 0 ) ? UUID.randomUUID().toString() : entityId;
     }
 
+    public static String dbQuote( String s ) {
+        return "\"" + s + "\"";
+    }
+
     private static String joinObjectsAsString( Set<Object> s ) {
         return s.stream()
                 .map( ApiUtil::toBytes )
