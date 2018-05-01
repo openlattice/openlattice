@@ -102,6 +102,8 @@ public final class SerializationConstants {
     public static final String SEARCH_FIELDS                 = "searchFields";
     public static final String EXACT_SEARCH_FIELDS           = "exactSearchFields";
     public static final String MAX_HITS                      = "maxHits";
+    public static final String NUM_HITS                      = "numHits";
+    public static final String HITS                          = "hits";
     public static final String START                         = "start";
     public static final String EXACT                         = "exact";
     public static final String VALUE_MAPPER                  = "valueMapper";
