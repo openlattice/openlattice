@@ -1,5 +1,8 @@
 package com.openlattice.search.requests;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -8,15 +11,18 @@ public class EntityKeyIdSearchResult {
     private final long       numHits;
     private final List<UUID> entityKeyIds;
 
-    public EntityKeyIdSearchResult( long numHits, List<UUID> entityKeyIds ) {
+    public EntityKeyIdSearchResult( @JsonProperty( SerializationConstants.NUM_HITS ) long numHits,
+            @JsonProperty( SerializationConstants.HITS ) List<UUID> entityKeyIds ) {
         this.numHits = numHits;
         this.entityKeyIds = entityKeyIds;
     }
 
+    @JsonProperty( SerializationConstants.NUM_HITS )
     public long getNumHits() {
         return numHits;
     }
 
+    @JsonProperty( SerializationConstants.HITS )
     public List<UUID> getEntityKeyIds() {
         return entityKeyIds;
     }
