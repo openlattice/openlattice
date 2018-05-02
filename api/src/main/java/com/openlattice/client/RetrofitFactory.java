@@ -18,19 +18,18 @@
 
 package com.openlattice.client;
 
+import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.client.serialization.SerializableSupplier;
+import com.openlattice.retrofit.RhizomeByteConverterFactory;
+import com.openlattice.retrofit.RhizomeCallAdapterFactory;
+import com.openlattice.retrofit.RhizomeJacksonConverterFactory;
+import okhttp3.OkHttpClient;
+import retrofit2.Retrofit;
+
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
-import com.dataloom.mappers.ObjectMappers;
-import com.openlattice.retrofit.LoomByteConverterFactory;
-import com.openlattice.retrofit.LoomCallAdapterFactory;
-import com.openlattice.retrofit.LoomJacksonConverterFactory;
-
-import okhttp3.OkHttpClient;
-import retrofit2.Retrofit;
 
 public final class RetrofitFactory {
     private static final String BASE_URL         = "https://api.openlattice.com/";
@@ -94,9 +93,9 @@ public final class RetrofitFactory {
     }
 
     public static final Retrofit.Builder decorateWithLoomFactories( Retrofit.Builder builder ) {
-        return builder.addConverterFactory( new LoomByteConverterFactory() )
-                .addConverterFactory( new LoomJacksonConverterFactory( jsonMapper ) )
-                .addCallAdapterFactory( new LoomCallAdapterFactory() );
+        return builder.addConverterFactory( new RhizomeByteConverterFactory() )
+                .addConverterFactory( new RhizomeJacksonConverterFactory( jsonMapper ) )
+                .addCallAdapterFactory( new RhizomeCallAdapterFactory() );
     }
     public static final OkHttpClient.Builder okhttpClientWithLoomAuth( Supplier<String> jwtToken ) {
         return new OkHttpClient.Builder()
