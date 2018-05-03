@@ -26,14 +26,26 @@ import com.codahale.metrics.annotation.Timed;
 import com.dataloom.hazelcast.ListenableHazelcastFuture;
 import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.authorization.ForbiddenException;
-import com.openlattice.data.*;
+import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.Entity;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataValue;
+import com.openlattice.data.EntityDatastore;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.EntitySetData;
+import com.openlattice.data.PropertyMetadata;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
@@ -46,35 +58,37 @@ import com.openlattice.hazelcast.predicates.EntitySetPredicates;
 import com.openlattice.hazelcast.processors.EntityDataUpserter;
 import com.openlattice.hazelcast.processors.MergeFinalizer;
 import com.openlattice.hazelcast.processors.SyncFinalizer;
-import com.openlattice.hazelcast.stream.EntitySetHazelcastStream;
 import com.openlattice.postgres.JsonDeserializer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import javafx.util.Pair;
+import java.nio.ByteBuffer;
+import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.inject.Inject;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import java.nio.ByteBuffer;
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class HazelcastEntityDatastore implements EntityDatastore {
     private static final Logger logger = LoggerFactory
             .getLogger( HazelcastEntityDatastore.class );
 
     private final ObjectMapper      mapper;
-    private final DatasourceManager dsm;
+//    private final DatasourceManager dsm;
 
     private final HazelcastInstance                    hazelcastInstance;
     private final IMap<EntityDataKey, EntityDataValue> entities;
     private final EntityKeyIdService                   idService;
     private final ListeningExecutorService             executor;
+    private final PostgresDataManager                  pdm;
 
     @Inject
     private EventBus eventBus;
@@ -84,12 +98,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             ListeningExecutorService executor,
             ObjectMapper mapper,
             EntityKeyIdService idService,
-            DatasourceManager dsm ) {
+            PostgresDataManager pdm ) {
         this.entities = hazelastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
-        this.entities.loadAll( true );
-
+        this.pdm = pdm;
         this.mapper = mapper;
-        this.dsm = dsm;
         this.idService = idService;
         this.hazelcastInstance = hazelastInstance;
         this.executor = executor;
@@ -102,15 +114,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID syncId,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-
-        EntitySetHazelcastStream entitySetStream = new EntitySetHazelcastStream( hazelcastInstance );
-
-        entitySetStream.start( executor, entities, EntitySetPredicates.entitySet( entitySetId ) );
-
         return new EntitySetData<>(
                 orderedPropertyNames,
-                StreamUtil.stream( entitySetStream )
-                        .map( e -> fromEntityDataValue( e, authorizedPropertyTypes ) )::iterator );
+                pdm.getEntitiesInEntitySet( entitySetId, ImmutableSet.copyOf( authorizedPropertyTypes.values() ) )
+                        .map( e -> fromEntity( e, authorizedPropertyTypes ) )::iterator );
     }
 
     @Override
@@ -486,10 +493,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return StreamUtil.stream( es );
     }
 
-    public static EntityDataValue fromSetMultimap( SetMultimap<UUID, Object> entityDetails ) {
-        return null;
-    }
-
     public static SetMultimap<Object, Object> fromEntityDataValue(
             EntityDataKey dataKey,
             EntityDataValue dataValue,
@@ -507,6 +510,19 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, PropertyType> propertyTypes ) {
         SetMultimap entityData = fromEntityDataValue( dataValue, propertyTypes );
         entityData.put( "id", dataKey.getEntityKeyId() );
+        return entityData;
+    }
+
+    public static SetMultimap<FullQualifiedName, Object> fromEntity(
+            Entity edv,
+            Map<UUID, PropertyType> propertyTypes ) {
+        SetMultimap<FullQualifiedName, Object> entityData = HashMultimap.create();
+        SetMultimap<UUID, Object> entityDataByUUID = edv.getProperties();
+
+        for ( Entry<UUID, PropertyType> propertyTypeEntry : propertyTypes.entrySet() ) {
+            UUID propertyTypeId = propertyTypeEntry.getKey();
+            entityData.put( propertyTypeEntry.getValue().getType() ,  entityDataByUUID.get( propertyTypeId ));
+        }
         return entityData;
     }
 

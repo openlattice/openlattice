@@ -38,6 +38,7 @@ import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.HazelcastEntityKeyIdService;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.PostgresEntitySetManager;
@@ -101,13 +102,19 @@ public class NeuronPod {
     }
 
     @Bean
+    public PostgresDataManager postgresDataManager() {
+        return new PostgresDataManager( hikariDataSource );
+    }
+
+
+    @Bean
     public HazelcastEntityDatastore cassandraDataManager() {
         return new HazelcastEntityDatastore(
                 hazelcastInstance,
                 executor,
                 defaultObjectMapper(),
                 idService(),
-                dataSourceManager()
+                postgresDataManager()
         );
     }
 

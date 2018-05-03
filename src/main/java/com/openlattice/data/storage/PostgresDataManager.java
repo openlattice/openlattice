@@ -1,25 +1,23 @@
 package com.openlattice.data.storage;
 
-import com.dataloom.streams.StreamUtil;
 import com.openlattice.data.Entity;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.postgres.CountdownConnectionCloser;
 import com.openlattice.postgres.DataTables;
-import com.openlattice.postgres.KeyIterator;
 import com.openlattice.postgres.ResultSetAdapters;
+import com.openlattice.postgres.streams.PostgresIterable;
+import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PostgresDataManager {
     protected final Logger logger = LoggerFactory.getLogger( getClass() );
@@ -59,25 +57,30 @@ public class PostgresDataManager {
 
     @SuppressFBWarnings( value = "ODR_OPEN_DATABASE_RESOURCE", justification = "Connection handled by CountdownConnectionCloser" )
     public Stream<Entity> getEntitiesInEntitySet( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes ) {
-        Set<UUID> authorizedPropertyTypeIds = authorizedPropertyTypes.stream().map( PropertyType::getId )
+        final Set<UUID> authorizedPropertyTypeIds = authorizedPropertyTypes.stream().map( PropertyType::getId )
                 .collect( Collectors.toSet() );
 
-        try {
-            Connection connection = hds.getConnection();
-            CallableStatement ps = connection
-                    .prepareCall( getEntitiesInEntitySetQuery( entitySetId, authorizedPropertyTypes ) );
-
-            ResultSet rs = ps.executeQuery();
-
-            KeyIterator keyIterator = new KeyIterator<>( rs,
-                    new CountdownConnectionCloser( rs, connection, 1 ),
-                    row -> ResultSetAdapters.entity( row, authorizedPropertyTypeIds ) );
-
-            return StreamUtil.stream( () -> keyIterator );
-
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to load entity set data.", e );
-            return Stream.empty();
-        }
+        return new PostgresIterable<>( () -> {
+            final ResultSet rs;
+            final Connection connection;
+            final Statement statement;
+            try {
+                connection = hds.getConnection();
+                statement = connection.createStatement();
+                rs = statement
+                        .executeQuery( getEntitiesInEntitySetQuery( entitySetId, authorizedPropertyTypes ) );
+                return new StatementHolder( connection, statement, rs );
+            } catch ( SQLException e ) {
+                logger.error( "Unable to create statement holder!", e );
+                throw new IllegalStateException( "Unable to create statement holder.", e );
+            }
+        }, rs -> {
+            try {
+                return ResultSetAdapters.entity( rs, authorizedPropertyTypeIds );
+            } catch ( SQLException e ) {
+                logger.error( "Unable to load entity information.", e );
+                throw new IllegalStateException( "Unable to load entity information.", e );
+            }
+        } ).stream();
     }
 }
