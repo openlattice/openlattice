@@ -103,7 +103,6 @@ public class ConductorServicesPod {
     @Bean( name = "conductorConfiguration" )
     @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
     public ConductorConfiguration getAwsConductorConfiguration() throws IOException {
-
         ConductorConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
                 awsLaunchConfig.getBucket(),
                 awsLaunchConfig.getFolder(),

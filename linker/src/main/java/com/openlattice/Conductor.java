@@ -25,6 +25,7 @@ import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.kryptnostic.rhizome.pods.CassandraPod;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
+import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.conductor.codecs.pods.TypeCodecsPod;
 import com.openlattice.datastore.cassandra.CassandraTablesPod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
@@ -59,7 +60,8 @@ public class Conductor extends RhizomeApplicationServer {
             JdbcPod.class,
             PostgresTablesPod.class,
             PostgresPod.class,
-            Auth0Pod.class
+            Auth0Pod.class,
+            AwsS3Pod.class
     };
 
     public Conductor() {
