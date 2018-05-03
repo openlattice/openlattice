@@ -206,7 +206,7 @@ public class DatastoreServicesPod {
                 executor,
                 defaultObjectMapper(),
                 idService(),
-                datasourceManager() );
+                postgresDataManager() );
     }
 
     @Bean
