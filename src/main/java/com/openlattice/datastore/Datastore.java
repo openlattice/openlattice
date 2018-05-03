@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
+import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.conductor.codecs.pods.TypeCodecsPod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
@@ -50,6 +51,7 @@ public class Datastore extends BaseRhizomeServer {
             DatastoreServicesPod.class,
             TypeCodecsPod.class,
             SharedStreamSerializersPod.class,
+            AwsS3Pod.class,
             //TODO: Why is this here?
             SparkDependencyPod.class,
             JdbcPod.class,
