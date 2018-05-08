@@ -20,6 +20,8 @@
 
 package com.openlattice.hazelcast.processor;
 
+import static com.openlattice.data.PropertyMetadata.hashObject;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -359,7 +361,7 @@ public class EntityDataUpserterTest {
             OffsetDateTime writeTime ) {
         UUID propertyTypeId = UUID.randomUUID();
         PropertyMetadata
-                pm = PropertyMetadata.newPropertyMetadata( writeTime );
+                pm = PropertyMetadata.newPropertyMetadata( hashObject(value), writeTime );
         m.put( propertyTypeId, Maps.newHashMap( ImmutableMap.of( value, pm ) ) );
         return propertyTypeId;
     }
