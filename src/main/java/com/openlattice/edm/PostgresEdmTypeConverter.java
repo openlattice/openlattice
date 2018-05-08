@@ -50,6 +50,7 @@ public final class PostgresEdmTypeConverter {
                 return PostgresDatatype.SMALLINT;
             case Int32:
                 return PostgresDatatype.INTEGER;
+            case Duration:
             case Int64:
                 return PostgresDatatype.BIGINT;
             case Date:
@@ -79,6 +80,7 @@ public final class PostgresEdmTypeConverter {
                 return PostgresDatatype.SMALLINT_ARRAY;
             case Int32:
                 return PostgresDatatype.INTEGER_ARRAY;
+            case Duration:
             case Int64:
                 return PostgresDatatype.BIGINT_ARRAY;
             case Date:
