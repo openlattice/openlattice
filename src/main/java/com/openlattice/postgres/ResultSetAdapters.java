@@ -79,6 +79,7 @@ import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.*;
+import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.linking.LinkingVertex;
@@ -134,6 +135,16 @@ import org.slf4j.LoggerFactory;
  */
 public final class ResultSetAdapters {
     private static final Logger logger = LoggerFactory.getLogger( ResultSetAdapters.class );
+
+    public static DataKey dataKey( ResultSet rs ) throws SQLException {
+        UUID id = (UUID) rs.getObject( "id" );
+        UUID entitySetId = (UUID) rs.getObject( "entity_set_id" );
+        UUID syncId = (UUID) rs.getObject( "syncid" );
+        String entityId = rs.getString( "entityId" );
+        UUID propertyTypeId = (UUID) rs.getObject( "property_type_id" );
+        byte[] hash = rs.getBytes( "property_value" );
+        return new DataKey( id, entitySetId, syncId, entityId, propertyTypeId, hash );
+    }
 
     public static EntityDataKey entityDataKey( ResultSet rs ) throws SQLException {
         return new EntityDataKey( entitySetId( rs ), id( rs ) );
