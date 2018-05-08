@@ -40,31 +40,33 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PropertyMetadata {
+    public final static  HashFunction      hf              = Hashing.murmur3_128();
     private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial( () -> {
         Kryo kryo = new Kryo();
         kryo.register( UUID.class, new UUIDSerializer() );
         return kryo;
     } );
     private static final int               CHUNK_SIZE      = 32;
-    public static        HashFunction      hf              = Hashing.murmur3_128();
 
     private final byte[]         hash;
     private final List<Long>     versions;
     private       long           version;
     private       OffsetDateTime lastWrite;
 
+    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings( value = "EI_EXPOSE_REP", justification = "Just hash. Might result in data overwrites or duplication if tampered or mishandled" )
     @JsonCreator
     public PropertyMetadata(
             byte[] hash,
             @JsonProperty( SerializationConstants.VERSION ) long version,
             List<Long> versions,
             OffsetDateTime lastWrite ) {
-        this.hash = hash;
+        this.hash = Arrays.copyOf( hash, hash.length );
         this.version = version;
         this.versions = versions;
         this.lastWrite = lastWrite;
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings( value = "EI_EXPOSE_REP", justification = "Just hash. Might result in data overwrites or duplication if tampered or mishandled" )
     public byte[] getHash() {
         return hash;
     }

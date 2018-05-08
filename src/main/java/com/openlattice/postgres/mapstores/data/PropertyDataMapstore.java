@@ -95,7 +95,7 @@ public class PropertyDataMapstore
     }
 
     @Override protected List<PostgresColumnDefinition> initValueColumns() {
-        return ImmutableList.of( valCol(), VERSION, VERSIONS, LAST_WRITE );
+        return ImmutableList.of( valCol(), HASH, VERSION, VERSIONS, LAST_WRITE );
     }
 
     @Override protected void bind( PreparedStatement ps, EntityDataKey key, Object subKey, PropertyMetadata value )
