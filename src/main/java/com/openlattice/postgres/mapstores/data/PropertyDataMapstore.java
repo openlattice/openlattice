@@ -27,13 +27,11 @@ import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.VERSION;
 import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.PropertyMetadata;
-import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresColumnDefinition;
 import com.openlattice.postgres.PostgresTableDefinition;
@@ -82,11 +80,11 @@ public class PropertyDataMapstore
     @Override protected Optional<String> buildOnConflictQuery() {
         return Optional.of( ( " ON CONFLICT ("
                 + Stream
-                .of( ENTITY_SET_ID.getName(), ID_VALUE.getName(), valCol().getName() )
+                .of( ENTITY_SET_ID.getName(), ID_VALUE.getName(), HASH.getName() )
                 .collect( Collectors.joining( ", " ) )
                 + ") DO "
-                + table.updateQuery( ImmutableList.of( ID_VALUE, valCol() ),
-                ImmutableList.of( HASH, VERSION, VERSIONS, LAST_WRITE ),
+                + table.updateQuery( ImmutableList.of( ID_VALUE, HASH ),
+                ImmutableList.of( valCol(), VERSION, VERSIONS, LAST_WRITE ),
                 false ) ) );
     }
 
@@ -95,21 +93,21 @@ public class PropertyDataMapstore
     }
 
     @Override protected List<PostgresColumnDefinition> initValueColumns() {
-        return ImmutableList.of( valCol(), HASH, VERSION, VERSIONS, LAST_WRITE );
+        return ImmutableList.of( HASH, valCol(), VERSION, VERSIONS, LAST_WRITE );
     }
 
     @Override protected void bind( PreparedStatement ps, EntityDataKey key, Object subKey, PropertyMetadata value )
             throws SQLException {
         int parameterIndex = bind( ps, key, 1 );
-        ps.setObject( parameterIndex++, subKey );
-
         ps.setBytes( parameterIndex++, value.getHash() );
+
+        ps.setObject( parameterIndex++, subKey );
         ps.setLong( parameterIndex++, value.getVersion() );
         ps.setArray( parameterIndex++, PostgresArrays.createLongArray( ps.getConnection(), value.getVersions() ) );
         ps.setObject( parameterIndex++, value.getLastWrite() );
 
         //Update Query parameters
-        ps.setBytes( parameterIndex++, value.getHash() );
+        ps.setObject( parameterIndex++, subKey );
         ps.setLong( parameterIndex++, value.getVersion() );
         ps.setArray( parameterIndex++, PostgresArrays.createLongArray( ps.getConnection(), value.getVersions() ) );
         ps.setObject( parameterIndex++, value.getLastWrite() );
@@ -143,7 +141,8 @@ public class PropertyDataMapstore
 
     @Override public Map<Object, PropertyMetadata> generateTestValue() {
         return ImmutableMap
-                .of( RandomStringUtils.randomAlphanumeric( 10 ), new PropertyMetadata( RandomUtils.nextBytes(16),5, ImmutableList.of( 1L, 2L ),
-                        OffsetDateTime.now() ) );
+                .of( RandomStringUtils.randomAlphanumeric( 10 ),
+                        new PropertyMetadata( RandomUtils.nextBytes( 16 ), 5, ImmutableList.of( 1L, 2L ),
+                                OffsetDateTime.now() ) );
     }
 }
