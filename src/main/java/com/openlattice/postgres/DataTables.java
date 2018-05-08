@@ -164,7 +164,7 @@ public class DataTables {
                         OWNERS )
                 .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH );
 
-        PostgresIndexDefinition idIndex = new PostgresIndexDefinition( ptd, ID_ )
+        PostgresIndexDefinition idIndex = new PostgresIndexDefinition( ptd, ID_VALUE )
                 .name( quote( idxPrefix + "_id_idx" ) )
                 .ifNotExists();
 
