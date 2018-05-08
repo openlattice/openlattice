@@ -164,13 +164,17 @@ public class DataTables {
                         OWNERS )
                 .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH );
 
+        PostgresIndexDefinition idIndex = new PostgresIndexDefinition( ptd, ID_ )
+                .name( quote( idxPrefix + "_id_idx" ) )
+                .ifNotExists();
+
         //Byte arrays are generally too large to be indexed by postgres
-        PostgresIndexDefinition idIndex = null;
         if ( unindexedProperties.contains( propertyType.getDatatype().getFullQualifiedName() ) ) {
-            idIndex = new PostgresIndexDefinition( ptd, valueColumn )
-                    .name( quote( idxPrefix + "_id_idx" ) )
+            PostgresIndexDefinition valueIndex = new PostgresIndexDefinition( ptd, valueColumn )
+                    .name( quote( idxPrefix + "_value_idx" ) )
                     .ifNotExists();
-            ptd.addIndexes( idIndex );
+
+            ptd.addIndexes( valueIndex );
         }
 
         PostgresIndexDefinition entitySetIdIndex = new PostgresIndexDefinition( ptd, ENTITY_SET_ID )
@@ -211,6 +215,7 @@ public class DataTables {
                 .ifNotExists();
 
         ptd.addIndexes(
+                idIndex,
                 entitySetIdIndex,
                 valueIndex,
                 versionIndex,
