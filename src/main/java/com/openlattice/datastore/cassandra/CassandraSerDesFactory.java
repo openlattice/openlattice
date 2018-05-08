@@ -149,9 +149,11 @@ public class CassandraSerDesFactory {
             case Date:
             case DateTimeOffset:
                 String dateStr = TypeCodec.varchar().deserialize( bytes, protocolVersion );
-                if ( dateStr.length() == 10 ) {
+                if(dateStr.contains( "Supplemental" )) {
+                    return null;
+                } else if ( dateStr.length() == 10 ) {
                     return LocalDate.parse( dateStr );
-                } else if( dateStr.length() >= 21 && dateStr.length() <= 23  ) {
+                } else if( dateStr.length() >= 21 && dateStr.length() <= 24  ) {
                     return LocalDateTime.parse( dateStr ).toLocalDate();
                 } else if ( dateStr.contains( "+" ) || dateStr.lastIndexOf( "-" ) > 18 ) {
                     return OffsetDateTime.parse( dateStr ).toLocalDate();

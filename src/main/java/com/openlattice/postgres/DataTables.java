@@ -173,7 +173,7 @@ public class DataTables {
             ptd.addIndexes( idIndex );
         }
 
-        PostgresIndexDefinition entitySetIdIndex = new PostgresIndexDefinition( ptd, valueColumn )
+        PostgresIndexDefinition entitySetIdIndex = new PostgresIndexDefinition( ptd, ENTITY_SET_ID )
                 .name( quote( idxPrefix + "_entity_set_id_idx" ) )
                 .ifNotExists();
 
