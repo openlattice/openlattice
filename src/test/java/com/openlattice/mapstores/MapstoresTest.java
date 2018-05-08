@@ -167,7 +167,8 @@ public class MapstoresTest extends HzAuthzTest {
         properties.put( propertyTypes[ 5 ].getId(), ImmutableMap.of( RandomUtils.nextInt( 0, 1 ) == 0, pm ) );
         properties.put( propertyTypes[ 6 ].getId(), ImmutableMap.of( new byte[] { 1, 2, 3, 4 }, pm ) );
         properties.put( propertyTypes[ 7 ].getId(), ImmutableMap.of( UUID.randomUUID(), pm ) );
-        properties.put( propertyTypes[ 8 ].getId(), ImmutableMap.of( RandomUtils.nextDouble( 0, 1e20 ), pm ) );
+        properties.put( propertyTypes[ 8 ].getId(), ImmutableMap.of( RandomUtils.nextInt( 0, 1 << 30 ), pm ) );
+        properties.put( propertyTypes[ 9 ].getId(), ImmutableMap.of( RandomUtils.nextDouble( 0, 1e20 ), pm ) );
 
         EntityDataValue edv = new EntityDataValue( metadata, properties );
         dmp.store( entityDataKey, edv );
