@@ -22,6 +22,7 @@ package com.openlattice.postgres.mapstores.data;
 
 import static com.openlattice.postgres.DataTables.LAST_WRITE;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.HASH;
 import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.VERSION;
 import static com.openlattice.postgres.PostgresColumn.VERSIONS;
@@ -51,6 +52,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -84,7 +86,7 @@ public class PropertyDataMapstore
                 .collect( Collectors.joining( ", " ) )
                 + ") DO "
                 + table.updateQuery( ImmutableList.of( ID_VALUE, valCol() ),
-                ImmutableList.of( VERSION, VERSIONS, LAST_WRITE ),
+                ImmutableList.of( HASH, VERSION, VERSIONS, LAST_WRITE ),
                 false ) ) );
     }
 
@@ -101,11 +103,13 @@ public class PropertyDataMapstore
         int parameterIndex = bind( ps, key, 1 );
         ps.setObject( parameterIndex++, subKey );
 
+        ps.setBytes( parameterIndex++, value.getHash() );
         ps.setLong( parameterIndex++, value.getVersion() );
         ps.setArray( parameterIndex++, PostgresArrays.createLongArray( ps.getConnection(), value.getVersions() ) );
         ps.setObject( parameterIndex++, value.getLastWrite() );
 
         //Update Query parameters
+        ps.setBytes( parameterIndex++, value.getHash() );
         ps.setLong( parameterIndex++, value.getVersion() );
         ps.setArray( parameterIndex++, PostgresArrays.createLongArray( ps.getConnection(), value.getVersions() ) );
         ps.setObject( parameterIndex++, value.getLastWrite() );
@@ -139,7 +143,7 @@ public class PropertyDataMapstore
 
     @Override public Map<Object, PropertyMetadata> generateTestValue() {
         return ImmutableMap
-                .of( RandomStringUtils.randomAlphanumeric( 10 ), new PropertyMetadata( 5, ImmutableList.of( 1L, 2L ),
+                .of( RandomStringUtils.randomAlphanumeric( 10 ), new PropertyMetadata( RandomUtils.nextBytes(16),5, ImmutableList.of( 1L, 2L ),
                         OffsetDateTime.now() ) );
     }
 }

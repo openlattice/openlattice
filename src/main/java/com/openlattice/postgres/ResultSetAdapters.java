@@ -76,17 +76,10 @@ import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.SetMultimap;
-import com.openlattice.data.*;
-import com.openlattice.data.hazelcast.DataKey;
-import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
-import com.openlattice.linking.LinkingVertex;
-import com.openlattice.linking.LinkingVertexKey;
-import com.openlattice.organizations.PrincipalSet;
 import com.google.common.base.Optional;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
@@ -100,6 +93,13 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.data.Entity;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataMetadata;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.PropertyMetadata;
+import com.openlattice.data.PropertyValueKey;
+import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -109,8 +109,13 @@ import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.graph.edge.Edge;
+import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.ids.Range;
+import com.openlattice.linking.LinkingVertex;
+import com.openlattice.linking.LinkingVertexKey;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
@@ -161,10 +166,11 @@ public final class ResultSetAdapters {
     }
 
     public static PropertyMetadata propertyMetadata( ResultSet rs ) throws SQLException {
+        byte[] hash = rs.getBytes( PostgresColumn.HASH_FIELD );
         long version = rs.getLong( PostgresColumn.VERSION_FIELD );
         Long[] versions = PostgresArrays.getLongArray( rs, PostgresColumn.VERSIONS_FIELD );
         OffsetDateTime lastWrite = rs.getObject( PostgresColumn.LAST_WRITE_FIELD, OffsetDateTime.class );
-        return new PropertyMetadata( version, Arrays.asList( versions ), lastWrite );
+        return new PropertyMetadata( hash, version, Arrays.asList( versions ), lastWrite );
     }
 
     public static EntityDataMetadata entityDataMetadata( ResultSet rs ) throws SQLException {
@@ -618,9 +624,9 @@ public final class ResultSetAdapters {
     public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
         UUID entityKeyId = id( rs );
         SetMultimap<UUID, Object> data = HashMultimap.create();
-        for (UUID ptId : authorizedPropertyTypeIds) {
+        for ( UUID ptId : authorizedPropertyTypeIds ) {
             Array valuesArr = rs.getArray( DataTables.propertyTableName( ptId ) );
-            if (valuesArr != null) {
+            if ( valuesArr != null ) {
                 data.putAll( ptId, Arrays.asList( valuesArr.getArray() ) );
             }
         }

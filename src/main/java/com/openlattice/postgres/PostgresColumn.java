@@ -23,6 +23,7 @@ package com.openlattice.postgres;
 import static com.openlattice.postgres.PostgresDatatype.BIGINT;
 import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
+import static com.openlattice.postgres.PostgresDatatype.BYTEA;
 import static com.openlattice.postgres.PostgresDatatype.DECIMAL;
 import static com.openlattice.postgres.PostgresDatatype.INTEGER;
 import static com.openlattice.postgres.PostgresDatatype.TEXT;
@@ -70,6 +71,7 @@ public final class PostgresColumn {
     public static final String ENTITY_TYPE_IDS_FIELD       = "entity_type_ids";
     public static final String EVENT_TYPE_FIELD            = "event_type";
     public static final String FLAGS_FIELD                 = "flags";
+    public static final String HASH_FIELD                  = "hash";
     public static final String GRAPH_DIAMETER_FIELD        = "graph_diameter";
     public static final String GRAPH_ID_FIELD              = "graph_id";
     public static final String ID_FIELD                    = "id";
@@ -190,6 +192,8 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( EVENT_TYPE_FIELD, TEXT );
     public static final PostgresColumnDefinition FLAGS                 =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
+    public static final PostgresColumnDefinition HASH                 =
+            new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();
     public static final PostgresColumnDefinition GRAPH_DIAMETER        =
             new PostgresColumnDefinition( GRAPH_DIAMETER_FIELD, DECIMAL );
     public static final PostgresColumnDefinition GRAPH_ID              =

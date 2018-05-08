@@ -20,30 +20,53 @@
 
 package com.openlattice.data;
 
+import com.esotericsoftware.kryo.Kryo;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.hazelcast.serializers.Jdk8StreamSerializers;
+import de.javakaffee.kryoserializers.UUIDSerializer;
+import java.io.ByteArrayOutputStream;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PropertyMetadata {
+    private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial( () -> {
+        Kryo kryo = new Kryo();
+        kryo.register( UUID.class, new UUIDSerializer() );
+        return kryo;
+    } );
+    private static final int               CHUNK_SIZE      = 32;
+    public static        HashFunction      hf              = Hashing.murmur3_128();
+
+    private final byte[]         hash;
     private final List<Long>     versions;
     private       long           version;
     private       OffsetDateTime lastWrite;
 
     @JsonCreator
     public PropertyMetadata(
+            byte[] hash,
             @JsonProperty( SerializationConstants.VERSION ) long version,
             List<Long> versions,
             OffsetDateTime lastWrite ) {
+        this.hash = hash;
         this.version = version;
         this.versions = versions;
         this.lastWrite = lastWrite;
+    }
+
+    public byte[] getHash() {
+        return hash;
     }
 
     public long getVersion() {
@@ -67,27 +90,37 @@ public class PropertyMetadata {
         this.lastWrite = lastWrite;
     }
 
-    public static PropertyMetadata newPropertyMetadata( OffsetDateTime lastWrite ) {
-        return newPropertyMetadata( lastWrite.toInstant().toEpochMilli(), lastWrite );
-    }
-
-    public static PropertyMetadata newPropertyMetadata( long version, OffsetDateTime lastWrite ) {
-        List<Long> versions = new ArrayList<>( 1 );
-        versions.add( version );
-        return new PropertyMetadata( version, versions, lastWrite );
-    }
-
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof PropertyMetadata ) ) { return false; }
         PropertyMetadata that = (PropertyMetadata) o;
         return version == that.version &&
+                Arrays.equals( hash, that.hash ) &&
                 Objects.equals( versions, that.versions ) &&
                 Objects.equals( lastWrite, that.lastWrite );
     }
 
     @Override public int hashCode() {
 
-        return Objects.hash( versions, version, lastWrite );
+        int result = Objects.hash( versions, version, lastWrite );
+        result = 31 * result + Arrays.hashCode( hash );
+        return result;
     }
+
+    public static PropertyMetadata newPropertyMetadata( byte[] hash, OffsetDateTime lastWrite ) {
+        return newPropertyMetadata( hash, lastWrite.toInstant().toEpochMilli(), lastWrite );
+    }
+
+    public static PropertyMetadata newPropertyMetadata( byte[] hash, long version, OffsetDateTime lastWrite ) {
+        List<Long> versions = new ArrayList<>( 1 );
+        versions.add( version );
+        return new PropertyMetadata( hash, version, versions, lastWrite );
+    }
+
+    public static byte[] hashObject( Object object ) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Jdk8StreamSerializers.serializeWithKryo( kryoThreadLocal.get(), baos, object, CHUNK_SIZE );
+        return hf.hashBytes( baos.toByteArray() ).asBytes();
+    }
+
 }

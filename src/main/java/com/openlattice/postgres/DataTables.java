@@ -21,6 +21,7 @@
 package com.openlattice.postgres;
 
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.HASH;
 import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.LAST_INDEX_FIELD;
@@ -41,7 +42,6 @@ import java.util.Base64.Encoder;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
@@ -69,7 +69,9 @@ public class DataTables {
 
     private static Set<FullQualifiedName> unindexedProperties = Sets
             .newConcurrentHashSet( Arrays
-                    .asList( new FullQualifiedName( "person.picture" ),
+                    .asList(
+                            new FullQualifiedName( "incident.narrative" ),
+                            new FullQualifiedName( "person.picture" ),
                             new FullQualifiedName( "person.mugshot" ) ) );
 
     public static String propertyTableName( UUID propertyTypeId ) {
@@ -150,8 +152,9 @@ public class DataTables {
         PostgresTableDefinition ptd = new PostgresTableDefinition(
                 quote( idxPrefix ) )
                 .addColumns(
-                        ENTITY_SET_ID,
+                        ENTITY_SET_ID, //TODO: This column is redundant. Remove in future migrations.
                         ID_VALUE,
+                        HASH,
                         valueColumn,
                         VERSION,
                         VERSIONS,
@@ -159,9 +162,9 @@ public class DataTables {
                         READERS,
                         WRITERS,
                         OWNERS )
-                .primaryKey( ENTITY_SET_ID, ID_VALUE, valueColumn );
+                .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH );
 
-        //Byte arrays are generally to large to be indexed by postgres
+        //Byte arrays are generally too large to be indexed by postgres
         PostgresIndexDefinition idIndex = null;
         if ( unindexedProperties.contains( propertyType.getDatatype().getFullQualifiedName() ) ) {
             idIndex = new PostgresIndexDefinition( ptd, valueColumn )
@@ -206,8 +209,6 @@ public class DataTables {
         PostgresIndexDefinition ownersIndex = new PostgresIndexDefinition( ptd, OWNERS )
                 .name( quote( idxPrefix + "_owners_idx" ) )
                 .ifNotExists();
-
-
 
         ptd.addIndexes(
                 entitySetIdIndex,

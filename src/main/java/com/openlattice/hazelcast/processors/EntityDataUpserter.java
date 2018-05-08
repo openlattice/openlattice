@@ -1,5 +1,7 @@
 package com.openlattice.hazelcast.processors;
 
+import static com.openlattice.data.PropertyMetadata.hashObject;
+
 import com.google.common.collect.SetMultimap;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
 import com.openlattice.data.EntityDataKey;
@@ -53,8 +55,8 @@ public class EntityDataUpserter extends AbstractRhizomeEntryProcessor<EntityData
                 //Only update property metadata if property has changed.
                 PropertyMetadata propertyMetadata = existingEntries
                         .computeIfAbsent( propertyValue, v -> PropertyMetadata
-                                .newPropertyMetadata( nextVersion, writeTime ) );
-                if( propertyMetadata.getVersion() < 0 ) {
+                                .newPropertyMetadata( hashObject( propertyValue ), nextVersion, writeTime ) );
+                if ( propertyMetadata.getVersion() < 0 ) {
                     propertyMetadata.setNextVersion( nextVersion );
                 }
                 //TODO: Consider having another field indicating the property was updated. For the moment.

@@ -43,14 +43,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.RandomUtils;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PropertiesDataMapstore extends AbstractBasePostgresMapstore<PropertyValueKey, PropertyMetadata> {
     private final PostgresColumnDefinition valueColumn;
-    private final String valueColumnName;
-
+    private final String                   valueColumnName;
 
     public PropertiesDataMapstore( PostgresTableDefinition table, HikariDataSource hds ) {
         //Table name doesn't matter as these aer used for configuring maps.
@@ -118,6 +118,6 @@ public class PropertiesDataMapstore extends AbstractBasePostgresMapstore<Propert
     }
 
     @Override public PropertyMetadata generateTestValue() {
-        return new PropertyMetadata( 5, ImmutableList.of( 1L, 2L ), OffsetDateTime.now() );
+        return new PropertyMetadata( RandomUtils.nextBytes( 16 ), 5, ImmutableList.of( 1L, 2L ), OffsetDateTime.now() );
     }
 }

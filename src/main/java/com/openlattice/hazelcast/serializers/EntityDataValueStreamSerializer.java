@@ -23,7 +23,6 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.serializers.TimeSerializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
@@ -44,7 +43,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class EntityDataValueStreamSerializer implements SelfRegisteringStreamSerializer<EntityDataValue> {
-    private static final int CHUNK_SIZE = 32;
+    //Changing this or Kryo will affect how hash is computed for database.
+    private static final  int               CHUNK_SIZE      = 32;
     private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial( () -> {
         Kryo kryo = new Kryo();
         kryo.register( UUID.class, new UUIDSerializer() );
@@ -123,22 +123,22 @@ public class EntityDataValueStreamSerializer implements SelfRegisteringStreamSer
             PropertyMetadata pm = property.getValue();
             List<Long> versions = pm.getVersions();
 
-                        Jdk8StreamSerializers.serializeWithKryo( kryoThreadLocal.get(), out, property.getKey(), CHUNK_SIZE );
-//            if ( value instanceof OffsetDateTime ) {
-//                out.writeInt( 1 );
-//                OffsetDateTimeStreamSerializer.serialize( out, (OffsetDateTime) value );
-//            } else {
-//                out.writeInt( -1 );
-//                out.writeObject( value );
-//            }
-
+            Jdk8StreamSerializers.serializeWithKryo( kryoThreadLocal.get(), out, property.getKey(), CHUNK_SIZE );
+            //            if ( value instanceof OffsetDateTime ) {
+            //                out.writeInt( 1 );
+            //                OffsetDateTimeStreamSerializer.serialize( out, (OffsetDateTime) value );
+            //            } else {
+            //                out.writeInt( -1 );
+            //                out.writeObject( value );
+            //            }
+            out.writeByteArray( pm.getHash() );
             OffsetDateTimeStreamSerializer.serialize( out, pm.getLastWrite() );
             out.writeLong( pm.getVersion() );
             out.writeInt( versions.size() );
             for ( long version : versions ) {
                 out.writeLong( version );
             }
-//            out.writeObject( value );
+            //            out.writeObject( value );
 
         }
     }
@@ -149,16 +149,17 @@ public class EntityDataValueStreamSerializer implements SelfRegisteringStreamSer
         for ( int i = 0; i < propertyCount; ++i ) {
 
             final Object value;
-//            final int type = in.readInt();
-//            switch ( type ) {
-//                case 1:
-//                    value = OffsetDateTimeStreamSerializer.deserialize( in );
-//                    break;
-//                default:
-//                    value = in.readObject();
-//
-//            }
+            //            final int type = in.readInt();
+            //            switch ( type ) {
+            //                case 1:
+            //                    value = OffsetDateTimeStreamSerializer.deserialize( in );
+            //                    break;
+            //                default:
+            //                    value = in.readObject();
+            //
+            //            }
             value = Jdk8StreamSerializers.deserializeWithKryo( kryoThreadLocal.get(), in, CHUNK_SIZE );
+            byte[] hash = in.readByteArray();
             OffsetDateTime lastWrite = OffsetDateTimeStreamSerializer.deserialize( in );
             long version = in.readLong();
             final int versionCount = in.readInt();
@@ -169,7 +170,7 @@ public class EntityDataValueStreamSerializer implements SelfRegisteringStreamSer
                 versions.add( j, in.readLong() );
             }
 
-            properties.put( value, new PropertyMetadata( version, versions, lastWrite ) );
+            properties.put( value, new PropertyMetadata( hash, version, versions, lastWrite ) );
         }
         return properties;
     }
