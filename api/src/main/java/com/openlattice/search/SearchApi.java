@@ -262,6 +262,6 @@ public interface SearchApi {
     Void trigerEntitySetDataIndex( @Path( ENTITY_SET_ID ) UUID entitySetId );
 
     @GET( BASE + ENTITY_SETS + INDEX )
-    Void trigerAllEntitySetDataIndex();
+    Void triggerAllEntitySetDataIndex();
 
 }
