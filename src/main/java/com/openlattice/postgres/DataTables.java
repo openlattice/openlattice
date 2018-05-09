@@ -180,11 +180,7 @@ public class DataTables {
         PostgresIndexDefinition entitySetIdIndex = new PostgresIndexDefinition( ptd, ENTITY_SET_ID )
                 .name( quote( idxPrefix + "_entity_set_id_idx" ) )
                 .ifNotExists();
-
-        PostgresIndexDefinition valueIndex = new PostgresIndexDefinition( ptd, valueColumn )
-                .name( quote( idxPrefix + "_value_idx" ) )
-                .ifNotExists();
-
+        
         PostgresIndexDefinition versionIndex = new PostgresIndexDefinition( ptd, LAST_WRITE )
                 .name( quote( idxPrefix + "_version_idx" ) )
                 .ifNotExists()
