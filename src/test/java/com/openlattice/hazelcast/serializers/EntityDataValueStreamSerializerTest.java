@@ -79,6 +79,7 @@ public class EntityDataValueStreamSerializerTest
         addProperty( value10, mockMap, preLastWrite );
         addProperty( LocalTime.now(), mockMap, preLastWrite );
         addProperty( LocalTime.now(), mockMap, preLastWrite );
+        addProperty( OffsetDateTime.now(), mockMap, preLastWrite );
 
         properties.put( propertyTypeId3, value3 );
 
@@ -92,6 +93,8 @@ public class EntityDataValueStreamSerializerTest
         Assert.assertFalse( mockProperties.containsKey( propertyTypeId3 ) );
 
         upserter.process( mockEntry );
+
+        Assert.assertTrue( mockProperties.containsKey( propertyTypeId3 ) );
 
         return mockEntry.getValue();
     }

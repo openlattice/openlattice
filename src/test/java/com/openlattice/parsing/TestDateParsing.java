@@ -23,17 +23,17 @@ package com.openlattice.parsing;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class TestDataParsing {
+public class TestDateParsing {
 
     @Test
     public void doDateTest() {
-        System.out.println( LocalDateTime.now().toString().length() );
-        OffsetDateTime.parse("2018-01-01T04:00:00.000Z").toLocalDate();
+        Assert.assertNotNull( OffsetDateTime.parse("2018-01-01T04:00:00.000Z").toLocalDate() );
 //        LocalDateTime.parse("2018-01-01T04:00:00.000Z").toLocalDate();
     }
 }

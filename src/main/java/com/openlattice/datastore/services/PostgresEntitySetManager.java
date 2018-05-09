@@ -82,14 +82,12 @@ public class PostgresEntitySetManager {
 
     public Iterable<EntitySet> getAllEntitySets() {
         try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( getAllEntitySets ) ) {
+                PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
+                ResultSet rs = ps.executeQuery()) {
             List<EntitySet> result = Lists.newArrayList();
-            ResultSet rs = ps.executeQuery();
             while ( rs.next() ) {
                 result.add( ResultSetAdapters.entitySet( rs ) );
             }
-
-            connection.close();
             return result;
         } catch ( SQLException e ) {
             logger.debug( "Unable to load all entity sets", e );

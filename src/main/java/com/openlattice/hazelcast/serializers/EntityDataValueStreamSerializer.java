@@ -119,19 +119,13 @@ public class EntityDataValueStreamSerializer implements SelfRegisteringStreamSer
     public static void serialize( ObjectDataOutput out, Map<Object, PropertyMetadata> properties ) throws IOException {
         out.writeInt( properties.size() );
         for ( Entry<Object, PropertyMetadata> property : properties.entrySet() ) {
-            Object value = property.getKey();
-            PropertyMetadata pm = property.getValue();
-            List<Long> versions = pm.getVersions();
+            final Object value = property.getKey();
+            final PropertyMetadata pm = property.getValue();
+            final List<Long> versions = pm.getVersions();
 
-            Jdk8StreamSerializers.serializeWithKryo( kryoThreadLocal.get(), out, property.getKey(), CHUNK_SIZE );
-            //            if ( value instanceof OffsetDateTime ) {
-            //                out.writeInt( 1 );
-            //                OffsetDateTimeStreamSerializer.serialize( out, (OffsetDateTime) value );
-            //            } else {
-            //                out.writeInt( -1 );
-            //                out.writeObject( value );
-            //            }
             out.writeByteArray( pm.getHash() );
+            Jdk8StreamSerializers.serializeWithKryo( kryoThreadLocal.get(), out, value, CHUNK_SIZE );
+
             OffsetDateTimeStreamSerializer.serialize( out, pm.getLastWrite() );
             out.writeLong( pm.getVersion() );
             out.writeInt( versions.size() );
@@ -148,20 +142,10 @@ public class EntityDataValueStreamSerializer implements SelfRegisteringStreamSer
         final Map<Object, PropertyMetadata> properties = new HashMap<>( propertyCount );
         for ( int i = 0; i < propertyCount; ++i ) {
 
-            final Object value;
-            //            final int type = in.readInt();
-            //            switch ( type ) {
-            //                case 1:
-            //                    value = OffsetDateTimeStreamSerializer.deserialize( in );
-            //                    break;
-            //                default:
-            //                    value = in.readObject();
-            //
-            //            }
-            value = Jdk8StreamSerializers.deserializeWithKryo( kryoThreadLocal.get(), in, CHUNK_SIZE );
-            byte[] hash = in.readByteArray();
-            OffsetDateTime lastWrite = OffsetDateTimeStreamSerializer.deserialize( in );
-            long version = in.readLong();
+            final byte[] hash = in.readByteArray();
+            final Object value = Jdk8StreamSerializers.deserializeWithKryo( kryoThreadLocal.get(), in, CHUNK_SIZE );
+            final OffsetDateTime lastWrite = OffsetDateTimeStreamSerializer.deserialize( in );
+            final long version = in.readLong();
             final int versionCount = in.readInt();
 
             List<Long> versions = new ArrayList<>( versionCount );
