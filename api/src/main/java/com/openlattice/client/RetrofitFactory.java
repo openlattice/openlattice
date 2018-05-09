@@ -18,17 +18,15 @@
 
 package com.openlattice.client;
 
+import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.client.serialization.SerializableSupplier;
+import com.openlattice.retrofit.RhizomeByteConverterFactory;
 import com.openlattice.retrofit.RhizomeCallAdapterFactory;
+import com.openlattice.retrofit.RhizomeJacksonConverterFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
-import com.dataloom.mappers.ObjectMappers;
-import com.openlattice.retrofit.RhizomeByteConverterFactory;
-import com.openlattice.retrofit.RhizomeJacksonConverterFactory;
-
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 
@@ -40,7 +38,8 @@ public final class RetrofitFactory {
 
     private static final ObjectMapper jsonMapper = ObjectMappers.getJsonMapper();
 
-    private RetrofitFactory() {}
+    private RetrofitFactory() {
+    }
 
     public static enum Environment {
         PRODUCTION( BASE_URL ),
@@ -98,6 +97,7 @@ public final class RetrofitFactory {
                 .addConverterFactory( new RhizomeJacksonConverterFactory( jsonMapper ) )
                 .addCallAdapterFactory( new RhizomeCallAdapterFactory() );
     }
+
     public static final OkHttpClient.Builder okhttpClientWithLoomAuth( Supplier<String> jwtToken ) {
         return new OkHttpClient.Builder()
                 .addInterceptor( chain -> chain

@@ -18,6 +18,9 @@
 
 package com.openlattice.search.requests;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+
 import java.util.List;
 import java.util.Map;
 
@@ -26,15 +29,19 @@ public class SearchResult {
     private final long                      numHits;
     private final List<Map<String, Object>> hits;
 
-    public SearchResult( long numHits, List<Map<String, Object>> hits ) {
+    public SearchResult(
+            @JsonProperty( SerializationConstants.NUM_HITS ) long numHits,
+            @JsonProperty( SerializationConstants.HITS ) List<Map<String, Object>> hits ) {
         this.numHits = numHits;
         this.hits = hits;
     }
 
+    @JsonProperty( SerializationConstants.NUM_HITS )
     public long getNumHits() {
         return numHits;
     }
 
+    @JsonProperty( SerializationConstants.HITS )
     public List<Map<String, Object>> getHits() {
         return hits;
     }
