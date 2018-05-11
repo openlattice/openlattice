@@ -21,6 +21,7 @@
 package com.openlattice.datastore.permissions.controllers;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.EventBus;
 import com.openlattice.authorization.Ace;
@@ -44,7 +45,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
-import jersey.repackaged.com.google.common.collect.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;

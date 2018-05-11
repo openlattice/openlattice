@@ -313,7 +313,7 @@ public class SearchController implements SearchApi, AuthorizingComponent {
             path = { ENTITY_SETS + INDEX },
             method = RequestMethod.GET )
     @Override
-    public Void trigerAllEntitySetDataIndex() {
+    public Void triggerAllEntitySetDataIndex() {
         ensureAdminAccess();
         searchService.triggerAllEntitySetDataIndex();
         return null;
