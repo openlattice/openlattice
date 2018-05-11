@@ -37,7 +37,6 @@ import com.openlattice.hazelcast.HazelcastMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-import javax.ws.rs.NotSupportedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,12 +62,12 @@ public class Auth0Mapstore implements TestableSelfRegisteringMapStore<String, Au
 
     @Override
     public void delete( String key ) {
-        throw new NotSupportedException( "Delete is not supported by this mapstore" );
+        throw new UnsupportedOperationException( "Delete is not supported by this mapstore" );
     }
 
     @Override
     public void deleteAll( Collection<String> keys ) {
-        throw new NotSupportedException( "Delete is not supported by this mapstore" );
+        throw new UnsupportedOperationException( "Delete is not supported by this mapstore" );
     }
 
     @Override
