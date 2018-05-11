@@ -22,14 +22,14 @@
 package com.openlattice.graph;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.openlattice.graph.query.AbstractOp;
+import com.openlattice.graph.query.AbstractQuery;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class AssociationQuery extends AbstractOp {
+public class AssociationQuery extends AbstractQuery {
     private final Set<Integer> srcEntityQueries;
     private final Set<Integer> dstEntityQueries;
     private final Set<Integer> associationEntityQueries;

@@ -19,15 +19,14 @@
  *
  */
 
-package com.openlattice.graph.query;
+package com.openlattice.graph;
 
-import java.util.Set;
+import java.util.Map;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class And extends AbstractQuery {
-    public And( Set<Query> childQueries ) {
-        super( childQueries );
-    }
+public class GraphQuery {
+    private final Map<Integer, VertexQuery> entityQueries;
+    private final Map<Integer, VertexQuery> entityQueries;
 }

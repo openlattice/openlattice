@@ -20,8 +20,7 @@ package com.openlattice.graph;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
-import com.openlattice.data.EntityKey;
-import com.openlattice.graph.query.Op;
+import com.openlattice.graph.query.Query;
 import java.util.Map;
 import java.util.UUID;
 
@@ -37,7 +36,7 @@ public interface GraphApi {
     String BASE       = SERVICE + CONTROLLER;
 
 
-    ListMultimap<UUID, SetMultimap<UUID, SetMultimap<UUID, Object>>> graphQuery( Map<Integer, Op> ops );
+    ListMultimap<UUID, SetMultimap<UUID, SetMultimap<UUID, Object>>> graphQuery( Map<Integer, Query> ops );
 
     
 

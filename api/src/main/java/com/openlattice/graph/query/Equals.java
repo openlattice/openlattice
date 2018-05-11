@@ -28,21 +28,31 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Equals extends AbstractOp {
+public class Equals extends AbstractQuery {
     private final FullQualifiedName fqn;
-    private final Object value;
-
+    private final Object            value;
+    private final ComparisonOp      comparisonOp;
     @JsonCreator
-    public Equals( Integer id, FullQualifiedName fqn, Object value ) {
+    public Equals(
+            Integer id,
+            FullQualifiedName fqn,
+            Object value,
+            ComparisonOp comparisonOp ) {
         super( id, new HashSet<>(), false );
         this.fqn = fqn;
         this.value = value;
+        this.comparisonOp = comparisonOp;
     }
 
-    public Equals( FullQualifiedName fqn, Object value ) {
-        super(new HashSet<> (), false );
+    public Equals( FullQualifiedName fqn, Object value, ComparisonOp comparisonOp ) {
+        super( new HashSet<>(), false );
         this.fqn = fqn;
         this.value = value;
+        this.comparisonOp = comparisonOp;
+    }
+
+    public ComparisonOp getComparisonOp() {
+        return comparisonOp;
     }
 
     public FullQualifiedName getFqn() {
@@ -51,5 +61,28 @@ public class Equals extends AbstractOp {
 
     public Object getValue() {
         return value;
+    }
+
+    enum ComparisonOp {
+        EQUAL,
+        LT,
+        LTE,
+        GT,
+        GTE;
+
+        String getComparisionString() {
+            switch ( this ) {
+                case EQUAL:
+                    return "=";
+                case LT:
+                    return "<";
+                case LTE:
+                    return "<=";
+                case GT:
+                    return ">";
+                case GTE:
+                    return ">=";
+            }
+        }
     }
 }

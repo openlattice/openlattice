@@ -21,43 +21,22 @@
 
 package com.openlattice.graph.query;
 
+import com.google.common.collect.ImmutableSet;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public abstract class AbstractOp implements Op {
-    private final Integer      id;
-    private final Set<Integer> ops;
-    private       boolean      negated;
-
-    public AbstractOp( Integer id, Set<Integer> ops, boolean negated ) {
-        this.id = id;
-        this.ops = ops;
-        this.negated = negated;
+public class EntityKeyIdQuery extends AbstractQuery<UUID> {
+    private final UUID entityKeyId;
+    public EntityKeyIdQuery( UUID entityKeyId ) {
+        super( ImmutableSet.of() );
+        this.entityKeyId = entityKeyId;
     }
 
-    public AbstractOp( Set<Integer> ops, boolean negated ) {
-        this( Op.idSource.getAndIncrement(), ops, negated );
-    }
-
-    @Override public Integer getId() {
-        return id;
-    }
-
-    @Override
-    public AbstractOp negate() {
-        negated = !negated;
-        return this;
-    }
-
-    @Override
-    public Set<Integer> getOps() {
-        return ops;
-    }
-
-    @Override
-    public boolean isNegated() {
-        return negated;
+    @Override public Object visit( Function<UUID,?> map, Function<Set<Object>, Object> reduce ) {
+        return map.apply(  entityKeyId );
     }
 }

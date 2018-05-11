@@ -26,8 +26,15 @@ import java.util.Set;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class And extends AbstractQuery {
-    public And( Set<Query> childQueries ) {
-        super( childQueries );
+public abstract class AbstractQuery<T> implements Query<T> {
+    private final Set<Query<T>> childQueries;
+
+    public AbstractQuery( Set<Query> childQueries ) {
+        this.childQueries = childQueries;
     }
+
+    public Set<Query<T>> getChildQueries() {
+        return childQueries;
+    }
+
 }

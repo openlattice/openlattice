@@ -19,34 +19,24 @@
  *
  */
 
-package com.openlattice.graph;
+package com.openlattice.graph.query;
 
-import com.openlattice.graph.query.AbstractOp;
-import java.util.Optional;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntityQuery extends AbstractOp {
-    private final Set<UUID>      entitySetId;
-    private final Optional<UUID> entityTypeId;
+public class EntitySetQuery extends AbstractQuery {
+    private final UUID entitySetId;
 
-    public EntityQuery(
-            Integer id,
-            Set<Integer> ops,
-            boolean negated,
-            Set<UUID> entitySetId,
-            Optional<UUID> entityTypeId ) {
-        super( id, ops, negated );
+    public EntitySetQuery( UUID entitySetId ) {
+        super( new HashSet<>() );
         this.entitySetId = entitySetId;
-        this.entityTypeId = entityTypeId;
     }
 
-    public EntityQuery( Set<Integer> ops, Set<UUID> entitySetId, Optional<UUID> entityTypeId ) {
-        super( ops, false );
-        this.entitySetId = entitySetId;
-        this.entityTypeId = entityTypeId;
+    public UUID getEntitySetId() {
+        return entitySetId;
     }
 }

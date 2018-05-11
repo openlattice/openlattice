@@ -26,13 +26,8 @@ import java.util.Set;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Or extends AbstractOp {
-    public Or( Set<Integer> ops, boolean negated ) {
-        super( ops, negated );
+public class Or extends AbstractQuery {
+    public Or( Set<Query> childQueries ) {
+        super( childQueries );
     }
-
-    public Or( Set<Integer> ops ) {
-        super( ops, false );
-    }
-
 }

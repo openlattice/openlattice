@@ -21,41 +21,37 @@
 
 package com.openlattice.graph.query;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
+import static java.util.Arrays.asList;
+
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public interface Op {
-    AtomicInteger idSource = new AtomicInteger(  );
+public interface Query<T> {
+    Set<Query<T>> getChildQueries();
 
-    Integer getId();
-    Set<Integer> getOps();
-
-    Op negate();
-
-    boolean isNegated();
-
-    default And and( Op ... ops ) {
-        Set<Integer> newOps = new HashSet<>( ops.length + 1 );
-        newOps.add( this.getId() );
-        for( Op op : ops ) {
-            newOps.add( op.getId() );
-        }
-        return new And( newOps );
+    default <O> O visit( Function<T, O> map, Function<Set<O>, O> reduce ) {
+        return reduce
+                .apply( getChildQueries().stream().map( query -> query.visit( map, reduce ) ).collect( Collectors.toSet() ) );
     }
 
-    default Or or( Op ... ops ) {
-        Set<Integer> newOps = new HashSet<>( ops.length + 1 );
-        newOps.add( this.getId() );
-        for( Op op : ops ) {
-            newOps.add( op.getId() );
-        }
-        return new Or( newOps );
+    default And and( Supplier<Integer> id, Query... queries ) {
+        Set<Query> newQueries = new HashSet<>( queries.length + 1 );
+        newQueries.add( this );
+        newQueries.addAll( asList( queries ) );
+        return new And( newQueries );
+    }
+
+    default Or or( Query... queries ) {
+        Set<Query> newQueries = new HashSet<>( queries.length + 1 );
+        newQueries.add( this );
+        newQueries.addAll( asList( queries ));
+        return new Or( newQueries );
     }
 
 }
