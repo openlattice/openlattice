@@ -20,22 +20,19 @@
 
 package com.openlattice.mail.services;
 
+import com.google.common.base.Preconditions;
+import com.hazelcast.core.IQueue;
 import com.openlattice.mail.RenderableEmailRequest;
 import com.openlattice.mail.config.HtmlEmailTemplate;
 import com.openlattice.mail.config.MailServiceConfig;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
-
-import com.hazelcast.core.IQueue;
-
-import jersey.repackaged.com.google.common.base.Preconditions;
 import jodd.mail.Email;
 import jodd.mail.SendMailSession;
 import jodd.mail.SmtpServer;
 import jodd.mail.SmtpSslServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 
 public class MailService {
     private final MailRenderer                   mailRenderer;
@@ -74,7 +71,7 @@ public class MailService {
 
     }
 
-    public void deleteTemplate( String templateId ){
+    public void deleteTemplate( String templateId ) {
 
     }
 
@@ -95,7 +92,7 @@ public class MailService {
      * By design under heavy load (not all emails rendered within 15 seconds) this will start dedicating more and more
      * threads to rendering outgoing e-mails queue.
      */
-   @Async
+    @Async
     public void processEmailRequestsQueue() {
         SendMailSession session = smtpServer.createSession();
         session.open();
