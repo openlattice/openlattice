@@ -305,6 +305,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             Set<UUID> keyProperties = dms.getEntityTypeByEntitySetId( entitySetId ).getKey();
 
             if ( authorizedProperties.containsAll( keyProperties ) ) {
+
                 return sts.acquireTicket( Principals.getCurrentUser(), entitySetId, authorizedProperties );
             } else {
                 throw new ForbiddenException(

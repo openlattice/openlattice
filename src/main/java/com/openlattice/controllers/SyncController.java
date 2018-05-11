@@ -20,6 +20,8 @@
 
 package com.openlattice.controllers;
 
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -27,7 +29,13 @@ import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataValue;
+import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.hazelcast.predicates.EntitySetPredicates;
+import com.openlattice.hazelcast.processors.SyncFinalizer;
 import com.openlattice.sync.SyncApi;
+import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.UUID;
 import javax.inject.Inject;
@@ -40,11 +48,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping( SyncApi.CONTROLLER )
 public class SyncController implements SyncApi, AuthorizingComponent {
 
+    private IMap<EntityDataKey, EntityDataValue> entities;
+    
     @Inject
     private AuthorizationManager authz;
+    @Inject
+    private DatasourceManager    datasourceManager;
 
     @Inject
-    private DatasourceManager datasourceManager;
+    public void setHazelcastInstance( HazelcastInstance hazelcastInstance ) {
+        entities = hazelcastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
+    }
 
     @Override
     @RequestMapping(
@@ -54,7 +68,10 @@ public class SyncController implements SyncApi, AuthorizingComponent {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.WRITE ) ) ) {
-            return datasourceManager.createNewSyncIdForEntitySet( entitySetId );
+            entities.executeOnEntries( new SyncFinalizer( OffsetDateTime.now() ),
+                    EntitySetPredicates.entitySet( entitySetId ) );
+            //            return datasourceManager.createNewSyncIdForEntitySet( entitySetId );
+            return UUID.randomUUID();
         } else {
             throw new ForbiddenException(
                     "Insufficient permissions to acquire a sync id for this entity set or it doesn't exists." );
