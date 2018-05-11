@@ -152,7 +152,7 @@ public class DataTables {
         PostgresTableDefinition ptd = new PostgresTableDefinition(
                 quote( idxPrefix ) )
                 .addColumns(
-                        ENTITY_SET_ID, //TODO: This column is redundant. Remove in future migrations.
+                        ENTITY_SET_ID, 
                         ID_VALUE,
                         HASH,
                         valueColumn,

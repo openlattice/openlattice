@@ -70,7 +70,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     //    private final DatasourceManager dsm;
 
     private final HazelcastInstance                    hazelcastInstance;
-    private final IMap<EntityDataKey, EntityDataValue> entities;
+//    private final IMap<EntityDataKey, EntityDataValue> entities;
     private final EntityKeyIdService                   idService;
     private final ListeningExecutorService             executor;
     private final PostgresDataManager                  pdm;
@@ -84,7 +84,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             ObjectMapper mapper,
             EntityKeyIdService idService,
             PostgresDataManager pdm ) {
-        this.entities = hazelastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
+//        this.entities = hazelastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
         this.pdm = pdm;
         this.mapper = mapper;
         this.idService = idService;

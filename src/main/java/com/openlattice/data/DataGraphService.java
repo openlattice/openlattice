@@ -262,8 +262,7 @@ public class DataGraphService implements DataGraphManager {
     public void createEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,
-            Map<UUID, Map<UUID, EdmPrimitiveTypeKind>> authorizedPropertiesByEntitySetId )
-            throws InterruptedException, ExecutionException {
+            Map<UUID, Map<UUID, EdmPrimitiveTypeKind>> authorizedPropertiesByEntitySetId ) {
         // Map<EntityKey, UUID> idsRegistered = new HashMap<>();
 
         entities.parallelStream()

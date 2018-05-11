@@ -104,8 +104,7 @@ public interface DataGraphManager {
     void createEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,
-            Map<UUID, Map<UUID, EdmPrimitiveTypeKind>> authorizedPropertiesByEntitySetId )
-            throws ExecutionException, InterruptedException;
+            Map<UUID, Map<UUID, EdmPrimitiveTypeKind>> authorizedPropertiesByEntitySetId );
 
     public Iterable<SetMultimap<Object, Object>> getTopUtilizers(
             UUID entitySetId,
