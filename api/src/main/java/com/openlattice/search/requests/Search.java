@@ -41,7 +41,7 @@ public class Search {
             @JsonProperty( SerializationConstants.PROPERTY_TYPE_IDS ) Optional<Set<UUID>> propertyTypes,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
-        this.optionalKeyword = keyword;
+        this.optionalKeyword = keyword.isPresent() ? Optional.of( keyword.get().trim() ) : Optional.absent();
         this.optionalEntityType = entityType;
         this.optionalPropertyTypes = propertyTypes;
         this.start = start;

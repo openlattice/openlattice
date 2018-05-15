@@ -41,7 +41,7 @@ public class SearchDetails implements Serializable {
         Preconditions.checkNotNull( searchTerm );
         Preconditions.checkNotNull( propertyType );
 
-        this.searchTerm = searchTerm;
+        this.searchTerm = searchTerm.trim();
         this.propertyType = propertyType;
         this.exactMatch = exactMatch;
     }
