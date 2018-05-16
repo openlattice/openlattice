@@ -1,2 +1,3 @@
 bucket: "lattice-test-config"
 folder: "conductor-test"
+region: "us-west-1"
