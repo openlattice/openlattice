@@ -98,6 +98,7 @@ public class Auth0Synchronizer {
         //Only one instance can populate and refresh the map. Unforunately, ILock is refusing to unlock causing issues
         //So we implement a different gating mechanism. This may occasionally be wrong when cluster size changes.
         logger.info( "Trying to acquire lock to refresh auth0 users." );
+        logger.info( "\"memberIds\" queue size: {}", memberIds.size() );
         String nextMember = memberIds.peek();
         if ( StringUtils.equals( nextMember, localMemberId ) && ( nextTime.get() < System.currentTimeMillis() ) ) {
             memberIds.poll();
@@ -133,8 +134,6 @@ public class Auth0Synchronizer {
             }
         } else {
             logger.info( "Not elected to refresh users." );
-            //Ensure that every active member is registered for selection.
-            memberIds.add( localMemberId );
         }
 
     }
