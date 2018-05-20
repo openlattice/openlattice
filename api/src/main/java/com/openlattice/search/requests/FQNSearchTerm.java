@@ -33,8 +33,8 @@ public class FQNSearchTerm {
             @JsonProperty( SerializationConstants.NAME ) String name,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
-        this.namespace = namespace;
-        this.name = name;
+        this.namespace = namespace.trim();
+        this.name = name.trim();
         this.start = start;
         this.maxHits = maxHits;
     }
