@@ -23,12 +23,12 @@ package com.openlattice.linking.util;
 import com.google.common.collect.Sets;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import java.text.DecimalFormat;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -185,7 +185,7 @@ public class PersonProperties {
             if ( dobUnparsed != null ) {
                 if ( StringUtils.isEmpty( dobUnparsed ) ) { values.add( "" ); } else {
                     try {
-                        DateTime dt = DateTime.parse( dobUnparsed );
+                        LocalDateTime dt = LocalDateTime.parse( dobUnparsed );
                         String dobParsed = dd.format( dt.getDayOfMonth() ) + dd.format( dt.getMonthOfYear() ) + String
                                 .valueOf( dt.getYear() );
                         values.add( dobParsed );
