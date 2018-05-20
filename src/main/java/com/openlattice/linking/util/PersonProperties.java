@@ -186,7 +186,7 @@ public class PersonProperties {
                 if ( StringUtils.isEmpty( dobUnparsed ) ) { values.add( "" ); } else {
                     try {
                         LocalDateTime dt = LocalDateTime.parse( dobUnparsed );
-                        String dobParsed = dd.format( dt.getDayOfMonth() ) + dd.format( dt.getMonthOfYear() ) + String
+                        String dobParsed = dd.format( dt.getDayOfMonth() ) + dd.format( dt.getMonthValue() ) + String
                                 .valueOf( dt.getYear() );
                         values.add( dobParsed );
                     } catch ( Exception e ) {
