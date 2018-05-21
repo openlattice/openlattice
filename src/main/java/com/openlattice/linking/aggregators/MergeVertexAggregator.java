@@ -89,7 +89,6 @@ public class MergeVertexAggregator extends Aggregator<Map.Entry<LinkingVertexKey
                 graphId,
                 syncId,
                 propertyTypeIdsByEntitySet,
-                propertyTypesById,
                 propertyTypesToPopulate,
                 authorizedPropertiesWithDataTypeForLinkedEntitySet );
     }
