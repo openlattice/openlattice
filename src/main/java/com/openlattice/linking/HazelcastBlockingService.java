@@ -20,7 +20,9 @@
 
 package com.openlattice.linking;
 
+import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ICountDownLatch;
 import com.hazelcast.core.IMap;
 import com.openlattice.blocking.GraphEntityPair;
 import com.openlattice.blocking.LinkingEntity;
@@ -43,12 +45,21 @@ public class HazelcastBlockingService {
     private static final int     blockSize = 50;
     private static final boolean explain   = false;
 
-    private IMap<GraphEntityPair, LinkingEntity> linkingEntities;
-    private HazelcastInstance                    hazelcastInstance;
+    private IMap<GraphEntityPair, LinkingEntity>  linkingEntities;
+    private IMap<LinkingVertexKey, LinkingVertex> linkingVertices;
+    private HazelcastInstance                     hazelcastInstance;
 
     public HazelcastBlockingService( HazelcastInstance hazelcastInstance ) {
         this.linkingEntities = hazelcastInstance.getMap( HazelcastMap.LINKING_ENTITIES.name() );
+        this.linkingVertices = hazelcastInstance.getMap( HazelcastMap.LINKING_VERTICES.name() );
         this.hazelcastInstance = hazelcastInstance;
+    }
+
+    @Async
+    public void setLinkingVertex( UUID graphId, UUID vertexId ) {
+        linkingVertices.set( new LinkingVertexKey( graphId, vertexId ),
+                new LinkingVertex( 0.0D, Sets.newHashSet( vertexId ) ) );
+        hazelcastInstance.getCountDownLatch( graphId.toString() ).countDown();
     }
 
     @Async

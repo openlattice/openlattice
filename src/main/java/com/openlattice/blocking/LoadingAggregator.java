@@ -7,18 +7,19 @@ import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.core.IMap;
-import com.openlattice.data.hazelcast.DataKey;
-import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataValue;
+import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.nio.ByteBuffer;
+
 import java.util.Map;
 import java.util.UUID;
 
 public class LoadingAggregator
-        extends Aggregator<Map.Entry<DataKey, ByteBuffer>, Integer>
+        extends Aggregator<Map.Entry<EntityDataKey, EntityDataValue>, Integer>
         implements HazelcastInstanceAware {
     private static final long serialVersionUID = -8998522786390338940L;
 
@@ -43,23 +44,19 @@ public class LoadingAggregator
         this( graphId, authorizedPropertyTypes, Maps.newHashMap() );
     }
 
-    @Override public void accumulate( Map.Entry<DataKey, ByteBuffer> input ) {
-        DataKey key = input.getKey();
-        UUID entityKeyId = key.getId();
-        UUID propertyTypeId = key.getPropertyTypeId();
+    @Override public void accumulate( Map.Entry<EntityDataKey, EntityDataValue> input ) {
+        EntityDataKey key = input.getKey();
+        UUID entityKeyId = key.getEntityKeyId();
         UUID entitySetId = key.getEntitySetId();
-        if ( authorizedPropertyTypes.get( entitySetId ).containsKey( propertyTypeId ) ) {
-            GraphEntityPair graphEntityPair = new GraphEntityPair( graphId, entityKeyId );
-            String value = CassandraSerDesFactory.deserializeValue( mapper,
-                    input.getValue(),
-                    authorizedPropertyTypes.get( entitySetId ).get( propertyTypeId ).getDatatype(),
-                    key.getEntityId() ).toString();
-            LinkingEntity entity = ( entities.containsKey( graphEntityPair ) ) ?
-                    entities.get( graphEntityPair ) :
-                    new LinkingEntity( Maps.newHashMap() );
-            entity.addEntry( propertyTypeId, value );
-            entities.put( graphEntityPair, entity );
-        }
+        GraphEntityPair graphEntityPair = new GraphEntityPair( graphId, entityKeyId );
+
+        LinkingEntity entity = ( entities.containsKey( graphEntityPair ) ) ?
+                entities.get( graphEntityPair ) : new LinkingEntity( Maps.newHashMap() );
+
+        entity.addAll( HazelcastEntityDatastore
+                .fromEntityDataValue( input.getValue(), authorizedPropertyTypes.get( entitySetId ).keySet() ) );
+        entities.put( graphEntityPair, entity );
+
     }
 
     @Override public void combine( Aggregator aggregator ) {

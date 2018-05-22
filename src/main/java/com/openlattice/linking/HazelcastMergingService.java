@@ -24,47 +24,37 @@ import com.dataloom.hazelcast.ListenableHazelcastFuture;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.query.Predicate;
+import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.blocking.GraphEntityPair;
 import com.openlattice.blocking.LinkingEntity;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.DataGraphService;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.EntityKeyIdService;
-import com.openlattice.data.aggregators.EntitiesAggregator;
-import com.openlattice.data.hazelcast.DataKey;
-import com.openlattice.data.hazelcast.Entities;
-import com.openlattice.data.hazelcast.EntitySets;
+import com.openlattice.data.*;
 import com.openlattice.data.ids.HazelcastEntityKeyIdService;
-import com.openlattice.data.mapstores.DataMapstore;
-import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
-import com.openlattice.datastore.cassandra.RowAdapters;
+import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.Graph;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.hazelcast.HazelcastMap;
-import java.nio.ByteBuffer;
+import com.openlattice.hazelcast.processors.EntityDataUpserter;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
+
+import javax.inject.Inject;
+import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Inject;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 
 public class HazelcastMergingService {
     private static final Logger logger = LoggerFactory.getLogger( HazelcastMergingService.class );
@@ -72,7 +62,7 @@ public class HazelcastMergingService {
     @Inject
     private       ConductorElasticsearchApi            elasticsearchApi;
     private       IMap<GraphEntityPair, LinkingEntity> linkingEntities;
-    private       IMap<DataKey, ByteBuffer>            data;
+    private       IMap<EntityDataKey, EntityDataValue> entities;
     private       IMap<LinkingVertexKey, UUID>         newIds;
     private       IMap<EntityKey, UUID>                ids;
     private       Graph                                graph;
@@ -80,11 +70,11 @@ public class HazelcastMergingService {
     private       ObjectMapper                         mapper;
 
     public HazelcastMergingService( HazelcastInstance hazelcastInstance, ListeningExecutorService executor ) {
-        this.data = hazelcastInstance.getMap( HazelcastMap.DATA.name() );
         this.newIds = hazelcastInstance.getMap( HazelcastMap.VERTEX_IDS_AFTER_LINKING.name() );
         this.mapper = ObjectMappers.getJsonMapper();
 
         this.ids = hazelcastInstance.getMap( HazelcastMap.IDS.name() );
+        this.entities = hazelcastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
         this.ekIds = new HazelcastEntityKeyIdService( hazelcastInstance, executor );
         this.graph = new Graph( executor, hazelcastInstance );
         this.hazelcastInstance = hazelcastInstance;
@@ -94,44 +84,37 @@ public class HazelcastMergingService {
     private SetMultimap<UUID, Object> computeMergedEntity(
             Set<UUID> entityKeyIds,
             Map<UUID, Set<UUID>> propertyTypeIdsByEntitySet,
-            Map<UUID, PropertyType> propertyTypesById,
             Set<UUID> propertyTypesToPopulate ) {
 
-        Map<UUID, Set<UUID>> authorizedPropertyTypesForEntity = ekIds.getEntityKeyEntries( entityKeyIds )
-                .stream()
-                .collect( Collectors.toMap( Entry::getValue,
-                        entry -> propertyTypeIdsByEntitySet.get( entry.getKey().getEntitySetId() ) ) );
+        Set<EntityDataKey> entityDataKeys = ekIds.getEntityKeys( entityKeyIds ).entrySet().stream()
+                .map( entry -> new EntityDataKey( entry.getValue().getEntitySetId(), entry.getKey() ) ).collect(
+                        Collectors.toSet() );
 
-        Predicate entitiesFilter = EntitySets
-                .getEntities( authorizedPropertyTypesForEntity.keySet().toArray( new UUID[ 0 ] ) );
-        Entities entities = data.aggregate( new EntitiesAggregator(), entitiesFilter );
+        Map<EntityDataKey, EntityDataValue> entityValues = entities.getAll( entityDataKeys );
 
-        SetMultimap<UUID, ByteBuffer> mergedEntity = HashMultimap.create();
+        SetMultimap<UUID, Object> mergedEntity = HashMultimap.create();
 
-        entities.entrySet().forEach( entityDetails -> {
-            Set<UUID> authorizedPropertyTypes = authorizedPropertyTypesForEntity.get( entityDetails.getKey() );
-            mergedEntity.putAll(
-                    Multimaps.filterKeys( entityDetails.getValue(), key -> authorizedPropertyTypes.contains( key ) ) );
+        entityValues.entrySet().forEach( entry -> {
+            UUID entitySetId = entry.getKey().getEntitySetId();
+            Set<UUID> authorizedPropertyTypes = Sets
+                    .intersection( propertyTypeIdsByEntitySet.get( entitySetId ), propertyTypesToPopulate );
+            mergedEntity.putAll( HazelcastEntityDatastore
+                    .fromEntityDataValue( entry.getValue(), authorizedPropertyTypes ) );
         } );
 
-        return RowAdapters.entityIndexedById( UUID.randomUUID().toString(),
-                mergedEntity,
-                propertyTypesById,
-                propertyTypesToPopulate,
-                mapper );
+        return mergedEntity;
     }
 
     @Async
     public void mergeEntity(
-            Set<UUID> entityKeyIds, UUID graphId,
+            Set<UUID> entityKeyIds,
+            UUID graphId,
             UUID syncId,
             Map<UUID, Set<UUID>> propertyTypeIdsByEntitySet,
-            Map<UUID, PropertyType> propertyTypesById,
             Set<UUID> propertyTypesToPopulate,
             Map<UUID, EdmPrimitiveTypeKind> propertyTypesWithDatatype ) {
         SetMultimap<UUID, Object> mergedEntity = computeMergedEntity( entityKeyIds,
                 propertyTypeIdsByEntitySet,
-                propertyTypesById,
                 propertyTypesToPopulate );
 
         String entityId = UUID.randomUUID().toString();
@@ -180,56 +163,31 @@ public class HazelcastMergingService {
         Set<UUID> authorizedProperties = propertyTypesWithDatatype.keySet();
         // does not write the row if some property values that user is trying to write to are not authorized.
         if ( !authorizedProperties.containsAll( entityDetails.keySet() ) ) {
-            logger.error( "Entity {} not written because the following properties are not authorized: {}",
-                    entityId,
-                    Sets.difference( entityDetails.keySet(), authorizedProperties ) );
-            return Stream.empty();
-        }
-
-        SetMultimap<UUID, Object> normalizedPropertyValues;
-        try {
-            normalizedPropertyValues = CassandraSerDesFactory.validateFormatAndNormalize( entityDetails,
-                    propertyTypesWithDatatype );
-        } catch ( Exception e ) {
-            logger.error( "Entity {} not written because some property values are of invalid format.",
-                    entityId,
-                    e );
-            return Stream.empty();
-
+            String msg = String
+                    .format( "Entity %s not written because the following properties are not authorized: %s",
+                            entityId,
+                            Sets.difference( entityDetails.keySet(), authorizedProperties ) );
+            logger.error( msg );
+            throw new ForbiddenException( msg );
         }
 
         EntityKey ek = new EntityKey( graphId, entityId, syncId );
         UUID id = ids.get( ek );
-        Stream<ListenableFuture> futures =
-                normalizedPropertyValues
-                        .entries().stream()
-                        .map( entry -> {
-                            UUID propertyTypeId = entry.getKey();
-                            EdmPrimitiveTypeKind datatype = propertyTypesWithDatatype
-                                    .get( propertyTypeId );
-                            ByteBuffer buffer = CassandraSerDesFactory.serializeValue(
-                                    mapper,
-                                    entry.getValue(),
-                                    datatype,
-                                    entityId );
-                            return data.setAsync( new DataKey(
-                                    id,
-                                    graphId,
-                                    syncId,
-                                    entityId,
-                                    propertyTypeId,
-                                    DataMapstore.hf.hashBytes( buffer.array() ).asBytes() ), buffer );
-                        } )
-                        .map( ListenableHazelcastFuture::new );
+        EntityDataKey edk = new EntityDataKey( graphId, id );
+        EntityDataUpserter entityDataUpserter =
+                new EntityDataUpserter( entityDetails, OffsetDateTime.now() );
+
+        Stream<ListenableFuture> futures = Stream
+                .of( new ListenableHazelcastFuture( entities.submitToKey( edk, entityDataUpserter ) ) );
 
         propertyTypesWithDatatype.entrySet().forEach( entry -> {
             if ( entry.getValue().equals( EdmPrimitiveTypeKind.Binary ) ) {
-                normalizedPropertyValues.removeAll( entry.getKey() );
+                entityDetails.removeAll( entry.getKey() );
             }
         } );
 
         elasticsearchApi.updateEntityData( new EntityDataKey( graphId, id ),
-                normalizedPropertyValues );
+                entityDetails );
 
         return futures;
     }

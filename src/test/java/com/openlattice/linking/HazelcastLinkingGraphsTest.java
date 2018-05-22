@@ -24,6 +24,7 @@ package com.openlattice.linking;
 
 import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.HzAuthzTest;
 import com.openlattice.clustering.DistributedClusterer;
 import com.openlattice.linking.HazelcastLinkingGraphs;
@@ -93,8 +94,11 @@ public class HazelcastLinkingGraphsTest extends HzAuthzTest {
             ids.put( TestDataFactory.entityKey( entitySetId, syncId ), id );
         }
 
-        graphs.initializeLinking( entitySetId, ImmutableSet.of( entitySetId ) );
-
+        ids.entrySet().stream().filter( entry -> entry.getKey().getEntitySetId().equals( entitySetId ) ).forEach( entry -> {
+            linkingVertices.set( new LinkingVertexKey( entitySetId, entry.getValue() ),
+                    new LinkingVertex( 0.0D, Sets.newHashSet( entry.getValue() ) ) );
+        } );
+        
         Set<LinkingVertexKey> vertices = linkingVertices.keySet().stream()
                 .filter( key -> key.getGraphId().equals( entitySetId ) ).collect(
                         Collectors.toSet() );

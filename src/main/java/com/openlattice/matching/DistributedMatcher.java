@@ -29,7 +29,8 @@ import com.openlattice.blocking.BlockingAggregator;
 import com.openlattice.blocking.GraphEntityPair;
 import com.openlattice.blocking.LinkingEntity;
 import com.openlattice.blocking.LoadingAggregator;
-import com.openlattice.data.hazelcast.DataKey;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataValue;
 import com.openlattice.data.hazelcast.EntitySets;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.type.PropertyType;
@@ -39,7 +40,6 @@ import com.openlattice.linking.predicates.LinkingPredicates;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.scheduling.annotation.Async;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -52,7 +52,7 @@ public class DistributedMatcher {
     private       SetMultimap<UUID, UUID>              linkIndexedByEntitySets;
     private       Iterable<UUID>                       linkingEntitySetIds;
     private       Map<FullQualifiedName, UUID>         propertyTypeIdIndexedByFqn;
-    private final IMap<DataKey, ByteBuffer>            data;
+    private       IMap<EntityDataKey, EntityDataValue> entities;
     private final IMap<GraphEntityPair, LinkingEntity> linkingEntities;
     private final HazelcastInstance                    hazelcast;
     private final HazelcastLinkingGraphs               graphs;
@@ -60,8 +60,8 @@ public class DistributedMatcher {
     public DistributedMatcher(
             HazelcastInstance hazelcast,
             EdmManager dms ) {
-        this.data = hazelcast.getMap( HazelcastMap.DATA.name() );
         this.linkingEntities = hazelcast.getMap( HazelcastMap.LINKING_ENTITIES.name() );
+        this.entities = hazelcast.getMap( HazelcastMap.ENTITY_DATA.name() );
         this.dms = dms;
         this.graphs = new HazelcastLinkingGraphs( hazelcast );
         this.hazelcast = hazelcast;
@@ -77,7 +77,7 @@ public class DistributedMatcher {
 
         graphs.initializeLinking( graphId, linkingEntitySetIds );
 
-        int numEntities = data.aggregate( new LoadingAggregator( graphId, authorizedPropertyTypes ),
+        int numEntities = entities.aggregate( new LoadingAggregator( graphId, authorizedPropertyTypes ),
                 EntitySets.filterByEntitySetIds( linkingEntitySetIds ) );
         System.out.println( "t1: " + String.valueOf( s.elapsed( TimeUnit.MILLISECONDS ) ) );
         s.reset();
