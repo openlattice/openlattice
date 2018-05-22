@@ -98,9 +98,7 @@ public class HazelcastLinkingGraphsTest extends HzAuthzTest {
             linkingVertices.set( new LinkingVertexKey( entitySetId, entry.getValue() ),
                     new LinkingVertex( 0.0D, Sets.newHashSet( entry.getValue() ) ) );
         } );
-
-        graphs.initializeLinking( entitySetId, ImmutableSet.of( entitySetId ) );
-
+        
         Set<LinkingVertexKey> vertices = linkingVertices.keySet().stream()
                 .filter( key -> key.getGraphId().equals( entitySetId ) ).collect(
                         Collectors.toSet() );
