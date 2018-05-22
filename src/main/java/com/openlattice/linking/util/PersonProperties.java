@@ -23,7 +23,6 @@ package com.openlattice.linking.util;
 import com.google.common.collect.Sets;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import java.text.DecimalFormat;
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -32,6 +31,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDate;
 public class PersonProperties {
     private static final Logger        logger = LoggerFactory.getLogger( PersonProperties.class );
     private static       DecimalFormat dd     = new DecimalFormat( "00" );
@@ -185,7 +185,7 @@ public class PersonProperties {
             if ( dobUnparsed != null ) {
                 if ( StringUtils.isEmpty( dobUnparsed ) ) { values.add( "" ); } else {
                     try {
-                        LocalDateTime dt = LocalDateTime.parse( dobUnparsed );
+                        LocalDate dt = LocalDate.parse( dobUnparsed );
                         String dobParsed = dd.format( dt.getDayOfMonth() ) + dd.format( dt.getMonthValue() ) + String
                                 .valueOf( dt.getYear() );
                         values.add( dobParsed );
