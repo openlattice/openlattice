@@ -20,16 +20,21 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.hazelcast.util.Preconditions;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.linking.HazelcastBlockingService;
 import com.openlattice.linking.HazelcastLinkingGraphs.Initializer;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
 
 @Component
 public class InitializerAggregatorStreamSerializer implements SelfRegisteringStreamSerializer<Initializer> {
+
+    private HazelcastBlockingService blockingService;
+
     @Override public Class<? extends Initializer> getClazz() {
         return Initializer.class;
     }
@@ -40,7 +45,7 @@ public class InitializerAggregatorStreamSerializer implements SelfRegisteringStr
     }
 
     @Override public Initializer read( ObjectDataInput in ) throws IOException {
-        return new Initializer( UUIDStreamSerializer.deserialize( in ) );
+        return new Initializer( UUIDStreamSerializer.deserialize( in ), blockingService );
     }
 
     @Override public int getTypeId() {
@@ -48,5 +53,10 @@ public class InitializerAggregatorStreamSerializer implements SelfRegisteringStr
     }
 
     @Override public void destroy() {
+    }
+
+    public synchronized void setBlockingService( HazelcastBlockingService blockingService ) {
+        Preconditions.checkState( this.blockingService == null, "HazelcastBlockingService can only be set once" );
+        this.blockingService = Preconditions.checkNotNull( blockingService );
     }
 }

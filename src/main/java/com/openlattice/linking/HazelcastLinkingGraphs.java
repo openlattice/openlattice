@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
+import com.hazelcast.core.ICountDownLatch;
 import com.hazelcast.core.IMap;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.hazelcast.EntitySets;
@@ -113,30 +114,52 @@ public class HazelcastLinkingGraphs {
     }
 
     public static class Initializer extends Aggregator<Entry<EntityKey, UUID>, Void> implements HazelcastInstanceAware {
-        private static final long serialVersionUID = 690840541802755664L;
+        private static final long serialVersionUID           = 690840541802755664L;
+        private static final int  MAX_FAILED_CONSEC_ATTEMPTS = 5;
 
-        public            UUID                                  graphId;
-        private transient IMap<LinkingVertexKey, LinkingVertex> linkingVertices;
+        public            UUID                     graphId;
+        private transient HazelcastBlockingService blockingService;
+        private transient ICountDownLatch          countDownLatch;
 
         public Initializer( UUID graphId ) {
             this.graphId = graphId;
         }
 
+        public Initializer( UUID graphId, HazelcastBlockingService blockingService ) {
+            this.graphId = graphId;
+            this.blockingService = blockingService;
+        }
+
         @Override public void accumulate( Entry<EntityKey, UUID> input ) {
-            linkingVertices.set( new LinkingVertexKey( graphId, input.getValue() ),
-                    new LinkingVertex( 0.0D, Sets.newHashSet( input.getValue() ) ) );
+            blockingService.setLinkingVertex( graphId, input.getValue() );
         }
 
         @Override public void combine( Aggregator aggregator ) {
-
         }
 
         @Override public Void aggregate() {
+            int numConsecFailures = 0;
+            long count = countDownLatch.getCount();
+            while ( count > 0 && numConsecFailures < MAX_FAILED_CONSEC_ATTEMPTS ) {
+                try {
+                    Thread.sleep( 5000 );
+                    long newCount = countDownLatch.getCount();
+                    if ( newCount == count ) {
+                        System.err.println( "Nothing is happening." );
+                        numConsecFailures++;
+                    } else
+                        numConsecFailures = 0;
+                    count = newCount;
+                } catch ( InterruptedException e ) {
+                    System.err.println( "Error occurred while waiting for linking vertices to initialize." );
+                }
+            }
             return null;
         }
 
-        @Override public void setHazelcastInstance( HazelcastInstance hazelcastInstance ) {
-            this.linkingVertices = hazelcastInstance.getMap( HazelcastMap.LINKING_VERTICES.name() );
+        @Override
+        public void setHazelcastInstance( HazelcastInstance hazelcastInstance ) {
+            this.countDownLatch = hazelcastInstance.getCountDownLatch( graphId.toString() );
         }
 
         public UUID getGraphId() {
