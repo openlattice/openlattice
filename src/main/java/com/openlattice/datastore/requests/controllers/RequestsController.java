@@ -37,8 +37,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-import javax.ws.rs.ForbiddenException;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -120,7 +120,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
             hrm.submitAll( statusMap );
             return null;
         }
-        throw new ForbiddenException();
+        throw new AccessDeniedException("Not authorized to update statuses.");
     }
 
     private Function<AclKey, Stream<Status>> getStatusesInStatus( RequestStatus requestStatus ) {

@@ -24,6 +24,7 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.google.common.collect.Iterables;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.authorization.Permission;
@@ -39,15 +40,14 @@ import com.openlattice.hazelcast.HazelcastMap;
 import java.io.Serializable;
 import java.util.List;
 import java.util.UUID;
-import jersey.repackaged.com.google.common.collect.Iterables;
 
 public class EntitySetContactsPopulator implements Serializable {
     private static final long serialVersionUID = -6252192257512539448L;
     private final IMap<UUID, EntitySet> entitySets;
-    private String               keyspace;
-    private Session              session;
-    private EdmManager           dms;
-    private UserDirectoryService uds;
+    private       String                keyspace;
+    private       Session               session;
+    private       EdmManager            dms;
+    private       UserDirectoryService  uds;
 
     public EntitySetContactsPopulator(
             String keyspace,

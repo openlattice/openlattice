@@ -34,7 +34,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import javax.ws.rs.ForbiddenException;
+import org.springframework.security.access.AccessDeniedException;
 
 ;
 
@@ -73,13 +73,13 @@ public class SyncTicketService {
         if ( authorizedEntitySets.containsKey( key ) ) {
             return Util.getSafely( authorizedProperties, key ).unwrap();
         }
-        throw new ForbiddenException( "Unable to authorized access to resource" );
+        throw new AccessDeniedException( "Unable to authorized access to resource" );
     }
 
     public UUID getAuthorizedEntitySet( Principal currentUser, UUID ticket ) {
         UUID entitySetId = Util.getSafely( authorizedEntitySets, ticketKey( currentUser, ticket ) );
         if ( entitySetId == null ) {
-            throw new ForbiddenException( "Unable to authorized access to resource" );
+            throw new AccessDeniedException( "Unable to authorized access to resource" );
         } else {
             return entitySetId;
         }
