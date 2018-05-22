@@ -20,6 +20,9 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.postgres.DataTables.LAST_INDEX_FQN;
+import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ANALYZER;
@@ -122,10 +125,12 @@ import com.openlattice.requests.Status;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -619,6 +624,63 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.fromNullable( description( rs ) );
         UUID entityTypeId = entityTypeId( rs );
         return new AppType( id, type, title, description, entityTypeId );
+    }
+
+    public static SetMultimap<FullQualifiedName, Object> implicitEntity(
+            ResultSet rs,
+            Set<PropertyType> authorizedPropertyTypes ) throws SQLException {
+        final UUID entityKeyId = (UUID) rs.getObject( DataTables.ID_FQN.getFullQualifiedNameAsString() );
+        final OffsetDateTime lastWrite = (OffsetDateTime) rs.getObject( LAST_WRITE_FQN.getFullQualifiedNameAsString() );
+        final OffsetDateTime lastIndex = (OffsetDateTime) rs.getObject( LAST_INDEX_FQN.getFullQualifiedNameAsString() );
+        final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
+        for ( PropertyType propertyType : authorizedPropertyTypes ) {
+            final String fqn = propertyType.getType().getFullQualifiedNameAsString();
+            final List<?> objects;
+            switch ( propertyType.getDatatype() ) {
+                case String:
+                    objects = Arrays.asList( (String[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case Guid:
+                    objects = Arrays.asList( (UUID[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case Byte:
+                    objects = Arrays.asList( rs.getBytes( fqn ) );
+                    break;
+                case Int16:
+                    objects = Arrays.asList( (Integer[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case Int32:
+                    objects = Arrays.asList( (Integer[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case Duration:
+                case Int64:
+                    objects = Arrays.asList( (Long[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case Date:
+                    objects = Arrays.asList( (LocalDate[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case DateTimeOffset:
+                    objects = Arrays.asList( (OffsetDateTime[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case Double:
+                    objects = Arrays.asList( (OffsetDateTime[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case Boolean:
+                    objects = Arrays.asList( (Boolean[]) rs.getArray( fqn ).getArray() );
+                    break;
+                case Binary:
+                    objects = Arrays.asList( (byte[][]) rs.getArray( fqn ).getArray() );
+                    break;
+                default:
+                    objects = null;
+                    logger.error( "Unable to read property type {} for entity {}.", propertyType.getId(), entityKeyId );
+            }
+            data.putAll( propertyType.getType(), objects );
+            data.put( LAST_WRITE_FQN, lastWrite );
+            data.put( LAST_INDEX_FQN, lastIndex );
+            data.put( ID_FQN, entityKeyId );
+        }
+        return data;
     }
 
     public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {

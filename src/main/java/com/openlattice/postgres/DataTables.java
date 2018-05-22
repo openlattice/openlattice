@@ -64,6 +64,11 @@ public class DataTables {
     public static final  PostgresColumnDefinition           OWNERS      = new PostgresColumnDefinition(
             "owners",
             PostgresDatatype.UUID );
+
+    public static final FullQualifiedName LAST_WRITE_FQN = new FullQualifiedName( "openlattice", "@lastWrite" );
+    public static final FullQualifiedName LAST_INDEX_FQN = new FullQualifiedName( "openlattice", "@lastIndex" );
+    public static final FullQualifiedName ID_FQN = new FullQualifiedName( "openlattice", "@id" );
+
     private static final Map<UUID, PostgresTableDefinition> ES_TABLES   = Maps.newConcurrentMap();
     private static final Encoder                            encoder     = Base64.getEncoder();
 

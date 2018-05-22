@@ -196,7 +196,7 @@ public class PostgresDataMapstoreProxy implements TestableSelfRegisteringMapStor
 
     @Override public void store( EntityDataKey key, EntityDataValue value ) {
         final UUID entitySetId = key.getEntitySetId();
-//        final UUID entityKeyId = key.getEntityKeyId();
+//        final UUID entityKeyId = key.getEntityTypeId();
 
         try ( Connection conn = hds.getConnection(); PreparedStatement ps = prepareEntityInsertQuery( conn, entitySetId ) ) {
 
@@ -239,7 +239,7 @@ public class PostgresDataMapstoreProxy implements TestableSelfRegisteringMapStor
 
     @Override public void delete( EntityDataKey key ) {
 //        EntityDataMapstore edms = getMapstore( key.getEntitySetId() );
-//        edms.delete( key.getEntityKeyId() );
+//        edms.delete( key.getEntityTypeId() );
     }
 
     @Override public void deleteAll( Collection<EntityDataKey> keys ) {
@@ -250,7 +250,7 @@ public class PostgresDataMapstoreProxy implements TestableSelfRegisteringMapStor
 
     @Override public EntityDataValue load( EntityDataKey key ) {
         final UUID entitySetId = key.getEntitySetId();
-//        final UUID entityKeyId = key.getEntityKeyId();
+//        final UUID entityKeyId = key.getEntityTypeId();
         final EntitySet es = entitySets.load( entitySetId );
 
         //If entity set is not found return immediately.

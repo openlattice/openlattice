@@ -26,6 +26,7 @@ import com.google.common.eventbus.Subscribe;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresTableDefinition;
@@ -166,6 +167,13 @@ public class PostgresEdmManager implements DbEdmManager {
         } catch ( SQLException e ) {
             logger.error( "Unable to create entity set {}", entitySetCreatedEvent.getEntitySet() );
         }
+    }
+
+    @Subscribe
+    @ExceptionMetered
+    @Timed
+    public void handlePropertyTypeCreated(PropertyTypeCreatedEvent propertyTypeCreatedEvent ) {
+
     }
 
 }

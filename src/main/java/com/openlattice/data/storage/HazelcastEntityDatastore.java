@@ -26,14 +26,25 @@ import com.codahale.metrics.annotation.Timed;
 import com.dataloom.hazelcast.ListenableHazelcastFuture;
 import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.authorization.ForbiddenException;
-import com.openlattice.data.*;
+import com.openlattice.data.Entity;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataValue;
+import com.openlattice.data.EntityDatastore;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.EntitySetData;
+import com.openlattice.data.PropertyMetadata;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
@@ -48,29 +59,30 @@ import com.openlattice.hazelcast.processors.MergeFinalizer;
 import com.openlattice.hazelcast.processors.SyncFinalizer;
 import com.openlattice.postgres.JsonDeserializer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.nio.ByteBuffer;
+import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.inject.Inject;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.nio.ByteBuffer;
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 public class HazelcastEntityDatastore implements EntityDatastore {
     private static final Logger logger = LoggerFactory
             .getLogger( HazelcastEntityDatastore.class );
 
-    private final ObjectMapper mapper;
-    //    private final DatasourceManager dsm;
-
+    private final ObjectMapper                         mapper;
     private final HazelcastInstance                    hazelcastInstance;
-//    private final IMap<EntityDataKey, EntityDataValue> entities;
+    private final IMap<EntityDataKey, EntityDataValue> entities;
     private final EntityKeyIdService                   idService;
     private final ListeningExecutorService             executor;
     private final PostgresDataManager                  pdm;
@@ -84,7 +96,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             ObjectMapper mapper,
             EntityKeyIdService idService,
             PostgresDataManager pdm ) {
-//        this.entities = hazelastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
+        this.entities = hazelastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
         this.pdm = pdm;
         this.mapper = mapper;
         this.idService = idService;

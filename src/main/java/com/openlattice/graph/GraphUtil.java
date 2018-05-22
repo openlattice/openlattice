@@ -22,19 +22,14 @@
 
 package com.openlattice.graph;
 
-import com.openlattice.graph.DirectedEdge;
+import com.datastax.driver.core.Row;
+import com.openlattice.data.EntityKey;
+import com.openlattice.datastore.cassandra.CommonColumns;
 import com.openlattice.linking.LinkingEdge;
 import com.openlattice.linking.LinkingVertexKey;
 import java.util.UUID;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.openlattice.data.EntityKey;
-import com.openlattice.linking.LinkingEdge;
-import com.openlattice.linking.LinkingVertexKey;
-import com.datastax.driver.core.Row;
-import com.openlattice.datastore.cassandra.CommonColumns;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -42,7 +37,8 @@ import com.openlattice.datastore.cassandra.CommonColumns;
 public final class GraphUtil {
     private static final Logger logger = LoggerFactory.getLogger( GraphUtil.class );
 
-    private GraphUtil() {}
+    private GraphUtil() {
+    }
 
     public static EntityKey min( EntityKey a, EntityKey b ) {
         return a.compareTo( b ) < 0 ? a : b;
@@ -50,10 +46,6 @@ public final class GraphUtil {
 
     public static EntityKey max( EntityKey a, EntityKey b ) {
         return a.compareTo( b ) > 0 ? a : b;
-    }
-
-    public static DirectedEdge edge( EntityKey a, EntityKey b ) {
-        return new DirectedEdge( a, b );
     }
 
     public static LinkingEdge linkingEdge( Row row ) {
