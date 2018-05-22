@@ -21,12 +21,29 @@
 
 package com.openlattice.graph;
 
-import java.util.Map;
+import com.dataloom.mappers.ObjectMappers;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openlattice.graph.query.EntitySetQuery;
+import java.io.IOException;
+import java.util.UUID;
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class GraphQuery {
-    private final Map<Integer, VertexQuery> entityQueries;
-    private final Map<Integer, VertexQuery> entityQueries;
+public class GraphApiTests {
+    private static final Logger logger = LoggerFactory.getLogger( GraphApiTests.class );
+
+    @Test
+    public void testSerdes() throws IOException {
+        ObjectMapper mapper = ObjectMappers.getJsonMapper();
+        final EntitySetQuery esq = new EntitySetQuery( UUID.randomUUID() );
+        String json = mapper.writeValueAsString( esq );
+        logger.info( "Json: {}", json );
+        final EntitySetQuery actual = mapper.readValue( json, EntitySetQuery.class );
+        Assert.assertEquals(esq, actual);
+    }
 }

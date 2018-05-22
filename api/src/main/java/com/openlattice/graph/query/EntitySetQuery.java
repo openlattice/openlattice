@@ -21,19 +21,35 @@
 
 package com.openlattice.graph.query;
 
-import java.util.HashSet;
-import java.util.Set;
+import static com.openlattice.client.serialization.SerializationConstants.ENTITY_SET_ID;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntitySetQuery extends AbstractQuery {
+public class EntitySetQuery implements Query {
     private final UUID entitySetId;
 
-    public EntitySetQuery( UUID entitySetId ) {
-        super( new HashSet<>() );
+    @JsonCreator
+    public EntitySetQuery(
+            @JsonProperty( ENTITY_SET_ID ) UUID entitySetId ) {
         this.entitySetId = entitySetId;
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof EntitySetQuery ) ) { return false; }
+        EntitySetQuery that = (EntitySetQuery) o;
+        return Objects.equals( entitySetId, that.entitySetId );
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( entitySetId );
     }
 
     public UUID getEntitySetId() {

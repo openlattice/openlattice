@@ -23,6 +23,7 @@ package com.openlattice.graph.query;
 
 import static java.util.Arrays.asList;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -32,15 +33,9 @@ import java.util.stream.Collectors;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public interface Query<T> {
-    Set<Query<T>> getChildQueries();
-
-    default <O> O visit( Function<T, O> map, Function<Set<O>, O> reduce ) {
-        return reduce
-                .apply( getChildQueries().stream().map( query -> query.visit( map, reduce ) ).collect( Collectors.toSet() ) );
-    }
-
-    default And and( Supplier<Integer> id, Query... queries ) {
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+public interface Query{
+    default And and( Query... queries ) {
         Set<Query> newQueries = new HashSet<>( queries.length + 1 );
         newQueries.add( this );
         newQueries.addAll( asList( queries ) );

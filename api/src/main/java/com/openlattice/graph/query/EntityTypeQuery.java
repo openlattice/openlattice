@@ -26,14 +26,14 @@ import java.util.UUID;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntityKeyIdQuery implements Query {
-    private final UUID entityKeyId;
+public class EntityTypeQuery implements Query {
+    private final UUID entityTypeId;
 
-    public EntityKeyIdQuery( UUID entityKeyId ) {
-        this.entityKeyId = entityKeyId;
+    public EntityTypeQuery( UUID entityTypeId ) {
+        this.entityTypeId = entityTypeId;
     }
 
-    public UUID getEntityKeyId() {
-        return entityKeyId;
+    public UUID getEntityTypeId() {
+        return entityTypeId;
     }
 }

@@ -21,19 +21,34 @@
 
 package com.openlattice.graph.query;
 
-import java.util.UUID;
+import com.google.common.collect.ImmutableSet;
+import com.openlattice.graph.query.AbstractQuery;
+import com.openlattice.graph.query.Query;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntityKeyIdQuery implements Query {
-    private final UUID entityKeyId;
+public class AssociationQuery extends AbstractQuery {
+    private final Query source;
+    private final Query destination;
+    private final Query association;
 
-    public EntityKeyIdQuery( UUID entityKeyId ) {
-        this.entityKeyId = entityKeyId;
+    public AssociationQuery( Query source, Query destination, Query association ) {
+        super( ImmutableSet.of() );
+        this.source = source;
+        this.destination = destination;
+        this.association = association;
     }
 
-    public UUID getEntityKeyId() {
-        return entityKeyId;
+    public Query getSource() {
+        return source;
+    }
+
+    public Query getDestination() {
+        return destination;
+    }
+
+    public Query getAssociation() {
+        return association;
     }
 }

@@ -176,6 +176,10 @@ dependencies {
     /*
      * TESTING
      */
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "${log4j_version}"
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-api', version: "${log4j_version}"
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4j_version}"
+
     testCompile "junit:junit:${junit_version}"
     testCompile("org.mockito:mockito-all:${mockito_version}") {
         exclude module: 'hamcrest'

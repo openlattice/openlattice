@@ -21,6 +21,7 @@
 
 package com.openlattice.graph.query;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.util.Set;
 
 /**

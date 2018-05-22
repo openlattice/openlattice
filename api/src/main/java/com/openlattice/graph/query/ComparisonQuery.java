@@ -22,30 +22,21 @@
 package com.openlattice.graph.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import java.util.HashSet;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Equals extends AbstractQuery {
+public class ComparisonQuery implements Query {
     private final FullQualifiedName fqn;
     private final Object            value;
     private final ComparisonOp      comparisonOp;
+
     @JsonCreator
-    public Equals(
-            Integer id,
+    public ComparisonQuery(
             FullQualifiedName fqn,
             Object value,
             ComparisonOp comparisonOp ) {
-        super( id, new HashSet<>(), false );
-        this.fqn = fqn;
-        this.value = value;
-        this.comparisonOp = comparisonOp;
-    }
-
-    public Equals( FullQualifiedName fqn, Object value, ComparisonOp comparisonOp ) {
-        super( new HashSet<>(), false );
         this.fqn = fqn;
         this.value = value;
         this.comparisonOp = comparisonOp;
@@ -83,6 +74,7 @@ public class Equals extends AbstractQuery {
                 case GTE:
                     return ">=";
             }
+            return null;
         }
     }
 }

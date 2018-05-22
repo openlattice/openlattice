@@ -21,19 +21,21 @@
 
 package com.openlattice.graph.query;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.util.Set;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public abstract class AbstractQuery<T> implements Query<T> {
-    private final Set<Query<T>> childQueries;
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+public abstract class AbstractQuery implements Query {
+    private final Set<Query> childQueries;
 
     public AbstractQuery( Set<Query> childQueries ) {
         this.childQueries = childQueries;
     }
 
-    public Set<Query<T>> getChildQueries() {
+    public Set<Query> getChildQueries() {
         return childQueries;
     }
 
