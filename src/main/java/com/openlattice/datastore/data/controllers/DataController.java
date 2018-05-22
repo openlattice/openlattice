@@ -480,14 +480,9 @@ public class DataController implements DataApi, AuthorizingComponent {
             authorizedPropertiesByEntitySetId.put( entitySetId, authorizedPropertiesWithDataType );
         } );
 
-        try {
-            dgm.createEntitiesAndAssociations( data.getEntities(),
-                    data.getAssociations(),
-                    authorizedPropertiesByEntitySetId );
-        } catch ( ExecutionException | InterruptedException e ) {
-            logger.error( "Unable to bulk create data.", e );
-            throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
-        }
+        dgm.createEntitiesAndAssociations( data.getEntities(),
+                data.getAssociations(),
+                authorizedPropertiesByEntitySetId );
         return null;
 
     }

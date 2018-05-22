@@ -98,9 +98,10 @@ public class SearchService {
 
     @PostConstruct
     public void initializeBus() {
-        eventBus.register( this );
+        eventBus.register(  this );
     }
 
+    @Timed
     public SearchResult executeEntitySetKeywordSearchQuery(
             Optional<String> optionalQuery,
             Optional<UUID> optionalEntityType,
@@ -122,21 +123,25 @@ public class SearchService {
                 maxHits );
     }
 
+    @Timed
     @Subscribe
     public void createEntitySet( EntitySetCreatedEvent event ) {
         elasticsearchApi.saveEntitySetToElasticsearch( event.getEntitySet(), event.getPropertyTypes() );
     }
 
+    @Timed
     @Subscribe
     public void deleteEntitySet( EntitySetDeletedEvent event ) {
         elasticsearchApi.deleteEntitySet( event.getEntitySetId() );
     }
 
+    @Timed
     @Subscribe
     public void createOrganization( OrganizationCreatedEvent event ) {
         elasticsearchApi.createOrganization( event.getOrganization() );
     }
 
+    @Timed
     public SearchResult executeOrganizationKeywordSearch( SearchTerm searchTerm ) {
         Set<AclKey> authorizedOrganizationIds = authorizations
                 .getAuthorizedObjectsOfType( Principals.getCurrentPrincipals(),
@@ -150,6 +155,7 @@ public class SearchService {
                 searchTerm.getMaxHits() );
     }
 
+    @Timed
     @Subscribe
     public void updateOrganization( OrganizationUpdatedEvent event ) {
         elasticsearchApi.updateOrganization( event.getId(),
