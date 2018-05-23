@@ -62,58 +62,59 @@ public interface EntityDatastore {
             String entityId,
             Set<PropertyType> authorizedPropertyTypes );
 
+    /**
+     * Replaces the contents of an entity in its entirety. Equivalent to a delete of the existing entity and write
+     * of new values
+     */
+    void replaceEntity(
+            UUID entitySetId,
+            UUID entityKeyId,
+            SetMultimap<UUID, Object> entity,
+            Set<PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Replaces a subset of the properties of an entity specified in the provided {@code entity} argument.
+     * @param entitySetId
+     * @param entityKeyId
+     * @param entity
+     * @param authorizedPropertyTypes
+     */
+    void partialReplaceEntity(
+            UUID entitySetId,
+            UUID entityKeyId,
+            SetMultimap<UUID, Object> entity,
+            Set<PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Replace specific values in an entity
+     * @param entitySetId
+     * @param entityKeyId
+     * @param entity
+     * @param authorizedPropertyTypes
+     */
+    void replaceEntityProperties(
+            UUID entitySetId,
+            UUID entityKeyId,
+            SetMultimap<UUID, Map<Object,Object>> entity,
+            Set<PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Merges in new entity data without affecting existing entity data.
+     * @param entitySetId
+     * @param entityKeyId
+     * @param entity
+     * @param authorizedPropertyTypes
+     */
+    void mergeIntoEntity(
+            UUID entitySetId,
+            UUID entityKeyId,
+            SetMultimap<UUID, Object> entity,
+            Set<PropertyType> authorizedPropertyTypes );
+
     // TODO remove vertices too
     void deleteEntitySetData( UUID entitySetId );
 
     void deleteEntity( EntityDataKey entityDataKey );
-
-    void finalizeMerge( UUID entitySetId, OffsetDateTime lastWrite );
-
-    void finalizeMerge( UUID entitySetId );
-
-    ListenableHazelcastFuture asyncUpsertEntity(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
-
-    ListenableHazelcastFuture asyncUpsertEntity(
-            EntityDataKey entityDataKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
-            OffsetDateTime lastWrite );
-
-    ListenableHazelcastFuture asyncUpsertEntity(
-            EntityDataKey entityDataKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
-
-    /**
-     * This routine finalizes the synchronization of data written using {@link EntityDatastore#asyncUpsertEntity}. If
-     * the {@link com.openlattice.data.PropertyMetadata#lastWrite} is before
-     * {@link com.openlattice.data.EntityDataMetadata#lastWrite} then {@link com.openlattice.data.PropertyMetadata#version}
-     * is set to negative of {@link com.openlattice.data.PropertyMetadata#version}
-     *
-     * @param entityKey The entity key of the entity to finalize synchronization for.
-     */
-    void finalizeSync( EntityKey entityKey );
-
-    void finalizeSync( EntityKey entityKey, OffsetDateTime lastWrite );
-
-    void finalizeSync( EntityDataKey entityDataKey, OffsetDateTime lastWrite );
-
-    void finalizeSync( UUID entitySetId, OffsetDateTime lastWrite );
-
-    void finalizeSync( UUID entitySetId );
-
-    void finalizeSync( EntityDataKey entityDataKey );
-
-    void finalizeMerge( EntityKey entityKey, OffsetDateTime lastWrite );
-
-    void finalizeMerge( EntityKey entityKey );
-
-    void finalizeMerge( EntityDataKey entityKey, OffsetDateTime offsetDateTime );
-
-    void finalizeMerge( EntityDataKey entityKey );
 
     /**
      * @param entityKey
