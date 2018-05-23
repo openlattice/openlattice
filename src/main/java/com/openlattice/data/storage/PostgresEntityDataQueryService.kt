@@ -22,6 +22,7 @@
 package com.openlattice.data.storage
 
 import com.google.common.collect.SetMultimap
+import com.google.common.hash.Hashing
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
@@ -33,6 +34,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.sql.ResultSet
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -43,7 +45,7 @@ import java.util.function.Supplier
  */
 const val MAX_PREV_VERSION = "max_prev_version"
 const val EXPANDED_VERSIONS = "expanded_versions"
-
+const val BATCH_SIZE = 10000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
@@ -63,7 +65,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             val connection = hds.getConnection()
             val statement = connection.createStatement()
             val rs = statement.executeQuery(
-                    if (version.isPresent()) {
+                    if (version.isPresent) {
                         selectEntitySetWithPropertyTypesAndVersion(
                                 entitySetId,
                                 entityKeyIds,
@@ -78,9 +80,57 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                                 metadataOptions)
                     })
             StatementHolder(connection, statement, rs)
-        },
-                Function<ResultSet, SetMultimap<FullQualifiedName, Any>> { ResultSetAdapters.implicitEntity(it, authorizedPropertyTypes, metadataOptions) })
+        }, Function<ResultSet, SetMultimap<FullQualifiedName, Any>> { ResultSetAdapters.implicitEntity(it, authorizedPropertyTypes, metadataOptions) })
     }
+
+
+    fun upsertEntities(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>, version: Long) {
+        val connection = hds.getConnection()
+        val statement = connection.createStatement()
+        val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId))
+        val preparedStatements = authorizedPropertyTypes
+                .map { it.id to connection.prepareStatement(upsertPropertyValues(entitySetId, it.id, it.type.fullQualifiedNameAsString, version)) }
+                .toMap()
+
+        entities.forEach {
+            entitySetPreparedStatement.setObject(1, it.key)
+            entitySetPreparedStatement.addBatch()
+
+            preparedStatements.forEach {
+                it.value.setObject(
+            }
+        }
+
+        val entitySetResults = entitySetPreparedStatement.executeBatch()
+
+    }
+}
+
+fun upsertEntity(entitySetId: UUID, version: Long): String {
+    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
+    val columns = setOf(
+            ID_VALUE.name,
+            VERSION.name,
+            LAST_WRITE.name,
+            LAST_INDEX.name)
+    return "INSERT INTO $esTableName (${columns.joinToString(",")}) VALUES( ?,$version,now(),${OffsetDateTime.MIN}) " +
+            "ON CONFLICT (${ID_VALUE.name}) DO UPDATE SET ${VERSION.name} = $version, ${LAST_WRITE.name} = now() "
+}
+
+fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: String, version: Long): String {
+    val propertyTable = quote(propertyTableName(propertyTypeId))
+    val columns = setOf(
+            ENTITY_SET_ID.name,
+            ID_VALUE.name,
+            HASH.name,
+            quote(propertyType),
+            VERSION.name,
+            VERSIONS.name,
+            LAST_WRITE.name)
+
+    //Insert new row or update version.
+    return "INSERT INTO $propertyTable (${columns.joinToString(",")}) VALUES($entitySetId,?,?,?,?,?,?)" +
+            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE SET versions = versions || $version, version = $version "
 }
 
 fun selectEntitySetWithPropertyTypes(entitySetId: UUID,
