@@ -21,8 +21,8 @@
 
 package com.openlattice.data.storage
 
+import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
-import com.google.common.hash.Hashing
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
@@ -84,10 +84,10 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     }
 
 
-    fun upsertEntities(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>, version: Long) {
+    fun upsertEntities(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>, version: Long): Int {
         val connection = hds.getConnection()
-        val statement = connection.createStatement()
-        val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId))
+        val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId, version))
+        val datatypes = authorizedPropertyTypes.map { it.id to it.datatype }.toMap()
         val preparedStatements = authorizedPropertyTypes
                 .map { it.id to connection.prepareStatement(upsertPropertyValues(entitySetId, it.id, it.type.fullQualifiedNameAsString, version)) }
                 .toMap()
@@ -96,13 +96,32 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entitySetPreparedStatement.setObject(1, it.key)
             entitySetPreparedStatement.addBatch()
 
-            preparedStatements.forEach {
-                it.value.setObject(
-            }
+            val entityKeyId = it.key
+            val entityData = it.value
+            Multimaps
+                    .asMap(entityData)
+                    .forEach {
+                        val propertyTypeId = it.key
+                        val properties = it.value
+                        properties.forEach {
+                            val ps = preparedStatements[propertyTypeId]
+                            ps?.setObject(1, entityKeyId)
+                            ps?.setObject(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
+                            ps?.setObject(3, it)
+                            ps?.addBatch()
+                            if (ps == null) {
+                                logger.warn("Skipping unauthorized property in entity $entityKeyId from entity set $entitySetId")
+                            }
+                        }
+                    }
         }
 
-        val entitySetResults = entitySetPreparedStatement.executeBatch()
+        //In case we want to do validation
+        val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() };
+        val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum();
 
+        logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
+        return updatedEntityCount;
     }
 }
 
@@ -129,7 +148,7 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
             LAST_WRITE.name)
 
     //Insert new row or update version.
-    return "INSERT INTO $propertyTable (${columns.joinToString(",")}) VALUES($entitySetId,?,?,?,?,?,?)" +
+    return "INSERT INTO $propertyTable (${columns.joinToString(",")}) VALUES($entitySetId,?,?,?,$version,ARRAY[$version],now())" +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE SET versions = versions || $version, version = $version "
 }
 
