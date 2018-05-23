@@ -21,20 +21,35 @@
 package com.openlattice.ids;
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class IdGeneratingEntryProcessor extends AbstractRhizomeEntryProcessor<Integer, Range, UUID> {
+public class IdGeneratingEntryProcessor extends AbstractRhizomeEntryProcessor<Integer, Range, List<UUID>> {
+    private final int count;
+
+    public IdGeneratingEntryProcessor( int count ) {
+        this.count = count;
+    }
 
     @Override
-    public UUID process( Entry<Integer, Range> entry ) {
-        Range range = entry.getValue(); //Range should never be null in the EP.
+    public List<UUID> process( Entry<Integer, Range> entry ) {
+        final Range range = entry.getValue(); //Range should never be null in the EP.
+        UUID[] ids = new UUID[ count ];
 
-        UUID id = range.getNextId();
+        for ( int i = 0; i < ids.length; ++i ) {
+            ids[ i ] = range.getNextId();
+        }
+
         entry.setValue( range );
-        return id;
+        return Arrays.asList( ids );
+    }
+
+    public int getCount() {
+        return count;
     }
 }

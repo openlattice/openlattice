@@ -27,7 +27,6 @@ import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ANALYZER;
 import static com.openlattice.postgres.PostgresColumn.APP_ID;
-import static com.openlattice.postgres.PostgresColumn.BASE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
 import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
@@ -58,6 +57,7 @@ import static com.openlattice.postgres.PostgresColumn.NAME;
 import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
 import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_IDS;
@@ -103,6 +103,7 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.data.PropertyMetadata;
 import com.openlattice.data.PropertyValueKey;
 import com.openlattice.data.hazelcast.DataKey;
+import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -218,11 +219,11 @@ public final class ResultSetAdapters {
         return new EntityKey( entitySetId, entityId, syncId );
     }
 
-    public static Range range( ResultSet rs, long mask ) throws SQLException {
-        long base = rs.getLong( BASE_FIELD );
+    public static Range range( ResultSet rs ) throws SQLException {
+        long base = rs.getLong( PARTITION_INDEX_FIELD );
         long msb = rs.getLong( MSB_FIELD );
         long lsb = rs.getLong( LSB_FIELD );
-        return new Range( mask, base, msb, lsb );
+        return new Range( base, msb, lsb );
     }
 
     public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {
@@ -628,11 +629,20 @@ public final class ResultSetAdapters {
 
     public static SetMultimap<FullQualifiedName, Object> implicitEntity(
             ResultSet rs,
-            Set<PropertyType> authorizedPropertyTypes ) throws SQLException {
+            Set<PropertyType> authorizedPropertyTypes, Set<MetadataOption> metadataOptions ) throws SQLException {
         final UUID entityKeyId = (UUID) rs.getObject( DataTables.ID_FQN.getFullQualifiedNameAsString() );
-        final OffsetDateTime lastWrite = (OffsetDateTime) rs.getObject( LAST_WRITE_FQN.getFullQualifiedNameAsString() );
-        final OffsetDateTime lastIndex = (OffsetDateTime) rs.getObject( LAST_INDEX_FQN.getFullQualifiedNameAsString() );
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
+
+        if ( metadataOptions.contains( MetadataOption.LAST_WRITE ) ) {
+            data.put( LAST_WRITE_FQN, rs.getObject( LAST_WRITE_FQN.getFullQualifiedNameAsString() ) );
+        }
+
+        if ( metadataOptions.contains( MetadataOption.LAST_INDEX ) ) {
+            data.put( LAST_INDEX_FQN, rs.getObject( LAST_INDEX_FQN.getFullQualifiedNameAsString() ) );
+        }
+
+        data.put( ID_FQN, entityKeyId );
+
         for ( PropertyType propertyType : authorizedPropertyTypes ) {
             final String fqn = propertyType.getType().getFullQualifiedNameAsString();
             final List<?> objects;
@@ -675,10 +685,8 @@ public final class ResultSetAdapters {
                     objects = null;
                     logger.error( "Unable to read property type {} for entity {}.", propertyType.getId(), entityKeyId );
             }
+
             data.putAll( propertyType.getType(), objects );
-            data.put( LAST_WRITE_FQN, lastWrite );
-            data.put( LAST_INDEX_FQN, lastIndex );
-            data.put( ID_FQN, entityKeyId );
         }
         return data;
     }

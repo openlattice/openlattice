@@ -23,14 +23,14 @@
 package com.openlattice.data;
 
 import com.dataloom.hazelcast.ListenableHazelcastFuture;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
 import java.time.OffsetDateTime;
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -41,57 +41,35 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  */
 public interface EntityDatastore {
 
-    /**
-     * Reads data from an entity set.
-     */
     EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
             UUID syncId,
             LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
+            Set<PropertyType> authorizedPropertyTypes );
 
-    /**
-     * Reads a single row from an entity set.
-     */
+    Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
+            UUID entitySetId,
+            Set<UUID> ids,
+            Set<PropertyType> authorizedPropertyTypes );
+
+    ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
+            SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
+            Map<UUID, Set<PropertyType>> authorizedPropertyTypesByEntitySet );
+
     SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entitySetId,
             UUID syncId,
             String entityId,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
-
-    /**
-     * Asynchronously load an entity with specified properties
-     */
-    //    ListenableFuture<SetMultimap<UUID, ByteBuffer>> asyncLoadEntity(
-    //            UUID entitySetId,
-    //            String entityId,
-    //            UUID syncId,
-    //            Set<UUID> properties );
+            Set<PropertyType> authorizedPropertyTypes );
 
     // TODO remove vertices too
     void deleteEntitySetData( UUID entitySetId );
 
     void deleteEntity( EntityDataKey entityDataKey );
 
-    Stream<SetMultimap<Object, Object>> getEntities(
-            Collection<UUID> ids, Map<UUID, PropertyType> authorizedPropertyTypes );
-
-    Map<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
-            Map<UUID, UUID> entityKeyIdToEntitySetId,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
-
-    //    SetMultimap<FullQualifiedName, Object> getEntity(
-    //            UUID id, Map<UUID, PropertyType> authorizedPropertyTypes );
-
     void finalizeMerge( UUID entitySetId, OffsetDateTime lastWrite );
 
     void finalizeMerge( UUID entitySetId );
-
-    //    ListenableFuture<SetMultimap<FullQualifiedName, Object>> getEntityAsync(
-    //            UUID entitySetId,
-    //            UUID syncId,
-    //            String entityId,
-    //            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     ListenableHazelcastFuture asyncUpsertEntity(
             EntityKey entityKey,
@@ -156,10 +134,4 @@ public interface EntityDatastore {
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
 
     Stream<EntityKey> getEntityKeysForEntitySet( UUID entitySetId, UUID syncId );
-
-    Stream<SetMultimap<Object, Object>> getEntities(
-            UUID entitySetId,
-            IncrementableWeightId[] utilizers,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
-
 }

@@ -35,43 +35,41 @@ import java.sql.SQLException;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Integer, Range> {
+public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Long, Range> {
     public IdGenerationMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ID_GENERATION.name(), PostgresTable.ID_GENERATION, hds );
     }
 
-    @Override public Integer generateTestKey() {
-        return TestDataFactory.integer();
+    @Override public Long generateTestKey() {
+        return (long) TestDataFactory.integer();
     }
 
     @Override public Range generateTestValue() {
-        return new Range( HazelcastIdGenerationService.MASK, 0, 1, 2 );
+        return new Range( 0, 1, 2 );
     }
 
-    @Override protected void bind( PreparedStatement ps, Integer key, Range value ) throws SQLException {
+    @Override protected void bind( PreparedStatement ps, Long key, Range value ) throws SQLException {
         bind( ps, key, 1 );
 
-        ps.setLong( 2, value.getBase() );
         ps.setLong( 3, value.getMsb() );
         ps.setLong( 4, value.getLsb() );
 
         //Update clause
-        ps.setLong( 5, value.getBase() );
         ps.setLong( 6, value.getMsb() );
         ps.setLong( 7, value.getLsb() );
 
     }
 
-    @Override protected int bind( PreparedStatement ps, Integer key, int parameterIndex ) throws SQLException {
-        ps.setInt( parameterIndex++, key );
+    @Override protected int bind( PreparedStatement ps, Long key, int parameterIndex ) throws SQLException {
+        ps.setLong( parameterIndex++, key );
         return parameterIndex;
     }
 
     @Override protected Range mapToValue( ResultSet rs ) throws SQLException {
-        return ResultSetAdapters.range( rs, HazelcastIdGenerationService.MASK );
+        return ResultSetAdapters.range( rs );
     }
 
-    @Override protected Integer mapToKey( ResultSet rs ) throws SQLException {
-        return rs.getInt( PARTITION_INDEX_FIELD );
+    @Override protected Long mapToKey( ResultSet rs ) throws SQLException {
+        return rs.getLong( PARTITION_INDEX_FIELD );
     }
 }
