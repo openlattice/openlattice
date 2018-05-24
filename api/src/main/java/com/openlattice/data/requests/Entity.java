@@ -18,12 +18,12 @@
 
 package com.openlattice.data.requests;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.data.EntityKey;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.data.EntityKey;
 import java.util.UUID;
 
 public class Entity {
@@ -58,11 +58,6 @@ public class Entity {
         return key.getEntityId();
     }
 
-    @JsonIgnore
-    public UUID getSyncId() {
-        return key.getSyncId();
-    }
-
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -81,7 +76,8 @@ public class Entity {
         if ( details == null ) {
             if ( other.details != null ) { return false; }
         } else if ( !details.equals( other.details ) ) {
-            return false; }
+            return false;
+        }
         if ( key == null ) {
             if ( other.key != null ) { return false; }
         } else if ( !key.equals( other.key ) ) { return false; }

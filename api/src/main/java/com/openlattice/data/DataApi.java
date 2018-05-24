@@ -48,29 +48,26 @@ public interface DataApi {
 
     String ENTITY_KEY_ID = "entityKeyId";
     String SET_ID        = "setId";
-    String SYNC_ID       = "syncId";
     String TICKET        = "ticket";
     String COUNT         = "count";
     String UPDATE        = "update";
 
     String ENTITY_KEY_ID_PATH = "{" + ENTITY_KEY_ID + "}";
     String SET_ID_PATH        = "{" + SET_ID + "}";
-    String SYNC_ID_PATH       = "{" + SYNC_ID + "}";
     String TICKET_PATH        = "{" + TICKET + "}";
 
     String FILE_TYPE = "fileType";
     String TOKEN     = "token";
 
-    @POST( BASE + "/" + TICKET + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH )
-    UUID acquireSyncTicket( @Path( SET_ID ) UUID entitySetId, @Path( SYNC_ID ) UUID syncId );
+    @POST( BASE + "/" + TICKET + "/" + SET_ID_PATH )
+    UUID acquireSyncTicket( @Path( SET_ID ) UUID entitySetId  );
 
     @DELETE( BASE + "/" + TICKET + "/" + TICKET_PATH )
     Void releaseSyncTicket( @Path( TICKET ) UUID ticket );
 
-    @PATCH( BASE + "/" + ENTITY_DATA + "/" + TICKET_PATH + "/" + SYNC_ID_PATH )
+    @PATCH( BASE + "/" + ENTITY_DATA + "/" + TICKET_PATH  )
     Void storeEntityData(
             @Path( TICKET ) UUID ticket,
-            @Path( SYNC_ID ) UUID syncId,
             @Body Map<String, SetMultimap<UUID, Object>> entities );
 
     @GET( BASE + "/" + ENTITY_DATA + "/" + SET_ID_PATH )
@@ -96,23 +93,7 @@ public interface DataApi {
      * Creates a new set of entities.
      *
      * @param entitySetId The id of the entity set to write to.
-     * @param syncId      A uuid retrieved from data source api.
      * @param entities    A map describing the entities to create. Each key will be used as the entity id and must be unique
-     *                    and stable across repeated integrations of data. If either constraint is violated then data may be
-     *                    overwritten or duplicated.
-     * @return
-     */
-    @PUT( BASE + "/" + ENTITY_DATA + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH )
-    Void createEntityData(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( SYNC_ID ) UUID syncId,
-            @Body Map<String, SetMultimap<UUID, Object>> entities );
-
-    /**
-     * Creates a new set of entities for the specified entity set's current sync id.
-     *
-     * @param entitySetId The id of the entity set to write to.
-     * @param entities    A map describing the entities to create. Each key will be used as the entity id and must be unique.
      *                    and stable across repeated integrations of data. If either constraint is violated then data may be
      *                    overwritten or duplicated.
      * @return
@@ -126,21 +107,18 @@ public interface DataApi {
      * Creates a new set of associations.
      *
      * @param entitySetId  The id of the edge entity set to write to.
-     * @param syncId       A uuid retrieved from data source api.
      * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
      *                     UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
      * @return
      */
-    @PUT( BASE + "/" + ASSOCIATION_DATA + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH )
+    @PUT( BASE + "/" + ASSOCIATION_DATA + "/" + SET_ID_PATH  )
     Void createAssociationData(
             @Path( SET_ID ) UUID entitySetId,
-            @Path( SYNC_ID ) UUID syncId,
             @Body Set<Association> associations );
 
-    @PATCH( BASE + "/" + ASSOCIATION_DATA + "/" + TICKET_PATH + "/" + SYNC_ID_PATH )
+    @PATCH( BASE + "/" + ASSOCIATION_DATA + "/" + TICKET_PATH )
     Void storeAssociationData(
             @Path( TICKET ) UUID ticket,
-            @Path( SYNC_ID ) UUID syncId,
             @Body Set<Association> associations );
 
     @PATCH( BASE + "/" + ENTITY_DATA )

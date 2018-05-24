@@ -18,10 +18,6 @@
 
 package com.openlattice.data.requests;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.dataloom.mappers.ObjectMappers;
 import com.esotericsoftware.kryo.Kryo;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -29,6 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import de.javakaffee.kryoserializers.UUIDSerializer;
 import de.javakaffee.kryoserializers.guava.HashMultimapSerializer;
 import de.javakaffee.kryoserializers.guava.ImmutableMultimapSerializer;
@@ -182,7 +182,6 @@ public class BulkDataCreation implements Serializable {
     private static void serialize( ObjectOutputStream oos, EntityKey ek ) throws IOException {
         serialize( oos, ek.getEntitySetId() );
         oos.writeUTF( ek.getEntityId() );
-        serialize( oos, ek.getSyncId() );
     }
 
     private static UUID deserializeUUID( ObjectInputStream ois ) throws IOException {
@@ -220,7 +219,6 @@ public class BulkDataCreation implements Serializable {
     private static EntityKey deserializeEntityKey( ObjectInputStream ois ) throws IOException {
         UUID entitySetId = deserializeUUID( ois );
         String entityId = ois.readUTF();
-        UUID syncId = deserializeUUID( ois );
-        return new EntityKey( entitySetId, entityId, syncId );
+        return new EntityKey( entitySetId, entityId );
     }
 }

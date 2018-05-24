@@ -22,6 +22,7 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -35,16 +36,13 @@ public class EntityKey implements Comparable<EntityKey> {
 
     private final UUID entitySetId;
     private final String entityId;
-    private final UUID   syncId;
 
     @JsonCreator
     public EntityKey(
             @JsonProperty( SerializationConstants.ENTITY_SET_ID ) UUID entitySetId,
-            @JsonProperty( SerializationConstants.ENTITY_ID ) String entityId,
-            @JsonProperty( SerializationConstants.SYNC_ID ) UUID syncId ) {
+            @JsonProperty( SerializationConstants.ENTITY_ID ) String entityId ) {
         this.entitySetId = checkNotNull( entitySetId );
         this.entityId = checkNotNull( entityId );
-        this.syncId = syncId;
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_ID )
@@ -57,32 +55,17 @@ public class EntityKey implements Comparable<EntityKey> {
         return entityId;
     }
 
-    @JsonProperty( SerializationConstants.SYNC_ID )
-    public UUID getSyncId() {
-        return syncId;
-    }
-
-    @Override
-    public boolean equals( Object o ) {
+    @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof EntityKey ) ) { return false; }
-
         EntityKey entityKey = (EntityKey) o;
-
-        if ( !entitySetId.equals( entityKey.entitySetId ) ) { return false; }
-        if ( !entityId.equals( entityKey.entityId ) ) { return false; }
-        if ( syncId == null ) {
-            if ( entityKey.syncId != null ) { return false; }
-        } else if ( !syncId.equals( entityKey.syncId ) ) { return false; }
-        return true;
+        return Objects.equals( entitySetId, entityKey.entitySetId ) &&
+                Objects.equals( entityId, entityKey.entityId );
     }
 
-    @Override
-    public int hashCode() {
-        int result = entitySetId.hashCode();
-        result = 31 * result + entityId.hashCode();
-        result = 31 * result + syncId.hashCode();
-        return result;
+    @Override public int hashCode() {
+
+        return Objects.hash( entitySetId, entityId );
     }
 
     @Override
@@ -93,16 +76,13 @@ public class EntityKey implements Comparable<EntityKey> {
             result = entityId.compareTo( o.entityId );
         }
 
-        if ( result == 0 ) {
-            result = syncId.compareTo( o.syncId );
-        }
-
         return result;
     }
 
-    @Override
-    public String toString() {
-        return "EntityKey [entitySetId=" + entitySetId + ", entityId=" + entityId + ", syncId=" + syncId + "]";
+    @Override public String toString() {
+        return "EntityKey{" +
+                "entitySetId=" + entitySetId +
+                ", entityId='" + entityId + '\'' +
+                '}';
     }
-
 }
