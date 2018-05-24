@@ -33,6 +33,7 @@ import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.*
@@ -84,8 +85,9 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     }
 
 
-    fun upsertEntities(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>, version: Long): Int {
+    fun upsertEntities(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>): Int {
         val connection = hds.getConnection()
+        val version = System.currentTimeMillis()
         val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId, version))
         val datatypes = authorizedPropertyTypes.map { it.id to it.datatype }.toMap()
         val preparedStatements = authorizedPropertyTypes
@@ -119,10 +121,69 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         //In case we want to do validation
         val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() };
         val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum();
+        preparedStatements.values.forEach(PreparedStatement::close)
+        entitySetPreparedStatement.close()
+        connection.close()
 
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
-        return updatedEntityCount;
+
+        return updatedEntityCount
     }
+
+
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Set<PropertyType>) {
+
+        tombstone( entitySetId, entityKeyIds, authorizedPropertyTypes )
+    }
+
+    fun replaceEntity(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>) {
+        /*
+         * Replacing an entity involves setting all properties for that versions for that entity to -now()
+         *
+         */
+        tombstone(entitySetId, entities.keys, authorizedPropertyTypes)
+        upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+    }
+
+    fun partialReplaceEntity(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>) {
+        //Only tombstone properties being replaced.
+        entities.forEach {
+            val entity = it.value
+            tombstone(entitySetId, setOf(it.key), authorizedPropertyTypes.filter(entity::containsKey).toSet())
+        }
+        upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+    }
+
+    private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>, propertyTypesToDelete: Set<PropertyType>): Int {
+        val connection = hds.getConnection()
+        val deleteVersion = System.currentTimeMillis()
+
+        return propertyTypesToDelete
+                .map { connection.prepareStatement(updatePropertyVersion(it.id)) }
+                .map {
+                    val ps = it
+                    entityKeyIds.forEach {
+                        ps.setLong(1, deleteVersion)
+                        ps.setLong(2, deleteVersion)
+                        ps.setObject(3, entitySetId)
+                        ps.setObject(4, it)
+                        ps.addBatch()
+                    }
+                    ps.executeBatch().sum()
+                }
+                .sum()
+    }
+}
+
+fun updateEntityVersion( entitySetId: UUID ) : String {
+    val entitiesTable = quote(entityTableName(entitySetId))
+    return
+}
+
+fun updatePropertyVersion(propertyTypeId: UUID): String {
+    val propertyTable = quote(propertyTableName(propertyTypeId))
+    return "UPDATE $propertyTable SET versions = versions || ?, version = ? " +
+            "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? "
 }
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
@@ -147,9 +208,10 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
             VERSIONS.name,
             LAST_WRITE.name)
 
-    //Insert new row or update version.
+    //Insert new row or update version. We only perform update if we're the winning timestamp.
     return "INSERT INTO $propertyTable (${columns.joinToString(",")}) VALUES($entitySetId,?,?,?,$version,ARRAY[$version],now())" +
-            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE SET versions = versions || $version, version = $version "
+            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE SET versions = versions || $version, version = $version " +
+            "WHERE $version > abs(version) "
 }
 
 fun selectEntitySetWithPropertyTypes(entitySetId: UUID,

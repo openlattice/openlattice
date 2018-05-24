@@ -160,7 +160,6 @@ public class PostgresEntityKeyIdsMapstore extends AbstractBasePostgresMapstore<E
 
     public int bind( PreparedStatement ps, EntityKey key, int parameterIndex ) throws SQLException {
         ps.setObject( parameterIndex++, key.getEntitySetId() );
-        ps.setObject( parameterIndex++, key.getSyncId() );
         ps.setObject( parameterIndex++, key.getEntityId() );
         return parameterIndex;
     }

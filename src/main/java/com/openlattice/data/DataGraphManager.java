@@ -42,7 +42,6 @@ public interface DataGraphManager {
      */
     EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
-            UUID syncId,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
@@ -76,7 +75,6 @@ public interface DataGraphManager {
 
     UUID createEntity(
             UUID entitySetId,
-            UUID syncId,
             String entityId,
             SetMultimap<UUID, Object> entityDetails,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
@@ -84,7 +82,6 @@ public interface DataGraphManager {
 
     void createEntities(
             UUID entitySetId,
-            UUID syncId,
             Map<String, SetMultimap<UUID, Object>> entities,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
             throws ExecutionException, InterruptedException;
@@ -96,7 +93,6 @@ public interface DataGraphManager {
 
     void createAssociations(
             UUID entitySetId,
-            UUID syncId,
             Set<Association> associations,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
             throws ExecutionException, InterruptedException;
@@ -108,11 +104,10 @@ public interface DataGraphManager {
 
     public Iterable<SetMultimap<Object, Object>> getTopUtilizers(
             UUID entitySetId,
-            UUID syncId,
             List<TopUtilizerDetails> topUtilizerDetails,
             int numResults,
             Map<UUID, PropertyType> authorizedPropertyTypes )
             throws InterruptedException, ExecutionException;
 
-    NeighborTripletSet getNeighborEntitySets( UUID entitySetId, UUID syncId );
+    NeighborTripletSet getNeighborEntitySets( UUID entitySetId );
 }
