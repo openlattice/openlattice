@@ -115,7 +115,7 @@ public class DataTables {
 
     public static PostgresTableDefinition doBuildEntitySetTableDefinition( UUID entitySetId ) {
         PostgresTableDefinition ptd = new PostgresTableDefinition( quote( entityTableName( entitySetId ) ) )
-                .addColumns( ID, VERSION, LAST_WRITE, LAST_INDEX, READERS, WRITERS, OWNERS );
+                .addColumns( ID, VERSION, VERSIONS, LAST_WRITE, LAST_INDEX, READERS, WRITERS, OWNERS );
 
         String idxPrefix = entityTableName( entitySetId );
 

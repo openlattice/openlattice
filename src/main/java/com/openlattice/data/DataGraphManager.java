@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -43,7 +44,7 @@ public interface DataGraphManager {
     EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
             LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
+            Set<PropertyType> authorizedPropertyTypes );
 
     // TODO remove vertices too
     void deleteEntitySetData( UUID entitySetId );
@@ -53,7 +54,7 @@ public interface DataGraphManager {
      */
     SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entityKeyId,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
+            Set<PropertyType> authorizedPropertyTypes );
 
     void updateEntity(
             UUID elementId,
@@ -102,11 +103,11 @@ public interface DataGraphManager {
             Set<Association> associations,
             Map<UUID, Map<UUID, EdmPrimitiveTypeKind>> authorizedPropertiesByEntitySetId );
 
-    public Iterable<SetMultimap<Object, Object>> getTopUtilizers(
+    public Stream<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
             UUID entitySetId,
             List<TopUtilizerDetails> topUtilizerDetails,
             int numResults,
-            Map<UUID, PropertyType> authorizedPropertyTypes )
+            Set<PropertyType> authorizedPropertyTypes )
             throws InterruptedException, ExecutionException;
 
     NeighborTripletSet getNeighborEntitySets( UUID entitySetId );

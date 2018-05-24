@@ -57,11 +57,9 @@ public interface GraphApi {
             UUID srcVertexId,
             UUID srcVertexEntityTypeId,
             UUID srcVertexEntitySetId,
-            UUID srcVertexEntitySyncId,
             UUID dstVertexId,
             UUID dstVertexEntityTypeId,
             UUID dstVertexEntitySetId,
-            UUID dstVertexEntitySyncId,
             UUID edgeId,
             UUID edgeTypeId,
             UUID edgeEntitySetId );
@@ -70,11 +68,9 @@ public interface GraphApi {
             UUID srcVertexId,
             UUID srcVertexEntityTypeId,
             UUID srcVertexEntitySetId,
-            UUID srcVertexEntitySyncId,
             UUID dstVertexId,
             UUID dstVertexEntityTypeId,
             UUID dstVertexEntitySetId,
-            UUID dstVertexEntitySyncId,
             UUID edgeEntityId,
             UUID edgeEntityTypeId,
             UUID edgeEntitySetId );
@@ -100,10 +96,9 @@ public interface GraphApi {
     IncrementableWeightId[] computeGraphAggregation(
             int limit,
             UUID entitySetId,
-            UUID syncId,
             SetMultimap<UUID, UUID> srcFilters,
             SetMultimap<UUID, UUID> dstFilters );
 
-    NeighborTripletSet getNeighborEntitySets( UUID entitySetId, UUID syncId );
+    NeighborTripletSet getNeighborEntitySets( UUID entitySetId );
 
 }

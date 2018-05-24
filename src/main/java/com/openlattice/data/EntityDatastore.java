@@ -43,7 +43,6 @@ public interface EntityDatastore {
 
     EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
-            UUID syncId,
             LinkedHashSet<String> orderedPropertyNames,
             Set<PropertyType> authorizedPropertyTypes );
 
@@ -58,7 +57,6 @@ public interface EntityDatastore {
 
     SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entitySetId,
-            UUID syncId,
             String entityId,
             Set<PropertyType> authorizedPropertyTypes );
 
@@ -134,5 +132,5 @@ public interface EntityDatastore {
             SetMultimap<UUID, Object> entityDetails,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
 
-    Stream<EntityKey> getEntityKeysForEntitySet( UUID entitySetId, UUID syncId );
+    Stream<EntityKey> getEntityKeysForEntitySet( UUID entitySetId );
 }

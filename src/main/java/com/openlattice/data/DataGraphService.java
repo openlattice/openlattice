@@ -25,6 +25,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.Futures;
@@ -45,16 +46,19 @@ import com.openlattice.graph.core.Graph;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.hazelcast.HazelcastMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -105,10 +109,9 @@ public class DataGraphService implements DataGraphManager {
     @Override
     public EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
-            UUID syncId,
             LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return eds.getEntitySetData( entitySetId, syncId, orderedPropertyNames, authorizedPropertyTypes );
+            Set<PropertyType> authorizedPropertyTypes ) {
+        return eds.getEntitySetData( entitySetId, orderedPropertyNames, authorizedPropertyTypes );
     }
 
     @Override
@@ -119,10 +122,9 @@ public class DataGraphService implements DataGraphManager {
 
     @Override
     public SetMultimap<FullQualifiedName, Object> getEntity(
-            UUID entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+            UUID entityKeyId, Set<PropertyType> authorizedPropertyTypes ) {
         EntityKey entityKey = idService.getEntityKey( entityKeyId );
         return eds.getEntity( entityKey.getEntitySetId(),
-                entityKey.getSyncId(),
                 entityKey.getEntityId(),
                 authorizedPropertyTypes );
     }
@@ -160,13 +162,12 @@ public class DataGraphService implements DataGraphManager {
     @Override
     public UUID createEntity(
             UUID entitySetId,
-            UUID syncId,
             String entityId,
             SetMultimap<UUID, Object> entityDetails,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
             throws ExecutionException, InterruptedException {
 
-        final EntityKey key = new EntityKey( entitySetId, entityId, syncId );
+        final EntityKey key = new EntityKey( entitySetId, entityId );
         createEntity( key, entityDetails, authorizedPropertiesWithDataType )
                 .forEach( DataGraphService::tryGetAndLogErrors );
         return idService.getEntityKeyId( key );
@@ -175,7 +176,6 @@ public class DataGraphService implements DataGraphManager {
     @Override
     public void createEntities(
             UUID entitySetId,
-            UUID syncId,
             Map<String, SetMultimap<UUID, Object>> entities,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
             throws ExecutionException, InterruptedException {
@@ -183,7 +183,7 @@ public class DataGraphService implements DataGraphManager {
                 .parallelStream()
                 .flatMap(
                         entity -> {
-                            final EntityKey key = new EntityKey( entitySetId, entity.getKey(), syncId );
+                            final EntityKey key = new EntityKey( entitySetId, entity.getKey() );
                             return createEntity( key, entity.getValue(), authorizedPropertiesWithDataType );
                         } )
                 .forEach( DataGraphService::tryGetAndLogErrors );
@@ -216,7 +216,6 @@ public class DataGraphService implements DataGraphManager {
     @Override
     public void createAssociations(
             UUID entitySetId,
-            UUID syncId,
             Set<Association> associations,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
             throws InterruptedException, ExecutionException {
@@ -234,11 +233,9 @@ public class DataGraphService implements DataGraphManager {
                     UUID srcId = idService.getEntityKeyId( association.getSrc() );
                     UUID srcTypeId = typeIds.getUnchecked( association.getSrc().getEntitySetId() );
                     UUID srcSetId = association.getSrc().getEntitySetId();
-                    UUID srcSyncId = association.getSrc().getSyncId();
                     UUID dstId = idService.getEntityKeyId( association.getDst() );
                     UUID dstTypeId = typeIds.getUnchecked( association.getDst().getEntitySetId() );
                     UUID dstSetId = association.getDst().getEntitySetId();
-                    UUID dstSyncId = association.getDst().getSyncId();
                     UUID edgeTypeId = typeIds.getUnchecked( association.getKey().getEntitySetId() );
                     UUID edgeSetId = association.getKey().getEntitySetId();
 
@@ -246,11 +243,9 @@ public class DataGraphService implements DataGraphManager {
                             .addEdgeAsync( srcId,
                                     srcTypeId,
                                     srcSetId,
-                                    srcSyncId,
                                     dstId,
                                     dstTypeId,
                                     dstSetId,
-                                    dstSyncId,
                                     edgeId,
                                     edgeTypeId,
                                     edgeSetId );
@@ -287,10 +282,8 @@ public class DataGraphService implements DataGraphManager {
 
                 UUID srcTypeId = typeIds.getUnchecked( association.getSrc().getEntitySetId() );
                 UUID srcSetId = association.getSrc().getEntitySetId();
-                UUID srcSyncId = association.getSrc().getSyncId();
                 UUID dstTypeId = typeIds.getUnchecked( association.getDst().getEntitySetId() );
                 UUID dstSetId = association.getDst().getEntitySetId();
-                UUID dstSyncId = association.getDst().getSyncId();
                 UUID edgeId = idService.getEntityKeyId( association.getKey() );
                 UUID edgeTypeId = typeIds.getUnchecked( association.getKey().getEntitySetId() );
                 UUID edgeSetId = association.getKey().getEntitySetId();
@@ -298,11 +291,9 @@ public class DataGraphService implements DataGraphManager {
                 ListenableFuture addEdge = lm.addEdgeAsync( srcId,
                         srcTypeId,
                         srcSetId,
-                        srcSyncId,
                         dstId,
                         dstTypeId,
                         dstSetId,
-                        dstSyncId,
                         edgeId,
                         edgeTypeId,
                         edgeSetId );
@@ -312,12 +303,11 @@ public class DataGraphService implements DataGraphManager {
     }
 
     @Override
-    public Iterable<SetMultimap<Object, Object>> getTopUtilizers(
+    public Stream<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
             UUID entitySetId,
-            UUID syncId,
             List<TopUtilizerDetails> topUtilizerDetailsList,
             int numResults,
-            Map<UUID, PropertyType> authorizedPropertyTypes )
+            Set<PropertyType> authorizedPropertyTypes )
             throws InterruptedException, ExecutionException {
         /*
          * ByteBuffer queryId; try { queryId = ByteBuffer.wrap( ObjectMappers.getSmileMapper().writeValueAsBytes(
@@ -338,19 +328,23 @@ public class DataGraphService implements DataGraphManager {
                         putAll( details.getAssociationTypeId(), details.getNeighborTypeIds() );
 
             } );
-            utilizers = lm.computeGraphAggregation( numResults, entitySetId, syncId, srcFilters, dstFilters );
+            utilizers = lm.computeGraphAggregation( numResults, entitySetId, srcFilters, dstFilters );
 
             queryCache.put( new MultiKey( entitySetId, topUtilizerDetailsList ), utilizers );
         } else {
             utilizers = maybeUtilizers;
         }
-
-        return eds.getEntities( entitySetId, utilizers, authorizedPropertyTypes )::iterator;
+        //TODO: this returns unsorted data.
+        final UUID[] utilizerIds = new UUID[ utilizers.length ];
+        for ( int i = 0; i < utilizers.length; ++i ) {
+            utilizerIds[ i ] = utilizers[ i ].getId();
+        }
+        return eds.getEntities( entitySetId, ImmutableSet.copyOf( utilizerIds ), authorizedPropertyTypes );
     }
 
     @Override
-    public NeighborTripletSet getNeighborEntitySets( UUID entitySetId, UUID syncId ) {
-        return lm.getNeighborEntitySets( entitySetId, syncId );
+    public NeighborTripletSet getNeighborEntitySets( UUID entitySetId ) {
+        return lm.getNeighborEntitySets( entitySetId );
     }
 
     public static void tryGetAndLogErrors( ListenableFuture<?> f ) {

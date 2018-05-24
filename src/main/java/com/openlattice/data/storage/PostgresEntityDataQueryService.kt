@@ -177,7 +177,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
 fun updateEntityVersion( entitySetId: UUID ) : String {
     val entitiesTable = quote(entityTableName(entitySetId))
-    return
+    return "UPDATE $entitiesTable SET versions = versions || ?, version = ? " +
+            "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? "
 }
 
 fun updatePropertyVersion(propertyTypeId: UUID): String {

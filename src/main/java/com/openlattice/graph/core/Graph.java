@@ -65,22 +65,18 @@ public class Graph implements GraphApi {
             UUID srcVertexId,
             UUID srcVertexEntityTypeId,
             UUID srcVertexEntitySetId,
-            UUID srcVertexEntitySyncId,
             UUID dstVertexId,
             UUID dstVertexEntityTypeId,
             UUID dstVertexEntitySetId,
-            UUID dstVertexEntitySyncId,
             UUID edgeEntityId,
             UUID edgeEntityTypeId,
             UUID edgeEntitySetId ) {
         StreamUtil.getUninterruptibly( addEdgeAsync( srcVertexId,
                 srcVertexEntityTypeId,
                 srcVertexEntitySetId,
-                srcVertexEntitySyncId,
                 dstVertexId,
                 dstVertexEntityTypeId,
                 dstVertexEntitySetId,
-                dstVertexEntitySyncId,
                 edgeEntityId,
                 edgeEntityTypeId,
                 edgeEntitySetId ) );
@@ -91,11 +87,9 @@ public class Graph implements GraphApi {
             UUID srcVertexId,
             UUID srcVertexEntityTypeId,
             UUID srcVertexEntitySetId,
-            UUID srcVertexEntitySyncId,
             UUID dstVertexId,
             UUID dstVertexEntityTypeId,
             UUID dstVertexEntitySetId,
-            UUID dstVertexEntitySyncId,
             UUID edgeEntityId,
             UUID edgeEntityTypeId,
             UUID edgeEntitySetId ) {
@@ -105,9 +99,7 @@ public class Graph implements GraphApi {
                 key,
                 srcVertexEntityTypeId,
                 srcVertexEntitySetId,
-                srcVertexEntitySyncId,
                 dstVertexEntitySetId,
-                dstVertexEntitySyncId,
                 edgeEntitySetId );
 
         return new ListenableHazelcastFuture<>( edges.setAsync( key, edge ) );
@@ -166,19 +158,18 @@ public class Graph implements GraphApi {
     public IncrementableWeightId[] computeGraphAggregation(
             int limit,
             UUID entitySetId,
-            UUID syncId,
             SetMultimap<UUID, UUID> srcFilters,
             SetMultimap<UUID, UUID> dstFilters ) {
-        Predicate p = edgesMatching( entitySetId, syncId, srcFilters, dstFilters );
+        Predicate p = edgesMatching( entitySetId, srcFilters, dstFilters );
         return this.edges.aggregate( new GraphCount( limit, entitySetId ), p );
     }
 
     @Override
     @Timed
-    public NeighborTripletSet getNeighborEntitySets( UUID entitySetId, UUID syncId ) {
+    public NeighborTripletSet getNeighborEntitySets( UUID entitySetId ) {
         Predicate p = Predicates.or(
-                Predicates.and( Predicates.equal( "srcSetId", entitySetId ), Predicates.equal( "srcSyncId", syncId ) ),
-                Predicates.and( Predicates.equal( "dstSetId", entitySetId ), Predicates.equal( "dstSyncId", syncId ) )
+                Predicates.and( Predicates.equal( "srcSetId", entitySetId ) ),
+                Predicates.and( Predicates.equal( "dstSetId", entitySetId ) )
         );
         return edges.aggregate( new NeighborEntitySetAggregator(), p );
     }
@@ -191,7 +182,6 @@ public class Graph implements GraphApi {
 
     public static Predicate edgesMatching(
             UUID entitySetId,
-            UUID syncId,
             SetMultimap<UUID, UUID> srcFilters,
             SetMultimap<UUID, UUID> dstFilters ) {
         /*
@@ -203,13 +193,11 @@ public class Graph implements GraphApi {
                 Stream.concat( dstFilters.entries().stream()
                                 .map( dstFilter -> Predicates.and(
                                         Predicates.equal( "dstSetId", entitySetId ),
-                                        Predicates.equal( "dstSyncId", syncId ),
                                         Predicates.equal( "edgeTypeId", dstFilter.getKey() ),
                                         Predicates.equal( "srcTypeId", dstFilter.getValue() ) ) ),
                         srcFilters.entries().stream()
                                 .map( srcFilter -> Predicates.and(
                                         Predicates.equal( "srcSetId", entitySetId ),
-                                        Predicates.equal( "srcSyncId", syncId ),
                                         Predicates.equal( "edgeTypeId", srcFilter.getKey() ),
                                         Predicates.equal( "dstTypeId", srcFilter.getValue() ) ) ) )
                         .toArray( Predicate[]::new ) );

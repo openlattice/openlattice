@@ -22,6 +22,7 @@
 
 package com.openlattice.graph.edge;
 
+import java.util.Objects;
 import java.util.UUID;
 
 public class Edge {
@@ -32,23 +33,16 @@ public class Edge {
     private UUID dstSetId;
     private UUID edgeSetId;
 
-    private UUID srcSyncId;
-    private UUID dstSyncId;
-
     public Edge(
             EdgeKey key,
             UUID srcType,
             UUID srcSetId,
-            UUID srcSyncId,
             UUID dstSetId,
-            UUID dstSyncId,
             UUID edgeSetId ) {
         this.key = key;
-        this.srcSyncId = srcSyncId;
         this.srcType = srcType;
         this.srcSetId = srcSetId;
         this.dstSetId = dstSetId;
-        this.dstSyncId = dstSyncId;
         this.edgeSetId = edgeSetId;
     }
 
@@ -64,16 +58,8 @@ public class Edge {
         return srcSetId;
     }
 
-    public UUID getSrcSyncId() {
-        return srcSyncId;
-    }
-
     public UUID getDstSetId() {
         return dstSetId;
-    }
-
-    public UUID getDstSyncId() {
-        return dstSyncId;
     }
 
     public UUID getEdgeSetId() {
@@ -107,34 +93,22 @@ public class Edge {
                 ", srcSetId=" + srcSetId +
                 ", dstSetId=" + dstSetId +
                 ", edgeSetId=" + edgeSetId +
-                ", srcSyncId=" + srcSyncId +
-                ", dstSyncId=" + dstSyncId +
                 '}';
     }
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof Edge ) ) { return false; }
-
         Edge edge = (Edge) o;
-
-        if ( !key.equals( edge.key ) ) { return false; }
-        if ( !srcType.equals( edge.srcType ) ) { return false; }
-        if ( !srcSetId.equals( edge.srcSetId ) ) { return false; }
-        if ( !dstSetId.equals( edge.dstSetId ) ) { return false; }
-        if ( !edgeSetId.equals( edge.edgeSetId ) ) { return false; }
-        if ( !srcSyncId.equals( edge.srcSyncId ) ) { return false; }
-        return dstSyncId.equals( edge.dstSyncId );
+        return Objects.equals( key, edge.key ) &&
+                Objects.equals( srcType, edge.srcType ) &&
+                Objects.equals( srcSetId, edge.srcSetId ) &&
+                Objects.equals( dstSetId, edge.dstSetId ) &&
+                Objects.equals( edgeSetId, edge.edgeSetId );
     }
 
     @Override public int hashCode() {
-        int result = key.hashCode();
-        result = 31 * result + srcType.hashCode();
-        result = 31 * result + srcSetId.hashCode();
-        result = 31 * result + dstSetId.hashCode();
-        result = 31 * result + edgeSetId.hashCode();
-        result = 31 * result + srcSyncId.hashCode();
-        result = 31 * result + dstSyncId.hashCode();
-        return result;
+
+        return Objects.hash( key, srcType, srcSetId, dstSetId, edgeSetId );
     }
 }
