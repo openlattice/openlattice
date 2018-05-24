@@ -56,6 +56,9 @@ public class PlasmaCoupling {
     @Inject
     private MergeVertexAggregatorStreamSerializer mvass;
 
+    @Inject
+    private MergeEdgeAggregatorStreamSerializer meass;
+
     @PostConstruct
     public void connect() {
         cecss.setConductorElasticsearchApi( elasticsearchApi );
@@ -63,5 +66,6 @@ public class PlasmaCoupling {
         bass.setBlockingService( blockingService );
         iass.setBlockingService( blockingService );
         mvass.setMergingService( mergingService );
+        meass.setMergingService( mergingService );
     }
 }
