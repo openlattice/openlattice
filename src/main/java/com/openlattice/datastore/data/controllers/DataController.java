@@ -37,7 +37,11 @@ import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
-import com.openlattice.data.*;
+import com.openlattice.data.DataApi;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntitySetData;
 import com.openlattice.data.requests.Association;
 import com.openlattice.data.requests.BulkDataCreation;
 import com.openlattice.data.requests.EntitySetSelection;
@@ -144,7 +148,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                     .authenticate( PreAuthenticatedAuthenticationJsonWebToken.usingToken( token ) );
             SecurityContextHolder.getContext().setAuthentication( authentication );
         }
-        return loadEntitySetData( entitySetId, Optional.absent(), Optional.absent() );
+        return loadEntitySetData( entitySetId, Optional.absent() );
     }
 
     @RequestMapping(
@@ -170,20 +174,19 @@ public class DataController implements DataApi, AuthorizingComponent {
             EntitySetSelection req,
             FileType fileType ) {
         if ( req == null ) {
-            return loadEntitySetData( entitySetId, Optional.absent(), Optional.absent() );
+            return loadEntitySetData( entitySetId, Optional.absent() );
         } else {
-            return loadEntitySetData( entitySetId, req.getSyncId(), req.getSelectedProperties() );
+            return loadEntitySetData( entitySetId, req.getSelectedProperties() );
         }
     }
 
     private EntitySetData<FullQualifiedName> loadEntitySetData(
             UUID entitySetId,
-            Optional<UUID> syncId,
             Optional<Set<UUID>> selectedProperties ) {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            return loadNormalEntitySetData( entitySetId, syncId, selectedProperties );
+            return loadNormalEntitySetData( entitySetId, selectedProperties );
         } else {
             throw new ForbiddenException( "Insufficient permissions to read the entity set or it doesn't exists." );
         }
@@ -191,9 +194,7 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     private EntitySetData<FullQualifiedName> loadNormalEntitySetData(
             UUID entitySetId,
-            Optional<UUID> syncId,
             Optional<Set<UUID>> selectedProperties ) {
-        UUID id = ( syncId.isPresent() ) ? syncId.get() : datasourceManager.getCurrentSyncId( entitySetId );
         Set<UUID> authorizedProperties;
         if ( selectedProperties.isPresent() && !selectedProperties.get().isEmpty() ) {
             if ( !authzHelper.getAllPropertiesOnEntitySet( entitySetId ).containsAll( selectedProperties.get() ) ) {
@@ -215,16 +216,15 @@ public class DataController implements DataApi, AuthorizingComponent {
                 .collect( Collectors.toCollection( () -> new LinkedHashSet<>() ) );
         Map<UUID, PropertyType> authorizedPropertyTypes = authorizedProperties.stream()
                 .collect( Collectors.toMap( ptId -> ptId, ptId -> dms.getPropertyType( ptId ) ) );
-        return dgm.getEntitySetData( entitySetId, id, orderedPropertyNames, authorizedPropertyTypes );
+        return dgm.getEntitySetData( entitySetId, orderedPropertyNames, authorizedPropertyTypes );
     }
 
     @RequestMapping(
-            path = { "/" + ENTITY_DATA + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH },
+            path = { "/" + ENTITY_DATA + "/" + SET_ID_PATH },
             method = RequestMethod.PUT,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void createEntityData(
             @PathVariable( SET_ID ) UUID entitySetId,
-            @PathVariable( SYNC_ID ) UUID syncId,
             @RequestBody Map<String, SetMultimap<UUID, Object>> entities ) {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
@@ -253,7 +253,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 throw new ResourceNotFoundException( "Unable to load data types for authorized properties." );
             }
             try {
-                dgm.createEntities( entitySetId, syncId, entities, authorizedPropertiesWithDataType );
+                dgm.createEntities( entitySetId, entities, authorizedPropertiesWithDataType );
             } catch ( ExecutionException | InterruptedException e ) {
                 logger.error( "Unable to bulk create entity data.", e );
                 throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
@@ -293,8 +293,8 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
-    @PostMapping( "/" + TICKET + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH )
-    public UUID acquireSyncTicket( @PathVariable( SET_ID ) UUID entitySetId, @PathVariable( SYNC_ID ) UUID syncId ) {
+    @PostMapping( "/" + TICKET + "/" + SET_ID_PATH )
+    public UUID acquireSyncTicket( @PathVariable( SET_ID ) UUID entitySetId ) {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.WRITE ) ) ) {
@@ -327,12 +327,11 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Override
     @RequestMapping(
-            value = "/" + ENTITY_DATA + "/" + TICKET_PATH + "/" + SYNC_ID_PATH,
+            value = "/" + ENTITY_DATA + "/" + TICKET_PATH,
             method = RequestMethod.PATCH,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void storeEntityData(
             @PathVariable( TICKET ) UUID ticket,
-            @PathVariable( SYNC_ID ) UUID syncId,
             @RequestBody Map<String, SetMultimap<UUID, Object>> entities ) {
 
         // To avoid re-doing authz check more of than once every 250 ms during an integration we cache the
@@ -349,7 +348,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             throw new ResourceNotFoundException( "Unable to load data types for authorized properties." );
         }
         try {
-            dgm.createEntities( entitySetId, syncId, entities, authorizedPropertiesWithDataType );
+            dgm.createEntities( entitySetId, entities, authorizedPropertiesWithDataType );
         } catch ( ExecutionException | InterruptedException e ) {
             logger.error( "Unable to bulk store entity data.", e );
             throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
@@ -364,12 +363,11 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Override
     @RequestMapping(
-            path = { "/" + ASSOCIATION_DATA + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH },
+            path = { "/" + ASSOCIATION_DATA + "/" + SET_ID_PATH },
             method = RequestMethod.PUT,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void createAssociationData(
             @PathVariable( SET_ID ) UUID entitySetId,
-            @PathVariable( SYNC_ID ) UUID syncId,
             @RequestBody Set<Association> associations ) {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
@@ -400,7 +398,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 throw new ResourceNotFoundException( "Unable to load data types for authorized properties." );
             }
             try {
-                dgm.createAssociations( entitySetId, syncId, associations, authorizedPropertiesWithDataType );
+                dgm.createAssociations( entitySetId, associations, authorizedPropertiesWithDataType );
             } catch ( ExecutionException | InterruptedException e ) {
                 logger.error( "Unable to bulk create association data.", e );
                 throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
@@ -413,12 +411,11 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Override
     @RequestMapping(
-            value = "/" + ASSOCIATION_DATA + "/" + TICKET_PATH + "/" + SYNC_ID_PATH,
+            value = "/" + ASSOCIATION_DATA + "/" + TICKET_PATH,
             method = RequestMethod.PATCH,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void storeAssociationData(
             @PathVariable( TICKET ) UUID ticket,
-            @PathVariable( SYNC_ID ) UUID syncId,
             @RequestBody Set<Association> associations ) {
 
         // To avoid re-doing authz check more of than once every 250 ms during an integration we cache the
@@ -436,24 +433,13 @@ public class DataController implements DataApi, AuthorizingComponent {
         }
 
         try {
-            dgm.createAssociations( entitySetId, syncId, associations, authorizedPropertiesWithDataType );
+            dgm.createAssociations( entitySetId, associations, authorizedPropertiesWithDataType );
         } catch ( ExecutionException | InterruptedException e ) {
             logger.error( "Unable to bulk store association data.", e );
             throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
         }
 
         return null;
-    }
-
-    @Override
-    @RequestMapping(
-            path = { "/" + ENTITY_DATA + "/" + SET_ID_PATH },
-            method = RequestMethod.PUT,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void createEntityData(
-            @PathVariable( SET_ID ) UUID entitySetId,
-            @RequestBody Map<String, SetMultimap<UUID, Object>> entities ) {
-        return createEntityData( entitySetId, datasourceManager.getCurrentSyncId( entitySetId ), entities );
     }
 
     @Override
