@@ -149,7 +149,10 @@ public final class SerializationConstants {
     public static final String ORGANIZATION                  = "organization";
     public static final String CONFIG                        = "config";
     public static final String VERSION                       = "version";
+    public static final String VERSIONS                      = "versions";
     public static final String URL                           = "url";
+    public static final String VALUE_FIELD                   = "value";
+    public static final String HASH                          = "hash";
 
     private SerializationConstants() {
     }
