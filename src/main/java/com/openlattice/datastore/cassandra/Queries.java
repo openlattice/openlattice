@@ -176,7 +176,7 @@ public final class Queries {
     }
 
 //    public static final RegularStatement countEntitySets( String keyspace ) {
-//        return QueryBuilder.select().countAll().from( keyspace, Table.ENTITY_SETS.getName() )
+//        return QueryBuilder.select().countAll().from( keyspace, Table.ENTITY_SET.getName() )
 //                .where( QueryBuilder.eq( CommonColumns.TYPENAME.cql(), QueryBuilder.bindMarker() ) )
 //                .and( QueryBuilder.eq( CommonColumns.NAME.cql(), QueryBuilder.bindMarker() ) );
 //    }

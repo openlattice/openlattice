@@ -87,60 +87,92 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
     fun upsertEntities(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>): Int {
         val connection = hds.getConnection()
-        val version = System.currentTimeMillis()
-        val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId, version))
-        val datatypes = authorizedPropertyTypes.map { it.id to it.datatype }.toMap()
-        val preparedStatements = authorizedPropertyTypes
-                .map { it.id to connection.prepareStatement(upsertPropertyValues(entitySetId, it.id, it.type.fullQualifiedNameAsString, version)) }
-                .toMap()
+        connection.use {
+            val version = System.currentTimeMillis()
+            val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId, version))
+            val datatypes = authorizedPropertyTypes.map { it.id to it.datatype }.toMap()
+            val preparedStatements = authorizedPropertyTypes
+                    .map { it.id to connection.prepareStatement(upsertPropertyValues(entitySetId, it.id, it.type.fullQualifiedNameAsString, version)) }
+                    .toMap()
 
-        entities.forEach {
-            entitySetPreparedStatement.setObject(1, it.key)
-            entitySetPreparedStatement.addBatch()
+            entities.forEach {
+                entitySetPreparedStatement.setObject(1, it.key)
+                entitySetPreparedStatement.addBatch()
 
-            val entityKeyId = it.key
-            val entityData = it.value
-            Multimaps
-                    .asMap(entityData)
-                    .forEach {
-                        val propertyTypeId = it.key
-                        val properties = it.value
-                        properties.forEach {
-                            val ps = preparedStatements[propertyTypeId]
-                            ps?.setObject(1, entityKeyId)
-                            ps?.setObject(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
-                            ps?.setObject(3, it)
-                            ps?.addBatch()
-                            if (ps == null) {
-                                logger.warn("Skipping unauthorized property in entity $entityKeyId from entity set $entitySetId")
+                val entityKeyId = it.key
+                val entityData = it.value
+                Multimaps
+                        .asMap(entityData)
+                        .forEach {
+                            val propertyTypeId = it.key
+                            val properties = it.value
+                            properties.forEach {
+                                val ps = preparedStatements[propertyTypeId]
+                                ps?.setObject(1, entityKeyId)
+                                ps?.setObject(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
+                                ps?.setObject(3, it)
+                                ps?.addBatch()
+                                if (ps == null) {
+                                    logger.warn("Skipping unauthorized property in entity $entityKeyId from entity set $entitySetId")
+                                }
                             }
                         }
-                    }
+            }
+
+            //In case we want to do validation
+            val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() };
+            val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum();
+            preparedStatements.values.forEach(PreparedStatement::close)
+            entitySetPreparedStatement.close()
+
+            logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
+
+            return updatedEntityCount
         }
-
-        //In case we want to do validation
-        val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() };
-        val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum();
-        preparedStatements.values.forEach(PreparedStatement::close)
-        entitySetPreparedStatement.close()
-        connection.close()
-
-        logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
-
-        return updatedEntityCount
     }
 
-
-    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Set<PropertyType>) {
-
-        tombstone( entitySetId, entityKeyIds, authorizedPropertyTypes )
+    fun clearEntitySet(entitySetId: UUID): Int {
+        return tombstone(entitySetId)
     }
 
+    fun clearEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Set<PropertyType>): Int {
+        //TODO: Make these a single transaction.
+        tombstone(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        return tombstone(entitySetId, entityKeyIds)
+    }
+
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Set<PropertyType>): Int {
+        val connection = hds.getConnection()
+        return connection.use {
+            return authorizedPropertyTypes
+                    .map {
+                        val s = connection.createStatement()
+                        val count: Int = s.executeUpdate(deletePropertiesOfEntities(entitySetId, it.id, entityKeyIds))
+                        s.close()
+                        count
+                    }
+                    .sum()
+        }
+    }
+
+    fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Set<PropertyType>): Int {
+        val connection = hds.getConnection()
+        return connection.use {
+            authorizedPropertyTypes
+                    .map {
+                        val s = connection.createStatement()
+                        val count: Int = s.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.id))
+                        s.close()
+                        count
+                    }
+                    .sum()
+        }
+    }
+
+    /**
+     * Replace Replacing an entity involves setting all properties for that versions for that entity to -now()*
+     */
     fun replaceEntity(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>) {
-        /*
-         * Replacing an entity involves setting all properties for that versions for that entity to -now()
-         *
-         */
         tombstone(entitySetId, entities.keys, authorizedPropertyTypes)
         upsertEntities(entitySetId, entities, authorizedPropertyTypes)
     }
@@ -154,37 +186,116 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         upsertEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
-    private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>, propertyTypesToDelete: Set<PropertyType>): Int {
+    /**
+     * Tombstones the provided set of property types for each provided entity key.
+     */
+    private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>, propertyTypesToTombstone: Set<PropertyType>): Int {
         val connection = hds.getConnection()
-        val deleteVersion = System.currentTimeMillis()
+        connection.use {
+            val tombstoneVersion = System.currentTimeMillis()
 
-        return propertyTypesToDelete
-                .map { connection.prepareStatement(updatePropertyVersion(it.id)) }
-                .map {
-                    val ps = it
-                    entityKeyIds.forEach {
-                        ps.setLong(1, deleteVersion)
-                        ps.setLong(2, deleteVersion)
-                        ps.setObject(3, entitySetId)
-                        ps.setObject(4, it)
-                        ps.addBatch()
+            return propertyTypesToTombstone
+                    .map {
+                        val ps = connection.prepareStatement(updatePropertyVersion(entitySetId, it.id, tombstoneVersion))
+                        entityKeyIds.forEach {
+                            ps.setObject(1, it)
+                            ps.addBatch()
+                        }
+                        ps.executeBatch().sum()
                     }
-                    ps.executeBatch().sum()
-                }
-                .sum()
+                    .sum()
+        }
+    }
+
+    /**
+     * Tombstones specific property values through hash id
+     */
+    private fun tombstone(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, ByteArray>>): Int {
+        val connection = hds.getConnection()
+        return connection.use {
+            val tombstoneVersion = System.currentTimeMillis()
+            val propertyTypePreparedStatements = entities.values
+                    .flatMap { it.keySet() }
+                    .toSet()
+                    .map { it to connection.prepareStatement(updatePropertyValueVersion(entitySetId, it, tombstoneVersion)) }
+                    .toMap()
+
+            entities.forEach {
+                val entityKeyId = it.key
+                Multimaps
+                        .asMap(it.value)
+                        .map {
+                            val ps = propertyTypePreparedStatements[it.key]!!
+                            //TODO: We're currently doing this on hash at a time and we should consider doing it using in query
+                            it.value.forEach {
+                                ps.setObject(1, entityKeyId)
+                                ps.setBytes(2, it) //hash
+                                ps.addBatch()
+                            }
+                        }
+            }
+            return propertyTypePreparedStatements.values.map(PreparedStatement::executeBatch).map(IntArray::sum).sum()
+        }
+    }
+
+    private fun tombstone(entitySetId: UUID): Int {
+        val connection = hds.getConnection()
+        return connection.use {
+            val ps = it.prepareStatement(updateAllEntityVersions(entitySetId, System.currentTimeMillis()))
+            return ps.executeUpdate()
+        }
+    }
+
+    private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
+        val connection = hds.getConnection()
+        return connection.use {
+            val ps = connection.prepareStatement(updateEntityVersion(entitySetId, System.currentTimeMillis()))
+            entityKeyIds.forEach {
+                ps.setObject(1, it)
+                ps.addBatch()
+            }
+            return ps.executeBatch().sum()
+        }
     }
 }
 
-fun updateEntityVersion( entitySetId: UUID ) : String {
+fun updateAllEntityVersions(entitySetId: UUID, version: Long): String {
     val entitiesTable = quote(entityTableName(entitySetId))
-    return "UPDATE $entitiesTable SET versions = versions || ?, version = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? "
+    return "UPDATE $entitiesTable SET versions = versions || $version, version = $version "
 }
 
-fun updatePropertyVersion(propertyTypeId: UUID): String {
+fun updateEntityVersion(entitySetId: UUID, version: Long): String {
+    return updateAllEntityVersions(entitySetId, version) + " WHERE ${ID_VALUE.name} = ? "
+}
+
+fun updatePropertyVersion(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    return "UPDATE $propertyTable SET versions = versions || ?, version = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? "
+    return "UPDATE $propertyTable SET versions = versions || $version, version = $version " +
+            "WHERE ${ENTITY_SET_ID.name} = $entitySetId AND ${ID_VALUE.name} = ? "
+}
+
+fun updatePropertyValueVersion(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
+    return updatePropertyVersion(entitySetId, propertyTypeId, version) +
+            "AND ${HASH.name} = ?"
+}
+
+fun deletePropertiesInEntitySet(entitySetId: UUID, propertyTypeId: UUID): String {
+    val propertyTable = quote(propertyTableName(propertyTypeId))
+    return "DELETE FROM $propertyTable WHERE ${ENTITY_SET_ID.name} = $entitySetId "
+}
+
+fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID, entityKeyIds: Set<UUID>): String {
+    return deletePropertiesInEntitySet(entitySetId, propertyTypeId) + " WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+}
+
+fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
+    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
+    return "DELETE FROM $esTableName WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+}
+
+fun deleteEntitySet(entitySetId: UUID): String {
+    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
+    return "DROP TABLE $esTableName"
 }
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {

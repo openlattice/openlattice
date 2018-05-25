@@ -40,11 +40,11 @@ public interface EntityKeyIdService {
      */
     UUID getEntityKeyId( EntityKey entityKey );
 
+    UUID getEntityKeyId( UUID entitySetId, String entityId );
+
     Map<EntityKey, UUID> getEntityKeyIds( Set<EntityKey> entityKeys );
 
-    @Timed Set<Entry<EntityKey, UUID>> getEntityKeyEntries( Set<UUID> entityKeyIds );
-
-    ListenableFuture<UUID> getEntityKeyIdAsync( EntityKey entityKey );
+    Set<Entry<EntityKey, UUID>> getEntityKeyEntries( Set<UUID> entityKeyIds );
 
     EntityKey getEntityKey( UUID entityKeyId );
 

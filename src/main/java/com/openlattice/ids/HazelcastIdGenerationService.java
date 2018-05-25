@@ -20,12 +20,16 @@
 
 package com.openlattice.ids;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.hazelcast.HazelcastMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -85,5 +89,4 @@ public class HazelcastIdGenerationService {
     public UUID nextId() {
         return getNextIds( 1 ).iterator().next();
     }
-
 }

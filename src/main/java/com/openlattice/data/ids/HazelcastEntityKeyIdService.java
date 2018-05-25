@@ -23,8 +23,6 @@
 package com.openlattice.data.ids;
 
 import com.codahale.metrics.annotation.Timed;
-import com.dataloom.hazelcast.ListenableHazelcastFuture;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -50,7 +48,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class    HazelcastEntityKeyIdService implements EntityKeyIdService {
+public class HazelcastEntityKeyIdService implements EntityKeyIdService {
     private static final Logger logger = LoggerFactory.getLogger( HazelcastEntityKeyIdService.class );
     private final ListeningExecutorService executor;
 
@@ -88,6 +86,12 @@ public class    HazelcastEntityKeyIdService implements EntityKeyIdService {
         return Util.getSafely( ids, entityKey );
     }
 
+    @Timed
+    @Override
+    public UUID getEntityKeyId( UUID entitySetId, String entityId ) {
+        return getEntityKeyId( new EntityKey( entitySetId, entityId ) );
+    }
+
     @Override
     @Timed
     public Map<EntityKey, UUID> getEntityKeyIds( Set<EntityKey> entityKeys ) {
@@ -104,11 +108,6 @@ public class    HazelcastEntityKeyIdService implements EntityKeyIdService {
 
     public Stream<EntityKey> getEntityKeysInEntitySet() {
         return null;
-    }
-
-    @Override
-    public ListenableFuture<UUID> getEntityKeyIdAsync( EntityKey entityKey ) {
-        return new ListenableHazelcastFuture<>( ids.getAsync( entityKey ) );
     }
 
 }

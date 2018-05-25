@@ -122,7 +122,7 @@ public class HazelcastMergingService {
         // create merged entity, in particular get back the entity key id for the new entity
         UUID mergedEntityKeyId;
         try {
-            mergedEntityKeyId = createEntity( entityId, mergedEntity, graphId, syncId, propertyTypesWithDatatype );
+            mergedEntityKeyId = createEntity( entityId, mergedEntity, graphId, propertyTypesWithDatatype );
 
             // write to a lookup table from old entity key id to new, merged entity key id
             entityKeyIds.forEach( oldId -> newIds.put( new LinkingVertexKey( graphId, oldId ), mergedEntityKeyId ) );
@@ -138,15 +138,13 @@ public class HazelcastMergingService {
             String entityId,
             SetMultimap<UUID, Object> entityDetails,
             UUID graphId,
-            UUID syncId,
             Map<UUID, EdmPrimitiveTypeKind> propertyTypesWithDatatype )
             throws ExecutionException, InterruptedException {
 
-        final EntityKey key = new EntityKey( graphId, entityId, syncId );
+        final EntityKey key = new EntityKey( graphId, entityId );
         final ListenableFuture reservationAndVertex = new ListenableHazelcastFuture<>( ids.getAsync( key ) );
         final Stream<ListenableFuture> writes = createDataAsync( entityId,
                 graphId,
-                syncId,
                 entityDetails,
                 propertyTypesWithDatatype );
         Stream.concat( Stream.of( reservationAndVertex ), writes ).forEach( DataGraphService::tryGetAndLogErrors );
@@ -156,7 +154,6 @@ public class HazelcastMergingService {
     private Stream<ListenableFuture> createDataAsync(
             String entityId,
             UUID graphId,
-            UUID syncId,
             SetMultimap<UUID, Object> entityDetails,
             Map<UUID, EdmPrimitiveTypeKind> propertyTypesWithDatatype ) {
 
@@ -171,7 +168,7 @@ public class HazelcastMergingService {
             throw new ForbiddenException( msg );
         }
 
-        EntityKey ek = new EntityKey( graphId, entityId, syncId );
+        EntityKey ek = new EntityKey( graphId, entityId );
         UUID id = ids.get( ek );
         EntityDataKey edk = new EntityDataKey( graphId, id );
         EntityDataUpserter entityDataUpserter =
@@ -199,9 +196,7 @@ public class HazelcastMergingService {
     @Async
     public void mergeEdgeAsync( UUID linkedEntitySetId, UUID syncId, Edge edge ) {
         UUID srcEntitySetId = edge.getSrcSetId();
-        UUID srcSyncId = edge.getSrcSyncId();
         UUID dstEntitySetId = edge.getDstSetId();
-        UUID dstSyncId = edge.getDstSyncId();
         UUID edgeEntitySetId = edge.getEdgeSetId();
 
         UUID srcId = edge.getKey().getSrcEntityKeyId();
@@ -211,13 +206,11 @@ public class HazelcastMergingService {
         UUID newSrcId = getMergedId( linkedEntitySetId, srcId );
         if ( newSrcId != null ) {
             srcEntitySetId = linkedEntitySetId;
-            srcSyncId = syncId;
             srcId = newSrcId;
         }
         UUID newDstId = getMergedId( linkedEntitySetId, dstId );
         if ( newDstId != null ) {
             dstEntitySetId = linkedEntitySetId;
-            dstSyncId = syncId;
             dstId = newDstId;
         }
         UUID newEdgeId = getMergedId( linkedEntitySetId, edgeId );
@@ -229,11 +222,9 @@ public class HazelcastMergingService {
         graph.addEdge( srcId,
                 edge.getSrcTypeId(),
                 srcEntitySetId,
-                srcSyncId,
                 dstId,
                 edge.getDstTypeId(),
                 dstEntitySetId,
-                dstSyncId,
                 edgeId,
                 edge.getEdgeTypeId(),
                 edgeEntitySetId );

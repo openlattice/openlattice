@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public interface DataGraphManager {
@@ -47,7 +46,7 @@ public interface DataGraphManager {
             Set<PropertyType> authorizedPropertyTypes );
 
     // TODO remove vertices too
-    void deleteEntitySetData( UUID entitySetId );
+    int deleteEntitySetData( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes );
 
     /*
      * CRUD methods for entity
@@ -59,12 +58,12 @@ public interface DataGraphManager {
     void updateEntity(
             UUID elementId,
             SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
+            Set<PropertyType> authorizedPropertyTypes );
 
     void updateEntity(
             EntityKey elementReference,
             SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
+            Set<PropertyType> authorizedPropertyTypes );
 
     void deleteEntity( EntityDataKey edk );
 
@@ -78,32 +77,32 @@ public interface DataGraphManager {
             UUID entitySetId,
             String entityId,
             SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
+            Set<PropertyType> authorizedPropertyTypes )
             throws ExecutionException, InterruptedException;
 
     void createEntities(
             UUID entitySetId,
             Map<String, SetMultimap<UUID, Object>> entities,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
+            Set<PropertyType> authorizedPropertyTypes )
             throws ExecutionException, InterruptedException;
 
     void replaceEntity(
             EntityDataKey edk,
             SetMultimap<UUID, Object> entity,
-            Map<UUID, EdmPrimitiveTypeKind> propertyTypes );
+            Set<PropertyType> authorizedPropertyTypes );
 
     void createAssociations(
             UUID entitySetId,
             Set<Association> associations,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
+            Set<PropertyType> authorizedPropertyTypes )
             throws ExecutionException, InterruptedException;
 
     void createEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,
-            Map<UUID, Map<UUID, EdmPrimitiveTypeKind>> authorizedPropertiesByEntitySetId );
+            Map<UUID, Set<PropertyType>> authorizedPropertiesByEntitySetId );
 
-    public Stream<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
+    Stream<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
             UUID entitySetId,
             List<TopUtilizerDetails> topUtilizerDetails,
             int numResults,

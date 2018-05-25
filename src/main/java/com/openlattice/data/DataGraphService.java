@@ -115,8 +115,8 @@ public class DataGraphService implements DataGraphManager {
     }
 
     @Override
-    public void deleteEntitySetData( UUID entitySetId ) {
-        eds.deleteEntitySetData( entitySetId );
+    public int deleteEntitySetData( UUID entitySetId,Set<PropertyType> authorizedPropertyTypes ) {
+        return eds.deleteEntitySetData( entitySetId,authorizedPropertyTypes );
         // TODO delete all vertices
     }
 
@@ -149,14 +149,14 @@ public class DataGraphService implements DataGraphManager {
     @Override
     public void deleteEntity( EntityDataKey edk ) {
         lm.deleteVertex( edk.getEntityKeyId() );
-        eds.deleteEntity( edk );
+        eds.deleteEntities( edk );
     }
 
     @Override
     public void deleteAssociation( EdgeKey key ) {
         EntityKey entityKey = idService.getEntityKey( key.getEdgeEntityKeyId() );
         lm.deleteEdge( key );
-        eds.deleteEntity( new EntityDataKey( entityKey.getEntitySetId(), key.getEdgeEntityKeyId() ) );
+        eds.deleteEntities( new EntityDataKey( entityKey.getEntitySetId(), key.getEdgeEntityKeyId() ) );
     }
 
     @Override
@@ -164,7 +164,7 @@ public class DataGraphService implements DataGraphManager {
             UUID entitySetId,
             String entityId,
             SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
+            Set<PropertyType> authorizedPropertyTypes )
             throws ExecutionException, InterruptedException {
 
         final EntityKey key = new EntityKey( entitySetId, entityId );
@@ -203,7 +203,7 @@ public class DataGraphService implements DataGraphManager {
             SetMultimap<UUID, Object> entity,
             Map<UUID, EdmPrimitiveTypeKind> propertyTypes ) {
         EntityKey key = idService.getEntityKey( edk.getEntityKeyId() );
-        eds.deleteEntity( edk );
+        eds.deleteEntities( edk );
         eds.updateEntityAsync( key, entity, propertyTypes ).forEach( DataGraphService::tryGetAndLogErrors );
 
         propertyTypes.entrySet().forEach( entry -> {
@@ -219,8 +219,6 @@ public class DataGraphService implements DataGraphManager {
             Set<Association> associations,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
             throws InterruptedException, ExecutionException {
-        // List<ListenableFuture> futures = new ArrayList<ListenableFuture>( 2 * associations.size() );
-
         associations
                 .parallelStream()
                 .flatMap( association -> {

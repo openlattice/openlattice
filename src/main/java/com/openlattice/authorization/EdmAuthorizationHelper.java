@@ -22,15 +22,16 @@
 
 package com.openlattice.authorization;
 
+import com.google.common.collect.ImmutableSet;
+import com.hazelcast.util.Preconditions;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.PropertyType;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.type.EntityType;
-import com.hazelcast.util.Preconditions;
-import com.openlattice.datastore.services.EdmManager;
 
 public class EdmAuthorizationHelper {
 
@@ -60,6 +61,20 @@ public class EdmAuthorizationHelper {
                         Collectors.toSet() ), Principals.getCurrentPrincipals() )
                 .filter( authorization -> authorization.getPermissions().values().stream().allMatch( val -> val ) )
                 .map( authorization -> authorization.getAclKey().get( 1 ) ).collect( Collectors.toSet() );
+    }
+
+    public Set<PropertyType> getAuthorizedPropertyTypesOnEntitySet(
+            UUID entitySetId,
+            EnumSet<Permission> requiredPermissions ) {
+        return ImmutableSet.copyOf( edm.getPropertyTypes(
+                authz.accessChecksForPrincipals( getAllPropertiesOnEntitySet( entitySetId ).stream()
+                        .map( ptId -> new AccessCheck( new AclKey( entitySetId, ptId ), requiredPermissions ) )
+                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
+                        .filter( authorization ->
+                                authorization.getPermissions().values().stream().allMatch( val -> val ) )
+                        .map( authorization -> authorization.getAclKey().get( 1 ) )
+                        .collect( Collectors.toSet() ) ) );
+
     }
 
     public Set<UUID> getAllPropertiesOnEntitySet( UUID entitySetId ) {

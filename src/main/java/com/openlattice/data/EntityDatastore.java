@@ -22,18 +22,15 @@
 
 package com.openlattice.data;
 
-import com.dataloom.hazelcast.ListenableHazelcastFuture;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.openlattice.edm.type.PropertyType;
-import java.time.OffsetDateTime;
+import java.nio.ByteBuffer;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
@@ -72,10 +69,6 @@ public interface EntityDatastore {
 
     /**
      * Replaces a subset of the properties of an entity specified in the provided {@code entity} argument.
-     * @param entitySetId
-     * @param entityKeyId
-     * @param entity
-     * @param authorizedPropertyTypes
      */
     void partialReplaceEntity(
             UUID entitySetId,
@@ -85,23 +78,15 @@ public interface EntityDatastore {
 
     /**
      * Replace specific values in an entity
-     * @param entitySetId
-     * @param entityKeyId
-     * @param entity
-     * @param authorizedPropertyTypes
      */
     void replaceEntityProperties(
             UUID entitySetId,
             UUID entityKeyId,
-            SetMultimap<UUID, Map<Object,Object>> entity,
+            SetMultimap<UUID, Map<ByteBuffer, Object>> replacementProperties,
             Set<PropertyType> authorizedPropertyTypes );
 
     /**
      * Merges in new entity data without affecting existing entity data.
-     * @param entitySetId
-     * @param entityKeyId
-     * @param entity
-     * @param authorizedPropertyTypes
      */
     void mergeIntoEntity(
             UUID entitySetId,
@@ -109,28 +94,36 @@ public interface EntityDatastore {
             SetMultimap<UUID, Object> entity,
             Set<PropertyType> authorizedPropertyTypes );
 
-    // TODO remove vertices too
-    void deleteEntitySetData( UUID entitySetId );
-
-    void deleteEntity( EntityDataKey entityDataKey );
+    /**
+     * Clears (soft-deletes) the contents of an entity set by setting version to {@code -now()}
+     *
+     * @param entitySetId The id of the entity set to clear.
+     * @return The number of rows cleared from the entity set.
+     */
+    int clearEntitySet( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes );
 
     /**
-     * @param entityKey
-     * @param entityDetails
-     * @param authorizedPropertiesWithDataType
+     * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
+     *
+     * @param entitySetId The id of the entity set to clear.
+     * @param entityKeyId The entity key id for the entity set to clear.
+     * @return The number of properties cleared.
      */
-    void updateEntity(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
+    int clearEntities( UUID entitySetId, Set<UUID> entityKeyId, Set<PropertyType> authorizedPropertyTypes );
 
     /**
-     * Performs async storage of an entity.
+     * Deletes an entity set and removes the historical contents. This causes loss of historical data
+     * and should only be used for scrubbing customer data.
+     *
+     * @param entitySetId The entity set id to be hard deleted.
      */
-    Stream<ListenableFuture> updateEntityAsync(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
+    int deleteEntitySetData( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes );
 
-    Stream<EntityKey> getEntityKeysForEntitySet( UUID entitySetId );
+    /**
+     * Deletes an entity and removes the historical contents.
+     *
+     * @param entityKeyId The entity key id to be hard deleted.
+     */
+    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyId, Set<PropertyType> authorizedPropertyTypes );
+
 }
