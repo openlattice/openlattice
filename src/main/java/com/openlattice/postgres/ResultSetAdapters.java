@@ -196,7 +196,7 @@ public final class ResultSetAdapters {
         UUID srcSetId = (UUID) rs.getObject( "src_entity_set_id" );
         UUID dstSetId = (UUID) rs.getObject( "dst_entity_set_id" );
         UUID edgeSetId = (UUID) rs.getObject( "edge_entity_set_id" );
-        return new Edge( key, srcType, srcSetId, dstSetId, edgeSetId );
+        return new Edge( key, srcType, srcSetId, dstSetId, edgeSetId, dstTypeId, edgeTypeId );
     }
 
     public static EdgeKey edgeKey( ResultSet rs ) throws SQLException {

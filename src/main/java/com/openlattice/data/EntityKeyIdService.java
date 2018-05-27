@@ -19,9 +19,6 @@
  */
 package com.openlattice.data;
 
-import com.codahale.metrics.annotation.Timed;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.openlattice.data.EntityKey;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -50,4 +47,5 @@ public interface EntityKeyIdService {
 
     Map<UUID, EntityKey> getEntityKeys( Set<UUID> entityKeyIds );
 
+    Map<String, UUID> assignEntityKeyIds( UUID entitySetId, Set<String> entityIds );
 }

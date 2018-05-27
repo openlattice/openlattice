@@ -25,9 +25,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.query.Predicate;
 import com.openlattice.data.analytics.IncrementableWeightId;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
@@ -35,7 +37,6 @@ import java.util.stream.Stream;
 
 /**
  * Graph Object supporting CRUD operations of vertices and edges to the graph.
- *
  */
 public interface GraphApi {
 
@@ -83,14 +84,16 @@ public interface GraphApi {
 
     Void submitAggregator( Aggregator<Entry<EdgeKey, Edge>, Void> agg, Predicate p );
 
-    void deleteEdge( EdgeKey edgeKey );
+    void deleteEdge( EdgeKey edgeKey, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     ListenableFuture deleteEdgeAsync( EdgeKey edgeKey );
 
     int clearVerticesInEntitySet( UUID entitySetId );
+
     int clearVertices( UUID entitySetId, Set<UUID> vertices );
 
     int deleteVerticesInEntitySet( UUID entitySetId );
+
     int deleteVertices( UUID entitySetId, Set<UUID> vertices );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID vertexId );

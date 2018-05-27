@@ -28,22 +28,26 @@ import java.util.UUID;
 public class Edge {
     private EdgeKey key;
 
-    private UUID srcType;
-    private UUID srcSetId;
-    private UUID dstSetId;
-    private UUID edgeSetId;
+    private final UUID srcType;
+    private final UUID srcSetId;
+    private final UUID dstSetId;
+    private final UUID edgeSetId;
+    private final UUID dstTypeId;
+    private final UUID edgeTypeId;
 
     public Edge(
             EdgeKey key,
             UUID srcType,
             UUID srcSetId,
             UUID dstSetId,
-            UUID edgeSetId ) {
+            UUID edgeSetId, UUID dstTypeId, UUID edgeTypeId ) {
         this.key = key;
         this.srcType = srcType;
         this.srcSetId = srcSetId;
         this.dstSetId = dstSetId;
         this.edgeSetId = edgeSetId;
+        this.dstTypeId = dstTypeId;
+        this.edgeTypeId = edgeTypeId;
     }
 
     public EdgeKey getKey() {
@@ -79,11 +83,11 @@ public class Edge {
     }
 
     public UUID getDstTypeId() {
-        return key.getDstTypeId();
+        return dstTypeId;
     }
 
     public UUID getEdgeTypeId() {
-        return key.getEdgeTypeId();
+        return edgeTypeId;
     }
 
     @Override public String toString() {

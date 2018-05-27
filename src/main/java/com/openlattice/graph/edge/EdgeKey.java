@@ -23,26 +23,28 @@
 package com.openlattice.graph.edge;
 
 import com.hazelcast.core.PartitionAware;
+import java.util.Objects;
 import java.util.UUID;
 
-/**
- * An EdgeKey is the pojo for the primary key of edges table. In the current setting, this is source vertexId,
- * destination vertexId, and the entity key referencing the edge in the edge entity set.
- *
- * @author Ho Chung Siu
- */
 public class EdgeKey implements PartitionAware<UUID> {
+    private final UUID srcEntitySetId;
     private final UUID srcEntityKeyId;
-    private final UUID dstTypeId;
-    private final UUID edgeTypeId;
+    private final UUID dstEntitySetId;
     private final UUID dstEntityKeyId;
+    private final UUID edgeEntitySetId;
     private final UUID edgeEntityKeyId;
 
-    public EdgeKey( UUID srcEntityKeyId, UUID dstTypeId, UUID edgeTypeId, UUID dstEntityKeyId, UUID edgeEntityKeyId ) {
+    public EdgeKey(
+            UUID srcEntitySetId,
+            UUID srcEntityKeyId,
+            UUID dstEntitySetId,
+            UUID dstEntityKeyId,
+            UUID edgeEntitySetId, UUID edgeEntityKeyId ) {
+        this.srcEntitySetId = srcEntitySetId;
         this.srcEntityKeyId = srcEntityKeyId;
-        this.dstTypeId = dstTypeId;
-        this.edgeTypeId = edgeTypeId;
+        this.dstEntitySetId = dstEntitySetId;
         this.dstEntityKeyId = dstEntityKeyId;
+        this.edgeEntitySetId = edgeEntitySetId;
         this.edgeEntityKeyId = edgeEntityKeyId;
     }
 
@@ -50,12 +52,50 @@ public class EdgeKey implements PartitionAware<UUID> {
         return srcEntityKeyId;
     }
 
-    public UUID getDstTypeId() {
-        return dstTypeId;
+    public UUID getSrcEntitySetId() {
+        return srcEntitySetId;
     }
 
-    public UUID getEdgeTypeId() {
-        return edgeTypeId;
+    public UUID getDstEntitySetId() {
+        return dstEntitySetId;
+    }
+
+    public UUID getEdgeEntitySetId() {
+        return edgeEntitySetId;
+    }
+
+    @Override public String toString() {
+        return "EdgeKey{" +
+                "srcEntitySetId=" + srcEntitySetId +
+                ", srcEntityKeyId=" + srcEntityKeyId +
+                ", dstEntitySetId=" + dstEntitySetId +
+                ", dstEntityKeyId=" + dstEntityKeyId +
+                ", edgeEntitySetId=" + edgeEntitySetId +
+                ", edgeEntityKeyId=" + edgeEntityKeyId +
+                '}';
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof EdgeKey ) ) { return false; }
+        EdgeKey edgeKey = (EdgeKey) o;
+        return Objects.equals( srcEntitySetId, edgeKey.srcEntitySetId ) &&
+                Objects.equals( srcEntityKeyId, edgeKey.srcEntityKeyId ) &&
+                Objects.equals( dstEntitySetId, edgeKey.dstEntitySetId ) &&
+                Objects.equals( dstEntityKeyId, edgeKey.dstEntityKeyId ) &&
+                Objects.equals( edgeEntitySetId, edgeKey.edgeEntitySetId ) &&
+                Objects.equals( edgeEntityKeyId, edgeKey.edgeEntityKeyId );
+    }
+
+    @Override public int hashCode() {
+
+        return Objects
+                .hash( srcEntitySetId,
+                        srcEntityKeyId,
+                        dstEntitySetId,
+                        dstEntityKeyId,
+                        edgeEntitySetId,
+                        edgeEntityKeyId );
     }
 
     public UUID getDstEntityKeyId() {
@@ -71,35 +111,4 @@ public class EdgeKey implements PartitionAware<UUID> {
         return srcEntityKeyId;
     }
 
-    @Override public String toString() {
-        return "EdgeKey{" +
-                "srcEntityKeyId=" + srcEntityKeyId +
-                ", dstTypeId=" + dstTypeId +
-                ", edgeTypeId=" + edgeTypeId +
-                ", dstEntityKeyId=" + dstEntityKeyId +
-                ", edgeEntityKeyId=" + edgeEntityKeyId +
-                '}';
-    }
-
-    @Override public boolean equals( Object o ) {
-        if ( this == o ) { return true; }
-        if ( !( o instanceof EdgeKey ) ) { return false; }
-
-        EdgeKey edgeKey = (EdgeKey) o;
-
-        if ( !srcEntityKeyId.equals( edgeKey.srcEntityKeyId ) ) { return false; }
-        if ( !dstTypeId.equals( edgeKey.dstTypeId ) ) { return false; }
-        if ( !edgeTypeId.equals( edgeKey.edgeTypeId ) ) { return false; }
-        if ( !dstEntityKeyId.equals( edgeKey.dstEntityKeyId ) ) { return false; }
-        return edgeEntityKeyId.equals( edgeKey.edgeEntityKeyId );
-    }
-
-    @Override public int hashCode() {
-        int result = srcEntityKeyId.hashCode();
-        result = 31 * result + dstTypeId.hashCode();
-        result = 31 * result + edgeTypeId.hashCode();
-        result = 31 * result + dstEntityKeyId.hashCode();
-        result = 31 * result + edgeEntityKeyId.hashCode();
-        return result;
-    }
 }

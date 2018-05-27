@@ -38,12 +38,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public interface DataGraphManager {
 
-    UUID createEntity(
-            UUID entitySetId,
-            String entityId,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
-
     /*
      * Entity set methods
      */
@@ -70,15 +64,15 @@ public interface DataGraphManager {
     //Hard deletes
     int deleteEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    int deleteEntities( Set<EntityDataKey> edk );
+    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    int deleteAssociation( Set<EdgeKey> key );
+    int deleteAssociation( Set<EdgeKey> key, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /*
      * Bulk endpoints for entities/associations
      */
 
-    void createEntities(
+    Map<String, UUID> createEntities(
             UUID entitySetId,
             Map<String, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
@@ -99,9 +93,8 @@ public interface DataGraphManager {
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
     void createAssociations(
-            UUID entitySetId,
             Set<Association> associations,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
     void createEntitiesAndAssociations(
             Set<Entity> entities,

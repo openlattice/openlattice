@@ -26,36 +26,37 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.analysis.requests.TopUtilizerDetails;
 import com.openlattice.data.analytics.IncrementableWeightId;
-import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.requests.Association;
 import com.openlattice.data.requests.Entity;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
-import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.Graph;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.hazelcast.HazelcastMap;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.collections4.keyvalue.MultiKey;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,10 +67,9 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataGraphService implements DataGraphManager {
-    private static final Logger logger = LoggerFactory
+    private static final Logger                                   logger     = LoggerFactory
             .getLogger( DataGraphService.class );
-    private final ListeningExecutorService executor;
-    private final Cache<MultiKey, IncrementableWeightId[]> queryCache = CacheBuilder.newBuilder()
+    private final        Cache<MultiKey, IncrementableWeightId[]> queryCache = CacheBuilder.newBuilder()
             .maximumSize( 1000 )
             .expireAfterWrite( 30, TimeUnit.SECONDS )
             .build();
@@ -85,12 +85,10 @@ public class DataGraphService implements DataGraphManager {
             HazelcastEntityDatastore eds,
             Graph lm,
             EntityKeyIdService ids,
-            ListeningExecutorService executor,
             EventBus eventBus ) {
         this.lm = lm;
         this.idService = ids;
         this.eds = eds;
-        this.executor = executor;
         this.eventBus = eventBus;
 
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
@@ -124,81 +122,114 @@ public class DataGraphService implements DataGraphManager {
             UUID entitySetId,
             UUID entityKeyId,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-         eds.getEntities( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes ).to;
+        return eds
+                .getEntities( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes )
+                .iterator()
+                .next();
     }
 
-    @Override
-    public void deleteEntity( EntityDataKey edk ) {
-        lm.deleteVertex( edk.getEntityKeyId() );
-        eds.deleteEntities( edk );
+    @Override public int clearEntitySet(
+            UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
     }
 
-    @Override
-    public void deleteAssociation( EdgeKey key ) {
-        EntityKey entityKey = idService.getEntityKey( key.getEdgeEntityKeyId() );
-        lm.deleteEdge( key );
-        eds.deleteEntities( new EntityDataKey( entityKey.getEntitySetId(), key.getEdgeEntityKeyId() ) );
+    @Override public int clearEntities(
+            UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
     }
 
+    @Override public int clearAssociations( Set<EdgeKey> key ) {
+        return 0;
+    }
+
+    //TODO: Return information about delete vertices.
     @Override
-    public UUID createEntity(
+    public int deleteEntities(
             UUID entitySetId,
-            String entityId,
-            SetMultimap<UUID, Object> entityDetails,
+            Set<UUID> entityKeyIds,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-
-        final EntityKey key = new EntityKey( entitySetId, entityId );
-        createEntity( key, entityDetails, authorizedPropertyTypes )
-                .forEach( DataGraphService::tryGetAndLogErrors );
-        return idService.getEntityKeyId( key );
+        lm.deleteVertices( entitySetId, entityKeyIds );
+        return eds.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
     }
 
     @Override
-    public void createEntities(
+    public int deleteAssociation( Set<EdgeKey> keys, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        final SetMultimap<UUID, UUID> entitySetsToEntityKeyIds = HashMultimap.create();
+        for ( EdgeKey edgeKey : keys ) {
+            lm.deleteEdge( edgeKey, authorizedPropertyTypes );
+            entitySetsToEntityKeyIds.put( edgeKey.getEdgeEntitySetId(), edgeKey.getEdgeEntityKeyId() );
+        }
+
+        return Multimaps.asMap( entitySetsToEntityKeyIds )
+                .entrySet()
+                .stream()
+                .mapToInt( e -> eds.deleteEntities( e.getKey(), e.getValue(), authorizedPropertyTypes ) )
+                .sum();
+    }
+
+    @Override
+    public Map<String, UUID> createEntities(
             UUID entitySetId,
             Map<String, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        eds.createEntities( entitySetId,
+
+        final Map<String, UUID> ids = idService.assignEntityKeyIds( entitySetId, entities.keySet() );
+        final Map<UUID, SetMultimap<UUID, Object>> identifiedEntities =
                 entities.entrySet()
-                        .parallelStream()
-                        .flatMap(
-                                entity -> {
-                                    final EntityKey key = new EntityKey( entitySetId, entity.getKey() );
-                                    return createEntity( key, entity.getValue(), authorizedPropertyTypes );
-                                } )
-                        .forEach( DataGraphService::tryGetAndLogErrors );
+                        .stream()
+                        .collect( Collectors.toMap( e -> ids.get( e.getKey() ), Entry::getValue ) );
+        eds.createEntities( entitySetId, identifiedEntities, authorizedPropertyTypes );
+        return ids;
     }
 
-    public void replaceEntity(
-            EntityDataKey edk,
-            SetMultimap<UUID, Object> entity,
+    @Override public void replaceEntites(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        eds.replaceEntities()
-        EntityKey key = idService.getEntityKey( edk.getEntityKeyId() );
-        eds.deleteEntities( edk );
-        eds.updateEntityAsync( key, entity, propertyTypes ).forEach( DataGraphService::tryGetAndLogErrors );
 
-        propertyTypes.entrySet().forEach( entry -> {
-            if ( entry.getValue().equals( EdmPrimitiveTypeKind.Binary ) ) { entity.removeAll( entry.getKey() ); }
-        } );
+    }
 
-        eventBus.post( new EntityDataCreatedEvent( edk, entity, false ) );
+    @Override public void partialReplaceEntites(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+
+    }
+
+    @Override public void replacePropertiesInEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+
     }
 
     @Override
     public void createAssociations(
-            UUID entitySetId,
             Set<Association> associations,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
-            throws InterruptedException, ExecutionException {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySet ) {
+
+        final Map<UUID, Map<String, SetMultimap<UUID, Object>>> associationEntitiesByEntitySet = new HashMap<>();
+        final Set<EntityKey> entityKeys = new HashSet<>( 2 * associations.size() );
+
+        for ( Association association : associations ) {
+            final Map<String, SetMultimap<UUID, Object>> associationEntities = associationEntitiesByEntitySet
+                    .computeIfAbsent( association.getKey().getEntitySetId(), k -> new HashMap<>() );
+            associationEntities.put( association.getKey().getEntityId(), association.getDetails() );
+            entityKeys.add( association.getSrc() );
+            entityKeys.add( association.getDst() );
+        }
+        final Map<EntityKey, UUID> entityKeyIds = idService.getEntityKeyIds( entityKeys );
+
+        associationEntitiesByEntitySet
+                .forEach( ( entitySetId, entities ) ->
+                        createEntities( entitySetId, entities, authorizedPropertiesByEntitySet.get( entitySetId ) )
+                                .forEach( ( entityId, entityKeyId ) ->
+                                        entityKeyIds.put( new EntityKey( entitySetId, entityId ), entityKeyId ) ) );
+
         associations
                 .parallelStream()
-                .flatMap( association -> {
-                    UUID edgeId = idService.getEntityKeyId( association.getKey() );
-
-                    Stream<ListenableFuture> writes = eds.updateEntityAsync( association.getKey(),
-                            association.getDetails(),
-                            authorizedPropertiesWithDataType );
+                .map( association -> {
+                    UUID edgeId = entityKeyIds.get( association.getKey() );
 
                     UUID srcId = idService.getEntityKeyId( association.getSrc() );
                     UUID srcTypeId = typeIds.getUnchecked( association.getSrc().getEntitySetId() );
@@ -209,7 +240,7 @@ public class DataGraphService implements DataGraphManager {
                     UUID edgeTypeId = typeIds.getUnchecked( association.getKey().getEntitySetId() );
                     UUID edgeSetId = association.getKey().getEntitySetId();
 
-                    ListenableFuture addEdge = lm
+                    return lm
                             .addEdgeAsync( srcId,
                                     srcTypeId,
                                     srcSetId,
@@ -219,7 +250,6 @@ public class DataGraphService implements DataGraphManager {
                                     edgeId,
                                     edgeTypeId,
                                     edgeSetId );
-                    return Stream.concat( writes, Stream.of( addEdge ) );
                 } ).forEach( DataGraphService::tryGetAndLogErrors );
     }
 
@@ -227,49 +257,24 @@ public class DataGraphService implements DataGraphManager {
     public void createEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,
-            Map<UUID, Set<PropertyType>> authorizedPropertiesByEntitySetId ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySetId ) {
         // Map<EntityKey, UUID> idsRegistered = new HashMap<>();
 
-        entities.parallelStream()
-                .flatMap( entity -> createEntity( entity.getKey(),
-                        entity.getDetails(),
-                        authorizedPropertiesByEntitySetId.get( entity.getKey().getEntitySetId() ) ) )
-                .forEach( DataGraphService::tryGetAndLogErrors );
+        final Map<UUID, Map<String, SetMultimap<UUID, Object>>> entitiesByEntitySet = new HashMap<>();
 
-        associations.parallelStream().flatMap( association -> {
-            UUID srcId = idService.getEntityKeyId( association.getSrc() );
-            UUID dstId = idService.getEntityKeyId( association.getDst() );
-            if ( srcId == null || dstId == null ) {
-                String err = String.format(
-                        "Edge %s cannot be created because some vertices failed to register for an id.",
-                        association.toString() );
-                logger.debug( err );
-                return Stream.of( Futures.immediateFailedFuture( new ResourceNotFoundException( err ) ) );
-            } else {
-                Stream<ListenableFuture> writes = eds.updateEntityAsync( association.getKey(),
-                        association.getDetails(),
-                        authorizedPropertiesByEntitySetId.get( association.getKey().getEntitySetId() ) );
+        for ( Entity entity : entities ) {
+            final Map<String, SetMultimap<UUID, Object>> entitiesToCreate = entitiesByEntitySet
+                    .computeIfAbsent( entity.getEntitySetId(), k -> new HashMap<>() );
+            entitiesToCreate.put( entity.getEntityId(), entity.getDetails() );
+        }
 
-                UUID srcTypeId = typeIds.getUnchecked( association.getSrc().getEntitySetId() );
-                UUID srcSetId = association.getSrc().getEntitySetId();
-                UUID dstTypeId = typeIds.getUnchecked( association.getDst().getEntitySetId() );
-                UUID dstSetId = association.getDst().getEntitySetId();
-                UUID edgeId = idService.getEntityKeyId( association.getKey() );
-                UUID edgeTypeId = typeIds.getUnchecked( association.getKey().getEntitySetId() );
-                UUID edgeSetId = association.getKey().getEntitySetId();
+        entitiesByEntitySet
+                .forEach( ( entitySetId, entitySet ) ->
+                        createEntities( entitySetId,
+                                entitySet,
+                                authorizedPropertiesByEntitySetId.get( entitySetId ) ) );
 
-                ListenableFuture addEdge = lm.addEdgeAsync( srcId,
-                        srcTypeId,
-                        srcSetId,
-                        dstId,
-                        dstTypeId,
-                        dstSetId,
-                        edgeId,
-                        edgeTypeId,
-                        edgeSetId );
-                return Stream.concat( writes, Stream.of( addEdge ) );
-            }
-        } ).forEach( DataGraphService::tryGetAndLogErrors );
+        createAssociations( associations,authorizedPropertiesByEntitySetId );
     }
 
     @Override
@@ -277,8 +282,7 @@ public class DataGraphService implements DataGraphManager {
             UUID entitySetId,
             List<TopUtilizerDetails> topUtilizerDetailsList,
             int numResults,
-            Set<PropertyType> authorizedPropertyTypes )
-            throws InterruptedException, ExecutionException {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
         /*
          * ByteBuffer queryId; try { queryId = ByteBuffer.wrap( ObjectMappers.getSmileMapper().writeValueAsBytes(
          * topUtilizerDetailsList ) ); } catch ( JsonProcessingException e1 ) { logger.debug(

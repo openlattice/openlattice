@@ -100,7 +100,7 @@ public class Graph implements GraphApi {
                 srcVertexEntityTypeId,
                 srcVertexEntitySetId,
                 dstVertexEntitySetId,
-                edgeEntitySetId );
+                edgeEntitySetId, dstTypeId, edgeTypeId );
 
         return new ListenableHazelcastFuture<>( edges.setAsync( key, edge ) );
     }
