@@ -87,7 +87,11 @@ public interface GraphApi {
 
     ListenableFuture deleteEdgeAsync( EdgeKey edgeKey );
 
-    void deleteEdges( UUID srcId );
+    int clearVerticesInEntitySet( UUID entitySetId );
+    int clearVertices( UUID entitySetId, Set<UUID> vertices );
+
+    int deleteVerticesInEntitySet( UUID entitySetId );
+    int deleteVertices( UUID entitySetId, Set<UUID> vertices );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID vertexId );
 

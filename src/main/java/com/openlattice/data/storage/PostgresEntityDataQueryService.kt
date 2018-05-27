@@ -51,7 +51,7 @@ private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::cla
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     fun streamableEntitySet(entitySetId: UUID,
-                            authorizedPropertyTypes: Set<PropertyType>,
+                            authorizedPropertyTypes: Map<UUID, PropertyType>,
                             metadataOptions: Set<MetadataOption>,
                             version: Optional<Long> = Optional.empty()): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         return streamableEntitySet(entitySetId, setOf(), authorizedPropertyTypes, metadataOptions, version)
@@ -59,7 +59,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
     fun streamableEntitySet(entitySetId: UUID,
                             entityKeyIds: Set<UUID>,
-                            authorizedPropertyTypes: Set<PropertyType>,
+                            authorizedPropertyTypes: Map<UUID, PropertyType>,
                             metadataOptions: Set<MetadataOption>,
                             version: Optional<Long> = Optional.empty()): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         return PostgresIterable(Supplier<StatementHolder> {
@@ -70,14 +70,14 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                         selectEntitySetWithPropertyTypesAndVersion(
                                 entitySetId,
                                 entityKeyIds,
-                                authorizedPropertyTypes.map { it.id to it.type.fullQualifiedNameAsString }.toMap(),
+                                authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
                                 metadataOptions,
                                 version.get())
                     } else {
                         selectEntitySetWithPropertyTypes(
                                 entitySetId,
                                 entityKeyIds,
-                                authorizedPropertyTypes.map { it.id to it.type.fullQualifiedNameAsString }.toMap(),
+                                authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
                                 metadataOptions)
                     })
             StatementHolder(connection, statement, rs)
@@ -85,14 +85,14 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     }
 
 
-    fun upsertEntities(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>): Int {
+    fun upsertEntities(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         val connection = hds.getConnection()
         connection.use {
             val version = System.currentTimeMillis()
             val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId, version))
-            val datatypes = authorizedPropertyTypes.map { it.id to it.datatype }.toMap()
+            val datatypes = authorizedPropertyTypes.map { it.key to it.value.datatype }.toMap()
             val preparedStatements = authorizedPropertyTypes
-                    .map { it.id to connection.prepareStatement(upsertPropertyValues(entitySetId, it.id, it.type.fullQualifiedNameAsString, version)) }
+                    .map { it.key to connection.prepareStatement(upsertPropertyValues(entitySetId, it.key, it.value.type.fullQualifiedNameAsString, version)) }
                     .toMap()
 
             entities.forEach {
@@ -135,19 +135,19 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         return tombstone(entitySetId)
     }
 
-    fun clearEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Set<PropertyType>): Int {
+    fun clearEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         //TODO: Make these a single transaction.
-        tombstone(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        tombstone(entitySetId, entityKeyIds, authorizedPropertyTypes.values)
         return tombstone(entitySetId, entityKeyIds)
     }
 
-    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Set<PropertyType>): Int {
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         val connection = hds.getConnection()
         return connection.use {
             return authorizedPropertyTypes
                     .map {
                         val s = connection.createStatement()
-                        val count: Int = s.executeUpdate(deletePropertiesOfEntities(entitySetId, it.id, entityKeyIds))
+                        val count: Int = s.executeUpdate(deletePropertiesOfEntities(entitySetId, it.key, entityKeyIds))
                         s.close()
                         count
                     }
@@ -155,13 +155,13 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         }
     }
 
-    fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Set<PropertyType>): Int {
+    fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         val connection = hds.getConnection()
         return connection.use {
             authorizedPropertyTypes
                     .map {
                         val s = connection.createStatement()
-                        val count: Int = s.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.id))
+                        val count: Int = s.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.key))
                         s.close()
                         count
                     }
@@ -172,16 +172,17 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     /**
      * Replace Replacing an entity involves setting all properties for that versions for that entity to -now()*
      */
-    fun replaceEntity(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>) {
-        tombstone(entitySetId, entities.keys, authorizedPropertyTypes)
+    fun replaceEntity(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Map<UUID, PropertyType>) {
+        tombstone(entitySetId, entities.keys, authorizedPropertyTypes.values)
         upsertEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
-    fun partialReplaceEntity(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Set<PropertyType>) {
+    fun partialReplaceEntity(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>, authorizedPropertyTypes: Map<UUID, PropertyType>) {
         //Only tombstone properties being replaced.
         entities.forEach {
             val entity = it.value
-            tombstone(entitySetId, setOf(it.key), authorizedPropertyTypes.filter(entity::containsKey).toSet())
+            //Implied access enforcement as it will raise exception if lacking permission
+            tombstone(entitySetId, setOf(it.key), entity.keySet().map { authorizedPropertyTypes[it]!! }.toSet())
         }
         upsertEntities(entitySetId, entities, authorizedPropertyTypes)
     }
@@ -189,7 +190,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     /**
      * Tombstones the provided set of property types for each provided entity key.
      */
-    private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>, propertyTypesToTombstone: Set<PropertyType>): Int {
+    private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>, propertyTypesToTombstone: Collection<PropertyType>): Int {
         val connection = hds.getConnection()
         connection.use {
             val tombstoneVersion = System.currentTimeMillis()

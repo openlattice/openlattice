@@ -27,87 +27,92 @@ import com.openlattice.data.requests.Entity;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.EdgeKey;
+import java.nio.ByteBuffer;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public interface DataGraphManager {
+
+    UUID createEntity(
+            UUID entitySetId,
+            String entityId,
+            SetMultimap<UUID, Object> entityDetails,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
     /*
      * Entity set methods
      */
     EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
             LinkedHashSet<String> orderedPropertyNames,
-            Set<PropertyType> authorizedPropertyTypes );
-
-    // TODO remove vertices too
-    int deleteEntitySetData( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes );
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /*
      * CRUD methods for entity
      */
     SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entityKeyId,
-            Set<PropertyType> authorizedPropertyTypes );
+            UUID entitySetId,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    void updateEntity(
-            UUID elementId,
-            SetMultimap<UUID, Object> entityDetails,
-            Set<PropertyType> authorizedPropertyTypes );
+    //Soft deletes
+    int clearEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    void updateEntity(
-            EntityKey elementReference,
-            SetMultimap<UUID, Object> entityDetails,
-            Set<PropertyType> authorizedPropertyTypes );
+    int clearEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    void deleteEntity( EntityDataKey edk );
+    int clearAssociations( Set<EdgeKey> key );
 
-    void deleteAssociation( EdgeKey key );
+    //Hard deletes
+    int deleteEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    int deleteEntities( Set<EntityDataKey> edk );
+
+    int deleteAssociation( Set<EdgeKey> key );
 
     /*
      * Bulk endpoints for entities/associations
      */
 
-    UUID createEntity(
-            UUID entitySetId,
-            String entityId,
-            SetMultimap<UUID, Object> entityDetails,
-            Set<PropertyType> authorizedPropertyTypes )
-            throws ExecutionException, InterruptedException;
-
     void createEntities(
             UUID entitySetId,
             Map<String, SetMultimap<UUID, Object>> entities,
-            Set<PropertyType> authorizedPropertyTypes )
-            throws ExecutionException, InterruptedException;
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    void replaceEntity(
-            EntityDataKey edk,
-            SetMultimap<UUID, Object> entity,
-            Set<PropertyType> authorizedPropertyTypes );
+    void replaceEntites(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    void partialReplaceEntites(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    void replacePropertiesInEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     void createAssociations(
             UUID entitySetId,
             Set<Association> associations,
-            Set<PropertyType> authorizedPropertyTypes )
-            throws ExecutionException, InterruptedException;
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     void createEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,
-            Map<UUID, Set<PropertyType>> authorizedPropertiesByEntitySetId );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySetId );
 
     Stream<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
             UUID entitySetId,
             List<TopUtilizerDetails> topUtilizerDetails,
             int numResults,
-            Set<PropertyType> authorizedPropertyTypes )
-            throws InterruptedException, ExecutionException;
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     NeighborTripletSet getNeighborEntitySets( UUID entitySetId );
 }

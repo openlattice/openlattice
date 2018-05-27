@@ -74,7 +74,6 @@ import static com.openlattice.postgres.PostgresColumn.SHOW;
 import static com.openlattice.postgres.PostgresColumn.SRC;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
 import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
-import static com.openlattice.postgres.PostgresColumn.SYNC_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
@@ -132,6 +131,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -154,7 +154,7 @@ public final class ResultSetAdapters {
         String entityId = rs.getString( "entityId" );
         UUID propertyTypeId = (UUID) rs.getObject( "property_type_id" );
         byte[] hash = rs.getBytes( "property_value" );
-        return new DataKey( id, entitySetId, syncId, entityId, propertyTypeId, hash );
+        return new DataKey( id, entitySetId, entityId, propertyTypeId, hash );
     }
 
     public static EntityDataKey entityDataKey( ResultSet rs ) throws SQLException {
@@ -194,12 +194,9 @@ public final class ResultSetAdapters {
         EdgeKey key = edgeKey( rs );
         UUID srcType = (UUID) rs.getObject( "src_type_id" );
         UUID srcSetId = (UUID) rs.getObject( "src_entity_set_id" );
-
-        UUID srcSyncId = (UUID) rs.getObject( "src_sync_id" );
         UUID dstSetId = (UUID) rs.getObject( "dst_entity_set_id" );
-        UUID dstSyncId = (UUID) rs.getObject( "dst_sync_id" );
         UUID edgeSetId = (UUID) rs.getObject( "edge_entity_set_id" );
-        return new Edge( key, srcType, srcSetId, srcSyncId, dstSetId, dstSyncId, edgeSetId );
+        return new Edge( key, srcType, srcSetId, dstSetId, edgeSetId );
     }
 
     public static EdgeKey edgeKey( ResultSet rs ) throws SQLException {
@@ -214,9 +211,8 @@ public final class ResultSetAdapters {
 
     public static EntityKey entityKey( ResultSet rs ) throws SQLException {
         UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
-        UUID syncId = (UUID) rs.getObject( SYNC_ID_FIELD );
         String entityId = rs.getString( ENTITY_ID_FIELD );
-        return new EntityKey( entitySetId, entityId, syncId );
+        return new EntityKey( entitySetId, entityId );
     }
 
     public static Range range( ResultSet rs ) throws SQLException {
@@ -629,7 +625,7 @@ public final class ResultSetAdapters {
 
     public static SetMultimap<FullQualifiedName, Object> implicitEntity(
             ResultSet rs,
-            Set<PropertyType> authorizedPropertyTypes, Set<MetadataOption> metadataOptions ) throws SQLException {
+            Map<UUID, PropertyType> authorizedPropertyTypes, Set<MetadataOption> metadataOptions ) throws SQLException {
         final UUID entityKeyId = (UUID) rs.getObject( DataTables.ID_FQN.getFullQualifiedNameAsString() );
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
 
@@ -643,7 +639,7 @@ public final class ResultSetAdapters {
 
         data.put( ID_FQN, entityKeyId );
 
-        for ( PropertyType propertyType : authorizedPropertyTypes ) {
+        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
             final String fqn = propertyType.getType().getFullQualifiedNameAsString();
             final List<?> objects;
             switch ( propertyType.getDatatype() ) {

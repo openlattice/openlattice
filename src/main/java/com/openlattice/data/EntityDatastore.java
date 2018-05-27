@@ -41,58 +41,60 @@ public interface EntityDatastore {
     EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
             LinkedHashSet<String> orderedPropertyNames,
-            Set<PropertyType> authorizedPropertyTypes );
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,
-            Set<PropertyType> authorizedPropertyTypes );
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
-            Map<UUID, Set<PropertyType>> authorizedPropertyTypesByEntitySet );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
 
+    @Deprecated
     SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entitySetId,
             String entityId,
-            Set<PropertyType> authorizedPropertyTypes );
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    int createEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Replaces the contents of an entity in its entirety. Equivalent to a delete of the existing entity and write
      * of new values
      */
-    void replaceEntity(
+    int replaceEntities(
             UUID entitySetId,
-            UUID entityKeyId,
-            SetMultimap<UUID, Object> entity,
-            Set<PropertyType> authorizedPropertyTypes );
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Replaces a subset of the properties of an entity specified in the provided {@code entity} argument.
      */
-    void partialReplaceEntity(
+    int partialReplaceEntities(
             UUID entitySetId,
-            UUID entityKeyId,
-            SetMultimap<UUID, Object> entity,
-            Set<PropertyType> authorizedPropertyTypes );
+            Map<UUID, SetMultimap<UUID, Object>> entity,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Replace specific values in an entity
      */
-    void replaceEntityProperties(
+    int replacePropertiesInEntities(
             UUID entitySetId,
-            UUID entityKeyId,
-            SetMultimap<UUID, Map<ByteBuffer, Object>> replacementProperties,
-            Set<PropertyType> authorizedPropertyTypes );
+            Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Merges in new entity data without affecting existing entity data.
      */
-    void mergeIntoEntity(
+    int mergeIntoEntities(
             UUID entitySetId,
-            UUID entityKeyId,
-            SetMultimap<UUID, Object> entity,
-            Set<PropertyType> authorizedPropertyTypes );
+            Map<UUID,SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Clears (soft-deletes) the contents of an entity set by setting version to {@code -now()}
@@ -100,7 +102,7 @@ public interface EntityDatastore {
      * @param entitySetId The id of the entity set to clear.
      * @return The number of rows cleared from the entity set.
      */
-    int clearEntitySet( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes );
+    int clearEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
@@ -109,7 +111,7 @@ public interface EntityDatastore {
      * @param entityKeyId The entity key id for the entity set to clear.
      * @return The number of properties cleared.
      */
-    int clearEntities( UUID entitySetId, Set<UUID> entityKeyId, Set<PropertyType> authorizedPropertyTypes );
+    int clearEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Deletes an entity set and removes the historical contents. This causes loss of historical data
@@ -117,13 +119,13 @@ public interface EntityDatastore {
      *
      * @param entitySetId The entity set id to be hard deleted.
      */
-    int deleteEntitySetData( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes );
+    int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Deletes an entity and removes the historical contents.
      *
      * @param entityKeyId The entity key id to be hard deleted.
      */
-    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyId, Set<PropertyType> authorizedPropertyTypes );
+    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
 }

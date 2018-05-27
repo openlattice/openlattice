@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -63,7 +64,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -105,7 +105,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     public EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
             LinkedHashSet<String> orderedPropertyNames,
-            Set<PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
         return new EntitySetData<>(
                 orderedPropertyNames,
                 dataQueryService.streamableEntitySet( entitySetId,
@@ -121,7 +121,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     public SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entitySetId,
             String entityId,
-            Set<PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
         UUID entityKeyId = idService.getEntityKeyId( new EntityKey( entitySetId, entityId ) );
         PostgresIterator<SetMultimap<FullQualifiedName, Object>> pgIter = dataQueryService
                 .streamableEntitySet( entitySetId,
@@ -149,54 +149,60 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     @Timed
-    @Override public void replaceEntity(
+    @Override public int createEntities(
             UUID entitySetId,
-            UUID entityKeyId,
-            SetMultimap<UUID, Object> entity,
-            Set<PropertyType> authorizedPropertyTypes ) {
-
-    }
-
-    @Timed
-    @Override public void partialReplaceEntity(
-            UUID entitySetId,
-            UUID entityKeyId,
-            SetMultimap<UUID, Object> entity,
-            Set<PropertyType> authorizedPropertyTypes ) {
-
-    }
-
-    @Timed
-    @Override public void replaceEntityProperties(
-            UUID entitySetId,
-            UUID entityKeyId,
-            SetMultimap<UUID, Map<ByteBuffer, Object>> entity,
-            Set<PropertyType> authorizedPropertyTypes ) {
-
-    }
-
-    @Timed
-    @Override public void mergeIntoEntity(
-            UUID entitySetId,
-            UUID entityKeyId,
-            SetMultimap<UUID, Object> entity,
-            Set<PropertyType> authorizedPropertyTypes ) {
-
-    }
-
-    @Override public int clearEntitySet(
-            UUID entitySetId, Set<PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
         return 0;
     }
 
+    @Timed
+    @Override public int replaceEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
+    }
+
+    @Timed
+    @Override public int partialReplaceEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entity,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
+    }
+
+    @Timed
+    @Override public int replacePropertiesInEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
+    }
+
+    @Timed
+    @Override public int mergeIntoEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
+    }
+
+    @Timed
+    @Override public int clearEntitySet(
+            UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
+    }
+
+    @Timed
     @Override public int clearEntities(
-            UUID entitySetId, Set<UUID> entityKeyId, Set<PropertyType> authorizedPropertyTypes ) {
+            UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         return 0;
     }
 
     private Map<EntityDataKey, SetMultimap<FullQualifiedName, Object>> getAllEntities(
             LinkedHashSet<EntityDataKey> dataKeys,
-            Set<PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final SetMultimap<UUID, UUID> entitySetToIds = HashMultimap.create();
         final Map<EntityDataKey, SetMultimap<FullQualifiedName, Object>> entities = new HashMap<>( dataKeys.size() );
 
@@ -222,7 +228,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     public Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,
-            Set<PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return dataQueryService.streamableEntitySet(
                 entitySetId,
@@ -236,7 +242,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     public ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
-            Map<UUID, Set<PropertyType>> authorizedPropertyTypesByEntitySet ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
 
         final int keyCount = entitySetIdsToEntityKeyIds.keySet().size();
         final int avgValuesPerKey = entitySetIdsToEntityKeyIds.size() / keyCount;
@@ -308,7 +314,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     public Stream<UUID> createEntityData(
             UUID entitySetId,
             Map<String, SetMultimap<UUID, Object>> entities,
-            Set<PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
         return entities.entrySet().stream().map(
                 entity ->
@@ -320,17 +326,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     }
 
+    /*creating
+
+     */
     @Timed
     public UUID createData(
             UUID entitySetId,
-            Set<PropertyType> authorizedPropertyTypes,
+            Map<UUID, PropertyType> authorizedPropertyTypes,
             String entityId,
             SetMultimap<UUID, Object> entityDetails ) {
         //TODO: Keep full local copy of PropertyTypes EDM
-        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType =
-                authorizedPropertyTypes
-                        .stream()
-                        .collect( Collectors.toMap( PropertyType::getId, PropertyType::getDatatype ) );
+        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType = Maps
+                .transformValues( authorizedPropertyTypes, PropertyType::getDatatype );
         Set<UUID> authorizedProperties = authorizedPropertiesWithDataType.keySet();
         // does not write the row if some property values that user is trying to write to are not authorized.
         //TODO: Don't fail silently
@@ -376,7 +383,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @SuppressFBWarnings(
             value = "UC_USELESS_OBJECT",
             justification = "results Object is used to execute deletes in batches" )
-    public int deleteEntitySetData( UUID entitySetId, Set<PropertyType> authorizedPropertyTypes ) {
+    public int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         logger.info( "Deleting data of entity set: {}", entitySetId );
         int deleteCount = dataQueryService.deleteEntitySet( entitySetId, authorizedPropertyTypes );
         logger.info( "Finished deletion of entity set {}. Deleted {} rows.", entitySetId, deleteCount );
@@ -384,7 +391,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     @Override
-    public int deleteEntities( UUID entitySetId, Set<UUID> entityKeyId, Set<PropertyType> authorizedPropertyTypes ) {
+    public int deleteEntities(
+            UUID entitySetId,
+            Set<UUID> entityKeyId,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
         int deleteCount = dataQueryService.deleteEntities( entitySetId, entityKeyId, authorizedPropertyTypes );
 

@@ -61,6 +61,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Manages the graph representation of information stored in the database.
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataGraphService implements DataGraphManager {
@@ -75,9 +77,6 @@ public class DataGraphService implements DataGraphManager {
     private Graph                    lm;
     private EntityKeyIdService       idService;
     private EntityDatastore          eds;
-    // Get entity type id by entity set id, cached.
-    // TODO HC: Local caching is needed because this would be called very often, so direct calls to IMap should be
-    // minimized. Nonetheless, this certainly should be refactored into EdmService or something.
     private IMap<UUID, EntitySet>    entitySets;
     private LoadingCache<UUID, UUID> typeIds;
 
@@ -110,40 +109,22 @@ public class DataGraphService implements DataGraphManager {
     public EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
             LinkedHashSet<String> orderedPropertyNames,
-            Set<PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
         return eds.getEntitySetData( entitySetId, orderedPropertyNames, authorizedPropertyTypes );
     }
 
     @Override
-    public int deleteEntitySetData( UUID entitySetId,Set<PropertyType> authorizedPropertyTypes ) {
-        return eds.deleteEntitySetData( entitySetId,authorizedPropertyTypes );
-        // TODO delete all vertices
+    public int deleteEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        lm.deleteVerticesInEntitySet( entitySetId );
+        return eds.deleteEntitySetData( entitySetId, authorizedPropertyTypes );
     }
 
     @Override
     public SetMultimap<FullQualifiedName, Object> getEntity(
-            UUID entityKeyId, Set<PropertyType> authorizedPropertyTypes ) {
-        EntityKey entityKey = idService.getEntityKey( entityKeyId );
-        return eds.getEntity( entityKey.getEntitySetId(),
-                entityKey.getEntityId(),
-                authorizedPropertyTypes );
-    }
-
-    @Override
-    public void updateEntity(
-            UUID id,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
-        EntityKey elementReference = idService.getEntityKey( id );
-        updateEntity( elementReference, entityDetails, authorizedPropertiesWithDataType );
-    }
-
-    @Override
-    public void updateEntity(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
-        eds.updateEntity( entityKey, entityDetails, authorizedPropertiesWithDataType );
+            UUID entitySetId,
+            UUID entityKeyId,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+         eds.getEntities( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes ).to;
     }
 
     @Override
@@ -164,11 +145,10 @@ public class DataGraphService implements DataGraphManager {
             UUID entitySetId,
             String entityId,
             SetMultimap<UUID, Object> entityDetails,
-            Set<PropertyType> authorizedPropertyTypes )
-            throws ExecutionException, InterruptedException {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
         final EntityKey key = new EntityKey( entitySetId, entityId );
-        createEntity( key, entityDetails, authorizedPropertiesWithDataType )
+        createEntity( key, entityDetails, authorizedPropertyTypes )
                 .forEach( DataGraphService::tryGetAndLogErrors );
         return idService.getEntityKeyId( key );
     }
@@ -177,31 +157,23 @@ public class DataGraphService implements DataGraphManager {
     public void createEntities(
             UUID entitySetId,
             Map<String, SetMultimap<UUID, Object>> entities,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType )
-            throws ExecutionException, InterruptedException {
-        entities.entrySet()
-                .parallelStream()
-                .flatMap(
-                        entity -> {
-                            final EntityKey key = new EntityKey( entitySetId, entity.getKey() );
-                            return createEntity( key, entity.getValue(), authorizedPropertiesWithDataType );
-                        } )
-                .forEach( DataGraphService::tryGetAndLogErrors );
-    }
-
-    private Stream<ListenableFuture> createEntity(
-            EntityKey key,
-            SetMultimap<UUID, Object> details,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
-        final ListenableFuture reservationAndVertex = idService.getEntityKeyIdAsync( key );
-        final Stream<ListenableFuture> writes = eds.updateEntityAsync( key, details, authorizedPropertiesWithDataType );
-        return Stream.concat( Stream.of( reservationAndVertex ), writes );
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        eds.createEntities( entitySetId,
+                entities.entrySet()
+                        .parallelStream()
+                        .flatMap(
+                                entity -> {
+                                    final EntityKey key = new EntityKey( entitySetId, entity.getKey() );
+                                    return createEntity( key, entity.getValue(), authorizedPropertyTypes );
+                                } )
+                        .forEach( DataGraphService::tryGetAndLogErrors );
     }
 
     public void replaceEntity(
             EntityDataKey edk,
             SetMultimap<UUID, Object> entity,
-            Map<UUID, EdmPrimitiveTypeKind> propertyTypes ) {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        eds.replaceEntities()
         EntityKey key = idService.getEntityKey( edk.getEntityKeyId() );
         eds.deleteEntities( edk );
         eds.updateEntityAsync( key, entity, propertyTypes ).forEach( DataGraphService::tryGetAndLogErrors );
@@ -255,7 +227,7 @@ public class DataGraphService implements DataGraphManager {
     public void createEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,
-            Map<UUID, Map<UUID, EdmPrimitiveTypeKind>> authorizedPropertiesByEntitySetId ) {
+            Map<UUID, Set<PropertyType>> authorizedPropertiesByEntitySetId ) {
         // Map<EntityKey, UUID> idsRegistered = new HashMap<>();
 
         entities.parallelStream()
