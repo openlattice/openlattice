@@ -21,6 +21,9 @@
 package com.openlattice.datastore.data.controllers;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Maps.transformValues;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
@@ -28,8 +31,11 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Optional;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -40,19 +46,19 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.DataEdge;
+import com.openlattice.data.DataGraph;
+import com.openlattice.data.DataGraphIds;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DatasourceManager;
-import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntitySetData;
-import com.openlattice.data.integration.Association;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
-import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.type.PropertyType;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
@@ -60,7 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
@@ -69,18 +75,18 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpServerErrorException;
 
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
@@ -224,7 +230,7 @@ public class DataController implements DataApi, AuthorizingComponent {
 
         accessCheck( aclKeysForAccessCheck( ImmutableSetMultimap.<UUID, UUID>builder()
                         .putAll( entitySetId, requiredPropertyTypes ).build(),
-                EnumSet.of( Permission.WRITE ) ) );
+                WRITE_PERMISSION ) );
         if ( partialReplace ) {
             return dgm.partialReplaceEntities( entitySetId,
                     entities,
@@ -232,6 +238,22 @@ public class DataController implements DataApi, AuthorizingComponent {
         } else {
             return dgm.replaceEntities( entitySetId, entities, dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
         }
+    }
+
+    @PatchMapping( value = "/" + ENTITY_SET + "/" + SET_ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @Override public Integer replaceEntityProperties(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
+        ensureReadAccess( new AclKey( entitySetId ) );
+
+        final Set<UUID> requiredPropertyTypes = requiredReplacementPropertyTypes( entities );
+        accessCheck( aclKeysForAccessCheck( ImmutableSetMultimap.<UUID, UUID>builder()
+                        .putAll( entitySetId, requiredPropertyTypes ).build(),
+                WRITE_PERMISSION ) );
+
+        return dgm.replacePropertiesInEntities( entitySetId,
+                entities,
+                dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
     }
 
     @Override
@@ -246,7 +268,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         ensureReadAccess( new AclKey( entitySetId ) );
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
+                .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
         return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
@@ -262,74 +284,53 @@ public class DataController implements DataApi, AuthorizingComponent {
             method = RequestMethod.PUT,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public ListMultimap<UUID, UUID> createAssociations( @RequestBody ListMultimap<UUID, DataEdge> associations ) {
-        if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
-                Principals.getCurrentPrincipals(),
-                EnumSet.of( Permission.WRITE ) ) ) {
-            // To avoid re-doing authz check more of than once every 250 ms during an integration we cache the
-            // results.cd ../
-            //            AuthorizationKey ak = new AuthorizationKey( Principals.getCurrentUser(), entitySetId, syncId );
-            //problem is that we are checking all properties
-            Set<UUID> authorizedProperties = authzHelper
-                    .getAuthorizedPropertiesOnEntitySet( entitySetId, EnumSet.of( Permission.WRITE ) );
+        //Ensure that we have read access to entity set metadata.
+        associations.keySet().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
 
-            Set<UUID> keyProperties = dms.getEntityTypeByEntitySetId( entitySetId ).getKey();
+        //Ensure that we can write properties.
+        final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
+        accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
 
-            if ( !authorizedProperties.containsAll( keyProperties ) ) {
-                throw new ForbiddenException(
-                        "Insufficient permissions to write to some of the key property types of the entity set." );
-            }
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
+                associations.keySet().stream()
+                        .collect( Collectors.toMap( Function.identity(),
+                                entitySetId -> authzHelper
+                                        .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) ) ) );
 
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType;
-
-            try {
-                authorizedPropertiesWithDataType = primitiveTypeKinds
-                        .getAll( authorizedProperties );
-            } catch ( ExecutionException e ) {
-                logger.error(
-                        "Unable to load data types for authorized properties for user " + Principals.getCurrentUser()
-                                + " and entity set " + entitySetId + "." );
-                throw new ResourceNotFoundException( "Unable to load data types for authorized properties." );
-            }
-            try {
-                dgm.integrateAssociations( entitySetId, associations, authorizedPropertiesWithDataType );
-            } catch ( ExecutionException | InterruptedException e ) {
-                logger.error( "Unable to bulk create association data.", e );
-                throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
-            }
-        } else {
-            throw new ForbiddenException( "Insufficient permissions to write to the entity set or it doesn't exists." );
-        }
-        return null;
+        return dgm.createAssociations( associations, authorizedPropertyTypesByEntitySet );
     }
 
+    @Timed
     @Override
-    @RequestMapping(
-            value = "/" + ASSOCIATION,
-            method = RequestMethod.PATCH,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void storeAssociationData( @RequestBody Set<Association> associations ) {
+    @PatchMapping( value = "/" + ASSOCIATION )
+    public Integer replaceAssociationData(
+            @RequestBody Map<UUID, Map<UUID, DataEdge>> associations,
+            @RequestParam( value = PARTIAL, required = false, defaultValue = "false" ) boolean partial ) {
+        associations.keySet().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
 
-        // To avoid re-doing authz check more of than once every 250 ms during an integration we cache the
-        // results.cd ../
-        UUID entitySetId = sts.getAuthorizedEntitySet( Principals.getCurrentUser(), ticket );
-        Set<UUID> authorizedProperties = sts.getAuthorizedProperties( Principals.getCurrentUser(), ticket );
-        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType;
-        try {
-            authorizedPropertiesWithDataType = primitiveTypeKinds
-                    .getAll( authorizedProperties );
-        } catch ( ExecutionException e ) {
-            logger.error( "Unable to load data types for authorized properties for user " + Principals.getCurrentUser()
-                    + " and entity set " + entitySetId + "." );
-            throw new ResourceNotFoundException( "Unable to load data types for authorized properties." );
-        }
+        //Ensure that we can write properties.
+        final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
+        accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
 
-        try {
-            dgm.integrateAssociations( entitySetId, associations, authorizedPropertiesWithDataType );
-        } catch ( ExecutionException | InterruptedException e ) {
-            logger.error( "Unable to bulk store association data.", e );
-            throw new HttpServerErrorException( HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() );
-        }
+        final Map<UUID, PropertyType> authorizedPropertyTypes = dms.getPropertyTypesAsMap( ImmutableSet.copyOf(requiredPropertyTypes.values() ) )
+        return associations.entrySet().stream().mapToInt( association -> {
+            final UUID entitySetId = association.getKey();
+            if ( partial ) {
+                return dgm.partialReplaceEntities( entitySetId, transformValues( association.getValue() , DataEdge::getData ),authorizedPropertyTypes );
+            } else {
+                return dgm.replaceEntities( entitySetId, transformValues( association.getValue() , DataEdge::getData ),authorizedPropertyTypes );
+            }
+        } ).sum();
+    }
 
+    @Timed
+    @Override
+    @PostMapping( value = {"/",""} )
+    public DataGraphIds createEntityAndAssociationData( DataGraph data ) {
+        Multimaps.asMap( data.getEntities() )
+                .forEach( (entitySetId , entities ) -> createOrMergeEntities(  ) );
+//        createOrMergeEntities( data )
+                createAssociations(  )
         return null;
     }
 
@@ -340,45 +341,53 @@ public class DataController implements DataApi, AuthorizingComponent {
     public Void clearEntityFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
-        ensureWriteAccess( new AclKey( entitySetId ) );
-        dms.getEntityTypeByEntitySetId( entitySetId ).getProperties().forEach( propertyTypeId -> {
-            ensureWriteAccess( new AclKey( entitySetId, propertyTypeId ) );
-        } );
+        ensureReadAccess( new AclKey( entitySetId ) );
+        //Note this will only clear properties to which the caller has access.
+        dgm.clearEntities( entitySetId,
+                ImmutableSet.of( entityKeyId ),
+                authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
+        return null;
+    }
 
-        dgm.deleteEntity( new EntityDataKey( entitySetId, entityKeyId ) );
+    @Override public Void clearEntitySet( UUID entitySetId ) {
         return null;
     }
 
     @Override
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + UPDATE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
             method = RequestMethod.PUT )
     public Void replaceEntityInEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody SetMultimap<UUID, Object> entity ) {
-        ensureWriteAccess( new AclKey( entitySetId ) );
+        ensureReadAccess( new AclKey( entitySetId ) );
+        Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,
+                WRITE_PERMISSION,
+                dms.getPropertyTypesAsMap( entity.keySet() ) );
+
         Map<UUID, EdmPrimitiveTypeKind> propertyTypes = dms.getEntityTypeByEntitySetId( entitySetId ).getProperties()
                 .stream().peek( propertyTypeId -> {
                     ensureWriteAccess( new AclKey( entitySetId, propertyTypeId ) );
                 } ).map( propertyTypeId -> dms.getPropertyType( propertyTypeId ) ).collect( Collectors
                         .toMap( propertyType -> propertyType.getId(), propertyType -> propertyType.getDatatype() ) );
 
-        dgm.replaceEntity( new EntityDataKey( entitySetId, entityKeyId ), entity, propertyTypes );
+        dgm.replaceEntities( entitySetId, ImmutableMap.of( entitySetId, entity ), authorizedPropertyTypes );
         return null;
     }
 
     @Override
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + UPDATE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
             method = RequestMethod.POST )
     public Void replaceEntityInEntitySetUsingFqns(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody SetMultimap<FullQualifiedName, Object> entityByFqns ) {
         SetMultimap<UUID, Object> entity = HashMultimap.create();
-        entityByFqns.entries()
-                .forEach( entry -> entity.put( dms.getPropertyType( entry.getKey() ).getId(), entry.getValue() ) );
+        Multimaps.asMap( entityByFqns )
+                .forEach( ( fqn, properties ) -> entity.putAll( dms.getPropertyTypeId( fqn ), properties ) );
+
         return replaceEntityInEntitySet( entitySetId, entityKeyId, entity );
     }
 
@@ -400,9 +409,13 @@ public class DataController implements DataApi, AuthorizingComponent {
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
         Map<UUID, PropertyType> authorizedPropertyTypes = dms
-                .getPropertyTypesAsMap( authzHelper.getAuthorizedPropertiesOnEntitySet( entitySetId,
-                        EnumSet.of( Permission.READ ) ) );
+                .getPropertyTypesAsMap( authzHelper
+                        .getAuthorizedPropertiesOnEntitySet( entitySetId, READ_PERMISSION ) );
         return dgm.getEntity( entitySetId, entityKeyId, authorizedPropertyTypes );
+    }
+
+    @Override public Set<Object> getEntity( UUID entitySetId, UUID entityKeyId, UUID propertyTypeId ) {
+        return null;
     }
 
     /**
@@ -434,7 +447,19 @@ public class DataController implements DataApi, AuthorizingComponent {
         return propertyTypesByEntitySet;
     }
 
+    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Map<UUID, Map<UUID, DataEdge>> associations ) {
+        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
+        associations.forEach( ( esId, edges ) -> edges.values()
+                .forEach( de -> propertyTypesByEntitySet.putAll( esId, de.getData().keySet() ) ) );
+        return propertyTypesByEntitySet;
+    }
+
     private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, SetMultimap<UUID, Object>> entities ) {
+        return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
+                .collect( Collectors.toSet() );
+    }
+
+    private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
         return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }

@@ -95,7 +95,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         ensureReadAccess( new AclKey( entitySetId ) );
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
+                .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
 
         final Map<String, UUID> entityKeyIds = dgm.integrateEntities( entitySetId, entities, authorizedPropertyTypes );
         final IntegrationResults results = new IntegrationResults( entityKeyIds.size(),
@@ -162,7 +162,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 Stream.concat( entitySets.stream(), associationEntitySets.stream() )
                         .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
-                                        .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) ) ) );
+                                        .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
 
         return dgm.integrateEntitiesAndAssociations( data.getEntities(),
                 data.getAssociations(),
