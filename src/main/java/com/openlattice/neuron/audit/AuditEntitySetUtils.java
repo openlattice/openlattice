@@ -21,8 +21,10 @@ package com.openlattice.neuron.audit;
 
 import com.openlattice.neuron.signals.Signal;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -202,24 +204,20 @@ public class AuditEntitySetUtils {
         AUDIT_ENTITY_SET_SYNC_ID = syncId;
     }
 
-    public static Map<UUID, EdmPrimitiveTypeKind> getPropertyDataTypesMap() {
+    public static Map<UUID, PropertyType> getPropertyDataTypesMap() {
 
         return PROPERTIES
                 .stream()
                 .collect(
-                        Collectors.toMap( PropertyType::getId, PropertyType::getDatatype )
+                        Collectors.toMap( PropertyType::getId, Function.identity() )
                 );
     }
 
-    public static Map<String, SetMultimap<UUID, Object>> prepareAuditEntityData( Signal signal, String entityId ) {
-
+    public static List<SetMultimap<UUID, Object>> prepareAuditEntityData( Signal signal, String entityId ) {
         SetMultimap<UUID, Object> propertyValuesMap = HashMultimap.create();
         propertyValuesMap.put( DETAILS_PROPERTY_TYPE.getId(), signal.getDetails() );
         propertyValuesMap.put( TYPE_PROPERTY_TYPE.getId(), signal.getType().name() );
 
-        Map<String, SetMultimap<UUID, Object>> auditEntityDataMap = Maps.newHashMap();
-        auditEntityDataMap.put( entityId, propertyValuesMap );
-
-        return auditEntityDataMap;
+        return ImmutableList.of( propertyValuesMap );
     }
 }
