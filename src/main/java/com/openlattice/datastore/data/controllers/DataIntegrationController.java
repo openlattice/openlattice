@@ -33,9 +33,9 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataIntegrationApi;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.IntegrationResults;
-import com.openlattice.data.requests.Association;
-import com.openlattice.data.requests.BulkDataCreation;
-import com.openlattice.data.requests.Entity;
+import com.openlattice.data.integration.Association;
+import com.openlattice.data.integration.BulkDataCreation;
+import com.openlattice.data.integration.Entity;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SearchService;
 import com.openlattice.edm.type.PropertyType;
@@ -97,7 +97,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
 
-        final Map<String, UUID> entityKeyIds = dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
+        final Map<String, UUID> entityKeyIds = dgm.integrateEntities( entitySetId, entities, authorizedPropertyTypes );
         final IntegrationResults results = new IntegrationResults( entityKeyIds.size(),
                 0,
                 detailedResults ? Optional.of( ImmutableMap.of( entitySetId, entityKeyIds ) ) : Optional.empty(),
@@ -115,7 +115,8 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 .collect( Collectors.toSet() );
         //Ensure that we have read access to entity set metadata.
         associationEntitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
-        accessCheck( aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ) ) );
+        accessCheck( EdmAuthorizationHelper
+                .aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
                 associationEntitySets.stream()
@@ -125,7 +126,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
 
         //        checkAllAssociationsInEntitySet( entitySetId, associations );
         final Map<UUID, Map<String, UUID>> entityKeyIds = dgm
-                .createAssociations( associations, authorizedPropertyTypesByEntitySet );
+                .integrateAssociations( associations, authorizedPropertyTypesByEntitySet );
         final IntegrationResults results = new IntegrationResults( 0,
                 entityKeyIds.values().stream().mapToInt( Map::size ).sum(),
                 Optional.empty(),
@@ -152,8 +153,10 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         entitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
         associationEntitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
 
-        accessCheck( aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ) ) );
-        accessCheck( aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ) ) );
+        accessCheck( EdmAuthorizationHelper
+                .aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
+        accessCheck( EdmAuthorizationHelper
+                .aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
                 Stream.concat( entitySets.stream(), associationEntitySets.stream() )
@@ -161,7 +164,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) ) ) );
 
-        return dgm.createEntitiesAndAssociations( data.getEntities(),
+        return dgm.integrateEntitiesAndAssociations( data.getEntities(),
                 data.getAssociations(),
                 authorizedPropertyTypesByEntitySet );
     }
@@ -180,8 +183,4 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return propertyTypesByEntitySet;
     }
 
-    private static Map<AclKey, EnumSet<Permission>> aclKeysForAccessCheck( SetMultimap<UUID, UUID> rawAclKeys ) {
-        return rawAclKeys.entries().stream()
-                .collect( Collectors.toMap( e -> new AclKey( e.getKey(), e.getValue() ), e -> WRITE_PERMISSION ) );
-    }
 }
