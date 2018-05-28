@@ -19,8 +19,8 @@
 package com.openlattice.data;
 
 import com.google.common.collect.SetMultimap;
-import com.openlattice.data.requests.Association;
-import com.openlattice.data.requests.BulkDataCreation;
+import com.openlattice.data.integration.Association;
+import com.openlattice.data.integration.BulkDataCreation;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;

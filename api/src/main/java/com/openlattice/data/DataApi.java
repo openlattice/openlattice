@@ -18,12 +18,12 @@
 
 package com.openlattice.data;
 
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
-import com.openlattice.data.requests.Association;
-import com.openlattice.data.requests.BulkDataCreation;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -85,11 +85,9 @@ public interface DataApi {
             @Query( FILE_TYPE ) FileType fileType );
 
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Void createOrMergeEntities(
+    List<UUID> createOrMergeEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<String, SetMultimap<UUID, Object>> entities );
-
-
+            @Body List<SetMultimap<UUID, Object>> entities );
 
     /**
      * Fully replaces entities.
@@ -102,36 +100,32 @@ public interface DataApi {
      * @return The UUID assigned to each entity id during creation.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Map<String, UUID> replaceEntities(
+    Integer replaceEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<String, SetMultimap<UUID, Object>> entities,
-            @Query( PARTIAL ) Boolean partialReplace );
+            @Body Map<UUID, SetMultimap<UUID, Object>> entities,
+            @Query( PARTIAL ) boolean partialReplace );
 
     @PATCH( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Void replaceEntityProperties(
+    Integer replaceEntityProperties(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities );
 
     /**
      * Creates a new set of associations.
      *
-     * @param entitySetId The id of the edge entity set to write to.
      * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
      * UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
      */
-    @POST( BASE + "/" + ASSOCIATION + "/" + SET_ID_PATH )
-    Void createOrMergeAssociations(
-            @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Set<Association> associations );
+    @POST( BASE + "/" + ASSOCIATION )
+    ListMultimap<UUID, UUID> createAssociations( @Body ListMultimap<UUID, DataEdge> associations );
 
-    @PATCH( BASE + "/" + ASSOCIATION + "/" + SET_ID_PATH )
-    Void replaceAssociationData(
-            @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Set<Association> associations,
-            @Query( PARTIAL ) Boolean partialReplace );
+    @PATCH( BASE + "/" + ASSOCIATION )
+    Integer replaceAssociationData(
+            @Body Map<UUID, Map<UUID, DataEdge>> associations,
+            @Query( PARTIAL ) boolean partial );
 
     @POST( BASE )
-    Void createEntityAndAssociationData( @Body BulkDataCreation data );
+    DataGraphIds createEntityAndAssociationData( @Body DataGraph data );
 
     /**
      * Clears a single entity from an entity set.
@@ -157,7 +151,7 @@ public interface DataApi {
      * @param entityKeyId The id of the entity to replace.
      * @param entity The new entity details object that will replace the old value, with property type ids as keys.
      */
-    @PUT( BASE + "/" + ENTITY_SET + "/" + UPDATE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Void replaceEntityInEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
@@ -170,7 +164,7 @@ public interface DataApi {
      * @param entityKeyId The id of the entity to replace.
      * @param entityByFqns The new entity details object that will replace the old value, with property type FQNs as keys.
      */
-    @POST( BASE + "/" + ENTITY_SET + "/" + UPDATE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Void replaceEntityInEntitySetUsingFqns(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
