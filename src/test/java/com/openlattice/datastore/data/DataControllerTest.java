@@ -57,7 +57,7 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         EntitySet es = createEntitySet( et );
         UUID syncId = syncApi.getCurrentSyncId( es.getId() );
         
-        dataApi.createEntityData( es.getId(),
+        dataApi.replaceEntities( es.getId(),
                 syncId,
                 TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ) );
 
@@ -73,7 +73,7 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         
         Map<String, SetMultimap<UUID, Object>> entities = TestDataFactory.randomStringEntityData( numberOfEntries,
                 et.getProperties() );
-        dataApi.createEntityData( es.getId(), syncId, entities );
+        dataApi.replaceEntities( es.getId(), syncId, entities );
 
         // load selected data
         Set<UUID> selectedProperties = et.getProperties().stream().filter( pid -> random.nextBoolean() )
@@ -114,7 +114,7 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         
         UUID ticket = dataApi.acquireSyncTicket( es.getId(), syncId );
 
-        dataApi.storeEntityData( ticket,
+        dataApi.createOrMergeEntities( ticket,
                 syncId,
                 TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ) );
 

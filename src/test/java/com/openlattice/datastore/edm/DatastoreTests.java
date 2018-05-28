@@ -134,7 +134,7 @@ public class DatastoreTests extends BootstrapDatastoreWithCassandra {
         e.setType( ENTITY_TYPE.getFullQualifiedNameAsString() );
         e.addProperty( empId ).addProperty( empName ).addProperty( empTitle ).addProperty( empSalary );
         /**
-        esc.createEntityData( ACLs.EVERYONE_ACL,
+        esc.replaceEntities( ACLs.EVERYONE_ACL,
                 Syncs.BASE.getSyncId(),
                 ENTITY_SET_NAME,
                 ENTITY_TYPE,
@@ -196,7 +196,7 @@ public class DatastoreTests extends BootstrapDatastoreWithCassandra {
                         .addProperty( employeeDept )
                         .addProperty( employeeSalary );
                 /**
-                esc.createEntityData( ACLs.EVERYONE_ACL,
+                esc.replaceEntities( ACLs.EVERYONE_ACL,
                         Syncs.BASE.getSyncId(),
                         ENTITY_SET_NAME,
                         ENTITY_TYPE,
@@ -204,13 +204,13 @@ public class DatastoreTests extends BootstrapDatastoreWithCassandra {
 
                 // Created by Ho Chung for testing different entity types
                 // add entityType "employeeMars"
-                esc.createEntityData( ACLs.EVERYONE_ACL,
+                esc.replaceEntities( ACLs.EVERYONE_ACL,
                         Syncs.BASE.getSyncId(),
                         ENTITY_SET_NAME,
                         ENTITY_TYPE_MARS,
                         entity );
                 // add entityType "employeeSaturn"
-                esc.createEntityData( ACLs.EVERYONE_ACL,
+                esc.replaceEntities( ACLs.EVERYONE_ACL,
                         Syncs.BASE.getSyncId(),
                         ENTITY_SET_NAME,
                         ENTITY_TYPE_SATURN,

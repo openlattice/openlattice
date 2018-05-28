@@ -42,7 +42,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,14 +64,13 @@ public class AnalysisService {
     @Inject
     private EdmManager edmManager;
 
-    public Iterable<SetMultimap<Object, Object>> getTopUtilizers(
+    public Stream<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
             UUID entitySetId,
             int numResults,
             List<TopUtilizerDetails> topUtilizerDetails,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        UUID syncId = datasourceManager.getCurrentSyncId( entitySetId );
+            Set<PropertyType> authorizedPropertyTypes ) {
         try {
-            return dgm.getTopUtilizers( entitySetId, syncId, topUtilizerDetails, numResults, authorizedPropertyTypes );
+            return dgm.getTopUtilizers( entitySetId, topUtilizerDetails, numResults, authorizedPropertyTypes );
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "Unable to get top utilizer data." );
             return null;
@@ -79,7 +80,7 @@ public class AnalysisService {
     public Iterable<NeighborType> getNeighborTypes( UUID entitySetId ) {
         UUID syncId = datasourceManager.getCurrentSyncId( entitySetId );
 
-        NeighborTripletSet neighborEntitySets = dgm.getNeighborEntitySets( entitySetId, syncId );
+        NeighborTripletSet neighborEntitySets = dgm.getNeighborEntitySets( entitySetId );
 
         Set<UUID> entitySetIds = neighborEntitySets.stream().flatMap( triplet -> triplet.stream() )
                 .collect( Collectors.toSet() );
