@@ -22,8 +22,8 @@ package com.openlattice.data;
 
 import com.google.common.collect.SetMultimap;
 import com.openlattice.analysis.requests.TopUtilizerDetails;
-import com.openlattice.data.requests.Association;
-import com.openlattice.data.requests.Entity;
+import com.openlattice.data.integration.Association;
+import com.openlattice.data.integration.Entity;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.EdgeKey;
@@ -72,31 +72,37 @@ public interface DataGraphManager {
      * Bulk endpoints for entities/associations
      */
 
-    Map<String, UUID> createEntities(
+    Map<String, UUID> integrateEntities(
             UUID entitySetId,
             Map<String, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    void replaceEntites(
+    List<UUID> createEntities(
+            UUID entitySetId,
+            List<SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    int replaceEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    void partialReplaceEntites(
+    int partialReplaceEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    void replacePropertiesInEntities(
+    int replacePropertiesInEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    void createAssociations(
+    Map<UUID, Map<String, UUID>> integrateAssociations(
             Set<Association> associations,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
-    void createEntitiesAndAssociations(
+    List<>
+    IntegrationResults integrateEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySetId );

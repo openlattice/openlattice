@@ -22,36 +22,10 @@
 
 package com.openlattice.datastore.services;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.dataloom.streams.StreamUtil;
-import com.openlattice.edm.events.AssociationTypeCreatedEvent;
-import com.openlattice.edm.events.AssociationTypeDeletedEvent;
-import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
-import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
-import com.openlattice.edm.events.EntityTypeCreatedEvent;
-import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
-import com.openlattice.edm.exceptions.TypeExistsException;
-import com.openlattice.edm.exceptions.TypeNotFoundException;
-import com.openlattice.edm.types.processors.AddDstEntityTypesToAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.AddPrimaryKeysToEntityTypeProcessor;
-import com.openlattice.edm.types.processors.AddPropertyTypesToEntityTypeProcessor;
-import com.openlattice.edm.types.processors.AddSrcEntityTypesToAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.RemoveDstEntityTypesFromAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.RemovePrimaryKeysFromEntityTypeProcessor;
-import com.openlattice.edm.types.processors.RemovePropertyTypesFromEntityTypeProcessor;
-import com.openlattice.edm.types.processors.RemoveSrcEntityTypesFromAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.ReorderPropertyTypesInEntityTypeProcessor;
-import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
-import com.openlattice.hazelcast.HazelcastUtils;
+import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Functions;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -74,11 +48,25 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DatasourceManager;
+import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.Schema;
+import com.openlattice.edm.events.AssociationTypeCreatedEvent;
+import com.openlattice.edm.events.AssociationTypeDeletedEvent;
+import com.openlattice.edm.events.ClearAllDataEvent;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
+import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
+import com.openlattice.edm.events.EntityTypeCreatedEvent;
+import com.openlattice.edm.events.EntityTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
+import com.openlattice.edm.exceptions.TypeExistsException;
+import com.openlattice.edm.exceptions.TypeNotFoundException;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -90,7 +78,21 @@ import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.types.processors.AddDstEntityTypesToAssociationTypeProcessor;
+import com.openlattice.edm.types.processors.AddPrimaryKeysToEntityTypeProcessor;
+import com.openlattice.edm.types.processors.AddPropertyTypesToEntityTypeProcessor;
+import com.openlattice.edm.types.processors.AddSrcEntityTypesToAssociationTypeProcessor;
+import com.openlattice.edm.types.processors.RemoveDstEntityTypesFromAssociationTypeProcessor;
+import com.openlattice.edm.types.processors.RemovePrimaryKeysFromEntityTypeProcessor;
+import com.openlattice.edm.types.processors.RemovePropertyTypesFromEntityTypeProcessor;
+import com.openlattice.edm.types.processors.RemoveSrcEntityTypesFromAssociationTypeProcessor;
+import com.openlattice.edm.types.processors.ReorderPropertyTypesInEntityTypeProcessor;
+import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor;
+import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor;
+import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
+import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.zaxxer.hikari.HikariDataSource;
@@ -574,7 +576,7 @@ public class EdmService implements EdmManager {
     @Override
     public EntityType getEntityType( FullQualifiedName typeFqn ) {
         UUID entityTypeId = getTypeAclKey( typeFqn );
-        Preconditions.checkNotNull( entityTypeId,
+        checkNotNull( entityTypeId,
                 "Entity type %s does not exists.",
                 typeFqn.getFullQualifiedNameAsString() );
         return getEntityType( entityTypeId );
@@ -582,7 +584,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public EntityType getEntityType( UUID entityTypeId ) {
-        return Preconditions.checkNotNull(
+        return checkNotNull(
                 getEntityTypeSafe( entityTypeId ),
                 "Entity type of id %s does not exists.",
                 entityTypeId.toString() );
@@ -632,7 +634,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public PropertyType getPropertyType( FullQualifiedName propertyType ) {
-        return Preconditions.checkNotNull(
+        return checkNotNull(
                 Util.getSafely( propertyTypes, Util.getSafely( aclKeys, Util.fqnToString( propertyType ) ) ),
                 "Property type %s does not exists",
                 propertyType.getFullQualifiedNameAsString() );
@@ -647,6 +649,24 @@ public class EdmService implements EdmManager {
     public Iterable<PropertyType> getPropertyTypes() {
         return entityTypeManager.getPropertyTypes();
     }
+
+    @Timed
+    @Override
+    public Map<UUID, PropertyType> getPropertyTypesForEntitySet( UUID entitySetId ) {
+        EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
+        if ( entitySet == null ) {
+            throw new ResourceNotFoundException( "Entity set " + entitySetId.toString() + " does not exist." );
+        }
+
+        UUID entityTypeId = entitySet.getEntityTypeId();
+        EntityType entityType = Util.getSafely( entityTypes, entityTypeId );
+
+        if( entityType == null ) {
+            throw new ResourceNotFoundException( "Entity type " + entityTypeId.toString() + " does not exist." );
+        }
+        return propertyTypes.getAll( entityType.getProperties() );
+    }
+
 
     @Override
     public void addPropertyTypesToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
@@ -774,7 +794,7 @@ public class EdmService implements EdmManager {
     public void addPrimaryKeysToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
         Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
         EntityType entityType = entityTypes.get( entityTypeId );
-        Preconditions.checkNotNull( entityType, "No entity type with id {}", entityTypeId );
+        checkNotNull( entityType, "No entity type with id {}", entityTypeId );
         Preconditions.checkArgument( entityType.getProperties().containsAll( propertyTypeIds ),
                 "Entity type does not contain all the requested primary key property types." );
 
@@ -792,7 +812,7 @@ public class EdmService implements EdmManager {
     public void removePrimaryKeysFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
         Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
         EntityType entityType = entityTypes.get( entityTypeId );
-        Preconditions.checkNotNull( entityType, "No entity type with id {}", entityTypeId );
+        checkNotNull( entityType, "No entity type with id {}", entityTypeId );
         Preconditions.checkArgument( entityType.getProperties().containsAll( propertyTypeIds ),
                 "Entity type does not contain all the requested primary key property types." );
 
@@ -995,7 +1015,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public AssociationType getAssociationType( UUID associationTypeId ) {
-        AssociationType associationDetails = Preconditions.checkNotNull(
+        AssociationType associationDetails = checkNotNull(
                 Util.getSafely( associationTypes, associationTypeId ),
                 "Association type of id %s does not exists.",
                 associationTypeId.toString() );
@@ -1175,7 +1195,6 @@ public class EdmService implements EdmManager {
         Map<UUID, PropertyType> propertyTypesById = Maps.newHashMap();
         Map<UUID, EntityType> entityTypesById = Maps.newHashMap();
         Map<UUID, AssociationType> associationTypesById = Maps.newHashMap();
-
 
         diff.getDiff().getPropertyTypes().forEach( pt -> {
             idToType.put( pt.getId(), SecurableObjectType.PropertyTypeInEntitySet );

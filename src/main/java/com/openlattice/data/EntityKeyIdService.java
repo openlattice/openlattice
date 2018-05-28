@@ -19,6 +19,7 @@
  */
 package com.openlattice.data;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -48,4 +49,6 @@ public interface EntityKeyIdService {
     Map<UUID, EntityKey> getEntityKeys( Set<UUID> entityKeyIds );
 
     Map<String, UUID> assignEntityKeyIds( UUID entitySetId, Set<String> entityIds );
+
+    List<UUID> reserveIds( UUID entitySetId, int count );
 }

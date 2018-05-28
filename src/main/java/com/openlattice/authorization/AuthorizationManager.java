@@ -77,7 +77,12 @@ public interface AuthorizationManager {
             Set<AccessCheck> accessChecks,
             Set<Principal> principals );
 
-    Stream<Authorization> accessChecksForPrincipals(
+    @Timed Map<AclKey, EnumMap<Permission, Boolean>> authorize(
+            Map<AclKey, EnumSet<Permission>> requests,
+            Set<Principal> principals );
+
+    @Timed
+    Stream<Authorization>       accessChecksForPrincipals(
             Set<AccessCheck> accessChecks,
             Set<Principal> principals );
 
@@ -95,7 +100,6 @@ public interface AuthorizationManager {
 
     Acl getAllSecurableObjectPermissions( AclKey key );
 
-    
     Stream<AclKey> getAuthorizedObjectsOfType(
             Principal principal,
             SecurableObjectType objectType,

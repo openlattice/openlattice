@@ -24,11 +24,17 @@ package com.openlattice.authorization;
 
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public interface AuthorizingComponent {
+    Logger logger = LoggerFactory.getLogger( AuthorizingComponent.class );
+
     AuthorizationManager getAuthorizationManager();
 
     default <T extends AbstractSecurableObject> Predicate<T> isAuthorizedObject(
@@ -73,6 +79,21 @@ public interface AuthorizingComponent {
     default void ensureAdminAccess() {
         if ( !Principals.getCurrentPrincipals().contains( Principals.getAdminRole() ) ) {
             throw new ForbiddenException( "Only admins are allowed to perform this action." );
+        }
+    }
+
+    default Map<AclKey, EnumMap<Permission, Boolean>> authorize( Map<AclKey, EnumSet<Permission>> requiredPermissionsByAclKey ) {
+        return getAuthorizationManager().authorize( requiredPermissionsByAclKey, Principals.getCurrentPrincipals() );
+    }
+
+    default void accessCheck( Map<AclKey, EnumSet<Permission>> requiredPermissionsByAclKey ) {
+        final boolean authorized = getAuthorizationManager()
+                .authorize( requiredPermissionsByAclKey, Principals.getCurrentPrincipals() )
+                .values().stream().allMatch( m -> m.values().stream().allMatch( v -> v ) );
+
+        if ( !authorized ) {
+            logger.warn( "Authorization failed for required permissions: {}", requiredPermissionsByAclKey );
+            throw new ForbiddenException( "Insufficient permissions to perform operation." );
         }
     }
 

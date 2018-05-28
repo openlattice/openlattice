@@ -34,8 +34,8 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.analysis.requests.TopUtilizerDetails;
 import com.openlattice.data.analytics.IncrementableWeightId;
-import com.openlattice.data.requests.Association;
-import com.openlattice.data.requests.Entity;
+import com.openlattice.data.integration.Association;
+import com.openlattice.data.integration.Entity;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
@@ -182,14 +182,14 @@ public class DataGraphService implements DataGraphManager {
         return ids;
     }
 
-    @Override public void replaceEntites(
+    @Override public void replaceEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
     }
 
-    @Override public void partialReplaceEntites(
+    @Override public void partialReplaceEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
@@ -204,7 +204,7 @@ public class DataGraphService implements DataGraphManager {
     }
 
     @Override
-    public void createAssociations(
+    public Map<UUID, Map<String,UUID>> integrateAssociations(
             Set<Association> associations,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySet ) {
 
@@ -251,10 +251,11 @@ public class DataGraphService implements DataGraphManager {
                                     edgeTypeId,
                                     edgeSetId );
                 } ).forEach( DataGraphService::tryGetAndLogErrors );
+        return null;
     }
 
     @Override
-    public void createEntitiesAndAssociations(
+    public IntegrationResults integrateEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySetId ) {
@@ -274,7 +275,8 @@ public class DataGraphService implements DataGraphManager {
                                 entitySet,
                                 authorizedPropertiesByEntitySetId.get( entitySetId ) ) );
 
-        createAssociations( associations,authorizedPropertiesByEntitySetId );
+        integrateAssociations( associations,authorizedPropertiesByEntitySetId );
+        return null;
     }
 
     @Override
