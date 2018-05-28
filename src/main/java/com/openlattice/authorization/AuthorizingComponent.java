@@ -22,6 +22,9 @@
 
 package com.openlattice.authorization;
 
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import java.util.EnumMap;
@@ -61,11 +64,11 @@ public interface AuthorizingComponent {
     }
 
     default void ensureReadAccess( AclKey aclKey ) {
-        accessCheck( aclKey, EnumSet.of( Permission.READ ) );
+        accessCheck( aclKey, READ_PERMISSION );
     }
 
     default void ensureWriteAccess( AclKey aclKey ) {
-        accessCheck( aclKey, EnumSet.of( Permission.WRITE ) );
+        accessCheck( aclKey, WRITE_PERMISSION );
     }
 
     default void ensureOwnerAccess( AclKey aclKey ) {

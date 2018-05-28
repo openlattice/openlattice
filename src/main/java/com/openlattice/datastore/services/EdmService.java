@@ -487,6 +487,11 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public UUID getPropertyTypeId( FullQualifiedName fqn ) {
+        return aclKeys.get( fqn.getFullQualifiedNameAsString() );
+    }
+
+    @Override
     public Set<UUID> getPropertyTypeUuids( Set<FullQualifiedName> fqns ) {
         return aclKeys.getAll( Util.fqnToString( fqns ) ).values().stream()
                 .filter( id -> id != null )

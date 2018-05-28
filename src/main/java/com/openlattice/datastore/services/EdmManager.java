@@ -143,6 +143,8 @@ public interface EdmManager {
 
     Set<UUID> getEntityTypeUuids( Set<FullQualifiedName> fqns );
 
+    UUID getPropertyTypeId( FullQualifiedName fqn );
+
     Set<UUID> getPropertyTypeUuids( Set<FullQualifiedName> fqns );
 
     EntityType getEntityType( FullQualifiedName type );

@@ -24,10 +24,7 @@ package com.openlattice.data
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
-import com.google.common.collect.HashMultimap
-import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Multimaps
-import com.google.common.collect.SetMultimap
+import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListenableFuture
 import com.hazelcast.core.HazelcastInstance
@@ -66,6 +63,7 @@ class KDataGraphService(
         private val eds: EntityDatastore
 ) : DataGraphManager {
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+
     private val typeIds: LoadingCache<UUID, UUID> = CacheBuilder.newBuilder()
             .maximumSize(100000) // 100K * 16 = 16000K = 16MB
             .build(
@@ -77,8 +75,6 @@ class KDataGraphService(
                         }
                     }
             )
-
-
     private val queryCache = CacheBuilder.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(30, TimeUnit.SECONDS)
@@ -92,6 +88,7 @@ class KDataGraphService(
     ): EntitySetData<FullQualifiedName> {
         return eds.getEntitySetData(entitySetId, orderedPropertyNames, authorizedPropertyTypes)
     }
+
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         lm.deleteVerticesInEntitySet(entitySetId)
@@ -197,6 +194,38 @@ class KDataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         return 0
+    }
+
+    override fun createAssociations(
+            associations: ListMultimap<UUID, DataEdge>?,
+            authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    ): ListMultimap<UUID, UUID> {
+        val entityKeyIds: ListMultimap<UUID, UUID> = ArrayListMultimap.create()
+        Multimaps
+                .asMap(associations)
+                .forEach {
+                    val entitySetId = it.key
+                    val ids = createEntities(
+                            entitySetId, it.value.map { it.data }.toList(),
+                            authorizedPropertiesByEntitySetId[entitySetId]!!
+                    )
+                    entityKeyIds.putAll(entitySetId, ids)
+
+                    for (i in 0 until ids.size) {
+                        lm.addEdge(
+                                it.value[i].src.entityKeyId,
+                                typeIds.getUnchecked(it.value[i].src.entitySetId),
+                                it.value[i].src.entitySetId,
+                                it.value[i].dst.entityKeyId,
+                                typeIds.getUnchecked(it.value[i].dst.entitySetId),
+                                it.value[i].dst.entitySetId,
+                                ids[i],
+                                typeIds.getUnchecked(entitySetId),
+                                entitySetId
+                        )
+                    }
+                }
+        return entityKeyIds
     }
 
     override fun integrateAssociations(

@@ -20,6 +20,7 @@
 
 package com.openlattice.data;
 
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.analysis.requests.TopUtilizerDetails;
 import com.openlattice.data.integration.Association;
@@ -99,9 +100,12 @@ public interface DataGraphManager {
 
     Map<UUID, Map<String, UUID>> integrateAssociations(
             Set<Association> associations,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySetId );
 
-    List<>
+    ListMultimap<UUID, UUID> createAssociations(
+            ListMultimap<UUID, DataEdge> associations,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySetId );
+
     IntegrationResults integrateEntitiesAndAssociations(
             Set<Entity> entities,
             Set<Association> associations,

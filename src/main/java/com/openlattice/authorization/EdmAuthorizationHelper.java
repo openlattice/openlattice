@@ -38,8 +38,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class EdmAuthorizationHelper implements AuthorizingComponent {
+    public static final EnumSet<Permission> WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
+    public static final EnumSet<Permission> READ_PERMISSION = EnumSet.of( Permission.WRITE );
 
-    private final EdmManager edm;
+    private final EdmManager           edm;
     private final AuthorizationManager authz;
 
     public EdmAuthorizationHelper( EdmManager edm, AuthorizationManager authz ) {
