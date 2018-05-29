@@ -110,7 +110,17 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities );
 
+
     /**
+     * Creates a new set of associations.
+     *
+     * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
+     * UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
+     */
+    @PUT( BASE + "/" + ASSOCIATION )
+    Integer createAssociations( @Body Set<DataEdgeKey> associations );
+    /**
+
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;

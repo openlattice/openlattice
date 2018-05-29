@@ -40,62 +40,39 @@
 package com.openlattice.data.integration;
 
 import com.dataloom.mappers.ObjectMappers;
-import com.esotericsoftware.kryo.Kryo;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import de.javakaffee.kryoserializers.UUIDSerializer;
-import de.javakaffee.kryoserializers.guava.HashMultimapSerializer;
-import de.javakaffee.kryoserializers.guava.ImmutableMultimapSerializer;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
 public class BulkDataCreation implements Serializable {
-
-    private static final ObjectMapper      mapper          = ObjectMappers.getSmileMapper();
-    private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial( () -> {
-
-        Kryo kryo = new Kryo();
-        kryo.register( UUID.class, new UUIDSerializer() );
-        HashMultimapSerializer.registerSerializers( kryo );
-        ImmutableMultimapSerializer.registerSerializers( kryo );
-        return kryo;
-    } );
-
     static {
         FullQualifiedNameJacksonSerializer.registerWithMapper( ObjectMappers.getJsonMapper() );
         FullQualifiedNameJacksonDeserializer.registerWithMapper( ObjectMappers.getJsonMapper() );
     }
 
-    private Set<UUID>        tickets;
     private Set<Entity>      entities;
     private Set<Association> associations;
 
     @JsonCreator
     public BulkDataCreation(
-            @JsonProperty( SerializationConstants.SYNC_TICKETS ) Set<UUID> tickets,
             @JsonProperty( SerializationConstants.ENTITIES ) Set<Entity> entities,
             @JsonProperty( SerializationConstants.ASSOCIATIONS ) Set<Association> associations ) {
-        this.tickets = tickets;
         this.entities = entities;
         this.associations = associations;
-    }
-
-    @JsonProperty( SerializationConstants.SYNC_TICKETS )
-    public Set<UUID> getTickets() {
-        return tickets;
     }
 
     @JsonProperty( SerializationConstants.ENTITIES )
@@ -110,11 +87,6 @@ public class BulkDataCreation implements Serializable {
 
     private void writeObject( ObjectOutputStream oos )
             throws IOException {
-        oos.writeInt( tickets.size() );
-
-        for ( UUID ticket : tickets ) {
-            BulkDataCreation.serialize( oos, ticket );
-        }
 
         oos.writeInt( entities.size() );
         for ( Entity entity : entities ) {
@@ -133,14 +105,8 @@ public class BulkDataCreation implements Serializable {
     }
 
     private void readObject( ObjectInputStream ois ) throws IOException, ClassNotFoundException {
-        int ticketCount = ois.readInt();
-        tickets = new HashSet<>();
         entities = new HashSet<>();
         associations = new HashSet<>();
-
-        for ( int i = 0; i < ticketCount; ++i ) {
-            tickets.add( deserializeUUID( ois ) );
-        }
 
         int entityCount = ois.readInt();
         for ( int i = 0; i < entityCount; ++i ) {
@@ -159,38 +125,22 @@ public class BulkDataCreation implements Serializable {
         }
     }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( associations == null ) ? 0 : associations.hashCode() );
-        result = prime * result + ( ( entities == null ) ? 0 : entities.hashCode() );
-        result = prime * result + ( ( tickets == null ) ? 0 : tickets.hashCode() );
-        return result;
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof BulkDataCreation ) ) { return false; }
+        BulkDataCreation that = (BulkDataCreation) o;
+        return Objects.equals( entities, that.entities ) &&
+                Objects.equals( associations, that.associations );
     }
 
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) { return true; }
-        if ( obj == null ) { return false; }
-        if ( getClass() != obj.getClass() ) { return false; }
-        BulkDataCreation other = (BulkDataCreation) obj;
-        if ( associations == null ) {
-            if ( other.associations != null ) { return false; }
-        } else if ( !associations.equals( other.associations ) ) { return false; }
-        if ( entities == null ) {
-            if ( other.entities != null ) { return false; }
-        } else if ( !entities.equals( other.entities ) ) { return false; }
-        if ( tickets == null ) {
-            if ( other.tickets != null ) { return false; }
-        } else if ( !tickets.equals( other.tickets ) ) { return false; }
-        return true;
+    @Override public int hashCode() {
+
+        return Objects.hash( entities, associations );
     }
 
     @Override public String toString() {
         return "BulkDataCreation{" +
-                "tickets=" + tickets +
-                ", entities=" + entities +
+                "entities=" + entities +
                 ", associations=" + associations +
                 '}';
     }

@@ -21,6 +21,9 @@
 
 package com.openlattice.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Objects;
 
 /**
@@ -29,18 +32,31 @@ import java.util.Objects;
 public class DataEdgeKey {
     private final EntityDataKey src;
     private final EntityDataKey dst;
+    private final EntityDataKey edge;
 
-    public DataEdgeKey( EntityDataKey src, EntityDataKey dst ) {
+    @JsonCreator
+    public DataEdgeKey(
+            @JsonProperty( SerializationConstants.SRC) EntityDataKey src,
+            @JsonProperty( SerializationConstants.DST) EntityDataKey dst,
+            @JsonProperty( SerializationConstants.EDGE) EntityDataKey edge ) {
         this.src = src;
         this.dst = dst;
+        this.edge = edge;
     }
 
+    @JsonProperty( SerializationConstants.SRC)
     public EntityDataKey getSrc() {
         return src;
     }
 
+    @JsonProperty( SerializationConstants.DST)
     public EntityDataKey getDst() {
         return dst;
+    }
+
+    @JsonProperty( SerializationConstants.EDGE)
+    public EntityDataKey getEdge() {
+        return edge;
     }
 
     @Override public boolean equals( Object o ) {

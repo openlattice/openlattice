@@ -22,6 +22,7 @@
 package com.openlattice.data;
 
 import com.google.common.collect.ListMultimap;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -29,5 +30,40 @@ import java.util.UUID;
  */
 public class DataGraphIds {
     private final ListMultimap<UUID, UUID> entityKeyIds;
-    private final
+    private final ListMultimap<UUID, UUID> associationEntityKeyIds;
+
+    public DataGraphIds(
+            ListMultimap<UUID, UUID> entityKeyIds,
+            ListMultimap<UUID, UUID> associationEntityKeyIds ) {
+        this.entityKeyIds = entityKeyIds;
+        this.associationEntityKeyIds = associationEntityKeyIds;
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof DataGraphIds ) ) { return false; }
+        DataGraphIds that = (DataGraphIds) o;
+        return Objects.equals( entityKeyIds, that.entityKeyIds ) &&
+                Objects.equals( associationEntityKeyIds, that.associationEntityKeyIds );
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( entityKeyIds, associationEntityKeyIds );
+    }
+
+    @Override public String toString() {
+        return "DataGraphIds{" +
+                "entityKeyIds=" + entityKeyIds +
+                ", associationEntityKeyIds=" + associationEntityKeyIds +
+                '}';
+    }
+
+    public ListMultimap<UUID, UUID> getEntityKeyIds() {
+        return entityKeyIds;
+    }
+
+    public ListMultimap<UUID, UUID> getAssociationEntityKeyIds() {
+        return associationEntityKeyIds;
+    }
 }

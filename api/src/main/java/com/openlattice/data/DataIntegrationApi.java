@@ -75,7 +75,7 @@ public interface DataIntegrationApi {
 
     @POST( BASE )
     IntegrationResults integrateEntityAndAssociationData(
-            @Query( DETAILED_RESULTS ) boolean detailedResults,
-            @Body BulkDataCreation data );
+            @Body BulkDataCreation data,
+            @Query( DETAILED_RESULTS ) boolean detailedResults );
 
 }

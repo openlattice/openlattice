@@ -23,7 +23,6 @@ package com.openlattice.data;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -31,12 +30,12 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataGraph {
-    private final ListMultimap<UUID, SetMultimap<UUID, Object>>             entities;
-    private final Map<UUID, Map<Integer, Map<UUID, Map<Integer, SetMultimap<UUID, Object>>>>> associations;
+    private final ListMultimap<UUID, SetMultimap<UUID, Object>> entities;
+    private final ListMultimap<UUID, DataAssociation>           associations;
 
     public DataGraph(
             ListMultimap<UUID, SetMultimap<UUID, Object>> entities,
-            Map<UUID, Map<Integer, Map<UUID, Map<Integer, SetMultimap<UUID, Object>>>>> associations ) {
+            ListMultimap<UUID, DataAssociation> associations ) {
         this.entities = entities;
         this.associations = associations;
     }
@@ -45,7 +44,7 @@ public class DataGraph {
         return entities;
     }
 
-    public Map<UUID, Map<Integer, Map<UUID, Map<Integer, SetMultimap<UUID, Object>>>>> getAssociations() {
+    public ListMultimap<UUID, DataAssociation> getAssociations() {
         return associations;
     }
 

@@ -157,6 +157,7 @@ public final class SerializationConstants {
     public static final String ASSOCIATION_COUNT                = "associationCount";
     public static final String ASSOCIATIONS_ENTITY_KEY_MAPPINGS = "associationsEntityKeyMappings";
     public static final String ENTITY_SETS_ENTITY_KEY_MAPPINGS  = "entitySetsEntityKeyMappings";
+    public static final String EDGE                             = "edge";
 
     private SerializationConstants() {
     }
