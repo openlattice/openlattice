@@ -22,7 +22,7 @@ package com.openlattice;
 
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.mapstores.PostgresDataMapstore;
-import com.openlattice.data.requests.Entity;
+import com.openlattice.data.integration.Entity;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.datastax.driver.core.Session;
 import com.google.common.util.concurrent.ListeningExecutorService;
