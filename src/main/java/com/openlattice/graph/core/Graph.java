@@ -94,13 +94,20 @@ public class Graph implements GraphApi {
             UUID edgeEntityTypeId,
             UUID edgeEntitySetId ) {
 
-        EdgeKey key = new EdgeKey( srcVertexId, dstVertexEntityTypeId, edgeEntityTypeId, dstVertexId, edgeEntityId );
+        EdgeKey key = new EdgeKey(
+                srcVertexId,
+                dstVertexEntityTypeId,
+                edgeEntityTypeId,
+                dstVertexId,
+                edgeEntityId );
         Edge edge = new Edge(
                 key,
                 srcVertexEntityTypeId,
                 srcVertexEntitySetId,
                 dstVertexEntitySetId,
-                edgeEntitySetId, dstTypeId, edgeTypeId );
+                edgeEntitySetId,
+                dstTypeId,
+                edgeTypeId );
 
         return new ListenableHazelcastFuture<>( edges.setAsync( key, edge ) );
     }

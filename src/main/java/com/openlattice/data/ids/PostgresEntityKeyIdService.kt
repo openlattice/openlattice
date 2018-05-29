@@ -21,11 +21,16 @@
 
 package com.openlattice.data.ids
 
+import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
+import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.core.IMap
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -37,32 +42,72 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-private val entityKeySql = "SELECT * FROM $IDS.name WHERE ${ID.name} = ? "
-private val entityKeysSql = "SELECT * FROM $IDS.name WHERE ${ID.name} IN " +
+private val entityKeySql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ? "
+private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} IN " +
         "(SELECT * FROM UNNEST( (?)::uuid[] )) "
-private val entityKeyIdsSql = "SELECT * FROM $IDS.name WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} IN " +
+private val entityKeyIdsSql = "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} IN " +
         "(SELECT * FROM UNNEST( (?)::text[] )) "
-private val entityKeyIdSql = "SELECT * FROM $IDS.name WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} =? "
+private val entityKeyIdSql = "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} =? "
+private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name})" +
+        " VALUES(?,?,?)"
 
-class PostgresEntityKeyIdService(private val hds: HikariDataSource) : EntityKeyIdService {
-    override fun getEntityKeyId(entitySetId: UUID?, entityId: String?): UUID {
-        val connection = hds.getConnection()
-        val ps = connection.prepareStatement(entityKeyIdSql)
-        ps.setObject(1, entitySetId)
-        ps.setString(2, entityId)
-        return ResultSetAdapters.id(ps.executeQuery())
+class PostgresEntityKeyIdService(
+        hazelcastInstance: HazelcastInstance,
+        private val hds: HikariDataSource,
+        private val idGenerationService: HazelcastIdGenerationService
+) : EntityKeyIdService {
+    private val entitySetCounts: IMap<UUID, Long> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SET_COUNTERS.name)
+
+    override fun assignEntityKeyIds(entitySetId: UUID, entityIds: MutableSet<String>): MutableMap<String, UUID> {
+
+    }
+
+    private fun genEntityKeyIds(entityIds: SetMultimap<UUID, String>): Map<String, UUID> {
+        val ids = idGenerationService.getNextIds(entityIds.size())
+        checkState(ids.size != entityIds.size(), "Insufficient ids generated.")
+
+        val idIterator = ids.iterator()
+        return entityIds.values().map { it to idIterator.next() }.toMap()
+    }
+
+    private fun storeEntityKeyIds(entitySetId: UUID) {
+
+    }
+
+
+    override fun reserveIds(entitySetId: UUID?, count: Int): MutableList<UUID> {
+        val base = entitySetCounts.executeOnKey(entitySetId, IdReservingEntryProcessor(count)) as Long
+        val ids = idGenerationService.getNextIds(count)
+
+    }
+
+    override fun getEntityKeyId(entitySetId: UUID?, entityId: String?): UUID? {
+        return loadEntityKeyId(entitySetId, entityId) ?: assignEntityKeyIds(entitySetId, setOf(entityId))
+
     }
 
     override fun getEntityKeyId(entityKey: EntityKey): UUID {
         return getEntityKeyId(entityKey.entitySetId, entityKey.entityId)
     }
 
-    override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Map<EntityKey, UUID> {
-        val entityIds: SetMultimap<UUID, String> = HashMultimap.create()
-        entityKeys.forEach { entityIds.put(it.entitySetId, it.entityId) }
-
+    private fun loadEntityKeyId(entitySetId: UUID?, entityId: String?): UUID? {
         val connection = hds.getConnection()
-        val ids = HashMap<EntityKey, UUID>(entityKeys.size)
+        val ps = connection.prepareStatement(entityKeyIdSql)
+        ps.setObject(1, entitySetId)
+        ps.setString(2, entityId)
+        val rs = ps.executeQuery()
+
+        return if (rs.next()) {
+            ResultSetAdapters.id(rs)
+        } else {
+            null
+        }
+    }
+
+    private fun loadEntityKeyIds(entityIds: SetMultimap<UUID, String>): Map<EntityKey, UUID> {
+        val connection = hds.getConnection()
+        val ids = HashMap<EntityKey, UUID>(entityIds.size())
+
         Multimaps
                 .asMap(entityIds)
                 .forEach {
@@ -76,6 +121,13 @@ class PostgresEntityKeyIdService(private val hds: HikariDataSource) : EntityKeyI
                 }
 
         return ids
+    }
+
+    override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Map<EntityKey, UUID> {
+        val entityIds: SetMultimap<UUID, String> = HashMultimap.create()
+        entityKeys.forEach { entityIds.put(it.entitySetId, it.entityId) }
+
+        return loadEntityKeyIds(entityIds)
     }
 
     override fun getEntityKeyEntries(entityKeyIds: Set<UUID>): Set<Map.Entry<EntityKey, UUID>> {

@@ -35,8 +35,9 @@ public enum HazelcastMap {
     EDM_VERSIONS( Table.EDM_VERSIONS ),
     ENUM_TYPES( Table.ENUM_TYPES ),
     ENTITY_DATA( null ),
+    ENTITY_SET_COUNTERS( null ),
     IDS( Table.IDS ),
-    ID_GENERATION( null),
+    ID_GENERATION( null ),
     KEYS( Table.KEYS ),
     LINKED_ENTITY_TYPES( Table.LINKED_ENTITY_TYPES ),
     LINKED_ENTITY_SETS( Table.LINKED_ENTITY_SETS ),
@@ -77,7 +78,6 @@ public enum HazelcastMap {
     APP_TYPES( Table.APP_TYPES ),
     APP_CONFIGS( Table.APP_CONFIGS ),
     ORGANIZATION_APPS( Table.ORGANIZATIONS );
-
 
     private final Table table;
 

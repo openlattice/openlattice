@@ -226,9 +226,11 @@ public final class PostgresTable {
 
     static {
         IDS.addIndexes(
-                new PostgresIndexDefinition( IDS, ENTITY_SET_ID, SYNC_ID, ENTITY_ID )
+                new PostgresIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
+                        .unique()
                         .name( "entity_key_idx" )
-                        .ifNotExists() );
+                        .ifNotExists()
+                );
         APPS.addIndexes(
                 new PostgresIndexDefinition( APPS, ID )
                         .name( "id_idx" )
