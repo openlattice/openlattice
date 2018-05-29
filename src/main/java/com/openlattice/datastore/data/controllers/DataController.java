@@ -30,6 +30,7 @@ import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticati
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Optional;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -45,11 +46,13 @@ import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.data.DataApi;
+import com.openlattice.data.DataAssociation;
 import com.openlattice.data.DataEdge;
 import com.openlattice.data.DataGraph;
 import com.openlattice.data.DataGraphIds;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
@@ -312,26 +315,54 @@ public class DataController implements DataApi, AuthorizingComponent {
         final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
         accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
 
-        final Map<UUID, PropertyType> authorizedPropertyTypes = dms.getPropertyTypesAsMap( ImmutableSet.copyOf(requiredPropertyTypes.values() ) )
+        final Map<UUID, PropertyType> authorizedPropertyTypes = dms
+                .getPropertyTypesAsMap( ImmutableSet.copyOf( requiredPropertyTypes.values() ) );
         return associations.entrySet().stream().mapToInt( association -> {
             final UUID entitySetId = association.getKey();
             if ( partial ) {
-                return dgm.partialReplaceEntities( entitySetId, transformValues( association.getValue() , DataEdge::getData ),authorizedPropertyTypes );
+                return dgm.partialReplaceEntities( entitySetId,
+                        transformValues( association.getValue(), DataEdge::getData ),
+                        authorizedPropertyTypes );
             } else {
-                return dgm.replaceEntities( entitySetId, transformValues( association.getValue() , DataEdge::getData ),authorizedPropertyTypes );
+                return dgm.replaceEntities( entitySetId,
+                        transformValues( association.getValue(), DataEdge::getData ),
+                        authorizedPropertyTypes );
             }
         } ).sum();
     }
 
     @Timed
     @Override
-    @PostMapping( value = {"/",""} )
-    public DataGraphIds createEntityAndAssociationData( DataGraph data ) {
+    @PostMapping( value = { "/", "" } )
+    public DataGraphIds createEntityAndAssociationData( @RequestBody DataGraph data ) {
+        final ListMultimap<UUID, UUID> entityKeyIds = ArrayListMultimap.create();
+        final ListMultimap<UUID, UUID> associationEntityKeyIds;
+
+        //First create the entities so we have entity key ids to work with
         Multimaps.asMap( data.getEntities() )
-                .forEach( (entitySetId , entities ) -> createOrMergeEntities(  ) );
-//        createOrMergeEntities( data )
-                createAssociations(  )
-        return null;
+                .forEach( ( entitySetId, entities ) ->
+                        entityKeyIds.putAll( entitySetId, createOrMergeEntities( entitySetId, entities ) ) );
+        final ListMultimap<UUID, DataEdge> toBeCreated = ArrayListMultimap.create();
+        Multimaps.asMap( data.getAssociations() )
+                .forEach( ( entitySetId, associations ) -> {
+                    for ( DataAssociation association : associations ) {
+                        final UUID srcEntitySetId = association.getSrcEntitySetId();
+                        final int srcEntityIndex = association.getSrcEntityIndex();
+                        final UUID dstEntitySetId = association.getDstEntitySetId();
+                        final int dstEntityIndex = association.getDstEntityIndex();
+                        toBeCreated.put( entitySetId, new DataEdge(
+                                new EntityDataKey(
+                                        srcEntitySetId,
+                                        entityKeyIds.get( srcEntitySetId ).get( srcEntityIndex ) ),
+                                new EntityDataKey(
+                                        dstEntitySetId,
+                                        entityKeyIds.get( dstEntitySetId ).get( dstEntityIndex ) ),
+                                association.getData() ) );
+                    }
+                } );
+        associationEntityKeyIds = createAssociations( toBeCreated );
+
+        return new DataGraphIds( entityKeyIds, associationEntityKeyIds );
     }
 
     @Override
