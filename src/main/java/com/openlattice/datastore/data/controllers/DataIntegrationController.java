@@ -136,8 +136,9 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
 
     @PostMapping( { "/", "" } )
     @Override public IntegrationResults integrateEntityAndAssociationData(
-            @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" ) boolean detailedResults,
-            @RequestBody BulkDataCreation data ) {
+            @RequestBody BulkDataCreation data,
+            @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" )
+                    boolean detailedResults ) {
         final Set<Entity> entities = data.getEntities();
         final Set<Association> associations = data.getAssociations();
 

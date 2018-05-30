@@ -48,6 +48,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.DataAssociation;
 import com.openlattice.data.DataEdge;
+import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.DataGraph;
 import com.openlattice.data.DataGraphIds;
 import com.openlattice.data.DataGraphManager;
@@ -71,6 +72,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
@@ -257,6 +259,17 @@ public class DataController implements DataApi, AuthorizingComponent {
         return dgm.replacePropertiesInEntities( entitySetId,
                 entities,
                 dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+    }
+
+    @Override public Integer createAssociations( Set<DataEdgeKey> associations ) {
+        Set<UUID> entitySetIds = associations.stream()
+                .flatMap( edgeKey -> Stream.of(
+                        edgeKey.getSrc().getEntitySetId(),
+                        edgeKey.getDst().getEntitySetId(),
+                        edgeKey.getEdge().getEntitySetId() ) )
+                .collect( Collectors.toSet() );
+
+        return null;
     }
 
     @Override
