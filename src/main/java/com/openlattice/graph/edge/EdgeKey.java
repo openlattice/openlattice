@@ -22,93 +22,50 @@
 
 package com.openlattice.graph.edge;
 
-import com.hazelcast.core.PartitionAware;
+import com.openlattice.data.EntityDataKey;
 import java.util.Objects;
-import java.util.UUID;
 
-public class EdgeKey implements PartitionAware<UUID> {
-    private final UUID srcEntitySetId;
-    private final UUID srcEntityKeyId;
-    private final UUID dstEntitySetId;
-    private final UUID dstEntityKeyId;
-    private final UUID edgeEntitySetId;
-    private final UUID edgeEntityKeyId;
+public class EdgeKey {
+    private final EntityDataKey src;
+    private final EntityDataKey dst;
+    private final EntityDataKey edge;
 
-    public EdgeKey(
-            UUID srcEntitySetId,
-            UUID srcEntityKeyId,
-            UUID dstEntitySetId,
-            UUID dstEntityKeyId,
-            UUID edgeEntitySetId, UUID edgeEntityKeyId ) {
-        this.srcEntitySetId = srcEntitySetId;
-        this.srcEntityKeyId = srcEntityKeyId;
-        this.dstEntitySetId = dstEntitySetId;
-        this.dstEntityKeyId = dstEntityKeyId;
-        this.edgeEntitySetId = edgeEntitySetId;
-        this.edgeEntityKeyId = edgeEntityKeyId;
+    public EdgeKey( EntityDataKey src, EntityDataKey dst, EntityDataKey edge ) {
+        this.src = src;
+        this.dst = dst;
+        this.edge = edge;
     }
 
-    public UUID getSrcEntityKeyId() {
-        return srcEntityKeyId;
+    public EntityDataKey getSrc() {
+        return src;
     }
 
-    public UUID getSrcEntitySetId() {
-        return srcEntitySetId;
+    public EntityDataKey getDst() {
+        return dst;
     }
 
-    public UUID getDstEntitySetId() {
-        return dstEntitySetId;
-    }
-
-    public UUID getEdgeEntitySetId() {
-        return edgeEntitySetId;
-    }
-
-    @Override public String toString() {
-        return "EdgeKey{" +
-                "srcEntitySetId=" + srcEntitySetId +
-                ", srcEntityKeyId=" + srcEntityKeyId +
-                ", dstEntitySetId=" + dstEntitySetId +
-                ", dstEntityKeyId=" + dstEntityKeyId +
-                ", edgeEntitySetId=" + edgeEntitySetId +
-                ", edgeEntityKeyId=" + edgeEntityKeyId +
-                '}';
+    public EntityDataKey getEdge() {
+        return edge;
     }
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof EdgeKey ) ) { return false; }
         EdgeKey edgeKey = (EdgeKey) o;
-        return Objects.equals( srcEntitySetId, edgeKey.srcEntitySetId ) &&
-                Objects.equals( srcEntityKeyId, edgeKey.srcEntityKeyId ) &&
-                Objects.equals( dstEntitySetId, edgeKey.dstEntitySetId ) &&
-                Objects.equals( dstEntityKeyId, edgeKey.dstEntityKeyId ) &&
-                Objects.equals( edgeEntitySetId, edgeKey.edgeEntitySetId ) &&
-                Objects.equals( edgeEntityKeyId, edgeKey.edgeEntityKeyId );
+        return Objects.equals( src, edgeKey.src ) &&
+                Objects.equals( dst, edgeKey.dst ) &&
+                Objects.equals( edge, edgeKey.edge );
     }
 
     @Override public int hashCode() {
-
-        return Objects
-                .hash( srcEntitySetId,
-                        srcEntityKeyId,
-                        dstEntitySetId,
-                        dstEntityKeyId,
-                        edgeEntitySetId,
-                        edgeEntityKeyId );
+        return Objects.hash( src, dst, edge );
     }
 
-    public UUID getDstEntityKeyId() {
-        return dstEntityKeyId;
+    @Override public String toString() {
+        return "EdgeKey{" +
+                "src=" + src +
+                ", dst=" + dst +
+                ", edge=" + edge +
+                '}';
     }
-
-    public UUID getEdgeEntityKeyId() {
-        return edgeEntityKeyId;
-    }
-
-    @Override
-    public UUID getPartitionKey() {
-        return srcEntityKeyId;
-    }
-
 }

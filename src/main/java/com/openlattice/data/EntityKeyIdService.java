@@ -48,7 +48,5 @@ public interface EntityKeyIdService {
 
     Map<UUID, EntityKey> getEntityKeys( Set<UUID> entityKeyIds );
 
-    Map<String, UUID> assignEntityKeyIds( UUID entitySetId, Set<String> entityIds );
-
     List<UUID> reserveIds( UUID entitySetId, int count );
 }

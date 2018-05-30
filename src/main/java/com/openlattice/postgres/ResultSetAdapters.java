@@ -76,6 +76,8 @@ import static com.openlattice.postgres.PostgresColumn.STATUS;
 import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
 import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
+import static com.openlattice.postgres.PostgresColumn.VERSION;
+import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 
 import com.google.common.base.Optional;
@@ -190,23 +192,24 @@ public final class ResultSetAdapters {
         return ImmutableSet.copyOf( PostgresArrays.getUuidArray( rs, PostgresColumn.ENTITY_TYPE_IDS_FIELD ) );
     }
 
-    public static Edge loomEdge( ResultSet rs ) throws SQLException {
+    public static Edge edge( ResultSet rs ) throws SQLException {
         EdgeKey key = edgeKey( rs );
-        UUID srcType = (UUID) rs.getObject( "src_type_id" );
-        UUID srcSetId = (UUID) rs.getObject( "src_entity_set_id" );
-        UUID dstSetId = (UUID) rs.getObject( "dst_entity_set_id" );
-        UUID edgeSetId = (UUID) rs.getObject( "edge_entity_set_id" );
-        return new Edge( key, srcType, srcSetId, dstSetId, edgeSetId, dstTypeId, edgeTypeId );
+        long version = rs.getLong( VERSION.getName() );
+        List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
+        return new Edge( key, version, versions );
     }
 
     public static EdgeKey edgeKey( ResultSet rs ) throws SQLException {
+        UUID srcEntitySetId = (UUID) rs.getObject( "src_entity_set_id" );
         UUID srcEntityKeyId = (UUID) rs.getObject( "src_entity_key_id" );
-        UUID dstTypeId = (UUID) rs.getObject( "dst_type_id" );
-        UUID edgeTypeId = (UUID) rs.getObject( "edge_type_id" );
+        UUID dstEntitySetId = (UUID) rs.getObject( "dst_entity_set_id" );
         UUID dstEntityKeyId = (UUID) rs.getObject( "dst_entity_key_id" );
+        UUID edgeEntitySetId = (UUID) rs.getObject( "edge_entity_set_id" );
         UUID edgeEntityKeyId = (UUID) rs.getObject( "edge_entity_key_id" );
-        return new EdgeKey( srcEntityKeyId, dstTypeId, edgeTypeId, dstEntityKeyId, edgeEntityKeyId );
 
+        return new EdgeKey( new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
+                new EntityDataKey( dstEntitySetId, dstEntityKeyId ),
+                new EntityDataKey( edgeEntitySetId, edgeEntityKeyId ) );
     }
 
     public static EntityKey entityKey( ResultSet rs ) throws SQLException {

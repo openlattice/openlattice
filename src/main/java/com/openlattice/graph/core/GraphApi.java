@@ -21,16 +21,10 @@
 package com.openlattice.graph.core;
 
 import com.google.common.collect.SetMultimap;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.hazelcast.aggregation.Aggregator;
-import com.hazelcast.query.Predicate;
 import com.openlattice.data.analytics.IncrementableWeightId;
-import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -40,61 +34,23 @@ import java.util.stream.Stream;
  */
 public interface GraphApi {
 
-    //    /*
-    //     * CRUD operations of vertices
-    //     */
-    //    void createVertex( UUID vertexId );
-    //
-    //    ResultSetFuture createVertexAsync( UUID vertexId );
-    //
-    void deleteVertex( UUID vertexId );
+    int createEdges( Set<EdgeKey> keys );
 
-    ListenableFuture deleteVertexAsync( UUID vertexId );
-
-    /*
-     * CRUD operations of edges
-     */
-    void addEdge(
-            UUID srcVertexId,
-            UUID srcVertexEntityTypeId,
-            UUID srcVertexEntitySetId,
-            UUID dstVertexId,
-            UUID dstVertexEntityTypeId,
-            UUID dstVertexEntitySetId,
-            UUID edgeId,
-            UUID edgeTypeId,
-            UUID edgeEntitySetId );
-
-    ListenableFuture addEdgeAsync(
-            UUID srcVertexId,
-            UUID srcVertexEntityTypeId,
-            UUID srcVertexEntitySetId,
-            UUID dstVertexId,
-            UUID dstVertexEntityTypeId,
-            UUID dstVertexEntitySetId,
-            UUID edgeEntityId,
-            UUID edgeEntityTypeId,
-            UUID edgeEntitySetId );
-
-    /**
-     * An EdgeKey is the pojo for the primary key of edges table. In the current setting, this is source vertexId,
-     * destination vertexId, and the edge syncId.
-     */
-    Edge getEdge( EdgeKey key );
-
-    Void submitAggregator( Aggregator<Entry<EdgeKey, Edge>, Void> agg, Predicate p );
-
-    void deleteEdge( EdgeKey edgeKey, Map<UUID, PropertyType> authorizedPropertyTypes );
-
-    ListenableFuture deleteEdgeAsync( EdgeKey edgeKey );
+    int clearEdges( Set<EdgeKey> keys );
 
     int clearVerticesInEntitySet( UUID entitySetId );
 
     int clearVertices( UUID entitySetId, Set<UUID> vertices );
 
+    int deleteEdges( Set<EdgeKey> keys );
+
     int deleteVerticesInEntitySet( UUID entitySetId );
 
     int deleteVertices( UUID entitySetId, Set<UUID> vertices );
+
+    Edge getEdge( EdgeKey key );
+
+    Set<Edge> getEdges( Set<EdgeKey> keys );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID vertexId );
 

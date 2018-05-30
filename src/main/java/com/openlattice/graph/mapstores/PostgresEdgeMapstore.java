@@ -20,14 +20,14 @@
 
 package com.openlattice.graph.mapstores;
 
-import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
+import com.openlattice.graph.edge.Edge;
+import com.openlattice.graph.edge.EdgeKey;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
@@ -97,11 +97,12 @@ public class PostgresEdgeMapstore extends AbstractBasePostgresMapstore<EdgeKey, 
     }
 
     public int bind( PreparedStatement ps, EdgeKey key, int parameterIndex ) throws SQLException {
+        ps.setObject( parameterIndex++, key.getSrcEntitySetId() );
         ps.setObject( parameterIndex++, key.getSrcEntityKeyId() );
-        ps.setObject( parameterIndex++, key.getDstTypeId() );
-        ps.setObject( parameterIndex++, key.getEdgeTypeId() );
+        ps.setObject( parameterIndex++, key.getDstEntitySetId() );
         ps.setObject( parameterIndex++, key.getDstEntityKeyId() );
         ps.setObject( parameterIndex++, key.getEdgeEntityKeyId() );
+        ps.setObject( parameterIndex++, key.getEdgeEntitySetId() );
         return parameterIndex;
     }
 

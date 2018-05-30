@@ -34,20 +34,20 @@ import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.blocking.GraphEntityPair;
 import com.openlattice.blocking.LinkingEntity;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.*;
-import com.openlattice.data.ids.HazelcastEntityKeyIdService;
+import com.openlattice.data.DataGraphService;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataValue;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.graph.core.Graph;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.processors.EntityDataUpserter;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
-
-import javax.inject.Inject;
+import com.openlattice.ids.HazelcastIdGenerationService;
+import com.zaxxer.hikari.HikariDataSource;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Set;
@@ -55,6 +55,11 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.inject.Inject;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 
 public class HazelcastMergingService {
     private static final Logger logger = LoggerFactory.getLogger( HazelcastMergingService.class );
@@ -69,13 +74,13 @@ public class HazelcastMergingService {
     private       HazelcastInstance                    hazelcastInstance;
     private       ObjectMapper                         mapper;
 
-    public HazelcastMergingService( HazelcastInstance hazelcastInstance, ListeningExecutorService executor ) {
+    public HazelcastMergingService( HazelcastInstance hazelcastInstance, HikariDataSource hds, ListeningExecutorService executor ) {
+        this.entities = hazelcastInstance.getMap( HazelcastMap.DATA.name() );
         this.newIds = hazelcastInstance.getMap( HazelcastMap.VERTEX_IDS_AFTER_LINKING.name() );
         this.mapper = ObjectMappers.getJsonMapper();
 
         this.ids = hazelcastInstance.getMap( HazelcastMap.IDS.name() );
-        this.entities = hazelcastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
-        this.ekIds = new HazelcastEntityKeyIdService( hazelcastInstance, executor );
+        this.ekIds = new PostgresEntityKeyIdService( hazelcastInstance, hds, new HazelcastIdGenerationService( hazelcastInstance ) );
         this.graph = new Graph( executor, hazelcastInstance );
         this.hazelcastInstance = hazelcastInstance;
 
@@ -194,10 +199,10 @@ public class HazelcastMergingService {
     }
 
     @Async
-    public void mergeEdgeAsync( UUID linkedEntitySetId, UUID syncId, Edge edge ) {
-        UUID srcEntitySetId = edge.getSrcSetId();
-        UUID dstEntitySetId = edge.getDstSetId();
-        UUID edgeEntitySetId = edge.getEdgeSetId();
+    public void mergeEdgeAsync( UUID linkedEntitySetId,  Edge edge ) {
+        UUID srcEntitySetId = edge.getSrc();
+        UUID dstEntitySetId = edge.getDst();
+        UUID edgeEntitySetId = edge.getEdge();
 
         UUID srcId = edge.getKey().getSrcEntityKeyId();
         UUID dstId = edge.getKey().getDstEntityKeyId();

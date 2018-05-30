@@ -20,13 +20,13 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.graph.edge.EdgeKey;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
-import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -56,20 +56,15 @@ public class EdgeKeyStreamSerializer implements SelfRegisteringStreamSerializer<
     }
 
     public static EdgeKey deserialize( ObjectDataInput in ) throws IOException {
-        final UUID srcEntityKeyId = UUIDStreamSerializer.deserialize( in );
-        final UUID dstTypeId = UUIDStreamSerializer.deserialize( in );
-        final UUID edgeTypeId = UUIDStreamSerializer.deserialize( in );
-        final UUID dstEntityKeyId = UUIDStreamSerializer.deserialize( in );
-        final UUID edgeEntityKeyId = UUIDStreamSerializer.deserialize( in );
-
-        return new EdgeKey( srcEntityKeyId, dstTypeId, edgeTypeId, dstEntityKeyId, edgeEntityKeyId );
+        final EntityDataKey src = EntityDataKeyStreamSerializer.deserialize( in );
+        final EntityDataKey dst = EntityDataKeyStreamSerializer.deserialize( in );
+        final EntityDataKey edge = EntityDataKeyStreamSerializer.deserialize( in );
+        return new EdgeKey( src, dst, edge );
     }
 
     public static void serialize( ObjectDataOutput out, EdgeKey object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getSrcEntityKeyId() );
-        UUIDStreamSerializer.serialize( out, object.getDstTypeId() );
-        UUIDStreamSerializer.serialize( out, object.getEdgeTypeId() );
-        UUIDStreamSerializer.serialize( out, object.getDstEntityKeyId() );
-        UUIDStreamSerializer.serialize( out, object.getEdgeEntityKeyId() );
+        EntityDataKeyStreamSerializer.serialize( out, object.getSrc() );
+        EntityDataKeyStreamSerializer.serialize( out, object.getDst() );
+        EntityDataKeyStreamSerializer.serialize( out, object.getEdge() );
     }
 }

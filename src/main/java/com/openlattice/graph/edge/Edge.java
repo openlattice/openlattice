@@ -22,81 +22,53 @@
 
 package com.openlattice.graph.edge;
 
+import com.openlattice.data.EntityDataKey;
+import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 public class Edge {
-    private EdgeKey key;
-
-    private final UUID srcType;
-    private final UUID srcSetId;
-    private final UUID dstSetId;
-    private final UUID edgeSetId;
-    private final UUID dstTypeId;
-    private final UUID edgeTypeId;
+    private final EdgeKey key;
+    private final long          version;
+    private final List<Long>    versions;
 
     public Edge(
             EdgeKey key,
-            UUID srcType,
-            UUID srcSetId,
-            UUID dstSetId,
-            UUID edgeSetId, UUID dstTypeId, UUID edgeTypeId ) {
+            long version,
+            List<Long> versions ) {
         this.key = key;
-        this.srcType = srcType;
-        this.srcSetId = srcSetId;
-        this.dstSetId = dstSetId;
-        this.edgeSetId = edgeSetId;
-        this.dstTypeId = dstTypeId;
-        this.edgeTypeId = edgeTypeId;
+        this.version = version;
+        this.versions = versions;
     }
 
     public EdgeKey getKey() {
         return key;
     }
 
-    public UUID getSrcTypeId() {
-        return srcType;
+    public EntityDataKey getSrc() {
+        return key.getSrc();
     }
 
-    public UUID getSrcSetId() {
-        return srcSetId;
+    public EntityDataKey getDst() {
+        return key.getDst();
     }
 
-    public UUID getDstSetId() {
-        return dstSetId;
+    public EntityDataKey getEdge() {
+        return key.getEdge();
     }
 
-    public UUID getEdgeSetId() {
-        return edgeSetId;
+    public long getVersion() {
+        return version;
     }
 
-    public UUID getSrcEntityKeyId() {
-        return key.getSrcEntityKeyId();
-    }
-
-    public UUID getDstEntityKeyId() {
-        return key.getDstEntityKeyId();
-    }
-
-    public UUID getEdgeEntityKeyId() {
-        return key.getEdgeEntityKeyId();
-    }
-
-    public UUID getDstTypeId() {
-        return dstTypeId;
-    }
-
-    public UUID getEdgeTypeId() {
-        return edgeTypeId;
+    public List<Long> getVersions() {
+        return versions;
     }
 
     @Override public String toString() {
         return "Edge{" +
                 "key=" + key +
-                ", srcType=" + srcType +
-                ", srcSetId=" + srcSetId +
-                ", dstSetId=" + dstSetId +
-                ", edgeSetId=" + edgeSetId +
+                ", version=" + version +
+                ", versions=" + versions +
                 '}';
     }
 
@@ -104,15 +76,13 @@ public class Edge {
         if ( this == o ) { return true; }
         if ( !( o instanceof Edge ) ) { return false; }
         Edge edge = (Edge) o;
-        return Objects.equals( key, edge.key ) &&
-                Objects.equals( srcType, edge.srcType ) &&
-                Objects.equals( srcSetId, edge.srcSetId ) &&
-                Objects.equals( dstSetId, edge.dstSetId ) &&
-                Objects.equals( edgeSetId, edge.edgeSetId );
+        return version == edge.version &&
+                Objects.equals( key, edge.key ) &&
+                Objects.equals( versions, edge.versions );
     }
 
     @Override public int hashCode() {
-
-        return Objects.hash( key, srcType, srcSetId, dstSetId, edgeSetId );
+        return Objects.hash( key, version, versions );
     }
+
 }

@@ -66,11 +66,6 @@ public class EntityByteBuffers {
         return key.getEntityId();
     }
 
-    @JsonIgnore
-    public UUID getSyncId() {
-        return key.getSyncId();
-    }
-
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof EntityByteBuffers ) ) { return false; }

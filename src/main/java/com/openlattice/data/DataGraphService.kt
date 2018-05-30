@@ -21,6 +21,7 @@
 
 package com.openlattice.data
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
@@ -36,6 +37,7 @@ import com.openlattice.data.integration.Entity
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.Graph
+import com.openlattice.graph.core.GraphApi
 import com.openlattice.graph.core.objects.NeighborTripletSet
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
@@ -55,10 +57,10 @@ import kotlin.collections.HashMap
  */
 private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 
-class KDataGraphService(
+class DataGraphService(
         hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
-        private val lm: Graph,
+        private val lm: GraphApi,
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore
 ) : DataGraphManager {
@@ -132,14 +134,15 @@ class KDataGraphService(
         return eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
+    @Timed
     override fun deleteAssociation(keys: Set<EdgeKey>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         val entitySetsToEntityKeyIds = HashMultimap.create<UUID, UUID>()
-        for (edgeKey in keys) {
-            lm.deleteEdge(edgeKey, authorizedPropertyTypes)
-            entitySetsToEntityKeyIds.put(edgeKey.edgeEntitySetId, edgeKey.edgeEntityKeyId)
+
+        keys.forEach() {
+            entitySetsToEntityKeyIds.put(it.edgeEntitySetId, it.edgeEntityKeyId)
         }
 
-        return Multimaps.asMap(entitySetsToEntityKeyIds)
+        return lm.deleteEdges(keys) + Multimaps.asMap(entitySetsToEntityKeyIds)
                 .entries
                 .stream()
                 .mapToInt { e -> eds.deleteEntities(e.key, e.value, authorizedPropertyTypes) }
@@ -151,11 +154,11 @@ class KDataGraphService(
             entities: Map<String, SetMultimap<UUID, Any>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Map<String, UUID> {
-
-        val ids = idService.assignEntityKeyIds(entitySetId, entities.keys)
-        val identifiedEntities = entities.map { ids[it.key] to it.value }.toMap()
+        val ids = idService.getEntityKeyIds(entities.keys.map { EntityKey(entitySetId, it) }.toSet())
+        val identifiedEntities = ids.map { it.value to entities[it.key.entityId] }.toMap()
         eds.createEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
-        return ids
+        //We need to fix this to avoid remapping. Skipping for expediency.
+        return ids.map{ it.key.entityId to it.value }.toMap()
     }
 
     override fun createEntities(

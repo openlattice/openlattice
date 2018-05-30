@@ -20,14 +20,15 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.graph.edge.Edge;
+import com.openlattice.graph.edge.EdgeKey;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 /**
@@ -42,25 +43,24 @@ public class EdgeStreamSerializer implements SelfRegisteringStreamSerializer<Edg
 
     @Override public void write( ObjectDataOutput out, Edge object ) throws IOException {
         EdgeKeyStreamSerializer.serialize( out, object.getKey() );
-        UUIDStreamSerializer.serialize( out, object.getSrcTypeId() );
-        UUIDStreamSerializer.serialize( out, object.getSrcSetId() );
-        UUIDStreamSerializer.serialize( out, object.getSrcSyncId() );
-        UUIDStreamSerializer.serialize( out, object.getDstSetId() );
-        UUIDStreamSerializer.serialize( out, object.getDstSyncId() );
-        UUIDStreamSerializer.serialize( out, object.getEdgeSetId() );
+        out.writeLong( object.getVersion() );
+        out.writeInt( object.getVersions().size() );
+        for ( long v : object.getVersions() ) {
+            out.writeLong( v );
+        }
     }
 
     @Override public Edge read( ObjectDataInput in ) throws IOException {
-        EdgeKey key = EdgeKeyStreamSerializer.deserialize( in );
+        final EdgeKey key = EdgeKeyStreamSerializer.deserialize( in );
 
-        UUID srcType = UUIDStreamSerializer.deserialize( in );
-        UUID srcSetId = UUIDStreamSerializer.deserialize( in );
-        UUID srcSyncId = UUIDStreamSerializer.deserialize( in );
-        UUID dstSetId = UUIDStreamSerializer.deserialize( in );
-        UUID dstSyncId = UUIDStreamSerializer.deserialize( in );
-        UUID edgeSetId = UUIDStreamSerializer.deserialize( in );
+        final long version = in.readLong();
+        final int size = in.readInt();
+        final List<Long> versions = new ArrayList<>( size );
+        for ( int i = 0; i < size; ++i ) {
+            versions.add( in.readLong() );
+        }
 
-        return new Edge( key, srcType, srcSetId, srcSyncId, dstSetId, dstSyncId, edgeSetId );
+        return new Edge( key, version, versions );
     }
 
     @Override public int getTypeId() {
