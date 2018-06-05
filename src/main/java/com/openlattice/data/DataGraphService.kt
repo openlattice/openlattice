@@ -36,9 +36,9 @@ import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.graph.core.Graph
 import com.openlattice.graph.core.GraphApi
 import com.openlattice.graph.core.objects.NeighborTripletSet
+import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
 import org.apache.commons.collections4.keyvalue.MultiKey
@@ -138,8 +138,8 @@ class DataGraphService(
     override fun deleteAssociation(keys: Set<EdgeKey>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         val entitySetsToEntityKeyIds = HashMultimap.create<UUID, UUID>()
 
-        keys.forEach() {
-            entitySetsToEntityKeyIds.put(it.edgeEntitySetId, it.edgeEntityKeyId)
+        keys.forEach {
+            entitySetsToEntityKeyIds.put(it.edge.entitySetId, it.edge.entityKeyId)
         }
 
         return lm.deleteEdges(keys) + Multimaps.asMap(entitySetsToEntityKeyIds)
@@ -158,7 +158,7 @@ class DataGraphService(
         val identifiedEntities = ids.map { it.value to entities[it.key.entityId] }.toMap()
         eds.createEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
         //We need to fix this to avoid remapping. Skipping for expediency.
-        return ids.map{ it.key.entityId to it.value }.toMap()
+        return ids.map { it.key.entityId to it.value }.toMap()
     }
 
     override fun createEntities(
@@ -215,7 +215,7 @@ class DataGraphService(
                     entityKeyIds.putAll(entitySetId, ids)
 
                     for (i in 0 until ids.size) {
-                        lm.addEdge(
+                        lm.createEdges(
                                 it.value[i].src.entityKeyId,
                                 typeIds.getUnchecked(it.value[i].src.entitySetId),
                                 it.value[i].src.entitySetId,
@@ -247,6 +247,7 @@ class DataGraphService(
             entityKeys.add(association.src)
             entityKeys.add(association.dst)
         }
+
         val entityKeyIds = idService.getEntityKeyIds(entityKeys)
 
         associationEntitiesByEntitySet
@@ -259,33 +260,21 @@ class DataGraphService(
                             }
                 }
 
-        associations
-                .parallelStream()
+        //Create graph structure.
+        val edges = associations
                 .map { association ->
+                    val srcId = entityKeyIds[association.src]
+                    val dstId = entityKeyIds[association.dst]
                     val edgeId = entityKeyIds[association.key]
 
-                    val srcId = idService.getEntityKeyId(association.src)
-                    val srcTypeId = typeIds.getUnchecked(association.src.entitySetId)
-                    val srcSetId = association.src.entitySetId
-                    val dstId = idService.getEntityKeyId(association.dst)
-                    val dstTypeId = typeIds.getUnchecked(association.dst.entitySetId)
-                    val dstSetId = association.dst.entitySetId
-                    val edgeTypeId = typeIds.getUnchecked(association.key.entitySetId)
-                    val edgeSetId = association.key.entitySetId
+                    val src = EntityDataKey(association.src.entitySetId, srcId)
+                    val dst = EntityDataKey(association.dst.entitySetId, dstId)
+                    val edge = EntityDataKey(association.key.entitySetId, edgeId)
 
-                    lm
-                            .addEdgeAsync(
-                                    srcId,
-                                    srcTypeId,
-                                    srcSetId,
-                                    dstId,
-                                    dstTypeId,
-                                    dstSetId,
-                                    edgeId,
-                                    edgeTypeId,
-                                    edgeSetId
-                            )
-                }.forEach { tryGetAndLogErrors(it) }
+                    EdgeKey( src, dst, edge )
+                }
+                .toSet()
+        lm.createEdges(edges)
         return null
     }
 
