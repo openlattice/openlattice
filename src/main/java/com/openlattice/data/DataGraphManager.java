@@ -98,6 +98,12 @@ public interface DataGraphManager {
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
+    /**
+     * Integrates association data into the system.
+     * @param associations The assosciations to integrate
+     * @param authorizedPropertiesByEntitySetId The authorized properties by entity set id.
+     * @return A map of entity sets to mappings of entity ids to entity key ids.
+     */
     Map<UUID, Map<String, UUID>> integrateAssociations(
             Set<Association> associations,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertiesByEntitySetId );

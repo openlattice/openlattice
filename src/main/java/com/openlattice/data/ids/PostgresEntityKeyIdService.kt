@@ -36,6 +36,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
+import kotlin.collections.HashMap
 
 /**
  *
@@ -83,25 +84,24 @@ class PostgresEntityKeyIdService(
     }
 
 
-    override fun reserveIds(entitySetId: UUID?, count: Int): List<UUID> {
+    override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
         storeEntityKeyIds(ids.map { EntityKey(entitySetId, it.toString()) to it }.toMap())
         return ids.toList()
     }
 
-    override fun getEntityKeyId(entitySetId: UUID, entityId: String): UUID? {
+    override fun getEntityKeyId(entitySetId: UUID, entityId: String): UUID {
         val entityKey = EntityKey(entitySetId, entityId)
         return getEntityKeyId(entityKey)
 
     }
 
-    override fun getEntityKeyId(entityKey: EntityKey): UUID? {
-        return loadEntityKeyId(entityKey.entitySetId, entityKey.entityId) ?: storeEntityKeyIds(
-                genEntityKeyIds(setOf(entityKey))
-        )[entityKey]
+    override fun getEntityKeyId(entityKey: EntityKey): UUID {
+        return loadEntityKeyId(entityKey.entitySetId, entityKey.entityId) ?:
+                storeEntityKeyIds(genEntityKeyIds(setOf(entityKey)))[entityKey]!!
     }
 
-    private fun loadEntityKeyId(entitySetId: UUID?, entityId: String?): UUID? {
+    private fun loadEntityKeyId(entitySetId: UUID, entityId: String): UUID? {
         val connection = hds.getConnection()
         connection.use {
             val ps = connection.prepareStatement(entityKeyIdSql)
@@ -136,42 +136,33 @@ class PostgresEntityKeyIdService(
         return ids
     }
 
-    override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Map<EntityKey, UUID> {
+    override fun getEntityKeyIds(
+            entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
+    ): MutableMap<EntityKey, UUID> {
         val entityIds: SetMultimap<UUID, String> = HashMultimap.create()
         entityKeys.forEach { entityIds.put(it.entitySetId, it.entityId) }
+        entityKeyIds.putAll(loadEntityKeyIds(entityIds))
 
-        val entityKeyIds = loadEntityKeyIds(entityIds)
+        //Making this line O(n) is why we chose to just take a set instead of a sequence (thus allowing lazy views since copy is required anyway)
         val missing = entityKeys.minus(entityKeyIds.keys)
         entityKeyIds.putAll(storeEntityKeyIds(genEntityKeyIds(missing)))
+
         return entityKeyIds
     }
 
-    @Deprecated("Remove usages of this function...")
-    override fun getEntityKeyEntries(entityKeyIds: Set<UUID>): Set<Map.Entry<EntityKey, UUID>> {
-        val connection = hds.getConnection()
-        connection.use {
-            val ps = connection.prepareStatement(entityKeysSql)
-            val entries = HashMap<EntityKey, UUID>(entityKeyIds.size)
-
-            ps.setArray(1, PostgresArrays.createUuidArray(connection, entityKeyIds))
-            val rs = ps.executeQuery()
-
-            while (rs.next()) {
-                entries.put(ResultSetAdapters.entityKey(rs), ResultSetAdapters.id(rs))
-            }
-            return entries.entries
-        }
+    override fun getEntityKeyIds(entityKeys: Set<EntityKey>): MutableMap<EntityKey, UUID> {
+        return getEntityKeyIds(entityKeys, HashMap(entityKeys.size))
     }
 
-    override fun getEntityKey(entityKeyId: UUID): EntityKey? {
-        return loadEntityKeys(setOf(entityKeyId))[entityKeyId]
+    override fun getEntityKey(entityKeyId: UUID): EntityKey {
+        return loadEntityKeys(setOf(entityKeyId))[entityKeyId]!!
     }
 
-    override fun getEntityKeys(entityKeyIds: Set<UUID>): Map<UUID, EntityKey> {
+    override fun getEntityKeys(entityKeyIds: Set<UUID>): MutableMap<UUID, EntityKey> {
         return loadEntityKeys(entityKeyIds)
     }
 
-    private fun loadEntityKeys(entityKeyIds: Set<UUID>): Map<UUID, EntityKey> {
+    private fun loadEntityKeys(entityKeyIds: Set<UUID>): MutableMap<UUID, EntityKey> {
         val connection = hds.getConnection()
         val entries = HashMap<UUID, EntityKey>(entityKeyIds.size)
 
