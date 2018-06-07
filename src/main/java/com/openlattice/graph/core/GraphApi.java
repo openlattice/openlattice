@@ -25,6 +25,7 @@ import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -50,12 +51,22 @@ public interface GraphApi {
 
     Edge getEdge( EdgeKey key );
 
-    Set<Edge> getEdges( Set<EdgeKey> keys );
+    Map<EdgeKey, Edge> getEdgesAsMap( Set<EdgeKey> keys );
+
+    Stream<Edge> getEdges( Set<EdgeKey> keys );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID vertexId );
 
     Stream<Edge> getEdgesAndNeighborsForVertices( Set<UUID> vertexIds );
 
+    /**
+     *
+     * @param limit
+     * @param entitySetId
+     * @param srcFilters Association type ids to neighbor type ids
+     * @param dstFilters Association type ids to neighbor type ids
+     * @return
+     */
     IncrementableWeightId[] computeGraphAggregation(
             int limit,
             UUID entitySetId,

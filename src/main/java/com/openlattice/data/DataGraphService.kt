@@ -227,7 +227,7 @@ class DataGraphService(
                     }.toSet()
                     lm.createEdges(edgeKeys)
                 }
-    
+
         return entityKeyIds
     }
 
