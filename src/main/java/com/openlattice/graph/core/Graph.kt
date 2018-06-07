@@ -22,12 +22,16 @@
 package com.openlattice.graph.core
 
 import com.google.common.collect.ImmutableList
+import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
+import com.openlattice.data.EntityDataKey
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.graph.core.objects.NeighborTripletSet
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
+import com.openlattice.postgres.DataTables.COUNT_FQN
+import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.EDGES
@@ -45,7 +49,9 @@ import java.util.stream.Stream
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+
 class Graph(private val hds: HikariDataSource, private val edm: EdmService) : GraphApi {
+
     override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
@@ -115,7 +121,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmService) : Gr
 
     override fun getEdge(key: EdgeKey): Edge? {
         val iter = getEdges(setOf(key)).iterator()
-        return if( iter.hasNext() ) { iter.next() } else { null }
+        return if (iter.hasNext()) {
+            iter.next()
+        } else {
+            null
+        }
     }
 
     override fun getEdges(keys: Set<EdgeKey>): Stream<Edge> {
@@ -144,6 +154,29 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmService) : Gr
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
+    override fun topEntities(
+            limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
+    ): Stream<EntityDataKey> {
+        val countColumn = quote(COUNT_FQN.fullQualifiedNameAsString)
+        val query = "SELECT ${ENTITY_SET_ID.name}, " +
+                "${caseExpression(entitySetId)} as ${ID_VALUE.name}, " +
+                "count(*) as $countColumn " +
+                "FROM edges " +
+                "WHERE ${srcClauses(entitySetId, srcFilters)} " +
+                "AND ${dstClauses(entitySetId, dstFilters)}" +
+                "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) " +
+                "ORDER BY $countColumn DESC"
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.getConnection()
+                    val stmt = connection.createStatement()
+                    val rs = stmt.executeQuery(query)
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, EntityDataKey> { ResultSetAdapters.entityDataKey(it) }
+        ).stream()
+    }
+
     override fun getNeighborEntitySets(entitySetId: UUID?): NeighborTripletSet {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
@@ -157,6 +190,39 @@ private fun selectEdges(keys: Set<EdgeKey>): String {
                     .asSequence()
                     .map { "(${it.src.entitySetId},${it.src.entityKeyId},${it.dst.entitySetId},${it.dst.entityKeyId},${it.edge.entitySetId},${it.edge.entityKeyId})" }
                     .joinToString(",") + ")"
+}
+
+private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
+    return associationClauses(SRC_ENTITY_SET_ID.name, entitySetId, DST_ENTITY_SET_ID.name, associationFilters)
+}
+
+private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
+    return associationClauses(DST_ENTITY_SET_ID.name, entitySetId, SRC_ENTITY_SET_ID.name, associationFilters)
+}
+
+/**
+ * Generates an association clause for querying the edges table.
+ * @param entitySetColumn The column to use for filtering allowed entity set ids.
+ * @param entitySetId The entity set id for which the aggregation will be performed.
+ * @param neighborColumn The column for the neighbors that will be counted.
+ * @param associationFilters A multimap from association entity set ids to allowed entity set ids.
+ */
+private fun associationClauses(
+        entitySetColumn: String, entitySetId: UUID, neighborColumn: String, associationFilters: SetMultimap<UUID, UUID>
+): String {
+    return Multimaps
+            .asMap(associationFilters)
+            .asSequence()
+            .map {
+                "$entitySetColumn = $entitySetId AND ${EDGE_ENTITY_SET_ID.name} = ${it.key} " +
+                        "$neighborColumn IN (${it.value.map { "'$it'" }.joinToString(",")}) "
+            }
+            .joinToString(",")
+}
+
+//TODO: Extract string constants.
+private fun caseExpression(entitySetId: UUID): String {
+    return " CASE WHEN ${SRC_ENTITY_SET_ID.name}=$entitySetId THEN ${SRC_ENTITY_KEY_ID.name} ELSE ${DST_ENTITY_KEY_ID.name} END "
 }
 
 private val KEY_COLUMNS = setOf(
@@ -180,7 +246,7 @@ private val INSERT_COLUMNS = setOf(
 ).map { it.name }.toSet()
 
 private val SELECT_SQL = "SELECT * FROM ${EDGES.name} " +
-        "WHERE (${KEY_COLUMNS.joinToString(",")}) IN ";
+        "WHERE (${KEY_COLUMNS.joinToString(",")}) IN "
 private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) DO UPDATE SET version = ?, versions = versions || ?"
 
@@ -189,8 +255,3 @@ private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versio
 )} = ? "
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
-private val TOP_SQL = "SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name}, count(*) FROM ${EDGES.name} " +
-        "WHERE ${SRC_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))  " +
-        "AND ${DST_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) " +
-        "AND ${EDGE_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) " +
-        "GROUP BY (${SRC_ENTITY_SET_ID.name}, ${SRC }"

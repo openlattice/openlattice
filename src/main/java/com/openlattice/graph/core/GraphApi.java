@@ -21,6 +21,7 @@
 package com.openlattice.graph.core;
 
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.Edge;
@@ -59,13 +60,15 @@ public interface GraphApi {
 
     Stream<Edge> getEdgesAndNeighborsForVertices( Set<UUID> vertexIds );
 
+    Stream<EntityDataKey> topEntities(
+            int limit,
+            UUID entitySetId,
+            SetMultimap<UUID, UUID> srcFilters,
+            SetMultimap<UUID, UUID> dstFilters );
+
     /**
-     *
-     * @param limit
-     * @param entitySetId
      * @param srcFilters Association type ids to neighbor type ids
      * @param dstFilters Association type ids to neighbor type ids
-     * @return
      */
     IncrementableWeightId[] computeGraphAggregation(
             int limit,
