@@ -115,7 +115,7 @@ public class DataManagerTest extends SetupEnvironment {
                 .collect( Collectors.toCollection( () -> new LinkedHashSet<>() ) );
         Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType = propertyTypes.entrySet().stream()
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
-        Map<String, SetMultimap<UUID, Object>> entities = generateData( 10, propertiesWithDataType, 1 );
+        Map<UUID, SetMultimap<UUID, Object>> entities = generateData( 10, propertiesWithDataType, 1 );
 
         testWriteData( entitySetId, syncId, entities, propertiesWithDataType );
         Set<SetMultimap<FullQualifiedName, Object>> result = testReadData( syncId,
@@ -149,10 +149,10 @@ public class DataManagerTest extends SetupEnvironment {
         Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType = propertyTypes.entrySet().stream()
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
 
-        Map<String, SetMultimap<UUID, Object>> firstEntities = generateData( 10, propertiesWithDataType, 1 );
+        Map<UUID, SetMultimap<UUID, Object>> firstEntities = generateData( 10, propertiesWithDataType, 1 );
         testWriteData( entitySetId, firstSyncId, firstEntities, propertiesWithDataType );
 
-        Map<String, SetMultimap<UUID, Object>> secondEntities = generateData( 10, propertiesWithDataType, 1 );
+        Map<UUID, SetMultimap<UUID, Object>> secondEntities = generateData( 10, propertiesWithDataType, 1 );
         testWriteData( entitySetId, secondSyncId, secondEntities, propertiesWithDataType );
 
         edmApi.deleteEntitySet( entitySetId );
@@ -164,10 +164,10 @@ public class DataManagerTest extends SetupEnvironment {
         Assert.assertNull( dataApi.loadEntitySetData( entitySetId,
                 new EntitySetSelection( Optional.of( secondSyncId ), Optional.of( propertyTypes.keySet() ) ),
                 FileType.json ) );
-//        Assert.assertEquals( 0, testReadData( secondSyncId,
-//                entitySetId,
-//                orderedPropertyNames,
-//                propertyTypes ).size() );
+        //        Assert.assertEquals( 0, testReadData( secondSyncId,
+        //                entitySetId,
+        //                orderedPropertyNames,
+        //                propertyTypes ).size() );
     }
 
     @Ignore
@@ -186,7 +186,7 @@ public class DataManagerTest extends SetupEnvironment {
             String line;
             int count = 0;
             int paging_constant = 1000;
-            Map<String, SetMultimap<UUID, Object>> entities = new HashMap<>();
+            Map<UUID, SetMultimap<UUID, Object>> entities = new HashMap<>();
 
             while ( ( line = br.readLine() ) != null ) {
                 Employee employee = Employee.EmployeeCsvReader.getEmployee( line );
@@ -200,9 +200,9 @@ public class DataManagerTest extends SetupEnvironment {
                 entity.put( idLookup.get( "salary" ), employee.getSalary() );
 
                 if ( count++ < paging_constant ) {
-                    entities.put( RandomStringUtils.randomAlphanumeric( 10 ), entity );
+                    entities.put( UUID.randomUUID(), entity );
                 } else {
-                    dataApi.createEntityData( entitySetId, syncId, entities );
+                    dataApi.replaceEntities( entitySetId, entities, false );
 
                     entities = new HashMap<>();
                     count = 0;
@@ -215,10 +215,10 @@ public class DataManagerTest extends SetupEnvironment {
     public void testWriteData(
             UUID entitySetId,
             UUID syncId,
-            Map<String, SetMultimap<UUID, Object>> entities,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType ) {
         System.out.println( "Writing Data..." );
-        dataApi.createEntityData( entitySetId, syncId, entities );
+        dataApi.replaceEntities( entitySetId, entities, false );
         System.out.println( "Writing done." );
     }
 
@@ -244,17 +244,17 @@ public class DataManagerTest extends SetupEnvironment {
         return propertyTypes;
     }
 
-    private Map<String, SetMultimap<UUID, Object>> generateData(
+    private Map<UUID, SetMultimap<UUID, Object>> generateData(
             int numOfEntities,
             Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType,
             int multiplicityOfProperties ) {
         System.out.println( "Generating data..." );
 
-        final Map<String, SetMultimap<UUID, Object>> entities = new HashMap<>();
+        final Map<UUID, SetMultimap<UUID, Object>> entities = new HashMap<>();
         Set<UUID> properties = propertiesWithDataType.keySet();
         for ( int i = 0; i < numOfEntities; i++ ) {
-            String id = RandomStringUtils.randomAlphanumeric( 10 );
-            SetMultimap<UUID, Object> propertyValues = HashMultimap.create();
+            final UUID id = UUID.randomUUID();
+            final SetMultimap<UUID, Object> propertyValues = HashMultimap.create();
             for ( UUID property : properties ) {
                 for ( int k = 0; k < multiplicityOfProperties; k++ ) {
                     // Generate random numeric strings as value
@@ -272,7 +272,7 @@ public class DataManagerTest extends SetupEnvironment {
     }
 
     private Set<SetMultimap<FullQualifiedName, Object>> convertGeneratedDataFromUuidToFqn(
-            Map<String, SetMultimap<UUID, Object>> map ) {
+            Map<UUID, SetMultimap<UUID, Object>> map ) {
         Set<SetMultimap<FullQualifiedName, Object>> result = new HashSet<>();
         for ( SetMultimap<UUID, Object> v : map.values() ) {
             SetMultimap<FullQualifiedName, Object> ans = HashMultimap.create();

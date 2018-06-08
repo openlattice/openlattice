@@ -58,9 +58,9 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         EntityType et = createEntityType();
         EntitySet es = createEntitySet( et );
         UUID syncId = syncApi.getCurrentSyncId( es.getId() );
-        Map<String, SetMultimap<UUID, Object>> testData = TestDataFactory
+        Map<UUID, SetMultimap<UUID, Object>> testData = TestDataFactory
                 .randomStringEntityData( numberOfEntries, et.getProperties() );
-        dataApi.createEntityData( es.getId(), syncId, testData );
+        dataApi.replaceEntities( es.getId(), testData, false );
         EntitySetSelection ess = new EntitySetSelection( Optional.of( syncId ), Optional.of( et.getProperties() ) );
         Set<SetMultimap<FullQualifiedName, Object>> results = Sets.newHashSet( dataApi
                 .loadEntitySetData( es.getId(), ess, FileType.json ) );
@@ -85,13 +85,13 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         EntitySet es = createEntitySet( et );
         UUID syncId = syncApi.getCurrentSyncId( es.getId() );
 
-        Map<String, SetMultimap<UUID, Object>> testData = new HashMap<>();
+        Map<UUID, SetMultimap<UUID, Object>> testData = new HashMap<>();
         LocalDate d = LocalDate.now();
         OffsetDateTime odt = OffsetDateTime.now();
-        testData.put( UUID.randomUUID().toString(),
+        testData.put( UUID.randomUUID(),
                 ImmutableSetMultimap
                         .of( p1.getId(), odt, p2.getId(), d, k.getId(), RandomStringUtils.randomAlphanumeric( 5 ) ) );
-        dataApi.createEntityData( es.getId(), syncId, testData );
+        dataApi.replaceEntities( es.getId(), testData, false );
         EntitySetSelection ess = new EntitySetSelection( Optional.of( syncId ), Optional.of( et.getProperties() ) );
         Set<SetMultimap<FullQualifiedName, Object>> results = Sets.newHashSet( dataApi
                 .loadEntitySetData( es.getId(), ess, FileType.json ) );
@@ -111,9 +111,9 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         EntitySet es = createEntitySet( et );
         UUID syncId = syncApi.getCurrentSyncId( es.getId() );
 
-        Map<String, SetMultimap<UUID, Object>> entities = TestDataFactory.randomStringEntityData( numberOfEntries,
+        Map<UUID, SetMultimap<UUID, Object>> entities = TestDataFactory.randomStringEntityData( numberOfEntries,
                 et.getProperties() );
-        dataApi.createEntityData( es.getId(), syncId, entities );
+        dataApi.replaceEntities( es.getId(), entities, false );
 
         // load selected data
         Set<UUID> selectedProperties = et.getProperties().stream().filter( pid -> random.nextBoolean() )
@@ -145,26 +145,6 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         }
 
         Assert.assertEquals( expectedValues, resultValues );
-    }
-
-    @Test
-    public void testSyncTicketService() {
-        EntityType et = createEntityType();
-        EntitySet es = createEntitySet( et );
-        UUID syncId = syncApi.getCurrentSyncId( es.getId() );
-
-        UUID ticket = dataApi.acquireSyncTicket( es.getId(), syncId );
-
-        dataApi.storeEntityData( ticket,
-                syncId,
-                TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ) );
-
-        dataApi.releaseSyncTicket( ticket );
-
-        // not passing in token should retain current security context
-        Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi.loadEntitySetData( es.getId(), null, "" );
-        Assert.assertEquals( numberOfEntries, Iterables.size( results ) );
-
     }
 
     @BeforeClass
