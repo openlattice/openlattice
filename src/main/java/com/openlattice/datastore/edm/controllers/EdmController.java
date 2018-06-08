@@ -30,6 +30,8 @@ import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -119,6 +121,9 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     @Inject
     private DatasourceManager datasourceManager;
+
+    @Inject
+    private EdmAuthorizationHelper authzHelper;
 
     @RequestMapping(
             path = CLEAR_PATH,
@@ -452,10 +457,17 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @ResponseStatus( HttpStatus.OK )
     public Void deleteEntitySet( @PathVariable( ID ) UUID entitySetId ) {
         ensureOwnerAccess( new AclKey( entitySetId ) );
+        final EntitySet entitySet = modelService.getEntitySet( entitySetId );
+        final EntityType entityType = modelService.getEntityType( entitySet.getEntityTypeId() );
+        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.OWNER ) );
+        if ( !authorizedPropertyTypes.keySet().containsAll( entityType.getProperties() ) ) {
+            throw new ForbiddenException( "You shall not pass!" );
+        }
+
         modelService.deleteEntitySet( entitySetId );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( entitySetId ) );
-
-        dataManager.deleteEntitySetData( entitySetId );
+        dataManager.deleteEntitySetData( entitySetId, authorizedPropertyTypes );
 
         return null;
     }
@@ -669,11 +681,11 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     }
 
     @Override public Void addPrimaryKeyToEntityType( UUID entityTypeId, UUID propertyTypeId ) {
-        throw new NotImplementedException("Not yet ported");
+        throw new NotImplementedException( "Not yet ported" );
     }
 
     @Override public Void removePrimaryKeyFromEntityType( UUID entityTypeId, UUID propertyTypeId ) {
-        throw new NotImplementedException("Not yet ported");
+        throw new NotImplementedException( "Not yet ported" );
     }
 
     @Override

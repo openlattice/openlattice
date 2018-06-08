@@ -45,11 +45,14 @@ import com.openlattice.clustering.DistributedClusterer;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.DatasourceManager;
-import com.openlattice.data.ids.HazelcastEntityKeyIdService;
+import com.openlattice.data.EntityDatastore;
+import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresDataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.AnalysisService;
 import com.openlattice.datastore.services.EdmManager;
@@ -65,6 +68,7 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.core.Graph;
+import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.linking.HazelcastListingService;
 import com.openlattice.linking.HazelcastVertexMergingService;
@@ -97,17 +101,17 @@ public class DatastoreServicesPod {
     @Inject
     Jdbi jdbi;
     @Inject
-    private HazelcastInstance hazelcastInstance;
+    private HazelcastInstance        hazelcastInstance;
     @Inject
-    private HikariDataSource hikariDataSource;
+    private HikariDataSource         hikariDataSource;
     @Inject
-    private Auth0Configuration auth0Configuration;
+    private Auth0Configuration       auth0Configuration;
     @Inject
     private ListeningExecutorService executor;
     @Inject
-    private EventBus eventBus;
+    private EventBus                 eventBus;
     @Inject
-    private Neuron neuron;
+    private Neuron                   neuron;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -160,6 +164,11 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public PostgresEntityDataQueryService dataQueryService() {
+        return new PostgresEntityDataQueryService( hikariDataSource );
+    }
+
+    @Bean
     public EdmManager dataModelService() {
         return new EdmService(
                 hikariDataSource,
@@ -200,13 +209,13 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public HazelcastEntityDatastore cassandraDataManager() {
+    public EntityDatastore entityDatastore() {
         return new HazelcastEntityDatastore(
                 hazelcastInstance,
                 executor,
                 defaultObjectMapper(),
                 idService(),
-                postgresDataManager() );
+                postgresDataManager(), dataQueryService() );
     }
 
     @Bean
@@ -298,23 +307,27 @@ public class DatastoreServicesPod {
 
     @Bean
     public Graph loomGraph() {
-        return new Graph( executor, hazelcastInstance );
+        return new Graph( hikariDataSource, dataModelService() );
     }
 
     @Bean
-    public HazelcastEntityKeyIdService idService() {
-        return new HazelcastEntityKeyIdService( hazelcastInstance, executor );
+    public HazelcastIdGenerationService idGenerationService() {
+        return new HazelcastIdGenerationService( hazelcastInstance );
+    }
+
+    @Bean
+    public EntityKeyIdService idService() {
+        return new PostgresEntityKeyIdService( hazelcastInstance, hikariDataSource, idGenerationService() );
     }
 
     @Bean
     public DataGraphManager dataGraphService() {
         return new DataGraphService(
                 hazelcastInstance,
-                cassandraDataManager(),
+                eventBus,
                 loomGraph(),
                 idService(),
-                executor,
-                eventBus );
+                entityDatastore() );
     }
 
     @Bean

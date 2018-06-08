@@ -361,7 +361,6 @@ public class SearchService {
         Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps = Maps.newHashMap();
 
         graphApi.getEdgesAndNeighborsForVertices( entityKeyIds ).forEach( edge -> {
-
             edges.add( edge );
             entitySetIds.add( edge.getEdgeSetId() );
             entitySetIds.add( entityKeyIds.contains( edge.getSrcEntityKeyId() ) ? edge.getDstSetId()
