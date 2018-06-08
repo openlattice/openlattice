@@ -23,23 +23,16 @@
 package com.openlattice.linking;
 
 import com.dataloom.streams.StreamUtil;
-import com.google.common.collect.ImmutableSet;
+import com.datastax.driver.core.utils.UUIDs;
 import com.google.common.collect.Sets;
+import com.hazelcast.core.IMap;
 import com.openlattice.authorization.HzAuthzTest;
 import com.openlattice.clustering.DistributedClusterer;
-import com.openlattice.linking.HazelcastLinkingGraphs;
-import com.openlattice.linking.LinkingEdge;
-import com.openlattice.linking.LinkingVertex;
-import com.openlattice.linking.LinkingVertexKey;
-import com.openlattice.linking.WeightedLinkingVertexKey;
-import com.openlattice.linking.WeightedLinkingVertexKeySet;
 import com.openlattice.data.EntityKey;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
-import com.datastax.driver.core.utils.UUIDs;
-import com.google.common.collect.ImmutableMap;
-import com.hazelcast.core.IMap;
-
+import com.openlattice.postgres.mapstores.LinkingVerticesMapstore;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -47,9 +40,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import com.openlattice.postgres.mapstores.LinkingVerticesMapstore;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -67,9 +57,9 @@ public class HazelcastLinkingGraphsTest extends HzAuthzTest {
     protected static final IMap<LinkingVertexKey, LinkingVertex>               linkingVertices;
     protected static final IMap<EntityKey, UUID>                               ids;
     @SuppressFBWarnings( value = "MS_MUTABLE_COLLECTION_PKGPROTECT", justification = "used is protected" )
-    protected static final Set<UUID> used    = new HashSet<>( entityCount );
-    private static final   Random    r       = new Random();
-    private static final   Logger    logger  = LoggerFactory
+    protected static final Set<UUID> used   = new HashSet<>( entityCount );
+    private static final   Random    r      = new Random();
+    private static final   Logger    logger = LoggerFactory
             .getLogger( HazelcastLinkingGraphsTest.class );
 
     static {
@@ -91,7 +81,7 @@ public class HazelcastLinkingGraphsTest extends HzAuthzTest {
             while ( used.contains( id ) ) {
                 id = UUID.randomUUID();
             }
-            ids.put( TestDataFactory.entityKey( entitySetId, syncId ), id );
+            ids.put( TestDataFactory.entityKey( entitySetId ), id );
         }
 
         ids.entrySet().stream().filter( entry -> entry.getKey().getEntitySetId().equals( entitySetId ) ).forEach( entry -> {

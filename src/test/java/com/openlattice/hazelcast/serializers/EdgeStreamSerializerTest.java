@@ -20,10 +20,12 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import static com.openlattice.mapstores.TestDataFactory.entityDataKey;
+
+import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-import java.util.UUID;
+import java.util.Arrays;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -35,17 +37,8 @@ public class EdgeStreamSerializerTest extends AbstractStreamSerializerTest<EdgeS
     }
 
     @Override protected Edge createInput() {
-        EdgeKey key = new EdgeKey( new UUID( 0, 0 ),
-                new UUID( 0, 1 ),
-                new UUID( 0, 2 ),
-                new UUID( 0, 3 ),
-                new UUID( 0, 4 ) );
-        return new Edge( key,
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                UUID.randomUUID() );
+        EdgeKey key = new EdgeKey( entityDataKey(), entityDataKey(), entityDataKey() );
+        long version = System.currentTimeMillis();
+        return new Edge( key, version, Arrays.asList( 0L, 1L, 2L, version ) );
     }
 }
