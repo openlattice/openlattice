@@ -62,7 +62,7 @@ class AnalysisService {
             topUtilizerDetails: List<TopUtilizerDetails>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>> {
-        return dgm!!.getTopUtilizers(entitySetId, topUtilizerDetails, numResults, authorizedPropertyTypes)
+        return dgm.getTopUtilizers(entitySetId, topUtilizerDetails, numResults, authorizedPropertyTypes)
     }
 
     fun getNeighborTypes(entitySetId: UUID): Iterable<NeighborType> {
@@ -93,8 +93,8 @@ class AnalysisService {
                     .contains(neighborEntitySetId)) {
                 neighborTypes.add(
                         NeighborType(
-                                entityTypes[entitySets[associationEntitySetId].getEntityTypeId()],
-                                entityTypes[entitySets[neighborEntitySetId].getEntityTypeId()],
+                                entityTypes[entitySets[associationEntitySetId]?.entityTypeId],
+                                entityTypes[entitySets[neighborEntitySetId]?.entityTypeId],
                                 src
                         )
                 )
