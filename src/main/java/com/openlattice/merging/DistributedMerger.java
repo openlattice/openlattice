@@ -20,7 +20,15 @@
 
 package com.openlattice.merging;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ICountDownLatch;
+import com.hazelcast.core.IMap;
 import com.openlattice.data.DatasourceManager;
+import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
@@ -31,26 +39,17 @@ import com.openlattice.linking.LinkingVertexKey;
 import com.openlattice.linking.aggregators.CountVerticesAggregator;
 import com.openlattice.linking.aggregators.MergeVertexAggregator;
 import com.openlattice.linking.predicates.LinkingPredicates;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.hazelcast.aggregation.Aggregator;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ICountDownLatch;
-import com.hazelcast.core.IMap;
-import com.hazelcast.query.Predicates;
-import com.openlattice.datastore.services.EdmManager;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
 public class DistributedMerger {
     private static final Logger logger = LoggerFactory.getLogger( DistributedMerger.class );
-
     private final IMap<LinkingVertexKey, LinkingVertex> linkingVertices;
     private final IMap<EdgeKey, Edge>                   edges;
     private final HazelcastListingService               listingService;

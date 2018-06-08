@@ -23,6 +23,7 @@ package com.openlattice.data
 
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithPropertyTypes
+import com.openlattice.data.storage.selectVersionOfPropertyTypeInEntitySet
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -40,7 +41,8 @@ class PostgresEntityDataQueryServiceTest {
     fun testEntitySetQuery() {
         val entitySetId = UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace")
 
-        val propertyTypeMap = mapOf(Pair(UUID.fromString("c270d705-3616-4abc-b16e-f891e264b784"), "im.PersonNickName"),
+        val propertyTypeMap = mapOf(
+                Pair(UUID.fromString("c270d705-3616-4abc-b16e-f891e264b784"), "im.PersonNickName"),
                 Pair(UUID.fromString("7b038634-a0b4-4ce1-a04f-85d1775937aa"), "nc.PersonSurName"),
                 Pair(UUID.fromString("8293b7f3-d89d-44f5-bec2-6397a4c5af8b"), "nc.PersonHairColorText"),
                 Pair(UUID.fromString("5260cfbd-bfa4-40c1-ade5-cd83cc9f99b2"), "nc.SubjectIdentification"),
@@ -61,19 +63,29 @@ class PostgresEntityDataQueryServiceTest {
                 Pair(UUID.fromString("c7d2c503-651d-483f-8c17-72358bcfc5cc"), "justice.xref"),
                 Pair(UUID.fromString("f950d05a-f4f2-451b-8c6d-56e78bba8b42"), "nc.PersonRace"),
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), "housing.updatedat"),
-                Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity"));
+                Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity")
+        );
         val version = System.currentTimeMillis()
-        logger.info("Entity set query: {}",
-                selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX)))
+        logger.info(
+                "Entity set query: {}",
+                selectEntitySetWithPropertyTypes(
+                        entitySetId, propertyTypeMap.keys, propertyTypeMap,
+                        setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX)
+                )
+        )
 //        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
     }
 
     @Test
     fun testPropertyTypeQuery() {
         val entitySetId = UUID.fromString("2fc1aefc-ceb8-4834-a9fd-b203d382394c")
+        val entityKeyId = UUID.randomUUID()
         val propertyTypeId = UUID.fromString("00e11d1a-5bd7-42bd-89a5-a452d4f6337e")
         val fqn = "publicsafety.assignedofficer"
         val version = 1525826581101L
-        logger.info("SQL Query: {}", com.openlattice.data.storage.selectVersionOfPropertyTypeInEntitySet(entitySetId, propertyTypeId, fqn, version))
+        logger.info(
+                "SQL Query: {}",
+                selectVersionOfPropertyTypeInEntitySet(entitySetId, setOf(entityKeyId), propertyTypeId, fqn, version)
+        )
     }
 }
