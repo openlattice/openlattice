@@ -20,15 +20,13 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.google.common.collect.Maps;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.util.Preconditions;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.linking.HazelcastMergingService;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.linking.aggregators.MergeVertexAggregator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -40,8 +38,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MergeVertexAggregatorStreamSerializer implements SelfRegisteringStreamSerializer<MergeVertexAggregator> {
-
-    private HazelcastMergingService mergingService;
 
     @Override public Class<? extends MergeVertexAggregator> getClazz() {
         return MergeVertexAggregator.class;
@@ -116,8 +112,7 @@ public class MergeVertexAggregatorStreamSerializer implements SelfRegisteringStr
                 propertyTypeIdsByEntitySet,
                 propertyTypesById,
                 propertyTypesToPopulate,
-                authorizedPropertiesWithDataTypeForLinkedEntitySet,
-                mergingService );
+                authorizedPropertiesWithDataTypeForLinkedEntitySet );//mergingService );
     }
 
     @Override public int getTypeId() {
@@ -128,8 +123,8 @@ public class MergeVertexAggregatorStreamSerializer implements SelfRegisteringStr
 
     }
 
-    public synchronized void setMergingService( HazelcastMergingService mergingService ) {
-        Preconditions.checkState( this.mergingService == null, "HazelcastMergingService can only be set once" );
-        this.mergingService = Preconditions.checkNotNull( mergingService );
-    }
+    //    public synchronized void setMergingService( HazelcastMergingService mergingService ) {
+    //        Preconditions.checkState( this.mergingService == null, "HazelcastMergingService can only be set once" );
+    //        this.mergingService = Preconditions.checkNotNull( mergingService );
+    //    }
 }

@@ -24,7 +24,6 @@ import com.openlattice.data.DatasourceManager;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
-import com.openlattice.graph.mapstores.PostgresEdgeMapstore;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.linking.HazelcastListingService;
 import com.openlattice.linking.LinkingVertex;
@@ -138,9 +137,9 @@ public class DistributedMerger {
         UUID[] ids = linkingSets.toArray( new UUID[ 0 ] );
 
         Aggregator<Map.Entry<EdgeKey, Edge>, Void> agg = new MergeEdgeAggregator( linkedEntitySetId, syncId );
-        edges.aggregate( agg, Predicates.or( Predicates.in( PostgresEdgeMapstore.SRC_SET_ID, ids ),
-                Predicates.in( PostgresEdgeMapstore.DST_SET_ID, ids ),
-                Predicates.in( PostgresEdgeMapstore.EDGE_SET_ID, ids ) ) );
+//        edges.aggregate( agg, Predicates.or( Predicates.in( PostgresEdgeMapstore.SRC_SET_ID, ids ),
+//                Predicates.in( PostgresEdgeMapstore.DST_SET_ID, ids ),
+//                Predicates.in( PostgresEdgeMapstore.EDGE_SET_ID, ids ) ) );
     }
 
 }
