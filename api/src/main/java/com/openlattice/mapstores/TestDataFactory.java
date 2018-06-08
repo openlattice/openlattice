@@ -18,9 +18,16 @@
 
 package com.openlattice.mapstores;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.Ace;
 import com.openlattice.authorization.Acl;
 import com.openlattice.authorization.AclData;
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Action;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
@@ -28,6 +35,7 @@ import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
@@ -43,14 +51,6 @@ import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
-import com.datastax.driver.core.utils.UUIDs;
-import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
-import com.openlattice.authorization.AclKey;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -74,6 +74,10 @@ public final class TestDataFactory {
     private static final Random                r                    = new Random();
 
     private TestDataFactory() {
+    }
+
+    public static EntityDataKey entityDataKey() {
+        return new EntityDataKey( UUID.randomUUID(), UUID.randomUUID() );
     }
 
     public static Long longValue() {
@@ -324,12 +328,12 @@ public final class TestDataFactory {
                 TestDataFactory.requestStatus() );
     }
 
-    public static Map<String, SetMultimap<UUID, Object>> randomStringEntityData(
+    public static Map<UUID, SetMultimap<UUID, Object>> randomStringEntityData(
             int numberOfEntries,
             Set<UUID> propertyIds ) {
-        Map<String, SetMultimap<UUID, Object>> data = new HashMap<>();
+        Map<UUID, SetMultimap<UUID, Object>> data = new HashMap<>();
         for ( int i = 0; i < numberOfEntries; i++ ) {
-            String entityId = UUID.randomUUID().toString();
+            UUID entityId = UUID.randomUUID();
             SetMultimap<UUID, Object> entity = HashMultimap.create();
             for ( UUID propertyId : propertyIds ) {
                 entity.put( propertyId, RandomStringUtils.randomAlphanumeric( 5 ) );
