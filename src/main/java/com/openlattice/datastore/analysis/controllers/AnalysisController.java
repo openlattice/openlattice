@@ -20,6 +20,9 @@
 
 package com.openlattice.datastore.analysis.controllers;
 
+import static com.openlattice.postgres.DataTables.COUNT_FQN;
+import static com.openlattice.postgres.DataTables.ID_FQN;
+
 import com.google.common.collect.SetMultimap;
 import com.openlattice.analysis.AnalysisApi;
 import com.openlattice.analysis.requests.NeighborType;
@@ -39,11 +42,12 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -72,7 +76,7 @@ public class AnalysisController implements AnalysisApi, AuthorizingComponent {
             path = { ENTITY_SET_ID_PATH + NUM_RESULTS_PATH },
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_CSV_VALUE } )
-    public EntitySetData<Object> getTopUtilizers(
+    public EntitySetData<FullQualifiedName> getTopUtilizers(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( NUM_RESULTS ) int numResults,
             @RequestBody List<TopUtilizerDetails> topUtilizerDetails,
@@ -88,26 +92,30 @@ public class AnalysisController implements AnalysisApi, AuthorizingComponent {
     }
 
     @Override
-    public EntitySetData<Object> getTopUtilizers(
+    public EntitySetData<FullQualifiedName> getTopUtilizers(
             UUID entitySetId,
             int numResults,
             List<TopUtilizerDetails> topUtilizerDetails,
             FileType fileType ) {
+
         if ( topUtilizerDetails.size() == 0 ) { return null; }
-        Set<UUID> authorizedProperties = authorizationsHelper.getAuthorizedPropertiesOnEntitySet( entitySetId,
-                EnumSet.of( Permission.READ ) );
-        if ( authorizedProperties.size() == 0 ) { return null; }
-        Map<UUID, PropertyType> authorizedPropertyTypes = edm.getPropertyTypesAsMap( authorizedProperties );
-        Iterable<SetMultimap<Object, Object>> utilizers = analysisService.getTopUtilizers( entitySetId,
+
+        final Map<UUID, PropertyType> authorizedPropertyTypes = authorizationsHelper
+                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.READ ) );
+        //TODO: Need to actually return authorization error
+        if ( authorizedPropertyTypes.size() == 0 ) { return null; }
+
+        final Stream<SetMultimap<FullQualifiedName, Object>> utilizers = analysisService.getTopUtilizers( entitySetId,
                 numResults,
                 topUtilizerDetails,
                 authorizedPropertyTypes );
-        LinkedHashSet<String> columnTitles = authorizedPropertyTypes.values().stream().map( pt -> pt.getType() )
+
+        final LinkedHashSet<String> columnTitles = authorizedPropertyTypes.values().stream().map( pt -> pt.getType() )
                 .map( fqn -> fqn.toString() )
-                .collect( Collectors.toCollection( () -> new LinkedHashSet<String>() ) );
-        columnTitles.add( "count" );
-        columnTitles.add( "id" );
-        return new EntitySetData<Object>( columnTitles, utilizers );
+                .collect( Collectors.toCollection( () -> new LinkedHashSet<>() ) );
+        columnTitles.add( COUNT_FQN.getFullQualifiedNameAsString() );
+        columnTitles.add( ID_FQN.getFullQualifiedNameAsString() );
+        return new EntitySetData<>( columnTitles, utilizers::iterator );
     }
 
     @RequestMapping(
