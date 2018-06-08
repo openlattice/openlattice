@@ -27,7 +27,6 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.datastore.services.EdmService
-import com.openlattice.graph.core.objects.NeighborTripletSet
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.postgres.DataTables.COUNT_FQN
@@ -177,11 +176,28 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmService) : Gr
         ).stream()
     }
 
-    override fun getNeighborEntitySets(entitySetId: UUID?): NeighborTripletSet {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun getNeighborEntitySets(entitySetId: UUID?): List<NeighborSets> {
+        val neighbors: MutableList<NeighborSets> = ArrayList()
+        val query = "SELECT DISTINCT(${SRC_ENTITY_SET_ID.name},${EDGE_ENTITY_SET_ID.name} ${DST_ENTITY_SET_ID.name}) " +
+                "FROM ${EDGES.name} " +
+                "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ?"
+        val connection = hds.getConnection()
+        connection.use {
+            val ps = connection.prepareStatement(query)
+            ps.use {
+                ps.setObject(1, entitySetId)
+                ps.setObject(2, entitySetId)
+                val rs = ps.executeQuery()
+                while (rs.next()) {
+                    val srcEntitySetId = rs.getObject(SRC_ENTITY_SET_ID.name) as UUID
+                    val edgeEntitySetId = rs.getObject(EDGE_ENTITY_SET_ID.name) as UUID
+                    val dstEntitySetId = rs.getObject(DST_ENTITY_SET_ID.name) as UUID
+                    neighbors.add( NeighborSets(srcEntitySetId,edgeEntitySetId, dstEntitySetId ) )
+                }
+            }
+        }
+        return neighbors
     }
-
-
 }
 
 private fun selectEdges(keys: Set<EdgeKey>): String {

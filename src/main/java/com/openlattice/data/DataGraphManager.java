@@ -26,6 +26,7 @@ import com.openlattice.analysis.requests.TopUtilizerDetails;
 import com.openlattice.data.integration.Association;
 import com.openlattice.data.integration.Entity;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.graph.core.NeighborSets;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.EdgeKey;
 import java.nio.ByteBuffer;
@@ -123,5 +124,5 @@ public interface DataGraphManager {
             int numResults,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    NeighborTripletSet getNeighborEntitySets( UUID entitySetId );
+    List<NeighborSets> getNeighborEntitySets( UUID entitySetId );
 }

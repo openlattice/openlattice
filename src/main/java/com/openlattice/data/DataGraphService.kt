@@ -37,6 +37,7 @@ import com.openlattice.data.integration.Entity
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphApi
+import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.core.objects.NeighborTripletSet
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
@@ -342,7 +343,7 @@ class DataGraphService(
         return eds.getEntities(entitySetId, ImmutableSet.copyOf<UUID>(utilizerIds), authorizedPropertyTypes)
     }
 
-    override fun getNeighborEntitySets(entitySetId: UUID): NeighborTripletSet {
+    override fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets> {
         return lm.getNeighborEntitySets(entitySetId)
     }
 

@@ -26,6 +26,7 @@ import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.graph.core.objects.NeighborTripletSet;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -76,6 +77,6 @@ public interface GraphApi {
             SetMultimap<UUID, UUID> srcFilters,
             SetMultimap<UUID, UUID> dstFilters );
 
-    NeighborTripletSet getNeighborEntitySets( UUID entitySetId );
+    List<NeighborSets> getNeighborEntitySets( UUID entitySetId );
 
 }
