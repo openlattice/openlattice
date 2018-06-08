@@ -23,12 +23,25 @@ package com.openlattice.datastore.services;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Optional;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.AccessCheck;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
@@ -39,7 +52,21 @@ import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.events.*;
+import com.openlattice.edm.events.AppCreatedEvent;
+import com.openlattice.edm.events.AppDeletedEvent;
+import com.openlattice.edm.events.AppTypeCreatedEvent;
+import com.openlattice.edm.events.AppTypeDeletedEvent;
+import com.openlattice.edm.events.AssociationTypeCreatedEvent;
+import com.openlattice.edm.events.AssociationTypeDeletedEvent;
+import com.openlattice.edm.events.ClearAllDataEvent;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
+import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
+import com.openlattice.edm.events.EntityTypeCreatedEvent;
+import com.openlattice.edm.events.EntityTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -49,16 +76,25 @@ import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.openlattice.search.requests.*;
+import com.openlattice.search.requests.AdvancedSearch;
+import com.openlattice.search.requests.DataSearchResult;
+import com.openlattice.search.requests.EntityKeyIdSearchResult;
+import com.openlattice.search.requests.SearchDetails;
+import com.openlattice.search.requests.SearchResult;
+import com.openlattice.search.requests.SearchTerm;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-import java.util.*;
-import java.util.stream.Collectors;
 
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
@@ -98,7 +134,7 @@ public class SearchService {
 
     @PostConstruct
     public void initializeBus() {
-        eventBus.register(  this );
+        eventBus.register( this );
     }
 
     @Timed
@@ -198,7 +234,9 @@ public class SearchService {
         Map<UUID, PropertyType> authorizedPropertyTypes = dataModelService
                 .getPropertyTypesAsMap( authorizedProperties );
 
-        List<SetMultimap<Object, Object>> results = getResults( result, authorizedPropertyTypes );
+        List<SetMultimap<FullQualifiedName, Object>> results = getResults( entitySetId,
+                result,
+                authorizedPropertyTypes );
 
         return new DataSearchResult( result.getNumHits(), results );
     }
@@ -255,7 +293,9 @@ public class SearchService {
             Map<UUID, PropertyType> authorizedPropertyTypes = dataModelService
                     .getPropertyTypesAsMap( authorizedProperties );
 
-            List<SetMultimap<Object, Object>> results = getResults( result, authorizedPropertyTypes );
+            List<SetMultimap<FullQualifiedName, Object>> results = getResults( entitySetId,
+                    result,
+                    authorizedPropertyTypes );
             return new DataSearchResult( result.getNumHits(), results );
         }
 
@@ -357,14 +397,14 @@ public class SearchService {
         List<Edge> edges = Lists.newArrayList();
         Set<UUID> entitySetIds = Sets.newHashSet();
         Map<UUID, Set<UUID>> authorizedEdgeESIdsToVertexESIds = Maps.newHashMap();
-        Map<UUID, UUID> entityKeyIdToEntitySetId = Maps.newHashMap();
+        SetMultimap<UUID, UUID> entityKeyIdToEntitySetId = HashMultimap.create();
         Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps = Maps.newHashMap();
 
         graphApi.getEdgesAndNeighborsForVertices( entityKeyIds ).forEach( edge -> {
             edges.add( edge );
-            entitySetIds.add( edge.getEdgeSetId() );
-            entitySetIds.add( entityKeyIds.contains( edge.getSrcEntityKeyId() ) ? edge.getDstSetId()
-                    : edge.getSrcSetId() );
+            entitySetIds.add( edge.getEdge().getEntitySetId() );
+            entitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
+                    edge.getDst().getEntitySetId() : edge.getSrc().getEntitySetId() );
         } );
 
         Set<UUID> authorizedEntitySetIds = authorizations.accessChecksForPrincipals( entitySetIds.stream()
@@ -402,13 +442,14 @@ public class SearchService {
         } );
 
         edges.forEach( edge -> {
-
-            UUID edgeEntityKeyId = edge.getEdgeEntityKeyId();
-            UUID neighborEntityKeyId = ( entityKeyIds.contains( edge.getSrcEntityKeyId() ) ) ? edge.getDstEntityKeyId()
-                    : edge.getSrcEntityKeyId();
-            UUID edgeEntitySetId = edge.getEdgeSetId();
-            UUID neighborEntitySetId = ( entityKeyIds.contains( edge.getSrcEntityKeyId() ) ) ? edge.getDstSetId()
-                    : edge.getSrcSetId();
+            UUID edgeEntityKeyId = edge.getEdge().getEntityKeyId();
+            UUID neighborEntityKeyId = ( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ) ? edge.getDst()
+                    .getEntityKeyId()
+                    : edge.getSrc().getEntityKeyId();
+            UUID edgeEntitySetId = edge.getEdge().getEntitySetId();
+            UUID neighborEntitySetId = ( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ) ? edge.getDst()
+                    .getEntitySetId()
+                    : edge.getSrc().getEntitySetId();
 
             if ( entitySetsIdsToAuthorizedProps.containsKey( edgeEntitySetId ) ) {
                 entityKeyIdToEntitySetId.put( edgeEntityKeyId, edgeEntitySetId );
@@ -421,15 +462,17 @@ public class SearchService {
 
         } );
 
-        Map<UUID, SetMultimap<FullQualifiedName, Object>> entities = dataManager
+        ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entities = dataManager
                 .getEntitiesAcrossEntitySets( entityKeyIdToEntitySetId, entitySetsIdsToAuthorizedProps );
 
         Map<UUID, List<NeighborEntityDetails>> entityNeighbors = Maps.newConcurrentMap();
 
         // create a NeighborEntityDetails object for each edge based on authorizations
         edges.parallelStream().forEach( edge -> {
-            boolean vertexIsSrc = entityKeyIds.contains( edge.getKey().getSrcEntityKeyId() );
-            UUID entityId = ( vertexIsSrc ) ? edge.getKey().getSrcEntityKeyId() : edge.getKey().getDstEntityKeyId();
+            boolean vertexIsSrc = entityKeyIds.contains( edge.getKey().getSrc().getEntityKeyId() );
+            UUID entityId = ( vertexIsSrc )
+                    ? edge.getKey().getSrc().getEntityKeyId()
+                    : edge.getKey().getDst().getEntityKeyId();
             if ( !entityNeighbors.containsKey( entityId ) ) {
                 entityNeighbors.put( entityId, Collections.synchronizedList( Lists.newArrayList() ) );
             }
@@ -469,17 +512,21 @@ public class SearchService {
             Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps,
             Map<UUID, EntitySet> entitySetsById,
             boolean vertexIsSrc,
-            Map<UUID, SetMultimap<FullQualifiedName, Object>> entities ) {
+            ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entities ) {
 
-        UUID edgeEntitySetId = edge.getEdgeSetId();
+        UUID edgeEntitySetId = edge.getEdge().getEntitySetId();
         if ( authorizedEdgeESIdsToVertexESIds.containsKey( edgeEntitySetId ) ) {
-            UUID neighborEntityKeyId = ( vertexIsSrc ) ? edge.getDstEntityKeyId() : edge.getSrcEntityKeyId();
-            UUID neighborEntitySetId = ( vertexIsSrc ) ? edge.getDstSetId() : edge.getSrcSetId();
+            UUID neighborEntityKeyId = ( vertexIsSrc )
+                    ? edge.getDst().getEntityKeyId()
+                    : edge.getSrc().getEntityKeyId();
+            UUID neighborEntitySetId = ( vertexIsSrc )
+                    ? edge.getDst().getEntitySetId()
+                    : edge.getSrc().getEntitySetId();
 
-            SetMultimap<FullQualifiedName, Object> edgeDetails = entities.get( edge.getEdgeEntityKeyId() );
+            List<SetMultimap<FullQualifiedName, Object>> edgeDetails = entities.get( edge.getEdge().getEntityKeyId() );
             if ( authorizedEdgeESIdsToVertexESIds.get( edgeEntitySetId )
                     .contains( neighborEntitySetId ) ) {
-                SetMultimap<FullQualifiedName, Object> neighborDetails = entities.get( neighborEntityKeyId );
+                List<SetMultimap<FullQualifiedName, Object>> neighborDetails = entities.get( neighborEntityKeyId );
                 return new NeighborEntityDetails(
                         entitySetsById.get( edgeEntitySetId ),
                         edgeDetails,
@@ -500,10 +547,13 @@ public class SearchService {
         return null;
     }
 
-    private List<SetMultimap<Object, Object>> getResults(
+    private List<SetMultimap<FullQualifiedName, Object>> getResults(
+            UUID entitySetId,
             EntityKeyIdSearchResult result,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataManager.getEntities( result.getEntityKeyIds(), authorizedPropertyTypes )
+        //TODO: Create a set from the beginning to avoid copy
+        return dataManager
+                .getEntities( entitySetId, ImmutableSet.copyOf( result.getEntityKeyIds() ), authorizedPropertyTypes )
                 .collect( Collectors.toList() );
     }
 
