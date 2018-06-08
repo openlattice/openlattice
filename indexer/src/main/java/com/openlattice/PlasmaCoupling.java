@@ -26,7 +26,6 @@ import com.openlattice.hazelcast.serializers.ConductorElasticsearchCallStreamSer
 import com.openlattice.hazelcast.serializers.FeatureExtractionAggregationStreamSerializer;
 import com.openlattice.hazelcast.serializers.MergeVertexAggregatorStreamSerializer;
 import com.openlattice.linking.HazelcastBlockingService;
-import com.openlattice.linking.HazelcastMergingService;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import org.springframework.context.annotation.Configuration;
@@ -50,9 +49,6 @@ public class PlasmaCoupling {
     private BlockingAggregatorStreamSerializer bass;
 
     @Inject
-    private HazelcastMergingService mergingService;
-
-    @Inject
     private MergeVertexAggregatorStreamSerializer mvass;
 
     @PostConstruct
@@ -60,6 +56,5 @@ public class PlasmaCoupling {
         cecss.setConductorElasticsearchApi( elasticsearchApi );
         feass.setConductorElasticsearchApi( elasticsearchApi );
         bass.setBlockingService( blockingService );
-        mvass.setMergingService( mergingService );
     }
 }

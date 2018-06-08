@@ -45,7 +45,6 @@ import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.HazelcastBlockingService;
-import com.openlattice.linking.HazelcastMergingService;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
@@ -150,10 +149,5 @@ public class ConductorSparkPod {
     @Bean
     public HazelcastBlockingService blockingService() {
         return new HazelcastBlockingService( hazelcastInstance );
-    }
-
-    @Bean
-    public HazelcastMergingService mergingService() {
-        return new HazelcastMergingService( hazelcastInstance, executorService );
     }
 }
