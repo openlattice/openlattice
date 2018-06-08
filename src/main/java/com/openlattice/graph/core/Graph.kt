@@ -26,6 +26,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.analytics.IncrementableWeightId
+import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
@@ -49,7 +50,7 @@ import java.util.stream.Stream
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-class Graph(private val hds: HikariDataSource, private val edm: EdmService) : GraphApi {
+class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphApi {
 
     override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
@@ -139,11 +140,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmService) : Gr
         ).stream()
     }
 
-    override fun getEdgesAndNeighborsForVertex(vertexId: UUID?): Stream<Edge> {
+    override fun getEdgesAndNeighborsForVertex(vertexId: UUID): Stream<Edge> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun getEdgesAndNeighborsForVertices(vertexIds: Set<UUID>?): Stream<Edge> {
+    override fun getEdgesAndNeighborsForVertices(vertexIds: Set<UUID>): Stream<Edge> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 

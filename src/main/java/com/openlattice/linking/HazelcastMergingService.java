@@ -27,7 +27,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.authorization.ForbiddenException;
@@ -41,6 +40,7 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.graph.core.Graph;
 import com.openlattice.graph.edge.Edge;
@@ -74,14 +74,16 @@ public class HazelcastMergingService {
     private       HazelcastInstance                    hazelcastInstance;
     private       ObjectMapper                         mapper;
 
-    public HazelcastMergingService( HazelcastInstance hazelcastInstance, HikariDataSource hds, ListeningExecutorService executor ) {
+    public HazelcastMergingService( HazelcastInstance hazelcastInstance, HikariDataSource hds, EdmManager edm ) {
         this.entities = hazelcastInstance.getMap( HazelcastMap.DATA.name() );
         this.newIds = hazelcastInstance.getMap( HazelcastMap.VERTEX_IDS_AFTER_LINKING.name() );
         this.mapper = ObjectMappers.getJsonMapper();
 
         this.ids = hazelcastInstance.getMap( HazelcastMap.IDS.name() );
-        this.ekIds = new PostgresEntityKeyIdService( hazelcastInstance, hds, new HazelcastIdGenerationService( hazelcastInstance ) );
-        this.graph = new Graph( executor, hazelcastInstance );
+        this.ekIds = new PostgresEntityKeyIdService( hazelcastInstance,
+                hds,
+                new HazelcastIdGenerationService( hazelcastInstance ) );
+        this.graph = new Graph( hds, edm );
         this.hazelcastInstance = hazelcastInstance;
 
     }
@@ -199,7 +201,7 @@ public class HazelcastMergingService {
     }
 
     @Async
-    public void mergeEdgeAsync( UUID linkedEntitySetId,  Edge edge ) {
+    public void mergeEdgeAsync( UUID linkedEntitySetId, Edge edge ) {
         UUID srcEntitySetId = edge.getSrc();
         UUID dstEntitySetId = edge.getDst();
         UUID edgeEntitySetId = edge.getEdge();
