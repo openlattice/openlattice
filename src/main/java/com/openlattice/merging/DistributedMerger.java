@@ -29,7 +29,6 @@ import com.openlattice.linking.HazelcastListingService;
 import com.openlattice.linking.LinkingVertex;
 import com.openlattice.linking.LinkingVertexKey;
 import com.openlattice.linking.aggregators.CountVerticesAggregator;
-import com.openlattice.linking.aggregators.MergeEdgeAggregator;
 import com.openlattice.linking.aggregators.MergeVertexAggregator;
 import com.openlattice.linking.predicates.LinkingPredicates;
 import com.google.common.collect.ImmutableSet;
@@ -136,7 +135,7 @@ public class DistributedMerger {
         logger.debug( "Linking Sets: {}", linkingSets );
         UUID[] ids = linkingSets.toArray( new UUID[ 0 ] );
 
-        Aggregator<Map.Entry<EdgeKey, Edge>, Void> agg = new MergeEdgeAggregator( linkedEntitySetId, syncId );
+//        Aggregator<Map.Entry<EdgeKey, Edge>, Void> agg = new MergeEdgeAggregator( linkedEntitySetId, syncId );
 //        edges.aggregate( agg, Predicates.or( Predicates.in( PostgresEdgeMapstore.SRC_SET_ID, ids ),
 //                Predicates.in( PostgresEdgeMapstore.DST_SET_ID, ids ),
 //                Predicates.in( PostgresEdgeMapstore.EDGE_SET_ID, ids ) ) );
