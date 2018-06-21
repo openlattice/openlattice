@@ -105,6 +105,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
@@ -1486,6 +1487,30 @@ public class EdmService implements EdmManager {
     public void updateEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId, MetadataUpdate update ) {
         EntitySetPropertyKey key = new EntitySetPropertyKey( entitySetId, propertyTypeId );
         entitySetPropertyMetadata.executeOnKey( key, new UpdateEntitySetPropertyMetadataProcessor( update ) );
+    }
+
+    @Override public EntityDataModel getEntityDataModel() {
+        final List<Schema> schemas = Lists.newArrayList( schemaManager.getAllSchemas() );
+        final List<EntityType> entityTypes = Lists.newArrayList( getEntityTypesStrict() );
+        final List<AssociationType> associationTypes = Lists.newArrayList( getAssociationTypes() );
+        final List<PropertyType> propertyTypes = Lists.newArrayList( getPropertyTypes() );
+        final Set<String> namespaces = new TreeSet<>();
+        getEntityTypes().forEach( entityType -> namespaces.add( entityType.getType().getNamespace() ) );
+        getPropertyTypes().forEach( propertyType -> namespaces.add( propertyType.getType().getNamespace() ) );
+
+        schemas.sort( Comparator.comparing( schema -> schema.getFqn().toString() ) );
+        entityTypes.sort( Comparator.comparing( entityType -> entityType.getType().toString() ) );
+        associationTypes.sort( Comparator
+                .comparing( associationType -> associationType.getAssociationEntityType().getType().toString() ) );
+        propertyTypes.sort( Comparator.comparing( propertyType -> propertyType.getType().toString() ) );
+
+        return new EntityDataModel(
+                getCurrentEntityDataModelVersion(),
+                namespaces,
+                schemas,
+                entityTypes,
+                associationTypes,
+                propertyTypes );
     }
 
 }

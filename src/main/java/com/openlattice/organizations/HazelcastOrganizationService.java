@@ -24,23 +24,7 @@ package com.openlattice.organizations;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.openlattice.apps.App;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.directory.UserDirectoryService;
-import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.organizations.events.OrganizationCreatedEvent;
-import com.openlattice.organizations.events.OrganizationDeletedEvent;
-import com.openlattice.organizations.events.OrganizationUpdatedEvent;
-import com.openlattice.organizations.processors.EmailDomainsMerger;
-import com.openlattice.organizations.processors.EmailDomainsRemover;
-import com.openlattice.organizations.processors.OrganizationAppMerger;
-import com.openlattice.organizations.processors.OrganizationAppRemover;
-import com.openlattice.organizations.processors.OrganizationMemberMerger;
-import com.openlattice.organizations.processors.OrganizationMemberRemover;
-import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.dataloom.streams.StreamUtil;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -49,12 +33,14 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
-import com.openlattice.datastore.util.Util;
 import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.Organization;
@@ -75,6 +61,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -154,14 +141,14 @@ public class HazelcastOrganizationService {
 
         OrganizationPrincipal principal = (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrgs );
         Set<Role> roles = getRoles( organizationId );
-        Set<UUID> apps = getOrganizationApps(organizationId);
+        Set<UUID> apps = getOrganizationApps( organizationId );
         try {
             return new Organization(
                     principal,
                     autoApprovedEmailDomains.get(),
                     members.get(),
                     roles,
-                    apps);
+                    apps );
         } catch ( InterruptedException | ExecutionException e ) {
             logger.error( "Unable to load organization. {}", organizationId, e );
             return null;
@@ -178,12 +165,12 @@ public class HazelcastOrganizationService {
 
     public void updateTitle( UUID organizationId, String title ) {
         securePrincipalsManager.updateTitle( new AclKey( organizationId ), title );
-        eventBus.post( new OrganizationUpdatedEvent( organizationId, Optional.of( title ), Optional.absent() ) );
+        eventBus.post( new OrganizationUpdatedEvent( organizationId, Optional.of( title ), Optional.empty() ) );
     }
 
     public void updateDescription( UUID organizationId, String description ) {
         securePrincipalsManager.updateDescription( new AclKey( organizationId ), description );
-        eventBus.post( new OrganizationUpdatedEvent( organizationId, Optional.absent(), Optional.of( description ) ) );
+        eventBus.post( new OrganizationUpdatedEvent( organizationId, Optional.empty(), Optional.of( description ) ) );
     }
 
     public Set<String> getAutoApprovedEmailDomains( UUID organizationId ) {

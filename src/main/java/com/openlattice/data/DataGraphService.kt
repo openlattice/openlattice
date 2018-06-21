@@ -57,7 +57,7 @@ import kotlin.collections.HashMap
  */
 private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 
-class DataGraphService(
+open class DataGraphService(
         hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
         private val lm: GraphApi,

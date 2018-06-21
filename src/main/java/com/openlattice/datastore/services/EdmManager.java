@@ -211,4 +211,5 @@ public interface EdmManager {
 
     void updateEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId, MetadataUpdate update );
 
+    EntityDataModel getEntityDataModel();
 }

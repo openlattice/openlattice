@@ -33,19 +33,19 @@ public class RangeTests {
     @Test
     public void testExhausted() {
         final Range r = new Range( 1L << 48L, ( 1L << 48 ) - 1, Long.MAX_VALUE );
-        Assert.assertNotNull( r.getNextId() );
-        Assert.assertNull( "Range is exhausted and should return nothing.", r.getNextId() );
+        Assert.assertNotNull( r.nextId() );
+        Assert.assertNull( "Range is exhausted and should return nothing.", r.nextId() );
     }
 
     @Test
     public void testRollover() {
         final Range r = new Range( 1L << 48L, 1L, Long.MAX_VALUE );
-        final UUID id = r.getNextId();
+        final UUID id = r.nextId();
         Assert.assertNotNull( id );
         Assert.assertEquals( 1L << 48L | 1L, id.getMostSignificantBits() );
         Assert.assertEquals( Long.MAX_VALUE, id.getLeastSignificantBits() );
 
-        final UUID id2 = r.getNextId();
+        final UUID id2 = r.nextId();
         Assert.assertNotNull( id2 );
         Assert.assertEquals( 1L << 48L | 2L, id2.getMostSignificantBits() );
         Assert.assertEquals( Long.MIN_VALUE, id2.getLeastSignificantBits() );
@@ -54,12 +54,12 @@ public class RangeTests {
     @Test
     public void testGetTwoIds() {
         final Range r = new Range( 1L << 48L, 1L, -1L );
-        final UUID id = r.getNextId();
+        final UUID id = r.nextId();
         Assert.assertNotNull( id );
         Assert.assertEquals( 1L << 48L | 1L, id.getMostSignificantBits() );
         Assert.assertEquals( -1L, id.getLeastSignificantBits() );
 
-        final UUID id2 = r.getNextId();
+        final UUID id2 = r.nextId();
         Assert.assertNotNull( id2 );
         Assert.assertEquals( 1L << 48L | 1L, id2.getMostSignificantBits() );
         Assert.assertEquals( 0, id2.getLeastSignificantBits() );

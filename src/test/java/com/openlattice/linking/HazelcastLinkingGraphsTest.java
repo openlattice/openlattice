@@ -74,7 +74,6 @@ public class HazelcastLinkingGraphsTest extends HzAuthzTest {
     @Test
     public void testClustering() {
         final UUID entitySetId = UUID.randomUUID();
-        final UUID syncId = UUIDs.timeBased();
 
         for ( int i = 0; i < entityCount; i++ ) {
             UUID id = UUID.randomUUID();

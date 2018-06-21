@@ -22,6 +22,7 @@
 package com.openlattice.data
 
 import com.openlattice.data.storage.MetadataOption
+import com.openlattice.data.storage.entityKeyIdsClause
 import com.openlattice.data.storage.selectEntitySetWithPropertyTypes
 import com.openlattice.data.storage.selectVersionOfPropertyTypeInEntitySet
 import org.junit.Test
@@ -65,11 +66,22 @@ class PostgresEntityDataQueryServiceTest {
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), "housing.updatedat"),
                 Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity")
         );
+        val entityKeyIds = sequenceOf(
+                "ce2288a9-bfe4-40c9-b565-d15fd9b34ea4",
+                "0cdad600-41ce-4af4-bd7b-4f752a173c3b",
+                "45ce04c9-c865-49c2-89ff-883614b6b168",
+                "ec746ecf-197c-4436-a4eb-65658381f828",
+                "6341e054-4c86-4e58-8e9e-282619e37f00"
+        )
+                .map(UUID::fromString)
+                .toSet()
         val version = System.currentTimeMillis()
         logger.info(
                 "Entity set query: {}",
                 selectEntitySetWithPropertyTypes(
-                        entitySetId, propertyTypeMap.keys, propertyTypeMap,
+                        entitySetId,
+                        entityKeyIds,
+                        propertyTypeMap,
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX)
                 )
         )
@@ -85,7 +97,9 @@ class PostgresEntityDataQueryServiceTest {
         val version = 1525826581101L
         logger.info(
                 "SQL Query: {}",
-                selectVersionOfPropertyTypeInEntitySet(entitySetId, setOf(entityKeyId), propertyTypeId, fqn, version)
+                selectVersionOfPropertyTypeInEntitySet(
+                        entitySetId, Optional.of(entityKeyIdsClause(setOf(entityKeyId))), propertyTypeId, fqn, version
+                )
         )
     }
 }

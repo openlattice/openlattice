@@ -19,6 +19,19 @@
 
 package com.openlattice.neuron.audit;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.data.DatasourceManager;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.neuron.signals.Signal;
 import java.util.Collection;
 import java.util.List;
@@ -26,45 +39,24 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.data.DatasourceManager;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
-import com.openlattice.neuron.signals.Signal;
-import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
-import com.openlattice.datastore.services.EdmManager;
-
 public class AuditEntitySetUtils {
-
-    private static final Logger logger = LoggerFactory.getLogger( AuditEntitySetUtils.class );
-
-    private static final String AUDIT_ENTITY_SET_NAME       = "OpenLattice Audit Entity Set";
-    private static final String OPENLATTICE_AUDIT_NAMESPACE = "OPENLATTICE_AUDIT";
-
-    private static final FullQualifiedName DETAILS_PT_FQN = new FullQualifiedName( OPENLATTICE_AUDIT_NAMESPACE,
-            "DETAILS" );
-    private static final FullQualifiedName TYPE_PT_FQN    = new FullQualifiedName( OPENLATTICE_AUDIT_NAMESPACE,
-            "TYPE" );
-    private static final FullQualifiedName AUDIT_ET_FQN   = new FullQualifiedName( OPENLATTICE_AUDIT_NAMESPACE,
-            "AUDIT" );
 
     // TODO: where does this belong?
     public static final Principal OPEN_LATTICE_PRINCIPAL = new Principal( PrincipalType.USER, "OpenLattice" );
-
+    private static final Logger logger = LoggerFactory.getLogger( AuditEntitySetUtils.class );
+    private static final String AUDIT_ENTITY_SET_NAME       = "OpenLattice Audit Entity Set";
+    private static final String OPENLATTICE_AUDIT_NAMESPACE = "OPENLATTICE_AUDIT";
+    public static final FullQualifiedName DETAILS_PT_FQN = new FullQualifiedName( OPENLATTICE_AUDIT_NAMESPACE,
+            "DETAILS" );
+    public static final FullQualifiedName TYPE_PT_FQN    = new FullQualifiedName( OPENLATTICE_AUDIT_NAMESPACE,
+            "TYPE" );
+    public static final FullQualifiedName AUDIT_ET_FQN   = new FullQualifiedName( OPENLATTICE_AUDIT_NAMESPACE,
+            "AUDIT" );
     private static Collection<PropertyType> PROPERTIES;
     private static PropertyType             TYPE_PROPERTY_TYPE;
     private static PropertyType             DETAILS_PROPERTY_TYPE;

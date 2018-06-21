@@ -42,7 +42,7 @@ public class IdGeneratingEntryProcessor extends AbstractRhizomeEntryProcessor<In
         UUID[] ids = new UUID[ count ];
 
         for ( int i = 0; i < ids.length; ++i ) {
-            ids[ i ] = range.getNextId();
+            ids[ i ] = range.nextId();
         }
 
         entry.setValue( range );
