@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore.search.controllers;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -45,6 +44,7 @@ import com.openlattice.search.requests.SearchTerm;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.inject.Inject;
@@ -114,8 +114,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
             @PathVariable( NUM_RESULTS ) int maxHits ) {
         return searchService
                 .executeEntitySetKeywordSearchQuery( Optional.of( "*" ),
-                        Optional.absent(),
-                        Optional.absent(),
+                        Optional.empty(),
+                        Optional.empty(),
                         start,
                         maxHits );
     }

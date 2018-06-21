@@ -22,7 +22,6 @@ package com.openlattice.datastore.services;
 
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
@@ -86,6 +85,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -151,7 +151,8 @@ public class SearchService {
                         EnumSet.of( Permission.READ ) ).collect( Collectors.toSet() );
         if ( authorizedEntitySetIds.size() == 0 ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
-        return elasticsearchApi.executeEntitySetMetadataSearch( optionalQuery,
+        return elasticsearchApi.executeEntitySetMetadataSearch(
+                optionalQuery,
                 optionalEntityType,
                 optionalPropertyTypes,
                 authorizedEntitySetIds,

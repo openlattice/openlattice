@@ -20,6 +20,16 @@
 
 package com.openlattice.datastore.data;
 
+import com.datastax.driver.core.utils.UUIDs;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.openlattice.conductor.rpc.Employee;
+import com.openlattice.datastore.BootstrapDatastoreWithCassandra;
+import com.openlattice.edm.type.PropertyType;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -39,7 +49,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -52,27 +61,16 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.openlattice.datastore.BootstrapDatastoreWithCassandra;
-import com.openlattice.edm.type.PropertyType;
-import com.datastax.driver.core.utils.UUIDs;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
-import com.openlattice.conductor.rpc.Employee;
-
 public class DataManagerTest extends BootstrapDatastoreWithCassandra {
-    protected static final Set<String>              PROFILES = Sets.newHashSet( "local", "cassandra" );
+    protected static final Set<String> PROFILES = Sets.newHashSet( "local", "cassandra" );
 
     private static final List<EdmPrimitiveTypeKind> edmTypesList;
     private static final int                        edmTypesSize;
 
-    private static final Random                     random   = new Random();
-    private static final SRID                       srid     = SRID.valueOf( "4326" );
-    private static final Base64.Encoder             encoder  = Base64.getEncoder();
-    private static ObjectMapper                     mapper;
+    private static final Random         random  = new Random();
+    private static final SRID           srid    = SRID.valueOf( "4326" );
+    private static final Base64.Encoder encoder = Base64.getEncoder();
+    private static ObjectMapper mapper;
 
     static {
         edmTypesList = Arrays.asList(
@@ -96,14 +94,6 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
         edmTypesSize = edmTypesList.size();
     }
 
-    @BeforeClass
-    public static void initDMTest() {
-        // if ( initLock.readLock().tryLock() ) {
-        mapper = ds.getContext().getBean( ObjectMapper.class );
-        // }
-        // initLock.readLock().unlock();
-    }
-
     @Test
     public void testWriteAndRead() {
         final UUID entitySetId = UUID.randomUUID();
@@ -118,9 +108,8 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
         Map<String, SetMultimap<UUID, Object>> entities = generateData( 10, propertiesWithDataType, 1 );
 
-        testWriteData( entitySetId, syncId, entities, propertiesWithDataType );
-        Set<SetMultimap<FullQualifiedName, Object>> result = testReadData( syncId,
-                entitySetId,
+        testWriteData( entitySetId, syncId, entities, propertyTypes );
+        Set<SetMultimap<FullQualifiedName, Object>> result = testReadData( entitySetId,
                 orderedPropertyNames,
                 propertyTypes );
 
@@ -150,15 +139,14 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
 
         Map<String, SetMultimap<UUID, Object>> firstEntities = generateData( 10, propertiesWithDataType, 1 );
-        testWriteData( entitySetId, firstSyncId, firstEntities, propertiesWithDataType );
+        testWriteData( entitySetId, firstSyncId, firstEntities, propertyTypes );
 
         Map<String, SetMultimap<UUID, Object>> secondEntities = generateData( 10, propertiesWithDataType, 1 );
-        testWriteData( entitySetId, secondSyncId, secondEntities, propertiesWithDataType );
+        testWriteData( entitySetId, secondSyncId, secondEntities, propertyTypes );
 
-        dataService.deleteEntitySetData( entitySetId );
+        dataService.deleteEntitySetData( entitySetId, propertyTypes );
 
-        Assert.assertEquals( 0, testReadData( secondSyncId,
-                entitySetId,
+        Assert.assertEquals( 0, testReadData( entitySetId,
                 orderedPropertyNames,
                 propertyTypes ).size() );
     }
@@ -170,8 +158,6 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
         // Four property types: Employee Name, Title, Department, Salary
         Map<String, UUID> idLookup = getUUIDsForEmployeeCsvProperties();
         Map<UUID, PropertyType> propertyTypes = getPropertiesForEmployeeCsv( idLookup );
-        Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType = propertyTypes.entrySet().stream()
-                .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
 
         try ( FileReader fr = new FileReader( "src/test/resources/employees.csv" );
                 BufferedReader br = new BufferedReader( fr ) ) {
@@ -195,7 +181,7 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
                 if ( count++ < paging_constant ) {
                     entities.put( RandomStringUtils.randomAlphanumeric( 10 ), entity );
                 } else {
-                    dataService.createEntityData( entitySetId, syncId, entities, propertiesWithDataType );
+                    dataService.createEntityData( entitySetId, entities, propertyTypes );
 
                     entities = new HashMap<>();
                     count = 0;
@@ -209,19 +195,19 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
             UUID entitySetId,
             UUID syncId,
             Map<String, SetMultimap<UUID, Object>> entities,
-            Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType ) {
+            Map<UUID, PropertyType> propertyTypes ) {
         System.out.println( "Writing Data..." );
-        dataService.createEntityData( entitySetId, syncId, entities, propertiesWithDataType );
+        dataService.createEntityData( entitySetId, entities, propertyTypes );
         System.out.println( "Writing done." );
     }
 
     public Set<SetMultimap<FullQualifiedName, Object>> testReadData(
-            UUID syncId,
             UUID entitySetId,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, PropertyType> propertyTypes ) {
         return Sets.newHashSet(
-                dataService.getEntitySetData( entitySetId, syncId, orderedPropertyNames, propertyTypes ).getEntities() );
+                dataService.getEntitySetData( entitySetId, orderedPropertyNames, propertyTypes )
+                        .getEntities() );
     }
 
     private LinkedHashMap<UUID, PropertyType> generateProperties( int n ) {
@@ -440,13 +426,6 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
         return result;
     }
 
-    /**
-     * Generate a random double within [-a,a]
-     */
-    private static double randomDouble( double a ) {
-        return 2 * a * random.nextDouble() - a;
-    }
-
     private String getStringFromNormalized( Object value, EdmPrimitiveTypeKind type ) {
         switch ( type ) {
             case Binary:
@@ -470,5 +449,20 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
             default:
                 return value.toString();
         }
+    }
+
+    @BeforeClass
+    public static void initDMTest() {
+        // if ( initLock.readLock().tryLock() ) {
+        mapper = ds.getContext().getBean( ObjectMapper.class );
+        // }
+        // initLock.readLock().unlock();
+    }
+
+    /**
+     * Generate a random double within [-a,a]
+     */
+    private static double randomDouble( double a ) {
+        return 2 * a * random.nextDouble() - a;
     }
 }

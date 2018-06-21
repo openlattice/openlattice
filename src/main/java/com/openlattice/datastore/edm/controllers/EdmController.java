@@ -150,27 +150,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     @Override
     public EntityDataModel getEntityDataModel() {
-        final List<Schema> schemas = Lists.newArrayList( schemaManager.getAllSchemas() );
-        final List<EntityType> entityTypes = Lists.newArrayList( getEntityTypesStrict() );
-        final List<AssociationType> associationTypes = Lists.newArrayList( getAssociationTypes() );
-        final List<PropertyType> propertyTypes = Lists.newArrayList( getPropertyTypes() );
-        final ConcurrentSkipListSet<String> namespaces = new ConcurrentSkipListSet<>();
-        getEntityTypes().forEach( entityType -> namespaces.add( entityType.getType().getNamespace() ) );
-        getPropertyTypes().forEach( propertyType -> namespaces.add( propertyType.getType().getNamespace() ) );
-
-        schemas.sort( Comparator.comparing( schema -> schema.getFqn().toString() ) );
-        entityTypes.sort( Comparator.comparing( entityType -> entityType.getType().toString() ) );
-        associationTypes.sort( Comparator
-                .comparing( associationType -> associationType.getAssociationEntityType().getType().toString() ) );
-        propertyTypes.sort( Comparator.comparing( propertyType -> propertyType.getType().toString() ) );
-
-        return new EntityDataModel(
-                getEntityDataModelVersion(),
-                namespaces,
-                schemas,
-                entityTypes,
-                associationTypes,
-                propertyTypes );
+        return modelService.getEntityDataModel();
     }
 
     @RequestMapping(

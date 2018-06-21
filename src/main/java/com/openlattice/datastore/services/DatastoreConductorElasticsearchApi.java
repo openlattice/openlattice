@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore.services;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.core.HazelcastInstance;
@@ -39,6 +38,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.search.requests.EntityKeyIdSearchResult;
 import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
