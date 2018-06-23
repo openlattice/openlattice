@@ -64,31 +64,31 @@ public final class RetrofitFactory {
 
     public static final Retrofit newClient( Environment environment, Supplier<String> jwtToken ) {
         OkHttpClient.Builder httpBuilder = okhttpClientWithLoomAuth( jwtToken );
-        return decorateWithLoomFactories( createBaseLoomRetrofitBuilder( environment, httpBuilder ) ).build();
+        return decorateWithLoomFactories( createBaseRhizomeRetrofitBuilder( environment, httpBuilder ) ).build();
     }
 
     public static final Retrofit newClient( String baseUrl, Supplier<String> jwtToken ) {
         OkHttpClient.Builder httpBuilder = okhttpClientWithLoomAuth( jwtToken );
-        return decorateWithLoomFactories( createBaseLoomRetrofitBuilder( baseUrl, httpBuilder.build() ) ).build();
+        return decorateWithLoomFactories( createBaseRhizomeRetrofitBuilder( baseUrl, httpBuilder.build() ) ).build();
     }
 
     public static final Retrofit newClient( Retrofit.Builder retrofitBuilder ) {
         return decorateWithLoomFactories( retrofitBuilder ).build();
     }
 
-    public static final Retrofit.Builder createBaseLoomRetrofitBuilder(
+    public static final Retrofit.Builder createBaseRhizomeRetrofitBuilder(
             Environment environment,
             OkHttpClient.Builder httpBuilder ) {
-        return createBaseLoomRetrofitBuilder( environment.getBaseUrl(), httpBuilder.build() );
+        return createBaseRhizomeRetrofitBuilder( environment.getBaseUrl(), httpBuilder.build() );
     }
 
-    public static final Retrofit.Builder createBaseLoomRetrofitBuilder(
+    public static final Retrofit.Builder createBaseRhizomeRetrofitBuilder(
             Environment environment,
             OkHttpClient httpClient ) {
-        return createBaseLoomRetrofitBuilder( environment.getBaseUrl(), httpClient );
+        return createBaseRhizomeRetrofitBuilder( environment.getBaseUrl(), httpClient );
     }
 
-    public static final Retrofit.Builder createBaseLoomRetrofitBuilder( String baseUrl, OkHttpClient httpClient ) {
+    public static final Retrofit.Builder createBaseRhizomeRetrofitBuilder( String baseUrl, OkHttpClient httpClient ) {
         return new Retrofit.Builder().baseUrl( baseUrl ).client( httpClient );
     }
 

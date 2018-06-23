@@ -158,6 +158,8 @@ public final class SerializationConstants {
     public static final String ASSOCIATIONS_ENTITY_KEY_MAPPINGS = "associationsEntityKeyMappings";
     public static final String ENTITY_SETS_ENTITY_KEY_MAPPINGS  = "entitySetsEntityKeyMappings";
     public static final String EDGE                             = "edge";
+    public static final String MISSING                          = "missing";
+    public static final String PRESENT                          = "present";
 
     private SerializationConstants() {
     }

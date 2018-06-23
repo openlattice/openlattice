@@ -246,7 +246,7 @@ public interface EdmApi {
     /**
      * Get all entity types.
      *
-     * @return Iterable containing all entity types.
+     * @return Iterable containing all entity types.e
      */
     @GET( ENTITY_TYPE_BASE_PATH )
     Iterable<EntityType> getEntityTypes();
