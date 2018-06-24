@@ -20,6 +20,9 @@
 
 package com.openlattice.rehearsal;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -27,57 +30,72 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.Schema;
-import com.openlattice.edm.exceptions.TypeExistsException;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * This class creates some basic EDM elements for testing. It assumes that entity data model is empty and that properties
+ * being created don't already exist.
  */
 
 public class TestEdmConfigurer {
-    public static final String SCHEMA_NAME      = "testcsv.csv";
-    public static final String SALARY           = "testcsv.salary";
-    public static final String EMPLOYEE_NAME    = "testcsv.name";
-    public static final String EMPLOYEE_TITLE   = "testcsv.title";
-    public static final String EMPLOYEE_DEPT    = "testcsv.dept";
-    public static final String EMPLOYEE_ID      = "testcsv.id";
-    public static final String ENTITY_SET_NAME  = "employees";
-    public static final String ENTITY_TYPE_NAME = "testcsv.person";
-    public static final String EMPLOYED_AS_NAME = "testcsv.employed_as";
+    public static final String SCHEMA_NAME         = "testcsv.csv";
+    public static final String SALARY              = "testcsv.salary";
+    public static final String NAME                = "testcsv.name";
+    public static final String TITLE               = "testcsv.title";
+    public static final String DEPT                = "testcsv.dept";
+    public static final String ID                  = "testcsv.id";
+    public static final String ROLE_NAME           = "testcsv.role";
+    public static final String ENTITY_TYPE_NAME    = "testcsv.person";
+    public static final String EMPLOYED_IN_NAME    = "testcsv.employed_in";
+    public static final String ENTITY_SET_NAME     = "employees";
+    public static final String EMPLOYED_IN_ES_NAME = "employedin";
 
-    public static final FullQualifiedName ENTITY_TYPE      = new FullQualifiedName( ENTITY_TYPE_NAME );
-    public static final FullQualifiedName ASSOCIATION_TYPE = new FullQualifiedName( EMPLOYED_AS_NAME );
+    public static final FullQualifiedName PERSON_FQN      = new FullQualifiedName( ENTITY_TYPE_NAME );
+    public static final FullQualifiedName EMPLOYED_IN_FQN = new FullQualifiedName( EMPLOYED_IN_NAME );
+    public static final FullQualifiedName ROLE_FQN        = new FullQualifiedName( ROLE_NAME );
 
-    public static final FullQualifiedName ENTITY_TYPE_MARS   = new FullQualifiedName( "testcsv.employeeMars" );
-    public static final FullQualifiedName ENTITY_TYPE_SATURN = new FullQualifiedName( "testcsv.employeeSaturn" );
-
-    public static final    PropertyType EMPLOYEE_TITLE_PROP_TYPE  = new PropertyType(
-            new FullQualifiedName( EMPLOYEE_TITLE ),
+    public static final PropertyType EMPLOYEE_TITLE_PROP_TYPE = new PropertyType(
+            new FullQualifiedName( TITLE ),
             "Title",
             Optional.of( "Title of an employee of the city of Chicago." ),
             ImmutableSet.of(),
             EdmPrimitiveTypeKind.String );
+
+    public static final PropertyType START_DATETIME_PROP_TYPE = new PropertyType(
+            new FullQualifiedName( "testcsv.startdate" ),
+            "Title",
+            Optional.of( "Start Date of entity relationship" ),
+            ImmutableSet.of(),
+            EdmPrimitiveTypeKind.DateTimeOffset );
+
+    public static final    PropertyType END_DATETIME_PROP_TYPE    = new PropertyType(
+            new FullQualifiedName( "testcsv.enddate" ),
+            "Title",
+            Optional.of( "Start Date of entity relationship" ),
+            ImmutableSet.of(),
+            EdmPrimitiveTypeKind.DateTimeOffset );
     protected static final PropertyType EMPLOYEE_NAME_PROP_TYPE   = new PropertyType(
-            new FullQualifiedName( EMPLOYEE_NAME ),
+            new FullQualifiedName( NAME ),
             "Name",
             Optional.of( "Name of an employee of the city of Chicago." ),
             ImmutableSet.of(),
             EdmPrimitiveTypeKind.String );
     protected static final PropertyType ID_PROP_TYPE              = new PropertyType(
-            new FullQualifiedName( EMPLOYEE_ID ),
-            "Employee ID",
-            Optional.of( "ID of an employee of the city of Chicago." ),
+            new FullQualifiedName( ID ),
+            "ID",
+            Optional.of( "Unique ID of an entity" ),
             ImmutableSet.of(),
             EdmPrimitiveTypeKind.Guid );
     protected static final PropertyType EMPLOYEE_DEPT_PROP_TYPE   = new PropertyType(
-            new FullQualifiedName( EMPLOYEE_DEPT ),
+            new FullQualifiedName( DEPT ),
             "Department",
             Optional.of( "Department of an employee of the city of Chicago." ),
             ImmutableSet.of(),
@@ -89,18 +107,15 @@ public class TestEdmConfigurer {
             ImmutableSet.of(),
             EdmPrimitiveTypeKind.Int64 );
 
-    public static EntityType      METADATA_LEVELS;
-    public static EntityType      METADATA_LEVELS_SATURN;
-    public static EntityType      METADATA_LEVELS_MARS;
-    public static EntityType      EMPLOYMENT_INFO;
-    public static AssociationType EMPLOYED_AS;
+    public static EntityType      PERSON;
+    public static AssociationType EMPLOYED_IN;
+    public static EntityType      ROLE;
 
-    public static UUID      METADATA_LEVELS_ID;
-    public static UUID      METADATA_LEVELS_MARS_ID;
-    public static UUID      METADATA_LEVELS_SATURN_ID;
-    public static EntitySet EMPLOYEES;
+    public static UUID      PERSON_ES_ID;
+    public static EntitySet PERSON_ES;
+    public static EntitySet EMPLOYED_IN_ES;
 
-    public static UUID EMPLOYED_AS_ID;
+    public static UUID EMPLOYED_IN_ES_ID;
     public static UUID EMPLOYEE_NAME_PROP_ID   = EMPLOYEE_NAME_PROP_TYPE.getId();
     public static UUID EMPLOYEE_TITLE_PROP_ID  = EMPLOYEE_TITLE_PROP_TYPE.getId();
     public static UUID ID_PROP_ID              = ID_PROP_TYPE.getId();
@@ -108,24 +123,22 @@ public class TestEdmConfigurer {
     public static UUID EMPLOYEE_SALARY_PROP_ID = EMPLOYEE_SALARY_PROP_TYPE.getId();
 
     static {
-        METADATA_LEVELS = with( ENTITY_TYPE );
-        METADATA_LEVELS_ID = METADATA_LEVELS.getId();
-        METADATA_LEVELS_SATURN = with( ENTITY_TYPE_SATURN );
-        METADATA_LEVELS_SATURN_ID = METADATA_LEVELS_SATURN.getId();
-        METADATA_LEVELS_MARS = with( ENTITY_TYPE_MARS );
-        METADATA_LEVELS_MARS_ID = METADATA_LEVELS_MARS.getId();
-
-        EMPLOYED_AS = new AssociationType( Optional
-                .of( new EntityType( ASSOCIATION_TYPE,
-                        "Employed As",
+        PERSON = with( PERSON_FQN );
+        PERSON_ES_ID = PERSON.getId();
+        EMPLOYED_IN = new AssociationType( Optional
+                .of( new EntityType( EMPLOYED_IN_FQN,
+                        "Employed In",
                         "Relationship representing type of employment",
                         ImmutableSet.of(),
-                        Sets.newLinkedHashSet(Arrays.asList(ID_PROP_ID)),
-                        Sets.newLinkedHashSet(Arrays.asList(ID_PROP_ID)),
+                        Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID ) ),
+                        Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID,
+                                START_DATETIME_PROP_TYPE.getId(),
+                                END_DATETIME_PROP_TYPE.getId() ) ),
                         Optional.absent(),
                         Optional.of( SecurableObjectType.AssociationType ) ) ),
-                Sets.newLinkedHashSet( Arrays.asList(  ) )
-                Sets.newLinkedHashSet() );
+                Sets.newLinkedHashSet( Arrays.asList( PERSON.getId() ) ),
+                Sets.newLinkedHashSet( Arrays.asList() ),
+                false );
     }
 
     static void setupDatamodel( EdmApi edmApi ) {
@@ -141,18 +154,29 @@ public class TestEdmConfigurer {
                         EMPLOYEE_NAME_PROP_TYPE,
                         EMPLOYEE_DEPT_PROP_TYPE,
                         EMPLOYEE_SALARY_PROP_TYPE ),
-                ImmutableSet.of( METADATA_LEVELS, METADATA_LEVELS_MARS, METADATA_LEVELS_SATURN ) ) );
+                ImmutableSet.of( PERSON, EMPLOYED_IN.getAssociationEntityType() ) ) );
 
         Assert.assertTrue( edmApi.getEntitySetId( ENTITY_SET_NAME ) != null );
     }
 
     private static void createAssociationTypes( EdmApi edmApi ) {
-        final UUID employedId = edmApi.createAssociationType( EMPLOYED_AS );
-        if ( employedId == null ) {
-            final FullQualifiedName associationFqn = EMPLOYED_AS.getAssociationEntityType().getType();
-            EMPLOYED_AS_ID = edmApi.getEntityTypeId( associationFqn.getNamespace(), associationFqn.getName() );
-        }
+        checkNotNull( edmApi.createAssociationType( EMPLOYED_IN ) );
+    }
 
+    private static EntityType getRoleEntityType() {
+        return new EntityType(
+                ROLE_FQN,
+                "Job Role",
+                "Details for individual job roles for persons.",
+                ImmutableSet.of(),
+                Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID ) ),
+                Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID,
+                        EMPLOYEE_TITLE_PROP_ID,
+                        EMPLOYEE_DEPT_PROP_ID,
+                        EMPLOYEE_SALARY_PROP_ID ) ),
+                Optional.absent(),
+                Optional.of( SecurableObjectType.EntityType )
+        );
     }
 
     public static EntityType with( FullQualifiedName fqn ) {
@@ -162,86 +186,50 @@ public class TestEdmConfigurer {
                 fqn.getFullQualifiedNameAsString() + " Employees of the city of Chicago",
                 ImmutableSet.of(),
                 Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID ) ),
-                Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID,
-                        EMPLOYEE_TITLE_PROP_ID,
-                        EMPLOYEE_NAME_PROP_ID,
-                        EMPLOYEE_DEPT_PROP_ID,
-                        EMPLOYEE_SALARY_PROP_ID ) ),
+                Sets.newLinkedHashSet( Arrays.asList(
+                        ID_PROP_ID,
+                        EMPLOYEE_NAME_PROP_ID ) ),
                 Optional.absent(),
                 Optional.of( SecurableObjectType.EntityType ) );
     }
 
     private static void createPropertyTypes( EdmApi dms ) {
-        try {
-            dms.createPropertyType( ID_PROP_TYPE );
-        } catch ( TypeExistsException e ) {
-            ID_PROP_ID = dms.getPropertyTypeId( ID_PROP_TYPE.getType().getNamespace(),
-                    ID_PROP_TYPE.getType().getName() );
-        }
-        try {
-            dms.createPropertyType( EMPLOYEE_TITLE_PROP_TYPE );
-        } catch ( TypeExistsException e ) {
-            EMPLOYEE_TITLE_PROP_ID = dms.getPropertyTypeId( EMPLOYEE_TITLE_PROP_TYPE.getType().getNamespace(),
-                    EMPLOYEE_TITLE_PROP_TYPE.getType().getName() );
-        }
-        try {
-            dms.createPropertyType( EMPLOYEE_NAME_PROP_TYPE );
-        } catch ( TypeExistsException e ) {
-            EMPLOYEE_NAME_PROP_ID = dms.getPropertyTypeId( EMPLOYEE_NAME_PROP_TYPE.getType().getNamespace(),
-                    EMPLOYEE_NAME_PROP_TYPE.getType().getName() );
-        }
-        try {
-            dms.createPropertyType( EMPLOYEE_DEPT_PROP_TYPE );
-        } catch ( TypeExistsException e ) {
-            EMPLOYEE_DEPT_PROP_ID = dms.getPropertyTypeId( EMPLOYEE_DEPT_PROP_TYPE.getType().getNamespace(),
-                    EMPLOYEE_DEPT_PROP_TYPE.getType().getName() );
-        }
-        try {
-            dms.createPropertyType( EMPLOYEE_SALARY_PROP_TYPE );
-        } catch ( TypeExistsException e ) {
-            EMPLOYEE_SALARY_PROP_ID = dms.getPropertyTypeId( EMPLOYEE_SALARY_PROP_TYPE.getType().getNamespace(),
-                    EMPLOYEE_SALARY_PROP_TYPE.getType().getName() );
-        }
+        checkNotNull( dms.createPropertyType( ID_PROP_TYPE ) );
+        checkNotNull( dms.createPropertyType( EMPLOYEE_TITLE_PROP_TYPE ) );
+        checkNotNull( dms.createPropertyType( EMPLOYEE_NAME_PROP_TYPE ) );
+        checkNotNull( dms.createPropertyType( EMPLOYEE_DEPT_PROP_TYPE ) );
+        checkNotNull( dms.createPropertyType( EMPLOYEE_SALARY_PROP_TYPE ) );
+        checkNotNull( dms.createPropertyType( START_DATETIME_PROP_TYPE ) );
+        checkNotNull( dms.createPropertyType( END_DATETIME_PROP_TYPE ) );
     }
 
     private static void createEntityTypes( EdmApi dms ) {
-        METADATA_LEVELS = createEntityTypeIfNotExists( dms, METADATA_LEVELS );
-        METADATA_LEVELS_ID = METADATA_LEVELS.getId();
-
-        METADATA_LEVELS_SATURN = createEntityTypeIfNotExists( dms, METADATA_LEVELS_SATURN );
-        METADATA_LEVELS_SATURN_ID = METADATA_LEVELS_SATURN.getId();
-
-        METADATA_LEVELS_MARS = createEntityTypeIfNotExists( dms, METADATA_LEVELS_MARS );
-        METADATA_LEVELS_MARS_ID = METADATA_LEVELS_MARS.getId();
+        PERSON = createEntityTypeIfNotExists( dms, PERSON );
+        ROLE = getRoleEntityType();
     }
 
     private static EntityType createEntityTypeIfNotExists( EdmApi edmApi, EntityType et ) {
-        UUID entityTypeId = edmApi.getEntityTypeId( et.getType().getNamespace(), et.getType().getName() );
-        if ( entityTypeId == null ) {
-            entityTypeId = edmApi.createEntityType( et );
-            return et;
-        } else {
-            return edmApi.getEntityType( entityTypeId );
-        }
+        checkNotNull( edmApi.createEntityType( et ) );
+        return et;
     }
 
     private static void createEntitySets( EdmApi edmApi ) {
-        UUID entitySetID = edmApi.getEntitySetId( ENTITY_SET_NAME );
+        PERSON_ES = new EntitySet(
+                PERSON_ES_ID,
+                ENTITY_SET_NAME,
+                ENTITY_SET_NAME,
+                Optional.of( "Names and salaries of Chicago employees" ),
+                ImmutableSet.of( "support@openlattice.com" ) );
+        EMPLOYED_IN_ES = new EntitySet( EMPLOYED_IN.getAssociationEntityType().getId(),
+                EMPLOYED_IN_ES_NAME,
+                "Chicago Employed In",
+                Optional.absent(),
+                ImmutableSet.of( "support@openlattice.com" )
+        );
 
-        if ( entitySetID == null ) {
-            EMPLOYEES = null;
-        } else {
-            EMPLOYEES = edmApi.getEntitySet( entitySetID );
-        }
-
-        if ( EMPLOYEES == null ) {
-            EMPLOYEES = new EntitySet(
-                    METADATA_LEVELS_ID,
-                    ENTITY_SET_NAME,
-                    ENTITY_SET_NAME,
-                    Optional.of( "Names and salaries of Chicago employees" ),
-                    ImmutableSet.of( "support@openlattice.com" ) );
-            edmApi.createEntitySets( ImmutableSet.of( EMPLOYEES ) );
-        }
+       final  Map<String, UUID> created = checkNotNull( edmApi
+                .createEntitySets( ImmutableSet.of( PERSON_ES, EMPLOYED_IN_ES ) ) );
+        checkState(
+                created.containsKey( ENTITY_SET_NAME ) && PERSON_ES_ID.equals( created.get( ENTITY_SET_NAME ) ) );
     }
 }
