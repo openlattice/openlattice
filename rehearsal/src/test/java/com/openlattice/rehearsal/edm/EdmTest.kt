@@ -23,7 +23,6 @@ package com.openlattice.rehearsal.edm
 
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.edm.EdmApi
-import com.openlattice.neuron.audit.AuditEntitySetUtils
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 
 /**
@@ -36,9 +35,6 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
             val client = RetrofitFactory.newClient(RetrofitFactory.Environment.PRODUCTION, { "" })
             val prodEdmApi = client.create(EdmApi::class.java)
             val prodEdm = prodEdmApi.entityDataModel
-            val entityTypes = prodEdm.entityTypes.filter { !it.type.equals(AuditEntitySetUtils.AUDIT_ET_FQN) }.toSet()
-            edmApi.
-                    edmApi.entityDataModel
         }
     }
 

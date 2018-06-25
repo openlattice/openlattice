@@ -62,21 +62,21 @@ public class TestEdmConfigurer {
     public static final FullQualifiedName EMPLOYED_IN_FQN = new FullQualifiedName( EMPLOYED_IN_NAME );
     public static final FullQualifiedName ROLE_FQN        = new FullQualifiedName( ROLE_NAME );
 
-    public static final PropertyType EMPLOYEE_TITLE_PROP_TYPE = new PropertyType(
+    protected static final PropertyType EMPLOYEE_TITLE_PROP_TYPE = new PropertyType(
             new FullQualifiedName( TITLE ),
             "Title",
             Optional.of( "Title of an employee of the city of Chicago." ),
             ImmutableSet.of(),
             EdmPrimitiveTypeKind.String );
 
-    public static final PropertyType START_DATETIME_PROP_TYPE = new PropertyType(
+    protected static final PropertyType START_DATETIME_PROP_TYPE = new PropertyType(
             new FullQualifiedName( "testcsv.startdate" ),
             "Title",
             Optional.of( "Start Date of entity relationship" ),
             ImmutableSet.of(),
             EdmPrimitiveTypeKind.DateTimeOffset );
 
-    public static final    PropertyType END_DATETIME_PROP_TYPE    = new PropertyType(
+    protected static final    PropertyType END_DATETIME_PROP_TYPE    = new PropertyType(
             new FullQualifiedName( "testcsv.enddate" ),
             "Title",
             Optional.of( "Start Date of entity relationship" ),
@@ -115,7 +115,6 @@ public class TestEdmConfigurer {
     public static EntitySet PERSON_ES;
     public static EntitySet EMPLOYED_IN_ES;
 
-    public static UUID EMPLOYED_IN_ES_ID;
     public static UUID EMPLOYEE_NAME_PROP_ID   = EMPLOYEE_NAME_PROP_TYPE.getId();
     public static UUID EMPLOYEE_TITLE_PROP_ID  = EMPLOYEE_TITLE_PROP_TYPE.getId();
     public static UUID ID_PROP_ID              = ID_PROP_TYPE.getId();
@@ -124,7 +123,6 @@ public class TestEdmConfigurer {
 
     static {
         PERSON = with( PERSON_FQN );
-        PERSON_ES_ID = PERSON.getId();
         EMPLOYED_IN = new AssociationType( Optional
                 .of( new EntityType( EMPLOYED_IN_FQN,
                         "Employed In",
@@ -205,7 +203,7 @@ public class TestEdmConfigurer {
 
     private static void createEntityTypes( EdmApi dms ) {
         PERSON = createEntityTypeIfNotExists( dms, PERSON );
-        ROLE = getRoleEntityType();
+        ROLE = createEntityTypeIfNotExists( dms, getRoleEntityType() );
     }
 
     private static EntityType createEntityTypeIfNotExists( EdmApi edmApi, EntityType et ) {
@@ -215,7 +213,7 @@ public class TestEdmConfigurer {
 
     private static void createEntitySets( EdmApi edmApi ) {
         PERSON_ES = new EntitySet(
-                PERSON_ES_ID,
+                PERSON.getId(),
                 ENTITY_SET_NAME,
                 ENTITY_SET_NAME,
                 Optional.of( "Names and salaries of Chicago employees" ),
@@ -226,8 +224,8 @@ public class TestEdmConfigurer {
                 Optional.absent(),
                 ImmutableSet.of( "support@openlattice.com" )
         );
-
-       final  Map<String, UUID> created = checkNotNull( edmApi
+        PERSON_ES_ID = PERSON_ES.getId();
+        final Map<String, UUID> created = checkNotNull( edmApi
                 .createEntitySets( ImmutableSet.of( PERSON_ES, EMPLOYED_IN_ES ) ) );
         checkState(
                 created.containsKey( ENTITY_SET_NAME ) && PERSON_ES_ID.equals( created.get( ENTITY_SET_NAME ) ) );

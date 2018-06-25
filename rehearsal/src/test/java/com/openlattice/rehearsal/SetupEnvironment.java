@@ -124,6 +124,7 @@ public class SetupEnvironment {
         user2 = toPrincipal( idUser2 );
         user3 = toPrincipal( idUser3 );
 
+        //Comment out this line for local testing.
         TestEdmConfigurer.setupDatamodel( retrofit.create( EdmApi.class ) );
     }
 
