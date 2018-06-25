@@ -26,7 +26,7 @@ hikari:
     jdbcUrl: "jdbc:postgresql://localhost:5432/openlattice"
     username: "oltest"
     password: "test"
-    maximumPoolSize: 3
+    maximumPoolSize: 10
 
 #graphite:
 #    host: "jarvis"

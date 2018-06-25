@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore.apps.services;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -67,6 +66,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -157,7 +157,7 @@ public class AppService {
                 .concat( appType.getType().getName() ) );
         String title = prefix.concat( " " ).concat( appType.getTitle() );
         Optional<String> description = Optional.of( prefix.concat( " " ).concat( appType.getDescription() ) );
-        EntitySet entitySet = new EntitySet( Optional.absent(),
+        EntitySet entitySet = new EntitySet( Optional.empty(),
                 appType.getEntityTypeId(),
                 name,
                 title,
@@ -180,7 +180,7 @@ public class AppService {
                     organizationId.toString().concat( "|" ).concat( title ) );
             String description = permission.name().concat( " permission for the " ).concat( app.getTitle() )
                     .concat( " app" );
-            Role role = new Role( Optional.absent(),
+            Role role = new Role( Optional.empty(),
                     organizationId,
                     principal,
                     title,

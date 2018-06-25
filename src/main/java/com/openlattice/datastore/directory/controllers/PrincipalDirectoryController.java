@@ -26,7 +26,6 @@ import static com.google.common.base.Preconditions.checkState;
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.auth.UserInfo;
-import com.google.common.base.Optional;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -46,6 +45,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
@@ -155,7 +155,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             }
 
             spm.createSecurablePrincipalIfNotExists( principal,
-                    new SecurablePrincipal( Optional.absent(), principal, title, Optional.absent() ) );
+                    new SecurablePrincipal( Optional.empty(), principal, title, Optional.empty() ) );
 
             dbCredService.createUserIfNotExists( userId );
         }
