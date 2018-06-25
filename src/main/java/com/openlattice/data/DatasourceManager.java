@@ -110,6 +110,7 @@ public class DatasourceManager {
         return currentSyncIds.getAll( entitySetIds );
     }
 
+    @Deprecated
     public void setCurrentSyncId( UUID entitySetId, UUID syncId ) {
 
         currentSyncIds.put( entitySetId, syncId );
@@ -119,6 +120,7 @@ public class DatasourceManager {
         }
     }
 
+    @Deprecated
     public UUID createNewSyncIdForEntitySet( UUID entitySetId ) {
         UUID newSyncId = new UUID( System.currentTimeMillis(), 0 );
         addSyncIdToEntitySet( entitySetId, newSyncId );
