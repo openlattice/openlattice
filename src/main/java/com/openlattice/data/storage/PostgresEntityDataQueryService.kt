@@ -27,6 +27,7 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.JsonDeserializer
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -37,7 +38,6 @@ import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -124,7 +124,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                 entitySetPreparedStatement.addBatch()
 
                 val entityKeyId = it.key
-                val entityData = it.value
+                val entityData = JsonDeserializer.validateFormatAndNormalize(it.value, datatypes)
+
                 Multimaps
                         .asMap(entityData)
                         .forEach {

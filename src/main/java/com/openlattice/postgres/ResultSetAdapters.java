@@ -629,7 +629,7 @@ public final class ResultSetAdapters {
     public static SetMultimap<FullQualifiedName, Object> implicitEntity(
             ResultSet rs,
             Map<UUID, PropertyType> authorizedPropertyTypes, Set<MetadataOption> metadataOptions ) throws SQLException {
-        final UUID entityKeyId = (UUID) rs.getObject( DataTables.ID_FQN.getFullQualifiedNameAsString() );
+        final UUID entityKeyId = entityKeyId( rs );
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
 
         if ( metadataOptions.contains( MetadataOption.LAST_WRITE ) ) {
@@ -688,6 +688,10 @@ public final class ResultSetAdapters {
             data.putAll( propertyType.getType(), objects );
         }
         return data;
+    }
+
+    public static UUID entityKeyId( ResultSet rs ) throws SQLException {
+        return (UUID) rs.getObject( ID_VALUE.getName() );
     }
 
     public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
