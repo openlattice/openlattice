@@ -31,8 +31,10 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,7 +57,10 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
     @Test
     public void testCreateAndLoadEntityData() {
         EntityType et = createEntityType();
+        waitForIt();
         EntitySet es = createEntitySet( et );
+        waitForIt();
+
         Map<UUID, SetMultimap<UUID, Object>> testData = TestDataFactory
                 .randomStringEntityData( numberOfEntries, et.getProperties() );
         dataApi.replaceEntities( es.getId(), testData, false );
@@ -64,6 +69,14 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
                 .loadEntitySetData( es.getId(), ess, FileType.json ) );
 
         Assert.assertEquals( numberOfEntries, results.size() );
+    }
+
+    private void waitForIt() {
+        try {
+            Thread.sleep( 1000 );
+        } catch ( InterruptedException e ) {
+            throw new IllegalStateException( "Failed to wait for it." );
+        }
     }
 
     @Test
@@ -80,11 +93,13 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         UUID entityTypeId = edmApi.createEntityType( et );
         Assert.assertNotNull( "Entity type creation shouldn't return null UUID.", entityTypeId );
 
+        waitForIt();
         EntitySet es = createEntitySet( et );
+        waitForIt();
 
         Map<UUID, SetMultimap<UUID, Object>> testData = new HashMap<>();
         LocalDate d = LocalDate.now();
-        OffsetDateTime odt = OffsetDateTime.now();
+        OffsetDateTime odt = OffsetDateTime.ofInstant( Instant.now(), ZoneId.of( "UTC" ) );
         testData.put( UUID.randomUUID(),
                 ImmutableSetMultimap
                         .of( p1.getId(), odt, p2.getId(), d, k.getId(), RandomStringUtils.randomAlphanumeric( 5 ) ) );
@@ -105,7 +120,9 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
     @Test
     public void testLoadSelectedEntityData() {
         EntityType et = createEntityType();
+        waitForIt();
         EntitySet es = createEntitySet( et );
+        waitForIt();
 
         Map<UUID, SetMultimap<UUID, Object>> entities = TestDataFactory.randomStringEntityData( numberOfEntries,
                 et.getProperties() );
@@ -121,7 +138,10 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         // For each entity, collect its property value in one set, and collect all these sets together.
         Set<Set<String>> resultValues = new HashSet<>();
         for ( SetMultimap<FullQualifiedName, Object> entity : results ) {
-            resultValues.add( entity.asMap().values().stream().flatMap( e -> e.stream() ).map( o -> (String) o )
+            resultValues.add( entity.asMap().entrySet().stream()
+                    .filter( e -> !e.getKey().getFullQualifiedNameAsString().contains( "@" ))
+                    .flatMap( e -> e.getValue().stream() )
+                    .map( o -> (String) o )
                     .collect( Collectors.toSet() ) );
         }
 
