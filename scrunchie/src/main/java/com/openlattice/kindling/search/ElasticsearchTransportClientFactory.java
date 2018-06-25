@@ -39,8 +39,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ElasticsearchTransportClientFactory {
-    public static final Logger logger = LoggerFactory.getLogger( ElasticsearchTransportClientFactory.class );
-    private static final RateLimiter r = RateLimiter.create( 1.0 / 30.0 );
+    public static final  Logger      logger = LoggerFactory.getLogger( ElasticsearchTransportClientFactory.class );
+    private static final RateLimiter r      = RateLimiter.create( 1.0 / 30.0 );
     private String  clientTransportHost;
     private Integer clientTransportPort;
     private String  cluster;
@@ -54,7 +54,7 @@ public class ElasticsearchTransportClientFactory {
         this.cluster = cluster;
     }
 
-    public Client getClient() throws UnknownHostException {
+    public Client getClient() {
         if ( this.clientTransportHost == null ) {
             logger.info( "no server passed in, logging to database" );
             return null;
@@ -62,13 +62,17 @@ public class ElasticsearchTransportClientFactory {
 
         logger.info( "getting kindling elasticsearch client on " + clientTransportHost + ":" + clientTransportPort
                 + " with elasticsearch cluster " + cluster );
-        System.setProperty("es.set.netty.runtime.available.processors", "false");
+        System.setProperty( "es.set.netty.runtime.available.processors", "false" );
         Settings settings = Settings.builder().put( "cluster.name", cluster ).build();
         TransportClient client = new PreBuiltTransportClient( settings );
-        client.addTransportAddress( new TransportAddress(
-                InetAddress.getByName( this.clientTransportHost ),
-                this.clientTransportPort )
-        );
+        try {
+            client.addTransportAddress( new TransportAddress(
+                    InetAddress.getByName( this.clientTransportHost ),
+                    this.clientTransportPort )
+            );
+        } catch ( UnknownHostException e ) {
+            throw new IllegalStateException( "Unable to resolve elasticsearch host: " + this.clientTransportHost, e );
+        }
 
         if ( isConnected( client ) ) {
             return client;

@@ -24,7 +24,6 @@ import com.dataloom.mappers.ObjectMappers;
 import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
@@ -45,6 +44,17 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.search.requests.EntityKeyIdSearchResult;
 import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
@@ -73,13 +83,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import java.io.IOException;
-import java.net.UnknownHostException;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     private static final Logger logger = LoggerFactory.getLogger( ConductorElasticsearchImpl.class );
@@ -92,21 +95,21 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     private String cluster;
     private int    port;
 
-    public ConductorElasticsearchImpl( SearchConfiguration config ) throws UnknownHostException {
-        this( config, Optional.absent() );
+    public ConductorElasticsearchImpl( SearchConfiguration config ) {
+        this( config, Optional.empty() );
     }
 
     public ConductorElasticsearchImpl(
             SearchConfiguration config,
-            Client someClient ) throws UnknownHostException {
+            Client someClient ) {
         this( config, Optional.of( someClient ) );
     }
 
     public ConductorElasticsearchImpl(
             SearchConfiguration config,
-            Optional<Client> someClient ) throws UnknownHostException {
+            Optional<Client> someClient ) {
         init( config );
-        client = someClient.or( factory.getClient() );
+        client = someClient.orElseGet( factory::getClient );
         initializeIndices();
 
         MultiLayerNetwork network;
