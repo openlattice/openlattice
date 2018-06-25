@@ -28,7 +28,6 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAcc
 
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Optional;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
@@ -68,6 +67,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -154,7 +154,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                     .authenticate( PreAuthenticatedAuthenticationJsonWebToken.usingToken( token ) );
             SecurityContextHolder.getContext().setAuthentication( authentication );
         }
-        return loadEntitySetData( entitySetId, Optional.absent() );
+        return loadEntitySetData( entitySetId, Optional.empty() );
     }
 
     @RequestMapping(
@@ -180,7 +180,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             EntitySetSelection req,
             FileType fileType ) {
         if ( req == null ) {
-            return loadEntitySetData( entitySetId, Optional.absent() );
+            return loadEntitySetData( entitySetId, Optional.empty() );
         } else {
             return loadEntitySetData( entitySetId, req.getSelectedProperties() );
         }
