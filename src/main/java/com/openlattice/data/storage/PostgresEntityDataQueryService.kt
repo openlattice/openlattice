@@ -384,11 +384,17 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
     val columns = setOf(
             ID_VALUE.name,
             VERSION.name,
+            VERSIONS.name,
             LAST_WRITE.name,
             LAST_INDEX.name
     )
-    return "INSERT INTO $esTableName (${columns.joinToString(",")}) VALUES( ?,$version,now(),'${OffsetDateTime.MIN}') " +
-            "ON CONFLICT (${ID_VALUE.name}) DO UPDATE SET ${VERSION.name} = $version, ${LAST_WRITE.name} = now() "
+    return "INSERT INTO $esTableName (${columns.joinToString(",")}) " +
+            "VALUES( ?,$version,ARRAY[$version],now(),'-infinity') " +
+            "ON CONFLICT (${ID_VALUE.name}) " +
+            "DO UPDATE SET versions = $esTableName.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
+            "${LAST_WRITE.name} = now() " +
+            "WHERE EXCLUDED.${VERSION.name} > abs($esTableName.version) "
 }
 
 fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: String, version: Long): String {
