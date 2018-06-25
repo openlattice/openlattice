@@ -63,6 +63,7 @@ import com.openlattice.datastore.services.PostgresEntitySetManager;
 import com.openlattice.datastore.services.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.directory.UserDirectoryService;
+import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -80,6 +81,7 @@ import com.openlattice.neuron.pods.NeuronPod;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.zaxxer.hikari.HikariDataSource;
@@ -99,7 +101,9 @@ import org.springframework.context.annotation.Import;
 public class DatastoreServicesPod {
 
     @Inject
-    Jdbi jdbi;
+    private Jdbi                     jdbi;
+    @Inject
+    private PostgresTableManager     tableManager;
     @Inject
     private HazelcastInstance        hazelcastInstance;
     @Inject
@@ -349,6 +353,13 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 principalService(),
                 aclKeyReservationService() ), "Checkpoint app service" );
+    }
+
+    @Bean
+    public PostgresEdmManager pgEdmManager() {
+        PostgresEdmManager pgEdmManager = new PostgresEdmManager( tableManager, hikariDataSource );
+        eventBus.register( pgEdmManager );
+        return pgEdmManager;
     }
 
     @Bean
