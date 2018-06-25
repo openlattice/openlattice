@@ -126,10 +126,14 @@ import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
 import java.sql.Array;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
@@ -668,13 +672,26 @@ public final class ResultSetAdapters {
                     objects = Arrays.asList( (Long[]) rs.getArray( fqn ).getArray() );
                     break;
                 case Date:
-                    objects = Arrays.asList( (LocalDate[]) rs.getArray( fqn ).getArray() );
+                    objects = Stream
+                            .of( (Date[]) rs.getArray( fqn ).getArray() )
+                            .map( Date::toLocalDate )
+                            .collect( Collectors.toList() );
+                    break;
+                case TimeOfDay:
+                    objects = Stream
+                            .of( (Time[]) rs.getArray( fqn ).getArray() )
+                            .map( Time::toLocalTime )
+                            .collect( Collectors.toList() );
                     break;
                 case DateTimeOffset:
-                    objects = Arrays.asList( (OffsetDateTime[]) rs.getArray( fqn ).getArray() );
+                    objects = Stream
+                            .of( (Timestamp[]) rs.getArray( fqn ).getArray() )
+                            .map( ts -> OffsetDateTime
+                                    .ofInstant( Instant.ofEpochMilli( ts.getTime() ), ZoneId.of( "UTC" ) ) )
+                            .collect( Collectors.toList() );
                     break;
                 case Double:
-                    objects = Arrays.asList( (OffsetDateTime[]) rs.getArray( fqn ).getArray() );
+                    objects = Arrays.asList( (Double[]) rs.getArray( fqn ).getArray() );
                     break;
                 case Boolean:
                     objects = Arrays.asList( (Boolean[]) rs.getArray( fqn ).getArray() );
