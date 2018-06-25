@@ -21,13 +21,13 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.apps.processors.UpdateAppMetadataProcessor;
 import com.openlattice.edm.requests.MetadataUpdate;
 import java.io.IOException;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -56,10 +56,10 @@ public class UpdateAppMetadataProcessorStreamSerializer implements
                 title,
                 description,
                 name,
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 url );
         return new UpdateAppMetadataProcessor( update );
     }

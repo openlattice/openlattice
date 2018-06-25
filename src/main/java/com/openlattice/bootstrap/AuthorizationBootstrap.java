@@ -24,7 +24,6 @@ import static com.openlattice.bootstrap.BootstrapConstants.GLOBAL_ORGANIZATION_I
 import static com.openlattice.bootstrap.BootstrapConstants.OPENLATTICE_ORGANIZATION_ID;
 import static com.openlattice.bootstrap.BootstrapConstants.ROOT_PRINCIPAL_ID;
 
-import com.google.common.base.Optional;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.authorization.AclKey;
@@ -35,6 +34,7 @@ import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import java.util.Optional;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -66,7 +66,7 @@ public class AuthorizationBootstrap {
     }
 
     public static Role createUserRole() {
-        return new Role( Optional.absent(),
+        return new Role( Optional.empty(),
                 GLOBAL_ORGANIZATION_ID,
                 SystemRole.AUTHENTICATED_USER.getPrincipal(),
                 "OpenLattice User Role",
@@ -74,7 +74,7 @@ public class AuthorizationBootstrap {
     }
 
     public static Role createAdminRole() {
-        return new Role( Optional.absent(),
+        return new Role( Optional.empty(),
                 GLOBAL_ORGANIZATION_ID,
                 SystemRole.ADMIN.getPrincipal(),
                 "Global Admin Role",

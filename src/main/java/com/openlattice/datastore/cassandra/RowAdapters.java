@@ -25,7 +25,6 @@ package com.openlattice.datastore.cassandra;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.reflect.TypeToken;
@@ -50,6 +49,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
@@ -228,7 +228,7 @@ public final class RowAdapters {
     }
 
     public static Optional<String> description( Row row ) {
-        return Optional.fromNullable( row.getString( CommonColumns.DESCRIPTION.cql() ) );
+        return Optional.ofNullable( row.getString( CommonColumns.DESCRIPTION.cql() ) );
     }
 
     public static Set<String> contacts( Row row ) {
@@ -255,13 +255,13 @@ public final class RowAdapters {
     }
 
     public static EnumType enumType( Row row ) {
-        com.google.common.base.Optional<UUID> id = com.google.common.base.Optional.of( id( row ) );
+        Optional<UUID> id = Optional.of( id( row ) );
         FullQualifiedName type = splitFqn( row );
         String title = title( row );
         Optional<String> description = description( row );
         Set<FullQualifiedName> schemas = schemas( row );
         LinkedHashSet<String> members = members( row );
-        Optional<EdmPrimitiveTypeKind> dataType = Optional.fromNullable( primitveType( row ) );
+        Optional<EdmPrimitiveTypeKind> dataType = Optional.ofNullable( primitveType( row ) );
         Optional<Boolean> piiField = pii( row );
         boolean flags = flags( row );
         Optional<Analyzer> maybeAnalyzer = analyzer( row );
@@ -288,7 +288,7 @@ public final class RowAdapters {
         Set<FullQualifiedName> schemas = row.getSet( CommonColumns.SCHEMAS.cql(), FullQualifiedName.class );
         LinkedHashSet<UUID> key = (LinkedHashSet<UUID>) row.getSet( CommonColumns.KEY.cql(), UUID.class );
         LinkedHashSet<UUID> properties = (LinkedHashSet<UUID>) row.getSet( CommonColumns.PROPERTIES.cql(), UUID.class );
-        Optional<UUID> baseType = Optional.fromNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
+        Optional<UUID> baseType = Optional.ofNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
         final Optional<SecurableObjectType> category;
         String objectType = row.getString( CommonColumns.CATEGORY.cql() );
         if ( StringUtils.isBlank( objectType ) ) {
@@ -306,7 +306,7 @@ public final class RowAdapters {
         Optional<String> description = description( row );
         Set<FullQualifiedName> schemas = row.getSet( CommonColumns.SCHEMAS.cql(), FullQualifiedName.class );
         LinkedHashSet<UUID> properties = (LinkedHashSet<UUID>) row.getSet( CommonColumns.PROPERTIES.cql(), UUID.class );
-        Optional<UUID> baseType = Optional.fromNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
+        Optional<UUID> baseType = Optional.ofNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
         SecurableObjectType category = SecurableObjectType.valueOf( row.getString( CommonColumns.CATEGORY.cql() ) );
         return new ComplexType( id, type, title, description, schemas, properties, baseType, category );
     }
@@ -315,7 +315,7 @@ public final class RowAdapters {
         LinkedHashSet<UUID> src = (LinkedHashSet<UUID>) row.getSet( CommonColumns.SRC.cql(), UUID.class );
         LinkedHashSet<UUID> dest = (LinkedHashSet<UUID>) row.getSet( CommonColumns.DST.cql(), UUID.class );
         boolean bidirectional = bidirectional( row );
-        return new AssociationType( Optional.absent(), src, dest, bidirectional );
+        return new AssociationType( Optional.empty(), src, dest, bidirectional );
     }
 
     public static FullQualifiedName splitFqn( Row row ) {

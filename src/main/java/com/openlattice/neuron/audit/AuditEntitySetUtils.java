@@ -19,7 +19,6 @@
 
 package com.openlattice.neuron.audit;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -36,6 +35,7 @@ import com.openlattice.neuron.signals.Signal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -151,8 +151,8 @@ public class AuditEntitySetUtils {
                     Sets.newLinkedHashSet(
                             Sets.newHashSet( TYPE_PROPERTY_TYPE.getId(), DETAILS_PROPERTY_TYPE.getId() )
                     ),
-                    Optional.absent(),
-                    Optional.absent()
+                    Optional.empty(),
+                    Optional.empty()
             );
             entityDataModelManager.createEntityType( AUDIT_ENTITY_TYPE );
         }

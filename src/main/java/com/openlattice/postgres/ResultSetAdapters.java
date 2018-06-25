@@ -80,7 +80,6 @@ import static com.openlattice.postgres.PostgresColumn.VERSION;
 import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
@@ -134,6 +133,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -472,10 +472,10 @@ public final class ResultSetAdapters {
         FullQualifiedName fqn = fqn( rs );
         EdmPrimitiveTypeKind datatype = datatype( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
-        Optional<Boolean> pii = Optional.fromNullable( pii( rs ) );
-        Optional<Analyzer> analyzer = Optional.fromNullable( analyzer( rs ) );
+        Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
+        Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
 
         return new PropertyType( id, fqn, title, description, schemas, datatype, pii, analyzer );
     }
@@ -484,11 +484,11 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         FullQualifiedName fqn = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> key = key( rs );
         LinkedHashSet<UUID> properties = properties( rs );
-        Optional<UUID> baseType = Optional.fromNullable( baseType( rs ) );
+        Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         Optional<SecurableObjectType> category = Optional.of( category( rs ) );
 
         return new EntityType( id, fqn, title, description, schemas, key, properties, baseType, category );
@@ -499,7 +499,7 @@ public final class ResultSetAdapters {
         String name = name( rs );
         UUID entityTypeId = entityTypeId( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<String> contacts = contacts( rs );
         return new EntitySet( id, entityTypeId, name, title, description, contacts );
     }
@@ -509,17 +509,17 @@ public final class ResultSetAdapters {
         LinkedHashSet<UUID> dst = dst( rs );
         boolean bidirectional = bidirectional( rs );
 
-        return new AssociationType( Optional.absent(), src, dst, bidirectional );
+        return new AssociationType( Optional.empty(), src, dst, bidirectional );
     }
 
     public static ComplexType complexType( ResultSet rs ) throws SQLException {
         UUID id = id( rs );
         FullQualifiedName fqn = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> properties = properties( rs );
-        Optional<UUID> baseType = Optional.fromNullable( baseType( rs ) );
+        Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         SecurableObjectType category = category( rs );
 
         return new ComplexType( id, fqn, title, description, schemas, properties, baseType, category );
@@ -542,16 +542,16 @@ public final class ResultSetAdapters {
         Optional<UUID> id = Optional.of( id( rs ) );
         FullQualifiedName fqn = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         LinkedHashSet<String> members = members( rs );
         Set<FullQualifiedName> schemas = schemas( rs );
         String datatypeStr = rs.getString( DATATYPE.getName() );
         Optional<EdmPrimitiveTypeKind> datatype = ( datatypeStr == null ) ?
-                Optional.absent() :
-                Optional.fromNullable( EdmPrimitiveTypeKind.valueOf( datatypeStr ) );
+                Optional.empty() :
+                Optional.ofNullable( EdmPrimitiveTypeKind.valueOf( datatypeStr ) );
         boolean flags = flags( rs );
-        Optional<Boolean> pii = Optional.fromNullable( pii( rs ) );
-        Optional<Analyzer> analyzer = Optional.fromNullable( analyzer( rs ) );
+        Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
+        Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
 
         return new EnumType( id, fqn, title, description, members, schemas, datatype, flags, pii, analyzer );
     }
@@ -583,7 +583,7 @@ public final class ResultSetAdapters {
     //        UUID orgId = organizationId( rs );
     //        String title = nullableTitle( rs );
     //        String description = description( rs );
-    //        return new Role( Optional.of( roleId ), orgId, title, Optional.fromNullable( description ) );
+    //        return new Role( Optional.of( roleId ), orgId, title, Optional.ofNullable( description ) );
     //    }
 
     public static PrincipalSet principalSet( ResultSet rs ) throws SQLException {
@@ -611,7 +611,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         LinkedHashSet<UUID> appTypeIds = appTypeIds( rs );
         String url = url( rs );
         return new App( id, name, title, description, appTypeIds, url );
@@ -621,7 +621,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         FullQualifiedName type = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         UUID entityTypeId = entityTypeId( rs );
         return new AppType( id, type, title, description, entityTypeId );
     }

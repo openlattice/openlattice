@@ -11,7 +11,6 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.Status;
-import com.google.common.base.Optional;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
@@ -19,6 +18,7 @@ import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Optional;
 
 public class RequestsMapstore extends AbstractBasePostgresMapstore<AceKey, Status> {
     private static final AclKey    TEST_ACL_KEY        = TestDataFactory.aclKey();

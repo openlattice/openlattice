@@ -23,7 +23,6 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
@@ -31,6 +30,7 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.PropertyType;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;

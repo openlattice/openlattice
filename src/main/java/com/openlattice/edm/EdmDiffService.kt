@@ -22,7 +22,6 @@
 package com.openlattice.edm
 
 import com.openlattice.datastore.services.EdmManager
-import java.util.*
 
 /**
  *
@@ -86,26 +85,14 @@ class EdmDiffService(private val edm: EdmManager) {
                 .filter { it.second != null && it.first == it.second }
                 .map { it.first }
                 .toSet()
-
         val conflictingSchemas = otherDataModel.schemas.filter {
             currentSchemas.containsKey(it.fqn)
-                    && it.propertyTypes == currentSchemas[it.fqn].propertyTypes
-                    && it.entityTypes == currentSchemas[it.fqn].entityTypes
+                    && it.propertyTypes == currentSchemas[it.fqn]?.propertyTypes
+                    && it.entityTypes == currentSchemas[it.fqn]?.entityTypes
         }
 
         //Namespaces cannot conflict.
-
-
         return EdmDiff(
-                Optional.empty(),
-                EntityDataModel(
-                        otherDataModel.version,
-                        missingNamespaces,
-                        missingSchemas,
-                        missingEntityTypes,
-                        missingAssociationTypes,
-                        missingPropertyTypes
-                ),
                 EntityDataModel(
                         currentDataModel.version,
                         presentNamespaces,
@@ -113,6 +100,14 @@ class EdmDiffService(private val edm: EdmManager) {
                         presentEntityTypes,
                         presentAssociationTypes,
                         presentPropertyTypes
+                ),
+                EntityDataModel(
+                        otherDataModel.version,
+                        missingNamespaces,
+                        missingSchemas,
+                        missingEntityTypes,
+                        missingAssociationTypes,
+                        missingPropertyTypes
                 ),
                 EntityDataModel(
                         otherDataModel.version,
@@ -176,22 +171,12 @@ class EdmDiffService(private val edm: EdmManager) {
 
         val conflictingSchemas = otherDataModel.schemas.filter {
             currentSchemas.containsKey(it.fqn)
-                    && it.propertyTypes == currentSchemas[it.fqn].propertyTypes
-                    && it.entityTypes == currentSchemas[it.fqn].entityTypes
+                    && it.propertyTypes == currentSchemas[it.fqn]?.propertyTypes
+                    && it.entityTypes == currentSchemas[it.fqn]?.entityTypes
         }
 
         //Namespaces cannot conflict.
-
         return EdmDiff(
-                Optional.empty(),
-                EntityDataModel(
-                        otherDataModel.version,
-                        missingNamespaces,
-                        missingSchemas,
-                        missingEntityTypes,
-                        missingAssociationTypes,
-                        missingPropertyTypes
-                ),
                 EntityDataModel(
                         currentDataModel.version,
                         presentNamespaces,
@@ -199,6 +184,14 @@ class EdmDiffService(private val edm: EdmManager) {
                         presentEntityTypes,
                         presentAssociationTypes,
                         presentPropertyTypes
+                ),
+                EntityDataModel(
+                        otherDataModel.version,
+                        missingNamespaces,
+                        missingSchemas,
+                        missingEntityTypes,
+                        missingAssociationTypes,
+                        missingPropertyTypes
                 ),
                 EntityDataModel(
                         otherDataModel.version,

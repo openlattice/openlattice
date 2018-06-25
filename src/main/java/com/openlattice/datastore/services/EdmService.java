@@ -27,7 +27,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Functions;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -46,6 +45,7 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
@@ -104,6 +104,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -309,15 +310,15 @@ public class EdmService implements EdmManager {
         key.forEach( keyId -> Preconditions.checkArgument( properties.contains( keyId ),
                 "Properties must include all the key property types" ) );
         return new EntityType(
-                Optional.fromNullable( entityType.getId() ),
+                Optional.ofNullable( entityType.getId() ),
                 entityType.getType(),
                 entityType.getTitle(),
-                Optional.fromNullable( entityType.getDescription() ),
+                Optional.ofNullable( entityType.getDescription() ),
                 entityType.getSchemas(),
                 key,
                 properties,
                 entityType.getBaseType(),
-                Optional.fromNullable( entityType.getCategory() ) );
+                Optional.ofNullable( entityType.getCategory() ) );
 
     }
 
@@ -413,6 +414,12 @@ public class EdmService implements EdmManager {
         createEntitySet( principal, entitySet, entityType.getProperties() );
     }
 
+    private SecurableObjectType getSecurableObjectType(
+            IMap<UUID, ? extends AbstractSecurableObject> objects,
+            UUID objectId ) {
+        return Util.getSafely( objects, objectId ).getCategory();
+    }
+
     @Override
     public void createEntitySet( Principal principal, EntitySet entitySet, Set<UUID> ownablePropertyTypes ) {
         Principals.ensureUser( principal );
@@ -421,7 +428,9 @@ public class EdmService implements EdmManager {
         try {
             setupDefaultEntitySetPropertyMetadata( entitySet.getId(), entitySet.getEntityTypeId() );
 
-            authorizations.setSecurableObjectType( new AclKey( entitySet.getId() ), SecurableObjectType.EntitySet );
+            authorizations.setSecurableObjectType(
+                    new AclKey( entitySet.getId() ),
+                    getSecurableObjectType( entityTypes, entitySet.getEntityTypeId() ) );
 
             authorizations.addPermission( new AclKey( entitySet.getId() ),
                     principal,
@@ -667,12 +676,11 @@ public class EdmService implements EdmManager {
         UUID entityTypeId = entitySet.getEntityTypeId();
         EntityType entityType = Util.getSafely( entityTypes, entityTypeId );
 
-        if( entityType == null ) {
+        if ( entityType == null ) {
             throw new ResourceNotFoundException( "Entity type " + entityTypeId.toString() + " does not exist." );
         }
         return propertyTypes.getAll( entityType.getProperties() );
     }
-
 
     @Override
     public void addPropertyTypesToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
@@ -1025,7 +1033,7 @@ public class EdmService implements EdmManager {
                 Util.getSafely( associationTypes, associationTypeId ),
                 "Association type of id %s does not exists.",
                 associationTypeId.toString() );
-        Optional<EntityType> entityType = Optional.fromNullable(
+        Optional<EntityType> entityType = Optional.ofNullable(
                 Util.getSafely( entityTypes, associationTypeId ) );
         return new AssociationType(
                 entityType,
@@ -1037,8 +1045,8 @@ public class EdmService implements EdmManager {
     @Override
     public AssociationType getAssociationTypeSafe( UUID associationTypeId ) {
         Optional<AssociationType> associationDetails = Optional
-                .fromNullable( Util.getSafely( associationTypes, associationTypeId ) );
-        Optional<EntityType> entityType = Optional.fromNullable(
+                .ofNullable( Util.getSafely( associationTypes, associationTypeId ) );
+        Optional<EntityType> entityType = Optional.ofNullable(
                 Util.getSafely( entityTypes, associationTypeId ) );
         if ( !associationDetails.isPresent() || !entityType.isPresent() ) { return null; }
         return new AssociationType(
@@ -1085,22 +1093,22 @@ public class EdmService implements EdmManager {
         PropertyType existing = getPropertyType( pt.getId() );
         if ( existing == null ) { createPropertyTypeIfNotExists( pt ); } else {
             Optional<String> optionalTitleUpdate = ( pt.getTitle().equals( existing.getTitle() ) )
-                    ? Optional.absent() : Optional.of( pt.getTitle() );
+                    ? Optional.empty() : Optional.of( pt.getTitle() );
             Optional<String> optionalDescriptionUpdate = ( pt.getDescription().equals( existing.getDescription() ) )
-                    ? Optional.absent() : Optional.of( pt.getDescription() );
+                    ? Optional.empty() : Optional.of( pt.getDescription() );
             Optional<FullQualifiedName> optionalFqnUpdate = ( fqn.equals( existing.getType() ) )
-                    ? Optional.absent() : Optional.of( fqn );
+                    ? Optional.empty() : Optional.of( fqn );
             Optional<Boolean> optionalPiiUpdate = ( pt.isPIIfield() == existing.isPIIfield() )
-                    ? Optional.absent() : Optional.of( pt.isPIIfield() );
+                    ? Optional.empty() : Optional.of( pt.isPIIfield() );
             updatePropertyTypeMetadata( existing.getId(), new MetadataUpdate(
                     optionalTitleUpdate,
                     optionalDescriptionUpdate,
-                    Optional.absent(),
-                    Optional.absent(),
+                    Optional.empty(),
+                    Optional.empty(),
                     optionalFqnUpdate,
                     optionalPiiUpdate,
-                    Optional.absent(),
-                    Optional.absent() ) );
+                    Optional.empty(),
+                    Optional.empty() ) );
         }
     }
 
@@ -1112,20 +1120,20 @@ public class EdmService implements EdmManager {
         EntityType existing = getEntityTypeSafe( et.getId() );
         if ( existing == null ) { createEntityType( et ); } else {
             Optional<String> optionalTitleUpdate = ( et.getTitle().equals( existing.getTitle() ) )
-                    ? Optional.absent() : Optional.of( et.getTitle() );
+                    ? Optional.empty() : Optional.of( et.getTitle() );
             Optional<String> optionalDescriptionUpdate = ( et.getDescription().equals( existing.getDescription() ) )
-                    ? Optional.absent() : Optional.of( et.getDescription() );
+                    ? Optional.empty() : Optional.of( et.getDescription() );
             Optional<FullQualifiedName> optionalFqnUpdate = ( fqn.equals( existing.getType() ) )
-                    ? Optional.absent() : Optional.of( fqn );
+                    ? Optional.empty() : Optional.of( fqn );
             updateEntityTypeMetadata( existing.getId(), new MetadataUpdate(
                     optionalTitleUpdate,
                     optionalDescriptionUpdate,
-                    Optional.absent(),
-                    Optional.absent(),
+                    Optional.empty(),
+                    Optional.empty(),
                     optionalFqnUpdate,
-                    Optional.absent(),
-                    Optional.absent(),
-                    Optional.absent() ) );
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty() ) );
             if ( !et.getProperties().equals( existing.getProperties() ) ) {
                 addPropertyTypesToEntityType( existing.getId(), et.getProperties() );
             }
@@ -1185,76 +1193,6 @@ public class EdmService implements EdmManager {
             default:
                 break;
         }
-    }
-
-    @Override
-    public void setEntityDataModel( EntityDataModel edm ) {
-        Pair<EntityDataModelDiff, Set<List<UUID>>> diffAndFqnCycles = getEntityDataModelDiffAndFqnLists( edm );
-        EntityDataModelDiff diff = diffAndFqnCycles.getLeft();
-        Set<List<UUID>> fqnCycles = diffAndFqnCycles.getRight();
-        if ( diff.getConflicts().isPresent() ) {
-            throw new IllegalArgumentException(
-                    "Unable to update entity data model: please resolve conflicts before importing." );
-        }
-
-        Map<UUID, SecurableObjectType> idToType = Maps.newHashMap();
-        Map<UUID, PropertyType> propertyTypesById = Maps.newHashMap();
-        Map<UUID, EntityType> entityTypesById = Maps.newHashMap();
-        Map<UUID, AssociationType> associationTypesById = Maps.newHashMap();
-
-        diff.getDiff().getPropertyTypes().forEach( pt -> {
-            idToType.put( pt.getId(), SecurableObjectType.PropertyTypeInEntitySet );
-            propertyTypesById.put( pt.getId(), pt );
-        } );
-        diff.getDiff().getEntityTypes().forEach( et -> {
-            idToType.put( et.getId(), SecurableObjectType.EntityType );
-            entityTypesById.put( et.getId(), et );
-        } );
-        diff.getDiff().getAssociationTypes().forEach( at -> {
-            idToType.put( at.getAssociationEntityType().getId(), SecurableObjectType.AssociationType );
-            associationTypesById.put( at.getAssociationEntityType().getId(), at );
-        } );
-
-        Set<UUID> updatedIds = Sets.newHashSet();
-
-        fqnCycles.forEach( cycle -> {
-            cycle.forEach( id -> {
-                resolveFqnCycles( id,
-                        idToType.get( id ),
-                        propertyTypesById,
-                        entityTypesById,
-                        associationTypesById,
-                        true );
-            } );
-            cycle.forEach( id -> {
-                resolveFqnCycles( id,
-                        idToType.get( id ),
-                        propertyTypesById,
-                        entityTypesById,
-                        associationTypesById,
-                        false );
-                updatedIds.add( id );
-            } );
-
-        } );
-
-        diff.getDiff().getSchemas().forEach( schema -> {
-            schemaManager.createOrUpdateSchemas( schema );
-        } );
-
-        diff.getDiff().getPropertyTypes().forEach( pt -> {
-            if ( !updatedIds.contains( pt.getId() ) ) { createOrUpdatePropertyType( pt ); }
-        } );
-
-        diff.getDiff().getEntityTypes().forEach( et -> {
-            if ( !updatedIds.contains( et.getId() ) ) { createOrUpdateEntityType( et ); }
-        } );
-
-        diff.getDiff().getAssociationTypes().forEach( at -> {
-            if ( !updatedIds.contains( at.getAssociationEntityType().getId() ) ) {
-                createOrUpdateAssociationType( at );
-            }
-        } );
     }
 
     @Override
@@ -1404,7 +1342,7 @@ public class EdmService implements EdmManager {
                     conflictingPropertyTypes );
         }
 
-        EntityDataModelDiff diff = new EntityDataModelDiff( edmDiff, Optional.fromNullable( conflicts ) );
+        EntityDataModelDiff diff = new EntityDataModelDiff( edmDiff, Optional.ofNullable( conflicts ) );
         Set<List<UUID>> cycles = cyclesAndConflicts.get( 0 );
         return Pair.of( diff, cycles );
 
@@ -1511,6 +1449,76 @@ public class EdmService implements EdmManager {
                 entityTypes,
                 associationTypes,
                 propertyTypes );
+    }
+
+    @Override
+    public void setEntityDataModel( EntityDataModel edm ) {
+        Pair<EntityDataModelDiff, Set<List<UUID>>> diffAndFqnCycles = getEntityDataModelDiffAndFqnLists( edm );
+        EntityDataModelDiff diff = diffAndFqnCycles.getLeft();
+        Set<List<UUID>> fqnCycles = diffAndFqnCycles.getRight();
+        if ( diff.getConflicts().isPresent() ) {
+            throw new IllegalArgumentException(
+                    "Unable to update entity data model: please resolve conflicts before importing." );
+        }
+
+        Map<UUID, SecurableObjectType> idToType = Maps.newHashMap();
+        Map<UUID, PropertyType> propertyTypesById = Maps.newHashMap();
+        Map<UUID, EntityType> entityTypesById = Maps.newHashMap();
+        Map<UUID, AssociationType> associationTypesById = Maps.newHashMap();
+
+        diff.getDiff().getPropertyTypes().forEach( pt -> {
+            idToType.put( pt.getId(), SecurableObjectType.PropertyTypeInEntitySet );
+            propertyTypesById.put( pt.getId(), pt );
+        } );
+        diff.getDiff().getEntityTypes().forEach( et -> {
+            idToType.put( et.getId(), SecurableObjectType.EntityType );
+            entityTypesById.put( et.getId(), et );
+        } );
+        diff.getDiff().getAssociationTypes().forEach( at -> {
+            idToType.put( at.getAssociationEntityType().getId(), SecurableObjectType.AssociationType );
+            associationTypesById.put( at.getAssociationEntityType().getId(), at );
+        } );
+
+        Set<UUID> updatedIds = Sets.newHashSet();
+
+        fqnCycles.forEach( cycle -> {
+            cycle.forEach( id -> {
+                resolveFqnCycles( id,
+                        idToType.get( id ),
+                        propertyTypesById,
+                        entityTypesById,
+                        associationTypesById,
+                        true );
+            } );
+            cycle.forEach( id -> {
+                resolveFqnCycles( id,
+                        idToType.get( id ),
+                        propertyTypesById,
+                        entityTypesById,
+                        associationTypesById,
+                        false );
+                updatedIds.add( id );
+            } );
+
+        } );
+
+        diff.getDiff().getSchemas().forEach( schema -> {
+            schemaManager.createOrUpdateSchemas( schema );
+        } );
+
+        diff.getDiff().getPropertyTypes().forEach( pt -> {
+            if ( !updatedIds.contains( pt.getId() ) ) { createOrUpdatePropertyType( pt ); }
+        } );
+
+        diff.getDiff().getEntityTypes().forEach( et -> {
+            if ( !updatedIds.contains( et.getId() ) ) { createOrUpdateEntityType( et ); }
+        } );
+
+        diff.getDiff().getAssociationTypes().forEach( at -> {
+            if ( !updatedIds.contains( at.getAssociationEntityType().getId() ) ) {
+                createOrUpdateAssociationType( at );
+            }
+        } );
     }
 
 }

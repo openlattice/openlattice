@@ -58,7 +58,7 @@ public class ComplexTypeMapstore extends AbstractStructuredCassandraPartitionKey
                 .setString( CommonColumns.DESCRIPTION.cql(), value.getDescription() )
                 .setSet( CommonColumns.PROPERTIES.cql(), value.getProperties(), UUID.class )
                 .setSet( CommonColumns.SCHEMAS.cql(), value.getSchemas(), FullQualifiedName.class )
-                .setUUID( CommonColumns.BASE_TYPE.cql(), value.getBaseType().orNull() )
+                .setUUID( CommonColumns.BASE_TYPE.cql(), value.getBaseType().orElse( null ) )
                 .setString( CommonColumns.CATEGORY.cql(), value.getCategory().toString() );
     }
 

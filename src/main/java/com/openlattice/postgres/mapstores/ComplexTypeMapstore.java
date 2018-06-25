@@ -1,20 +1,19 @@
 package com.openlattice.postgres.mapstores;
 
+import static com.openlattice.postgres.PostgresTable.COMPLEX_TYPES;
+
 import com.openlattice.edm.type.ComplexType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
-
-import static com.openlattice.postgres.PostgresTable.COMPLEX_TYPES;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class ComplexTypeMapstore extends AbstractBasePostgresMapstore<UUID, ComplexType> {
 
@@ -23,7 +22,7 @@ public class ComplexTypeMapstore extends AbstractBasePostgresMapstore<UUID, Comp
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, ComplexType value ) throws SQLException {
-        bind( ps, key, 1);
+        bind( ps, key, 1 );
 
         FullQualifiedName fqn = value.getType();
         ps.setString( 2, fqn.getNamespace() );
@@ -35,7 +34,7 @@ public class ComplexTypeMapstore extends AbstractBasePostgresMapstore<UUID, Comp
         Array properties = PostgresArrays.createUuidArray( ps.getConnection(), value.getProperties().stream() );
         ps.setArray( 6, properties );
 
-        ps.setObject( 7, value.getBaseType().orNull() );
+        ps.setObject( 7, value.getBaseType().orElse( null ) );
 
         Array schemas = PostgresArrays.createTextArray(
                 ps.getConnection(),
@@ -50,7 +49,7 @@ public class ComplexTypeMapstore extends AbstractBasePostgresMapstore<UUID, Comp
         ps.setString( 12, value.getTitle() );
         ps.setString( 13, value.getDescription() );
         ps.setArray( 14, properties );
-        ps.setObject( 15, value.getBaseType().orNull() );
+        ps.setObject( 15, value.getBaseType().orElse( null ) );
         ps.setArray( 16, schemas );
         ps.setString( 17, value.getCategory().name() );
     }

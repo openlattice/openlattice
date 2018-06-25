@@ -22,23 +22,20 @@
 
 package com.openlattice.edm.mapstores;
 
-import com.openlattice.hazelcast.HazelcastMap;
-import java.util.UUID;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.mapstores.TestDataFactory;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.kryptnostic.rhizome.cassandra.CassandraTableBuilder;
+import com.kryptnostic.rhizome.mapstores.cassandra.AbstractStructuredCassandraPartitionKeyValueStore;
 import com.openlattice.conductor.codecs.odata.Table;
 import com.openlattice.datastore.cassandra.CommonColumns;
 import com.openlattice.datastore.cassandra.RowAdapters;
-import com.kryptnostic.rhizome.cassandra.CassandraTableBuilder;
-import com.kryptnostic.rhizome.mapstores.cassandra.AbstractStructuredCassandraPartitionKeyValueStore;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.mapstores.TestDataFactory;
+import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class EntityTypeMapstore extends AbstractStructuredCassandraPartitionKeyValueStore<UUID, EntityType> {
     private static final CassandraTableBuilder ctb = Table.ENTITY_TYPES.getBuilder();
@@ -62,7 +59,7 @@ public class EntityTypeMapstore extends AbstractStructuredCassandraPartitionKeyV
                 .setSet( CommonColumns.KEY.cql(), value.getKey(), UUID.class )
                 .setSet( CommonColumns.PROPERTIES.cql(), value.getProperties(), UUID.class )
                 .setSet( CommonColumns.SCHEMAS.cql(), value.getSchemas(), FullQualifiedName.class )
-                .setUUID( CommonColumns.BASE_TYPE.cql(), value.getBaseType().orNull() )
+                .setUUID( CommonColumns.BASE_TYPE.cql(), value.getBaseType().orElse( null ) )
                 .setString( CommonColumns.CATEGORY.cql(), value.getCategory().toString() );
     }
 
