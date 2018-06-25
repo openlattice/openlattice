@@ -20,14 +20,13 @@ package com.openlattice.edm.type;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.UUID;
-
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 public class AssociationType {
 
@@ -51,7 +50,7 @@ public class AssociationType {
 
     @JsonProperty( SerializationConstants.ENTITY_TYPE )
     public EntityType getAssociationEntityType() {
-        return associationEntityType.orNull();
+        return associationEntityType.orElse( null );
     }
 
     @JsonProperty( SerializationConstants.SRC )

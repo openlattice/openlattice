@@ -26,7 +26,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 
 /**
@@ -61,7 +60,7 @@ public class EnumType extends PropertyType {
                 title,
                 description,
                 schemas,
-                datatype.or( EdmPrimitiveTypeKind.Int32 ),
+                datatype.orElse( EdmPrimitiveTypeKind.Int32 ),
                 piiField,
                 analyzer );
         Preconditions.checkState( ALLOWED_UNDERLYING_TYPES.contains( this.datatype ),

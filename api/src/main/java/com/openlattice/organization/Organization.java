@@ -25,10 +25,10 @@ import com.openlattice.organization.roles.Role;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.openlattice.authorization.*;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 

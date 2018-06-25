@@ -18,7 +18,6 @@
 
 package com.openlattice.mapstores;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -56,6 +55,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -123,7 +123,7 @@ public final class TestDataFactory {
                 k,
                 Sets.newLinkedHashSet( Sets
                         .union( k, propertyTypes ) ),
-                Optional.fromNullable( parentId ),
+                Optional.ofNullable( parentId ),
                 Optional.of( SecurableObjectType.EntityType ) );
     }
 
@@ -360,7 +360,7 @@ public final class TestDataFactory {
                 Optional.of( "test complex type" ),
                 ImmutableSet.of( fqn(), fqn() ),
                 Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
-                Optional.absent(),
+                Optional.empty(),
                 SecurableObjectType.ComplexType );
     }
 
@@ -399,7 +399,7 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.absent() );
+                        Optional.empty() );
         }
     }
 
@@ -407,13 +407,13 @@ public final class TestDataFactory {
         return new EntityType( UUID.randomUUID(),
                 fqn(),
                 RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.absent(),
+                Optional.empty(),
                 ImmutableSet.of(),
                 Stream.of( key ).map( PropertyType::getId )
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
                 Stream.concat( Stream.of( key ), Stream.of( propertyTypes ) ).map( PropertyType::getId )
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty() );
     }
 }
