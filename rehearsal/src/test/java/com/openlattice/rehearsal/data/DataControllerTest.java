@@ -20,10 +20,8 @@
 
 package com.openlattice.rehearsal.data;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.data.requests.EntitySetSelection;
@@ -38,6 +36,7 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -57,11 +56,10 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
     public void testCreateAndLoadEntityData() {
         EntityType et = createEntityType();
         EntitySet es = createEntitySet( et );
-        UUID syncId = syncApi.getCurrentSyncId( es.getId() );
         Map<UUID, SetMultimap<UUID, Object>> testData = TestDataFactory
                 .randomStringEntityData( numberOfEntries, et.getProperties() );
         dataApi.replaceEntities( es.getId(), testData, false );
-        EntitySetSelection ess = new EntitySetSelection( Optional.of( syncId ), Optional.of( et.getProperties() ) );
+        EntitySetSelection ess = new EntitySetSelection( Optional.of( et.getProperties() ) );
         Set<SetMultimap<FullQualifiedName, Object>> results = Sets.newHashSet( dataApi
                 .loadEntitySetData( es.getId(), ess, FileType.json ) );
 
@@ -83,7 +81,6 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         Assert.assertNotNull( "Entity type creation shouldn't return null UUID.", entityTypeId );
 
         EntitySet es = createEntitySet( et );
-        UUID syncId = syncApi.getCurrentSyncId( es.getId() );
 
         Map<UUID, SetMultimap<UUID, Object>> testData = new HashMap<>();
         LocalDate d = LocalDate.now();
@@ -92,7 +89,7 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
                 ImmutableSetMultimap
                         .of( p1.getId(), odt, p2.getId(), d, k.getId(), RandomStringUtils.randomAlphanumeric( 5 ) ) );
         dataApi.replaceEntities( es.getId(), testData, false );
-        EntitySetSelection ess = new EntitySetSelection( Optional.of( syncId ), Optional.of( et.getProperties() ) );
+        EntitySetSelection ess = new EntitySetSelection( Optional.of( et.getProperties() ) );
         Set<SetMultimap<FullQualifiedName, Object>> results = Sets.newHashSet( dataApi
                 .loadEntitySetData( es.getId(), ess, FileType.json ) );
 
@@ -109,7 +106,6 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
     public void testLoadSelectedEntityData() {
         EntityType et = createEntityType();
         EntitySet es = createEntitySet( et );
-        UUID syncId = syncApi.getCurrentSyncId( es.getId() );
 
         Map<UUID, SetMultimap<UUID, Object>> entities = TestDataFactory.randomStringEntityData( numberOfEntries,
                 et.getProperties() );
@@ -118,9 +114,7 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         // load selected data
         Set<UUID> selectedProperties = et.getProperties().stream().filter( pid -> random.nextBoolean() )
                 .collect( Collectors.toSet() );
-        EntitySetSelection ess = new EntitySetSelection(
-                Optional.of( syncId ),
-                Optional.of( selectedProperties ) );
+        EntitySetSelection ess = new EntitySetSelection( Optional.of( selectedProperties ) );
         Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi.loadEntitySetData( es.getId(), ess, null );
 
         // check results

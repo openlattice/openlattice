@@ -23,7 +23,6 @@ package com.openlattice.rehearsal.data;
 import com.dataloom.mappers.ObjectMappers;
 import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
@@ -49,6 +48,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -117,8 +117,8 @@ public class DataManagerTest extends SetupEnvironment {
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
         Map<UUID, SetMultimap<UUID, Object>> entities = generateData( 10, propertiesWithDataType, 1 );
 
-        testWriteData( entitySetId, syncId, entities, propertiesWithDataType );
-        Set<SetMultimap<FullQualifiedName, Object>> result = testReadData( syncId,
+        testWriteData( entitySetId, entities, propertiesWithDataType );
+        Set<SetMultimap<FullQualifiedName, Object>> result = testReadData(
                 entitySetId,
                 orderedPropertyNames,
                 propertyTypes );
@@ -138,8 +138,6 @@ public class DataManagerTest extends SetupEnvironment {
     @Ignore
     public void testWriteAndDelete() {
         final UUID entitySetId = UUID.randomUUID();
-        final UUID firstSyncId = UUIDs.timeBased();
-        final UUID secondSyncId = UUIDs.timeBased();
 
         LinkedHashMap<UUID, PropertyType> propertyTypes = generateProperties( 5 );
         LinkedHashSet<String> orderedPropertyNames = propertyTypes.entrySet().stream()
@@ -150,19 +148,19 @@ public class DataManagerTest extends SetupEnvironment {
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
 
         Map<UUID, SetMultimap<UUID, Object>> firstEntities = generateData( 10, propertiesWithDataType, 1 );
-        testWriteData( entitySetId, firstSyncId, firstEntities, propertiesWithDataType );
+        testWriteData( entitySetId,  firstEntities, propertiesWithDataType );
 
         Map<UUID, SetMultimap<UUID, Object>> secondEntities = generateData( 10, propertiesWithDataType, 1 );
-        testWriteData( entitySetId, secondSyncId, secondEntities, propertiesWithDataType );
+        testWriteData( entitySetId, secondEntities, propertiesWithDataType );
 
         edmApi.deleteEntitySet( entitySetId );
         //        dataService.deleteEntitySetData( entitySetId );
 
         Assert.assertNull( dataApi.loadEntitySetData( entitySetId,
-                new EntitySetSelection( Optional.of( firstSyncId ), Optional.of( propertyTypes.keySet() ) ),
+                new EntitySetSelection(  Optional.of( propertyTypes.keySet() ) ),
                 FileType.json ) );
         Assert.assertNull( dataApi.loadEntitySetData( entitySetId,
-                new EntitySetSelection( Optional.of( secondSyncId ), Optional.of( propertyTypes.keySet() ) ),
+                new EntitySetSelection(  Optional.of( propertyTypes.keySet() ) ),
                 FileType.json ) );
         //        Assert.assertEquals( 0, testReadData( secondSyncId,
         //                entitySetId,
@@ -214,7 +212,6 @@ public class DataManagerTest extends SetupEnvironment {
 
     public void testWriteData(
             UUID entitySetId,
-            UUID syncId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType ) {
         System.out.println( "Writing Data..." );
@@ -223,13 +220,12 @@ public class DataManagerTest extends SetupEnvironment {
     }
 
     public Set<SetMultimap<FullQualifiedName, Object>> testReadData(
-            UUID syncId,
             UUID entitySetId,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, PropertyType> propertyTypes ) {
         return Sets.newHashSet(
                 dataApi.loadEntitySetData( entitySetId,
-                        new EntitySetSelection( Optional.of( syncId ), Optional.of( propertyTypes.keySet() ) ),
+                        new EntitySetSelection( Optional.of( propertyTypes.keySet() ) ),
                         FileType.json ) );
     }
 
@@ -344,7 +340,7 @@ public class DataManagerTest extends SetupEnvironment {
                 id,
                 getFqnFromUuid( id ),
                 "Property " + id.toString(),
-                Optional.absent(),
+                Optional.empty(),
                 ImmutableSet.of(),
                 type );
 

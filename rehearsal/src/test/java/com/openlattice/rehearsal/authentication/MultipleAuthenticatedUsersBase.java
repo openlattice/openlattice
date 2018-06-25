@@ -20,7 +20,6 @@
 
 package com.openlattice.rehearsal.authentication;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.AclKey;
@@ -41,6 +40,7 @@ import com.openlattice.sync.SyncApi;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Assert;

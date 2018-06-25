@@ -23,7 +23,6 @@ package com.openlattice.rehearsal;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -35,6 +34,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -76,7 +76,7 @@ public class TestEdmConfigurer {
             ImmutableSet.of(),
             EdmPrimitiveTypeKind.DateTimeOffset );
 
-    protected static final    PropertyType END_DATETIME_PROP_TYPE    = new PropertyType(
+    protected static final PropertyType END_DATETIME_PROP_TYPE    = new PropertyType(
             new FullQualifiedName( "testcsv.enddate" ),
             "Title",
             Optional.of( "Start Date of entity relationship" ),
@@ -123,17 +123,19 @@ public class TestEdmConfigurer {
 
     static {
         PERSON = with( PERSON_FQN );
-        EMPLOYED_IN = new AssociationType( Optional
-                .of( new EntityType( EMPLOYED_IN_FQN,
-                        "Employed In",
-                        "Relationship representing type of employment",
-                        ImmutableSet.of(),
-                        Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID ) ),
-                        Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID,
-                                START_DATETIME_PROP_TYPE.getId(),
-                                END_DATETIME_PROP_TYPE.getId() ) ),
-                        Optional.absent(),
-                        Optional.of( SecurableObjectType.AssociationType ) ) ),
+        EMPLOYED_IN = new AssociationType(
+                Optional.of(
+                        new EntityType( EMPLOYED_IN_FQN,
+                                "Employed In",
+                                "Relationship representing type of employment",
+                                ImmutableSet.of(),
+                                Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID ) ),
+                                Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID,
+                                        START_DATETIME_PROP_TYPE.getId(),
+                                        END_DATETIME_PROP_TYPE.getId() ) ),
+                                Optional.empty(),
+                                Optional.of( SecurableObjectType.AssociationType ) )
+                ),
                 Sets.newLinkedHashSet( Arrays.asList( PERSON.getId() ) ),
                 Sets.newLinkedHashSet( Arrays.asList() ),
                 false );
@@ -172,7 +174,7 @@ public class TestEdmConfigurer {
                         EMPLOYEE_TITLE_PROP_ID,
                         EMPLOYEE_DEPT_PROP_ID,
                         EMPLOYEE_SALARY_PROP_ID ) ),
-                Optional.absent(),
+                Optional.empty(),
                 Optional.of( SecurableObjectType.EntityType )
         );
     }
@@ -187,7 +189,7 @@ public class TestEdmConfigurer {
                 Sets.newLinkedHashSet( Arrays.asList(
                         ID_PROP_ID,
                         EMPLOYEE_NAME_PROP_ID ) ),
-                Optional.absent(),
+                Optional.empty(),
                 Optional.of( SecurableObjectType.EntityType ) );
     }
 
@@ -221,7 +223,7 @@ public class TestEdmConfigurer {
         EMPLOYED_IN_ES = new EntitySet( EMPLOYED_IN.getAssociationEntityType().getId(),
                 EMPLOYED_IN_ES_NAME,
                 "Chicago Employed In",
-                Optional.absent(),
+                Optional.empty(),
                 ImmutableSet.of( "support@openlattice.com" )
         );
         PERSON_ES_ID = PERSON_ES.getId();
