@@ -21,7 +21,9 @@
 package com.openlattice.postgres;
 
 import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.postgres.DataTables.LAST_INDEX;
 import static com.openlattice.postgres.DataTables.LAST_INDEX_FQN;
+import static com.openlattice.postgres.DataTables.LAST_WRITE;
 import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
@@ -633,11 +635,11 @@ public final class ResultSetAdapters {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
 
         if ( metadataOptions.contains( MetadataOption.LAST_WRITE ) ) {
-            data.put( LAST_WRITE_FQN, rs.getObject( LAST_WRITE_FQN.getFullQualifiedNameAsString() ) );
+            data.put( LAST_WRITE_FQN, lastWrite( rs ) );
         }
 
         if ( metadataOptions.contains( MetadataOption.LAST_INDEX ) ) {
-            data.put( LAST_INDEX_FQN, rs.getObject( LAST_INDEX_FQN.getFullQualifiedNameAsString() ) );
+            data.put( LAST_INDEX_FQN, lastIndex( rs ) );
         }
 
         data.put( ID_FQN, entityKeyId );
@@ -688,6 +690,14 @@ public final class ResultSetAdapters {
             data.putAll( propertyType.getType(), objects );
         }
         return data;
+    }
+
+    public static Object lastWrite( ResultSet rs ) throws SQLException {
+        return rs.getObject( LAST_WRITE.getName() );
+    }
+
+    public static Object lastIndex( ResultSet rs ) throws SQLException {
+        return rs.getObject( LAST_INDEX.getName() );
     }
 
     public static UUID entityKeyId( ResultSet rs ) throws SQLException {
