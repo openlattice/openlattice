@@ -133,7 +133,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                             properties.forEach {
                                 val ps = preparedStatements[propertyTypeId]
                                 ps?.setObject(1, entityKeyId)
-                                ps?.setObject(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
+                                ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
                                 ps?.setObject(3, it)
                                 ps?.addBatch()
                                 if (ps == null) {
@@ -146,8 +146,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             }
 
             //In case we want to do validation
-            val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() };
-            val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum();
+            val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() }
+            val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum()
             preparedStatements.values.forEach(PreparedStatement::close)
             entitySetPreparedStatement.close()
 
@@ -350,7 +350,7 @@ fun updateEntityVersion(entitySetId: UUID, version: Long): String {
 fun updatePropertyVersion(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
     return "UPDATE $propertyTable SET versions = versions || $version, version = $version " +
-            "WHERE ${ENTITY_SET_ID.name} = $entitySetId AND ${ID_VALUE.name} = ? "
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId'::uuid AND ${ID_VALUE.name} = ? "
 }
 
 fun updatePropertyValueVersion(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
@@ -360,7 +360,7 @@ fun updatePropertyValueVersion(entitySetId: UUID, propertyTypeId: UUID, version:
 
 fun deletePropertiesInEntitySet(entitySetId: UUID, propertyTypeId: UUID): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    return "DELETE FROM $propertyTable WHERE ${ENTITY_SET_ID.name} = $entitySetId "
+    return "DELETE FROM $propertyTable WHERE ${ENTITY_SET_ID.name} = '$entitySetId'::uuid "
 }
 
 fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID, entityKeyIds: Set<UUID>): String {
@@ -387,7 +387,7 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             LAST_WRITE.name,
             LAST_INDEX.name
     )
-    return "INSERT INTO $esTableName (${columns.joinToString(",")}) VALUES( ?,$version,now(),${OffsetDateTime.MIN}) " +
+    return "INSERT INTO $esTableName (${columns.joinToString(",")}) VALUES( ?,$version,now(),'${OffsetDateTime.MIN}') " +
             "ON CONFLICT (${ID_VALUE.name}) DO UPDATE SET ${VERSION.name} = $version, ${LAST_WRITE.name} = now() "
 }
 
@@ -406,9 +406,11 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
     //Insert new row or update version. We only perform update if we're the winning timestamp.
     return "INSERT INTO $propertyTable (${columns.joinToString(
             ","
-    )}) VALUES($entitySetId,?,?,?,$version,ARRAY[$version],now())" +
-            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE SET versions = versions || $version, version = $version " +
-            "WHERE $version > abs(version) "
+    )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now()) " +
+            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) " +
+            "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "${VERSION.name} = EXCLUDED.${VERSION.name} " +
+            "WHERE EXCLUDED.${VERSION.name} > abs($propertyTable.version) "
 }
 
 fun selectEntitySetWithPropertyTypes(
