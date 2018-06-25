@@ -21,6 +21,7 @@
 
 package com.openlattice.data.storage
 
+import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.edm.type.PropertyType
@@ -33,6 +34,7 @@ import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
+import java.nio.ByteBuffer
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.time.OffsetDateTime
@@ -99,7 +101,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
 
     fun upsertEntities(
-            entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>,
+            entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Any>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         val connection = hds.getConnection()
@@ -200,25 +202,57 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     /**
      * Replace Replacing an entity involves setting all properties for that versions for that entity to -now()*
      */
-    fun replaceEntity(
-            entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>,
+    fun replaceEntities(
+            entitySetId: UUID,
+            entities: Map<UUID, SetMultimap<UUID, Any>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ) {
+    ): Int {
         tombstone(entitySetId, entities.keys, authorizedPropertyTypes.values)
-        upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+        return upsertEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
-    fun partialReplaceEntity(
-            entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Object>>,
+    fun partialReplaceEntities(
+            entitySetId: UUID,
+            entities: Map<UUID, SetMultimap<UUID, Any>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ) {
+    ): Int {
         //Only tombstone properties being replaced.
         entities.forEach {
             val entity = it.value
             //Implied access enforcement as it will raise exception if lacking permission
             tombstone(entitySetId, setOf(it.key), entity.keySet().map { authorizedPropertyTypes[it]!! }.toSet())
         }
-        upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+        return upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+    }
+
+    fun replacePropertiesInEntities(
+            entitySetId: UUID,
+            replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int {
+        //We expect controller to have performed access control checks upstream.
+        tombstone(entitySetId, replacementProperties)
+        //This performs unnecessary copies and we should fix at some point
+        val replacementValues = replacementProperties.asSequence().map {
+            it.key to extractValues(
+                    it.value
+            )
+        }.toMap()
+        return upsertEntities(entitySetId, replacementValues, authorizedPropertyTypes)
+    }
+
+
+    private fun extractValues(
+            replacementProperties: SetMultimap<UUID, Map<ByteBuffer, Any>>
+    ): SetMultimap<UUID, Any> {
+        val values: SetMultimap<UUID, Any> = HashMultimap.create()
+        replacementProperties.asMap().forEach {
+            values.putAll(
+                    it.key,
+                    it.value.asSequence().flatMap { it.values.asSequence() }.asIterable()
+            )
+        }
+        return values
     }
 
     /**
@@ -229,7 +263,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     ): Int {
         val connection = hds.getConnection()
         connection.use {
-            val tombstoneVersion = System.currentTimeMillis()
+            val tombstoneVersion = -System.currentTimeMillis()
 
             return propertyTypesToTombstone
                     .map {
@@ -249,10 +283,10 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     /**
      * Tombstones specific property values through hash id
      */
-    private fun tombstone(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, ByteArray>>): Int {
+    private fun tombstone(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>): Int {
         val connection = hds.getConnection()
         return connection.use {
-            val tombstoneVersion = System.currentTimeMillis()
+            val tombstoneVersion = -System.currentTimeMillis()
             val propertyTypePreparedStatements = entities.values
                     .flatMap { it.keySet() }
                     .toSet()
@@ -269,11 +303,13 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                         .asMap(it.value)
                         .map {
                             val ps = propertyTypePreparedStatements[it.key]!!
-                            //TODO: We're currently doing this on hash at a time and we should consider doing it using in query
+                            //TODO: We're currently doing this one hash at a time and we should consider doing it using in query
                             it.value.forEach {
-                                ps.setObject(1, entityKeyId)
-                                ps.setBytes(2, it) //hash
-                                ps.addBatch()
+                                it.keys.forEach {
+                                    ps.setObject(1, entityKeyId)
+                                    ps.setBytes(2, it.array()) //hash
+                                    ps.addBatch()
+                                }
                             }
                         }
             }

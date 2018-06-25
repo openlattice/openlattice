@@ -24,7 +24,7 @@ package com.openlattice.hazelcast;
 
 import com.openlattice.conductor.codecs.odata.Table;
 
-public enum HazelcastMap {
+public enum  HazelcastMap {
     ACL_KEYS( Table.ACL_KEYS ),
     AUDIT_LOG( Table.AUDIT_LOG ),
     AUDIT_EVENTS( Table.AUDIT_EVENTS ),

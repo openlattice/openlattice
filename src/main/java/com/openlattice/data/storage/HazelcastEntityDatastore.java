@@ -161,15 +161,15 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return 0;
+        return dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
     @Timed
     @Override public int partialReplaceEntities(
             UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entity,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return 0;
+        return dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
     @Timed
@@ -177,7 +177,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return 0;
+        return dataQueryService.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes  );
     }
 
     @Timed
