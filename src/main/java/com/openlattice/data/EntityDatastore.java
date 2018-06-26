@@ -48,6 +48,12 @@ public interface EntityDatastore {
             Set<UUID> ids,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
+    EntitySetData<FullQualifiedName> getEntities(
+            UUID entitySetId,
+            Set<UUID> ids,
+            LinkedHashSet<String> orderedPropertyTypes,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
     ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );

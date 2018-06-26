@@ -48,6 +48,12 @@ public interface DataGraphManager {
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
+    EntitySetData<FullQualifiedName> getEntitySetData(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
+            LinkedHashSet<String> orderedPropertyNames,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
     /*
      * CRUD methods for entity
      */

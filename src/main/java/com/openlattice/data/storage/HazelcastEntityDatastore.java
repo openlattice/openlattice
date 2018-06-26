@@ -177,7 +177,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes  );
+        return dataQueryService
+                .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
     }
 
     @Timed
@@ -221,6 +222,24 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                                         new EntityDataKey( k, (UUID) e.get( DataTables.ID_FQN ).iterator().next() ),
                                         e ) ) );
         return entities;
+    }
+
+    @Override
+    @Timed
+    public EntitySetData<FullQualifiedName> getEntities(
+            UUID entitySetId,
+            Set<UUID> ids,
+            LinkedHashSet<String> orderedPropertyTypes,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
+        return new EntitySetData<>(
+                orderedPropertyTypes,
+                dataQueryService.streamableEntitySet(
+                        entitySetId,
+                        ids,
+                        authorizedPropertyTypes,
+                        EnumSet.noneOf( MetadataOption.class ),
+                        Optional.empty() ) );
     }
 
     @Override

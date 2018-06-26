@@ -64,6 +64,8 @@ open class DataGraphService(
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore
 ) : DataGraphManager {
+
+
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
 
     private val typeIds: LoadingCache<UUID, UUID> = CacheBuilder.newBuilder()
@@ -89,6 +91,14 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): EntitySetData<FullQualifiedName> {
         return eds.getEntitySetData(entitySetId, orderedPropertyNames, authorizedPropertyTypes)
+    }
+
+    override fun getEntitySetData(
+            entitySetId: UUID?, entityKeyIds: MutableSet<UUID>,
+            orderedPropertyNames: LinkedHashSet<String>,
+            authorizedPropertyTypes: MutableMap<UUID, PropertyType>?
+    ): EntitySetData<FullQualifiedName> {
+        return eds.getEntities(entitySetId, entityKeyIds,orderedPropertyNames, authorizedPropertyTypes);
     }
 
 

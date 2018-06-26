@@ -634,7 +634,8 @@ public final class ResultSetAdapters {
 
     public static SetMultimap<FullQualifiedName, Object> implicitEntity(
             ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes, Set<MetadataOption> metadataOptions ) throws SQLException {
+            Map<UUID, PropertyType> authorizedPropertyTypes,
+            Set<MetadataOption> metadataOptions ) throws SQLException {
         final UUID entityKeyId = entityKeyId( rs );
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
 

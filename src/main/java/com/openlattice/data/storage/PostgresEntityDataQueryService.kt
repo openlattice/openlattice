@@ -91,11 +91,10 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                             }
                     )
                     StatementHolder(connection, statement, rs)
-                }, Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
-            ResultSetAdapters.implicitEntity(
-                    it, authorizedPropertyTypes, metadataOptions
-            )
-        }
+                },
+                Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
+                    ResultSetAdapters.implicitEntity(it, authorizedPropertyTypes, metadataOptions)
+                }
         )
     }
 
