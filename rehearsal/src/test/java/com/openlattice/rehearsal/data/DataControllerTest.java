@@ -20,6 +20,7 @@
 
 package com.openlattice.rehearsal.data;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
@@ -37,6 +38,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
@@ -69,6 +71,25 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
                 .loadEntitySetData( es.getId(), ess, FileType.json ) );
 
         Assert.assertEquals( numberOfEntries, results.size() );
+    }
+
+    @Test
+    public void testCreateLoadReplaceLoadData() {
+        EntityType et = createEntityType();
+        waitForIt();
+        EntitySet es = createEntitySet( et );
+        waitForIt();
+
+        Map<UUID, SetMultimap<UUID, Object>> testData = TestDataFactory
+                .randomStringEntityData( numberOfEntries, et.getProperties() );
+        final List<SetMultimap<UUID, Object>> entries = ImmutableList.copyOf( testData.values() );
+        final List<UUID> ids = dataApi.createOrMergeEntities( es.getId(), entries );
+        final EntitySetSelection ess = new EntitySetSelection( Optional.empty(),
+                Optional.of( ImmutableSet.copyOf( ids ) ) );
+        final List<SetMultimap<FullQualifiedName, Object>> data = ImmutableList
+                .copyOf( dataApi.loadEntitySetData( es.getId(), ess, FileType.json ) );
+
+
     }
 
     private void waitForIt() {
@@ -139,7 +160,7 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         Set<Set<String>> resultValues = new HashSet<>();
         for ( SetMultimap<FullQualifiedName, Object> entity : results ) {
             resultValues.add( entity.asMap().entrySet().stream()
-                    .filter( e -> !e.getKey().getFullQualifiedNameAsString().contains( "@" ))
+                    .filter( e -> !e.getKey().getFullQualifiedNameAsString().contains( "@" ) )
                     .flatMap( e -> e.getValue().stream() )
                     .map( o -> (String) o )
                     .collect( Collectors.toSet() ) );
