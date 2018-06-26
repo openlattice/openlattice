@@ -56,6 +56,8 @@ import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.ids.IdGenerationMapstore;
+import com.openlattice.ids.Range;
 import com.openlattice.linking.LinkingVertex;
 import com.openlattice.linking.LinkingVertexKey;
 import com.openlattice.linking.WeightedLinkingVertexKeySet;
@@ -353,6 +355,11 @@ public class MapstoresPod {
                 propertyTypeMapstore(),
                 entitySetMapstore(),
                 entityTypeMapstore() );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<Long, Range> idGenerationMapstore() {
+        return new IdGenerationMapstore( hikariDataSource );
     }
 
     @Bean

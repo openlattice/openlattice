@@ -20,16 +20,12 @@
 
 package com.openlattice.ids;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.hazelcast.HazelcastMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -62,7 +58,7 @@ public class HazelcastIdGenerationService {
 
     public void initializeRanges() {
         for ( long i = 0; i < NUM_PARTITIONS; ++i ) {
-            scrolls.set( i << 48, new Range( i ) );
+            scrolls.set( i, new Range( i << 48L ) );
         }
     }
 
@@ -72,7 +68,7 @@ public class HazelcastIdGenerationService {
         final Set<Long> ranges = new HashSet<>( remainderToBeDistributed );
 
         while ( ranges.size() < remainderToBeDistributed ) {
-            ranges.add( ( (long) r.nextInt( NUM_PARTITIONS ) ) << 48L );
+            ranges.add( ( (long) r.nextInt( NUM_PARTITIONS ) ) );
         }
 
         final Map<Long, Object> ids = scrolls.executeOnEntries( new IdGeneratingEntryProcessor( countPerPartition ) );
