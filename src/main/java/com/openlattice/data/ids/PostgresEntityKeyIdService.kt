@@ -71,8 +71,8 @@ class PostgresEntityKeyIdService(
             val ps = connection.prepareStatement(INSERT_SQL)
             entityKeyIds.forEach {
                 ps.setObject(1, it.value)
-                ps.setObject(2, it.key.entitySetId)
-                ps.setString(3, it.key.entityId)
+                ps.setString(2, it.key.entityId)
+                ps.setObject(3, it.key.entitySetId)
                 ps.addBatch()
             }
             val totalWritten = ps.executeBatch().sum()
