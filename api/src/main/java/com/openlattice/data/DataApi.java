@@ -84,9 +84,9 @@ public interface DataApi {
             @Body EntitySetSelection req,
             @Query( FILE_TYPE ) FileType fileType );
 
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    @POST( BASE + "/" + ENTITY_SET + "/" )
     List<UUID> createOrMergeEntities(
-            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Query( ENTITY_SET_ID ) UUID entitySetId,
             @Body List<SetMultimap<UUID, Object>> entities );
 
     /**

@@ -19,6 +19,8 @@
 package com.openlattice.data.requests;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Objects;
@@ -27,22 +29,35 @@ import java.util.Set;
 import java.util.UUID;
 
 public class EntitySetSelection {
-    private Optional<Set<UUID>> selectedProperties;
+    private final Optional<Set<UUID>> properties;
+    private final Optional<Set<UUID>> entityKeyIds;
 
     @JsonCreator
     public EntitySetSelection(
-            @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) Optional<Set<UUID>> selectedProperties ) {
-        this.selectedProperties = selectedProperties;
+            @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) Optional<Set<UUID>> properties,
+            @JsonProperty( SerializationConstants.IDS ) Optional<Set<UUID>> entityKeyIds ) {
+        this.properties = properties;
+        this.entityKeyIds = entityKeyIds;
+    }
+
+    public EntitySetSelection( Optional<Set<UUID>> properties ) {
+        this( properties, Optional.empty() );
     }
 
     @JsonProperty( SerializationConstants.PROPERTIES_FIELD )
-    public Optional<Set<UUID>> getSelectedProperties() {
-        return selectedProperties;
+    public Optional<Set<UUID>> getProperties() {
+        return properties;
+    }
+
+    @JsonProperty( SerializationConstants.IDS )
+    public Optional<Set<UUID>> getEntityKeyIds() {
+        return entityKeyIds;
     }
 
     @Override public String toString() {
         return "EntitySetSelection{" +
-                "selectedProperties=" + selectedProperties +
+                "properties=" + properties +
+                ", entityKeyIds=" + entityKeyIds +
                 '}';
     }
 
@@ -50,12 +65,12 @@ public class EntitySetSelection {
         if ( this == o ) { return true; }
         if ( !( o instanceof EntitySetSelection ) ) { return false; }
         EntitySetSelection that = (EntitySetSelection) o;
-        return Objects.equals( selectedProperties, that.selectedProperties );
+        return Objects.equals( properties, that.properties ) &&
+                Objects.equals( entityKeyIds, that.entityKeyIds );
     }
 
     @Override public int hashCode() {
 
-        return Objects.hash( selectedProperties );
+        return Objects.hash( properties, entityKeyIds );
     }
-
 }

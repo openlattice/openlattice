@@ -41,7 +41,7 @@ public final class RetrofitFactory {
     private RetrofitFactory() {
     }
 
-    public static enum Environment {
+    public enum Environment {
         PRODUCTION( BASE_URL ),
         STAGING( STAGING_BASE_URL ),
         LOCAL( LOCAL_BASE_URL ),
@@ -49,7 +49,7 @@ public final class RetrofitFactory {
 
         private final String baseUrl;
 
-        private Environment( String baseUrl ) {
+        Environment( String baseUrl ) {
             this.baseUrl = baseUrl;
         }
 

@@ -160,7 +160,9 @@ public final class SerializationConstants {
     public static final String EDGE                             = "edge";
     public static final String MISSING                          = "missing";
     public static final String PRESENT                          = "present";
+    public static final String IDS                              = "ids";
 
     private SerializationConstants() {
     }
+
 }
