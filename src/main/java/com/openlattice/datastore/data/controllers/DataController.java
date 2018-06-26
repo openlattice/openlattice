@@ -154,45 +154,39 @@ public class DataController implements DataApi, AuthorizingComponent {
                     .authenticate( PreAuthenticatedAuthenticationJsonWebToken.usingToken( token ) );
             SecurityContextHolder.getContext().setAuthentication( authentication );
         }
-        return loadEntitySetData( entitySetId, Optional.empty() );
+        return loadEntitySetData( entitySetId, new EntitySetSelection( Optional.empty() ) );
     }
 
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
             method = RequestMethod.POST,
+            consumes = { MediaType.APPLICATION_JSON_VALUE },
             produces = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_CSV_VALUE } )
     public EntitySetData<FullQualifiedName> loadEntitySetData(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody(
-                    required = false ) EntitySetSelection req,
-            @RequestParam(
-                    value = FILE_TYPE,
-                    required = false ) FileType fileType,
+            @RequestBody( required = false ) EntitySetSelection selection,
+            @RequestParam( value = FILE_TYPE, required = false ) FileType fileType,
             HttpServletResponse response ) {
         setContentDisposition( response, entitySetId.toString(), fileType );
         setDownloadContentType( response, fileType );
-        return loadEntitySetData( entitySetId, req, fileType );
+        return loadEntitySetData( entitySetId, selection, fileType );
     }
 
     @Override
     public EntitySetData<FullQualifiedName> loadEntitySetData(
             UUID entitySetId,
-            EntitySetSelection req,
+            EntitySetSelection selection,
             FileType fileType ) {
-        if ( req == null ) {
-            return loadEntitySetData( entitySetId, Optional.empty() );
-        } else {
-            return loadEntitySetData( entitySetId, req.getSelectedProperties() );
-        }
+        return loadEntitySetData( entitySetId, selection );
     }
 
     private EntitySetData<FullQualifiedName> loadEntitySetData(
             UUID entitySetId,
-            Optional<Set<UUID>> selectedProperties ) {
+            EntitySetSelection selection ) {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            return loadNormalEntitySetData( entitySetId, selectedProperties );
+            return loadNormalEntitySetData( entitySetId, selection );
         } else {
             throw new ForbiddenException( "Insufficient permissions to read the entity set or it doesn't exists." );
         }
@@ -200,17 +194,18 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     private EntitySetData<FullQualifiedName> loadNormalEntitySetData(
             UUID entitySetId,
-            Optional<Set<UUID>> selectedProperties ) {
+            EntitySetSelection selection ) {
         final Set<UUID> allProperties = authzHelper.getAllPropertiesOnEntitySet( entitySetId );
-        checkState( selectedProperties.isPresent() && allProperties.containsAll( selectedProperties.get() ),
-                "Selected properties are not property types of entity set %s",
-                entitySetId );
+        final Set<UUID> selectedProperties = selection.getProperties().orElse( allProperties );
+
+        checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
+                "Selected properties are not property types of entity set %s", entitySetId );
 
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.READ ),
-                        selectedProperties.isPresent() ?
-                                dms.getPropertyTypesAsMap( selectedProperties.get() ) :
-                                dms.getPropertyTypesAsMap( allProperties ) );
+                .getAuthorizedPropertyTypes( entitySetId,
+                        EnumSet.of( Permission.READ ),
+                        dms.getPropertyTypesAsMap( selectedProperties ) );
+
         final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
 
         allProperties.stream()
@@ -218,6 +213,14 @@ public class DataController implements DataApi, AuthorizingComponent {
                 .map( authorizedPropertyTypes::get )
                 .map( pt -> pt.getType().getFullQualifiedNameAsString() )
                 .forEach( orderedPropertyNames::add );
+
+        if ( selection.getEntityKeyIds().isPresent() ) {
+            return dgm.getEntitySetData(
+                    entitySetId,
+                    selection.getEntityKeyIds().get(),
+                    orderedPropertyNames,
+                    authorizedPropertyTypes );
+        }
         return dgm.getEntitySetData( entitySetId, orderedPropertyNames, authorizedPropertyTypes );
     }
 
@@ -275,10 +278,10 @@ public class DataController implements DataApi, AuthorizingComponent {
     @Override
     @RequestMapping(
             value = "/" + ENTITY_SET + "/",
-            method = RequestMethod.PATCH,
+            method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public List<UUID> createOrMergeEntities(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestParam( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody List<SetMultimap<UUID, Object>> entities ) {
         //Ensure that we have read access to entity set metadata.
         ensureReadAccess( new AclKey( entitySetId ) );
