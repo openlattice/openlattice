@@ -225,7 +225,7 @@ public final class ResultSetAdapters {
     }
 
     public static Range range( ResultSet rs ) throws SQLException {
-        long base = rs.getLong( PARTITION_INDEX_FIELD );
+        long base = rs.getLong( PARTITION_INDEX_FIELD ) << 48L;
         long msb = rs.getLong( MSB_FIELD );
         long lsb = rs.getLong( LSB_FIELD );
         return new Range( base, msb, lsb );

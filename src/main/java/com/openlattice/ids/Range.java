@@ -53,7 +53,7 @@ public class Range {
     public UUID nextId() {
         //If we've run out of ids in given range.
         if ( msb == MAX_MSB ) {
-            logger.error( "Exhausted id in range with base  {} and msb {}", base, msb );
+            logger.error( "Exhausted id in range with base {} and msb {}", base, msb );
             return null;
         }
 

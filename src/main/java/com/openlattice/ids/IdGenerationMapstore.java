@@ -49,14 +49,14 @@ public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Long, Ran
     }
 
     @Override protected void bind( PreparedStatement ps, Long key, Range value ) throws SQLException {
-        bind( ps, key, 1 );
+        int parameterIndex = bind( ps, key, 1 );
 
-        ps.setLong( 2, value.getMsb() );
-        ps.setLong( 3, value.getLsb() );
+        ps.setLong( parameterIndex++, value.getMsb() );
+        ps.setLong( parameterIndex++, value.getLsb() );
 
         //Update clause
-        ps.setLong( 4, value.getMsb() );
-        ps.setLong( 5, value.getLsb() );
+        ps.setLong( parameterIndex++, value.getMsb() );
+        ps.setLong( parameterIndex++, value.getLsb() );
 
     }
 
