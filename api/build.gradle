@@ -2,6 +2,11 @@ buildscript {
     repositories {
         mavenCentral()
     }
+
+    configurations.classpath {
+        exclude module: 'slf4j-simple'
+    }
+
     dependencies {
         classpath('io.swagger:swagger-codegen:3.0.0-rc0')
     }
@@ -15,7 +20,7 @@ plugins {
     id 'idea'
     id 'jacoco'
     id 'checkstyle'
-    id 'findbugs'
+    //id 'findbugs'
 }
 
 description = "OpenLattice REST APIs"
@@ -40,6 +45,13 @@ spotbugs {
 
 checkstyle {
     toolVersion = "${versions.checkstyle}"
+}
+
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
 }
 
 tasks.withType(FindBugs) {
@@ -115,6 +127,8 @@ dependencies {
     spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
     compileOnly 'net.jcip:jcip-annotations:1.0'
     compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    testCompileOnly 'net.jcip:jcip-annotations:1.0'
+    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
 
     /*
      * SL4J

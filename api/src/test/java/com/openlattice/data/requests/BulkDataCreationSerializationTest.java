@@ -44,6 +44,7 @@ import com.google.common.collect.SetMultimap;
 import com.openlattice.data.integration.BulkDataCreation;
 import com.openlattice.data.integration.Entity;
 import com.openlattice.mapstores.TestDataFactory;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -60,6 +61,7 @@ import org.junit.Test;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@SuppressFBWarnings(value="SECOBDES", justification = "This is a test.")
 public class BulkDataCreationSerializationTest {
 
     @Test

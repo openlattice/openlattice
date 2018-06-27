@@ -48,6 +48,7 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -58,6 +59,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+@SuppressFBWarnings(value="SECOBDES", justification = "Java serialization for this class only occurs client side.")
 public class BulkDataCreation implements Serializable {
     static {
         FullQualifiedNameJacksonSerializer.registerWithMapper( ObjectMappers.getJsonMapper() );
