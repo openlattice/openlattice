@@ -203,7 +203,7 @@ open class DataGraphService(
             entities: Map<UUID, SetMultimap<UUID, Any>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        return 0
+        return eds.partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
     override fun replacePropertiesInEntities(
@@ -211,7 +211,7 @@ open class DataGraphService(
             replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        return 0
+        return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes )
     }
 
     override fun createAssociations(
