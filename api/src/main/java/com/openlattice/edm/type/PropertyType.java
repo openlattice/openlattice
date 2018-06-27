@@ -18,29 +18,27 @@
 
 package com.openlattice.edm.type;
 
-import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
-import java.util.Set;
-import java.util.UUID;
-
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- *
  */
 public class PropertyType extends AbstractSchemaAssociatedSecurableType {
 
     protected EdmPrimitiveTypeKind datatype;
     protected boolean              piiField;
     protected Analyzer             analyzer;
-    private transient int          h = 0;
+    private transient int h = 0;
 
     @JsonCreator
     public PropertyType(
@@ -59,8 +57,8 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 description,
                 schemas );
         this.datatype = datatype;
-        this.piiField = piiField.or( false );
-        this.analyzer = analyzer.or( Analyzer.STANDARD );
+        this.piiField = piiField.orElse( false );
+        this.analyzer = analyzer.orElse( Analyzer.STANDARD );
     }
 
     public PropertyType(
@@ -83,7 +81,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             Set<FullQualifiedName> schemas,
             EdmPrimitiveTypeKind datatype,
             Optional<Boolean> piiField ) {
-        this( Optional.of( id ), fqn, title, description, schemas, datatype, piiField, Optional.absent() );
+        this( Optional.of( id ), fqn, title, description, schemas, datatype, piiField, Optional.empty() );
     }
 
     public PropertyType(
@@ -93,7 +91,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             Optional<String> description,
             Set<FullQualifiedName> schemas,
             EdmPrimitiveTypeKind datatype ) {
-        this( Optional.of( id ), fqn, title, description, schemas, datatype, Optional.absent(), Optional.absent() );
+        this( Optional.of( id ), fqn, title, description, schemas, datatype, Optional.empty(), Optional.empty() );
     }
 
     public PropertyType(
@@ -102,7 +100,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             Optional<String> description,
             Set<FullQualifiedName> schemas,
             EdmPrimitiveTypeKind datatype ) {
-        this( Optional.absent(), fqn, title, description, schemas, datatype, Optional.absent(), Optional.absent() );
+        this( Optional.empty(), fqn, title, description, schemas, datatype, Optional.empty(), Optional.empty() );
     }
 
     @JsonProperty( SerializationConstants.DATATYPE_FIELD )

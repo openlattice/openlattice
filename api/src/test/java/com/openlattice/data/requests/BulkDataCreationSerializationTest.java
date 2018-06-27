@@ -38,12 +38,13 @@
 
 package com.openlattice.data.requests;
 
-import com.openlattice.mapstores.TestDataFactory;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
-import com.openlattice.data.requests.BulkDataCreation;
-import com.openlattice.data.requests.Entity;
+import com.openlattice.data.integration.BulkDataCreation;
+import com.openlattice.data.integration.Entity;
+import com.openlattice.mapstores.TestDataFactory;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -60,15 +61,14 @@ import org.junit.Test;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@SuppressFBWarnings(value="SECOBDES", justification = "This is a test.")
 public class BulkDataCreationSerializationTest {
 
     @Test
     public void test() throws IOException, ClassNotFoundException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream( baos );
-        BulkDataCreation bdc = new BulkDataCreation( new HashSet<>(), new HashSet<>(), new HashSet<>() );
-
-        bdc.getTickets().add( UUID.randomUUID() );
+        BulkDataCreation bdc = new BulkDataCreation( new HashSet<>(), new HashSet<>() );
 
         bdc.getEntities().add( new Entity( TestDataFactory.entityKey(), getObjects() ) );
         oos.writeObject( bdc );
@@ -83,7 +83,7 @@ public class BulkDataCreationSerializationTest {
 
     public SetMultimap<UUID, Object> getObjects() {
         return HashMultimap.create( ImmutableSetMultimap.of(
-                UUID.randomUUID(), RandomUtils.nextDouble(0.0, 1e6 ),
+                UUID.randomUUID(), RandomUtils.nextDouble( 0.0, 1e6 ),
                 UUID.randomUUID(), DateTime.now(),
                 UUID.randomUUID(), RandomStringUtils.random( 10 ),
                 UUID.randomUUID(), RandomUtils.nextInt( 0, 10000 ),

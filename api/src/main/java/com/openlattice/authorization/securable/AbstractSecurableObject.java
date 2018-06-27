@@ -21,7 +21,7 @@ package com.openlattice.authorization.securable;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.UUID;
@@ -61,7 +61,7 @@ public abstract class AbstractSecurableObject {
             Optional<UUID> id,
             String title,
             Optional<String> description ) {
-        this( id.or( UUID::randomUUID ), title, description, id.isPresent() );
+        this( id.orElseGet( UUID::randomUUID ), title, description, id.isPresent() );
     }
 
     /**
@@ -83,7 +83,7 @@ public abstract class AbstractSecurableObject {
         checkArgument( StringUtils.isNotBlank( title ), "Title cannot be blank." );
         this.id = checkNotNull( id );
         this.idPresent = idPresent;
-        this.description = description.or( "" );
+        this.description = description.orElse( "" );
         this.title = title;
     }
 

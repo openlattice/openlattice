@@ -2,6 +2,11 @@ buildscript {
     repositories {
         mavenCentral()
     }
+
+    configurations.classpath {
+        exclude module: 'slf4j-simple'
+    }
+
     dependencies {
         classpath('io.swagger:swagger-codegen:3.0.0-rc0')
     }
@@ -10,11 +15,12 @@ buildscript {
 plugins {
     id 'java'
     id "org.jetbrains.kotlin.jvm" version "1.2.30"
+    id "com.github.spotbugs" version "1.6.2"
     id 'eclipse'
     id 'idea'
     id 'jacoco'
     id 'checkstyle'
-    id 'findbugs'
+    //id 'findbugs'
 }
 
 description = "OpenLattice REST APIs"
@@ -33,8 +39,19 @@ def versions = [
         checkstyle: '7.4',
 ]
 
+spotbugs {
+    toolVersion = '3.1.5'
+}
+
 checkstyle {
     toolVersion = "${versions.checkstyle}"
+}
+
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
 }
 
 tasks.withType(FindBugs) {
@@ -107,6 +124,12 @@ clean.doFirst {
 }
 
 dependencies {
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+    compileOnly 'net.jcip:jcip-annotations:1.0'
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    testCompileOnly 'net.jcip:jcip-annotations:1.0'
+    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+
     /*
      * SL4J
      */
@@ -176,6 +199,10 @@ dependencies {
     /*
      * TESTING
      */
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "${log4j_version}"
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-api', version: "${log4j_version}"
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4j_version}"
+
     testCompile "junit:junit:${junit_version}"
     testCompile("org.mockito:mockito-all:${mockito_version}") {
         exclude module: 'hamcrest'

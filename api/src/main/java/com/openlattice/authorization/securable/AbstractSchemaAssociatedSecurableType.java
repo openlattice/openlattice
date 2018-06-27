@@ -20,8 +20,8 @@ package com.openlattice.authorization.securable;
 
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
+import java.util.Optional;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.util.Collection;

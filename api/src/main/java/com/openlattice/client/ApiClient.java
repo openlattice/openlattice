@@ -27,6 +27,7 @@ import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.client.RetrofitFactory.Environment;
 import com.openlattice.client.serialization.SerializableSupplier;
 import com.openlattice.data.DataApi;
+import com.openlattice.data.DataIntegrationApi;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.search.SearchApi;
 import com.openlattice.sync.SyncApi;
@@ -61,9 +62,12 @@ public class ApiClient implements ApiFactoryFactory {
 
     public ApiClient( ApiFactoryFactory retrofitSupplier ) {
         this.retrofitSupplier = retrofitSupplier;
-        logger.info( "Loom client ready!" );
+        logger.info( "API client ready!" );
     }
 
+    public DataIntegrationApi getDataIntegrationApi() {
+        return (DataIntegrationApi) get().create( DataIntegrationApi.class );
+    }
     public DataApi getDataApi() throws ExecutionException {
         return (DataApi) get().create( DataApi.class );
     }
