@@ -31,11 +31,13 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
+import com.openlattice.postgres.DataTables;
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -44,6 +46,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -51,7 +54,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class DataControllerTest extends MultipleAuthenticatedUsersBase {
+public class DataControllerTest2 extends MultipleAuthenticatedUsersBase {
 
     private static final int    numberOfEntries = 10;
     private static final Random random          = new Random();
@@ -84,12 +87,20 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
                 .randomStringEntityData( numberOfEntries, et.getProperties() );
         final List<SetMultimap<UUID, Object>> entries = ImmutableList.copyOf( testData.values() );
         final List<UUID> ids = dataApi.createOrMergeEntities( es.getId(), entries );
-        final EntitySetSelection ess = new EntitySetSelection( Optional.empty(),
-                Optional.of( ImmutableSet.copyOf( ids ) ) );
+
+        final EntitySetSelection ess = new EntitySetSelection(
+                Optional.of( et.getProperties() ),
+                Optional.of( new HashSet<>( ids ) ) );
         final List<SetMultimap<FullQualifiedName, Object>> data = ImmutableList
                 .copyOf( dataApi.loadEntitySetData( es.getId(), ess, FileType.json ) );
+        final Map<UUID, SetMultimap<FullQualifiedName, Object>> indexActual = index( data );
+    }
 
-
+    private Map<UUID, SetMultimap<FullQualifiedName, Object>> index( Collection<SetMultimap<FullQualifiedName, Object>> data ) {
+        return data.stream().collect(
+                Collectors.toMap(
+                        e -> UUID.fromString( (String) e.get( DataTables.ID_FQN ).iterator().next() ),
+                        Function.identity() ) );
     }
 
     private void waitForIt() {

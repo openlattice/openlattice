@@ -169,6 +169,5 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 entitySetIds.values().contains( newES.getId() ) );
 
         return newES;
-
     }
 }
