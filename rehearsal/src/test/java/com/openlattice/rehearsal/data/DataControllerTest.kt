@@ -117,6 +117,34 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         Assert.assertEquals(indexExpected, indexActual)
+
+        val propertySrc = entries[0];
+        val replacement: SetMultimap<UUID, Any> = HashMultimap.create()
+        val replacementProperty = propertySrc.keySet().first();
+        replacement.put(replacementProperty, RandomStringUtils.random(10) as Object)
+
+        val replacementMap = mapOf(ids[0]!! to replacement)
+
+        Assert.assertEquals( 1, dataApi.replaceEntities(es.id, replacementMap, true ) )
+
+        val ess2 = EntitySetSelection(
+                Optional.of(et.properties),
+                Optional.of(setOf( ids[0] ) )
+        )
+        val data2 = ImmutableList
+                .copyOf(dataApi.loadEntitySetData(es.id, ess2, FileType.json))
+
+        val indexActual2 = index(data2)
+
+        //Remove the extra properties for easier equals.
+        indexActual2.forEach {
+            it.value.removeAll(DataTables.ID_FQN)
+            it.value.removeAll(DataTables.LAST_INDEX_FQN)
+            it.value.removeAll(DataTables.LAST_WRITE_FQN)
+        }
+
+        Assert.assertFalse(data2[0][fqnCache[replacementProperty]] == indexActual[ids[0]]!![fqnCache[replacementProperty]])
+
     }
 
 
