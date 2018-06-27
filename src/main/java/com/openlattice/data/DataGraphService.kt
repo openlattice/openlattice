@@ -38,7 +38,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphApi
 import com.openlattice.graph.core.NeighborSets
-import com.openlattice.graph.core.objects.NeighborTripletSet
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
 import org.apache.commons.collections4.keyvalue.MultiKey
@@ -98,7 +97,7 @@ open class DataGraphService(
             orderedPropertyNames: LinkedHashSet<String>,
             authorizedPropertyTypes: MutableMap<UUID, PropertyType>?
     ): EntitySetData<FullQualifiedName> {
-        return eds.getEntities(entitySetId, entityKeyIds,orderedPropertyNames, authorizedPropertyTypes);
+        return eds.getEntities(entitySetId, entityKeyIds, orderedPropertyNames, authorizedPropertyTypes);
     }
 
 
@@ -176,7 +175,7 @@ open class DataGraphService(
     ): Map<EntityKey, UUID> {
         val ids = idService.getEntityKeyIds(entities.keys.map { EntityKey(entitySetId, it) }.toSet())
         val identifiedEntities = ids.map { it.value to entities[it.key.entityId] }.toMap()
-        eds.createEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
+        eds.createOrUpdateEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
         return ids
     }
 
@@ -186,11 +185,8 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): List<UUID> {
         val ids = idService.reserveIds(entitySetId, entities.size)
-        val entityMap: MutableMap<UUID, SetMultimap<UUID, Any>> = HashMap()
-        for (i in 0 until entities.size) {
-            entityMap[ids[i]] = entities[i]
-        }
-        eds.createEntities(entitySetId, entityMap, authorizedPropertyTypes)
+        val entityMap = ids.mapIndexed({ i, id -> id to entities[i] }).toMap()
+        eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
         return ids
     }
 
@@ -199,7 +195,7 @@ open class DataGraphService(
             entities: Map<UUID, SetMultimap<UUID, Any>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        return eds.replaceEntities(entitySetId, entities, authorizedPropertyTypes )
+        return eds.replaceEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
     override fun partialReplaceEntities(

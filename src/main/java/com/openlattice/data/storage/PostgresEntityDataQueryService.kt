@@ -444,7 +444,7 @@ fun selectEntitySetWithPropertyTypes(
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value )} USING (${ID.name} )" }
                     .joinToString("\n" ) +
-            if( entityKeyIdsClause.isPresent ) { " WHERE $entityKeyIdsClause " } else  { " " }
+            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} " } else  { " " }
     //@formatter:on
 }
 
@@ -474,7 +474,7 @@ fun selectEntitySetWithPropertyTypesAndVersion(
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version )} USING (${ID.name} )" }
                     .joinToString("\n" ) +
-            if( entityKeyIdsClause.isPresent ) { " WHERE $entityKeyIdsClause " } else  { " " }
+            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} " } else  { " " }
     //@formatter:on
 }
 

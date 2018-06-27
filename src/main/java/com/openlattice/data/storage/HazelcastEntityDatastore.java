@@ -149,11 +149,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     @Timed
-    @Override public int createEntities(
+    @Override public int createOrUpdateEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return 0;
+        return dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
     @Timed
@@ -179,14 +179,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         return dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
-    }
-
-    @Timed
-    @Override public int mergeIntoEntities(
-            UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entities,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return 0;
     }
 
     @Timed

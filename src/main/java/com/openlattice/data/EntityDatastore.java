@@ -64,7 +64,14 @@ public interface EntityDatastore {
             String entityId,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    int createEntities(
+    /**
+     * Creates entities if they do not exist and then adds the provided properties to specified entities.
+     * @param entitySetId
+     * @param entities
+     * @param authorizedPropertyTypes
+     * @return
+     */
+    int createOrUpdateEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
@@ -92,14 +99,6 @@ public interface EntityDatastore {
     int replacePropertiesInEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
-
-    /**
-     * Merges in new entity data without affecting existing entity data.
-     */
-    int mergeIntoEntities(
-            UUID entitySetId,
-            Map<UUID,SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
