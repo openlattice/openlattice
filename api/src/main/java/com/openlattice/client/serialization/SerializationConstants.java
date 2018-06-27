@@ -99,6 +99,8 @@ public final class SerializationConstants {
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";
     public static final String KEY_FIELD                        = "key";
+    public static final String LAST_INDEX                       = "lastIndex";
+    public static final String LAST_WRITE                       = "lastWrite";
     public static final String LINKING_ENTITY_SET_FIELD         = "linkingEntitySet";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String MAX_HITS                         = "maxHits";

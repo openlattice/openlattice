@@ -24,29 +24,36 @@ package com.openlattice.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * The main issue with using this class is that
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Used to represent a property and all associated metadata for that property.
+ *
  */
 public class Property {
-    private final Object value;
-    private final byte[] hash;
-    private final long version;
-    private final long[] versions;
+    private final byte[]         hash;
+    private final Object         value;
+    private final long           version;
+    private final long[]         versions;
+    private final OffsetDateTime lastWrite;
+    private final OffsetDateTime lastIndex;
 
     @JsonCreator
     public Property(
+            @JsonProperty( SerializationConstants.HASH ) byte[] hash,
             @JsonProperty( SerializationConstants.VALUE_FIELD ) Object value,
-            @JsonProperty(SerializationConstants.HASH) byte[] hash,
             @JsonProperty( SerializationConstants.VERSION ) long version,
-            @JsonProperty( SerializationConstants.VERSIONS) long[] versions ) {
+            @JsonProperty( SerializationConstants.VERSIONS ) long[] versions,
+            @JsonProperty( SerializationConstants.LAST_WRITE ) OffsetDateTime lastWrite,
+            @JsonProperty( SerializationConstants.LAST_INDEX ) OffsetDateTime lastIndex ) {
         this.value = value;
         this.hash = hash;
         this.version = version;
         this.versions = versions;
+        this.lastWrite = lastWrite;
+        this.lastIndex = lastIndex;
     }
 
     @JsonProperty( SerializationConstants.VALUE_FIELD )
@@ -54,7 +61,7 @@ public class Property {
         return value;
     }
 
-    @JsonProperty(SerializationConstants.HASH)
+    @JsonProperty( SerializationConstants.HASH )
     public byte[] getHash() {
         return hash;
     }
@@ -64,18 +71,14 @@ public class Property {
         return version;
     }
 
-    @JsonProperty( SerializationConstants.VERSIONS)
+    @JsonProperty( SerializationConstants.VERSIONS )
     public long[] getVersions() {
         return versions;
     }
 
-    @Override public String toString() {
-        return "Property{" +
-                "value=" + value +
-                ", hash=" + Arrays.toString( hash ) +
-                ", version=" + version +
-                ", versions=" + Arrays.toString( versions ) +
-                '}';
+    @JsonProperty( SerializationConstants.VERSIONS )
+    public OffsetDateTime getLastWrite() {
+        return lastWrite;
     }
 
     @Override public boolean equals( Object o ) {
@@ -83,16 +86,35 @@ public class Property {
         if ( !( o instanceof Property ) ) { return false; }
         Property property = (Property) o;
         return version == property.version &&
-                Objects.equals( value, property.value ) &&
                 Arrays.equals( hash, property.hash ) &&
-                Arrays.equals( versions, property.versions );
+                Objects.equals( value, property.value ) &&
+                Arrays.equals( versions, property.versions ) &&
+                Objects.equals( lastWrite, property.lastWrite ) &&
+                Objects.equals( lastIndex, property.lastIndex );
     }
 
     @Override public int hashCode() {
 
-        int result = Objects.hash( value, version );
+        int result = Objects.hash( value, version, lastWrite, lastIndex );
         result = 31 * result + Arrays.hashCode( hash );
         result = 31 * result + Arrays.hashCode( versions );
         return result;
     }
+
+    @Override public String toString() {
+        return "Property{" +
+                "hash=" + Arrays.toString( hash ) +
+                ", value=" + value +
+                ", version=" + version +
+                ", versions=" + Arrays.toString( versions ) +
+                ", lastWrite=" + lastWrite +
+                ", lastIndex=" + lastIndex +
+                '}';
+    }
+
+    @JsonProperty( SerializationConstants.VERSIONS )
+    public OffsetDateTime getLastIndex() {
+        return lastIndex;
+    }
+
 }
