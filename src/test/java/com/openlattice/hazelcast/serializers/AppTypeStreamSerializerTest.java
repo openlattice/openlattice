@@ -20,13 +20,11 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.AppTypeStreamSerializer;
-import com.openlattice.apps.AppType;
-import com.google.common.base.Optional;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
+import com.openlattice.apps.AppType;
+import java.util.Optional;
 import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class AppTypeStreamSerializerTest extends AbstractStreamSerializerTest<AppTypeStreamSerializer, AppType> {
     @Override protected AppTypeStreamSerializer createSerializer() {

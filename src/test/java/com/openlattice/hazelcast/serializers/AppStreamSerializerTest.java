@@ -20,12 +20,11 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.AppStreamSerializer;
 import com.openlattice.apps.App;
-import com.google.common.base.Optional;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.UUID;
 
 public class AppStreamSerializerTest extends AbstractStreamSerializerTest<AppStreamSerializer, App> {

@@ -44,6 +44,7 @@ import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.graph.core.Graph;
 import com.openlattice.graph.edge.Edge;
+import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.processors.EntityDataUpserter;
 import com.openlattice.ids.HazelcastIdGenerationService;
@@ -202,13 +203,13 @@ public class HazelcastMergingService {
 
     @Async
     public void mergeEdgeAsync( UUID linkedEntitySetId, Edge edge ) {
-        UUID srcEntitySetId = edge.getSrc();
-        UUID dstEntitySetId = edge.getDst();
-        UUID edgeEntitySetId = edge.getEdge();
+        UUID srcEntitySetId = edge.getSrc().getEntitySetId();
+        UUID dstEntitySetId = edge.getDst().getEntitySetId();
+        UUID edgeEntitySetId = edge.getEdge().getEntitySetId();
 
-        UUID srcId = edge.getKey().getSrcEntityKeyId();
-        UUID dstId = edge.getKey().getDstEntityKeyId();
-        UUID edgeId = edge.getKey().getEdgeEntityKeyId();
+        UUID srcId = edge.getKey().getSrc().getEntityKeyId();
+        UUID dstId = edge.getKey().getDst().getEntityKeyId();
+        UUID edgeId = edge.getKey().getEdge().getEntityKeyId();
 
         UUID newSrcId = getMergedId( linkedEntitySetId, srcId );
         if ( newSrcId != null ) {
@@ -226,14 +227,5 @@ public class HazelcastMergingService {
             edgeId = newEdgeId;
         }
 
-        graph.addEdge( srcId,
-                edge.getSrcTypeId(),
-                srcEntitySetId,
-                dstId,
-                edge.getDstTypeId(),
-                dstEntitySetId,
-                edgeId,
-                edge.getEdgeTypeId(),
-                edgeEntitySetId );
     }
 }

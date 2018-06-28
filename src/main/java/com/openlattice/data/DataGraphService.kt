@@ -22,6 +22,7 @@
 package com.openlattice.data
 
 import com.codahale.metrics.annotation.Timed
+
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
@@ -64,9 +65,21 @@ open class DataGraphService(
         private val eds: EntityDatastore
 ) : DataGraphManager {
 
+    companion object {
+        @JvmStatic
+        fun tryGetAndLogErrors(f: ListenableFuture<*>) {
+            try {
+                f.get()
+            } catch (e: InterruptedException) {
+                logger.error("Future execution failed.", e)
+            } catch (e: ExecutionException) {
+                logger.error("Future execution failed.", e)
+            }
+
+        }
+    }
 
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
-
     private val typeIds: LoadingCache<UUID, UUID> = CacheBuilder.newBuilder()
             .maximumSize(100000) // 100K * 16 = 16000K = 16MB
             .build(
@@ -78,11 +91,12 @@ open class DataGraphService(
                         }
                     }
             )
+
+
     private val queryCache = CacheBuilder.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(30, TimeUnit.SECONDS)
             .build<MultiKey<*>, Array<IncrementableWeightId>>()
-
 
     override fun getEntitySetData(
             entitySetId: UUID,
@@ -92,6 +106,7 @@ open class DataGraphService(
         return eds.getEntitySetData(entitySetId, orderedPropertyNames, authorizedPropertyTypes)
     }
 
+
     override fun getEntitySetData(
             entitySetId: UUID?, entityKeyIds: MutableSet<UUID>,
             orderedPropertyNames: LinkedHashSet<String>,
@@ -99,7 +114,6 @@ open class DataGraphService(
     ): EntitySetData<FullQualifiedName> {
         return eds.getEntities(entitySetId, entityKeyIds, orderedPropertyNames, authorizedPropertyTypes);
     }
-
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         lm.deleteVerticesInEntitySet(entitySetId)
@@ -211,7 +225,7 @@ open class DataGraphService(
             replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes )
+        return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
     }
 
     override fun createAssociations(
@@ -351,16 +365,5 @@ open class DataGraphService(
 
     override fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets> {
         return lm.getNeighborEntitySets(entitySetId)
-    }
-
-    fun tryGetAndLogErrors(f: ListenableFuture<*>) {
-        try {
-            f.get()
-        } catch (e: InterruptedException) {
-            logger.error("Future execution failed.", e)
-        } catch (e: ExecutionException) {
-            logger.error("Future execution failed.", e)
-        }
-
     }
 }
