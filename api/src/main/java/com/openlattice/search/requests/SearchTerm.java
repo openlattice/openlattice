@@ -31,7 +31,7 @@ public class SearchTerm {
             @JsonProperty( SerializationConstants.SEARCH_TERM ) String searchTerm,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
-        this.searchTerm = searchTerm;
+        this.searchTerm = searchTerm.trim();
         this.start = start;
         this.maxHits = maxHits;
     }

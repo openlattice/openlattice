@@ -18,15 +18,15 @@
 
 package com.openlattice.client;
 
-import com.openlattice.client.serialization.SerializableSupplier;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
 import com.dataloom.mappers.ObjectMappers;
-import com.dataloom.retrofit.LoomByteConverterFactory;
-import com.dataloom.retrofit.LoomCallAdapterFactory;
-import com.dataloom.retrofit.LoomJacksonConverterFactory;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openlattice.client.serialization.SerializableSupplier;
+import com.openlattice.retrofit.RhizomeByteConverterFactory;
+import com.openlattice.retrofit.RhizomeCallAdapterFactory;
+import com.openlattice.retrofit.RhizomeJacksonConverterFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 
@@ -36,7 +36,10 @@ public final class RetrofitFactory {
     private static final String LOCAL_BASE_URL   = "http://localhost:8080/";
     private static final String TESTING_BASE_URL = "http://localhost:8080/";
 
-    private RetrofitFactory() {}
+    private static final ObjectMapper jsonMapper = ObjectMappers.getJsonMapper();
+
+    private RetrofitFactory() {
+    }
 
     public static enum Environment {
         PRODUCTION( BASE_URL ),
@@ -90,10 +93,11 @@ public final class RetrofitFactory {
     }
 
     public static final Retrofit.Builder decorateWithLoomFactories( Retrofit.Builder builder ) {
-        return builder.addConverterFactory( new LoomByteConverterFactory() )
-                .addConverterFactory( new LoomJacksonConverterFactory( ObjectMappers.getJsonMapper() ) )
-                .addCallAdapterFactory( new LoomCallAdapterFactory() );
+        return builder.addConverterFactory( new RhizomeByteConverterFactory() )
+                .addConverterFactory( new RhizomeJacksonConverterFactory( jsonMapper ) )
+                .addCallAdapterFactory( new RhizomeCallAdapterFactory() );
     }
+
     public static final OkHttpClient.Builder okhttpClientWithLoomAuth( Supplier<String> jwtToken ) {
         return new OkHttpClient.Builder()
                 .addInterceptor( chain -> chain
@@ -104,4 +108,7 @@ public final class RetrofitFactory {
                 .connectTimeout( 0, TimeUnit.MILLISECONDS );
     }
 
+    public static void configureObjectMapper( Consumer<ObjectMapper> c ) {
+        c.accept( jsonMapper );
+    }
 }

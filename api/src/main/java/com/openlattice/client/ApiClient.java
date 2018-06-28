@@ -81,7 +81,7 @@ public class ApiClient implements ApiFactoryFactory {
     }
 
     public SearchApi getSearchApi() {
-        return get().create( SearchApi.class );
+        return (SearchApi) get().create( SearchApi.class );
     }
 
     public ApiFactory get() {
