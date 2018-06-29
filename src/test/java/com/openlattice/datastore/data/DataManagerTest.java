@@ -22,13 +22,12 @@ package com.openlattice.datastore.data;
 
 import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.conductor.rpc.Employee;
-import com.openlattice.datastore.BootstrapDatastoreWithCassandra;
+import com.openlattice.datastore.IntegrationTestsBootstrap;
 import com.openlattice.edm.type.PropertyType;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -44,6 +43,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -61,7 +61,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-public class DataManagerTest extends BootstrapDatastoreWithCassandra {
+public class DataManagerTest extends IntegrationTestsBootstrap {
     protected static final Set<String> PROFILES = Sets.newHashSet( "local", "cassandra" );
 
     private static final List<EdmPrimitiveTypeKind> edmTypesList;
@@ -321,7 +321,7 @@ public class DataManagerTest extends BootstrapDatastoreWithCassandra {
                 id,
                 getFqnFromUuid( id ),
                 "Property " + id.toString(),
-                Optional.absent(),
+                Optional.empty(),
                 ImmutableSet.of(),
                 type );
 

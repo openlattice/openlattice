@@ -34,7 +34,7 @@ import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.data.DataApi;
-import com.openlattice.datastore.BootstrapDatastoreWithCassandra;
+import com.openlattice.datastore.IntegrationTestsBootstrap;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
@@ -49,7 +49,7 @@ import com.google.common.collect.ImmutableSet;
 
 import retrofit2.Retrofit;
 
-public class MultipleAuthenticatedUsersBase extends BootstrapDatastoreWithCassandra {
+public class MultipleAuthenticatedUsersBase extends IntegrationTestsBootstrap {
     protected static Map<String, Retrofit> retrofitMap = new HashMap<>();
 
     protected static EdmApi                edmApi;

@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore.data;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
@@ -30,6 +29,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.mapstores.TestDataFactory;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -69,9 +69,7 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         // load selected data
         Set<UUID> selectedProperties = et.getProperties().stream().filter( pid -> random.nextBoolean() )
                 .collect( Collectors.toSet() );
-        EntitySetSelection ess = new EntitySetSelection(
-                Optional.of( syncId ),
-                Optional.of( selectedProperties ) );
+        EntitySetSelection ess = new EntitySetSelection( Optional.of( selectedProperties ) );
         Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi.loadEntitySetData( es.getId(), ess, null );
 
         // check results

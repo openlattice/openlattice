@@ -21,7 +21,6 @@
 package com.openlattice.datastore;
 
 import com.dataloom.mappers.ObjectMappers;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
@@ -29,7 +28,6 @@ import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConf
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.conductor.codecs.pods.TypeCodecsPod;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.datastore.pods.DatastoreSecurityPod;
 import com.openlattice.datastore.pods.DatastoreServicesPod;
@@ -40,13 +38,6 @@ import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
 
 public class Datastore extends BaseRhizomeServer {
-    public static final Class<?>[] webPods     = new Class<?>[] {
-            DatastoreServletsPod.class,
-            DatastoreSecurityPod.class, };
-    public static final Class<?>[] rhizomePods = new Class<?>[] {
-            RegistryBasedHazelcastInstanceConfigurationPod.class,
-            Auth0Pod.class };
-
     public static final Class<?>[] datastorePods = new Class<?>[] {
             DatastoreServicesPod.class,
             TypeCodecsPod.class,
@@ -57,11 +48,15 @@ public class Datastore extends BaseRhizomeServer {
             JdbcPod.class,
             PostgresPod.class
     };
+    public static final Class<?>[] rhizomePods = new Class<?>[] {
+            RegistryBasedHazelcastInstanceConfigurationPod.class,
+            Auth0Pod.class };
+    public static final Class<?>[] webPods     = new Class<?>[] {
+            DatastoreServletsPod.class,
+            DatastoreSecurityPod.class, };
 
     static {
         ObjectMappers.foreach( FullQualifiedNameJacksonSerializer::registerWithMapper );
-        ObjectMappers.foreach( FullQualifiedNameJacksonDeserializer::registerWithMapper );
-        ObjectMappers.foreach( mapper -> mapper.disable( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS ) );
     }
 
     public Datastore( Class<?>... pods ) {

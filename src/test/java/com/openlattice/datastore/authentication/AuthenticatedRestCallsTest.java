@@ -20,13 +20,13 @@
 
 package com.openlattice.datastore.authentication;
 
-import com.openlattice.datastore.BootstrapDatastoreWithCassandra;
+import com.openlattice.datastore.IntegrationTestsBootstrap;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.type.EntityType;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class AuthenticatedRestCallsTest extends BootstrapDatastoreWithCassandra {
+public class AuthenticatedRestCallsTest extends IntegrationTestsBootstrap {
 
     @Test
     public void testAuthenticatedAPICall() {

@@ -126,7 +126,7 @@ public class DatastoreServicesPod {
     public ObjectMapper defaultObjectMapper() {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
         FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
-        FullQualifiedNameJacksonDeserializer.registerWithMapper( mapper );
+
         return mapper;
     }
 
