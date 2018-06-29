@@ -21,14 +21,14 @@ package com.openlattice.edm;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.openlattice.authorization.securable.AbstractSecurableObject;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
+import com.openlattice.authorization.securable.AbstractSecurableObject;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
@@ -38,9 +38,9 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class EntitySet extends AbstractSecurableObject {
     private final UUID        entityTypeId;
+    private final boolean     external;
     private       String      name;
     private       Set<String> contacts;
-    private final boolean     external;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
@@ -66,7 +66,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.name = name;
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
-        this.external = external.or( true ); //Default to external
+        this.external = external.orElse( true ); //Default to external
     }
 
     public EntitySet(
@@ -76,7 +76,7 @@ public class EntitySet extends AbstractSecurableObject {
             String title,
             Optional<String> description,
             Set<String> contacts ) {
-        this( Optional.of( id ), entityTypeId, name, title, description, contacts, Optional.of(true ));
+        this( Optional.of( id ), entityTypeId, name, title, description, contacts, Optional.of( true ) );
     }
 
     public EntitySet(
@@ -85,7 +85,7 @@ public class EntitySet extends AbstractSecurableObject {
             String title,
             Optional<String> description,
             Set<String> contacts ) {
-        this( Optional.absent(), entityTypeId, name, title, description, contacts, Optional.of( true )) ;
+        this( Optional.empty(), entityTypeId, name, title, description, contacts, Optional.of( true ) );
     }
 
     @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD )
@@ -111,7 +111,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.contacts = contacts;
     }
 
-    @JsonProperty(SerializationConstants.EXTERNAL)
+    @JsonProperty( SerializationConstants.EXTERNAL )
     public boolean isExternal() {
         return external;
     }

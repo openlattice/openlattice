@@ -28,9 +28,9 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +48,7 @@ public class Role extends SecurablePrincipal {
             @JsonProperty( SerializationConstants.PRINCIPAL ) Principal principal,
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description ) {
-        super( new AclKey( organizationId, id.or( UUID::randomUUID ) ), principal, title, description );
+        super( new AclKey( organizationId, id.orElseGet( UUID::randomUUID ) ), principal, title, description );
         checkArgument( principal.getType().equals( PrincipalType.ROLE ) );
         this.organizationId = checkNotNull( organizationId, "Organization id cannot be null." );
     }

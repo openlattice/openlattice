@@ -18,7 +18,11 @@
 
 package com.openlattice.graph;
 
-import com.openlattice.data.EntityKey;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.SetMultimap;
+import com.openlattice.graph.query.Query;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -31,9 +35,12 @@ public interface GraphApi {
     String CONTROLLER = "/graph";
     String BASE       = SERVICE + CONTROLLER;
 
-    EntityKey getEdge( DirectedEdge edge );
-
-    Void createOrUpdateEdge( DirectedEdge edge , EntityKey entityKey );
-    Void deleteEdge( DirectedEdge edge );
+    /**
+     *
+     * @param ops
+     * @return
+     */
+    ListMultimap<UUID, SetMultimap<UUID, SetMultimap<UUID, Object>>> graphQuery( Set<Query> ops ); // Entity Key Id -> Property Type Id -> Entity Set Id
+    //That is a list of entities along with properties annotated with which entity set they came from.
 
 }

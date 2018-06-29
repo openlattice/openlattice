@@ -21,26 +21,24 @@ package com.openlattice.edm.type;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.UUID;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class ComplexType extends AbstractSchemaAssociatedSecurableType {
 
-    private LinkedHashSet<UUID>       properties;
     private final Optional<UUID>      baseType;
     private final SecurableObjectType category;
-    private transient int             h = 0;
+    private       LinkedHashSet<UUID> properties;
+    private transient int h = 0;
 
     @JsonCreator
     public ComplexType(
@@ -78,7 +76,7 @@ public class ComplexType extends AbstractSchemaAssociatedSecurableType {
             LinkedHashSet<UUID> properties,
             Optional<UUID> baseType,
             SecurableObjectType category ) {
-        this( Optional.absent(), type, title, Optional.of( description ), schemas, properties, baseType, category );
+        this( Optional.empty(), type, title, Optional.of( description ), schemas, properties, baseType, category );
     }
 
     @JsonProperty( SerializationConstants.PARENT_TYPE_FIELD )
@@ -126,17 +124,17 @@ public class ComplexType extends AbstractSchemaAssociatedSecurableType {
 
     @Override
     public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( !super.equals( obj ) ) return false;
-        if ( getClass() != obj.getClass() ) return false;
+        if ( this == obj ) { return true; }
+        if ( !super.equals( obj ) ) { return false; }
+        if ( getClass() != obj.getClass() ) { return false; }
         ComplexType other = (ComplexType) obj;
         if ( baseType == null ) {
-            if ( other.baseType != null ) return false;
-        } else if ( !baseType.equals( other.baseType ) ) return false;
-        if ( category != other.category ) return false;
+            if ( other.baseType != null ) { return false; }
+        } else if ( !baseType.equals( other.baseType ) ) { return false; }
+        if ( category != other.category ) { return false; }
         if ( properties == null ) {
-            if ( other.properties != null ) return false;
-        } else if ( !properties.equals( other.properties ) ) return false;
+            if ( other.properties != null ) { return false; }
+        } else if ( !properties.equals( other.properties ) ) { return false; }
         return true;
     }
 

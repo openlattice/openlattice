@@ -25,9 +25,9 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.openlattice.authorization.AclKey;
 import java.util.EnumSet;
+import java.util.Optional;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -42,7 +42,7 @@ public class Request {
             @JsonProperty( SerializationConstants.ACL_OBJECT_PATH ) AclKey aclKey,
             @JsonProperty( SerializationConstants.PERMISSIONS ) EnumSet<Permission> permissions,
             @JsonProperty( SerializationConstants.REASON ) Optional<String> reason ) {
-        this( aclKey, permissions, reason.or( "" ) );
+        this( aclKey, permissions, reason.orElse( "" ) );
     }
 
     public Request( AclKey aclKey, EnumSet<Permission> permissions, String reason ) {

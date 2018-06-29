@@ -21,8 +21,8 @@ package com.openlattice.edm.requests;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -188,24 +188,24 @@ public class MetadataUpdate {
         return new MetadataUpdate(
                 update.getTitle(),
                 update.getDescription(),
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
                 update.getType(),
                 update.getPii(),
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToEntityTypeUpdate( MetadataUpdate update ) {
         return new MetadataUpdate(
                 update.getTitle(),
                 update.getDescription(),
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
                 update.getType(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToEntitySetUpdate( MetadataUpdate update ) {
@@ -214,22 +214,22 @@ public class MetadataUpdate {
                 update.getDescription(),
                 update.getName(),
                 update.getContacts(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToEntitySetPropertyMetadataUpdate( MetadataUpdate update ) {
         return new MetadataUpdate(
                 update.getTitle(),
                 update.getDescription(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 update.getDefaultShow(),
-                Optional.absent() );
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToAppUpdate( MetadataUpdate update ) {
@@ -237,10 +237,10 @@ public class MetadataUpdate {
                 update.getTitle(),
                 update.getDescription(),
                 update.getName(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 update.getUrl() );
     }
 
@@ -248,11 +248,11 @@ public class MetadataUpdate {
         return new MetadataUpdate(
                 update.getTitle(),
                 update.getDescription(),
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
                 update.getType(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
     }
 }
