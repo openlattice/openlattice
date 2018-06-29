@@ -18,44 +18,69 @@
 
 package com.openlattice.data.serializers;
 
-import java.io.IOException;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.io.IOException;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
-public class FullQualifiedNameJacksonSerializer extends StdSerializer<FullQualifiedName> {
-    private static final long         serialVersionUID = 642017294181795076L;
-    private static final SimpleModule module           = new SimpleModule();
+public class FullQualifiedNameJacksonSerializer {
+    private static final SimpleModule module           =
+            new SimpleModule( FullQualifiedNameJacksonSerializer.class.getName() );
 
     static {
-        module.addSerializer( FullQualifiedName.class, new FullQualifiedNameJacksonSerializer() );
-    }
-
-    public FullQualifiedNameJacksonSerializer() {
-        this( FullQualifiedName.class );
-    }
-
-    public FullQualifiedNameJacksonSerializer( Class<FullQualifiedName> clazz ) {
-        super( clazz );
-    }
-
-    @Override
-    public void serialize( FullQualifiedName value, JsonGenerator jgen, SerializerProvider provider )
-            throws IOException, JsonGenerationException {
-        jgen.writeStartObject();
-        jgen.writeStringField( SerializationConstants.NAMESPACE_FIELD, value.getNamespace() );
-        jgen.writeStringField( SerializationConstants.NAME_FIELD, value.getName() );
-        jgen.writeEndObject();
+        module.addSerializer( FullQualifiedName.class, new FullQualifiedNameJacksonSerializer.Serializer() );
+        module.addDeserializer( FullQualifiedName.class, new FullQualifiedNameJacksonSerializer.Deserializer() );
     }
 
     public static void registerWithMapper( ObjectMapper mapper ) {
         mapper.registerModule( module );
+    }
+
+    public static class Serializer extends StdSerializer<FullQualifiedName> {
+
+        public Serializer() {
+            this( FullQualifiedName.class );
+        }
+
+        public Serializer( Class<FullQualifiedName> clazz ) {
+            super( clazz );
+        }
+
+        @Override
+        public void serialize( FullQualifiedName value, JsonGenerator jgen, SerializerProvider provider )
+                throws IOException {
+            jgen.writeStartObject();
+            jgen.writeStringField( SerializationConstants.NAMESPACE_FIELD, value.getNamespace() );
+            jgen.writeStringField( SerializationConstants.NAME_FIELD, value.getName() );
+            jgen.writeEndObject();
+        }
+    }
+
+    public static class Deserializer extends StdDeserializer<FullQualifiedName> {
+
+        public Deserializer() {
+            this( FullQualifiedName.class );
+        }
+
+        protected Deserializer( Class<FullQualifiedName> clazz ) {
+            super( clazz );
+        }
+
+        @Override
+        public FullQualifiedName deserialize( JsonParser jp, DeserializationContext ctxt ) throws IOException {
+            JsonNode node = jp.getCodec().readTree( jp );
+            return new FullQualifiedName(
+                    node.get( SerializationConstants.NAMESPACE_FIELD ).asText(),
+                    node.get( SerializationConstants.NAME_FIELD ).asText() );
+        }
+
     }
 }

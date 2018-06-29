@@ -46,7 +46,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
@@ -63,7 +62,6 @@ import java.util.UUID;
 public class BulkDataCreation implements Serializable {
     static {
         FullQualifiedNameJacksonSerializer.registerWithMapper( ObjectMappers.getJsonMapper() );
-        FullQualifiedNameJacksonDeserializer.registerWithMapper( ObjectMappers.getJsonMapper() );
     }
 
     private Set<Entity>      entities;

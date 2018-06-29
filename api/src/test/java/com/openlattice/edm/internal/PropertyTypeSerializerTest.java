@@ -30,9 +30,9 @@ public class PropertyTypeSerializerTest extends AbstractJacksonSerializationTest
     @BeforeClass
     public static void configureSerializer() {
         FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
-        FullQualifiedNameJacksonDeserializer.registerWithMapper( mapper );
+
         FullQualifiedNameJacksonSerializer.registerWithMapper( smile );
-        FullQualifiedNameJacksonDeserializer.registerWithMapper( smile );
+
     }
 
     @Override
