@@ -18,21 +18,13 @@
 
 package com.openlattice.edm.internal;
 
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import org.junit.BeforeClass;
 
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.mapstores.TestDataFactory;
-
 public class EntitySetSerializerTest extends AbstractJacksonSerializationTest<PropertyType> {
-
-    @BeforeClass
-    public static void configureSerializer() {
-        FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
-        FullQualifiedNameJacksonSerializer.registerWithMapper( smile );
-    }
 
     @Override
     protected PropertyType getSampleData() {
@@ -42,5 +34,11 @@ public class EntitySetSerializerTest extends AbstractJacksonSerializationTest<Pr
     @Override
     protected Class<PropertyType> getClazz() {
         return PropertyType.class;
+    }
+
+    @BeforeClass
+    public static void configureSerializer() {
+        FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
+        FullQualifiedNameJacksonSerializer.registerWithMapper( smile );
     }
 }
