@@ -123,8 +123,8 @@ public interface DataApi {
 
      * Creates a new set of associations.
      *
-     * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
-     * UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
+     * @param associations Set of associations to create. Keys are association entity set ids and values for each keys
+     * are the data to be created.
      */
     @POST( BASE + "/" + ASSOCIATION )
     ListMultimap<UUID, UUID> createAssociations( @Body ListMultimap<UUID, DataEdge> associations );
