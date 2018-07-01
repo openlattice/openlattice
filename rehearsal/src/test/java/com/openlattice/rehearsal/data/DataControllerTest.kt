@@ -25,6 +25,8 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
+import com.openlattice.data.DataEdge
+import com.openlattice.data.EntityDataKey
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.mapstores.TestDataFactory
@@ -125,11 +127,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val replacementMap = mapOf(ids[0]!! to replacement)
 
-        Assert.assertEquals( 1, dataApi.replaceEntities(es.id, replacementMap, true ) )
+        Assert.assertEquals(1, dataApi.replaceEntities(es.id, replacementMap, true))
 
         val ess2 = EntitySetSelection(
                 Optional.of(et.properties),
-                Optional.of(setOf( ids[0] ) )
+                Optional.of(setOf(ids[0]))
         )
         val data2 = ImmutableList
                 .copyOf(dataApi.loadEntitySetData(es.id, ess2, FileType.json))
@@ -143,10 +145,77 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             it.value.removeAll(DataTables.LAST_WRITE_FQN)
         }
 
-        Assert.assertFalse(data2[0][fqnCache[replacementProperty]] == indexActual[ids[0]]!![fqnCache[replacementProperty]])
-
+        Assert.assertFalse(
+                data2[0][fqnCache[replacementProperty]] == indexActual[ids[0]]!![fqnCache[replacementProperty]]
+        )
     }
 
+    @Test
+    fun createEdges() {
+        val et = MultipleAuthenticatedUsersBase.createEntityType()
+        waitForIt()
+        val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
+        waitForIt()
+        val src = MultipleAuthenticatedUsersBase.createEntityType()
+        waitForIt()
+        val esSrc = MultipleAuthenticatedUsersBase.createEntitySet(src)
+        waitForIt()
+        val dst = MultipleAuthenticatedUsersBase.createEntityType()
+        waitForIt()
+        val esDst = MultipleAuthenticatedUsersBase.createEntitySet(dst)
+        waitForIt()
+        val at = MultipleAuthenticatedUsersBase.createAssociationType(et, setOf(src), setOf(dst))
+        waitForIt()
+
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
+
+        val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val idsSrc = dataApi.createOrMergeEntities(esSrc.id, entriesSrc)
+
+        val entriesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createOrMergeEntities(esDst.id, entriesDst)
+
+        val indexExpectedSrc = entriesSrc.mapIndexed { index, data -> idsSrc[index] to keyByFqn(data) }.toMap()
+        val indexExpectedDst = entriesSrc.mapIndexed { index, data -> idsDst[index] to keyByFqn(data) }.toMap()
+
+
+        val edgesToBeCreated: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
+        val edgeData = createDataEdges(es.id, et.properties, idsSrc, idsDst)
+        edgesToBeCreated.putAll(edgeData.first, edgeData.second)
+
+        val createdEdges = dataApi.createAssociations(edgesToBeCreated)
+
+        Assert.assertNotNull(createdEdges)
+        Assert.assertEquals(edgeData.second.size, createdEdges.values().size)
+
+        val ess = EntitySetSelection(
+                Optional.of(et.properties),
+                Optional.of(HashSet(createdEdges.values()))
+        )
+
+        val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+
+        Assert.assertEquals(  edgeData.second.map{ it.data } , actualEdgeData )
+        dataApi.ass
+    }
+
+    private fun createDataEdges(
+            entitySetId: UUID,
+            properties: Set<UUID>,
+            srcIds: List<UUID>,
+            dstIds: List<UUID>
+    ): Pair<UUID, List<DataEdge>> {
+        val edgeData = TestDataFactory.randomStringEntityData(numberOfEntries, properties).values.toList()
+
+        val edges = srcIds.mapIndexed { index, data ->
+            val srcDataKey = EntityDataKey(entitySetId, srcIds[index])
+            val dstDataKey = EntityDataKey(entitySetId, dstIds[index])
+            DataEdge(srcDataKey, dstDataKey, edgeData[index])
+        }
+
+        return entitySetId to edges;
+    }
 
     private fun keyByFqn(data: SetMultimap<UUID, Any>): SetMultimap<FullQualifiedName, Any> {
         val rekeyed: SetMultimap<FullQualifiedName, Any> = HashMultimap.create()

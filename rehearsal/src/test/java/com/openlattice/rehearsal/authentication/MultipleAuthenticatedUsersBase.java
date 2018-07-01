@@ -29,6 +29,7 @@ import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.data.DataApi;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
@@ -39,9 +40,12 @@ import com.openlattice.search.SearchApi;
 import com.openlattice.sync.SyncApi;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Assert;
 import retrofit2.Retrofit;
@@ -134,16 +138,37 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return pt;
     }
 
-    public static EntityType createEntityType() {
-        PropertyType p1 = createPropertyType();
+    public static EntityType createEntityType( UUID... propertyTypes ) {
         PropertyType k = createPropertyType();
-        PropertyType p2 = createPropertyType();
-
         EntityType expected = TestDataFactory.entityType( k );
         expected.removePropertyTypes( expected.getProperties() );
-        expected.addPropertyTypes( ImmutableSet.of( k.getId(), p1.getId(), p2.getId() ) );
+
+        if ( propertyTypes == null || propertyTypes.length == 0 ) {
+            PropertyType p1 = createPropertyType();
+            PropertyType p2 = createPropertyType();
+            expected.addPropertyTypes( ImmutableSet.of( k.getId(), p1.getId(), p2.getId() ) );
+        } else {
+            expected.addPropertyTypes( ImmutableSet.copyOf( propertyTypes ) );
+        }
+
         UUID entityTypeId = edmApi.createEntityType( expected );
         Assert.assertNotNull( "Entity type creation shouldn't return null UUID.", entityTypeId );
+
+        return expected;
+    }
+
+    public static AssociationType createAssociationType(
+            EntityType aet,
+            Set<EntityType> src,
+            Set<EntityType> dst ) {
+
+        AssociationType expected = new AssociationType( Optional.of( aet ),
+                src.stream().map( EntityType::getId ).collect( Collectors.toCollection( LinkedHashSet::new ) ),
+                dst.stream().map( EntityType::getId ).collect( Collectors.toCollection( LinkedHashSet::new ) ),
+                false );
+
+        UUID associationTypeId = edmApi.createAssociationType( expected );
+        Assert.assertNotNull( "Assert association type shouldn't return null UUID.", associationTypeId );
 
         return expected;
     }
