@@ -21,14 +21,33 @@
 
 package com.openlattice.graph.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.util.Set;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class And extends AbstractQuery {
-    public And( Set<Query> childQueries ) {
-        super( childQueries );
+public abstract class AbstractEdgeQuery implements EdgeQuery {
+    private final Set<EdgeQuery> childQueries;
+
+    public AbstractEdgeQuery( Set<EdgeQuery> childQueries ) {
+        this.childQueries = childQueries;
+    }
+
+    public Set<EdgeQuery> getChildQueries() {
+        return childQueries;
+    }
+
+    public static class And extends AbstractEdgeQuery {
+        public And( Set<EdgeQuery> childQueries ) {
+            super( childQueries );
+        }
+    }
+
+    public static class Or extends AbstractEdgeQuery {
+        public Or( Set<EdgeQuery> childQueries ) {
+            super( childQueries );
+        }
     }
 }

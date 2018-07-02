@@ -28,13 +28,14 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Used to represent a property and all associated metadata for that property.
- *
  */
-@SuppressFBWarnings(value="", justification = "POJO for Rest APIs")
+@SuppressFBWarnings( value = "", justification = "POJO for Rest APIs" )
 public class Property {
+    private final UUID           entitySetId;
     private final byte[]         hash;
     private final Object         value;
     private final long           version;
@@ -44,18 +45,25 @@ public class Property {
 
     @JsonCreator
     public Property(
+            @JsonProperty( SerializationConstants.ENTITY_SET_ID ) UUID entitySetId,
             @JsonProperty( SerializationConstants.HASH ) byte[] hash,
             @JsonProperty( SerializationConstants.VALUE_FIELD ) Object value,
             @JsonProperty( SerializationConstants.VERSION ) long version,
             @JsonProperty( SerializationConstants.VERSIONS ) long[] versions,
             @JsonProperty( SerializationConstants.LAST_WRITE ) OffsetDateTime lastWrite,
             @JsonProperty( SerializationConstants.LAST_INDEX ) OffsetDateTime lastIndex ) {
+        this.entitySetId = entitySetId;
         this.value = value;
         this.hash = hash;
         this.version = version;
         this.versions = versions;
         this.lastWrite = lastWrite;
         this.lastIndex = lastIndex;
+    }
+
+    @JsonProperty( SerializationConstants.ENTITY_SET_ID )
+    public UUID getEntitySetId() {
+        return entitySetId;
     }
 
     @JsonProperty( SerializationConstants.VALUE_FIELD )

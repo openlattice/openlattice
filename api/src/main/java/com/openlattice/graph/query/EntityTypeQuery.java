@@ -21,18 +21,24 @@
 
 package com.openlattice.graph.query;
 
+import static com.openlattice.client.serialization.SerializationConstants.ENTITY_TYPE_ID_FIELD;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntityTypeQuery implements Query {
+public class EntityTypeQuery implements EntityQuery {
     private final UUID entityTypeId;
 
+    @JsonCreator
     public EntityTypeQuery( UUID entityTypeId ) {
         this.entityTypeId = entityTypeId;
     }
 
+    @JsonProperty( ENTITY_TYPE_ID_FIELD )
     public UUID getEntityTypeId() {
         return entityTypeId;
     }

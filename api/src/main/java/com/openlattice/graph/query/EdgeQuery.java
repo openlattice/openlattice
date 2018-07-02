@@ -21,34 +21,31 @@
 
 package com.openlattice.graph.query;
 
-import com.google.common.collect.ImmutableSet;
-import com.openlattice.graph.query.AbstractQuery;
-import com.openlattice.graph.query.Query;
+import static java.util.Arrays.asList;
+
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.openlattice.graph.query.AbstractEdgeQuery.And;
+import com.openlattice.graph.query.AbstractEdgeQuery.Or;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class AssociationQuery extends AbstractQuery {
-    private final Query source;
-    private final Query destination;
-    private final Query association;
+@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+public interface EdgeQuery {
 
-    public AssociationQuery( Query source, Query destination, Query association ) {
-        super( ImmutableSet.of() );
-        this.source = source;
-        this.destination = destination;
-        this.association = association;
+    default And and( EdgeQuery... queries ) {
+        final Set<EdgeQuery> newQueries = new HashSet<>( queries.length + 1 );
+        newQueries.add( this );
+        newQueries.addAll( asList( queries ) );
+        return new And( newQueries );
     }
 
-    public Query getSource() {
-        return source;
-    }
-
-    public Query getDestination() {
-        return destination;
-    }
-
-    public Query getAssociation() {
-        return association;
+    default Or or( EdgeQuery... queries ) {
+        final Set<EdgeQuery> newQueries = new HashSet<>( queries.length + 1 );
+        newQueries.add( this );
+        newQueries.addAll( asList( queries ));
+        return new Or( newQueries );
     }
 }

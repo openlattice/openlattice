@@ -19,15 +19,22 @@
  *
  */
 
-package com.openlattice.graph.query;
+package com.openlattice.graph;
 
-import java.util.Set;
+import com.google.common.collect.SetMultimap;
+import com.openlattice.data.DataEdgeKey;
+import com.openlattice.data.Property;
+import com.openlattice.graph.query.GraphQuery.AssociationIndexes;
+import java.util.List;
+import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Or extends AbstractQuery {
-    public Or( Set<Query> childQueries ) {
-        super( childQueries );
-    }
+public class SubGraph {
+    private final List<Iterable<SetMultimap<FullQualifiedName, Property>>> entities;
+    private final List<Iterable<DataEdgeKey>                                    edges;
+
+    private final Iterable<AssociationIndexes> edges
 }

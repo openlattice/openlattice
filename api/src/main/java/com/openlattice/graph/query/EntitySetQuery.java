@@ -31,7 +31,7 @@ import java.util.UUID;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntitySetQuery implements Query {
+public class EntitySetQuery implements EntityQuery {
     private final UUID entitySetId;
 
     @JsonCreator
@@ -52,6 +52,7 @@ public class EntitySetQuery implements Query {
         return Objects.hash( entitySetId );
     }
 
+    @JsonProperty( ENTITY_SET_ID )
     public UUID getEntitySetId() {
         return entitySetId;
     }

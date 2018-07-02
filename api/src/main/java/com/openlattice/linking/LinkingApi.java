@@ -19,13 +19,11 @@
 package com.openlattice.linking;
 
 import com.openlattice.data.DataApi;
+import com.openlattice.data.EntityKey;
+import com.openlattice.edm.type.LinkingEntityType;
 import com.openlattice.linking.requests.LinkingRequest;
 import java.util.Set;
 import java.util.UUID;
-
-import com.openlattice.data.EntityKey;
-import com.openlattice.edm.type.LinkingEntityType;
-
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.POST;
@@ -40,18 +38,17 @@ import retrofit2.http.Path;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public interface LinkingApi {
+    String CONTROLLER = "/linking";
+    String ENTITY_ID        = "entityId";
+    String LINKED_ENTITY_ID = "linkedEntityId";
     /*
      * These determine the service routing for the LB
      */
-    String SERVICE          = "/datastore";
-    String CONTROLLER       = "/linking";
-    String BASE             = SERVICE + CONTROLLER;
-
+    String SERVICE    = "/datastore";
+    String BASE       = SERVICE + CONTROLLER;
+    String SET              = "set";
     String SET_ID           = "setId";
     String SYNC_ID          = "syncId";
-    String ENTITY_ID        = "entityId";
-    String SET              = "set";
-    String LINKED_ENTITY_ID = "linkedEntityId";
     String TYPE             = "type";
 
     /**
@@ -68,10 +65,10 @@ public interface LinkingApi {
      * Performs linking operation on entity sets.
      *
      * @param linkingRequest A request including a set of property type ids to populate in the linking result, and a
-     *            linking entity set definition consisting of an entity set and associated properties to link on. Each
-     *            map in linking properties must be the same length, with entity set ids as a keys and property type ids
-     *            as values. If no maps are provided, an empty linking entity set is created that can be populated by
-     *            calling {@link LinkingApi#linkEntities(UUID, UUID, UUID, Set)}.
+     * linking entity set definition consisting of an entity set and associated properties to link on. Each
+     * map in linking properties must be the same length, with entity set ids as a keys and property type ids
+     * as values. If no maps are provided, an empty linking entity set is created that can be populated by
+     * calling {@link LinkingApi#linkEntities(UUID, UUID, Set)}.
      * @return The id of the new entity set constructed from linking the desired entity sets.
      */
     @POST( BASE )
@@ -80,42 +77,33 @@ public interface LinkingApi {
     /**
      * Links a set of entities into a new linked entity.
      *
-     * @param syncId
-     * @param entitySetId
-     * @param entityId
-     * @param entities
      * @return The entity id of the new linked entity id
      */
-    @POST( BASE + "/" + SET + "/{" + SYNC_ID + "}/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
+    @POST( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
     UUID linkEntities(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId,
             @Body Set<EntityKey> entities );
 
-    @PUT( BASE + "/" + SET + "/{" + SYNC_ID + "}/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
+    @PUT( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
     Void setLinkedEntities(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId,
             @Body Set<EntityKey> entities );
 
-    @DELETE( BASE + "/" + SET + "/{" + SYNC_ID + "}/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
+    @DELETE( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
     Void deleteLinkedEntities(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId );
 
-    @PUT( BASE + "/" + SET + "/{" + SYNC_ID + "}/{" + SET_ID + "}/{" + ENTITY_ID + "}/{" + LINKED_ENTITY_ID + "}" )
+    @PUT( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}/{" + LINKED_ENTITY_ID + "}" )
     Void addLinkedEntities(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId,
             @Path( LINKED_ENTITY_ID ) UUID linkedEntityId );
 
-    @DELETE( BASE + "/" + SET + "/{" + SYNC_ID + "}/{" + SET_ID + "}/{" + ENTITY_ID + "}/{" + LINKED_ENTITY_ID + "}" )
+    @DELETE( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}/{" + LINKED_ENTITY_ID + "}" )
     Void removeLinkedEntity(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId,
             @Path( LINKED_ENTITY_ID ) UUID linkedEntityId );

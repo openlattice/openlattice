@@ -21,22 +21,30 @@
 
 package com.openlattice.graph.query;
 
+import static java.util.Arrays.asList;
+
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.openlattice.graph.query.AbstractEntityQuery.And;
+import com.openlattice.graph.query.AbstractEntityQuery.Or;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Interface for
  */
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public abstract class AbstractQuery implements Query {
-    private final Set<Query> childQueries;
-
-    public AbstractQuery( Set<Query> childQueries ) {
-        this.childQueries = childQueries;
+@JsonTypeInfo( use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class" )
+public interface EntityQuery {
+    default And and( EntityQuery... queries ) {
+        final Set<EntityQuery> newQueries = new HashSet<>( queries.length + 1 );
+        newQueries.add( this );
+        newQueries.addAll( asList( queries ) );
+        return new And( newQueries );
     }
 
-    public Set<Query> getChildQueries() {
-        return childQueries;
+    default Or or( EntityQuery... queries ) {
+        final Set<EntityQuery> newQueries = new HashSet<>( queries.length + 1 );
+        newQueries.add( this );
+        newQueries.addAll( asList( queries ));
+        return new Or( newQueries );
     }
-
 }

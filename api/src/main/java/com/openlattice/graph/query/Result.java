@@ -21,19 +21,22 @@
 
 package com.openlattice.graph.query;
 
-import static java.util.Arrays.asList;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public interface Query {
+public class Result {
+    private final UUID queryId;
+    private final long entityCount;
+    private final long edgeCount;
+    private final OffsetDateTime expiration;
 
+    public Result( UUID queryId, long entityCount, long edgeCount, OffsetDateTime expiration ) {
+        this.queryId = queryId;
+        this.entityCount = entityCount;
+        this.edgeCount = edgeCount;
+        this.expiration = expiration;
+    }
 }
