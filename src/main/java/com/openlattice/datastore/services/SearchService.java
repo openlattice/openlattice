@@ -69,7 +69,7 @@ import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.graph.core.GraphApi;
+import com.openlattice.graph.core.GraphService;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
@@ -118,7 +118,7 @@ public class SearchService {
     private EdmManager dataModelService;
 
     @Inject
-    private GraphApi graphApi;
+    private GraphService graphService;
 
     @Inject
     private EntityDatastore dataManager;
@@ -401,7 +401,7 @@ public class SearchService {
         SetMultimap<UUID, UUID> entityKeyIdToEntitySetId = HashMultimap.create();
         Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps = Maps.newHashMap();
 
-        graphApi.getEdgesAndNeighborsForVertices( entityKeyIds ).forEach( edge -> {
+        graphService.getEdgesAndNeighborsForVertices( entityKeyIds ).forEach( edge -> {
             edges.add( edge );
             entitySetIds.add( edge.getEdge().getEntitySetId() );
             entitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
