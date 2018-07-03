@@ -21,17 +21,27 @@
 
 package com.openlattice.graph.query;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
 public abstract class AbstractEntityQuery implements EntityQuery {
+    private final UUID             entityTypeId;
     private final Set<EntityQuery> childQueries;
 
-    public AbstractEntityQuery( Set<EntityQuery> childQueries ) {
+    public AbstractEntityQuery( UUID entityTypeId, Set<EntityQuery> childQueries ) {
+        this.entityTypeId = entityTypeId;
         this.childQueries = childQueries;
+    }
+
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
+    @Override public UUID getEntityTypeId() {
+        return entityTypeId;
     }
 
     public Set<EntityQuery> getChildQueries() {
@@ -39,14 +49,14 @@ public abstract class AbstractEntityQuery implements EntityQuery {
     }
 
     public static class And extends AbstractEntityQuery {
-        public And( Set<EntityQuery> childQueries ) {
-            super( childQueries );
+        public And( UUID entityTypeId, Set<EntityQuery> childQueries ) {
+            super( entityTypeId, childQueries );
         }
     }
 
     public static class Or extends AbstractEntityQuery {
-        public Or( Set<EntityQuery> childQueries ) {
-            super( childQueries );
+        public Or( UUID entityTypeId, Set<EntityQuery> childQueries ) {
+            super( entityTypeId, childQueries );
         }
     }
 

@@ -21,10 +21,12 @@
 
 package com.openlattice.graph.query;
 
-import static com.openlattice.client.serialization.SerializationConstants.ENTITY_TYPE_ID_FIELD;
+import static com.openlattice.client.serialization.SerializationConstants.ENTITY_TYPE_ID;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -38,8 +40,12 @@ public class EntityTypeQuery implements EntityQuery {
         this.entityTypeId = entityTypeId;
     }
 
-    @JsonProperty( ENTITY_TYPE_ID_FIELD )
+    @JsonProperty( ENTITY_TYPE_ID )
     public UUID getEntityTypeId() {
         return entityTypeId;
+    }
+
+    @Override public Set<EntityQuery> getChildQueries() {
+        return ImmutableSet.of();
     }
 }

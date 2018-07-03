@@ -21,18 +21,27 @@
 
 package com.openlattice.graph.query;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public abstract class AbstractEdgeQuery implements EdgeQuery {
+    private final UUID           associationEntityTypeId;
     private final Set<EdgeQuery> childQueries;
 
-    public AbstractEdgeQuery( Set<EdgeQuery> childQueries ) {
+    public AbstractEdgeQuery( UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
+        this.associationEntityTypeId = associationEntityTypeId;
         this.childQueries = childQueries;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ASSOCIATION_ENTITY_TYPE )
+    public UUID getAssociationEntityTypeId() {
+        return associationEntityTypeId;
     }
 
     public Set<EdgeQuery> getChildQueries() {
@@ -40,14 +49,14 @@ public abstract class AbstractEdgeQuery implements EdgeQuery {
     }
 
     public static class And extends AbstractEdgeQuery {
-        public And( Set<EdgeQuery> childQueries ) {
-            super( childQueries );
+        public And( UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
+            super( associationEntityTypeId, childQueries );
         }
     }
 
     public static class Or extends AbstractEdgeQuery {
-        public Or( Set<EdgeQuery> childQueries ) {
-            super( childQueries );
+        public Or( UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
+            super( associationEntityTypeId, childQueries );
         }
     }
 }

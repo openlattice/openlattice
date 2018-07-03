@@ -21,30 +21,48 @@
 
 package com.openlattice.graph.query;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Arrays.asList;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.openlattice.graph.query.AbstractEntityQuery.And;
 import com.openlattice.graph.query.AbstractEntityQuery.Or;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Interface for
  */
 @JsonTypeInfo( use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class" )
 public interface EntityQuery {
+    UUID getEntityTypeId();
+
+    Set<EntityQuery> getChildQueries();
+
+    default void dfs( EntityQueryVisitor v ) {
+        getChildQueries().forEach( cQ -> cQ.dfs( v ) );
+        v.accept( this );
+    }
+
     default And and( EntityQuery... queries ) {
         final Set<EntityQuery> newQueries = new HashSet<>( queries.length + 1 );
+        final List<EntityQuery> toAnd = asList( queries );
+        checkState( toAnd.stream().allMatch( eq -> eq.getEntityTypeId().equals( eq.getEntityTypeId() ) ),
+                "Entity types match to perform boolean query!" );
         newQueries.add( this );
-        newQueries.addAll( asList( queries ) );
-        return new And( newQueries );
+        newQueries.addAll( toAnd );
+        return new And( getEntityTypeId(), newQueries );
     }
 
     default Or or( EntityQuery... queries ) {
         final Set<EntityQuery> newQueries = new HashSet<>( queries.length + 1 );
+        final List<EntityQuery> toOr = asList( queries );
+        checkState( toOr.stream().allMatch( eq -> eq.getEntityTypeId().equals( eq.getEntityTypeId() ) ),
+                "Entity types match to perform boolean query!" );
         newQueries.add( this );
-        newQueries.addAll( asList( queries ));
-        return new Or( newQueries );
+        newQueries.addAll( toOr );
+        return new Or( getEntityTypeId(), newQueries );
     }
 }

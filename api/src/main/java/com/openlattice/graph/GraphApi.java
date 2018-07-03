@@ -41,8 +41,6 @@ public interface GraphApi {
 
     SubGraph getResults( UUID queryId );
 
-    Map<UUID, Iterable<SetMultimap<Ful>>>
-
     /**
      *
      * @param ops

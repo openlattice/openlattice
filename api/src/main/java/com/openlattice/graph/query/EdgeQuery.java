@@ -21,31 +21,52 @@
 
 package com.openlattice.graph.query;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Arrays.asList;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.openlattice.graph.query.AbstractEdgeQuery.And;
 import com.openlattice.graph.query.AbstractEdgeQuery.Or;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
+@JsonTypeInfo( use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class" )
 public interface EdgeQuery {
+    UUID getAssociationEntityTypeId();
 
+    Set<EdgeQuery> getChildQueries();
+
+    default void dfs( EdgeQueryVisitor v ) {
+        getChildQueries().forEach( cQ -> cQ.dfs( v ) );
+        v.accept( this );
+    }
+    
     default And and( EdgeQuery... queries ) {
         final Set<EdgeQuery> newQueries = new HashSet<>( queries.length + 1 );
+        final List<EdgeQuery> toAnd = asList( queries );
+        checkState( toAnd
+                        .stream()
+                        .allMatch( eq -> eq.getAssociationEntityTypeId().equals( eq.getAssociationEntityTypeId() ) ),
+                "Association entity types must match to combine in boolean fashion." );
         newQueries.add( this );
-        newQueries.addAll( asList( queries ) );
-        return new And( newQueries );
+        newQueries.addAll( toAnd );
+        return new And( getAssociationEntityTypeId(), newQueries );
     }
 
     default Or or( EdgeQuery... queries ) {
         final Set<EdgeQuery> newQueries = new HashSet<>( queries.length + 1 );
+        final List<EdgeQuery> toOr = asList( queries );
+        checkState( toOr
+                        .stream()
+                        .allMatch( eq -> eq.getAssociationEntityTypeId().equals( eq.getAssociationEntityTypeId() ) ),
+                "Association entity types must match to combine in boolean fashion." );
         newQueries.add( this );
-        newQueries.addAll( asList( queries ));
-        return new Or( newQueries );
+        newQueries.addAll( toOr );
+        return new Or( getAssociationEntityTypeId(), newQueries );
     }
 }

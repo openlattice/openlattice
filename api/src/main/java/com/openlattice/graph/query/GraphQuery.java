@@ -22,7 +22,10 @@
 package com.openlattice.graph.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.collect.ImmutableSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -31,6 +34,7 @@ public class GraphQuery {
     private final List<EntityQuery>        entityQueries;
     private final List<AssociationIndexes> associationQueries;
 
+    @JsonCreator
     public GraphQuery(
             List<EntityQuery> entityQueries,
             List<AssociationIndexes> associationQueries ) {
@@ -38,13 +42,23 @@ public class GraphQuery {
         this.associationQueries = associationQueries;
     }
 
+    public List<EntityQuery> getEntityQueries() {
+        return entityQueries;
+    }
+
+    public List<AssociationIndexes> getAssociationQueries() {
+        return associationQueries;
+    }
+
     public static class AssociationIndexes implements EdgeQuery {
-        private final int srcIndex;
-        private final int dstIndex;
-        private final int edgeIndex;
+        private final UUID associationEntityTypeId;
+        private final int  srcIndex;
+        private final int  dstIndex;
+        private final int  edgeIndex;
 
         @JsonCreator
-        public AssociationIndexes( int srcIndex, int dstIndex, int edgeIndex ) {
+        public AssociationIndexes( UUID associationEntityTypeId, int srcIndex, int dstIndex, int edgeIndex ) {
+            this.associationEntityTypeId = associationEntityTypeId;
             this.srcIndex = srcIndex;
             this.dstIndex = dstIndex;
             this.edgeIndex = edgeIndex;
@@ -60,6 +74,14 @@ public class GraphQuery {
 
         public int getEdgeIndex() {
             return edgeIndex;
+        }
+
+        @Override public UUID getAssociationEntityTypeId() {
+            return null;
+        }
+
+        @Override public Set<EdgeQuery> getChildQueries() {
+            return ImmutableSet.of();
         }
     }
 }

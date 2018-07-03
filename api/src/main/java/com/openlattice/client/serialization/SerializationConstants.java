@@ -79,9 +79,8 @@ public final class SerializationConstants {
     public static final String ENTITY_SET_NAME                  = "entitySetName";
     public static final String ENTITY_TYPE                      = "entityType";
     public static final String ENTITY_TYPES                     = "entityTypes";
-    public static final String ENTITY_TYPE_ID                   = "eid";
+    public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
-    public static final String ENTITY_TYPE_ID_FIELD             = "entityTypeId";
     public static final String ERROR                            = "error";
     public static final String ERRORS                           = "errors";
     public static final String EXACT                            = "exact";
