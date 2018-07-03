@@ -37,7 +37,7 @@ import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.graph.core.GraphApi
+import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
@@ -60,7 +60,7 @@ private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 open class DataGraphService(
         hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
-        private val lm: GraphApi,
+        private val lm: GraphService,
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore
 ) : DataGraphManager {

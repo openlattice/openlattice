@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.graph.core
+package com.openlattice.graph
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
@@ -27,7 +27,8 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.datastore.services.EdmService
+import com.openlattice.graph.core.GraphService
+import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.postgres.DataTables.COUNT_FQN
@@ -50,7 +51,7 @@ import java.util.stream.Stream
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphApi {
+class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
 
     override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
@@ -193,7 +194,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val srcEntitySetId = rs.getObject(SRC_ENTITY_SET_ID.name) as UUID
                     val edgeEntitySetId = rs.getObject(EDGE_ENTITY_SET_ID.name) as UUID
                     val dstEntitySetId = rs.getObject(DST_ENTITY_SET_ID.name) as UUID
-                    neighbors.add( NeighborSets(srcEntitySetId,edgeEntitySetId, dstEntitySetId ) )
+                    neighbors.add(
+                            NeighborSets(srcEntitySetId, edgeEntitySetId, dstEntitySetId)
+                    )
                 }
             }
         }
@@ -210,11 +213,15 @@ private fun selectEdges(keys: Set<EdgeKey>): String {
 }
 
 private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
-    return associationClauses(SRC_ENTITY_SET_ID.name, entitySetId, DST_ENTITY_SET_ID.name, associationFilters)
+    return associationClauses(
+            SRC_ENTITY_SET_ID.name, entitySetId, DST_ENTITY_SET_ID.name, associationFilters
+    )
 }
 
 private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
-    return associationClauses(DST_ENTITY_SET_ID.name, entitySetId, SRC_ENTITY_SET_ID.name, associationFilters)
+    return associationClauses(
+            DST_ENTITY_SET_ID.name, entitySetId, SRC_ENTITY_SET_ID.name, associationFilters
+    )
 }
 
 /**

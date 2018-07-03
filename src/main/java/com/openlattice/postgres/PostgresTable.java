@@ -31,6 +31,7 @@ import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
 import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.BLOCK_ID;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
+import static com.openlattice.postgres.PostgresColumn.CLAUSES;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -57,6 +58,7 @@ import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_IDS;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.EVENT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.EXPIRY;
 import static com.openlattice.postgres.PostgresColumn.FLAGS;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_DIAMETER;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
@@ -78,6 +80,7 @@ import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
@@ -293,6 +296,11 @@ public final class PostgresTable {
                     .addColumns( GRAPH_ID, VERTEX_ID, NEW_VERTEX_ID )
                     .primaryKey( GRAPH_ID, VERTEX_ID );
 
+    public static final PostgresTableDefinition ENTITY_QUERIES =
+            new PostgresTableDefinition( "entity_graph_queries" )
+                    .addColumns( QUERY_ID, ID_VALUE, CLAUSES, EXPIRY )
+                    .primaryKey( QUERY_ID, ID_VALUE );
+
     public static final List<PostgresColumnDefinition> HASH_ON =
             ImmutableList.of(
                     ID,
@@ -341,6 +349,10 @@ public final class PostgresTable {
                 new PostgresIndexDefinition( APPS, ID )
                         .name( "id_idx" )
                         .ifNotExists() );
+        ENTITY_QUERIES.addIndexes(
+                new PostgresIndexDefinition( ENTITY_QUERIES, ID_VALUE )
+                .name( "id_idx" )
+                .ifNotExists() );
     }
 
     private PostgresTable() {

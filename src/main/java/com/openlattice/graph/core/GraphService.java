@@ -35,7 +35,7 @@ import java.util.stream.Stream;
 /**
  * Graph Object supporting CRUD operations of vertices and edges to the graph.
  */
-public interface GraphApi {
+public interface GraphService {
 
     int createEdges( Set<EdgeKey> keys );
 
