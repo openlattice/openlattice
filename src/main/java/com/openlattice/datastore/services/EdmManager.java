@@ -199,8 +199,6 @@ public interface EdmManager {
 
     Iterable<EntityType> getAvailableAssociationTypesForEntityType( UUID entityTypeId );
 
-    void setEntityDataModel( EntityDataModel edm );
-
     EntityDataModelDiff getEntityDataModelDiff( EntityDataModel edm );
 
     Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata(
@@ -212,4 +210,8 @@ public interface EdmManager {
     void updateEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId, MetadataUpdate update );
 
     EntityDataModel getEntityDataModel();
+
+    void setEntityDataModel( EntityDataModel edm );
+
+    Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId );
 }

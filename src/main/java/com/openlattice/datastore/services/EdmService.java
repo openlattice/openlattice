@@ -39,6 +39,7 @@ import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
@@ -1517,6 +1518,10 @@ public class EdmService implements EdmManager {
                 createOrUpdateAssociationType( at );
             }
         } );
+    }
+
+    @Override public Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId ) {
+        return entitySets.values( Predicates.equal( "entityTypeId", entityTypeId ) );
     }
 
 }
