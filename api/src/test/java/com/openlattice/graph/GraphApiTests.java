@@ -40,7 +40,7 @@ public class GraphApiTests {
     @Test
     public void testSerdes() throws IOException {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
-        final EntitySetQuery esq = new EntitySetQuery( UUID.randomUUID() );
+        final EntitySetQuery esq = new EntitySetQuery( UUID.randomUUID(), entityTypeId );
         String json = mapper.writeValueAsString( esq );
         logger.info( "Json: {}", json );
         final EntitySetQuery actual = mapper.readValue( json, EntitySetQuery.class );

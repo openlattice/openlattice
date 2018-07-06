@@ -25,35 +25,60 @@ import static com.openlattice.client.serialization.SerializationConstants.ENTITY
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class EntitySetQuery implements EntityQuery {
-    private final UUID entitySetId;
+    private final Optional<UUID> entitySetId;
+    private final UUID entityTypeId;
 
     @JsonCreator
     public EntitySetQuery(
-            @JsonProperty( ENTITY_SET_ID ) UUID entitySetId ) {
+            @JsonProperty( ENTITY_SET_ID ) Optional<UUID> entitySetId,
+            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId ) {
         this.entitySetId = entitySetId;
+        this.entityTypeId = entityTypeId;
+    }
+
+    @JsonProperty( ENTITY_SET_ID )
+    public Optional<UUID> getEntitySetId() {
+        return entitySetId;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
+    public UUID getEntityTypeId() {
+        return entityTypeId;
+    }
+
+    @Override public Set<EntityQuery> getChildQueries() {
+        return ImmutableSet.of();
     }
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof EntitySetQuery ) ) { return false; }
         EntitySetQuery that = (EntitySetQuery) o;
-        return Objects.equals( entitySetId, that.entitySetId );
+        return Objects.equals( entitySetId, that.entitySetId ) &&
+                Objects.equals( entityTypeId, that.entityTypeId );
     }
 
     @Override public int hashCode() {
 
-        return Objects.hash( entitySetId );
+        return Objects.hash( entitySetId, entityTypeId );
     }
 
-    @JsonProperty( ENTITY_SET_ID )
-    public UUID getEntitySetId() {
-        return entitySetId;
+    @Override public String toString() {
+        return "EntitySetQuery{" +
+                "entitySetId=" + entitySetId +
+                ", entityTypeId=" + entityTypeId +
+                '}';
     }
 }

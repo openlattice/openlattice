@@ -22,21 +22,26 @@
 package com.openlattice.graph.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import java.util.Optional;
+import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class ComparisonQuery implements Query {
+public class EntitySetComparisonQuery extends EntitySetQuery {
     private final FullQualifiedName fqn;
     private final Object            value;
     private final ComparisonOp      comparisonOp;
 
     @JsonCreator
-    public ComparisonQuery(
+    public EntitySetComparisonQuery(
+            Optional<UUID> entitySetId,
+            UUID entityTypeId,
             FullQualifiedName fqn,
             Object value,
             ComparisonOp comparisonOp ) {
+        super( entitySetId, entityTypeId );
         this.fqn = fqn;
         this.value = value;
         this.comparisonOp = comparisonOp;
