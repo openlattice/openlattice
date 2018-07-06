@@ -80,6 +80,7 @@ import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.QUERY;
 import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
@@ -91,6 +92,7 @@ import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.SRC_LINKING_VERTEX_ID;
 import static com.openlattice.postgres.PostgresColumn.SRC_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
 import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
 import static com.openlattice.postgres.PostgresColumn.TIME_UUID;
@@ -298,8 +300,12 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition ENTITY_QUERIES =
             new PostgresTableDefinition( "entity_graph_queries" )
-                    .addColumns( QUERY_ID, ID_VALUE, CLAUSES, EXPIRY )
+                    .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
                     .primaryKey( QUERY_ID, ID_VALUE );
+    public static final PostgresTableDefinition GRAPH_QUERIES =
+            new PostgresTableDefinition( "graph_queries" )
+                    .addColumns( QUERY_ID, QUERY, STATE, EXPIRY )
+                    .primaryKey( QUERY_ID );
 
     public static final List<PostgresColumnDefinition> HASH_ON =
             ImmutableList.of(
@@ -353,6 +359,8 @@ public final class PostgresTable {
                 new PostgresIndexDefinition( ENTITY_QUERIES, ID_VALUE )
                 .name( "id_idx" )
                 .ifNotExists() );
+        GRAPH_QUERIES.addIndexes(
+                new PostgresIndexDefinition( GRAPH_QUERIES, EXPIRY ).name( "expiry_idx" ).ifNotExists() );
     }
 
     private PostgresTable() {

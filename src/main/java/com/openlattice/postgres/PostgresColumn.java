@@ -241,6 +241,8 @@ public final class PostgresColumn {
     public static final String                   PROPERTY_TYPE_ID_FIELD      = "property_type_id";
     public static final PostgresColumnDefinition PROPERTY_TYPE_ID            =
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
+    public static final PostgresColumnDefinition QUERY                       =
+            new PostgresColumnDefinition( "query", TEXT ).notNull();
     public static final PostgresColumnDefinition QUERY_ID                    =
             new PostgresColumnDefinition( "query_id", UUID );
     public static final String                   REASON_FIELD                = "reason";
@@ -279,6 +281,8 @@ public final class PostgresColumn {
     public static final String                   SRC_TYPE_ID_FIELD           = "src_type_id";
     public static final PostgresColumnDefinition SRC_TYPE_ID                 =
             new PostgresColumnDefinition( SRC_TYPE_ID_FIELD, UUID );
+    public static final PostgresColumnDefinition STATE                       =
+            new PostgresColumnDefinition( "state", TEXT ).notNull();
     public static final String                   STATUS_FIELD                = "status";
     public static final PostgresColumnDefinition STATUS                      =
             new PostgresColumnDefinition( STATUS_FIELD, TEXT ).notNull();
