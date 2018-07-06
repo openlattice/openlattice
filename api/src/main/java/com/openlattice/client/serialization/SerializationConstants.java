@@ -64,6 +64,7 @@ public final class SerializationConstants {
     public static final String DST                              = "dst";
     public static final String EDGE                             = "edge";
     public static final String EDM_TEMPLATES_FIELD              = "edmTemplates";
+    public static final String ELAPSED_MILLIS                   = "elapsedMillis";
     public static final String EMAILS_FIELD                     = "emails";
     public static final String ENTITIES                         = "entities";
     public static final String ENTITY_COUNT                     = "entityCount";
@@ -134,11 +135,14 @@ public final class SerializationConstants {
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
     public static final String PROPERTY_TYPE_IDS                = "pid";
     public static final String PROPERTY_TYPE_ID_LIST            = "propertyTypeIds";
+    public static final String QUERY_ID                         = "queryId";
     public static final String REASON                           = "reason";
     public static final String REQUEST                          = "request";
     public static final String REQUESTING_USER                  = "requestingUser";
     public static final String REQUEST_ID                       = "requestId";
     public static final String REQUEST_STATUS                   = "status";
+    public static final String RESULT                           = "result";
+    public static final String RESULT_SUMMARY                   = "resultSummary";
     public static final String ROLES                            = "roles";
     public static final String SCHEMA                           = "schema";
     public static final String SCHEMAS                          = "schemas";
@@ -146,6 +150,7 @@ public final class SerializationConstants {
     public static final String SEARCH_TERM                      = "searchTerm";
     public static final String SRC                              = "src";
     public static final String START                            = "start";
+    public static final String STATE                            = "state";
     public static final String STATUS                           = "status";
     public static final String SYNC_ID                          = "syncId";
     public static final String SYNC_IDS                         = "syncIds";

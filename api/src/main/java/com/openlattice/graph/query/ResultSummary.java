@@ -27,13 +27,13 @@ import java.util.UUID;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Result {
-    private final UUID queryId;
-    private final long entityCount;
-    private final long edgeCount;
+public class ResultSummary {
+    private final UUID           queryId;
+    private final long           entityCount;
+    private final long           edgeCount;
     private final OffsetDateTime expiration;
 
-    public Result( UUID queryId, long entityCount, long edgeCount, OffsetDateTime expiration ) {
+    public ResultSummary( UUID queryId, long entityCount, long edgeCount, OffsetDateTime expiration ) {
         this.queryId = queryId;
         this.entityCount = entityCount;
         this.edgeCount = edgeCount;
