@@ -24,37 +24,71 @@ package com.openlattice.graph.controllers
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.graph.GraphApi
+import com.openlattice.graph.GraphApi.ID
+import com.openlattice.graph.GraphApi.QUERY
+import com.openlattice.graph.GraphQueryService
 import com.openlattice.graph.SubGraph
-import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.query.GraphQuery
-import com.openlattice.graph.query.Result
-import org.springframework.stereotype.Controller
-import org.springframework.web.bind.annotation.RequestMapping
+import com.openlattice.graph.query.GraphQueryState
+import org.springframework.http.MediaType
+import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
 
 /**
  *
  */
-@Controller
+@RestController
 @RequestMapping(GraphApi.CONTROLLER)
 open class GraphController
 @Inject
-constructor(private val graphService: GraphService) : GraphApi {
+constructor(
+        private val graphQueryService: GraphQueryService,
+        private val authorizationManager: AuthorizationManager
+) : GraphApi, AuthorizingComponent {
+
     @Timed
-    override fun query(query: GraphQuery?): Result {
+    @PostMapping(
+            value = QUERY,
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun submit(query: GraphQuery): GraphQueryState {
+
+        return graphQueryService.submitQuery(query);
+    }
+
+    @Timed
+    @PostMapping(
+            value = QUERY,
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun getQueryState(
+            @PathVariable(ID) queryId: UUID,
+            @RequestBody options: Set<GraphQueryState.Option>
+    ): GraphQueryState {
+        return graphQueryService.getQueryState(queryId, options)
+    }
+
+    override fun getQueryState(queryId: UUID): GraphQueryState {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     @Timed
-    override fun getResults(queryId: UUID?): SubGraph {
+    override fun getResults(queryId: UUID): SubGraph {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     @Timed
-    override fun graphQuery(ops: GraphQuery?): ListMultimap<UUID, SetMultimap<UUID, SetMultimap<UUID, Any>>> {
+    override fun graphQuery(ops: GraphQuery): ListMultimap<UUID, SetMultimap<UUID, SetMultimap<UUID, Any>>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
+    override fun getAuthorizationManager(): AuthorizationManager {
+        return authorizationManager
+    }
 }

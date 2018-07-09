@@ -84,6 +84,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -461,8 +462,18 @@ public class DataController implements DataApi, AuthorizingComponent {
         return dgm.getEntity( entitySetId, entityKeyId, authorizedPropertyTypes );
     }
 
-    @Override public Set<Object> getEntity( UUID entitySetId, UUID entityKeyId, UUID propertyTypeId ) {
-        return null;
+    @Override
+    @GetMapping(
+            path = "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Set<Object> getEntity( UUID entitySetId, UUID entityKeyId, UUID propertyTypeId ) {
+        ensureReadAccess( new AclKey( entitySetId ) );
+        ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
+        Map<UUID, PropertyType> authorizedPropertyTypes = dms
+                .getPropertyTypesAsMap( ImmutableSet.of( propertyTypeId ) );
+
+        return dgm.getEntity( entitySetId, entitySetId, authorizedPropertyTypes )
+                .get( authorizedPropertyTypes.get( propertyTypeId ).getType() );
     }
 
     /**
