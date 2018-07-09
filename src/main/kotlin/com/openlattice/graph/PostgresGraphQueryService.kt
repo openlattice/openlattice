@@ -24,8 +24,10 @@ package com.openlattice.graph
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
+import com.openlattice.graph.query.ResultSummary
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.GRAPH_QUERIES
+import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
@@ -40,15 +42,24 @@ class PostgresGraphQueryService(
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun getQueryState(queryId: UUID): UUID {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun getQueryState(queryId: UUID, options: Set<GraphQueryState.Option>): GraphQueryState {
+        val queryState = getQueryState(queryId)
+        if (options.contains(GraphQueryState.Option.RESULT)) {
+            queryState.result = getResult(queryId)
+        }
+
+        if (options.contains(GraphQueryState.Option.SUMMARY)) {
+            queryState.resultSummary = getResultSummary(queryId)
+        }
+        return queryState
     }
+
 
     override fun abortQuery(queryId: UUID) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun submitQuery(query: GraphQuery): UUID {
+    override fun submitQuery(query: GraphQuery): GraphQueryState {
         val queryId = UUID.randomUUID()
         saveQuery(queryId, query);
         //TODO: Consider stronger of enforcement of uniqueness for mission critical
@@ -56,6 +67,7 @@ class PostgresGraphQueryService(
         query.entityQueries.forEach { it.dfs(visitor) }
         val queryMap = visitor.queryMap
         discard(visitor.queryId, query.entityQueries.map { visitor.queryMap[it]!! })
+        val queryState = GraphQueryState(visitor.queryId, GraphQueryState.State.RUNNING, )
         return visitor.queryId
     }
 
@@ -68,10 +80,24 @@ class PostgresGraphQueryService(
             ps.setObject(1, queryId)
             ps.setString(2, queryJson)
             ps.setString(3, GraphQueryState.State.RUNNING.name)
-            ps.setObject(4, System.currentTimeMillis() + TTL_MILLIS)
+            ps.setLong(4, System.currentTimeMillis() + TTL_MILLIS)
             //TODO: Consider checking to make sure value was inserted.
             ps.executeUpdate()
         }
+    }
+
+    private fun getQueryState(queryId: UUID): GraphQueryState {
+        val conn = hds.connection
+        conn.use {
+            val ps = conn.prepareStatement(readGraphQueryState)
+            ps.setObject(1, queryId)
+            val rs = ps.executeQuery()
+            return ResultSetAdapters.graphQueryState(rs)
+        }
+    }
+
+    private fun getResultSummary(queryId: UUID): Optional<ResultSummary> {
+
     }
 
     /**
@@ -85,6 +111,7 @@ class PostgresGraphQueryService(
 }
 
 const val TTL_MILLIS = 10 * 60 * 1000;
+private val readGraphQueryState = "SELECT * FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"
 private val insertGraphQuery =
-        "INSERT INTO ${GRAPH_QUERIES.name} (${QUERY_ID.name},${QUERY.name},${STATE.name},${EXPIRY.name}) " +
+        "INSERT INTO ${GRAPH_QUERIES.name} (${QUERY_ID.name},${QUERY.name},${STATE.name},${START_TIME.name}) " +
                 "VALUES (?,?,?,?)"

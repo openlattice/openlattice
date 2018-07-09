@@ -23,7 +23,7 @@ package com.openlattice.graph
 
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
-import com.openlattice.graph.query.GraphQueryState.Options
+import com.openlattice.graph.query.GraphQueryState.Option
 import java.util.*
 
 /**
@@ -33,8 +33,8 @@ import java.util.*
 interface GraphQueryService {
     fun submitQuery(query: GraphQuery): GraphQueryState
     fun getQuery(queryId: UUID): GraphQuery
-    fun getQueryState(queryId: UUID, options: Set<Options> = setOf()): GraphQueryState
+    fun getQueryState(queryId: UUID, options: Set<Option> = setOf()): GraphQueryState
     fun abortQuery(queryId: UUID)
-    fun getResult(queryId: UUID): SubGraph
+    fun getResult(queryId: UUID): Optional<SubGraph>
 
 }

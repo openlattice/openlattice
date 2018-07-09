@@ -67,6 +67,7 @@ import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
@@ -74,6 +75,8 @@ import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.SHOW;
 import static com.openlattice.postgres.PostgresColumn.SRC;
+import static com.openlattice.postgres.PostgresColumn.START_TIME;
+import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
 import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
 import static com.openlattice.postgres.PostgresColumn.TITLE;
@@ -117,6 +120,8 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
+import com.openlattice.graph.query.GraphQueryState;
+import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.LinkingVertex;
 import com.openlattice.linking.LinkingVertexKey;
@@ -154,6 +159,18 @@ import org.slf4j.LoggerFactory;
  */
 public final class ResultSetAdapters {
     private static final Logger logger = LoggerFactory.getLogger( ResultSetAdapters.class );
+
+    public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
+        final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
+        final State state = State.valueOf( rs.getString( STATE.getName() ) );
+        final long startTime = rs.getLong( START_TIME.getName() );
+        return new GraphQueryState(
+                queryId,
+                state,
+                Optional.empty(),
+                System.currentTimeMillis() - startTime,
+                Optional.empty() );
+    }
 
     public static DataKey dataKey( ResultSet rs ) throws SQLException {
         UUID id = (UUID) rs.getObject( "id" );

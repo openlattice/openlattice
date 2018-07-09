@@ -60,7 +60,7 @@ class EntityQueryExecutingVisitor(private val hds: HikariDataSource, val queryId
     private fun executeQuery(query: EntityKeyIdQuery) {
         val currentClauseIndex = assignIndex(query)
         val sql = "INSERT INTO ${ENTITY_QUERIES.name} " +
-                "(${QUERY_ID.name},${ID_VALUE.name},${CLAUSES.name},${EXPIRY.name}) " +
+                "(${QUERY_ID.name},${ID_VALUE.name},${CLAUSES.name},${START_TIME.name}) " +
                 "VALUES ($queryId,${query.entityKeyId},ARRAY[$currentClauseIndex],$expiry) " +
                 "ON CONFLICT((${QUERY_ID.name},${ID_VALUE.name}) " +
                 "DO UPDATE SET ${ENTITY_QUERIES.name}.${CLAUSES.name} = " +

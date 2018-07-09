@@ -160,8 +160,6 @@ public final class PostgresColumn {
     public static final String                   EVENT_TYPE_FIELD            = "event_type";
     public static final PostgresColumnDefinition EVENT_TYPE                  =
             new PostgresColumnDefinition( EVENT_TYPE_FIELD, TEXT );
-    public static final PostgresColumnDefinition EXPIRY                      = new PostgresColumnDefinition( "expiry",
-            PostgresDatatype.BIGINT );
     public static final String                   FLAGS_FIELD                 = "flags";
     public static final PostgresColumnDefinition FLAGS                       =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
@@ -218,7 +216,6 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition PERMISSIONS                 =
             new PostgresColumnDefinition( PERMISSIONS_FIELD, TEXT_ARRAY );
     public static final String                   PII_FIELD                   = "pii";
-
     public static final PostgresColumnDefinition PII                         =
             new PostgresColumnDefinition( PII_FIELD, BOOLEAN )
                     .withDefault( false )
@@ -281,6 +278,9 @@ public final class PostgresColumn {
     public static final String                   SRC_TYPE_ID_FIELD           = "src_type_id";
     public static final PostgresColumnDefinition SRC_TYPE_ID                 =
             new PostgresColumnDefinition( SRC_TYPE_ID_FIELD, UUID );
+    public static final PostgresColumnDefinition START_TIME                  = new PostgresColumnDefinition(
+            "start_time",
+            PostgresDatatype.BIGINT );
     public static final PostgresColumnDefinition STATE                       =
             new PostgresColumnDefinition( "state", TEXT ).notNull();
     public static final String                   STATUS_FIELD                = "status";

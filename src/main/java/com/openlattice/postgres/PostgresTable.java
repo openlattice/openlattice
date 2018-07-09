@@ -58,7 +58,7 @@ import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_IDS;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.EVENT_TYPE;
-import static com.openlattice.postgres.PostgresColumn.EXPIRY;
+import static com.openlattice.postgres.PostgresColumn.START_TIME;
 import static com.openlattice.postgres.PostgresColumn.FLAGS;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_DIAMETER;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
@@ -304,7 +304,7 @@ public final class PostgresTable {
                     .primaryKey( QUERY_ID, ID_VALUE );
     public static final PostgresTableDefinition GRAPH_QUERIES =
             new PostgresTableDefinition( "graph_queries" )
-                    .addColumns( QUERY_ID, QUERY, STATE, EXPIRY )
+                    .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
                     .primaryKey( QUERY_ID );
 
     public static final List<PostgresColumnDefinition> HASH_ON =
@@ -360,7 +360,7 @@ public final class PostgresTable {
                 .name( "id_idx" )
                 .ifNotExists() );
         GRAPH_QUERIES.addIndexes(
-                new PostgresIndexDefinition( GRAPH_QUERIES, EXPIRY ).name( "expiry_idx" ).ifNotExists() );
+                new PostgresIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "expiry_idx" ).ifNotExists() );
     }
 
     private PostgresTable() {
