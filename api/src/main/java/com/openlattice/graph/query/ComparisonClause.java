@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.openlattice.client.serialization.SerializationConstants;
-import java.util.Set;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -71,6 +70,25 @@ public class ComparisonClause extends AbstractBooleanClauses {
         LTE,
         GT,
         GTE;
+
+        /**
+         * These must all be reversed since ANY clause inverts form of logic.
+         */
+        public String getArrayComparisonString() {
+            switch ( this ) {
+                case EQUAL:
+                    return "=";
+                case LT:
+                    return ">";
+                case LTE:
+                    return ">=";
+                case GT:
+                    return "<";
+                case GTE:
+                    return "<=";
+            }
+            return null;
+        }
 
         public String getComparisionString() {
             switch ( this ) {
