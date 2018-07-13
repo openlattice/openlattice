@@ -21,7 +21,12 @@
 
 package com.openlattice.graph
 
-import com.openlattice.graph.query.*
+import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.query.AbstractEntityQuery
+import com.openlattice.graph.query.EntityKeyIdQuery
+import com.openlattice.graph.query.EntityQuery
+import com.openlattice.graph.query.EntitySetQuery
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.ENTITY_QUERIES
 import com.zaxxer.hikari.HikariDataSource
@@ -32,14 +37,19 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class EntityQueryExecutingVisitor(private val hds: HikariDataSource, val queryId: UUID) : EntityQueryVisitor {
+class EntityQueryExecutingVisitor(
+        private val hds: HikariDataSource,
+        private val edm: EdmManager,
+        private val authorizedPropertyTypes: Map<UUID, PropertyType>,
+        val queryId: UUID
+) : EntityQueryVisitor {
     private val indexGen = AtomicInteger()
     private val expiry = System.currentTimeMillis() + 10 * 60 * 1000 //10 minute, arbitary
     val queryMap: MutableMap<EntityQuery, Int> = mutableMapOf()
     override fun accept(query: EntityQuery) {
+        query.childQueries.forEach(this)
         when (query) {
             is EntitySetQuery -> executeQuery(query)
-            is EntityTypeQuery -> executeQuery(query)
             is EntityKeyIdQuery -> executeQuery(query)
             is AbstractEntityQuery.And -> executeQuery(query)
             is AbstractEntityQuery.Or -> executeQuery(query)
@@ -54,17 +64,17 @@ class EntityQueryExecutingVisitor(private val hds: HikariDataSource, val queryId
     private fun executeQuery(query: AbstractEntityQuery.And) {
         val clauses = query.childQueries.map { queryMap[it]!! }
         val currentClauseIndex = assignIndex(query)
-
     }
 
     private fun executeQuery(query: EntityKeyIdQuery) {
-        val currentClauseIndex = assignIndex(query)
+        //An entity key id query is easy to satisfy by plugging in entity key ids.
+        //val currentClauseIndex = assignIndex(query)
         val sql = "INSERT INTO ${ENTITY_QUERIES.name} " +
                 "(${QUERY_ID.name},${ID_VALUE.name},${CLAUSES.name},${START_TIME.name}) " +
-                "VALUES ($queryId,${query.entityKeyId},ARRAY[$currentClauseIndex],$expiry) " +
+                "VALUES ($queryId,${query.entityKeyId},ARRAY[${query.id}],$expiry) " +
                 "ON CONFLICT((${QUERY_ID.name},${ID_VALUE.name}) " +
                 "DO UPDATE SET ${ENTITY_QUERIES.name}.${CLAUSES.name} = " +
-                "s${ENTITY_QUERIES.name}.${CLAUSES.name} || EXCLUDED.${CLAUSES.name}  "
+                "${ENTITY_QUERIES.name}.${CLAUSES.name} || EXCLUDED.${CLAUSES.name}  "
 
         val connection = hds.connection
         connection.use {
@@ -72,12 +82,31 @@ class EntityQueryExecutingVisitor(private val hds: HikariDataSource, val queryId
         }
     }
 
-    private fun executeQuery(query: EntityTypeQuery) {
-
-    }
-
+    /**
+     * Executes an entity set query.
+     */
     private fun executeQuery(query: EntitySetQuery) {
+        val clausesVisitor = ClauseBuildingVisitor()
+        val clauses = clausesVisitor.apply(query.clauses)
+        val entitySetIds = query.entitySetId
+                .map { setOf(it) }
+                .orElse(edm.getEntitySetsOfType(query.entityTypeId).map { it.id }.toSet())
 
+        //For each entity set we have to execute a boolean query and insert it into 
+        val selectSql = "SELECT * FROM $query."
+
+        val sql = "INSERT INTO ${ENTITY_QUERIES.name} " +
+                "(${QUERY_ID.name},${ID_VALUE.name},${CLAUSES.name},${START_TIME.name}) " +
+                "VALUES ($queryId,${query.entityKeyId},ARRAY[${query.id}],$expiry) " +
+                "ON CONFLICT((${QUERY_ID.name},${ID_VALUE.name}) " +
+                "DO UPDATE SET ${ENTITY_QUERIES.name}.${CLAUSES.name} = " +
+                "${ENTITY_QUERIES.name}.${CLAUSES.name} || EXCLUDED.${CLAUSES.name}  "
+
+
+        val connection = hds.connection
+        connection.use {
+            connection.createStatement().executeUpdate(sql)
+        }
     }
 
     private fun assignIndex(query: EntityQuery): Int {

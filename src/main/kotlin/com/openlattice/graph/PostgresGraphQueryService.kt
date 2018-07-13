@@ -39,7 +39,14 @@ class PostgresGraphQueryService(
         private val hds: HikariDataSource, private val mapper: ObjectMapper
 ) : GraphQueryService {
     override fun getQuery(queryId: UUID): GraphQuery {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val conn = hds.connection
+        conn.use {
+            val ps = conn.prepareStatement(getQuerySql)
+            ps.setObject(1, queryId)
+            val rs = ps.executeQuery()
+            val json = rs.getString( QUERY.name )
+            return mapper.readValue( json, GraphQuery::class.java )
+        }
     }
 
     override fun getQueryState(queryId: UUID, options: Set<GraphQueryState.Option>): GraphQueryState {
@@ -54,37 +61,45 @@ class PostgresGraphQueryService(
         return queryState
     }
 
-
     override fun abortQuery(queryId: UUID) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
+
     override fun submitQuery(query: GraphQuery): GraphQueryState {
         val queryId = UUID.randomUUID()
-        saveQuery(queryId, query);
+        val startTime = saveQuery(queryId, query)
         //TODO: Consider stronger of enforcement of uniqueness for mission critical
         val visitor = EntityQueryExecutingVisitor(hds, queryId)
-        query.entityQueries.forEach { it.dfs(visitor) }
+        query.entityQueries.forEach( visitor )
         val queryMap = visitor.queryMap
         discard(visitor.queryId, query.entityQueries.map { visitor.queryMap[it]!! })
-        val queryState = GraphQueryState(visitor.queryId, GraphQueryState.State.RUNNING, )
-        return visitor.queryId
+        val queryState = GraphQueryState(
+                visitor.queryId,
+                GraphQueryState.State.RUNNING,
+                System.currentTimeMillis() - startTime
+        )
+        return queryState
     }
 
-
-    private fun saveQuery(queryId: UUID, query: GraphQuery) {
+    private fun saveQuery(queryId: UUID, query: GraphQuery): Long {
+        val startTime = System.currentTimeMillis()
         val queryJson = mapper.writeValueAsString(query);
         val conn = hds.connection
+
         conn.use {
             val ps = conn.prepareStatement(insertGraphQuery)
             ps.setObject(1, queryId)
             ps.setString(2, queryJson)
             ps.setString(3, GraphQueryState.State.RUNNING.name)
-            ps.setLong(4, System.currentTimeMillis() + TTL_MILLIS)
+            ps.setLong(4, startTime)
             //TODO: Consider checking to make sure value was inserted.
             ps.executeUpdate()
         }
+
+        return startTime
     }
+
 
     private fun getQueryState(queryId: UUID): GraphQueryState {
         val conn = hds.connection
@@ -96,8 +111,19 @@ class PostgresGraphQueryService(
         }
     }
 
-    private fun getResultSummary(queryId: UUID): Optional<ResultSummary> {
 
+    private fun getResultSummary(queryId: UUID): Optional<ResultSummary> {
+        //Retrieve the query so we can compute the result summary
+        val query = getQuery(queryId)
+
+        //
+
+        return
+
+    }
+
+    override fun getResult(queryId: UUID): Optional<SubGraph> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     /**
@@ -110,7 +136,9 @@ class PostgresGraphQueryService(
     }
 }
 
-const val TTL_MILLIS = 10 * 60 * 1000;
+const val TTL_MILLIS = 10 * 60 * 1000
+private val getEntityEntityQuery 
+private val getQuerySql = "SELECT ${QUERY.name} FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"
 private val readGraphQueryState = "SELECT * FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"
 private val insertGraphQuery =
         "INSERT INTO ${GRAPH_QUERIES.name} (${QUERY_ID.name},${QUERY.name},${STATE.name},${START_TIME.name}) " +

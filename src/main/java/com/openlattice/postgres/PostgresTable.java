@@ -358,7 +358,9 @@ public final class PostgresTable {
         ENTITY_QUERIES.addIndexes(
                 new PostgresIndexDefinition( ENTITY_QUERIES, ID_VALUE )
                 .name( "id_idx" )
-                .ifNotExists() );
+                .ifNotExists(),
+                new PostgresIndexDefinition( ENTITY_QUERIES, CLAUSES )
+        .name( "" ));
         GRAPH_QUERIES.addIndexes(
                 new PostgresIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "expiry_idx" ).ifNotExists() );
     }
