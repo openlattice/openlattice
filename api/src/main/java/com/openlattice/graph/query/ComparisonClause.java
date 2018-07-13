@@ -22,51 +22,57 @@
 package com.openlattice.graph.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import java.util.Optional;
-import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Set;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntitySetComparisonQuery extends EntitySetQuery {
+public class ComparisonClause extends AbstractBooleanClauses {
     private final FullQualifiedName fqn;
     private final Object            value;
     private final ComparisonOp      comparisonOp;
 
     @JsonCreator
-    public EntitySetComparisonQuery(
-            Optional<UUID> entitySetId,
-            UUID entityTypeId,
-            FullQualifiedName fqn,
-            Object value,
-            ComparisonOp comparisonOp ) {
-        super( entitySetId, entityTypeId );
+    public ComparisonClause(
+            @JsonProperty( SerializationConstants.ID_FIELD ) int id,
+            @JsonProperty( SerializationConstants.DATATYPE_FIELD ) EdmPrimitiveTypeKind datatype,
+            @JsonProperty( SerializationConstants.FQN ) FullQualifiedName fqn,
+            @JsonProperty( SerializationConstants.VALUE_FIELD ) Object value,
+            @JsonProperty( SerializationConstants.COMPARISON ) ComparisonOp comparisonOp ) {
+        super( id, datatype, ImmutableSet.of() );
         this.fqn = fqn;
         this.value = value;
         this.comparisonOp = comparisonOp;
     }
 
+    @JsonProperty( SerializationConstants.COMPARISON )
     public ComparisonOp getComparisonOp() {
         return comparisonOp;
     }
 
+    @JsonProperty( SerializationConstants.FQN )
     public FullQualifiedName getFqn() {
         return fqn;
     }
 
+    @JsonProperty( SerializationConstants.VALUE_FIELD )
     public Object getValue() {
         return value;
     }
 
-    enum ComparisonOp {
+    public enum ComparisonOp {
         EQUAL,
         LT,
         LTE,
         GT,
         GTE;
 
-        String getComparisionString() {
+        public String getComparisionString() {
             switch ( this ) {
                 case EQUAL:
                     return "=";

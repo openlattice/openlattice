@@ -25,21 +25,21 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Set;
-import java.util.UUID;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-public abstract class AbstractEntityQuery implements EntityQuery {
-    private final int              id;
-    private final UUID             entityTypeId;
-    private final Set<EntityQuery> childQueries;
+public abstract class AbstractBooleanClauses implements BooleanClauses {
+    private final int                  id;
+    private final EdmPrimitiveTypeKind datatype;
+    private final Set<BooleanClauses>  childClauses;
 
-    public AbstractEntityQuery( int id, UUID entityTypeId, Set<EntityQuery> childQueries ) {
+    public AbstractBooleanClauses( int id, EdmPrimitiveTypeKind datatype, Set<BooleanClauses> childClauses ) {
         this.id = id;
-        this.entityTypeId = entityTypeId;
-        this.childQueries = childQueries;
+        this.datatype = datatype;
+        this.childClauses = childClauses;
     }
 
     @Override
@@ -48,32 +48,35 @@ public abstract class AbstractEntityQuery implements EntityQuery {
         return id;
     }
 
-    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
-    @Override public UUID getEntityTypeId() {
-        return entityTypeId;
+    @Override
+    @JsonProperty( SerializationConstants.DATATYPE_FIELD )
+    public EdmPrimitiveTypeKind getDatatype() {
+        return datatype;
     }
 
-    public Set<EntityQuery> getChildQueries() {
-        return childQueries;
+    @Override
+    @JsonProperty( SerializationConstants.CHILD_QUERIES )
+    public Set<BooleanClauses> getChildClauses() {
+        return childClauses;
     }
 
-    public static class And extends AbstractEntityQuery {
+    public static class And extends AbstractBooleanClauses {
         @JsonCreator
         public And(
                 @JsonProperty( SerializationConstants.ID_FIELD ) int id,
-                @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
-                @JsonProperty( SerializationConstants.ENTITY_QUERIES ) Set<EntityQuery> childQueries ) {
-            super( id, entityTypeId, childQueries );
+                @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) EdmPrimitiveTypeKind datatype,
+                @JsonProperty( SerializationConstants.CHILD_QUERIES ) Set<BooleanClauses> childClauses ) {
+            super( id, datatype, childClauses );
         }
     }
 
-    public static class Or extends AbstractEntityQuery {
+    public static class Or extends AbstractBooleanClauses {
         @JsonCreator
         public Or(
                 @JsonProperty( SerializationConstants.ID_FIELD ) int id,
-                @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
-                @JsonProperty( SerializationConstants.ENTITY_QUERIES ) Set<EntityQuery> childQueries ) {
-            super( id, entityTypeId, childQueries );
+                @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) EdmPrimitiveTypeKind datatype,
+                @JsonProperty( SerializationConstants.CHILD_QUERIES ) Set<BooleanClauses> childClauses ) {
+            super( id, datatype, childClauses );
         }
     }
 

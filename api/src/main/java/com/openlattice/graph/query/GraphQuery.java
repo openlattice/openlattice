@@ -22,7 +22,9 @@
 package com.openlattice.graph.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -36,32 +38,45 @@ public class GraphQuery {
 
     @JsonCreator
     public GraphQuery(
-            List<EntityQuery> entityQueries,
-            List<AssociationIndexes> associationQueries ) {
+            @JsonProperty( SerializationConstants.ENTITY_QUERIES ) List<EntityQuery> entityQueries,
+            @JsonProperty( SerializationConstants.ASSOCIATION_QUERIES ) List<AssociationIndexes> associationQueries ) {
         this.entityQueries = entityQueries;
         this.associationQueries = associationQueries;
     }
 
+    @JsonProperty( SerializationConstants.ENTITY_QUERIES )
     public List<EntityQuery> getEntityQueries() {
         return entityQueries;
     }
 
+    @JsonProperty( SerializationConstants.ASSOCIATION_QUERIES )
     public List<AssociationIndexes> getAssociationQueries() {
         return associationQueries;
     }
 
     public static class AssociationIndexes implements EdgeQuery {
+        private final int  id;
         private final UUID associationEntityTypeId;
         private final int  srcIndex;
         private final int  dstIndex;
         private final int  edgeIndex;
 
         @JsonCreator
-        public AssociationIndexes( UUID associationEntityTypeId, int srcIndex, int dstIndex, int edgeIndex ) {
+        public AssociationIndexes(
+                @JsonProperty( SerializationConstants.ID_FIELD ) int id,
+                @JsonProperty( SerializationConstants.ASSOCIATION_TYPE_ID ) UUID associationEntityTypeId,
+                @JsonProperty( SerializationConstants.SRC ) int srcIndex,
+                @JsonProperty( SerializationConstants.DST ) int dstIndex,
+                @JsonProperty( SerializationConstants.EDGE ) int edgeIndex ) {
             this.associationEntityTypeId = associationEntityTypeId;
+            this.id = id;
             this.srcIndex = srcIndex;
             this.dstIndex = dstIndex;
             this.edgeIndex = edgeIndex;
+        }
+
+        @Override public int getId() {
+            return id;
         }
 
         public int getSrcIndex() {

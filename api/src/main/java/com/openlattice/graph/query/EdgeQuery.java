@@ -37,8 +37,8 @@ import java.util.UUID;
  */
 @JsonTypeInfo( use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class" )
 public interface EdgeQuery {
+    int getId();
     UUID getAssociationEntityTypeId();
-
     Set<EdgeQuery> getChildQueries();
 
     default void dfs( EdgeQueryVisitor v ) {

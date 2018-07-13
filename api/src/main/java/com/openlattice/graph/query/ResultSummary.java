@@ -21,7 +21,11 @@
 
 package com.openlattice.graph.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -33,10 +37,50 @@ public class ResultSummary {
     private final long           edgeCount;
     private final OffsetDateTime expiration;
 
-    public ResultSummary( UUID queryId, long entityCount, long edgeCount, OffsetDateTime expiration ) {
+    @JsonCreator
+    public ResultSummary(
+            @JsonProperty( SerializationConstants.QUERY_ID ) UUID queryId,
+            @JsonProperty( SerializationConstants.ENTITY_COUNT ) long entityCount,
+            @JsonProperty( SerializationConstants.EDGE_COUNT ) long edgeCount,
+            @JsonProperty( SerializationConstants.EXPIRATION ) OffsetDateTime expiration ) {
         this.queryId = queryId;
         this.entityCount = entityCount;
         this.edgeCount = edgeCount;
         this.expiration = expiration;
+    }
+
+    @JsonProperty( SerializationConstants.QUERY_ID )
+    public UUID getQueryId() {
+        return queryId;
+    }
+
+    @JsonProperty( SerializationConstants.ENTITY_COUNT )
+    public long getEntityCount() {
+        return entityCount;
+    }
+
+    @JsonProperty( SerializationConstants.EDGE_COUNT )
+    public long getEdgeCount() {
+        return edgeCount;
+    }
+
+    @JsonProperty( SerializationConstants.EXPIRATION )
+    public OffsetDateTime getExpiration() {
+        return expiration;
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof ResultSummary ) ) { return false; }
+        ResultSummary that = (ResultSummary) o;
+        return entityCount == that.entityCount &&
+                edgeCount == that.edgeCount &&
+                Objects.equals( queryId, that.queryId ) &&
+                Objects.equals( expiration, that.expiration );
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( queryId, entityCount, edgeCount, expiration );
     }
 }

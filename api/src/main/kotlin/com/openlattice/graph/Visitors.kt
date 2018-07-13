@@ -19,13 +19,18 @@
  *
  */
 
-package com.openlattice.graph.query;
+package com.openlattice.graph
 
-import java.util.function.Consumer;
+import com.openlattice.graph.query.BooleanClauses
+import com.openlattice.graph.query.EdgeQuery
+import com.openlattice.graph.query.EntityQuery
+import java.util.function.Consumer
+import java.util.function.Function
 
-/**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-public interface EdgeQueryVisitor extends Consumer<EdgeQuery> {
+interface BooleanClauseVisitor : Consumer<BooleanClauses>
+interface EdgeQueryVisitor : Consumer<EdgeQuery>
+interface EntityQueryVisitor : Consumer<EntityQuery>
 
-}
+interface BooleanClauseVisitorFunction<O> : Function<BooleanClauses, O>
+interface EdgeQueryVisitorFunction<O> : Function<EdgeQuery, O>
+interface EntityQueryVisitorFunction<O> : Function<EntityQuery, O>

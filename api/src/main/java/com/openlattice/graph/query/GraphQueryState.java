@@ -37,9 +37,9 @@ import java.util.UUID;
 public class GraphQueryState {
     private final UUID                    queryId;
     private final State                   state;
-    private final Optional<ResultSummary> resultSummary;
     private final long                    elapsedMillis;
-    private final Optional<SubGraph>      result;
+    private       Optional<ResultSummary> resultSummary;
+    private       Optional<SubGraph>      result;
 
     @JsonCreator
     public GraphQueryState(
@@ -53,6 +53,10 @@ public class GraphQueryState {
         this.resultSummary = resultSummary;
         this.elapsedMillis = elapsedMillis;
         this.result = result;
+    }
+
+    public GraphQueryState( UUID queryId, State state, long elapsedMillis ) {
+        this( queryId, state, Optional.empty(), elapsedMillis, Optional.empty() );
     }
 
     @JsonProperty( SerializationConstants.QUERY_ID )
@@ -70,6 +74,10 @@ public class GraphQueryState {
         return resultSummary;
     }
 
+    public void setResultSummary( Optional<ResultSummary> resultSummary ) {
+        this.resultSummary = resultSummary;
+    }
+
     @JsonProperty( SerializationConstants.ELAPSED_MILLIS )
     public long getElapsedMillis() {
         return elapsedMillis;
@@ -80,6 +88,10 @@ public class GraphQueryState {
         return result;
     }
 
+    public void setResult( Optional<SubGraph> result ) {
+        this.result = result;
+    }
+
     public enum State {
         RUNNING,
         COMPLETE,
@@ -87,7 +99,7 @@ public class GraphQueryState {
         STOPPED
     }
 
-    public enum Options {
+    public enum Option {
         RESULT,
         SUMMARY
     }

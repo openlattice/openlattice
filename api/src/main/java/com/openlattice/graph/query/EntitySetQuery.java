@@ -36,15 +36,33 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class EntitySetQuery implements EntityQuery {
+    private final int            id;
+    private final UUID           entityTypeId;
     private final Optional<UUID> entitySetId;
-    private final UUID entityTypeId;
+    private final BooleanClauses clauses;
 
     @JsonCreator
     public EntitySetQuery(
+            @JsonProperty( SerializationConstants.ID_FIELD ) int id,
+            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
             @JsonProperty( ENTITY_SET_ID ) Optional<UUID> entitySetId,
-            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId ) {
+            @JsonProperty( SerializationConstants.CLAUSES ) BooleanClauses clauses ) {
+        this.id = id;
         this.entitySetId = entitySetId;
         this.entityTypeId = entityTypeId;
+        this.clauses = clauses;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ID_FIELD )
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
+    public UUID getEntityTypeId() {
+        return entityTypeId;
     }
 
     @JsonProperty( ENTITY_SET_ID )
@@ -52,10 +70,9 @@ public class EntitySetQuery implements EntityQuery {
         return entitySetId;
     }
 
-    @Override
-    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
-    public UUID getEntityTypeId() {
-        return entityTypeId;
+    @JsonProperty( SerializationConstants.CLAUSES )
+    public BooleanClauses getClauses() {
+        return clauses;
     }
 
     @Override public Set<EntityQuery> getChildQueries() {

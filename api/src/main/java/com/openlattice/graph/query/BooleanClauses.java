@@ -25,42 +25,42 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Arrays.asList;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.openlattice.graph.EntityQueryVisitor;
-import com.openlattice.graph.query.AbstractEntityQuery.And;
-import com.openlattice.graph.query.AbstractEntityQuery.Or;
+import com.openlattice.graph.BooleanClauseVisitor;
+import com.openlattice.graph.query.AbstractBooleanClauses.And;
+import com.openlattice.graph.query.AbstractBooleanClauses.Or;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 
 /**
  * Interface for
  */
 @JsonTypeInfo( use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class" )
-public interface EntityQuery {
+public interface BooleanClauses {
     int getId();
 
-    UUID getEntityTypeId();
+    EdmPrimitiveTypeKind getDatatype();
 
-    Set<EntityQuery> getChildQueries();
+    Set<BooleanClauses> getChildClauses();
 
-    default And and( EntityQuery... queries ) {
-        final Set<EntityQuery> newQueries = new HashSet<>( queries.length + 1 );
-        final List<EntityQuery> toAnd = asList( queries );
-        checkState( toAnd.stream().allMatch( eq -> eq.getEntityTypeId().equals( eq.getEntityTypeId() ) ),
+    default And and( BooleanClauses... queries ) {
+        final Set<BooleanClauses> newQueries = new HashSet<>( queries.length + 1 );
+        final List<BooleanClauses> toAnd = asList( queries );
+        checkState( toAnd.stream().allMatch( eq -> eq.getDatatype().equals( eq.getDatatype() ) ),
                 "Entity types match to perform boolean query!" );
         newQueries.add( this );
         newQueries.addAll( toAnd );
-        return new And( getId(), getEntityTypeId(), newQueries );
+        return new And( getId(), getDatatype(), newQueries );
     }
 
-    default Or or( EntityQuery... queries ) {
-        final Set<EntityQuery> newQueries = new HashSet<>( queries.length + 1 );
-        final List<EntityQuery> toOr = asList( queries );
-        checkState( toOr.stream().allMatch( eq -> eq.getEntityTypeId().equals( eq.getEntityTypeId() ) ),
+    default Or or( BooleanClauses... queries ) {
+        final Set<BooleanClauses> newQueries = new HashSet<>( queries.length + 1 );
+        final List<BooleanClauses> toOr = asList( queries );
+        checkState( toOr.stream().allMatch( eq -> eq.getDatatype().equals( eq.getDatatype() ) ),
                 "Entity types match to perform boolean query!" );
         newQueries.add( this );
         newQueries.addAll( toOr );
-        return new Or( getId(), getEntityTypeId(), newQueries );
+        return new Or( getId(), getDatatype(), newQueries );
     }
 }

@@ -22,7 +22,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.graph.query.GraphQuery;
 import com.openlattice.graph.query.GraphQueryState;
-import com.openlattice.graph.query.GraphQueryState.Options;
+import com.openlattice.graph.query.GraphQueryState.Option;
 import java.util.Set;
 import java.util.UUID;
 import retrofit2.http.Body;
@@ -48,7 +48,7 @@ public interface GraphApi {
     GraphQueryState submit( GraphQuery query );
 
     @POST( BASE + QUERY + ID_PATH )
-    GraphQueryState getQueryState( @Path( ID ) UUID queryId, @Body Set<Options> options );
+    GraphQueryState getQueryState( @Path( ID ) UUID queryId, @Body Set<Option> options );
 
     /**
      * Retrieves the graph query state with any additional options. Equivalent to {@code getQueryState(queryId, Collections.EMPTY_SET) }
