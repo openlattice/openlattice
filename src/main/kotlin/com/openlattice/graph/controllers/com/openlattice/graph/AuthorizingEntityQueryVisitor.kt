@@ -26,7 +26,11 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.authorization.Permission
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.graph.query.*
+import com.openlattice.graph.EntityQueryVisitor
+import com.openlattice.graph.query.AbstractEntityQuery
+import com.openlattice.graph.query.EntityKeyIdQuery
+import com.openlattice.graph.query.EntityQuery
+import com.openlattice.graph.query.EntitySetQuery
 import java.util.*
 
 /**
@@ -76,3 +80,4 @@ class AuthorizingEntityQueryVisitor(
         )
     }
 }
+
