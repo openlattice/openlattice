@@ -98,6 +98,7 @@ import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
 import static com.openlattice.postgres.PostgresColumn.TIME_UUID;
 import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
+import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 
 import com.google.common.collect.ImmutableList;
@@ -163,7 +164,8 @@ public final class PostgresTable {
                             EDGE_ENTITY_KEY_ID,
                             SRC_TYPE_ID,
                             DST_TYPE_ID,
-                            EDGE_TYPE_ID )
+                            EDGE_TYPE_ID,
+                            VERSIONS )
                     .primaryKey( SRC_ENTITY_KEY_ID,
                             SRC_ENTITY_SET_ID,
                             DST_ENTITY_SET_ID,
