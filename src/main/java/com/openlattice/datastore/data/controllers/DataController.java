@@ -364,17 +364,25 @@ public class DataController implements DataApi, AuthorizingComponent {
                 .forEach( ( entitySetId, associations ) -> {
                     for ( DataAssociation association : associations ) {
                         final UUID srcEntitySetId = association.getSrcEntitySetId();
-                        final int srcEntityIndex = association.getSrcEntityIndex();
+                        final UUID srcEntityKeyId = association
+                                .getSrcEntityKeyId()
+                                .orElseGet( () ->
+                                        entityKeyIds.get( srcEntitySetId )
+                                                .get( association.getSrcEntityIndex().get() ) );
+
                         final UUID dstEntitySetId = association.getDstEntitySetId();
-                        final int dstEntityIndex = association.getDstEntityIndex();
-                        toBeCreated.put( entitySetId, new DataEdge(
-                                new EntityDataKey(
-                                        srcEntitySetId,
-                                        entityKeyIds.get( srcEntitySetId ).get( srcEntityIndex ) ),
-                                new EntityDataKey(
-                                        dstEntitySetId,
-                                        entityKeyIds.get( dstEntitySetId ).get( dstEntityIndex ) ),
-                                association.getData() ) );
+                        final UUID dstEntityKeyId = association
+                                .getDstEntityKeyId()
+                                .orElseGet( () ->
+                                        entityKeyIds.get( srcEntitySetId )
+                                                .get( association.getSrcEntityIndex().get() ) );
+
+                        toBeCreated.put(
+                                entitySetId,
+                                new DataEdge(
+                                        new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
+                                        new EntityDataKey( dstEntitySetId, dstEntityKeyId ),
+                                        association.getData() ) );
                     }
                 } );
         associationEntityKeyIds = createAssociations( toBeCreated );
