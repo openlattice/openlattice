@@ -20,6 +20,7 @@
 
 package com.openlattice.ids;
 
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -40,14 +41,14 @@ public class HazelcastIdGenerationService {
     /*
      * This should be good enough until we scale past 65536 Hazelcast nodes.
      */
-    public static final  int    MASK_LENGTH    = 16;
-    public static final  int    NUM_PARTITIONS = 1 << MASK_LENGTH; //65536
-    private static final Random r              = new Random();
+    public static final  int               MASK_LENGTH    = 16;
+    public static final  int               NUM_PARTITIONS = 1 << MASK_LENGTH; //65536
+    private static final Random            r              = new Random();
     /*
      * Each range owns a portion of the keyspace.
      */
-    private final IMap<Long, Range> scrolls;
-    private final AtomicInteger rangeIndex = new AtomicInteger();
+    private final        IMap<Long, Range> scrolls;
+    private final        AtomicInteger     rangeIndex     = new AtomicInteger();
 
     public HazelcastIdGenerationService( HazelcastInstance hazelcastInstance ) {
         this.scrolls = hazelcastInstance.getMap( HazelcastMap.ID_GENERATION.name() );
@@ -71,7 +72,15 @@ public class HazelcastIdGenerationService {
             ranges.add( ( (long) r.nextInt( NUM_PARTITIONS ) ) );
         }
 
-        final Map<Long, Object> ids = scrolls.executeOnEntries( new IdGeneratingEntryProcessor( countPerPartition ) );
+        final Map<Long, Object> ids;
+
+        if ( countPerPartition > 0 ) {
+            ids = scrolls
+                    .executeOnEntries( new IdGeneratingEntryProcessor( countPerPartition ) );
+        } else {
+            ids = ImmutableMap.of();
+        }
+
         final Map<Long, Object> remainingIds = scrolls.executeOnKeys( ranges, new IdGeneratingEntryProcessor( 1 ) );
 
         return Stream
