@@ -18,13 +18,11 @@
 
 package com.openlattice.edm.internal;
 
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import org.junit.BeforeClass;
-
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.mapstores.TestDataFactory;
 
 public class PropertyTypeSerializerTest extends AbstractJacksonSerializationTest<PropertyType> {
     @BeforeClass

@@ -18,17 +18,14 @@
 
 package com.openlattice.edm.internal;
 
-import java.io.IOException;
-
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import java.io.IOException;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class EntityTypeSerializerTest extends AbstractJacksonSerializationTest<EntityType> {
 

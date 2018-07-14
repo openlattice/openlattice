@@ -38,14 +38,11 @@ import java.util.UUID;
 @JsonTypeInfo( use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class" )
 public interface EdgeQuery {
     int getId();
+
     UUID getAssociationEntityTypeId();
+
     Set<EdgeQuery> getChildQueries();
 
-    default void dfs( EdgeQueryVisitor v ) {
-        getChildQueries().forEach( cQ -> cQ.dfs( v ) );
-        v.accept( this );
-    }
-    
     default And and( EdgeQuery... queries ) {
         final Set<EdgeQuery> newQueries = new HashSet<>( queries.length + 1 );
         final List<EdgeQuery> toAnd = asList( queries );
@@ -55,7 +52,7 @@ public interface EdgeQuery {
                 "Association entity types must match to combine in boolean fashion." );
         newQueries.add( this );
         newQueries.addAll( toAnd );
-        return new And( getAssociationEntityTypeId(), newQueries );
+        return new And( getId(), getAssociationEntityTypeId(), newQueries );
     }
 
     default Or or( EdgeQuery... queries ) {
@@ -67,6 +64,6 @@ public interface EdgeQuery {
                 "Association entity types must match to combine in boolean fashion." );
         newQueries.add( this );
         newQueries.addAll( toOr );
-        return new Or( getAssociationEntityTypeId(), newQueries );
+        return new Or( getId(), getAssociationEntityTypeId(), newQueries );
     }
 }

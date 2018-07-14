@@ -32,18 +32,27 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class EntityKeyIdQuery implements EntityQuery {
+    private final int  id;
     private final UUID entitySetId;
     private final UUID entityKeyId;
     private final UUID entityTypeId;
 
     @JsonCreator
     public EntityKeyIdQuery(
+            @JsonProperty( SerializationConstants.ID_FIELD ) int id,
             @JsonProperty( SerializationConstants.ENTITY_SET_ID ) UUID entitySetId,
-            @JsonProperty( SerializationConstants.ID_FIELD ) UUID entityKeyId,
+            @JsonProperty( SerializationConstants.ENTITY_KEY_ID ) UUID entityKeyId,
             @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId ) {
+        this.id = id;
         this.entitySetId = entitySetId;
         this.entityKeyId = entityKeyId;
         this.entityTypeId = entityTypeId;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ID_FIELD )
+    public int getId() {
+        return id;
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_ID )
@@ -51,13 +60,14 @@ public class EntityKeyIdQuery implements EntityQuery {
         return entitySetId;
     }
 
-    @JsonProperty( SerializationConstants.ID_FIELD )
+    @JsonProperty( SerializationConstants.ENTITY_KEY_ID )
     public UUID getEntityKeyId() {
         return entityKeyId;
     }
 
+    @Override
     @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
-    @Override public UUID getEntityTypeId() {
+    public UUID getEntityTypeId() {
         return entityTypeId;
     }
 

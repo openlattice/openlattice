@@ -18,12 +18,10 @@
 
 package com.openlattice.authorization;
 
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
-import org.junit.BeforeClass;
-
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.mapstores.TestDataFactory;
+import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import org.junit.BeforeClass;
 
 public class AclDataSerializerTest extends AbstractJacksonSerializationTest<AclData> {
 

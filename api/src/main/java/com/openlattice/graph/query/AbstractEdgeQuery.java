@@ -30,12 +30,20 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public abstract class AbstractEdgeQuery implements EdgeQuery {
+    private final int            id;
     private final UUID           associationEntityTypeId;
     private final Set<EdgeQuery> childQueries;
 
-    public AbstractEdgeQuery( UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
+    public AbstractEdgeQuery( int id, UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
+        this.id = id;
         this.associationEntityTypeId = associationEntityTypeId;
         this.childQueries = childQueries;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ID_FIELD )
+    public int getId() {
+        return id;
     }
 
     @Override
@@ -49,14 +57,14 @@ public abstract class AbstractEdgeQuery implements EdgeQuery {
     }
 
     public static class And extends AbstractEdgeQuery {
-        public And( UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
-            super( associationEntityTypeId, childQueries );
+        public And( int id, UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
+            super( id, associationEntityTypeId, childQueries );
         }
     }
 
     public static class Or extends AbstractEdgeQuery {
-        public Or( UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
-            super( associationEntityTypeId, childQueries );
+        public Or( int id, UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
+            super( id, associationEntityTypeId, childQueries );
         }
     }
 }
