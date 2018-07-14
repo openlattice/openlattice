@@ -161,6 +161,13 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         return tombstone(entitySetId)
     }
 
+    /**
+     * Tombstones (writes a negative version) for the provided entities.
+     * @param entitySetId The entity set to operate on.
+     * @param entityKeyIds The entity key ids to tombstone.
+     * @param authorizedPropertyTypes The property types the user is allowed to tombstone. We assume that authorization
+     * checks are enforced at a higher level and that this just streamlines issuing the necessary queries.
+     */
     fun clearEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
