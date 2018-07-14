@@ -59,7 +59,7 @@ class PostgresEntityKeyIdService(
 
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
-        checkState(ids.size != entityIds.size, "Insufficient ids generated.")
+        checkState(ids.size == entityIds.size, "Insufficient ids generated.")
 
         val idIterator = ids.iterator()
         return entityIds.map { it to idIterator.next() }.toMap()
