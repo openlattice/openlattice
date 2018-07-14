@@ -22,6 +22,7 @@
 package com.openlattice.graph
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.openlattice.datastore.services.EdmManager
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
 import com.openlattice.graph.query.ResultSummary
@@ -36,7 +37,9 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class PostgresGraphQueryService(
-        private val hds: HikariDataSource, private val mapper: ObjectMapper
+        private val hds: HikariDataSource,
+        private val edm: EdmManager,
+        private val mapper: ObjectMapper
 ) : GraphQueryService {
     override fun getQuery(queryId: UUID): GraphQuery {
         val conn = hds.connection
@@ -44,8 +47,8 @@ class PostgresGraphQueryService(
             val ps = conn.prepareStatement(getQuerySql)
             ps.setObject(1, queryId)
             val rs = ps.executeQuery()
-            val json = rs.getString( QUERY.name )
-            return mapper.readValue( json, GraphQuery::class.java )
+            val json = rs.getString(QUERY.name)
+            return mapper.readValue(json, GraphQuery::class.java)
         }
     }
 
@@ -70,8 +73,8 @@ class PostgresGraphQueryService(
         val queryId = UUID.randomUUID()
         val startTime = saveQuery(queryId, query)
         //TODO: Consider stronger of enforcement of uniqueness for mission critical
-        val visitor = EntityQueryExecutingVisitor(hds, queryId)
-        query.entityQueries.forEach( visitor )
+        val visitor = EntityQueryExecutingVisitor(hds, edm, queryId)
+        query.entityQueries.forEach(visitor)
         val queryMap = visitor.queryMap
         discard(visitor.queryId, query.entityQueries.map { visitor.queryMap[it]!! })
         val queryState = GraphQueryState(
@@ -118,7 +121,7 @@ class PostgresGraphQueryService(
 
         //
 
-        return
+        return Optional.empty()
 
     }
 
@@ -137,7 +140,6 @@ class PostgresGraphQueryService(
 }
 
 const val TTL_MILLIS = 10 * 60 * 1000
-private val getEntityEntityQuery 
 private val getQuerySql = "SELECT ${QUERY.name} FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"
 private val readGraphQueryState = "SELECT * FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"
 private val insertGraphQuery =
