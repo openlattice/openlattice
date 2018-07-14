@@ -23,7 +23,7 @@ plugins {
     id "eclipse"
     id "idea"
     id "jacoco"
-    id "org.jetbrains.kotlin.jvm" version "1.2.30"
+    id "org.jetbrains.kotlin.jvm" version "1.2.51"
 }
 
 description = "Responsible for sending outgoing e-mails from a queue."
