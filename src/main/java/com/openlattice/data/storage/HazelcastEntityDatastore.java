@@ -54,6 +54,7 @@ import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.JsonDeserializer;
 import com.openlattice.postgres.streams.PostgresIterable.PostgresIterator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
@@ -66,6 +67,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -256,7 +258,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
 
         final int keyCount = entitySetIdsToEntityKeyIds.keySet().size();
-        final int avgValuesPerKey = entitySetIdsToEntityKeyIds.size() / keyCount;
+        final int avgValuesPerKey =
+                entitySetIdsToEntityKeyIds.size() == 0 ? 0 : entitySetIdsToEntityKeyIds.size() / keyCount;
         final ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entities
                 = ArrayListMultimap.create( keyCount, avgValuesPerKey );
 

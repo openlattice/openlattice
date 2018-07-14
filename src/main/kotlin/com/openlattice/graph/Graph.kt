@@ -72,8 +72,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 ps.setObject(6, it.edge.entityKeyId)
                 ps.setLong(7, version)
                 ps.setArray(8, versions)
-                ps.setLong(9, version)
-                ps.setLong(10, version)
                 ps.addBatch()
             }
             return ps.executeBatch().sum()
@@ -141,12 +139,62 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
-    override fun getEdgesAndNeighborsForVertex(vertexId: UUID): Stream<Edge> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    fun neighborhoodClause(entitySetColumn: String, idColumn: String, entitySetId: UUID, vertexIds: Set<UUID>): String {
+        return "$entitySetColumn = '$entitySetId' AND $idColumn IN (${vertexIds.map { "'$it'" }.joinToString("','")}) "
     }
 
-    override fun getEdgesAndNeighborsForVertices(vertexIds: Set<UUID>): Stream<Edge> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    fun srcNeighborhoodClause(entitySetId: UUID, vertexIds: Set<UUID>): String {
+        return neighborhoodClause(SRC_ENTITY_SET_ID.name, SRC_ENTITY_KEY_ID.name, entitySetId, vertexIds)
+    }
+
+    fun dstNeighborhoodClause(entitySetId: UUID, vertexIds: Set<UUID>): String {
+        return neighborhoodClause(DST_ENTITY_SET_ID.name, DST_ENTITY_KEY_ID.name, entitySetId, vertexIds)
+    }
+
+    fun executeEdgesQuery(query: String): Stream<Edge> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.getConnection()
+                    val stmt = connection.createStatement()
+                    val rs = stmt.executeQuery(query)
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
+        ).stream()
+    }
+
+    override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, vertexId: UUID): Stream<Edge> {
+
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.getConnection()
+                    val stmt = connection.prepareStatement(NEIGHBORHOOD_SQL)
+                    stmt.setObject(1, entitySetId)
+                    stmt.setObject(2, vertexId)
+                    stmt.setObject(3, entitySetId)
+                    stmt.setObject(4, vertexId)
+                    val rs = stmt.executeQuery()
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
+        ).stream()
+    }
+
+    override fun getEdgesAndNeighborsForVertices(entitySetId: UUID, vertexIds: Set<UUID>): Stream<Edge> {
+        val ids = vertexIds.toTypedArray()
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.getConnection()
+                    val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
+                    stmt.setObject(1, entitySetId)
+                    stmt.setObject(2, ids)
+                    stmt.setObject(3, entitySetId)
+                    stmt.setObject(4, ids)
+                    val rs = stmt.executeQuery()
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
+        ).stream()
     }
 
     override fun computeGraphAggregation(
@@ -272,10 +320,19 @@ private val INSERT_COLUMNS = setOf(
 private val SELECT_SQL = "SELECT * FROM ${EDGES.name} " +
         "WHERE (${KEY_COLUMNS.joinToString(",")}) IN "
 private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?) " +
-        "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) DO UPDATE SET version = ?, versions = versions || ?"
+        "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
+        "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
 private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE ${KEY_COLUMNS.joinToString(
         " = ? AND "
 )} = ? "
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+
+private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
+        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND $${DST_ENTITY_KEY_ID.name} = ?)"
+
+private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
+        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND $${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
 

@@ -671,61 +671,70 @@ public final class ResultSetAdapters {
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
             final String fqn = propertyType.getType().getFullQualifiedNameAsString();
-            final List<?> objects;
-            switch ( propertyType.getDatatype() ) {
-                case String:
-                    objects = Arrays.asList( (String[]) rs.getArray( fqn ).getArray() );
-                    break;
-                case Guid:
-                    objects = Arrays.asList( (UUID[]) rs.getArray( fqn ).getArray() );
-                    break;
-                case Byte:
-                    objects = Arrays.asList( rs.getBytes( fqn ) );
-                    break;
-                case Int16:
-                    objects = Arrays.asList( (Integer[]) rs.getArray( fqn ).getArray() );
-                    break;
-                case Int32:
-                    objects = Arrays.asList( (Integer[]) rs.getArray( fqn ).getArray() );
-                    break;
-                case Duration:
-                case Int64:
-                    objects = Arrays.asList( (Long[]) rs.getArray( fqn ).getArray() );
-                    break;
-                case Date:
-                    objects = Stream
-                            .of( (Date[]) rs.getArray( fqn ).getArray() )
-                            .map( Date::toLocalDate )
-                            .collect( Collectors.toList() );
-                    break;
-                case TimeOfDay:
-                    objects = Stream
-                            .of( (Time[]) rs.getArray( fqn ).getArray() )
-                            .map( Time::toLocalTime )
-                            .collect( Collectors.toList() );
-                    break;
-                case DateTimeOffset:
-                    objects = Stream
-                            .of( (Timestamp[]) rs.getArray( fqn ).getArray() )
-                            .map( ts -> OffsetDateTime
-                                    .ofInstant( Instant.ofEpochMilli( ts.getTime() ), ZoneId.of( "UTC" ) ) )
-                            .collect( Collectors.toList() );
-                    break;
-                case Double:
-                    objects = Arrays.asList( (Double[]) rs.getArray( fqn ).getArray() );
-                    break;
-                case Boolean:
-                    objects = Arrays.asList( (Boolean[]) rs.getArray( fqn ).getArray() );
-                    break;
-                case Binary:
-                    objects = Arrays.asList( (byte[][]) rs.getArray( fqn ).getArray() );
-                    break;
-                default:
-                    objects = null;
-                    logger.error( "Unable to read property type {} for entity {}.", propertyType.getId(), entityKeyId );
+            List<?> objects = null;
+            Array arr = rs.getArray( fqn );
+            if (arr != null) {
+                switch ( propertyType.getDatatype() ) {
+                    case String:
+                        objects = Arrays.asList( (String[]) arr.getArray() );
+                        break;
+                    case Guid:
+                        objects = Arrays.asList( (UUID[]) arr.getArray() );
+                        break;
+                    case Byte:
+                        byte[] bytes = rs.getBytes( fqn );
+                        if (bytes != null && bytes.length > 0) {
+                            objects = Arrays.asList( rs.getBytes( fqn ) );
+                        }
+                        break;
+                    case Int16:
+                        objects = Arrays.asList( (Integer[]) arr.getArray() );
+                        break;
+                    case Int32:
+                        objects = Arrays.asList( (Integer[]) arr.getArray() );
+                        break;
+                    case Duration:
+                    case Int64:
+                        objects = Arrays.asList( (Long[]) arr.getArray() );
+                        break;
+                    case Date:
+                        objects = Stream
+                                .of( (Date[]) arr.getArray() )
+                                .map( Date::toLocalDate )
+                                .collect( Collectors.toList() );
+                        break;
+                    case TimeOfDay:
+                        objects = Stream
+                                .of( (Time[]) arr.getArray() )
+                                .map( Time::toLocalTime )
+                                .collect( Collectors.toList() );
+                        break;
+                    case DateTimeOffset:
+                        objects = Stream
+                                .of( (Timestamp[]) arr.getArray() )
+                                .map( ts -> OffsetDateTime
+                                        .ofInstant( Instant.ofEpochMilli( ts.getTime() ), ZoneId.of( "UTC" ) ) )
+                                .collect( Collectors.toList() );
+                        break;
+                    case Double:
+                        objects = Arrays.asList( (Double[]) arr.getArray() );
+                        break;
+                    case Boolean:
+                        objects = Arrays.asList( (Boolean[]) arr.getArray() );
+                        break;
+                    case Binary:
+                        objects = Arrays.asList( (byte[][]) arr.getArray() );
+                        break;
+                    default:
+                        objects = null;
+                        logger.error( "Unable to read property type {} for entity {}.",
+                                propertyType.getId(),
+                                entityKeyId );
+                }
+                if (objects != null) {
+                    data.putAll( propertyType.getType(), objects );
+                }
             }
-
-            data.putAll( propertyType.getType(), objects );
         }
         return data;
     }
