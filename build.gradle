@@ -19,7 +19,6 @@
 description = "OpenLattice Development Environment."
 group = "com.openlattice"
 
-
 if ( !ext.has("jars") ){
   ext.developmentMode = true
 }
