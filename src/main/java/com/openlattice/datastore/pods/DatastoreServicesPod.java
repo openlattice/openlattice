@@ -48,7 +48,6 @@ import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresDataManager;
