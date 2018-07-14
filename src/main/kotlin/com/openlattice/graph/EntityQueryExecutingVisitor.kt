@@ -35,8 +35,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Vistor class that executes initial populating queries for a graph query.
  */
 class EntityQueryExecutingVisitor(
         private val hds: HikariDataSource,

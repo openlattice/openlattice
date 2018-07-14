@@ -18,6 +18,15 @@
  *
  *
  */
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.17"
+    }
+}
 
 plugins {
     id "java"
@@ -39,6 +48,7 @@ ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor-c
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
 apply plugin: 'kotlin'
+apply plugin: 'org.jetbrains.dokka'
 
 sourceCompatibility=JavaVersion.VERSION_1_8
 
@@ -62,6 +72,15 @@ tasks.withType(Checkstyle) {
         xml.enabled = false
         html.enabled = true
     }
+}
+
+tasks.withType(Javadoc) {
+    enabled = false
+}
+
+dokka {
+    outputFormat = 'html'
+    outputDirectory = "$buildDir/javadoc"
 }
 
 dependencies { 
