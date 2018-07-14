@@ -21,57 +21,58 @@
 
 package com.openlattice.data;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+
 import com.google.common.collect.SetMultimap;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataAssociation {
-    private final UUID srcEntitySetId;
-    private final int  srcEntityIndex;
+    private final UUID              srcEntitySetId;
+    private final Optional<Integer> srcEntityIndex;
+    private final Optional<UUID>    srcEntityKeyId;
 
-    private final UUID dstEntitySetId;
-    private final int  dstEntityIndex;
+    private final UUID              dstEntitySetId;
+    private final Optional<Integer> dstEntityIndex;
+    private final Optional<UUID>    dstEntityKeyId;
 
     private final SetMultimap<UUID, Object> data;
 
     public DataAssociation(
             UUID srcEntitySetId,
-            int srcEntityIndex,
+            Optional<Integer> srcEntityIndex,
+            Optional<UUID> srcEntityKeyId,
             UUID dstEntitySetId,
-            int dstEntityIndex,
+            Optional<Integer> dstEntityIndex,
+            Optional<UUID> dstEntityKeyId,
             SetMultimap<UUID, Object> data ) {
+        checkArgument( srcEntityIndex.isPresent() ^ srcEntityKeyId.isPresent(),
+                "Only one of index or entity key id must be present for source" );
+        checkArgument( dstEntityIndex.isPresent() ^ dstEntityKeyId.isPresent(),
+                "Only one of index or entity key id must be present for destination" );
         this.srcEntitySetId = srcEntitySetId;
         this.srcEntityIndex = srcEntityIndex;
+        this.srcEntityKeyId = srcEntityKeyId;
         this.dstEntitySetId = dstEntitySetId;
         this.dstEntityIndex = dstEntityIndex;
+        this.dstEntityKeyId = dstEntityKeyId;
         this.data = data;
     }
 
-    @Override public boolean equals( Object o ) {
-        if ( this == o ) { return true; }
-        if ( !( o instanceof DataAssociation ) ) { return false; }
-        DataAssociation that = (DataAssociation) o;
-        return srcEntityIndex == that.srcEntityIndex &&
-                dstEntityIndex == that.dstEntityIndex &&
-                Objects.equals( srcEntitySetId, that.srcEntitySetId ) &&
-                Objects.equals( dstEntitySetId, that.dstEntitySetId ) &&
-                Objects.equals( data, that.data );
-    }
-
-    @Override public int hashCode() {
-
-        return Objects.hash( srcEntitySetId, srcEntityIndex, dstEntitySetId, dstEntityIndex, data );
-    }
-
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "DataAssociation{" +
                 "srcEntitySetId=" + srcEntitySetId +
                 ", srcEntityIndex=" + srcEntityIndex +
+                ", srcEntityKeyId=" + srcEntityKeyId +
                 ", dstEntitySetId=" + dstEntitySetId +
                 ", dstEntityIndex=" + dstEntityIndex +
+                ", dstEntityKeyId=" + dstEntityKeyId +
                 ", data=" + data +
                 '}';
     }
@@ -80,7 +81,7 @@ public class DataAssociation {
         return srcEntitySetId;
     }
 
-    public int getSrcEntityIndex() {
+    public Optional<Integer> getSrcEntityIndex() {
         return srcEntityIndex;
     }
 
@@ -88,11 +89,43 @@ public class DataAssociation {
         return dstEntitySetId;
     }
 
-    public int getDstEntityIndex() {
+    public Optional<Integer> getDstEntityIndex() {
         return dstEntityIndex;
+    }
+
+    public Optional<UUID> getSrcEntityKeyId() {
+        return srcEntityKeyId;
+    }
+
+    public Optional<UUID> getDstEntityKeyId() {
+        return dstEntityKeyId;
     }
 
     public SetMultimap<UUID, Object> getData() {
         return data;
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof DataAssociation ) ) { return false; }
+        DataAssociation that = (DataAssociation) o;
+        return Objects.equals( srcEntitySetId, that.srcEntitySetId ) &&
+                Objects.equals( srcEntityIndex, that.srcEntityIndex ) &&
+                Objects.equals( srcEntityKeyId, that.srcEntityKeyId ) &&
+                Objects.equals( dstEntitySetId, that.dstEntitySetId ) &&
+                Objects.equals( dstEntityIndex, that.dstEntityIndex ) &&
+                Objects.equals( dstEntityKeyId, that.dstEntityKeyId ) &&
+                Objects.equals( data, that.data );
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( srcEntitySetId,
+                srcEntityIndex,
+                srcEntityKeyId,
+                dstEntitySetId,
+                dstEntityIndex,
+                dstEntityKeyId,
+                data );
     }
 }
