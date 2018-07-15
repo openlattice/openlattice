@@ -68,6 +68,7 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
+import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.linking.HazelcastListingService;
@@ -309,7 +310,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public Graph loomGraph() {
+    public GraphService graphApi() {
         return new Graph( hikariDataSource, dataModelService() );
     }
 
@@ -328,7 +329,7 @@ public class DatastoreServicesPod {
         return new DataGraphService(
                 hazelcastInstance,
                 eventBus,
-                loomGraph(),
+                graphApi(),
                 idService(),
                 entityDatastore() );
     }

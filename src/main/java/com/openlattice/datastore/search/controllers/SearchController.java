@@ -41,6 +41,7 @@ import com.openlattice.search.requests.FQNSearchTerm;
 import com.openlattice.search.requests.Search;
 import com.openlattice.search.requests.SearchResult;
 import com.openlattice.search.requests.SearchTerm;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.inject.Inject;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -262,7 +264,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            return searchService.executeEntityNeighborSearch( ImmutableSet.of( entityId ) ).get( entityId );
+            return searchService.executeEntityNeighborSearch( entitySetId, ImmutableSet.of( entityId ) )
+                    .get( entityId );
         }
         return Lists.newArrayList();
     }
@@ -279,7 +282,7 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            result = searchService.executeEntityNeighborSearch( entityIds );
+            result = searchService.executeEntityNeighborSearch( entitySetId, entityIds );
         }
         return result;
     }

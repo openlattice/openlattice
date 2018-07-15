@@ -392,7 +392,7 @@ public class SearchService {
     }
 
     @Timed
-    public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearch( Set<UUID> entityKeyIds ) {
+    public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearch( UUID entitySetId, Set<UUID> entityKeyIds ) {
         Set<Principal> principals = Principals.getCurrentPrincipals();
 
         List<Edge> edges = Lists.newArrayList();
@@ -401,7 +401,7 @@ public class SearchService {
         SetMultimap<UUID, UUID> entityKeyIdToEntitySetId = HashMultimap.create();
         Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps = Maps.newHashMap();
 
-        graphService.getEdgesAndNeighborsForVertices( entityKeyIds ).forEach( edge -> {
+        graphService.getEdgesAndNeighborsForVertices( entitySetId, entityKeyIds ).forEach( edge -> {
             edges.add( edge );
             entitySetIds.add( edge.getEdge().getEntitySetId() );
             entitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
@@ -409,7 +409,7 @@ public class SearchService {
         } );
 
         Set<UUID> authorizedEntitySetIds = authorizations.accessChecksForPrincipals( entitySetIds.stream()
-                .map( entitySetId -> new AccessCheck( new AclKey( entitySetId ), EnumSet.of( Permission.READ ) ) )
+                .map( esId -> new AccessCheck( new AclKey( esId ), EnumSet.of( Permission.READ ) ) )
                 .collect( Collectors.toSet() ), principals )
                 .filter( auth -> auth.getPermissions().get( Permission.READ ) ).map( auth -> auth.getAclKey().get( 0 ) )
                 .collect( Collectors.toSet() );
@@ -435,9 +435,9 @@ public class SearchService {
 
         authorizations.accessChecksForPrincipals( accessChecks, principals ).forEach( auth -> {
             if ( auth.getPermissions().get( Permission.READ ) ) {
-                UUID entitySetId = auth.getAclKey().get( 0 );
+                UUID esId = auth.getAclKey().get( 0 );
                 UUID propertyTypeId = auth.getAclKey().get( 1 );
-                entitySetsIdsToAuthorizedProps.get( entitySetId )
+                entitySetsIdsToAuthorizedProps.get( esId )
                         .put( propertyTypeId, propertyTypesById.get( propertyTypeId ) );
             }
         } );
