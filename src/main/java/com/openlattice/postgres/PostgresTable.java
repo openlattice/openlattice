@@ -170,7 +170,6 @@ public final class PostgresTable {
                             VERSIONS )
                     .primaryKey( SRC_ENTITY_KEY_ID,
                             SRC_ENTITY_SET_ID,
-
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_SET_ID,

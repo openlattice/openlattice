@@ -46,6 +46,7 @@ class EntityQueryExecutingVisitor(
     private val indexGen = AtomicInteger()
     private val expiry = System.currentTimeMillis() + 10 * 60 * 1000 //10 minute, arbitary
     val queryMap: MutableMap<EntityQuery, Int> = mutableMapOf()
+
     override fun accept(query: EntityQuery) {
         query.childQueries.forEach(this)
         when (query) {

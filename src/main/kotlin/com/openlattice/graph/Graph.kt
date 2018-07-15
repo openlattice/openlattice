@@ -58,28 +58,29 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun createEdges(keys: MutableSet<EdgeKey>): Int {
-        val connection = hds.getConnection()
-        connection.use {
-            val ps = connection.prepareStatement(UPSERT_SQL)
+        hds.connection.use {
+            val ps = it.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
-            val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
-            keys.forEach {
-                ps.setObject(1, it.src.entitySetId)
-                ps.setObject(2, it.src.entityKeyId)
-                ps.setObject(3, it.dst.entitySetId)
-                ps.setObject(4, it.dst.entityKeyId)
-                ps.setObject(5, it.edge.entitySetId)
-                ps.setObject(6, it.edge.entityKeyId)
-                ps.setLong(7, version)
-                ps.setArray(8, versions)
-                ps.addBatch()
+            val versions = PostgresArrays.createLongArray(it, ImmutableList.of(version))
+            ps.use {
+                keys.forEach {
+                    ps.setObject(1, it.src.entitySetId)
+                    ps.setObject(2, it.src.entityKeyId)
+                    ps.setObject(3, it.dst.entitySetId)
+                    ps.setObject(4, it.dst.entityKeyId)
+                    ps.setObject(5, it.edge.entitySetId)
+                    ps.setObject(6, it.edge.entityKeyId)
+                    ps.setLong(7, version)
+                    ps.setArray(8, versions)
+                    ps.addBatch()
+                }
+                return ps.executeBatch().sum()
             }
-            return ps.executeBatch().sum()
         }
     }
 
     override fun clearEdges(keys: MutableSet<EdgeKey>): Int {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(CLEAR_SQL)
             val version = -System.currentTimeMillis()
@@ -253,7 +254,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 }
 
 private fun selectEdges(keys: Set<EdgeKey>): String {
-    return SELECT_SQL + "(" +
+    return "$SELECT_SQL(" +
             keys
                     .asSequence()
                     .map { "(${it.src.entitySetId},${it.src.entityKeyId},${it.dst.entitySetId},${it.dst.entityKeyId},${it.edge.entitySetId},${it.edge.entityKeyId})" }
@@ -323,9 +324,8 @@ private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToStri
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
-private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE ${KEY_COLUMNS.joinToString(
-        " = ? AND "
-)} = ? "
+private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
+        "WHERE ${KEY_COLUMNS.joinToString(        " = ? AND ")} = ? "
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
