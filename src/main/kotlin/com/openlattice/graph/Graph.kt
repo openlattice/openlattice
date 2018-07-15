@@ -140,18 +140,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
-    fun neighborhoodClause(entitySetColumn: String, idColumn: String, entitySetId: UUID, vertexIds: Set<UUID>): String {
-        return "$entitySetColumn = '$entitySetId' AND $idColumn IN (${vertexIds.map { "'$it'" }.joinToString("','")}) "
-    }
-
-    fun srcNeighborhoodClause(entitySetId: UUID, vertexIds: Set<UUID>): String {
-        return neighborhoodClause(SRC_ENTITY_SET_ID.name, SRC_ENTITY_KEY_ID.name, entitySetId, vertexIds)
-    }
-
-    fun dstNeighborhoodClause(entitySetId: UUID, vertexIds: Set<UUID>): String {
-        return neighborhoodClause(DST_ENTITY_SET_ID.name, DST_ENTITY_KEY_ID.name, entitySetId, vertexIds)
-    }
-
     fun executeEdgesQuery(query: String): Stream<Edge> {
         return PostgresIterable(
                 Supplier {
@@ -182,15 +170,15 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun getEdgesAndNeighborsForVertices(entitySetId: UUID, vertexIds: Set<UUID>): Stream<Edge> {
-        val ids = vertexIds.toTypedArray()
         return PostgresIterable(
                 Supplier {
                     val connection = hds.getConnection()
+                    val ids = PostgresArrays.createUuidArray(connection, vertexIds.stream())
                     val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
                     stmt.setObject(1, entitySetId)
-                    stmt.setObject(2, ids)
+                    stmt.setArray(2, ids)
                     stmt.setObject(3, entitySetId)
-                    stmt.setObject(4, ids)
+                    stmt.setArray(4, ids)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
@@ -334,5 +322,5 @@ private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
 
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND $${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
+        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
 
