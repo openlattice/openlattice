@@ -299,8 +299,8 @@ private fun caseExpression(entitySetId: UUID): String {
 }
 
 private val KEY_COLUMNS = setOf(
-        SRC_ENTITY_KEY_ID,
         SRC_ENTITY_SET_ID,
+        SRC_ENTITY_KEY_ID,
         DST_ENTITY_SET_ID,
         DST_ENTITY_KEY_ID,
         EDGE_ENTITY_SET_ID,
