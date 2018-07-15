@@ -308,8 +308,8 @@ private val KEY_COLUMNS = setOf(
 ).map { it.name }.toSet()
 
 private val INSERT_COLUMNS = setOf(
-        SRC_ENTITY_KEY_ID,
         SRC_ENTITY_SET_ID,
+        SRC_ENTITY_KEY_ID,
         DST_ENTITY_SET_ID,
         DST_ENTITY_KEY_ID,
         EDGE_ENTITY_SET_ID,
