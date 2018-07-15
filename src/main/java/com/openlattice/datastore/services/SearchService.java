@@ -22,13 +22,7 @@ package com.openlattice.datastore.services;
 
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
@@ -81,6 +75,7 @@ import com.openlattice.search.requests.EntityKeyIdSearchResult;
 import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
 import com.openlattice.search.requests.SearchTerm;
+
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -91,6 +86,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -392,13 +388,15 @@ public class SearchService {
     }
 
     @Timed
-    public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearch( UUID entitySetId, Set<UUID> entityKeyIds ) {
+    public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearch(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds ) {
         Set<Principal> principals = Principals.getCurrentPrincipals();
 
         List<Edge> edges = Lists.newArrayList();
         Set<UUID> entitySetIds = Sets.newHashSet();
         Map<UUID, Set<UUID>> authorizedEdgeESIdsToVertexESIds = Maps.newHashMap();
-        SetMultimap<UUID, UUID> entityKeyIdToEntitySetId = HashMultimap.create();
+        SetMultimap<UUID, UUID> entitySetIdToEntityKeyId = HashMultimap.create();
         Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps = Maps.newHashMap();
 
         graphService.getEdgesAndNeighborsForVertices( entitySetId, entityKeyIds ).forEach( edge -> {
@@ -453,18 +451,24 @@ public class SearchService {
                     : edge.getSrc().getEntitySetId();
 
             if ( entitySetsIdsToAuthorizedProps.containsKey( edgeEntitySetId ) ) {
-                entityKeyIdToEntitySetId.put( edgeEntityKeyId, edgeEntitySetId );
+                entitySetIdToEntityKeyId.put( edgeEntitySetId, edgeEntityKeyId );
 
                 if ( entitySetsIdsToAuthorizedProps.containsKey( neighborEntitySetId ) ) {
                     authorizedEdgeESIdsToVertexESIds.get( edgeEntitySetId ).add( neighborEntitySetId );
-                    entityKeyIdToEntitySetId.put( neighborEntityKeyId, neighborEntitySetId );
+                    entitySetIdToEntityKeyId.put( neighborEntitySetId, neighborEntityKeyId );
                 }
             }
 
         } );
 
-        ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entities = dataManager
-                .getEntitiesAcrossEntitySets( entityKeyIdToEntitySetId, entitySetsIdsToAuthorizedProps );
+        ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entitiesByEntitySetId = dataManager
+                .getEntitiesAcrossEntitySets( entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps );
+
+        Map<UUID, SetMultimap<FullQualifiedName, Object>> entities = Maps.newHashMap();
+        entitiesByEntitySetId.entries().forEach( entry -> entities
+                .put( UUID.fromString( entry.getValue().get( new FullQualifiedName( "openlattice.@id" ) ).iterator()
+                                .next().toString() ),
+                        entry.getValue() ) );
 
         Map<UUID, List<NeighborEntityDetails>> entityNeighbors = Maps.newConcurrentMap();
 
@@ -513,7 +517,7 @@ public class SearchService {
             Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps,
             Map<UUID, EntitySet> entitySetsById,
             boolean vertexIsSrc,
-            ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entities ) {
+            Map<UUID, SetMultimap<FullQualifiedName, Object>> entities ) {
 
         UUID edgeEntitySetId = edge.getEdge().getEntitySetId();
         if ( authorizedEdgeESIdsToVertexESIds.containsKey( edgeEntitySetId ) ) {
@@ -524,10 +528,10 @@ public class SearchService {
                     ? edge.getDst().getEntitySetId()
                     : edge.getSrc().getEntitySetId();
 
-            List<SetMultimap<FullQualifiedName, Object>> edgeDetails = entities.get( edge.getEdge().getEntityKeyId() );
+            SetMultimap<FullQualifiedName, Object> edgeDetails = entities.get( edge.getEdge().getEntityKeyId() );
             if ( authorizedEdgeESIdsToVertexESIds.get( edgeEntitySetId )
                     .contains( neighborEntitySetId ) ) {
-                List<SetMultimap<FullQualifiedName, Object>> neighborDetails = entities.get( neighborEntityKeyId );
+                SetMultimap<FullQualifiedName, Object> neighborDetails = entities.get( neighborEntityKeyId );
                 return new NeighborEntityDetails(
                         entitySetsById.get( edgeEntitySetId ),
                         edgeDetails,
