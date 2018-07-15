@@ -346,16 +346,16 @@ public class MapstoresPod {
     public SelfRegisteringMapStore<AppConfigKey, AppTypeSetting> appConfigMapstore() {
         return new AppConfigMapstore( hikariDataSource );
     }
-
-    @Bean
-    public SelfRegisteringMapStore<EntityDataKey, EntityDataValue> entityDataMapstore() {
-        return new DataMapstoreProxy(
-                ptMgr,
-                hikariDataSource,
-                propertyTypeMapstore(),
-                entitySetMapstore(),
-                entityTypeMapstore() );
-    }
+//
+//    @Bean
+//    public SelfRegisteringMapStore<EntityDataKey, EntityDataValue> entityDataMapstore() {
+//        return new DataMapstoreProxy(
+//                ptMgr,
+//                hikariDataSource,
+//                propertyTypeMapstore(),
+//                entitySetMapstore(),
+//                entityTypeMapstore() );
+//    }
 
     @Bean
     public SelfRegisteringMapStore<Long, Range> idGenerationMapstore() {

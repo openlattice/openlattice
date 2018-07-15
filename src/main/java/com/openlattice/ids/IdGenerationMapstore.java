@@ -22,6 +22,9 @@ package com.openlattice.ids;
 
 import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
 
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapStoreConfig;
+import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresTable;
@@ -58,6 +61,14 @@ public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Long, Ran
         ps.setLong( parameterIndex++, value.getMsb() );
         ps.setLong( parameterIndex++, value.getLsb() );
 
+    }
+
+    @Override public MapStoreConfig getMapStoreConfig() {
+        return super.getMapStoreConfig().setInitialLoadMode( InitialLoadMode.EAGER ).setWriteDelaySeconds( 5 );
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super.getMapConfig();
     }
 
     @Override protected int bind( PreparedStatement ps, Long key, int parameterIndex ) throws SQLException {

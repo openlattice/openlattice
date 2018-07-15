@@ -184,13 +184,13 @@ public final class PostgresColumn {
     public static final String                   LAST_WRITE_FIELD            = "last_write";
     public static final String                   LSB_FIELD                   = "lsb";
     public static final PostgresColumnDefinition LSB                         =
-            new PostgresColumnDefinition( LSB_FIELD, BIGINT );
+            new PostgresColumnDefinition( LSB_FIELD, BIGINT ).notNull();
     public static final String                   MEMBERS_FIELD               = "members";
     public static final PostgresColumnDefinition MEMBERS                     =
             new PostgresColumnDefinition( MEMBERS_FIELD, TEXT_ARRAY );
     public static final String                   MSB_FIELD                   = "msb";
     public static final PostgresColumnDefinition MSB                         =
-            new PostgresColumnDefinition( MSB_FIELD, BIGINT );
+            new PostgresColumnDefinition( MSB_FIELD, BIGINT ).notNull();
     public static final String                   NAMESPACE_FIELD             = "namespace";
     public static final PostgresColumnDefinition NAMESPACE                   =
             new PostgresColumnDefinition( NAMESPACE_FIELD, TEXT ).notNull();
@@ -209,9 +209,9 @@ public final class PostgresColumn {
     public static final String                   ORGANIZATION_ID_FIELD       = "organization_id";
     public static final PostgresColumnDefinition ORGANIZATION_ID             =
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
-    public static final String                   PARTITION_INDEX_FIELD       = "partion_index";
+    public static final String                   PARTITION_INDEX_FIELD       = "partition_index";
     public static final PostgresColumnDefinition PARTITION_INDEX             =
-            new PostgresColumnDefinition( PARTITION_INDEX_FIELD, INTEGER ).notNull();
+            new PostgresColumnDefinition( PARTITION_INDEX_FIELD, BIGINT ).notNull();
     public static final String                   PERMISSIONS_FIELD           = "permissions";
     public static final PostgresColumnDefinition PERMISSIONS                 =
             new PostgresColumnDefinition( PERMISSIONS_FIELD, TEXT_ARRAY );

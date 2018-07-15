@@ -350,23 +350,26 @@ public final class PostgresTable {
                         .name( "edge_entity_key_id_idx" )
                         .ifNotExists());
         IDS.addIndexes(
+                new PostgresIndexDefinition( IDS, ENTITY_SET_ID )
+                        .name( "entity_key_ids_entity_set_id_idx" )
+                        .ifNotExists(),
                 new PostgresIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
                         .unique()
-                        .name( "entity_key_idx" )
+                        .name( "entity_key_ids_entity_key_idx" )
                         .ifNotExists()
         );
         APPS.addIndexes(
                 new PostgresIndexDefinition( APPS, ID )
-                        .name( "id_idx" )
+                        .name( "apps_id_idx" )
                         .ifNotExists() );
         ENTITY_QUERIES.addIndexes(
                 new PostgresIndexDefinition( ENTITY_QUERIES, ID_VALUE )
-                .name( "id_idx" )
+                .name( "entity_queries_id_idx" )
                 .ifNotExists(),
                 new PostgresIndexDefinition( ENTITY_QUERIES, CLAUSES )
         .name( "" ));
         GRAPH_QUERIES.addIndexes(
-                new PostgresIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "expiry_idx" ).ifNotExists() );
+                new PostgresIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "graph_queries_expiry_idx" ).ifNotExists() );
     }
 
     private PostgresTable() {

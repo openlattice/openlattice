@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.hazelcast.HazelcastMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,9 +59,11 @@ public class HazelcastIdGenerationService {
     }
 
     public void initializeRanges() {
+        final Map<Long, Range> ranges = new HashMap(NUM_PARTITIONS);
         for ( long i = 0; i < NUM_PARTITIONS; ++i ) {
-            scrolls.set( i, new Range( i << 48L ) );
+            ranges.put( i, new Range( i << 48L ) );
         }
+        scrolls.putAll( ranges );
     }
 
     public Set<UUID> getNextIds( int count ) {
