@@ -19,8 +19,6 @@
 package com.openlattice.data.requests;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Objects;

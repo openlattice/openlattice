@@ -19,15 +19,28 @@
  *
  */
 
-package com.openlattice.graph.query;
+package com.openlattice.graph;
 
-import java.util.Set;
+import com.google.common.collect.SetMultimap;
+import com.openlattice.data.Property;
+import com.openlattice.graph.query.GraphQuery.AssociationIndexes;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Or extends AbstractQuery {
-    public Or( Set<Query> childQueries ) {
-        super( childQueries );
+public class SubGraph {
+    private final UUID                                                     queryId;
+    private final List<Iterable<SetMultimap<UUID, Property>>>              entities;
+    private final Iterable<AssociationIndexes>                             edges;
+
+    public SubGraph(
+            UUID queryId,
+            List<Iterable<SetMultimap<UUID, Property>>> entities,
+            Iterable<AssociationIndexes> edges ) {
+        this.queryId = queryId;
+        this.entities = entities;
+        this.edges = edges;
     }
 }

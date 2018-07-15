@@ -53,7 +53,7 @@ public class EntitySet extends AbstractSecurableObject {
     @JsonCreator
     public EntitySet(
             @JsonProperty( SerializationConstants.ID_FIELD ) Optional<UUID> id,
-            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD ) UUID entityTypeId,
+            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
             @JsonProperty( SerializationConstants.NAME_FIELD ) String name,
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
@@ -88,7 +88,7 @@ public class EntitySet extends AbstractSecurableObject {
         this( Optional.empty(), entityTypeId, name, title, description, contacts, Optional.of( true ) );
     }
 
-    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD )
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
     public UUID getEntityTypeId() {
         return entityTypeId;
     }

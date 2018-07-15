@@ -21,19 +21,57 @@
 
 package com.openlattice.graph.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntityKeyIdQuery implements Query {
+public class EntityKeyIdQuery implements EntityQuery {
+    private final int  id;
+    private final UUID entitySetId;
     private final UUID entityKeyId;
+    private final UUID entityTypeId;
 
-    public EntityKeyIdQuery( UUID entityKeyId ) {
+    @JsonCreator
+    public EntityKeyIdQuery(
+            @JsonProperty( SerializationConstants.ID_FIELD ) int id,
+            @JsonProperty( SerializationConstants.ENTITY_SET_ID ) UUID entitySetId,
+            @JsonProperty( SerializationConstants.ENTITY_KEY_ID ) UUID entityKeyId,
+            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId ) {
+        this.id = id;
+        this.entitySetId = entitySetId;
         this.entityKeyId = entityKeyId;
+        this.entityTypeId = entityTypeId;
     }
 
+    @Override
+    @JsonProperty( SerializationConstants.ID_FIELD )
+    public int getId() {
+        return id;
+    }
+
+    @JsonProperty( SerializationConstants.ENTITY_SET_ID )
+    public UUID getEntitySetId() {
+        return entitySetId;
+    }
+
+    @JsonProperty( SerializationConstants.ENTITY_KEY_ID )
     public UUID getEntityKeyId() {
         return entityKeyId;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
+    public UUID getEntityTypeId() {
+        return entityTypeId;
+    }
+
+    @Override public Set<EntityQuery> getChildQueries() {
+        return ImmutableSet.of();
     }
 }

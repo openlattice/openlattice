@@ -21,7 +21,7 @@ public class AppType extends AbstractSecurableType {
             @JsonProperty( SerializationConstants.TYPE_FIELD ) FullQualifiedName type,
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
-            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD ) UUID entityTypeId ) {
+            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId ) {
         super( id, type, title, description );
         Preconditions.checkNotNull( entityTypeId, "entityTypeId cannot be null for an AppType" );
         this.entityTypeId = entityTypeId;
@@ -39,7 +39,7 @@ public class AppType extends AbstractSecurableType {
         return SecurableObjectType.AppType;
     }
 
-    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD )
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
     public UUID getEntityTypeId() {
         return entityTypeId;
     }

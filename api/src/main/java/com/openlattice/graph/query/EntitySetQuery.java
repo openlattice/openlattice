@@ -25,34 +25,77 @@ import static com.openlattice.client.serialization.SerializationConstants.ENTITY
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntitySetQuery implements Query {
-    private final UUID entitySetId;
+public class EntitySetQuery implements EntityQuery {
+    private final int            id;
+    private final UUID           entityTypeId;
+    private final Optional<UUID> entitySetId;
+    private final BooleanClauses clauses;
 
     @JsonCreator
     public EntitySetQuery(
-            @JsonProperty( ENTITY_SET_ID ) UUID entitySetId ) {
+            @JsonProperty( SerializationConstants.ID_FIELD ) int id,
+            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
+            @JsonProperty( ENTITY_SET_ID ) Optional<UUID> entitySetId,
+            @JsonProperty( SerializationConstants.CLAUSES ) BooleanClauses clauses ) {
+        this.id = id;
         this.entitySetId = entitySetId;
+        this.entityTypeId = entityTypeId;
+        this.clauses = clauses;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ID_FIELD )
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
+    public UUID getEntityTypeId() {
+        return entityTypeId;
+    }
+
+    @JsonProperty( ENTITY_SET_ID )
+    public Optional<UUID> getEntitySetId() {
+        return entitySetId;
+    }
+
+    @JsonProperty( SerializationConstants.CLAUSES )
+    public BooleanClauses getClauses() {
+        return clauses;
+    }
+
+    @Override public Set<EntityQuery> getChildQueries() {
+        return ImmutableSet.of();
     }
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof EntitySetQuery ) ) { return false; }
         EntitySetQuery that = (EntitySetQuery) o;
-        return Objects.equals( entitySetId, that.entitySetId );
+        return Objects.equals( entitySetId, that.entitySetId ) &&
+                Objects.equals( entityTypeId, that.entityTypeId );
     }
 
     @Override public int hashCode() {
 
-        return Objects.hash( entitySetId );
+        return Objects.hash( entitySetId, entityTypeId );
     }
 
-    public UUID getEntitySetId() {
-        return entitySetId;
+    @Override public String toString() {
+        return "EntitySetQuery{" +
+                "entitySetId=" + entitySetId +
+                ", entityTypeId=" + entityTypeId +
+                '}';
     }
 }

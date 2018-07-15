@@ -19,21 +19,18 @@
  *
  */
 
-package com.openlattice.graph.query;
+package com.openlattice.graph
 
-import java.util.UUID;
+import com.openlattice.graph.query.BooleanClauses
+import com.openlattice.graph.query.EdgeQuery
+import com.openlattice.graph.query.EntityQuery
+import java.util.function.Consumer
+import java.util.function.Function
 
-/**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-public class EntityTypeQuery implements Query {
-    private final UUID entityTypeId;
+interface BooleanClauseVisitor : Consumer<BooleanClauses>
+interface EdgeQueryVisitor : Consumer<EdgeQuery>
+interface EntityQueryVisitor : Consumer<EntityQuery>
 
-    public EntityTypeQuery( UUID entityTypeId ) {
-        this.entityTypeId = entityTypeId;
-    }
-
-    public UUID getEntityTypeId() {
-        return entityTypeId;
-    }
-}
+interface BooleanClauseVisitorFunction<O> : Function<BooleanClauses, O>
+interface EdgeQueryVisitorFunction<O> : Function<EdgeQuery, O>
+interface EntityQueryVisitorFunction<O> : Function<EntityQuery, O>

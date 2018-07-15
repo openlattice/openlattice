@@ -34,19 +34,6 @@ import java.util.stream.Collectors;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include=JsonTypeInfo.As.PROPERTY, property="@class")
-public interface Query{
-    default And and( Query... queries ) {
-        Set<Query> newQueries = new HashSet<>( queries.length + 1 );
-        newQueries.add( this );
-        newQueries.addAll( asList( queries ) );
-        return new And( newQueries );
-    }
-
-    default Or or( Query... queries ) {
-        Set<Query> newQueries = new HashSet<>( queries.length + 1 );
-        newQueries.add( this );
-        newQueries.addAll( asList( queries ));
-        return new Or( newQueries );
-    }
+public interface Query {
 
 }

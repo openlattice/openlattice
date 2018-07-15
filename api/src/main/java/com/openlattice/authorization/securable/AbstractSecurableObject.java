@@ -18,6 +18,8 @@
 
 package com.openlattice.authorization.securable;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,8 +32,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Base class for all securable objects in the system.
  */
+@JsonInclude(value= Include.NON_ABSENT) //This means empty collections will not be included in generated JSON.
 public abstract class AbstractSecurableObject {
     protected final UUID    id;
     //This is only a descriptive property so relax finality.
