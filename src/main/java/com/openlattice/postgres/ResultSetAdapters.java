@@ -688,7 +688,7 @@ public final class ResultSetAdapters {
                         }
                         break;
                     case Int16:
-                        objects = Arrays.asList( (Integer[]) arr.getArray() );
+                        objects = Arrays.asList( (Short[]) arr.getArray() );
                         break;
                     case Int32:
                         objects = Arrays.asList( (Integer[]) arr.getArray() );
