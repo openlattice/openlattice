@@ -428,7 +428,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 } ).map( propertyTypeId -> dms.getPropertyType( propertyTypeId ) ).collect( Collectors
                         .toMap( propertyType -> propertyType.getId(), propertyType -> propertyType.getDatatype() ) );
 
-        dgm.replaceEntities( entitySetId, ImmutableMap.of( entitySetId, entity ), authorizedPropertyTypes );
+        dgm.replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
         return null;
     }
 
