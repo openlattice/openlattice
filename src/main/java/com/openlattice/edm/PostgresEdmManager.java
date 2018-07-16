@@ -22,6 +22,7 @@ package com.openlattice.edm;
 
 import com.codahale.metrics.annotation.ExceptionMetered;
 import com.codahale.metrics.annotation.Timed;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
@@ -152,7 +153,8 @@ public class PostgresEdmManager implements DbEdmManager {
      * all include an if not exists. If the behavior of that class changes this function should be updated
      * appropriately.
      */
-    private void createPropertyTypeTableIfNotExist( EntitySet entitySet, PropertyType propertyType )
+    @VisibleForTesting
+    public void createPropertyTypeTableIfNotExist( EntitySet entitySet, PropertyType propertyType )
             throws SQLException {
         PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( entitySet, propertyType );
         ptm.registerTables( ptd );
