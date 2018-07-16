@@ -314,6 +314,11 @@ public class AppService {
     public void updateAppConfigEntitySetId( UUID organizationId, UUID appId, UUID appTypeId, UUID entitySetId ) {
         AppConfigKey key = new AppConfigKey( appId, organizationId, appTypeId );
         appConfigs.executeOnKey( key, new UpdateAppConfigEntitySetProcessor( entitySetId ) );
+
+        Principal appPrincipal = new Principal( PrincipalType.APP,
+                AppConfig.getAppPrincipalId( appId, organizationId ) );
+        EnumSet<Permission> permissions = appConfigs.get( key ).getPermissions();
+        authorizationService.addPermission( new AclKey( entitySetId ), appPrincipal, permissions );
     }
 
     public void updateAppConfigPermissions(
@@ -323,6 +328,11 @@ public class AppService {
             EnumSet<Permission> permissions ) {
         AppConfigKey key = new AppConfigKey( organizationId, appId, appTypeId );
         appConfigs.executeOnKey( key, new UpdateAppConfigPermissionsProcessor( permissions ) );
+
+        Principal appPrincipal = new Principal( PrincipalType.APP,
+                AppConfig.getAppPrincipalId( appId, organizationId ) );
+        UUID entitySetId = appConfigs.get( key ).getEntitySetId();
+        authorizationService.addPermission( new AclKey( entitySetId ), appPrincipal, permissions );
     }
 
     public void updateAppMetadata( UUID appId, MetadataUpdate metadataUpdate ) {

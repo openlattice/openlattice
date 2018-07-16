@@ -20,13 +20,16 @@
 
 package com.openlattice.datastore.converters;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.csv.CsvGenerator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema.Builder;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema.ColumnType;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.datastore.constants.CustomMediaType;
@@ -48,6 +51,9 @@ public class CsvHttpMessageConverter
         csvMapper.registerModule( new AfterburnerModule() );
         csvMapper.registerModule( new GuavaModule() );
         csvMapper.registerModule( new JodaModule() );
+        csvMapper.registerModule( new JavaTimeModule() );
+        csvMapper.registerModule( new Jdk8Module() );
+        csvMapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false );
         csvMapper.configure( CsvGenerator.Feature.STRICT_CHECK_FOR_QUOTING, true );
     }
 
