@@ -21,13 +21,14 @@
 package com.openlattice;
 
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.hazelcast.serializers.*;
+import com.openlattice.hazelcast.serializers.BlockingAggregatorStreamSerializer;
+import com.openlattice.hazelcast.serializers.ConductorElasticsearchCallStreamSerializer;
+import com.openlattice.hazelcast.serializers.FeatureExtractionAggregationStreamSerializer;
+import com.openlattice.hazelcast.serializers.MergeVertexAggregatorStreamSerializer;
 import com.openlattice.linking.HazelcastBlockingService;
-import com.openlattice.linking.HazelcastMergingService;
-import org.springframework.context.annotation.Configuration;
-
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class PlasmaCoupling {
@@ -48,24 +49,12 @@ public class PlasmaCoupling {
     private BlockingAggregatorStreamSerializer bass;
 
     @Inject
-    private InitializerAggregatorStreamSerializer iass;
-
-    @Inject
-    private HazelcastMergingService mergingService;
-
-    @Inject
     private MergeVertexAggregatorStreamSerializer mvass;
-
-    @Inject
-    private MergeEdgeAggregatorStreamSerializer meass;
 
     @PostConstruct
     public void connect() {
         cecss.setConductorElasticsearchApi( elasticsearchApi );
         feass.setConductorElasticsearchApi( elasticsearchApi );
         bass.setBlockingService( blockingService );
-        iass.setBlockingService( blockingService );
-        mvass.setMergingService( mergingService );
-        meass.setMergingService( mergingService );
     }
 }
