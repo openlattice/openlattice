@@ -20,45 +20,41 @@
 
 package com.openlattice;
 
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.mapstores.PostgresDataMapstore;
-import com.openlattice.data.requests.Entity;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.datastax.driver.core.Session;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.integration.Entity;
+import com.openlattice.hazelcast.HazelcastMap;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataLoadingService {
     private final ListeningExecutorService executor;
-    private final PostgresDataMapstore     dataMapstore;
     private final IMap<EntityKey, Entity>  data;
     private final Session                  session;
 
     public DataLoadingService(
             Session session,
             HazelcastInstance hz,
-            ListeningExecutorService executor,
-            PostgresDataMapstore dataMapstore ) {
+            ListeningExecutorService executor ) {
         this.executor = executor;
-        this.dataMapstore = dataMapstore;
         this.session = session;
         this.data = hz.getMap( HazelcastMap.DATA.name() );
     }
 
     public void backgroundLoad() {
-//        executor.execute( () ->
-//                StreamUtil.stream( session
-//                        .execute( DataMapstore.currentSyncs(  ) ) )
-//                        .parallel()
-//                        .map( dataMapstore::getEntityKeys )
-//                        .map( ResultSetFuture::getUninterruptibly )
-//                        .flatMap( StreamUtil::stream )
-//                        .map( RowAdapters::entityKeyFromData )
-//                        .forEach( data::get ) );
+        //        executor.execute( () ->
+        //                StreamUtil.stream( session
+        //                        .execute( DataMapstore.currentSyncs(  ) ) )
+        //                        .parallel()
+        //                        .map( dataMapstore::getEntityKeys )
+        //                        .map( ResultSetFuture::getUninterruptibly )
+        //                        .flatMap( StreamUtil::stream )
+        //                        .map( RowAdapters::entityKeyFromData )
+        //                        .forEach( data::get ) );
 
         //.unordered();
         //.distinct()::iterator;

@@ -23,7 +23,6 @@ package com.openlattice.conductor.users;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Optional;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IAtomicLong;
 import com.hazelcast.core.IMap;
@@ -45,6 +44,7 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -145,7 +145,7 @@ public class Auth0Synchronizer {
                 user.getEmail();
 
         spm.createSecurablePrincipalIfNotExists( principal,
-                new SecurablePrincipal( Optional.absent(), principal, title, Optional.absent() ) );
+                new SecurablePrincipal( Optional.empty(), principal, title, Optional.empty() ) );
 
         AclKey userAclKey = spm.lookup( principal );
 
