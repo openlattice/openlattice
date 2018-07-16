@@ -26,13 +26,13 @@ import java.util.UUID;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.openlattice.datastore.BootstrapDatastoreWithCassandra;
+import com.openlattice.datastore.IntegrationTestsBootstrap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.OrganizationsApi;
 import com.google.common.collect.ImmutableSet;
 
-public class OrganizationsTest extends BootstrapDatastoreWithCassandra {
+public class OrganizationsTest extends IntegrationTestsBootstrap {
 
     protected static final OrganizationsApi organizations = getApiUser1( OrganizationsApi.class );
 

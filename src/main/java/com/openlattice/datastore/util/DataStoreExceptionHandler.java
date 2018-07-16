@@ -43,17 +43,17 @@ public class DataStoreExceptionHandler {
     public ResponseEntity<ErrorsDTO> handleNotFoundException( Exception e ) {
         logger.error( ERROR_MSG, e );
         if ( e.getMessage() != null ) {
-            return new ResponseEntity<ErrorsDTO>(
+            return new ResponseEntity<>(
                     new ErrorsDTO( ApiExceptions.RESOURCE_NOT_FOUND_EXCEPTION, e.getMessage() ),
                     HttpStatus.NOT_FOUND );
         }
-        return new ResponseEntity<ErrorsDTO>( HttpStatus.NOT_FOUND );
+        return new ResponseEntity<>( HttpStatus.NOT_FOUND );
     }
 
     @ExceptionHandler( { IllegalArgumentException.class, HttpMessageNotReadableException.class } )
     public ResponseEntity<ErrorsDTO> handleIllegalArgumentException( Exception e ) {
         logger.error( ERROR_MSG, e );
-        return new ResponseEntity<ErrorsDTO>(
+        return new ResponseEntity<>(
                 new ErrorsDTO( ApiExceptions.ILLEGAL_ARGUMENT_EXCEPTION, e.getMessage() ),
                 HttpStatus.BAD_REQUEST );
     }
@@ -61,7 +61,7 @@ public class DataStoreExceptionHandler {
     @ExceptionHandler( IllegalStateException.class )
     public ResponseEntity<ErrorsDTO> handleIllegalStateException( Exception e ) {
         logger.error( ERROR_MSG, e );
-        return new ResponseEntity<ErrorsDTO>(
+        return new ResponseEntity<>(
                 new ErrorsDTO( ApiExceptions.ILLEGAL_STATE_EXCEPTION, e.getMessage() ),
                 HttpStatus.INTERNAL_SERVER_ERROR );
     }
@@ -69,7 +69,7 @@ public class DataStoreExceptionHandler {
     @ExceptionHandler( TypeExistsException.class )
     public ResponseEntity<ErrorsDTO> handleTypeExistsException( Exception e ) {
         logger.error( ERROR_MSG, e );
-        return new ResponseEntity<ErrorsDTO>(
+        return new ResponseEntity<>(
                 new ErrorsDTO( ApiExceptions.TYPE_EXISTS_EXCEPTION, e.getMessage() ),
                 HttpStatus.CONFLICT );
     }
@@ -77,7 +77,7 @@ public class DataStoreExceptionHandler {
     @ExceptionHandler( ForbiddenException.class )
     public ResponseEntity<ErrorsDTO> handleUnauthorizedExceptions( ForbiddenException e ) {
         logger.error( ERROR_MSG, e );
-        return new ResponseEntity<ErrorsDTO>(
+        return new ResponseEntity<>(
                 new ErrorsDTO( ApiExceptions.FORBIDDEN_EXCEPTION, e.getMessage() ),
                 HttpStatus.UNAUTHORIZED );
     }
@@ -91,7 +91,7 @@ public class DataStoreExceptionHandler {
     @ExceptionHandler( Exception.class )
     public ResponseEntity<ErrorsDTO> handleOtherExceptions( Exception e ) {
         logger.error( ERROR_MSG, e );
-        return new ResponseEntity<ErrorsDTO>(
+        return new ResponseEntity<>(
                 new ErrorsDTO( ApiExceptions.OTHER_EXCEPTION, e.getClass().getSimpleName() + ": " + e.getMessage() ),
                 HttpStatus.INTERNAL_SERVER_ERROR );
     }

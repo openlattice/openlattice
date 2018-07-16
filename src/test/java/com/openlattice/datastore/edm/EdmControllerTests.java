@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.openlattice.datastore.BootstrapDatastoreWithCassandra;
+import com.openlattice.datastore.IntegrationTestsBootstrap;
 
 import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EnumType;
@@ -51,7 +51,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
-public class EdmControllerTests extends BootstrapDatastoreWithCassandra {
+public class EdmControllerTests extends IntegrationTestsBootstrap {
     private final static Logger logger = LoggerFactory.getLogger( AuthenticatedRestCallsTest.class );
     private final EdmApi        edm    = getApiAdmin( EdmApi.class );
 

@@ -30,6 +30,8 @@ import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -120,6 +122,9 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @Inject
     private DatasourceManager datasourceManager;
 
+    @Inject
+    private EdmAuthorizationHelper authzHelper;
+
     @RequestMapping(
             path = CLEAR_PATH,
             method = RequestMethod.DELETE )
@@ -145,27 +150,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     @Override
     public EntityDataModel getEntityDataModel() {
-        final List<Schema> schemas = Lists.newArrayList( schemaManager.getAllSchemas() );
-        final List<EntityType> entityTypes = Lists.newArrayList( getEntityTypesStrict() );
-        final List<AssociationType> associationTypes = Lists.newArrayList( getAssociationTypes() );
-        final List<PropertyType> propertyTypes = Lists.newArrayList( getPropertyTypes() );
-        final ConcurrentSkipListSet<String> namespaces = new ConcurrentSkipListSet<>();
-        getEntityTypes().forEach( entityType -> namespaces.add( entityType.getType().getNamespace() ) );
-        getPropertyTypes().forEach( propertyType -> namespaces.add( propertyType.getType().getNamespace() ) );
-
-        schemas.sort( Comparator.comparing( schema -> schema.getFqn().toString() ) );
-        entityTypes.sort( Comparator.comparing( entityType -> entityType.getType().toString() ) );
-        associationTypes.sort( Comparator
-                .comparing( associationType -> associationType.getAssociationEntityType().getType().toString() ) );
-        propertyTypes.sort( Comparator.comparing( propertyType -> propertyType.getType().toString() ) );
-
-        return new EntityDataModel(
-                getEntityDataModelVersion(),
-                namespaces,
-                schemas,
-                entityTypes,
-                associationTypes,
-                propertyTypes );
+        return modelService.getEntityDataModel();
     }
 
     @RequestMapping(
@@ -452,10 +437,17 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @ResponseStatus( HttpStatus.OK )
     public Void deleteEntitySet( @PathVariable( ID ) UUID entitySetId ) {
         ensureOwnerAccess( new AclKey( entitySetId ) );
+        final EntitySet entitySet = modelService.getEntitySet( entitySetId );
+        final EntityType entityType = modelService.getEntityType( entitySet.getEntityTypeId() );
+        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.OWNER ) );
+        if ( !authorizedPropertyTypes.keySet().containsAll( entityType.getProperties() ) ) {
+            throw new ForbiddenException( "You shall not pass!" );
+        }
+
         modelService.deleteEntitySet( entitySetId );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( entitySetId ) );
-
-        dataManager.deleteEntitySetData( entitySetId );
+        dataManager.deleteEntitySetData( entitySetId, authorizedPropertyTypes );
 
         return null;
     }
@@ -669,11 +661,11 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     }
 
     @Override public Void addPrimaryKeyToEntityType( UUID entityTypeId, UUID propertyTypeId ) {
-        throw new NotImplementedException("Not yet ported");
+        throw new NotImplementedException( "Not yet ported" );
     }
 
     @Override public Void removePrimaryKeyFromEntityType( UUID entityTypeId, UUID propertyTypeId ) {
-        throw new NotImplementedException("Not yet ported");
+        throw new NotImplementedException( "Not yet ported" );
     }
 
     @Override

@@ -35,13 +35,12 @@ import static com.openlattice.datastore.TestEdmConfigurer.NAMESPACE;
 import static com.openlattice.datastore.TestEdmConfigurer.SALARY;
 import static com.openlattice.datastore.TestEdmConfigurer.SCHEMA_NAME;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.openlattice.conductor.rpc.Employee;
-import com.openlattice.datastore.BootstrapDatastoreWithCassandra;
+import com.openlattice.datastore.IntegrationTestsBootstrap;
 import com.openlattice.datastore.converters.IterableCsvHttpMessageConverter;
 import com.openlattice.datastore.odata.EdmProviderImpl;
 import com.openlattice.datastore.odata.Transformers.EntitySetTransformer;
@@ -56,6 +55,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.olingo.commons.api.data.Entity;
@@ -81,7 +81,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 
-public class DatastoreTests extends BootstrapDatastoreWithCassandra {
+public class DatastoreTests extends IntegrationTestsBootstrap {
 
     private static final Multimap<String, Object> m = HashMultimap.create();
 
@@ -134,7 +134,7 @@ public class DatastoreTests extends BootstrapDatastoreWithCassandra {
         e.setType( ENTITY_TYPE.getFullQualifiedNameAsString() );
         e.addProperty( empId ).addProperty( empName ).addProperty( empTitle ).addProperty( empSalary );
         /**
-        esc.createEntityData( ACLs.EVERYONE_ACL,
+        esc.replaceEntities( ACLs.EVERYONE_ACL,
                 Syncs.BASE.getSyncId(),
                 ENTITY_SET_NAME,
                 ENTITY_TYPE,
@@ -196,7 +196,7 @@ public class DatastoreTests extends BootstrapDatastoreWithCassandra {
                         .addProperty( employeeDept )
                         .addProperty( employeeSalary );
                 /**
-                esc.createEntityData( ACLs.EVERYONE_ACL,
+                esc.replaceEntities( ACLs.EVERYONE_ACL,
                         Syncs.BASE.getSyncId(),
                         ENTITY_SET_NAME,
                         ENTITY_TYPE,
@@ -204,13 +204,13 @@ public class DatastoreTests extends BootstrapDatastoreWithCassandra {
 
                 // Created by Ho Chung for testing different entity types
                 // add entityType "employeeMars"
-                esc.createEntityData( ACLs.EVERYONE_ACL,
+                esc.replaceEntities( ACLs.EVERYONE_ACL,
                         Syncs.BASE.getSyncId(),
                         ENTITY_SET_NAME,
                         ENTITY_TYPE_MARS,
                         entity );
                 // add entityType "employeeSaturn"
-                esc.createEntityData( ACLs.EVERYONE_ACL,
+                esc.replaceEntities( ACLs.EVERYONE_ACL,
                         Syncs.BASE.getSyncId(),
                         ENTITY_SET_NAME,
                         ENTITY_TYPE_SATURN,

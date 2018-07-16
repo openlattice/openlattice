@@ -113,7 +113,7 @@ public class EntityProcessorImpl implements EntityProcessor {
          Entity requestEntity = result.getEntity();
 
          // 2.2 do the creation in backend, which returns the newly created entity
-         Entity createdEntity = storage.createEntityData(
+         Entity createdEntity = storage.replaceEntities(
          ACLs.EVERYONE_ACL,
          Syncs.BASE.getSyncId(),
          edmEntitySet,

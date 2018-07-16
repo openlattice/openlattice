@@ -45,11 +45,13 @@ import com.openlattice.clustering.DistributedClusterer;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.DatasourceManager;
-import com.openlattice.data.ids.HazelcastEntityKeyIdService;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
+import com.openlattice.data.EntityDatastore;
+import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresDataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.AnalysisService;
 import com.openlattice.datastore.services.EdmManager;
@@ -60,11 +62,14 @@ import com.openlattice.datastore.services.PostgresEntitySetManager;
 import com.openlattice.datastore.services.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.directory.UserDirectoryService;
+import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
-import com.openlattice.graph.core.Graph;
+import com.openlattice.graph.Graph;
+import com.openlattice.graph.core.GraphService;
+import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.linking.HazelcastListingService;
 import com.openlattice.linking.HazelcastVertexMergingService;
@@ -76,6 +81,7 @@ import com.openlattice.neuron.pods.NeuronPod;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.zaxxer.hikari.HikariDataSource;
@@ -95,19 +101,21 @@ import org.springframework.context.annotation.Import;
 public class DatastoreServicesPod {
 
     @Inject
-    Jdbi jdbi;
+    private Jdbi                     jdbi;
     @Inject
-    private HazelcastInstance hazelcastInstance;
+    private PostgresTableManager     tableManager;
     @Inject
-    private HikariDataSource hikariDataSource;
+    private HazelcastInstance        hazelcastInstance;
     @Inject
-    private Auth0Configuration auth0Configuration;
+    private HikariDataSource         hikariDataSource;
+    @Inject
+    private Auth0Configuration       auth0Configuration;
     @Inject
     private ListeningExecutorService executor;
     @Inject
-    private EventBus eventBus;
+    private EventBus                 eventBus;
     @Inject
-    private Neuron neuron;
+    private Neuron                   neuron;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -118,7 +126,7 @@ public class DatastoreServicesPod {
     public ObjectMapper defaultObjectMapper() {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
         FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
-        FullQualifiedNameJacksonDeserializer.registerWithMapper( mapper );
+
         return mapper;
     }
 
@@ -157,6 +165,11 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresTypeManager entityTypeManager() {
         return new PostgresTypeManager( hikariDataSource );
+    }
+
+    @Bean
+    public PostgresEntityDataQueryService dataQueryService() {
+        return new PostgresEntityDataQueryService( hikariDataSource );
     }
 
     @Bean
@@ -200,13 +213,13 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public HazelcastEntityDatastore cassandraDataManager() {
+    public EntityDatastore entityDatastore() {
         return new HazelcastEntityDatastore(
                 hazelcastInstance,
                 executor,
                 defaultObjectMapper(),
                 idService(),
-                postgresDataManager() );
+                postgresDataManager(), dataQueryService() );
     }
 
     @Bean
@@ -297,24 +310,28 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public Graph loomGraph() {
-        return new Graph( executor, hazelcastInstance );
+    public GraphService graphApi() {
+        return new Graph( hikariDataSource, dataModelService() );
     }
 
     @Bean
-    public HazelcastEntityKeyIdService idService() {
-        return new HazelcastEntityKeyIdService( hazelcastInstance, executor );
+    public HazelcastIdGenerationService idGenerationService() {
+        return new HazelcastIdGenerationService( hazelcastInstance );
+    }
+
+    @Bean
+    public EntityKeyIdService idService() {
+        return new PostgresEntityKeyIdService( hazelcastInstance, hikariDataSource, idGenerationService() );
     }
 
     @Bean
     public DataGraphManager dataGraphService() {
         return new DataGraphService(
                 hazelcastInstance,
-                cassandraDataManager(),
-                loomGraph(),
+                eventBus,
+                graphApi(),
                 idService(),
-                executor,
-                eventBus );
+                entityDatastore() );
     }
 
     @Bean
@@ -336,6 +353,13 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 principalService(),
                 aclKeyReservationService() ), "Checkpoint app service" );
+    }
+
+    @Bean
+    public PostgresEdmManager pgEdmManager() {
+        PostgresEdmManager pgEdmManager = new PostgresEdmManager( tableManager, hikariDataSource );
+        eventBus.register( pgEdmManager );
+        return pgEdmManager;
     }
 
     @Bean

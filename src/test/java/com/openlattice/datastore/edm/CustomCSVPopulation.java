@@ -337,7 +337,7 @@ public class CustomCSVPopulation {
          * ).getFullQualifiedNameAsString() ); property.setValue( ValueType.PRIMITIVE, TypeConversion( map.get(
          * propertyName ), propertyType.getJavaTypeName() ) );
          *
-         * entity.addProperty( property ); } odsc.createEntityData( ACLs.EVERYONE_ACL, Syncs.BASE.getSyncId(),
+         * entity.addProperty( property ); } odsc.replaceEntities( ACLs.EVERYONE_ACL, Syncs.BASE.getSyncId(),
          * entitySetName, entityTypeFQN, entity ); }
          */
     }

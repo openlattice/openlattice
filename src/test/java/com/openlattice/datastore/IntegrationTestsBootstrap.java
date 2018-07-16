@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import retrofit2.Retrofit;
 
-public class BootstrapDatastoreWithCassandra {
+public class IntegrationTestsBootstrap {
     protected static final Datastore     ds       = new Datastore();
     protected static final Set<Class<?>> PODS     = Sets.newHashSet();
     protected static final Set<String>   PROFILES = Sets.newHashSet( "local", "postgres" );
@@ -163,6 +163,6 @@ public class BootstrapDatastoreWithCassandra {
 
     @AfterClass
     public static void shutdown() {
-        LoggerFactory.getLogger( BootstrapDatastoreWithCassandra.class ).info( "BREAKPOINT" );
+        LoggerFactory.getLogger( IntegrationTestsBootstrap.class ).info( "BREAKPOINT" );
     }
 }

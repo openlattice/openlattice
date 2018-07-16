@@ -20,46 +20,37 @@
 
 package com.openlattice.datastore.data;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import com.google.common.collect.Iterables;
+import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.datastore.authentication.MultipleAuthenticatedUsersBase;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.mapstores.TestDataFactory;
-import com.google.common.base.Optional;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.SetMultimap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class DataControllerTest extends MultipleAuthenticatedUsersBase {
 
     private static final int    numberOfEntries = 10;
     private static final Random random          = new Random();
 
-    @BeforeClass
-    public static void init() {
-        loginAs( "admin" );
-    }
-
     @Test
     public void testCreateAndLoadEntityData() {
         EntityType et = createEntityType();
         EntitySet es = createEntitySet( et );
-        UUID syncId = syncApi.getCurrentSyncId( es.getId() );
-        
-        dataApi.createEntityData( es.getId(),
-                syncId,
-                TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ) );
+
+        dataApi.replaceEntities( es.getId(),
+                TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ), false );
 
         Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi.loadEntitySetData( es.getId(), null, "" );
         Assert.assertEquals( numberOfEntries, Iterables.size( results ) );
@@ -70,17 +61,15 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         EntityType et = createEntityType();
         EntitySet es = createEntitySet( et );
         UUID syncId = syncApi.getCurrentSyncId( es.getId() );
-        
-        Map<String, SetMultimap<UUID, Object>> entities = TestDataFactory.randomStringEntityData( numberOfEntries,
+
+        Map<UUID, SetMultimap<UUID, Object>> entities = TestDataFactory.randomStringEntityData( numberOfEntries,
                 et.getProperties() );
-        dataApi.createEntityData( es.getId(), syncId, entities );
+        dataApi.replaceEntities( es.getId(), entities, false );
 
         // load selected data
         Set<UUID> selectedProperties = et.getProperties().stream().filter( pid -> random.nextBoolean() )
                 .collect( Collectors.toSet() );
-        EntitySetSelection ess = new EntitySetSelection(
-                Optional.of( syncId ),
-                Optional.of( selectedProperties ) );
+        EntitySetSelection ess = new EntitySetSelection( Optional.of( selectedProperties ) );
         Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi.loadEntitySetData( es.getId(), ess, null );
 
         // check results
@@ -96,7 +85,8 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
             expectedValues
                     .add( entity.asMap().entrySet().stream()
                             // filter the entries with key (propertyId) in the selected set
-                            .filter( e -> ( selectedProperties.isEmpty() || selectedProperties.contains( e.getKey() ) ) )
+                            .filter( e -> ( selectedProperties.isEmpty() || selectedProperties
+                                    .contains( e.getKey() ) ) )
                             // Put all the property values in the same stream, and cast them back to strings
                             .flatMap( e -> e.getValue().stream() )
                             .map( o -> (String) o )
@@ -106,23 +96,8 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         Assert.assertEquals( expectedValues, resultValues );
     }
 
-    @Test
-    public void testSyncTicketService() {
-        EntityType et = createEntityType();
-        EntitySet es = createEntitySet( et );
-        UUID syncId = syncApi.getCurrentSyncId( es.getId() );
-        
-        UUID ticket = dataApi.acquireSyncTicket( es.getId(), syncId );
-
-        dataApi.storeEntityData( ticket,
-                syncId,
-                TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ) );
-
-        dataApi.releaseSyncTicket( ticket );
-
-        // not passing in token should retain current security context
-        Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi.loadEntitySetData( es.getId(), null, "" );
-        Assert.assertEquals( numberOfEntries, Iterables.size( results ) );
-
+    @BeforeClass
+    public static void init() {
+        loginAs( "admin" );
     }
 }

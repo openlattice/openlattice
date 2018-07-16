@@ -127,7 +127,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
 
     @Override
     public UUID linkEntities(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId,
             @Body Set<EntityKey> entities ) {
@@ -136,7 +135,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
 
     @Override
     public Void setLinkedEntities(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId,
             @Body Set<EntityKey> entities ) {
@@ -145,7 +143,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
 
     @Override
     public Void deleteLinkedEntities(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId ) {
         return null;
@@ -153,7 +150,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
 
     @Override
     public Void addLinkedEntities(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId,
             @Path( LINKED_ENTITY_ID ) UUID linkedEntityId ) {
@@ -162,7 +158,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
 
     @Override
     public Void removeLinkedEntity(
-            @Path( SYNC_ID ) UUID syncId,
             @Path( SET_ID ) UUID entitySetId,
             @Path( ENTITY_ID ) UUID entityId,
             @Path( LINKED_ENTITY_ID ) UUID linkedEntityId ) {
