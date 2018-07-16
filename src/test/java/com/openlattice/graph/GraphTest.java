@@ -25,10 +25,10 @@ import com.openlattice.authorization.HzAuthzTest;
 public class GraphTest extends HzAuthzTest {
 
 //    protected static final Graph         lg;
-  //  protected static final GraphQueryService gqs;
+  //  protected static final PostgresGraphQueryService gqs;
 
     static {
-      //  gqs = new GraphQueryService( session );
+      //  gqs = new PostgresGraphQueryService( session );
 //        lg = new Graph( gqs, hazelcastInstance );
     }
 

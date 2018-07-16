@@ -28,7 +28,6 @@ import com.datastax.driver.core.utils.UUIDs;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.EntityKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.neuron.audit.AuditEntitySetUtils;
 import com.openlattice.neuron.audit.AuditLogQueryService;
@@ -40,7 +39,6 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -105,21 +103,15 @@ public class Neuron {
         try {
 
             UUID auditEntitySetId = AuditEntitySetUtils.getId();
-            UUID auditEntitySetSyncId = AuditEntitySetUtils.getSyncId();
             String auditEntityId = UUID.randomUUID().toString();
 
-            this.dataGraphManager.createEntities(
+            return this.dataGraphManager.createEntities(
                     auditEntitySetId,
-                    auditEntitySetSyncId,
                     AuditEntitySetUtils.prepareAuditEntityData( signal, auditEntityId ),
                     AuditEntitySetUtils.getPropertyDataTypesMap()
-            );
+            ).get( 0 );
 
-            // TODO: remove dependency on EntityKeyIdService once DataGraphManager can return the UUID after creation
-            EntityKey auditEntityKey = new EntityKey( auditEntitySetId, auditEntityId, auditEntitySetSyncId );
-            return entityKeyIdService.getEntityKeyId( auditEntityKey );
-
-        } catch ( ExecutionException | InterruptedException | NullPointerException e ) {
+        } catch ( NullPointerException e ) {
             logger.error( "Failed to write to Audit EntitySet." );
             logger.error( e.getMessage(), e );
             return null;

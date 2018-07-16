@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2018. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,31 +16,25 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.graph.aggregators;
+package com.openlattice.graph
 
-import com.openlattice.graph.edge.Edge;
-import com.hazelcast.query.IndexAwarePredicate;
-import com.hazelcast.query.impl.QueryContext;
-import com.hazelcast.query.impl.QueryableEntry;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
+import com.openlattice.graph.query.GraphQuery
+import com.openlattice.graph.query.GraphQueryState
+import com.openlattice.graph.query.GraphQueryState.Option
+import java.util.*
 
 /**
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class GraphPredicate implements IndexAwarePredicate<UUID, Edge> {
-    @Override public Set<QueryableEntry<UUID, Edge>> filter( QueryContext queryContext ) {
-        return null;
-    }
+interface GraphQueryService {
+    fun submitQuery(query: GraphQuery): GraphQueryState
+    fun getQuery(queryId: UUID): GraphQuery
+    fun getQueryState(queryId: UUID, options: Set<Option> = setOf()): GraphQueryState
+    fun abortQuery(queryId: UUID)
+    fun getResult(queryId: UUID): Optional<SubGraph>
 
-    @Override public boolean isIndexed( QueryContext queryContext ) {
-        return false;
-    }
-
-    @Override public boolean apply( Entry<UUID, Edge> mapEntry ) {
-        return false;
-    }
 }

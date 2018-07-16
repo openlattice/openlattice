@@ -92,7 +92,7 @@ public final class PostgresEdmTypeConverter {
             case Boolean:
                 return PostgresDatatype.BOOLEAN_ARRAY;
             case Binary:
-                //TODO: Find out of if there are arrays of byte arrays in Postgres.
+                return PostgresDatatype.BYTEA_ARRAY;
             default:
                 throw new NotImplementedException( "Don't know how to convert " + edmType.name() + " to array type" );
         }

@@ -16,38 +16,40 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.graph.aggregators.NeighborEntitySetAggregator;
-import com.openlattice.graph.core.objects.NeighborTripletSet;
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import com.openlattice.ids.Range;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
 
+/**
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ */
 @Component
-public class NeighborEntitySetAggregatorStreamSerializer
-        implements SelfRegisteringStreamSerializer<NeighborEntitySetAggregator> {
-    @Override public Class<? extends NeighborEntitySetAggregator> getClazz() {
-        return NeighborEntitySetAggregator.class;
+public class RangeStreamSerializer implements SelfRegisteringStreamSerializer<Range> {
+    @Override public Class<Range> getClazz() {
+        return Range.class;
     }
 
-    @Override public void write(
-            ObjectDataOutput out, NeighborEntitySetAggregator object ) throws IOException {
-        NeighborTripletSetStreamSerializer.serialize( out, object.getEdgeTriplets() );
+    @Override public void write( ObjectDataOutput out, Range object ) throws IOException {
+        out.writeLong(  object.getBase() );
+        out.writeLong(  object.getMsb() );
+        out.writeLong(  object.getLsb() );
     }
 
-    @Override public NeighborEntitySetAggregator read( ObjectDataInput in ) throws IOException {
-        NeighborTripletSet edgeTriplets = NeighborTripletSetStreamSerializer.deserialize( in );
-        return new NeighborEntitySetAggregator( edgeTriplets );
+    @Override public Range read( ObjectDataInput in ) throws IOException {
+        return new Range( in.readLong(), in.readLong(), in.readLong() );
     }
 
     @Override public int getTypeId() {
-        return StreamSerializerTypeIds.NEIGHBOR_ENTITY_SET_AGGREGATOR.ordinal();
+        return StreamSerializerTypeIds.RANGE.ordinal();
     }
 
     @Override public void destroy() {

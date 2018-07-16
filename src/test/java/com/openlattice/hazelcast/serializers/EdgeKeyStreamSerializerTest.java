@@ -23,6 +23,7 @@ package com.openlattice.hazelcast.serializers;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.hazelcast.serializers.EdgeKeyStreamSerializer;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import com.openlattice.mapstores.TestDataFactory;
 import java.util.UUID;
 
 /**
@@ -34,6 +35,6 @@ public class EdgeKeyStreamSerializerTest extends AbstractStreamSerializerTest<Ed
     }
 
     @Override protected EdgeKey createInput() {
-        return new EdgeKey( UUID.randomUUID(), UUID.randomUUID(),UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() );
+        return new EdgeKey( TestDataFactory.entityDataKey(),TestDataFactory.entityDataKey(), TestDataFactory.entityDataKey() );
     }
 }

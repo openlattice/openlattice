@@ -22,119 +22,67 @@
 
 package com.openlattice.graph.edge;
 
-import java.util.UUID;
+import com.openlattice.data.EntityDataKey;
+import java.util.List;
+import java.util.Objects;
 
 public class Edge {
-    private EdgeKey key;
-
-    private UUID srcType;
-    private UUID srcSetId;
-    private UUID dstSetId;
-    private UUID edgeSetId;
-
-    private UUID srcSyncId;
-    private UUID dstSyncId;
+    private final EdgeKey key;
+    private final long          version;
+    private final List<Long>    versions;
 
     public Edge(
             EdgeKey key,
-            UUID srcType,
-            UUID srcSetId,
-            UUID srcSyncId,
-            UUID dstSetId,
-            UUID dstSyncId,
-            UUID edgeSetId ) {
+            long version,
+            List<Long> versions ) {
         this.key = key;
-        this.srcSyncId = srcSyncId;
-        this.srcType = srcType;
-        this.srcSetId = srcSetId;
-        this.dstSetId = dstSetId;
-        this.dstSyncId = dstSyncId;
-        this.edgeSetId = edgeSetId;
+        this.version = version;
+        this.versions = versions;
     }
 
     public EdgeKey getKey() {
         return key;
     }
 
-    public UUID getSrcTypeId() {
-        return srcType;
+    public EntityDataKey getSrc() {
+        return key.getSrc();
     }
 
-    public UUID getSrcSetId() {
-        return srcSetId;
+    public EntityDataKey getDst() {
+        return key.getDst();
     }
 
-    public UUID getSrcSyncId() {
-        return srcSyncId;
+    public EntityDataKey getEdge() {
+        return key.getEdge();
     }
 
-    public UUID getDstSetId() {
-        return dstSetId;
+    public long getVersion() {
+        return version;
     }
 
-    public UUID getDstSyncId() {
-        return dstSyncId;
-    }
-
-    public UUID getEdgeSetId() {
-        return edgeSetId;
-    }
-
-    public UUID getSrcEntityKeyId() {
-        return key.getSrcEntityKeyId();
-    }
-
-    public UUID getDstEntityKeyId() {
-        return key.getDstEntityKeyId();
-    }
-
-    public UUID getEdgeEntityKeyId() {
-        return key.getEdgeEntityKeyId();
-    }
-
-    public UUID getDstTypeId() {
-        return key.getDstTypeId();
-    }
-
-    public UUID getEdgeTypeId() {
-        return key.getEdgeTypeId();
+    public List<Long> getVersions() {
+        return versions;
     }
 
     @Override public String toString() {
         return "Edge{" +
                 "key=" + key +
-                ", srcType=" + srcType +
-                ", srcSetId=" + srcSetId +
-                ", dstSetId=" + dstSetId +
-                ", edgeSetId=" + edgeSetId +
-                ", srcSyncId=" + srcSyncId +
-                ", dstSyncId=" + dstSyncId +
+                ", version=" + version +
+                ", versions=" + versions +
                 '}';
     }
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof Edge ) ) { return false; }
-
         Edge edge = (Edge) o;
-
-        if ( !key.equals( edge.key ) ) { return false; }
-        if ( !srcType.equals( edge.srcType ) ) { return false; }
-        if ( !srcSetId.equals( edge.srcSetId ) ) { return false; }
-        if ( !dstSetId.equals( edge.dstSetId ) ) { return false; }
-        if ( !edgeSetId.equals( edge.edgeSetId ) ) { return false; }
-        if ( !srcSyncId.equals( edge.srcSyncId ) ) { return false; }
-        return dstSyncId.equals( edge.dstSyncId );
+        return version == edge.version &&
+                Objects.equals( key, edge.key ) &&
+                Objects.equals( versions, edge.versions );
     }
 
     @Override public int hashCode() {
-        int result = key.hashCode();
-        result = 31 * result + srcType.hashCode();
-        result = 31 * result + srcSetId.hashCode();
-        result = 31 * result + dstSetId.hashCode();
-        result = 31 * result + edgeSetId.hashCode();
-        result = 31 * result + srcSyncId.hashCode();
-        result = 31 * result + dstSyncId.hashCode();
-        return result;
+        return Objects.hash( key, version, versions );
     }
+
 }

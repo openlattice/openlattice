@@ -20,8 +20,6 @@
 
 package com.openlattice.ids;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,39 +30,45 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class Range {
-    private static final Logger logger = LoggerFactory.getLogger( Range.class );
-
-    private final long bandwidth;
+    private static final Logger logger  = LoggerFactory.getLogger( Range.class );
+    private static final long   MAX_MSB = 1L << 48;
     private final long base;
 
     private long msb;
     private long lsb;
 
-    public Range( long bandwidth, long base, long msb, long lsb ) {
-        this.bandwidth = bandwidth;
+    public Range( long base, long msb, long lsb ) {
         this.base = base;
         this.msb = msb;
         this.lsb = lsb;
     }
 
+    public Range( long base ) {
+        this( base, 0, Long.MIN_VALUE );
+    }
+
     /**
      * Generates the next id by incrementing the least significant bit
      */
-    public UUID getNextId() {
-        lsb++;
+    public UUID nextId() {
+        //If we've run out of ids in given range.
+        if ( msb == MAX_MSB ) {
+            logger.error( "Exhausted id in range with base {} and msb {}", base, msb );
+            return null;
+        }
 
-        //When Java overflows, it starts from Long#MIN_VALUE so we check for a full cycle back to zero
-        if ( lsb == 0 ) {
+        final UUID nextId =  new UUID( base | msb, lsb );
+
+        /*
+         * The java specification does not directly guarantee that behavior in case of primitive overflow.
+         */
+        if ( lsb == Long.MAX_VALUE ) {
+            lsb = Long.MIN_VALUE;
             msb++;
+        } else {
+            lsb++;
         }
-
-        //If mask has
-        if ( ( msb * bandwidth ) == 0 ) {
-            logger.error( "Exhausted id in range with bandwidth {} and base {}", bandwidth, base );
-            throw new IllegalStateException( "Exhausted available ids in range!" );
-        }
-
-        return new UUID( msb * base, lsb );
+        return nextId;
     }
 
     public long getBase() {

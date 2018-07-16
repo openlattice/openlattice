@@ -20,25 +20,23 @@
 
 package com.openlattice.conductor.codecs;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.openlattice.data.EntityKey;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.ProtocolVersion;
 import com.datastax.driver.core.TypeCodec;
 import com.datastax.driver.core.exceptions.InvalidTypeException;
+import com.openlattice.data.EntityKey;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EntityKeyTypeCodec extends TypeCodec<EntityKey> {
     private static final Base64.Encoder encoder = Base64.getEncoder();
     private static final Base64.Decoder decoder = Base64.getDecoder();
 
-    private static final Logger         logger  = LoggerFactory
+    private static final Logger logger = LoggerFactory
             .getLogger( EntityKeyTypeCodec.class );
 
     public EntityKeyTypeCodec() {
@@ -75,8 +73,6 @@ public class EntityKeyTypeCodec extends TypeCodec<EntityKey> {
         final ByteBuffer buf = ByteBuffer.wrap( bytes );
         buf.putLong( value.getEntitySetId().getLeastSignificantBits() );
         buf.putLong( value.getEntitySetId().getMostSignificantBits() );
-        buf.putLong( value.getSyncId().getLeastSignificantBits() );
-        buf.putLong( value.getSyncId().getMostSignificantBits() );
         buf.put( idBytes );
         buf.clear();
         return buf;
@@ -90,13 +86,10 @@ public class EntityKeyTypeCodec extends TypeCodec<EntityKey> {
         long lsb = buf.getLong();
         long msb = buf.getLong();
         UUID entitySetId = new UUID( msb, lsb );
-        lsb = buf.getLong();
-        msb = buf.getLong();
-        UUID syncId = new UUID( msb, lsb );
         byte[] idBytes = new byte[ buf.remaining() ];
         buf.get( idBytes );
         String entityId = new String( idBytes, StandardCharsets.UTF_8 );
-        return new EntityKey( entitySetId, entityId, syncId );
+        return new EntityKey( entitySetId, entityId );
     }
 
 }

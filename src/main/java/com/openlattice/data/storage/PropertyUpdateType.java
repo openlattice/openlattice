@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2018. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,20 +16,16 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.graph.aggregators;
-
-import com.openlattice.data.analytics.IncrementableWeightId;
-import java.util.SortedSet;
+package com.openlattice.data.storage;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class GraphCountResult {
-    private final SortedSet<IncrementableWeightId> weights;
-
-    public GraphCountResult( SortedSet<IncrementableWeightId> weights ) {
-        this.weights = weights;
-    }
+public enum PropertyUpdateType {
+    REPLACE,
+    PARTIAL_REPLACE,
+    MERGE
 }

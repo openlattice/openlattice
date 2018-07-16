@@ -20,11 +20,11 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.data.hazelcast.DataKey;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -42,7 +42,6 @@ public class DataKeyStreamSerializer implements SelfRegisteringStreamSerializer<
     @Override public void write( ObjectDataOutput out, DataKey object ) throws IOException {
         UUIDStreamSerializer.serialize( out, object.getId() );
         UUIDStreamSerializer.serialize( out, object.getEntitySetId() );
-        UUIDStreamSerializer.serialize( out, object.getSyncId() );
         out.writeUTF( object.getEntityId() );
         UUIDStreamSerializer.serialize( out, object.getPropertyTypeId() );
         out.writeByteArray( object.getHash() );
@@ -51,11 +50,10 @@ public class DataKeyStreamSerializer implements SelfRegisteringStreamSerializer<
     @Override public DataKey read( ObjectDataInput in ) throws IOException {
         UUID id = UUIDStreamSerializer.deserialize( in );
         UUID entitySetId = UUIDStreamSerializer.deserialize( in );
-        UUID syncId = UUIDStreamSerializer.deserialize( in );
         String entityId = in.readUTF();
         UUID propertyTypeId = UUIDStreamSerializer.deserialize( in );
         byte[] hash = in.readByteArray();
-        return new DataKey( id, entitySetId, syncId, entityId, propertyTypeId, hash );
+        return new DataKey( id, entitySetId, entityId, propertyTypeId, hash );
     }
 
     @Override public int getTypeId() {

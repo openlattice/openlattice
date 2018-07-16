@@ -20,7 +20,6 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingBiConsumer;
@@ -28,6 +27,7 @@ import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingConsumer;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -64,9 +64,9 @@ public final class OptionalStreamSerializers {
             throws IOException {
         if ( in.readBoolean() ) {
             T elem = f.apply( in );
-            return ( elem == null ) ? Optional.absent() : Optional.of( elem );
+            return ( elem == null ) ? Optional.empty() : Optional.of( elem );
         } else {
-            return Optional.absent();
+            return Optional.empty();
         }
     }
 
@@ -97,7 +97,7 @@ public final class OptionalStreamSerializers {
             Set<T> elements = SetStreamSerializers.deserialize( in, f );
             return Optional.of( elements );
         } else {
-            return Optional.absent();
+            return Optional.empty();
         }
     }
 }

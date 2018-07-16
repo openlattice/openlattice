@@ -23,57 +23,66 @@
 package com.openlattice.data.storage;
 
 import com.codahale.metrics.annotation.Timed;
-import com.dataloom.hazelcast.ListenableHazelcastFuture;
-import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.openlattice.authorization.ForbiddenException;
-import com.openlattice.data.*;
-import com.openlattice.data.analytics.IncrementableWeightId;
+import com.openlattice.data.Entity;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataValue;
+import com.openlattice.data.EntityDatastore;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.EntitySetData;
+import com.openlattice.data.PropertyMetadata;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
-import com.openlattice.data.hazelcast.EntityKeyHazelcastStream;
 import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
-import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.hazelcast.predicates.EntitySetPredicates;
-import com.openlattice.hazelcast.processors.EntityDataUpserter;
-import com.openlattice.hazelcast.processors.MergeFinalizer;
-import com.openlattice.hazelcast.processors.SyncFinalizer;
+import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.JsonDeserializer;
+import com.openlattice.postgres.streams.PostgresIterable.PostgresIterator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
+import javax.inject.Inject;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.nio.ByteBuffer;
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 public class HazelcastEntityDatastore implements EntityDatastore {
     private static final Logger logger = LoggerFactory
             .getLogger( HazelcastEntityDatastore.class );
 
-    private final ObjectMapper mapper;
-    //    private final DatasourceManager dsm;
-
-    private final HazelcastInstance                    hazelcastInstance;
-    private final IMap<EntityDataKey, EntityDataValue> entities;
-    private final EntityKeyIdService                   idService;
-    private final ListeningExecutorService             executor;
-    private final PostgresDataManager                  pdm;
+    private final ObjectMapper                   mapper;
+    private final HazelcastInstance              hazelcastInstance;
+    private final EntityKeyIdService             idService;
+    private final ListeningExecutorService       executor;
+    private final PostgresDataManager            pdm;
+    private final PostgresEntityDataQueryService dataQueryService;
 
     @Inject
     private EventBus eventBus;
@@ -83,8 +92,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             ListeningExecutorService executor,
             ObjectMapper mapper,
             EntityKeyIdService idService,
-            PostgresDataManager pdm ) {
-        this.entities = hazelastInstance.getMap( HazelcastMap.ENTITY_DATA.name() );
+            PostgresDataManager pdm,
+            PostgresEntityDataQueryService dataQueryService ) {
+        this.dataQueryService = dataQueryService;
         this.pdm = pdm;
         this.mapper = mapper;
         this.idService = idService;
@@ -96,189 +106,178 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     public EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
-            UUID syncId,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         return new EntitySetData<>(
                 orderedPropertyNames,
-                pdm.getEntitiesInEntitySet( entitySetId, ImmutableSet.copyOf( authorizedPropertyTypes.values() ) )
-                        .map( e -> fromEntity( e, authorizedPropertyTypes ) )::iterator );
+                dataQueryService.streamableEntitySet( entitySetId,
+                        ImmutableSet.of(),
+                        authorizedPropertyTypes,
+                        EnumSet
+                                .of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
+                        Optional.empty() ) );
     }
 
-    @Override
     @Timed
+    @Override
     public SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entitySetId,
-            UUID syncId,
             String entityId,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        UUID entityKeyId = idService.getEntityKeyId( new EntityKey( entitySetId, entityId, syncId ) );
-        EntityDataKey edk = new EntityDataKey( entitySetId, entityKeyId );
-        SetMultimap<FullQualifiedName, Object> e = fromEntityDataValue( Util.getSafely( entities, edk ),
-                authorizedPropertyTypes );
+        UUID entityKeyId = idService.getEntityKeyId( new EntityKey( entitySetId, entityId ) );
+        PostgresIterator<SetMultimap<FullQualifiedName, Object>> pgIter = dataQueryService
+                .streamableEntitySet( entitySetId,
+                        ImmutableSet.of(),
+                        authorizedPropertyTypes,
+                        EnumSet
+                                .of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
+                        Optional.empty() ).iterator();
 
-        if ( e == null ) {
+        SetMultimap<FullQualifiedName, Object> entity = pgIter.next();
+
+        try {
+            pgIter.close();
+        } catch ( IOException e ) {
+            logger.error( "Unable to close connection to database after reading key id {} for id {}!",
+                    entityKeyId,
+                    entityId );
+        }
+
+        if ( entity == null ) {
             return ImmutableSetMultimap.of();
         }
 
-        return e;
+        return entity;
     }
 
-    @Override
     @Timed
-    public Stream<SetMultimap<Object, Object>> getEntities(
+    @Override public int createOrUpdateEntities(
             UUID entitySetId,
-            IncrementableWeightId[] utilizers,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        LinkedHashSet<EntityDataKey> dataKeys = new LinkedHashSet<>( utilizers.length );
+        return dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
+    }
 
-        Stream.of( utilizers )
-                .map( utilizer -> new EntityDataKey( entitySetId, utilizer.getId() ) )
-                .forEach( dataKeys::add );
+    @Timed
+    @Override public int replaceEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+    }
 
-        Map<EntityDataKey, EntityDataValue> entityData = entities.getAll( dataKeys );
+    @Timed
+    @Override public int partialReplaceEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+    }
 
-        return Stream.of( utilizers )
-                .map( utilizer -> {
-                    EntityDataKey dataKey = new EntityDataKey( entitySetId, utilizer.getId() );
-                    return fromEntityDataValue(
-                            dataKey,
-                            entityData.get( dataKey ),
-                            utilizer.getWeight(),
-                            authorizedPropertyTypes );
-                } );
+    @Timed
+    @Override public int replacePropertiesInEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return dataQueryService
+                .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
+    }
+
+    @Timed
+    @Override public int clearEntitySet(
+            UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
+    }
+
+    @Timed
+    @Override public int clearEntities(
+            UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return 0;
+    }
+
+    private Map<EntityDataKey, SetMultimap<FullQualifiedName, Object>> getAllEntities(
+            LinkedHashSet<EntityDataKey> dataKeys,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        final SetMultimap<UUID, UUID> entitySetToIds = HashMultimap.create();
+        final Map<EntityDataKey, SetMultimap<FullQualifiedName, Object>> entities = new HashMap<>( dataKeys.size() );
+
+        dataKeys.stream().forEach( key -> entitySetToIds.put( key.getEntityKeyId(), key.getEntitySetId() ) );
+
+        Multimaps
+                .asMap( entitySetToIds )
+                .forEach( ( k, v ) ->
+                        dataQueryService.streamableEntitySet(
+                                k,
+                                v,
+                                authorizedPropertyTypes,
+                                EnumSet.noneOf( MetadataOption.class ),
+                                Optional.empty() )
+                                .forEach( e -> entities.put(
+                                        new EntityDataKey( k, (UUID) e.get( DataTables.ID_FQN ).iterator().next() ),
+                                        e ) ) );
+        return entities;
     }
 
     @Override
     @Timed
-    public Stream<SetMultimap<Object, Object>> getEntities(
-            Collection<UUID> ids,
+    public EntitySetData<FullQualifiedName> getEntities(
+            UUID entitySetId,
+            Set<UUID> ids,
+            LinkedHashSet<String> orderedPropertyTypes,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        Map<UUID, EntityKey> entityKeyIds = idService.getEntityKeys( ImmutableSet.copyOf( ids ) );
-
-        return ids.stream()
-                .map( id -> {
-                    final EntityKey entityKey = entityKeyIds.get( id );
-                    final EntityDataKey entityDataKey = new EntityDataKey( entityKey.getEntitySetId(), id );
-                    EntityDataValue edv = entities.get( entityDataKey );
-                    SetMultimap<Object, Object> entity = fromEntityDataValue( entityDataKey,
-                            edv,
-                            authorizedPropertyTypes );
-                    entity.put( "id", id.toString() );
-                    return entity;
-                } );
+        //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
+        return new EntitySetData<>(
+                orderedPropertyTypes,
+                dataQueryService.streamableEntitySet(
+                        entitySetId,
+                        ids,
+                        authorizedPropertyTypes,
+                        EnumSet.noneOf( MetadataOption.class ),
+                        Optional.empty() ) );
     }
 
     @Override
     @Timed
-    public Map<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
-            Map<UUID, UUID> entityKeyIdToEntitySetId,
+    public Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
+            UUID entitySetId,
+            Set<UUID> ids,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
+        return dataQueryService.streamableEntitySet(
+                entitySetId,
+                ids,
+                authorizedPropertyTypes,
+                EnumSet.noneOf( MetadataOption.class ),
+                Optional.empty() ).stream();
+    }
+
+    @Override
+    @Timed
+    public ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
+            SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
-        Set<EntityDataKey> dataKeys = entityKeyIdToEntitySetId.entrySet().stream()
-                .map( e -> new EntityDataKey( e.getValue(), e.getKey() ) )
-                .collect( Collectors.toSet() );
-        Map<EntityDataKey, EntityDataValue> entityData = entities.getAll( dataKeys );
 
-        return entityData.entrySet()
-                .stream()
-                .collect( Collectors.toMap( e -> e.getKey().getEntityKeyId(),
-                        e -> fromEntityDataValue( e.getValue(),
-                                authorizedPropertyTypesByEntitySet.get( e.getKey().getEntitySetId() ) ) ) );
-    }
+        final int keyCount = entitySetIdsToEntityKeyIds.keySet().size();
+        final int avgValuesPerKey =
+                entitySetIdsToEntityKeyIds.size() == 0 ? 0 : entitySetIdsToEntityKeyIds.size() / keyCount;
+        final ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entities
+                = ArrayListMultimap.create( keyCount, avgValuesPerKey );
 
-    @Override public ListenableHazelcastFuture asyncUpsertEntity(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
-        return asyncUpsertEntity( fromEntityKey( entityKey ), entityDetails, authorizedPropertiesWithDataType );
+        Multimaps
+                .asMap( entitySetIdsToEntityKeyIds )
+                .forEach( ( entitySetId, entityKeyIds ) -> entities.putAll( entitySetId, dataQueryService.streamableEntitySet(
+                        entitySetId,
+                        entityKeyIds,
+                        authorizedPropertyTypesByEntitySet.get( entitySetId ),
+                        EnumSet.noneOf( MetadataOption.class ),
+                        Optional.empty() ) ) );
+
+        return entities;
     }
 
     private EntityDataKey fromEntityKey( EntityKey entityKey ) {
         UUID entityKeyId = idService.getEntityKeyId( entityKey );
         return new EntityDataKey( entityKey.getEntitySetId(), entityKeyId );
-    }
-
-    @Override public ListenableHazelcastFuture asyncUpsertEntity(
-            EntityDataKey entityDataKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
-            OffsetDateTime lastWrite ) {
-        //        EntityDataValue edv = fromSetMultimap( entityDetails );
-        return new ListenableHazelcastFuture<>( entities
-                .submitToKey( entityDataKey, new EntityDataUpserter( entityDetails, OffsetDateTime.now() ) ) );
-
-    }
-
-    @Override public ListenableHazelcastFuture asyncUpsertEntity(
-            EntityDataKey entityDataKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
-        return asyncUpsertEntity( entityDataKey,
-                entityDetails,
-                authorizedPropertiesWithDataType,
-                OffsetDateTime.now() );
-
-    }
-
-    @Override
-    public void finalizeSync( EntityKey entityKey, OffsetDateTime lastWrite ) {
-        finalizeSync( fromEntityKey( entityKey ) );
-    }
-
-    @Override
-    public void finalizeSync( EntityKey entityKey ) {
-        finalizeSync( entityKey, OffsetDateTime.now() );
-    }
-
-    @Override
-    public void finalizeSync( EntityDataKey entityDataKey, OffsetDateTime lastWrite ) {
-        entities.executeOnEntries( new SyncFinalizer( lastWrite ), EntitySetPredicates.entity( entityDataKey ) );
-    }
-
-    @Override
-    public void finalizeSync( UUID entitySetId, OffsetDateTime lastWrite ) {
-        entities.executeOnEntries( new SyncFinalizer( lastWrite ), EntitySetPredicates.entitySet( entitySetId ) );
-    }
-
-    @Override
-    public void finalizeSync( UUID entitySetId ) {
-        finalizeSync( entitySetId, OffsetDateTime.now() );
-    }
-
-    @Override
-    public void finalizeSync( EntityDataKey entityDataKey ) {
-        finalizeSync( entityDataKey, OffsetDateTime.now() );
-
-    }
-
-    @Override
-    public void finalizeMerge( EntityKey entityKey, OffsetDateTime lastWrite ) {
-        finalizeMerge( fromEntityKey( entityKey ), lastWrite );
-    }
-
-    @Override
-    public void finalizeMerge( EntityKey entityKey ) {
-        finalizeMerge( entityKey, OffsetDateTime.now() );
-    }
-
-    @Override
-    public void finalizeMerge( EntityDataKey entityDataKey, OffsetDateTime lastWrite ) {
-        entities.executeOnEntries( new MergeFinalizer( lastWrite ), EntitySetPredicates.entity( entityDataKey ) );
-    }
-
-    @Override
-    public void finalizeMerge( EntityDataKey entityDataKey ) {
-        finalizeMerge( entityDataKey, OffsetDateTime.now() );
-    }
-
-    @Override
-    public void finalizeMerge( UUID entitySetId, OffsetDateTime lastWrite ) {
-        entities.executeOnEntries( new MergeFinalizer( lastWrite ), EntitySetPredicates.entitySet( entitySetId ) );
-    }
-
-    @Override
-    public void finalizeMerge( UUID entitySetId ) {
-        finalizeMerge( entitySetId, OffsetDateTime.now() );
     }
 
     public SetMultimap<FullQualifiedName, Object> fromEntityBytes(
@@ -324,80 +323,39 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return entityData;
     }
 
-    @Override
-    public void updateEntity(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
-        createData( entityKey.getEntitySetId(),
-                entityKey.getSyncId(),
-                authorizedPropertiesWithDataType,
-                authorizedPropertiesWithDataType.keySet(),
-                entityKey.getEntityId(),
-                entityDetails );
-    }
-
-    @Override
-    public Stream<ListenableFuture> updateEntityAsync(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
-        return createDataAsync( entityKey.getEntitySetId(),
-                entityKey.getSyncId(),
-                authorizedPropertiesWithDataType,
-                authorizedPropertiesWithDataType.keySet(),
-                entityKey.getEntityId(),
-                entityDetails );
-    }
-
-    public Stream<String> getEntityIds( UUID entitySetId, UUID syncId ) {
-        return getEntityKeysForEntitySet( entitySetId, syncId ).map( EntityKey::getEntityId );
-    }
-
     @Deprecated
-    public void createEntityData(
+    @Timed
+    public Stream<UUID> createEntityData(
             UUID entitySetId,
-            UUID syncId,
             Map<String, SetMultimap<UUID, Object>> entities,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+
+        return entities.entrySet().stream().map(
+                entity ->
+                        createData(
+                                entitySetId,
+                                authorizedPropertyTypes,
+                                entity.getKey(),
+                                entity.getValue() ) );
+
+    }
+
+    /*creating
+
+     */
+    @Timed
+    public UUID createData(
+            UUID entitySetId,
+            Map<UUID, PropertyType> authorizedPropertyTypes,
+            String entityId,
+            SetMultimap<UUID, Object> entityDetails ) {
+        //TODO: Keep full local copy of PropertyTypes EDM
+        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType = Maps
+                .transformValues( authorizedPropertyTypes, PropertyType::getDatatype );
         Set<UUID> authorizedProperties = authorizedPropertiesWithDataType.keySet();
-
-        entities.entrySet().stream().flatMap( entity -> createDataAsync( entitySetId,
-                syncId,
-                authorizedPropertiesWithDataType,
-                authorizedProperties,
-                entity.getKey(),
-                entity.getValue() ) )
-                .forEach( StreamUtil::getUninterruptibly );
-    }
-
-    @Timed
-    public void createData(
-            UUID entitySetId,
-            UUID syncId,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
-            Set<UUID> authorizedProperties,
-            String entityId,
-            SetMultimap<UUID, Object> entityDetails ) {
-        createDataAsync(
-                entitySetId,
-                syncId,
-                authorizedPropertiesWithDataType,
-                authorizedProperties,
-                entityId,
-                entityDetails ).forEach( StreamUtil::getUninterruptibly );
-    }
-
-    @Timed
-    public Stream<ListenableFuture> createDataAsync(
-            UUID entitySetId,
-            UUID syncId,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
-            Set<UUID> authorizedProperties,
-            String entityId,
-            SetMultimap<UUID, Object> entityDetails ) {
         // does not write the row if some property values that user is trying to write to are not authorized.
         //TODO: Don't fail silently
+        //TODO: Move all access checks up to controller.
         if ( !authorizedProperties.containsAll( entityDetails.keySet() ) ) {
             String msg = String
                     .format( "Entity %s not written because the following properties are not authorized: %s",
@@ -415,17 +373,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             logger.error( "Entity {} not written because some property values are of invalid format.",
                     entityId,
                     e );
-            return Stream.empty();
+            return null;
         }
 
-        EntityKey ek = new EntityKey( entitySetId, entityId, syncId );
-        UUID id = idService.getEntityKeyId( ek );
-        EntityDataKey edk = new EntityDataKey( entitySetId, id );
-        EntityDataUpserter entityDataUpserter =
-                new EntityDataUpserter( normalizedPropertyValues, OffsetDateTime.now() );
-
+        //Get an id for this object and write that data.
+        //TODO: Push the getting id layer up.
+        final UUID id = idService.getEntityKeyId( entitySetId, entityId );
+        final EntityDataKey edk = new EntityDataKey( entitySetId, id );
+        dataQueryService.upsertEntities( entitySetId,
+                ImmutableMap.of( id, normalizedPropertyValues ),
+                authorizedPropertyTypes );
         eventBus.post( new EntityDataCreatedEvent( edk, normalizedPropertyValues, true ) );
-        return Stream.of( new ListenableHazelcastFuture( entities.submitToKey( edk, entityDataUpserter ) ) );
+        return id;
     }
 
     /**
@@ -438,44 +397,25 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @SuppressFBWarnings(
             value = "UC_USELESS_OBJECT",
             justification = "results Object is used to execute deletes in batches" )
-    public void deleteEntitySetData( UUID entitySetId ) {
+    public int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         logger.info( "Deleting data of entity set: {}", entitySetId );
-
-        try {
-            asyncDeleteEntitySet( entitySetId ).get();
-            logger.info( "Finished deletion of entity set data: {}", entitySetId );
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.error( "Unable to delete entity set {}", entitySetId );
-        }
-
-    }
-
-    public ListenableFuture<?> asyncDeleteEntitySet( UUID entitySetId ) {
-        return executor.submit( () -> entities.removeAll( EntitySetPredicates.entitySet( entitySetId ) ) );
-    }
-
-    public ListenableFuture<?> asyncDeleteEntity( EntityDataKey edk ) {
-        return new ListenableHazelcastFuture<>( entities.removeAsync( edk ) );
+        int deleteCount = dataQueryService.deleteEntitySet( entitySetId, authorizedPropertyTypes );
+        logger.info( "Finished deletion of entity set {}. Deleted {} rows.", entitySetId, deleteCount );
+        return deleteCount;
     }
 
     @Override
-    public void deleteEntity( EntityDataKey entityDataKey ) {
-        try {
-            asyncDeleteEntity( entityDataKey ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.error( "Unable to delete entity {}", entityDataKey );
-        }
+    public int deleteEntities(
+            UUID entitySetId,
+            Set<UUID> entityKeyId,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
-        eventBus.post( new EntityDataDeletedEvent( entityDataKey ) );
-    }
+        int deleteCount = dataQueryService.deleteEntities( entitySetId, entityKeyId, authorizedPropertyTypes );
 
-    @Override
-    public Stream<EntityKey> getEntityKeysForEntitySet( UUID entitySetId, UUID syncId ) {
-        EntityKeyHazelcastStream es = new EntityKeyHazelcastStream( executor,
-                hazelcastInstance,
-                entitySetId,
-                syncId );
-        return StreamUtil.stream( es );
+        entityKeyId.forEach( id -> {
+            eventBus.post( new EntityDataDeletedEvent( new EntityDataKey( entitySetId, id ) ) );
+        } );
+        return deleteCount;
     }
 
     public static SetMultimap<Object, Object> fromEntityDataValue(

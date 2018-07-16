@@ -22,18 +22,15 @@
 
 package com.openlattice.data;
 
-import com.dataloom.hazelcast.ListenableHazelcastFuture;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
-import java.time.OffsetDateTime;
-import java.util.Collection;
+import java.nio.ByteBuffer;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
@@ -41,125 +38,99 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  */
 public interface EntityDatastore {
 
-    /**
-     * Reads data from an entity set.
-     */
     EntitySetData<FullQualifiedName> getEntitySetData(
             UUID entitySetId,
-            UUID syncId,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    /**
-     * Reads a single row from an entity set.
-     */
+    Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
+            UUID entitySetId,
+            Set<UUID> ids,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    EntitySetData<FullQualifiedName> getEntities(
+            UUID entitySetId,
+            Set<UUID> ids,
+            LinkedHashSet<String> orderedPropertyTypes,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
+            SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
+
+    @Deprecated
     SetMultimap<FullQualifiedName, Object> getEntity(
             UUID entitySetId,
-            UUID syncId,
             String entityId,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
-     * Asynchronously load an entity with specified properties
+     * Creates entities if they do not exist and then adds the provided properties to specified entities.
+     * @param entitySetId
+     * @param entities
+     * @param authorizedPropertyTypes
+     * @return
      */
-    //    ListenableFuture<SetMultimap<UUID, ByteBuffer>> asyncLoadEntity(
-    //            UUID entitySetId,
-    //            String entityId,
-    //            UUID syncId,
-    //            Set<UUID> properties );
-
-    // TODO remove vertices too
-    void deleteEntitySetData( UUID entitySetId );
-
-    void deleteEntity( EntityDataKey entityDataKey );
-
-    Stream<SetMultimap<Object, Object>> getEntities(
-            Collection<UUID> ids, Map<UUID, PropertyType> authorizedPropertyTypes );
-
-    Map<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
-            Map<UUID, UUID> entityKeyIdToEntitySetId,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
-
-    //    SetMultimap<FullQualifiedName, Object> getEntity(
-    //            UUID id, Map<UUID, PropertyType> authorizedPropertyTypes );
-
-    void finalizeMerge( UUID entitySetId, OffsetDateTime lastWrite );
-
-    void finalizeMerge( UUID entitySetId );
-
-    //    ListenableFuture<SetMultimap<FullQualifiedName, Object>> getEntityAsync(
-    //            UUID entitySetId,
-    //            UUID syncId,
-    //            String entityId,
-    //            Map<UUID, PropertyType> authorizedPropertyTypes );
-
-    ListenableHazelcastFuture asyncUpsertEntity(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
-
-    ListenableHazelcastFuture asyncUpsertEntity(
-            EntityDataKey entityDataKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
-            OffsetDateTime lastWrite );
-
-    ListenableHazelcastFuture asyncUpsertEntity(
-            EntityDataKey entityDataKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
-
-    /**
-     * This routine finalizes the synchronization of data written using {@link EntityDatastore#asyncUpsertEntity}. If
-     * the {@link com.openlattice.data.PropertyMetadata#lastWrite} is before
-     * {@link com.openlattice.data.EntityDataMetadata#lastWrite} then {@link com.openlattice.data.PropertyMetadata#version}
-     * is set to negative of {@link com.openlattice.data.PropertyMetadata#version}
-     *
-     * @param entityKey The entity key of the entity to finalize synchronization for.
-     */
-    void finalizeSync( EntityKey entityKey );
-
-    void finalizeSync( EntityKey entityKey, OffsetDateTime lastWrite );
-
-    void finalizeSync( EntityDataKey entityDataKey, OffsetDateTime lastWrite );
-
-    void finalizeSync( UUID entitySetId, OffsetDateTime lastWrite );
-
-    void finalizeSync( UUID entitySetId );
-
-    void finalizeSync( EntityDataKey entityDataKey );
-
-    void finalizeMerge( EntityKey entityKey, OffsetDateTime lastWrite );
-
-    void finalizeMerge( EntityKey entityKey );
-
-    void finalizeMerge( EntityDataKey entityKey, OffsetDateTime offsetDateTime );
-
-    void finalizeMerge( EntityDataKey entityKey );
-
-    /**
-     * @param entityKey
-     * @param entityDetails
-     * @param authorizedPropertiesWithDataType
-     */
-    void updateEntity(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
-
-    /**
-     * Performs async storage of an entity.
-     */
-    Stream<ListenableFuture> updateEntityAsync(
-            EntityKey entityKey,
-            SetMultimap<UUID, Object> entityDetails,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType );
-
-    Stream<EntityKey> getEntityKeysForEntitySet( UUID entitySetId, UUID syncId );
-
-    Stream<SetMultimap<Object, Object>> getEntities(
+    int createOrUpdateEntities(
             UUID entitySetId,
-            IncrementableWeightId[] utilizers,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Replaces the contents of an entity in its entirety. Equivalent to a delete of the existing entity and write
+     * of new values
+     */
+    int replaceEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Replaces a subset of the properties of an entity specified in the provided {@code entity} argument.
+     */
+    int partialReplaceEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entity,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Replace specific values in an entity
+     */
+    int replacePropertiesInEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Clears (soft-deletes) the contents of an entity set by setting version to {@code -now()}
+     *
+     * @param entitySetId The id of the entity set to clear.
+     * @return The number of rows cleared from the entity set.
+     */
+    int clearEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
+     *
+     * @param entitySetId The id of the entity set to clear.
+     * @param entityKeyId The entity key id for the entity set to clear.
+     * @return The number of properties cleared.
+     */
+    int clearEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Deletes an entity set and removes the historical contents. This causes loss of historical data
+     * and should only be used for scrubbing customer data.
+     *
+     * @param entitySetId The entity set id to be hard deleted.
+     */
+    int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Deletes an entity and removes the historical contents.
+     *
+     * @param entityKeyId The entity key id to be hard deleted.
+     */
+    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
 }

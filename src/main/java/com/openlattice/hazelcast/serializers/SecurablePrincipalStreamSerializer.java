@@ -21,7 +21,6 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
@@ -31,6 +30,7 @@ import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import java.io.IOException;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /**

@@ -31,15 +31,13 @@ import java.util.UUID;
 public class DataKey {
     private final UUID   id;
     private final UUID   entitySetId;
-    private final UUID   syncId;
     private final String entityId;
     private final UUID   propertyTypeId;
     private final byte[] hash;
 
-    public DataKey( UUID id, UUID entitySetId, UUID syncId, String entityId, UUID propertyTypeId, byte[] hash ) {
+    public DataKey( UUID id, UUID entitySetId, String entityId, UUID propertyTypeId, byte[] hash ) {
         this.id = id;
         this.entitySetId = entitySetId;
-        this.syncId = syncId;
         this.entityId = entityId;
         this.propertyTypeId = propertyTypeId;
         this.hash = hash.clone();
@@ -51,10 +49,6 @@ public class DataKey {
 
     public UUID getEntitySetId() {
         return entitySetId;
-    }
-
-    public UUID getSyncId() {
-        return syncId;
     }
 
     public String getEntityId() {
@@ -76,10 +70,9 @@ public class DataKey {
     public static DataKey fromRow( Row row ) {
         UUID id = RowAdapters.id( row );
         UUID entitySetId = RowAdapters.entitySetId( row );
-        UUID syncId = RowAdapters.syncId( row );
         String entityId = RowAdapters.entityId( row );
         UUID propertyTypeId = RowAdapters.propertyTypeId( row );
         byte[] hash = row.getBytes( CommonColumns.PROPERTY_VALUE.cql() ).array();
-        return new DataKey( id, entitySetId, syncId, entityId, propertyTypeId, hash );
+        return new DataKey( id, entitySetId, entityId, propertyTypeId, hash );
     }
 }

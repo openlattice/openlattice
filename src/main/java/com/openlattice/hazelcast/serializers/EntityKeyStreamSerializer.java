@@ -64,14 +64,12 @@ public class EntityKeyStreamSerializer implements SelfRegisteringStreamSerialize
     public static void serialize( ObjectDataOutput out, EntityKey object ) throws IOException {
         UUIDStreamSerializer.serialize( out, object.getEntitySetId() );
         out.writeUTF( object.getEntityId() );
-        UUIDStreamSerializer.serialize( out, object.getSyncId() );
     }
 
     public static EntityKey deserialize( ObjectDataInput in ) throws IOException {
         final UUID entitySetId = UUIDStreamSerializer.deserialize( in );
         final String entityId = in.readUTF();
-        final UUID syncId = UUIDStreamSerializer.deserialize( in );
-        return new EntityKey( entitySetId, entityId, syncId );
+        return new EntityKey( entitySetId, entityId );
     }
 
 }

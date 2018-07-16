@@ -23,12 +23,12 @@ package com.openlattice.bootstrap;
 import static com.openlattice.bootstrap.AuthorizationBootstrap.GLOBAL_ADMIN_ROLE;
 import static com.openlattice.bootstrap.AuthorizationBootstrap.OPENLATTICE_ROLE;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -56,7 +56,7 @@ public class OrganizationBootstrap {
         return new Organization( Optional.of( id ),
                 org,
                 title,
-                Optional.absent(),
+                Optional.empty(),
                 ImmutableSet.of(),
                 ImmutableSet.of(),
                 ImmutableSet.of() );
@@ -69,7 +69,7 @@ public class OrganizationBootstrap {
         return new Organization( Optional.of( id ),
                 org,
                 title,
-                Optional.absent(),
+                Optional.empty(),
                 ImmutableSet.of(),
                 ImmutableSet.of(),
                 ImmutableSet.of() );

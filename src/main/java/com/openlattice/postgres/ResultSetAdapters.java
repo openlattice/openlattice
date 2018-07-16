@@ -20,11 +20,15 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.postgres.DataTables.LAST_INDEX;
+import static com.openlattice.postgres.DataTables.LAST_INDEX_FQN;
+import static com.openlattice.postgres.DataTables.LAST_WRITE;
+import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ANALYZER;
 import static com.openlattice.postgres.PostgresColumn.APP_ID;
-import static com.openlattice.postgres.PostgresColumn.BASE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
 import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
@@ -55,6 +59,7 @@ import static com.openlattice.postgres.PostgresColumn.NAME;
 import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
 import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
 import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_IDS;
@@ -62,6 +67,7 @@ import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
@@ -69,14 +75,16 @@ import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.SHOW;
 import static com.openlattice.postgres.PostgresColumn.SRC;
+import static com.openlattice.postgres.PostgresColumn.START_TIME;
+import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
 import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
-import static com.openlattice.postgres.PostgresColumn.SYNC_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
+import static com.openlattice.postgres.PostgresColumn.VERSION;
+import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
@@ -100,6 +108,7 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.data.PropertyMetadata;
 import com.openlattice.data.PropertyValueKey;
 import com.openlattice.data.hazelcast.DataKey;
+import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -111,6 +120,9 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
+import com.openlattice.graph.query.GraphQuery;
+import com.openlattice.graph.query.GraphQueryState;
+import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.LinkingVertex;
 import com.openlattice.linking.LinkingVertexKey;
@@ -120,18 +132,28 @@ import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
 import java.sql.Array;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,6 +163,18 @@ import org.slf4j.LoggerFactory;
 public final class ResultSetAdapters {
     private static final Logger logger = LoggerFactory.getLogger( ResultSetAdapters.class );
 
+    public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
+        final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
+        final State state = State.valueOf( rs.getString( STATE.getName() ) );
+        final long startTime = rs.getLong( START_TIME.getName() );
+        return new GraphQueryState(
+                queryId,
+                state,
+                Optional.empty(),
+                System.currentTimeMillis() - startTime,
+                Optional.empty() );
+    }
+
     public static DataKey dataKey( ResultSet rs ) throws SQLException {
         UUID id = (UUID) rs.getObject( "id" );
         UUID entitySetId = (UUID) rs.getObject( "entity_set_id" );
@@ -148,7 +182,7 @@ public final class ResultSetAdapters {
         String entityId = rs.getString( "entityId" );
         UUID propertyTypeId = (UUID) rs.getObject( "property_type_id" );
         byte[] hash = rs.getBytes( "property_value" );
-        return new DataKey( id, entitySetId, syncId, entityId, propertyTypeId, hash );
+        return new DataKey( id, entitySetId, entityId, propertyTypeId, hash );
     }
 
     public static EntityDataKey entityDataKey( ResultSet rs ) throws SQLException {
@@ -184,40 +218,37 @@ public final class ResultSetAdapters {
         return ImmutableSet.copyOf( PostgresArrays.getUuidArray( rs, PostgresColumn.ENTITY_TYPE_IDS_FIELD ) );
     }
 
-    public static Edge loomEdge( ResultSet rs ) throws SQLException {
+    public static Edge edge( ResultSet rs ) throws SQLException {
         EdgeKey key = edgeKey( rs );
-        UUID srcType = (UUID) rs.getObject( "src_type_id" );
-        UUID srcSetId = (UUID) rs.getObject( "src_entity_set_id" );
-
-        UUID srcSyncId = (UUID) rs.getObject( "src_sync_id" );
-        UUID dstSetId = (UUID) rs.getObject( "dst_entity_set_id" );
-        UUID dstSyncId = (UUID) rs.getObject( "dst_sync_id" );
-        UUID edgeSetId = (UUID) rs.getObject( "edge_entity_set_id" );
-        return new Edge( key, srcType, srcSetId, srcSyncId, dstSetId, dstSyncId, edgeSetId );
+        long version = rs.getLong( VERSION.getName() );
+        List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
+        return new Edge( key, version, versions );
     }
 
     public static EdgeKey edgeKey( ResultSet rs ) throws SQLException {
+        UUID srcEntitySetId = (UUID) rs.getObject( "src_entity_set_id" );
         UUID srcEntityKeyId = (UUID) rs.getObject( "src_entity_key_id" );
-        UUID dstTypeId = (UUID) rs.getObject( "dst_type_id" );
-        UUID edgeTypeId = (UUID) rs.getObject( "edge_type_id" );
+        UUID dstEntitySetId = (UUID) rs.getObject( "dst_entity_set_id" );
         UUID dstEntityKeyId = (UUID) rs.getObject( "dst_entity_key_id" );
+        UUID edgeEntitySetId = (UUID) rs.getObject( "edge_entity_set_id" );
         UUID edgeEntityKeyId = (UUID) rs.getObject( "edge_entity_key_id" );
-        return new EdgeKey( srcEntityKeyId, dstTypeId, edgeTypeId, dstEntityKeyId, edgeEntityKeyId );
 
+        return new EdgeKey( new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
+                new EntityDataKey( dstEntitySetId, dstEntityKeyId ),
+                new EntityDataKey( edgeEntitySetId, edgeEntityKeyId ) );
     }
 
     public static EntityKey entityKey( ResultSet rs ) throws SQLException {
         UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
-        UUID syncId = (UUID) rs.getObject( SYNC_ID_FIELD );
         String entityId = rs.getString( ENTITY_ID_FIELD );
-        return new EntityKey( entitySetId, entityId, syncId );
+        return new EntityKey( entitySetId, entityId );
     }
 
-    public static Range range( ResultSet rs, long mask ) throws SQLException {
-        long base = rs.getLong( BASE_FIELD );
+    public static Range range( ResultSet rs ) throws SQLException {
+        long base = rs.getLong( PARTITION_INDEX_FIELD ) << 48L;
         long msb = rs.getLong( MSB_FIELD );
         long lsb = rs.getLong( LSB_FIELD );
-        return new Range( mask, base, msb, lsb );
+        return new Range( base, msb, lsb );
     }
 
     public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {
@@ -467,10 +498,10 @@ public final class ResultSetAdapters {
         FullQualifiedName fqn = fqn( rs );
         EdmPrimitiveTypeKind datatype = datatype( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
-        Optional<Boolean> pii = Optional.fromNullable( pii( rs ) );
-        Optional<Analyzer> analyzer = Optional.fromNullable( analyzer( rs ) );
+        Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
+        Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
 
         return new PropertyType( id, fqn, title, description, schemas, datatype, pii, analyzer );
     }
@@ -479,11 +510,11 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         FullQualifiedName fqn = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> key = key( rs );
         LinkedHashSet<UUID> properties = properties( rs );
-        Optional<UUID> baseType = Optional.fromNullable( baseType( rs ) );
+        Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         Optional<SecurableObjectType> category = Optional.of( category( rs ) );
 
         return new EntityType( id, fqn, title, description, schemas, key, properties, baseType, category );
@@ -494,7 +525,7 @@ public final class ResultSetAdapters {
         String name = name( rs );
         UUID entityTypeId = entityTypeId( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<String> contacts = contacts( rs );
         return new EntitySet( id, entityTypeId, name, title, description, contacts );
     }
@@ -504,17 +535,17 @@ public final class ResultSetAdapters {
         LinkedHashSet<UUID> dst = dst( rs );
         boolean bidirectional = bidirectional( rs );
 
-        return new AssociationType( Optional.absent(), src, dst, bidirectional );
+        return new AssociationType( Optional.empty(), src, dst, bidirectional );
     }
 
     public static ComplexType complexType( ResultSet rs ) throws SQLException {
         UUID id = id( rs );
         FullQualifiedName fqn = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> properties = properties( rs );
-        Optional<UUID> baseType = Optional.fromNullable( baseType( rs ) );
+        Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         SecurableObjectType category = category( rs );
 
         return new ComplexType( id, fqn, title, description, schemas, properties, baseType, category );
@@ -537,16 +568,16 @@ public final class ResultSetAdapters {
         Optional<UUID> id = Optional.of( id( rs ) );
         FullQualifiedName fqn = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         LinkedHashSet<String> members = members( rs );
         Set<FullQualifiedName> schemas = schemas( rs );
         String datatypeStr = rs.getString( DATATYPE.getName() );
         Optional<EdmPrimitiveTypeKind> datatype = ( datatypeStr == null ) ?
-                Optional.absent() :
-                Optional.fromNullable( EdmPrimitiveTypeKind.valueOf( datatypeStr ) );
+                Optional.empty() :
+                Optional.ofNullable( EdmPrimitiveTypeKind.valueOf( datatypeStr ) );
         boolean flags = flags( rs );
-        Optional<Boolean> pii = Optional.fromNullable( pii( rs ) );
-        Optional<Analyzer> analyzer = Optional.fromNullable( analyzer( rs ) );
+        Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
+        Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
 
         return new EnumType( id, fqn, title, description, members, schemas, datatype, flags, pii, analyzer );
     }
@@ -578,7 +609,7 @@ public final class ResultSetAdapters {
     //        UUID orgId = organizationId( rs );
     //        String title = nullableTitle( rs );
     //        String description = description( rs );
-    //        return new Role( Optional.of( roleId ), orgId, title, Optional.fromNullable( description ) );
+    //        return new Role( Optional.of( roleId ), orgId, title, Optional.ofNullable( description ) );
     //    }
 
     public static PrincipalSet principalSet( ResultSet rs ) throws SQLException {
@@ -606,7 +637,7 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         String name = name( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         LinkedHashSet<UUID> appTypeIds = appTypeIds( rs );
         String url = url( rs );
         return new App( id, name, title, description, appTypeIds, url );
@@ -616,9 +647,108 @@ public final class ResultSetAdapters {
         UUID id = id( rs );
         FullQualifiedName type = fqn( rs );
         String title = title( rs );
-        Optional<String> description = Optional.fromNullable( description( rs ) );
+        Optional<String> description = Optional.ofNullable( description( rs ) );
         UUID entityTypeId = entityTypeId( rs );
         return new AppType( id, type, title, description, entityTypeId );
+    }
+
+    public static SetMultimap<FullQualifiedName, Object> implicitEntity(
+            ResultSet rs,
+            Map<UUID, PropertyType> authorizedPropertyTypes,
+            Set<MetadataOption> metadataOptions ) throws SQLException {
+        final UUID entityKeyId = entityKeyId( rs );
+        final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
+
+        if ( metadataOptions.contains( MetadataOption.LAST_WRITE ) ) {
+            data.put( LAST_WRITE_FQN, lastWrite( rs ) );
+        }
+
+        if ( metadataOptions.contains( MetadataOption.LAST_INDEX ) ) {
+            data.put( LAST_INDEX_FQN, lastIndex( rs ) );
+        }
+
+        data.put( ID_FQN, entityKeyId );
+
+        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
+            final String fqn = propertyType.getType().getFullQualifiedNameAsString();
+            List<?> objects = null;
+            Array arr = rs.getArray( fqn );
+            if (arr != null) {
+                switch ( propertyType.getDatatype() ) {
+                    case String:
+                        objects = Arrays.asList( (String[]) arr.getArray() );
+                        break;
+                    case Guid:
+                        objects = Arrays.asList( (UUID[]) arr.getArray() );
+                        break;
+                    case Byte:
+                        byte[] bytes = rs.getBytes( fqn );
+                        if (bytes != null && bytes.length > 0) {
+                            objects = Arrays.asList( rs.getBytes( fqn ) );
+                        }
+                        break;
+                    case Int16:
+                        objects = Arrays.asList( (Short[]) arr.getArray() );
+                        break;
+                    case Int32:
+                        objects = Arrays.asList( (Integer[]) arr.getArray() );
+                        break;
+                    case Duration:
+                    case Int64:
+                        objects = Arrays.asList( (Long[]) arr.getArray() );
+                        break;
+                    case Date:
+                        objects = Stream
+                                .of( (Date[]) arr.getArray() )
+                                .map( Date::toLocalDate )
+                                .collect( Collectors.toList() );
+                        break;
+                    case TimeOfDay:
+                        objects = Stream
+                                .of( (Time[]) arr.getArray() )
+                                .map( Time::toLocalTime )
+                                .collect( Collectors.toList() );
+                        break;
+                    case DateTimeOffset:
+                        objects = Stream
+                                .of( (Timestamp[]) arr.getArray() )
+                                .map( ts -> OffsetDateTime
+                                        .ofInstant( Instant.ofEpochMilli( ts.getTime() ), ZoneId.of( "UTC" ) ) )
+                                .collect( Collectors.toList() );
+                        break;
+                    case Double:
+                        objects = Arrays.asList( (Double[]) arr.getArray() );
+                        break;
+                    case Boolean:
+                        objects = Arrays.asList( (Boolean[]) arr.getArray() );
+                        break;
+                    case Binary:
+                        objects = Arrays.asList( (byte[][]) arr.getArray() );
+                        break;
+                    default:
+                        objects = null;
+                        logger.error( "Unable to read property type {} for entity {}.",
+                                propertyType.getId(),
+                                entityKeyId );
+                }
+                if (objects != null) {
+                    data.putAll( propertyType.getType(), objects );
+                }
+            }
+        }
+        return data;
+    }
+
+    public static Object lastWrite( ResultSet rs ) throws SQLException {
+        return rs.getObject( LAST_WRITE.getName() );
+    }
+
+    public static Object lastIndex( ResultSet rs ) throws SQLException {
+        return rs.getObject( LAST_INDEX.getName() );
+    }
+
+    public static UUID entityKeyId( ResultSet rs ) throws SQLException {
+        return (UUID) rs.getObject( ID_VALUE.getName() );
     }
 
     public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {

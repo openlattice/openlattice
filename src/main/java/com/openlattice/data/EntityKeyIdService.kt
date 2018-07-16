@@ -16,38 +16,36 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
-package com.openlattice.data;
 
-import com.codahale.metrics.annotation.Timed;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.openlattice.data.EntityKey;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
+package com.openlattice.data
+
+import com.openlattice.data.EntityKey
+import java.util.*
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Used to assign entity key ids for a given
  */
-public interface EntityKeyIdService {
-
+interface EntityKeyIdService {
     /**
      * Retrieves the assigned id for an entity key. Assigns one if entity key hasn't been assigned.
      *
      * @param entityKey The entity key for which to retrieve an assigned id.
      * @return The id assigned to entity key.
      */
-    UUID getEntityKeyId( EntityKey entityKey );
+    fun getEntityKeyId(entityKey: EntityKey): UUID
 
-    Map<EntityKey, UUID> getEntityKeyIds( Set<EntityKey> entityKeys );
+    fun getEntityKeyId(entitySetId: UUID, entityId: String): UUID
 
-    @Timed Set<Entry<EntityKey, UUID>> getEntityKeyEntries( Set<UUID> entityKeyIds );
+    fun getEntityKeyIds(entityKeys: Set<EntityKey>): MutableMap<EntityKey, UUID>
 
-    ListenableFuture<UUID> getEntityKeyIdAsync( EntityKey entityKey );
+    fun getEntityKey(entityKeyId: UUID): EntityKey
 
-    EntityKey getEntityKey( UUID entityKeyId );
+    fun getEntityKeys(entityKeyIds: Set<UUID>): MutableMap<UUID, EntityKey>
 
-    Map<UUID, EntityKey> getEntityKeys( Set<UUID> entityKeyIds );
-
+    fun reserveIds(entitySetId: UUID, count: Int): List<UUID>
+    fun getEntityKeyIds(
+            entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
+    ): MutableMap<EntityKey, UUID>
 }

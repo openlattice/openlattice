@@ -22,17 +22,24 @@
 
 package com.openlattice.authorization;
 
-import java.util.EnumSet;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.type.EntityType;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
 import com.hazelcast.util.Preconditions;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.PropertyType;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-public class EdmAuthorizationHelper {
+public class EdmAuthorizationHelper implements AuthorizingComponent {
+    public static final EnumSet<Permission> WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
+    public static final EnumSet<Permission> READ_PERMISSION = EnumSet.of( Permission.WRITE );
 
     private final EdmManager           edm;
     private final AuthorizationManager authz;
@@ -40,6 +47,30 @@ public class EdmAuthorizationHelper {
     public EdmAuthorizationHelper( EdmManager edm, AuthorizationManager authz ) {
         this.edm = Preconditions.checkNotNull( edm );
         this.authz = Preconditions.checkNotNull( authz );
+    }
+
+    public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
+            UUID entitySetId,
+            EnumSet<Permission> requiredPermissions ) {
+        return getAuthorizedPropertyTypes( entitySetId,
+                requiredPermissions,
+                edm.getPropertyTypesForEntitySet( entitySetId ) );
+    }
+
+    public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
+            UUID entitySetId,
+            EnumSet<Permission> requiredPermissions,
+            Map<UUID, PropertyType> propertyTypes ) {
+
+        Map<AclKey, EnumSet<Permission>> accessRequest = propertyTypes.keySet().stream()
+                .map( ptId -> new AclKey( entitySetId, ptId ) )
+                .collect( Collectors.toMap( Function.identity(), aclKey -> requiredPermissions ) );
+
+        Map<AclKey, EnumMap<Permission, Boolean>> authorizations = authorize( accessRequest );
+        authorizations.entrySet().stream()
+                .filter( authz -> authz.getValue().values().stream().allMatch( v -> !v ) )
+                .forEach( authz -> propertyTypes.remove( authz.getKey().get( 1 ) ) );
+        return propertyTypes;
     }
 
     public Set<UUID> getAuthorizedPropertiesOnEntitySet(
@@ -62,10 +93,34 @@ public class EdmAuthorizationHelper {
                 .map( authorization -> authorization.getAclKey().get( 1 ) ).collect( Collectors.toSet() );
     }
 
+    public Set<PropertyType> getAuthorizedPropertyTypesOnEntitySet(
+            UUID entitySetId,
+            EnumSet<Permission> requiredPermissions ) {
+        return ImmutableSet.copyOf( edm.getPropertyTypes(
+                authz.accessChecksForPrincipals( getAllPropertiesOnEntitySet( entitySetId ).stream()
+                        .map( ptId -> new AccessCheck( new AclKey( entitySetId, ptId ), requiredPermissions ) )
+                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
+                        .filter( authorization ->
+                                authorization.getPermissions().values().stream().allMatch( val -> val ) )
+                        .map( authorization -> authorization.getAclKey().get( 1 ) )
+                        .collect( Collectors.toSet() ) ) );
+
+    }
+
     public Set<UUID> getAllPropertiesOnEntitySet( UUID entitySetId ) {
         EntitySet es = edm.getEntitySet( entitySetId );
         EntityType et = edm.getEntityType( es.getEntityTypeId() );
         return et.getProperties();
     }
 
+    @Override public AuthorizationManager getAuthorizationManager() {
+        return authz;
+    }
+
+    public static Map<AclKey, EnumSet<Permission>> aclKeysForAccessCheck(
+            SetMultimap<UUID, UUID> rawAclKeys,
+            EnumSet<Permission> requiredPermission ) {
+        return rawAclKeys.entries().stream()
+                .collect( Collectors.toMap( e -> new AclKey( e.getKey(), e.getValue() ), e -> requiredPermission ) );
+    }
 }

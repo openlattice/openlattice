@@ -21,7 +21,6 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
@@ -30,6 +29,7 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import java.io.IOException;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -60,7 +60,7 @@ public class AssociationTypeStreamSerializer implements SelfRegisteringStreamSer
         LinkedHashSet<UUID> src = SetStreamSerializers.orderedDeserialize( in, UUIDStreamSerializer::deserialize );
         LinkedHashSet<UUID> dst = SetStreamSerializers.orderedDeserialize( in, UUIDStreamSerializer::deserialize );
         boolean bidirectional = in.readBoolean();
-        Optional<EntityType> entityType = Optional.absent();
+        Optional<EntityType> entityType = Optional.empty();
         if ( in.readBoolean() ) entityType = Optional.of( EntityTypeStreamSerializer.deserialize( in ) );
 
         return new AssociationType( entityType, src, dst, bidirectional );

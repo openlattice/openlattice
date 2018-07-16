@@ -66,11 +66,6 @@ public class EntityBytes implements Serializable {
         return key.getEntityId();
     }
 
-    @JsonIgnore
-    public UUID getSyncId() {
-        return key.getSyncId();
-    }
-
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof EntityBytes ) ) { return false; }

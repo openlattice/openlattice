@@ -21,13 +21,13 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.google.common.base.Optional;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
 import java.io.IOException;
+import java.util.Optional;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
 
@@ -55,12 +55,12 @@ public class UpdatePropertyTypeMetadataProcessorStreamSerializer
         MetadataUpdate update = new MetadataUpdate(
                 title,
                 description,
-                Optional.absent(),
-                Optional.absent(),
+                Optional.empty(),
+                Optional.empty(),
                 type,
                 pii,
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty() );
         return new UpdatePropertyTypeMetadataProcessor( update );
     }
 

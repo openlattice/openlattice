@@ -47,10 +47,6 @@ import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDataValue;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.hazelcast.DataKey;
-import com.openlattice.data.mapstores.PostgresDataMapstore;
-import com.openlattice.data.mapstores.PostgresEntityKeyIdsMapstore;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
@@ -60,10 +56,8 @@ import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
-import com.openlattice.graph.mapstores.PostgresEdgeMapstore;
-import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.ids.IdGenerationMapstore;
+import com.openlattice.ids.Range;
 import com.openlattice.linking.LinkingVertex;
 import com.openlattice.linking.LinkingVertexKey;
 import com.openlattice.linking.WeightedLinkingVertexKeySet;
@@ -101,7 +95,6 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -145,11 +138,6 @@ public class MapstoresPod {
         }
 
         return jdbi.onDemand( PostgresUserApi.class );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<EdgeKey, Edge> edgesMapstore() throws SQLException {
-        return new PostgresEdgeMapstore( hikariDataSource );
     }
 
     @Bean
@@ -313,12 +301,6 @@ public class MapstoresPod {
         return new SyncIdsMapstore( hikariDataSource );
     }
 
-    //Still using Cassandra for mapstores below to avoid contention on data integrations
-    @Bean
-    public SelfRegisteringMapStore<EntityKey, UUID> idsMapstore() throws SQLException {
-        return new PostgresEntityKeyIdsMapstore( hikariDataSource );
-    }
-
     @Bean
     public SelfRegisteringMapStore<LinkingVertexKey, UUID> vertexIdsAfterLinkingMapstore() {
         return new VertexIdsAfterLinkingMapstore( hikariDataSource );
@@ -332,11 +314,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
         return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<DataKey, ByteBuffer> dataMapstore() throws SQLException {
-        return new PostgresDataMapstore( HazelcastMap.DATA.name(), hikariDataSource );
     }
 
     @Bean
@@ -369,15 +346,20 @@ public class MapstoresPod {
     public SelfRegisteringMapStore<AppConfigKey, AppTypeSetting> appConfigMapstore() {
         return new AppConfigMapstore( hikariDataSource );
     }
+//
+//    @Bean
+//    public SelfRegisteringMapStore<EntityDataKey, EntityDataValue> entityDataMapstore() {
+//        return new DataMapstoreProxy(
+//                ptMgr,
+//                hikariDataSource,
+//                propertyTypeMapstore(),
+//                entitySetMapstore(),
+//                entityTypeMapstore() );
+//    }
 
     @Bean
-    public SelfRegisteringMapStore<EntityDataKey, EntityDataValue> entityDataMapstore() {
-        return new DataMapstoreProxy(
-                ptMgr,
-                hikariDataSource,
-                propertyTypeMapstore(),
-                entitySetMapstore(),
-                entityTypeMapstore() );
+    public SelfRegisteringMapStore<Long, Range> idGenerationMapstore() {
+        return new IdGenerationMapstore( hikariDataSource );
     }
 
     @Bean

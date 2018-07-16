@@ -2,7 +2,6 @@ package com.openlattice.postgres.mapstores;
 
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -13,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.openlattice.postgres.PostgresTable.ASSOCIATION_TYPES;
@@ -59,7 +59,7 @@ public class AssociationTypeMapstore extends AbstractBasePostgresMapstore<UUID, 
 
     @Override public AssociationType generateTestValue() {
         return new AssociationType(
-                Optional.absent(),
+                Optional.empty(),
                 Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
                 Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
                 false );

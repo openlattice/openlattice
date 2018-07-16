@@ -20,15 +20,14 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.UpdateEntitySetMetadataProcessorStreamSerializer;
 import java.io.Serializable;
 
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor;
 import com.openlattice.mapstores.TestDataFactory;
-import com.google.common.base.Optional;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import java.util.Optional;
 
 public class UpdateEntitySetMetadataProcessorStreamSerializerTest extends
         AbstractStreamSerializerTest<UpdateEntitySetMetadataProcessorStreamSerializer, UpdateEntitySetMetadataProcessor>
@@ -49,10 +48,10 @@ public class UpdateEntitySetMetadataProcessorStreamSerializerTest extends
                 Optional.of( es.getDescription() ),
                 Optional.of( es.getName() ),
                 Optional.of( es.getContacts() ),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
         return new UpdateEntitySetMetadataProcessor( update );
     }
 

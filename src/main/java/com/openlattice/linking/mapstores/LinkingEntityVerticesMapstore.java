@@ -20,19 +20,18 @@
 
 package com.openlattice.linking.mapstores;
 
-import java.util.UUID;
-
-import com.openlattice.data.EntityKey;
-import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.linking.LinkingEntityKey;
-import com.openlattice.mapstores.TestDataFactory;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.openlattice.conductor.codecs.odata.Table;
-import com.openlattice.datastore.cassandra.CommonColumns;
 import com.kryptnostic.rhizome.mapstores.cassandra.AbstractStructuredCassandraMapstore;
+import com.openlattice.conductor.codecs.odata.Table;
+import com.openlattice.data.EntityKey;
+import com.openlattice.datastore.cassandra.CommonColumns;
+import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.linking.LinkingEntityKey;
+import com.openlattice.mapstores.TestDataFactory;
+import java.util.UUID;
 
 public class LinkingEntityVerticesMapstore extends AbstractStructuredCassandraMapstore<LinkingEntityKey, UUID> {
     public LinkingEntityVerticesMapstore( Session session ) {
@@ -44,7 +43,6 @@ public class LinkingEntityVerticesMapstore extends AbstractStructuredCassandraMa
         EntityKey ek = key.getEntityKey();
         return bs.setUUID( CommonColumns.ENTITY_SET_ID.cql(), ek.getEntitySetId() )
                 .setString( CommonColumns.ENTITYID.cql(), ek.getEntityId() )
-                .setUUID( CommonColumns.SYNCID.cql(), ek.getSyncId() )
                 .setUUID( CommonColumns.GRAPH_ID.cql(), key.getGraphId() );
     }
 
@@ -62,8 +60,7 @@ public class LinkingEntityVerticesMapstore extends AbstractStructuredCassandraMa
         UUID entitySetId = row.getUUID( CommonColumns.ENTITY_SET_ID.cql() );
         UUID graphId = row.getUUID( CommonColumns.GRAPH_ID.cql() );
         String entityId = row.getString( CommonColumns.ENTITYID.cql() );
-        UUID syncId = row.getUUID( CommonColumns.SYNCID.cql() );
-        return new LinkingEntityKey( graphId, new EntityKey( entitySetId, entityId, syncId ) );
+        return new LinkingEntityKey( graphId, new EntityKey( entitySetId, entityId ) );
     }
 
     @Override

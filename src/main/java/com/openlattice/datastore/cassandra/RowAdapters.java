@@ -22,8 +22,15 @@
 
 package com.openlattice.datastore.cassandra;
 
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
+import com.google.common.reflect.TypeToken;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.conductor.codecs.EnumSetTypeCodec;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.storage.EntityBytes;
 import com.openlattice.edm.EntitySet;
@@ -36,22 +43,13 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.objects.VertexKey;
-import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.requests.RequestStatus;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.SetMultimap;
-import com.google.common.reflect.TypeToken;
-import com.openlattice.conductor.codecs.EnumSetTypeCodec;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
@@ -230,7 +228,7 @@ public final class RowAdapters {
     }
 
     public static Optional<String> description( Row row ) {
-        return Optional.fromNullable( row.getString( CommonColumns.DESCRIPTION.cql() ) );
+        return Optional.ofNullable( row.getString( CommonColumns.DESCRIPTION.cql() ) );
     }
 
     public static Set<String> contacts( Row row ) {
@@ -257,13 +255,13 @@ public final class RowAdapters {
     }
 
     public static EnumType enumType( Row row ) {
-        com.google.common.base.Optional<UUID> id = com.google.common.base.Optional.of( id( row ) );
+        Optional<UUID> id = Optional.of( id( row ) );
         FullQualifiedName type = splitFqn( row );
         String title = title( row );
         Optional<String> description = description( row );
         Set<FullQualifiedName> schemas = schemas( row );
         LinkedHashSet<String> members = members( row );
-        Optional<EdmPrimitiveTypeKind> dataType = Optional.fromNullable( primitveType( row ) );
+        Optional<EdmPrimitiveTypeKind> dataType = Optional.ofNullable( primitveType( row ) );
         Optional<Boolean> piiField = pii( row );
         boolean flags = flags( row );
         Optional<Analyzer> maybeAnalyzer = analyzer( row );
@@ -290,7 +288,7 @@ public final class RowAdapters {
         Set<FullQualifiedName> schemas = row.getSet( CommonColumns.SCHEMAS.cql(), FullQualifiedName.class );
         LinkedHashSet<UUID> key = (LinkedHashSet<UUID>) row.getSet( CommonColumns.KEY.cql(), UUID.class );
         LinkedHashSet<UUID> properties = (LinkedHashSet<UUID>) row.getSet( CommonColumns.PROPERTIES.cql(), UUID.class );
-        Optional<UUID> baseType = Optional.fromNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
+        Optional<UUID> baseType = Optional.ofNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
         final Optional<SecurableObjectType> category;
         String objectType = row.getString( CommonColumns.CATEGORY.cql() );
         if ( StringUtils.isBlank( objectType ) ) {
@@ -308,7 +306,7 @@ public final class RowAdapters {
         Optional<String> description = description( row );
         Set<FullQualifiedName> schemas = row.getSet( CommonColumns.SCHEMAS.cql(), FullQualifiedName.class );
         LinkedHashSet<UUID> properties = (LinkedHashSet<UUID>) row.getSet( CommonColumns.PROPERTIES.cql(), UUID.class );
-        Optional<UUID> baseType = Optional.fromNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
+        Optional<UUID> baseType = Optional.ofNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
         SecurableObjectType category = SecurableObjectType.valueOf( row.getString( CommonColumns.CATEGORY.cql() ) );
         return new ComplexType( id, type, title, description, schemas, properties, baseType, category );
     }
@@ -317,7 +315,7 @@ public final class RowAdapters {
         LinkedHashSet<UUID> src = (LinkedHashSet<UUID>) row.getSet( CommonColumns.SRC.cql(), UUID.class );
         LinkedHashSet<UUID> dest = (LinkedHashSet<UUID>) row.getSet( CommonColumns.DST.cql(), UUID.class );
         boolean bidirectional = bidirectional( row );
-        return new AssociationType( Optional.absent(), src, dest, bidirectional );
+        return new AssociationType( Optional.empty(), src, dest, bidirectional );
     }
 
     public static FullQualifiedName splitFqn( Row row ) {
@@ -428,53 +426,10 @@ public final class RowAdapters {
         return row.getBool( CommonColumns.FLAGS.cql() );
     }
 
-    public static EdgeKey edgeKey( Row row ) {
-        UUID srcEntityKeyId = row.getUUID( CommonColumns.SRC_ENTITY_KEY_ID.cql() );
-        UUID dstTypeId = row.getUUID( CommonColumns.DST_TYPE_ID.cql() );
-        UUID edgeTypeId = row.getUUID( CommonColumns.EDGE_TYPE_ID.cql() );
-        UUID dstEntityKeyId = row.getUUID( CommonColumns.DST_ENTITY_KEY_ID.cql() );
-        UUID edgeEntityKeyId = row.getUUID( CommonColumns.EDGE_ENTITY_KEY_ID.cql() );
-
-        return new EdgeKey( srcEntityKeyId, dstTypeId, edgeTypeId, dstEntityKeyId, edgeEntityKeyId );
-    }
-
-    public static EdgeKey backEdgeKey( Row row ) {
-        UUID srcEntityKeyId = row.getUUID( CommonColumns.DST_ENTITY_KEY_ID.cql() );
-        UUID dstTypeId = row.getUUID( CommonColumns.SRC_TYPE_ID.cql() );
-        UUID edgeTypeId = row.getUUID( CommonColumns.EDGE_TYPE_ID.cql() );
-        UUID dstEntityKeyId = row.getUUID( CommonColumns.SRC_ENTITY_KEY_ID.cql() );
-        UUID edgeEntityKeyId = row.getUUID( CommonColumns.EDGE_ENTITY_KEY_ID.cql() );
-
-        return new EdgeKey( srcEntityKeyId, dstTypeId, edgeTypeId, dstEntityKeyId, edgeEntityKeyId );
-    }
-
     public static VertexKey loomVertex( Row row ) {
         UUID key = row.getUUID( CommonColumns.VERTEX_ID.cql() );
         EntityKey reference = row.get( CommonColumns.ENTITY_KEY.cql(), EntityKey.class );
         return new VertexKey( key, reference );
-    }
-
-    public static Edge loomEdge( Row row ) {
-        EdgeKey key = edgeKey( row );
-
-        UUID srcType = row.getUUID( CommonColumns.SRC_TYPE_ID.cql() );
-        UUID srcSetId = row.getUUID( CommonColumns.SRC_ENTITY_SET_ID.cql() );
-        UUID srcSyncId = row.getUUID( CommonColumns.SRC_SYNC_ID.cql() );
-        UUID dstSetId = row.getUUID( CommonColumns.DST_ENTITY_SET_ID.cql() );
-        UUID dstSyncId = row.getUUID( CommonColumns.DST_SYNC_ID.cql() );
-        UUID srcEdgeId = row.getUUID( CommonColumns.EDGE_ENTITY_SET_ID.cql() );
-        return new Edge( key, srcType, srcSetId, srcSyncId, dstSetId, dstSyncId, srcEdgeId );
-    }
-
-    public static Edge loomBackEdge( Row row ) {
-        EdgeKey key = backEdgeKey( row );
-        UUID srcType = row.getUUID( CommonColumns.DST_TYPE_ID.cql() );
-        UUID srcSetId = row.getUUID( CommonColumns.DST_ENTITY_SET_ID.cql() );
-        UUID srcSyncId = row.getUUID( CommonColumns.DST_SYNC_ID.cql() );
-        UUID dstSetId = row.getUUID( CommonColumns.SRC_ENTITY_SET_ID.cql() );
-        UUID dstSyncId = row.getUUID( CommonColumns.SRC_SYNC_ID.cql() );
-        UUID srcEdgeId = row.getUUID( CommonColumns.EDGE_ENTITY_SET_ID.cql() );
-        return new Edge( key, srcType, srcSetId, srcSyncId, dstSetId, dstSyncId, srcEdgeId );
     }
 
     public static UUID vertexId( Row row ) {
@@ -488,8 +443,7 @@ public final class RowAdapters {
     public static EntityKey entityKeyFromData( Row row ) {
         UUID entitySetId = row.getUUID( CommonColumns.ENTITY_SET_ID.cql() );
         String entityId = row.getString( CommonColumns.ENTITYID.cql() );
-        UUID syncId = row.getUUID( CommonColumns.SYNCID.cql() );
-        return new EntityKey( entitySetId, entityId, syncId );
+        return new EntityKey( entitySetId, entityId );
     }
 
     public static UUID propertyTypeId( Row row ) {

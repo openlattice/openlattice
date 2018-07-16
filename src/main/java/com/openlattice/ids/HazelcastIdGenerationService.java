@@ -20,16 +20,20 @@
 
 package com.openlattice.ids;
 
+import com.google.common.collect.ImmutableMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.query.Predicate;
-import com.hazelcast.query.Predicates;
 import com.openlattice.hazelcast.HazelcastMap;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
@@ -38,14 +42,14 @@ public class HazelcastIdGenerationService {
     /*
      * This should be good enough until we scale past 65536 Hazelcast nodes.
      */
-    public static final int  MASK_LENGTH    = 16;
-    public static final int  NUM_PARTITIONS = 1 << MASK_LENGTH; //65536
-    public static final long MASK           = ( -1L ) >>> MASK_LENGTH; //
+    public static final  int               MASK_LENGTH    = 16;
+    public static final  int               NUM_PARTITIONS = 1 << MASK_LENGTH; //65536
+    private static final Random            r              = new Random();
     /*
-     * Each range owns a portion of the keyspace. The mask determines the
+     * Each range owns a portion of the keyspace.
      */
-    private final IMap<Integer, Range> scrolls;
-    private final AtomicInteger rangeIndex = new AtomicInteger();
+    private final        IMap<Long, Range> scrolls;
+    private final        AtomicInteger     rangeIndex     = new AtomicInteger();
 
     public HazelcastIdGenerationService( HazelcastInstance hazelcastInstance ) {
         this.scrolls = hazelcastInstance.getMap( HazelcastMap.ID_GENERATION.name() );
@@ -55,26 +59,42 @@ public class HazelcastIdGenerationService {
     }
 
     public void initializeRanges() {
-        for ( int i = 0; i < NUM_PARTITIONS; ++i ) {
-            new Range( MASK, i * ( 1L << ( 64 - MASK_LENGTH ) ), 0, 0 );
+        final Map<Long, Range> ranges = new HashMap(NUM_PARTITIONS);
+        for ( long i = 0; i < NUM_PARTITIONS; ++i ) {
+            ranges.put( i, new Range( i << 48L ) );
         }
+        scrolls.putAll( ranges );
     }
 
     public Set<UUID> getNextIds( int count ) {
-        int start = rangeIndex.getAndAdd( count );
-        Map<Integer, Object> idMap = scrolls
-                .executeOnEntries( new IdGeneratingEntryProcessor(), between( start, start + count - 1 ) );
-        Set<UUID> ids = new HashSet<>( count );
-        idMap.forEach( ( k, v ) -> ids.add( (UUID) v ) );
-        return ids;
+        final int remainderToBeDistributed = count % NUM_PARTITIONS;
+        final int countPerPartition = count / NUM_PARTITIONS; //0 if count < NUM_PARTITIONS
+        final Set<Long> ranges = new HashSet<>( remainderToBeDistributed );
+
+        while ( ranges.size() < remainderToBeDistributed ) {
+            ranges.add( ( (long) r.nextInt( NUM_PARTITIONS ) ) );
+        }
+
+        final Map<Long, Object> ids;
+
+        if ( countPerPartition > 0 ) {
+            ids = scrolls
+                    .executeOnEntries( new IdGeneratingEntryProcessor( countPerPartition ) );
+        } else {
+            ids = ImmutableMap.of();
+        }
+
+        final Map<Long, Object> remainingIds = scrolls.executeOnKeys( ranges, new IdGeneratingEntryProcessor( 1 ) );
+
+        return Stream
+                .concat( ids.values().stream(), remainingIds.values().stream() )
+                .map( idList -> (List<UUID>) idList )
+                .flatMap( List::stream )
+                .collect( Collectors.toSet() );
+
     }
 
     public UUID nextId() {
-        return (UUID) scrolls.executeOnKey( rangeIndex.getAndIncrement(), new IdGeneratingEntryProcessor() );
-
-    }
-
-    public static Predicate between( int start, int end ) {
-        return Predicates.between( "__key", start, end );
+        return getNextIds( 1 ).iterator().next();
     }
 }

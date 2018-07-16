@@ -21,7 +21,6 @@
 package com.openlattice.linking.aggregators;
 
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.linking.HazelcastMergingService;
 import com.openlattice.linking.LinkingVertex;
 import com.openlattice.linking.LinkingVertexKey;
 import com.hazelcast.aggregation.Aggregator;
@@ -47,7 +46,6 @@ public class MergeVertexAggregator extends Aggregator<Map.Entry<LinkingVertexKey
     private           Set<UUID>                       propertyTypesToPopulate;
     private           Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataTypeForLinkedEntitySet;
     private transient ICountDownLatch                 countDownLatch;
-    private transient HazelcastMergingService         mergingService;
 
     private final int MAX_FAILED_CONSEC_ATTEMPTS = 5;
 
@@ -58,39 +56,23 @@ public class MergeVertexAggregator extends Aggregator<Map.Entry<LinkingVertexKey
             Map<UUID, PropertyType> propertyTypesById,
             Set<UUID> propertyTypesToPopulate,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataTypeForLinkedEntitySet ) {
-        this( graphId,
-                syncId,
-                propertyTypeIdsByEntitySet,
-                propertyTypesById,
-                propertyTypesToPopulate,
-                authorizedPropertiesWithDataTypeForLinkedEntitySet,
-                null );
-    }
-
-    public MergeVertexAggregator(
-            UUID graphId,
-            UUID syncId,
-            Map<UUID, Set<UUID>> propertyTypeIdsByEntitySet,
-            Map<UUID, PropertyType> propertyTypesById,
-            Set<UUID> propertyTypesToPopulate,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataTypeForLinkedEntitySet,
-            HazelcastMergingService mergingService ) {
         this.graphId = graphId;
         this.syncId = syncId;
         this.propertyTypeIdsByEntitySet = propertyTypeIdsByEntitySet;
         this.propertyTypesById = propertyTypesById;
         this.propertyTypesToPopulate = propertyTypesToPopulate;
         this.authorizedPropertiesWithDataTypeForLinkedEntitySet = authorizedPropertiesWithDataTypeForLinkedEntitySet;
-        this.mergingService = mergingService;
+//        this.mergingService = mergingService;
     }
 
     @Override public void accumulate( Map.Entry<LinkingVertexKey, LinkingVertex> input ) {
-        mergingService.mergeEntity( input.getValue().getEntityKeys(),
-                graphId,
-                syncId,
-                propertyTypeIdsByEntitySet,
-                propertyTypesToPopulate,
-                authorizedPropertiesWithDataTypeForLinkedEntitySet );
+//        mergingService.mergeEntity( input.getValue().getEntityKeys(),
+//                graphId,
+//                syncId,
+//                propertyTypeIdsByEntitySet,
+//                propertyTypesById,
+//                propertyTypesToPopulate,
+//                authorizedPropertiesWithDataTypeForLinkedEntitySet );
     }
 
     @Override public void combine( Aggregator aggregator ) {

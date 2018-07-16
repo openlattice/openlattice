@@ -2,11 +2,11 @@ package com.openlattice.postgres.mapstores;
 
 import com.openlattice.apps.App;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.google.common.base.Optional;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.Optional;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.sql.Array;

@@ -20,10 +20,90 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.PostgresColumn.ACL_KEY;
+import static com.openlattice.postgres.PostgresColumn.ACL_KEY_SET;
+import static com.openlattice.postgres.PostgresColumn.ALLOWED_EMAIL_DOMAINS;
+import static com.openlattice.postgres.PostgresColumn.ANALYZER;
+import static com.openlattice.postgres.PostgresColumn.APP_ID;
+import static com.openlattice.postgres.PostgresColumn.APP_IDS;
+import static com.openlattice.postgres.PostgresColumn.AUDIT_ID;
+import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
+import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
+import static com.openlattice.postgres.PostgresColumn.BLOCK_ID;
+import static com.openlattice.postgres.PostgresColumn.CATEGORY;
+import static com.openlattice.postgres.PostgresColumn.CLAUSES;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
+import static com.openlattice.postgres.PostgresColumn.CONTACTS;
+import static com.openlattice.postgres.PostgresColumn.CREDENTIAL;
+import static com.openlattice.postgres.PostgresColumn.CURRENT_SYNC_ID;
+import static com.openlattice.postgres.PostgresColumn.DATATYPE;
+import static com.openlattice.postgres.PostgresColumn.DATA_ID;
+import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
+import static com.openlattice.postgres.PostgresColumn.DST;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.DST_LINKING_VERTEX_ID;
+import static com.openlattice.postgres.PostgresColumn.DST_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.EDGE_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.EDGE_VALUE;
+import static com.openlattice.postgres.PostgresColumn.EDM_VERSION;
+import static com.openlattice.postgres.PostgresColumn.EDM_VERSION_NAME;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_IDS;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_IDS;
+import static com.openlattice.postgres.PostgresColumn.EVENT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.START_TIME;
+import static com.openlattice.postgres.PostgresColumn.FLAGS;
+import static com.openlattice.postgres.PostgresColumn.GRAPH_DIAMETER;
+import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
+import static com.openlattice.postgres.PostgresColumn.ID;
+import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
+import static com.openlattice.postgres.PostgresColumn.KEY;
+import static com.openlattice.postgres.PostgresColumn.LSB;
+import static com.openlattice.postgres.PostgresColumn.MEMBERS;
+import static com.openlattice.postgres.PostgresColumn.MSB;
+import static com.openlattice.postgres.PostgresColumn.NAME;
+import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
+import static com.openlattice.postgres.PostgresColumn.NAME_SET;
+import static com.openlattice.postgres.PostgresColumn.NEW_VERTEX_ID;
+import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX;
+import static com.openlattice.postgres.PostgresColumn.PII;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE;
+import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.QUERY;
+import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
+import static com.openlattice.postgres.PostgresColumn.REASON;
+import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
+import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.SHOW;
+import static com.openlattice.postgres.PostgresColumn.SRC;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_LINKING_VERTEX_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.STATE;
+import static com.openlattice.postgres.PostgresColumn.STATUS;
+import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
+import static com.openlattice.postgres.PostgresColumn.TIME_UUID;
+import static com.openlattice.postgres.PostgresColumn.TITLE;
+import static com.openlattice.postgres.PostgresColumn.URL;
+import static com.openlattice.postgres.PostgresColumn.VERSION;
+import static com.openlattice.postgres.PostgresColumn.VERSIONS;
+import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
+
 import com.google.common.collect.ImmutableList;
 import java.util.List;
-
-import static com.openlattice.postgres.PostgresColumn.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -77,10 +157,23 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition EDGES =
             new PostgresTableDefinition( "edges" )
-                    .addColumns( SRC_ENTITY_KEY_ID, SRC_TYPE_ID, SRC_ENTITY_SET_ID, SRC_SYNC_ID,
-                            DST_ENTITY_KEY_ID, DST_TYPE_ID, DST_ENTITY_SET_ID, DST_SYNC_ID,
-                            EDGE_ENTITY_KEY_ID, EDGE_TYPE_ID, EDGE_ENTITY_SET_ID )
-                    .primaryKey( SRC_ENTITY_KEY_ID, DST_TYPE_ID, EDGE_TYPE_ID, DST_ENTITY_KEY_ID, EDGE_ENTITY_KEY_ID );
+                    .addColumns( SRC_ENTITY_KEY_ID,
+                            SRC_ENTITY_SET_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID,
+                            EDGE_ENTITY_SET_ID,
+                            EDGE_ENTITY_KEY_ID,
+                            SRC_TYPE_ID,
+                            DST_TYPE_ID,
+                            EDGE_TYPE_ID,
+                            VERSION,
+                            VERSIONS )
+                    .primaryKey( SRC_ENTITY_KEY_ID,
+                            SRC_ENTITY_SET_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID,
+                            EDGE_ENTITY_SET_ID,
+                            EDGE_ENTITY_KEY_ID );
 
     public static final PostgresTableDefinition EDM_VERSIONS =
             new PostgresTableDefinition( "edm_versions" )
@@ -130,11 +223,11 @@ public final class PostgresTable {
     public static final PostgresTableDefinition ID_GENERATION =
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
-                    .addColumns( PARTITION_INDEX, BASE, MSB, LSB );
+                    .addColumns( PARTITION_INDEX, MSB, LSB );
 
     public static final PostgresTableDefinition IDS =
             new PostgresTableDefinition( "entity_key_ids" )
-                    .addColumns( ENTITY_SET_ID, SYNC_ID, ENTITY_ID, ID );
+                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID );
 
     public static final PostgresTableDefinition LINKED_ENTITY_SETS =
             new PostgresTableDefinition( "linked_entity_sets" )
@@ -209,6 +302,15 @@ public final class PostgresTable {
                     .addColumns( GRAPH_ID, VERTEX_ID, NEW_VERTEX_ID )
                     .primaryKey( GRAPH_ID, VERTEX_ID );
 
+    public static final PostgresTableDefinition ENTITY_QUERIES =
+            new PostgresTableDefinition( "entity_graph_queries" )
+                    .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
+                    .primaryKey( QUERY_ID, ID_VALUE );
+    public static final PostgresTableDefinition GRAPH_QUERIES =
+            new PostgresTableDefinition( "graph_queries" )
+                    .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
+                    .primaryKey( QUERY_ID );
+
     public static final List<PostgresColumnDefinition> HASH_ON =
             ImmutableList.of(
                     ID,
@@ -225,14 +327,49 @@ public final class PostgresTable {
             );
 
     static {
+        EDGES.addIndexes(
+                new PostgresIndexDefinition( EDGES, SRC_ENTITY_KEY_ID )
+                        .name( "src_entity_key_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( EDGES, SRC_ENTITY_SET_ID )
+                        .name( "src_entity_set_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( EDGES, DST_ENTITY_KEY_ID )
+                        .name( "dst_entity_key_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( EDGES, DST_ENTITY_KEY_ID )
+                        .name( "dst_entity_key_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( EDGES, SRC_TYPE_ID )
+                        .name( "src_entity_key_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( EDGES, DST_TYPE_ID )
+                        .name( "dst_entity_key_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( EDGES, EDGE_TYPE_ID )
+                        .name( "edge_entity_key_id_idx" )
+                        .ifNotExists());
         IDS.addIndexes(
-                new PostgresIndexDefinition( IDS, ENTITY_SET_ID, SYNC_ID, ENTITY_ID )
-                        .name( "entity_key_idx" )
-                        .ifNotExists() );
+                new PostgresIndexDefinition( IDS, ENTITY_SET_ID )
+                        .name( "entity_key_ids_entity_set_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
+                        .unique()
+                        .name( "entity_key_ids_entity_key_idx" )
+                        .ifNotExists()
+        );
         APPS.addIndexes(
                 new PostgresIndexDefinition( APPS, ID )
-                        .name( "id_idx" )
+                        .name( "apps_id_idx" )
                         .ifNotExists() );
+        ENTITY_QUERIES.addIndexes(
+                new PostgresIndexDefinition( ENTITY_QUERIES, ID_VALUE )
+                .name( "entity_queries_id_idx" )
+                .ifNotExists(),
+                new PostgresIndexDefinition( ENTITY_QUERIES, CLAUSES )
+        .name( "" ));
+        GRAPH_QUERIES.addIndexes(
+                new PostgresIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "graph_queries_expiry_idx" ).ifNotExists() );
     }
 
     private PostgresTable() {
