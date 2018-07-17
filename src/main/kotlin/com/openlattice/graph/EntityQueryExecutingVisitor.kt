@@ -21,13 +21,13 @@
 
 package com.openlattice.graph
 
+import com.openlattice.authorization.*
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
+import com.openlattice.data.storage.selectEntitySetWithPropertyTypes
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.graph.query.AbstractEntityQuery
-import com.openlattice.graph.query.EntityKeyIdQuery
-import com.openlattice.graph.query.EntityQuery
-import com.openlattice.graph.query.EntitySetQuery
+import com.openlattice.graph.query.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.ENTITY_QUERIES
 import com.zaxxer.hikari.HikariDataSource
@@ -40,13 +40,15 @@ import java.util.concurrent.atomic.AtomicInteger
 class EntityQueryExecutingVisitor(
         private val hds: HikariDataSource,
         private val edm: EdmManager,
+        private val authorizationManager: AuthorizationManager,
         val queryId: UUID
-) : EntityQueryVisitor {
+) : EntityQueryVisitor, AuthorizingComponent {
+    private val authzHelper = EdmAuthorizationHelper(edm, authorizationManager)
     private val pgeqs = PostgresEntityDataQueryService(hds)
+
     private val indexGen = AtomicInteger()
     private val expiry = System.currentTimeMillis() + 10 * 60 * 1000 //10 minute, arbitary
     val queryMap: MutableMap<EntityQuery, Int> = mutableMapOf()
-
     override fun accept(query: EntityQuery) {
         query.childQueries.forEach(this)
         when (query) {
@@ -88,27 +90,94 @@ class EntityQueryExecutingVisitor(
      * @param query The entity set query to execute.
      */
     private fun executeQuery(query: EntitySetQuery) {
-        val clausesVisitor = ClauseBuildingVisitor()
-        val clauses = clausesVisitor.apply(query.clauses)
+        val requiredPropertyTypes = PropertyTypeIdEnumeratingClauseVisitor(edm).apply(query.clauses).toSet()
+        val requiredPermissions = EnumSet.of(Permission.READ)
+        /*
+         * We have to make sure that for each entity set we have read access to all required property types.
+         * First we ensure that we have read access to all property types being read or filter on.
+         * In the future, we can modify this to allow filtering on computable properties that the user cannot explicitly
+         * access.
+         */
+
         val entitySetIds = query.entitySetId
                 .map { setOf(it) }
                 .orElse(edm.getEntitySetsOfType(query.entityTypeId).map { it.id }.toSet())
+                .filter { isAuthorized(requiredPermissions).test(AclKey(it)) }.toMutableSet()
+
+        if (entitySetIds.isEmpty()) {
+            return
+        }
+
+        val requiredAuthorizations = entitySetIds.asSequence().flatMap {
+            val entitySetId = it
+            requiredPropertyTypes.asSequence().map { AclKey(entitySetId, it) to requiredPermissions }
+        }.toMap()
+
+        val authorizations = authorize(requiredAuthorizations)
+
+        authorizations.forEach {
+            val entitySetId = it.key[0]
+            if (entitySetIds.contains(entitySetId) && !it.value.values.all { it }) {
+                entitySetIds.remove(entitySetId)
+            }
+        }
+
+        val authorizedPropertyTypes = edm.getPropertyTypesAsMap(requiredPropertyTypes)
+        val clausesVisitor = ClauseBuildingVisitor(authorizedPropertyTypes)
+        val clausesSql = clausesVisitor.apply(query.clauses)
+
+        //For each entity
+        entitySetIds.forEach {
+            executeInsertQuery(
+                    query.id,
+                    it,
+                    authorizedPropertyTypes,
+                    clausesVisitor.clauses,
+                    clausesSql
+            )
+        }
+
         //private val authorizedPropertyTypes: Map<UUID, PropertyType>,
         //For each entity set we have to execute a boolean query and insert it into
-////        val selectSqls = entitySetIds.map( pgeqs::)
-////
-////        val sql = "INSERT INTO ${ENTITY_QUERIES.name} " +
-////                "(${QUERY_ID.name},${ID_VALUE.name},${CLAUSES.name},${START_TIME.name}) " +
-////                "VALUES ($queryId,${query.entityKeyId},ARRAY[${query.id}],$expiry) " +
-////                "ON CONFLICT((${QUERY_ID.name},${ID_VALUE.name}) " +
-////                "DO UPDATE SET ${ENTITY_QUERIES.name}.${CLAUSES.name} = " +
-////                "${ENTITY_QUERIES.name}.${CLAUSES.name} || EXCLUDED.${CLAUSES.name}  "
+//        val selectSqls = entitySetIds.map( pgeqs::)
+//
+//        val sql = "INSERT INTO ${ENTITY_QUERIES.name} " +
+//                "(${QUERY_ID.name},${ID_VALUE.name},${CLAUSES.name},${START_TIME.name}) " +
+//                "VALUES ($queryId,${query.entityKeyId},ARRAY[${query.id}],$expiry) " +
+//                "ON CONFLICT((${QUERY_ID.name},${ID_VALUE.name}) " +
+//                "DO UPDATE SET ${ENTITY_QUERIES.name}.${CLAUSES.name} = " +
+//                "${ENTITY_QUERIES.name}.${CLAUSES.name} || EXCLUDED.${CLAUSES.name}  "
 //
 //
 //        val connection = hds.connection
 //        connection.use {
 //            connection.createStatement().executeUpdate(sql)
 //        }
+    }
+
+    private fun executeInsertQuery(
+            clauseId: Int,
+            entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            clauses: List<Pair<UUID, BooleanClauses>>,
+            clausesSql: String
+    ) {
+        val sql = "INSERT INTO ${ENTITY_QUERIES.name}(${QUERY_ID.name},${ID_VALUE.name},${CLAUSES.name}) " +
+                "SELECT distint $queryId,id,$clauseId FROM (" + selectEntitySetWithPropertyTypes(
+                entitySetId,
+                setOf(),
+                authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
+                EnumSet.noneOf(MetadataOption::class.java)
+        ) + clausesSql + ") ON CONFLICT DO " +
+                "UPDATE SET ${ENTITY_QUERIES.name}.${CLAUSES.name} = ${ENTITY_QUERIES.name}.${CLAUSES.name}|| EXCLUDE.${CLAUSES.name}"
+
+        hds.connection.use {
+            it.createStatement().use { it.executeUpdate(sql) }
+        }
+    }
+
+    override fun getAuthorizationManager(): AuthorizationManager {
+        return authorizationManager
     }
 
 

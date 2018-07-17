@@ -22,6 +22,7 @@
 package com.openlattice.graph
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
@@ -39,6 +40,7 @@ import java.util.*
 class PostgresGraphQueryService(
         private val hds: HikariDataSource,
         private val edm: EdmManager,
+        private val authorizationManager: AuthorizationManager,
         private val mapper: ObjectMapper
 ) : GraphQueryService {
     override fun getQuery(queryId: UUID): GraphQuery {
@@ -73,7 +75,7 @@ class PostgresGraphQueryService(
         val queryId = UUID.randomUUID()
         val startTime = saveQuery(queryId, query)
         //TODO: Consider stronger of enforcement of uniqueness for mission critical
-        val visitor = EntityQueryExecutingVisitor(hds, edm, queryId)
+        val visitor = EntityQueryExecutingVisitor(hds, edm,authorizationManager, queryId)
         query.entityQueries.forEach(visitor)
         val queryMap = visitor.queryMap
         discard(visitor.queryId, query.entityQueries.map { visitor.queryMap[it]!! })

@@ -64,7 +64,7 @@ open class DataGraphService(
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore
 ) : DataGraphManager {
-
+    //TODO: Move to a utility class
     companion object {
         @JvmStatic
         fun tryGetAndLogErrors(f: ListenableFuture<*>) {
@@ -75,7 +75,6 @@ open class DataGraphService(
             } catch (e: ExecutionException) {
                 logger.error("Future execution failed.", e)
             }
-
         }
     }
 
@@ -92,7 +91,6 @@ open class DataGraphService(
                     }
             )
 
-
     private val queryCache = CacheBuilder.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(30, TimeUnit.SECONDS)
@@ -108,11 +106,12 @@ open class DataGraphService(
 
 
     override fun getEntitySetData(
-            entitySetId: UUID?, entityKeyIds: MutableSet<UUID>,
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
             orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: MutableMap<UUID, PropertyType>?
+            authorizedPropertyTypes: Map<UUID, PropertyType>
     ): EntitySetData<FullQualifiedName> {
-        return eds.getEntities(entitySetId, entityKeyIds, orderedPropertyNames, authorizedPropertyTypes);
+        return eds.getEntities(entitySetId, entityKeyIds, orderedPropertyNames, authorizedPropertyTypes)
     }
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
@@ -229,7 +228,7 @@ open class DataGraphService(
     }
 
     override fun createAssociations(
-            associations: ListMultimap<UUID, DataEdge>?,
+            associations: ListMultimap<UUID, DataEdge>,
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): ListMultimap<UUID, UUID> {
         val entityKeyIds: ListMultimap<UUID, UUID> = ArrayListMultimap.create()

@@ -667,11 +667,13 @@ public class EdmService implements EdmManager {
     @Timed
     @Override
     public Map<UUID, PropertyType> getPropertyTypesForEntitySet( UUID entitySetId ) {
+        //TODO: Use a projection to retrieve just the entity type.
         EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
         if ( entitySet == null ) {
             throw new ResourceNotFoundException( "Entity set " + entitySetId.toString() + " does not exist." );
         }
 
+        //TODO: Use a project tio retrieve just the property type ids.
         UUID entityTypeId = entitySet.getEntityTypeId();
         EntityType entityType = Util.getSafely( entityTypes, entityTypeId );
 

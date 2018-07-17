@@ -426,7 +426,7 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
             "WHERE EXCLUDED.${VERSION.name} > abs($propertyTable.version) "
 }
 
-fun selectEntitySetWithPropertyTypes(
+ fun selectEntitySetWithPropertyTypes(
         entitySetId: UUID,
         entityKeyIds: Set<UUID>,
         authorizedPropertyTypes: Map<UUID, String>,

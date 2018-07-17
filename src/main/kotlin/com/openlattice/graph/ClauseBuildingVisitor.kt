@@ -21,18 +21,30 @@
 
 package com.openlattice.graph
 
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.query.AbstractBooleanClauses
 import com.openlattice.graph.query.BooleanClauses
 import com.openlattice.graph.query.ComparisonClause
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import java.util.*
 
 /**
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * This class builds a prepared statement SQL fragment that will be used to filter a entity set before loading it.
+ *
+ * It will generate the correct form of clauses to account for property multiplicity and should result in queries that
+ * can be pushed down to numeric tables.
+ *
+ * TODO: We should differentiate between large and small text fields. The postgres indexer has a limit on the maximum
+ * size of the field it can index thus it will do scans when doing range queries on strings (as we don't index those fields)
  */
-class ClauseBuildingVisitor : BooleanClauseVisitorFunction<String> {
+class ClauseBuildingVisitor(
+        authorizedPropertyTypes: Map<UUID, PropertyType>
+) : BooleanClauseVisitorFunction<String> {
     private var sql: String = ""
-    private var counter = 1
-    private val insertionMap: MutableMap<Int, BooleanClauses> = mutableMapOf()
+    private val fqnMap = authorizedPropertyTypes.map { it.value.type to it.value }.toMap()
+    //The insertion map is a public field that will be used by the prepared statement binder.
+    val clauses: MutableList<Pair<UUID, BooleanClauses>> = mutableListOf()
 
     override fun apply(clauses: BooleanClauses): String {
         return when (clauses) {
@@ -52,9 +64,14 @@ class ClauseBuildingVisitor : BooleanClauseVisitorFunction<String> {
     }
 
     private fun executeQuery(clauses: ComparisonClause): String {
-        insertionMap[counter++] = clauses
-        return "${clauses.fqn.fullQualifiedNameAsString} ${clauses.comparisonOp.comparisionString} ?"
-    }
+        val propertyType = fqnMap[clauses.fqn]!!
+        this.clauses.add(propertyType.id to clauses)
 
+        return if (propertyType.isMultiValued) {
+            " ? ${clauses.comparisonOp.arrayComparisonString} ANY(${clauses.fqn.fullQualifiedNameAsString}) "
+        } else {
+            " ${clauses.fqn.fullQualifiedNameAsString} ${clauses.comparisonOp.comparisonString} ? "
+        }
+    }
 
 }
