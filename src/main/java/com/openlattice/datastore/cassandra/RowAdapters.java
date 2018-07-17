@@ -254,20 +254,6 @@ public final class RowAdapters {
         return new EntitySet( id, entityTypeId, name, title, description, contacts );
     }
 
-    public static EnumType enumType( Row row ) {
-        Optional<UUID> id = Optional.of( id( row ) );
-        FullQualifiedName type = splitFqn( row );
-        String title = title( row );
-        Optional<String> description = description( row );
-        Set<FullQualifiedName> schemas = schemas( row );
-        LinkedHashSet<String> members = members( row );
-        Optional<EdmPrimitiveTypeKind> dataType = Optional.ofNullable( primitveType( row ) );
-        Optional<Boolean> piiField = pii( row );
-        boolean flags = flags( row );
-        Optional<Analyzer> maybeAnalyzer = analyzer( row );
-        return new EnumType( id, type, title, description, members, schemas, dataType, flags, piiField, maybeAnalyzer );
-    }
-
     public static PropertyType propertyType( Row row ) {
         UUID id = id( row );
         FullQualifiedName type = splitFqn( row );
