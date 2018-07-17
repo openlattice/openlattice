@@ -499,9 +499,18 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
+        Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
 
-        return new PropertyType( id, fqn, title, description, schemas, datatype, pii, analyzer );
+        return new PropertyType( Optional.of( id ),
+                fqn,
+                title,
+                description,
+                schemas,
+                datatype,
+                pii,
+                multiValued,
+                analyzer );
     }
 
     public static EntityType entityType( ResultSet rs ) throws SQLException {
@@ -575,7 +584,7 @@ public final class ResultSetAdapters {
                 Optional.ofNullable( EdmPrimitiveTypeKind.valueOf( datatypeStr ) );
         boolean flags = flags( rs );
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
-        Optional<Boolean> multiValued = Optional.of( multiValued( rs ) );
+        Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
 
         return new EnumType( id,
