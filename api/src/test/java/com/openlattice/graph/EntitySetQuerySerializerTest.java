@@ -42,7 +42,7 @@ public class EntitySetQuerySerializerTest extends AbstractJacksonSerializationTe
         return new EntitySetQuery( 1,
                 UUID.randomUUID(),
                 Optional.empty(),
-                new ComparisonClause( 2,
+                propertyTypes, new ComparisonClause( 2,
                         EdmPrimitiveTypeKind.Int64,
                         TestDataFactory.fqn(),
                         RandomUtils.nextLong( 0, Long.MAX_VALUE ),

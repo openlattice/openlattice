@@ -21,6 +21,8 @@
 
 package com.openlattice.graph.query;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -64,6 +66,7 @@ public abstract class AbstractEntityQuery implements EntityQuery {
                 @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
                 @JsonProperty( SerializationConstants.ENTITY_QUERIES ) Set<EntityQuery> childQueries ) {
             super( id, entityTypeId, childQueries );
+            checkArgument( !childQueries.isEmpty(), "Child queries cannot be empty for an AND query");
         }
     }
 
@@ -74,6 +77,7 @@ public abstract class AbstractEntityQuery implements EntityQuery {
                 @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
                 @JsonProperty( SerializationConstants.ENTITY_QUERIES ) Set<EntityQuery> childQueries ) {
             super( id, entityTypeId, childQueries );
+            checkArgument( !childQueries.isEmpty(), "Child queries cannot be empty for an AND query");
         }
     }
 

@@ -21,6 +21,9 @@
 
 package com.openlattice.graph.query;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -67,6 +70,7 @@ public abstract class AbstractBooleanClauses implements BooleanClauses {
                 @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) EdmPrimitiveTypeKind datatype,
                 @JsonProperty( SerializationConstants.CHILD_QUERIES ) Set<BooleanClauses> childClauses ) {
             super( id, datatype, childClauses );
+            checkArgument( !childClauses.isEmpty(), "Child clauses cannot be empty for an AND query");
         }
     }
 
@@ -77,6 +81,7 @@ public abstract class AbstractBooleanClauses implements BooleanClauses {
                 @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) EdmPrimitiveTypeKind datatype,
                 @JsonProperty( SerializationConstants.CHILD_QUERIES ) Set<BooleanClauses> childClauses ) {
             super( id, datatype, childClauses );
+            checkArgument( !childClauses.isEmpty(), "Child clauses cannot be empty for an Or query");
         }
     }
 
