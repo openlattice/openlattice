@@ -55,6 +55,7 @@ import static com.openlattice.postgres.PostgresColumn.KEY;
 import static com.openlattice.postgres.PostgresColumn.LSB_FIELD;
 import static com.openlattice.postgres.PostgresColumn.MEMBERS;
 import static com.openlattice.postgres.PostgresColumn.MSB_FIELD;
+import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
 import static com.openlattice.postgres.PostgresColumn.NAME;
 import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
 import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
@@ -120,7 +121,6 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
-import com.openlattice.graph.query.GraphQuery;
 import com.openlattice.graph.query.GraphQueryState;
 import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
@@ -152,8 +152,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -577,9 +575,24 @@ public final class ResultSetAdapters {
                 Optional.ofNullable( EdmPrimitiveTypeKind.valueOf( datatypeStr ) );
         boolean flags = flags( rs );
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
+        Optional<Boolean> multiValued = Optional.of( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
 
-        return new EnumType( id, fqn, title, description, members, schemas, datatype, flags, pii, analyzer );
+        return new EnumType( id,
+                fqn,
+                title,
+                description,
+                members,
+                schemas,
+                datatype,
+                flags,
+                pii,
+                multiValued,
+                analyzer );
+    }
+
+    public static Boolean multiValued( ResultSet rs ) throws SQLException {
+        return rs.getBoolean( MULTI_VALUED.getName() );
     }
 
     public static LinkingVertex linkingVertex( ResultSet rs ) throws SQLException {
@@ -673,7 +686,7 @@ public final class ResultSetAdapters {
             final String fqn = propertyType.getType().getFullQualifiedNameAsString();
             List<?> objects = null;
             Array arr = rs.getArray( fqn );
-            if (arr != null) {
+            if ( arr != null ) {
                 switch ( propertyType.getDatatype() ) {
                     case String:
                         objects = Arrays.asList( (String[]) arr.getArray() );
@@ -683,7 +696,7 @@ public final class ResultSetAdapters {
                         break;
                     case Byte:
                         byte[] bytes = rs.getBytes( fqn );
-                        if (bytes != null && bytes.length > 0) {
+                        if ( bytes != null && bytes.length > 0 ) {
                             objects = Arrays.asList( rs.getBytes( fqn ) );
                         }
                         break;
@@ -731,7 +744,7 @@ public final class ResultSetAdapters {
                                 propertyType.getId(),
                                 entityKeyId );
                 }
-                if (objects != null) {
+                if ( objects != null ) {
                     data.putAll( propertyType.getType(), objects );
                 }
             }

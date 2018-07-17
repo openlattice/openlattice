@@ -25,7 +25,6 @@ import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
 import static com.openlattice.postgres.PostgresDatatype.BYTEA;
 import static com.openlattice.postgres.PostgresDatatype.DECIMAL;
-import static com.openlattice.postgres.PostgresDatatype.INTEGER;
 import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.TEXT;
 import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
@@ -191,6 +190,10 @@ public final class PostgresColumn {
     public static final String                   MSB_FIELD                   = "msb";
     public static final PostgresColumnDefinition MSB                         =
             new PostgresColumnDefinition( MSB_FIELD, BIGINT ).notNull();
+    public static final PostgresColumnDefinition MULTI_VALUED                =
+            new PostgresColumnDefinition( "multi_valued", BOOLEAN )
+                    .withDefault( false )
+                    .notNull();
     public static final String                   NAMESPACE_FIELD             = "namespace";
     public static final PostgresColumnDefinition NAMESPACE                   =
             new PostgresColumnDefinition( NAMESPACE_FIELD, TEXT ).notNull();
