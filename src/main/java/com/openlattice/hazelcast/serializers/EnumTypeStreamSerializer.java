@@ -20,13 +20,13 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.EnumType;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -53,6 +53,7 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
         out.writeInt( object.getDatatype().ordinal() );
         out.writeBoolean( object.isFlags() );
         out.writeBoolean( object.isPIIfield() );
+        out.writeBoolean( object.isMultiValued() );
         out.writeInt( object.getAnalyzer().ordinal() );
     }
 
@@ -69,8 +70,19 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
         Optional<EdmPrimitiveTypeKind> datatype = Optional.of( edmTypes[ in.readInt() ] );
         boolean flags = in.readBoolean();
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );
+        Optional<Boolean> multiValued = Optional.of( in.readBoolean() );
         Optional<Analyzer> analyzer = Optional.of( analyzers[ in.readInt() ] );
-        return new EnumType( id, type, title, description, members, schemas, datatype, flags, piiField, analyzer );
+        return new EnumType( id,
+                type,
+                title,
+                description,
+                members,
+                schemas,
+                datatype,
+                flags,
+                piiField,
+                multiValued,
+                analyzer );
     }
 
     @Override
@@ -79,7 +91,8 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
     }
 
     @Override
-    public void destroy() {}
+    public void destroy() {
+    }
 
     @Override
     public Class<EnumType> getClazz() {
