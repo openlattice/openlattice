@@ -28,6 +28,7 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.graph.GraphApi
 import com.openlattice.graph.GraphApi.ID
+import com.openlattice.graph.GraphApi.ID_PATH
 import com.openlattice.graph.GraphApi.QUERY
 import com.openlattice.graph.GraphQueryService
 import com.openlattice.graph.SubGraph
@@ -63,7 +64,7 @@ constructor(
 
     @Timed
     @PostMapping(
-            value = QUERY,
+            value = QUERY + ID_PATH,
             consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
