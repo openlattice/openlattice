@@ -68,6 +68,8 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
+import com.openlattice.graph.GraphQueryService;
+import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.HazelcastLinkingGraphs;
@@ -133,6 +135,16 @@ public class DatastoreServicesPod {
     @Bean
     public AuthorizationQueryService authorizationQueryService() {
         return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );
+    }
+
+    @Bean
+    public GraphQueryService graphQueryService() {
+        return new PostgresGraphQueryService(
+                hikariDataSource,
+                dataModelService(),
+                authorizationManager(),
+                defaultObjectMapper()
+        );
     }
 
     @Bean
