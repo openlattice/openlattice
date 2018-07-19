@@ -20,7 +20,11 @@
 
 package com.openlattice.datastore.pods;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openlattice.controllers.OrganizationsController;
+import com.openlattice.controllers.SyncController;
 import com.openlattice.data.DataApi;
+import com.openlattice.data.controllers.EntitySetsController;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
 import com.openlattice.datastore.apps.controllers.AppController;
 import com.openlattice.datastore.authorization.controllers.AuthorizationsController;
@@ -35,13 +39,10 @@ import com.openlattice.datastore.permissions.controllers.PermissionsController;
 import com.openlattice.datastore.requests.controllers.RequestsController;
 import com.openlattice.datastore.search.controllers.SearchController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
-import com.openlattice.controllers.OrganizationsController;
-import com.openlattice.controllers.SyncController;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openlattice.graph.controllers.GraphController;
 import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
 import java.util.List;
 import javax.inject.Inject;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -62,7 +63,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
                 PrincipalDirectoryController.class,
                 EdmController.class, OrganizationsController.class,
                 DataStoreExceptionHandler.class, LinkingController.class, AnalysisController.class,
-                SyncController.class, RequestsController.class, AppController.class },
+                SyncController.class, RequestsController.class, AppController.class, GraphController.class,
+                EntitySetsController.class },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,
                         org.springframework.web.bind.annotation.RestControllerAdvice.class },
