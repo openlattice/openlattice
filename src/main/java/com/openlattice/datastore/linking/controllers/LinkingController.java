@@ -35,8 +35,6 @@ import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.LinkingService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.LinkingEntitySet;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.LinkingEntityType;
 import com.openlattice.linking.HazelcastListingService;
 import com.openlattice.linking.LinkingApi;
 import com.openlattice.linking.requests.LinkingRequest;
@@ -44,7 +42,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import javax.inject.Inject;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -75,26 +72,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
 
     @Inject
     private DatasourceManager datasourceManager;
-
-    @Override
-    @PostMapping(
-            value = "/"
-                    + TYPE,
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public UUID createLinkingEntityType( @RequestBody LinkingEntityType linkingEntityType ) {
-        EntityType entityType = linkingEntityType.getLinkingEntityType();
-        // remove PII properties of linked entity type if deidentified flag is on.
-        if ( linkingEntityType.isDeidentified() ) {
-            Set<UUID> piiTypes = entityType.getProperties().stream()
-                    .map( propertyTypeId -> edm.getPropertyType( propertyTypeId ) ).filter( pt -> pt.isPIIfield() )
-                    .map( pt -> pt.getId() ).collect( Collectors.toSet() );
-            entityType.removePropertyTypes( piiTypes );
-        }
-        edm.createEntityType( entityType );
-        listings.setLinkedEntityTypes( entityType.getId(), linkingEntityType.getLinkedEntityTypes() );
-        return entityType.getId();
-    }
 
     @Override
     @PostMapping(
