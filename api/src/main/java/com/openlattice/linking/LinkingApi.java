@@ -52,16 +52,6 @@ public interface LinkingApi {
     String TYPE             = "type";
 
     /**
-     * Creates an entity type describing the result of linking several entity types together. This entity type will be
-     * be usable in entity set searches.
-     *
-     * @param linkingEntityType The linking entity type
-     * @return The {@link UUID} of the linked entity type.
-     */
-    @POST( BASE + "/" + TYPE )
-    UUID createLinkingEntityType( LinkingEntityType linkingEntityType );
-
-    /**
      * Performs linking operation on entity sets.
      *
      * @param linkingRequest A request including a set of property type ids to populate in the linking result, and a

@@ -90,7 +90,7 @@ public class ComparisonClause extends AbstractBooleanClauses {
             return null;
         }
 
-        public String getComparisionString() {
+        public String getComparisonString() {
             switch ( this ) {
                 case EQUAL:
                     return "=";

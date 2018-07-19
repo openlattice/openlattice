@@ -68,7 +68,6 @@ public class EntitySetSelection {
     }
 
     @Override public int hashCode() {
-
         return Objects.hash( properties, entityKeyIds );
     }
 }

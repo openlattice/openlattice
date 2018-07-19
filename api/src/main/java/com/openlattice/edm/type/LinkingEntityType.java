@@ -29,6 +29,7 @@ import java.util.UUID;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Deprecated
 public class LinkingEntityType {
     private final EntityType linkingEntityType;
     private final Set<UUID>  linkedEntityTypes;

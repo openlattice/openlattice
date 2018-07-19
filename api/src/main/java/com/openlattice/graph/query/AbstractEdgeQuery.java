@@ -21,6 +21,8 @@
 
 package com.openlattice.graph.query;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Set;
@@ -59,12 +61,14 @@ public abstract class AbstractEdgeQuery implements EdgeQuery {
     public static class And extends AbstractEdgeQuery {
         public And( int id, UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
             super( id, associationEntityTypeId, childQueries );
+            checkArgument( !childQueries.isEmpty(), "Child queries cannot be empty for an AND query" );
         }
     }
 
     public static class Or extends AbstractEdgeQuery {
         public Or( int id, UUID associationEntityTypeId, Set<EdgeQuery> childQueries ) {
             super( id, associationEntityTypeId, childQueries );
+            checkArgument( !childQueries.isEmpty(), "Child queries cannot be empty for an OR query" );
         }
     }
 }

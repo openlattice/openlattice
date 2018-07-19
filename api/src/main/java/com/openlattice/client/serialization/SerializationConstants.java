@@ -110,12 +110,15 @@ public final class SerializationConstants {
     public static final String KEY_FIELD                        = "key";
     public static final String LAST_INDEX                       = "lastIndex";
     public static final String LAST_WRITE                       = "lastWrite";
+    public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
+    public static final String LINKING                          = "linking";
     public static final String LINKING_ENTITY_SET_FIELD         = "linkingEntitySet";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";
     public static final String MISSING                          = "missing";
+    public static final String MULTI_VALUED                     = "multiValued";
     public static final String NAME                             = "name";
     public static final String NAMESPACE                        = "namespace";
     public static final String NAMESPACE_FIELD                  = "namespace";
@@ -142,8 +145,7 @@ public final class SerializationConstants {
     public static final String PROPERTY_FIELD                   = "property";
     public static final String PROPERTY_TYPES                   = "propertyTypes";
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
-    public static final String PROPERTY_TYPE_IDS                = "pid";
-    public static final String PROPERTY_TYPE_ID_LIST            = "propertyTypeIds";
+    public static final String PROPERTY_TYPE_IDS                = "propertyTypeIds";
     public static final String QUERY_ID                         = "queryId";
     public static final String REASON                           = "reason";
     public static final String REQUEST                          = "request";

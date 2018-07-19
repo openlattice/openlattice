@@ -22,6 +22,7 @@
 package com.openlattice.graph.query;
 
 import static com.openlattice.client.serialization.SerializationConstants.ENTITY_SET_ID;
+import static com.openlattice.client.serialization.SerializationConstants.PROPERTY_TYPE_IDS;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -39,6 +40,7 @@ public class EntitySetQuery implements EntityQuery {
     private final int            id;
     private final UUID           entityTypeId;
     private final Optional<UUID> entitySetId;
+    private final Set<UUID>      propertyTypes;
     private final BooleanClauses clauses;
 
     @JsonCreator
@@ -46,10 +48,12 @@ public class EntitySetQuery implements EntityQuery {
             @JsonProperty( SerializationConstants.ID_FIELD ) int id,
             @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
             @JsonProperty( ENTITY_SET_ID ) Optional<UUID> entitySetId,
+            @JsonProperty( SerializationConstants.PROPERTY_TYPE_IDS ) Set<UUID> propertyTypes,
             @JsonProperty( SerializationConstants.CLAUSES ) BooleanClauses clauses ) {
         this.id = id;
         this.entitySetId = entitySetId;
         this.entityTypeId = entityTypeId;
+        this.propertyTypes = propertyTypes;
         this.clauses = clauses;
     }
 
@@ -68,6 +72,11 @@ public class EntitySetQuery implements EntityQuery {
     @JsonProperty( ENTITY_SET_ID )
     public Optional<UUID> getEntitySetId() {
         return entitySetId;
+    }
+
+    @JsonProperty( PROPERTY_TYPE_IDS )
+    public Set<UUID> getPropertyTypes() {
+        return propertyTypes;
     }
 
     @JsonProperty( SerializationConstants.CLAUSES )

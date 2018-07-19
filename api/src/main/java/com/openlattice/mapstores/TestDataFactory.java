@@ -377,6 +377,7 @@ public final class TestDataFactory {
                 Optional.of( EdmPrimitiveTypeKind.Int32 ),
                 false,
                 Optional.of( true ),
+                Optional.empty(),
                 Optional.of( Analyzer.METAPHONE ) );
     }
 
