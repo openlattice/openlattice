@@ -80,6 +80,14 @@ public interface EdmManager {
 
     void deleteEntitySet( UUID entitySetId );
 
+    int addLinkedEntitySets( UUID entitySetId, Set<UUID> linkedEntitySets );
+
+    int removeLinkedEntitySets( UUID entitySetId, Set<UUID> linkedEntitySets );
+
+    Set<EntitySet> getLinkedEntitySets( UUID entitySetId );
+
+    Set<UUID> getLinkedEntitySetIds( UUID entitySetId );
+
     void createEntityType( EntityType objectType );
 
     EntityType getEntityType( String namespace, String name );

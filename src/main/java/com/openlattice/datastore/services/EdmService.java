@@ -121,8 +121,8 @@ import org.slf4j.LoggerFactory;
 
 public class EdmService implements EdmManager {
 
-    private static final Logger logger = LoggerFactory.getLogger( EdmService.class );
-    private final IMap<String, UUID> edmVersions;
+    private static final Logger             logger = LoggerFactory.getLogger( EdmService.class );
+    private final        IMap<String, UUID> edmVersions;
 
     private final IMap<UUID, PropertyType>                              propertyTypes;
     private final IMap<UUID, ComplexType>                               complexTypes;
@@ -399,6 +399,36 @@ public class EdmService implements EdmManager {
         aclKeyReservations.release( entitySetId );
         syncIds.remove( entitySetId );
         eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
+    }
+
+    @Override public int addLinkedEntitySets( UUID entitySetId, Set<UUID> linkedEntitySets ) {
+        final EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
+        final int startSize = entitySet.getLinkedEntitySets().size();
+        //TODO: Turn this into an entity processor
+        entitySet.getLinkedEntitySets().addAll( linkedEntitySets );
+        entitySets.set(entitySetId, entitySet );
+        return entitySet.getLinkedEntitySets().size() - startSize;
+    }
+
+    @Override public int removeLinkedEntitySets( UUID entitySetId, Set<UUID> linkedEntitySets ) {
+        final EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
+        final int startSize = entitySet.getLinkedEntitySets().size();
+        //TODO: Turn this into an entity processor
+        entitySet.getLinkedEntitySets().removeAll( linkedEntitySets );
+        entitySets.set(entitySetId, entitySet );
+        return startSize - entitySet.getLinkedEntitySets().size();
+    }
+
+    @Override public Set<EntitySet> getLinkedEntitySets( UUID entitySetId ) {
+        final EntitySet es = Util.getSafely( entitySets, entitySetId );
+        return es == null
+                ? ImmutableSet.of()
+                : ImmutableSet.copyOf( entitySets.getAll( es.getLinkedEntitySets() ).values() );
+    }
+
+    @Override public Set<UUID> getLinkedEntitySetIds( UUID entitySetId ) {
+        final EntitySet es = Util.getSafely( entitySets, entitySetId );
+        return es == null ? ImmutableSet.of() : es.getLinkedEntitySets();
     }
 
     private void createEntitySet( EntitySet entitySet ) {
