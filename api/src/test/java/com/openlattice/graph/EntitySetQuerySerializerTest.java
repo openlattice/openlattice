@@ -21,6 +21,7 @@
 
 package com.openlattice.graph;
 
+import com.google.common.collect.ImmutableSet;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.graph.query.ComparisonClause;
 import com.openlattice.graph.query.ComparisonClause.ComparisonOp;
@@ -28,6 +29,7 @@ import com.openlattice.graph.query.EntitySetQuery;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -39,14 +41,15 @@ import org.junit.BeforeClass;
 public class EntitySetQuerySerializerTest extends AbstractJacksonSerializationTest<EntitySetQuery> {
     @Override
     protected EntitySetQuery getSampleData() {
+        final Set<UUID> propertyTypes = ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID() );
         return new EntitySetQuery( 1,
                 UUID.randomUUID(),
                 Optional.empty(),
                 propertyTypes, new ComparisonClause( 2,
-                        EdmPrimitiveTypeKind.Int64,
-                        TestDataFactory.fqn(),
-                        RandomUtils.nextLong( 0, Long.MAX_VALUE ),
-                        ComparisonOp.EQUAL ) );
+                EdmPrimitiveTypeKind.Int64,
+                TestDataFactory.fqn(),
+                RandomUtils.nextLong( 0, Long.MAX_VALUE ),
+                ComparisonOp.EQUAL ) );
     }
 
     @Override
