@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.Principal;
@@ -48,6 +47,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -219,7 +219,7 @@ public class CustomCSVPopulation {
             dms.createPropertyTypeIfNotExists( new PropertyType(
                     type.getFqn(),
                     "Generated Type " + type.getFqn().toString(),
-                    Optional.absent(),
+                    Optional.empty(),
                     ImmutableSet.of(),
                     type.getDataType() ) );
         }
@@ -246,11 +246,11 @@ public class CustomCSVPopulation {
                     entityTypeId,
                     new FullQualifiedName( NAMESPACE, entityTypeName ),
                     entityTypeName,
-                    Optional.absent(),
+                    Optional.empty(),
                     ImmutableSet.of(),
                     keyPropertyType,
                     propertyTypeIdsSet,
-                    Optional.absent(),
+                    Optional.empty(),
                     Optional.of( SecurableObjectType.EntityType ) );
             // Add property types to entity type
 
@@ -269,7 +269,7 @@ public class CustomCSVPopulation {
                                 entityTypeId,
                                 entitySetName,
                                 "Random Entity Set " + entitySetName,
-                                Optional.absent(),
+                                Optional.empty(),
                                 ImmutableSet.of( "foo@bar.com" ) ) );
 
                 // Update list of custom Entity Sets
@@ -285,7 +285,7 @@ public class CustomCSVPopulation {
                 .map( type -> new PropertyType(
                         type.getFqn(),
                         "Generated Type " + type.getFqn().toString(),
-                        Optional.absent(),
+                        Optional.empty(),
                         ImmutableSet.of(),
                         type.getDataType() ) )
                 .collect( Collectors.toSet() );

@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.Principal;
@@ -33,6 +32,7 @@ import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.UUID;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -156,7 +156,7 @@ public class TestEdmConfigurer {
                         EMPLOYEE_NAME_PROP_ID,
                         EMPLOYEE_DEPT_PROP_ID,
                         EMPLOYEE_SALARY_PROP_ID ) ),
-                Optional.absent(),
+                Optional.empty(),
                 Optional.of( SecurableObjectType.EntityType ) );
     }
 

@@ -24,6 +24,7 @@ import com.openlattice.authorization.AclKey;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -44,7 +45,6 @@ import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.requests.RequestsApi;
 import com.openlattice.search.SearchApi;
 import com.openlattice.sync.SyncApi;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 
 import retrofit2.Retrofit;
@@ -145,7 +145,7 @@ public class MultipleAuthenticatedUsersBase extends IntegrationTestsBootstrap {
                 entityType.getId(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
                 "foobar",
-                Optional.<String> of( "barred" ),
+                Optional.of( "barred" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ) );
 
         Map<String, UUID> entitySetIds = edmApi.createEntitySets( ImmutableSet.of( newES ) );
