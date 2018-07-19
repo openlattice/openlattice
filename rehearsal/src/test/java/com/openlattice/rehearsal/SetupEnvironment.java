@@ -31,7 +31,6 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.client.RetrofitFactory;
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.pojo.Auth0UserBasic;
