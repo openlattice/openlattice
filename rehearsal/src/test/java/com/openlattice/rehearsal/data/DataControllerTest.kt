@@ -196,8 +196,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
 
-        Assert.assertEquals(  edgeData.second.map{ it.data } , actualEdgeData )
-        dataApi.ass
+        Assert.assertEquals(edgeData.second.map { it.data }, actualEdgeData)
     }
 
     private fun createDataEdges(
