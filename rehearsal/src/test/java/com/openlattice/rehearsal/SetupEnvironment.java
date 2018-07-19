@@ -91,7 +91,6 @@ public class SetupEnvironment {
         String tokenUser3 = (String) jwtUser3.getCredentials();
 
         RetrofitFactory.configureObjectMapper( FullQualifiedNameJacksonSerializer::registerWithMapper );
-        RetrofitFactory.configureObjectMapper( FullQualifiedNameJacksonDeserializer::registerWithMapper );
 
         retrofit = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenAdmin );
         retrofit1 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser1 );
