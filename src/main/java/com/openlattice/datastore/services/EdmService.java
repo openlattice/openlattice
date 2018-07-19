@@ -457,9 +457,7 @@ public class EdmService implements EdmManager {
         try {
             setupDefaultEntitySetPropertyMetadata( entitySet.getId(), entitySet.getEntityTypeId() );
 
-            authorizations.setSecurableObjectType(
-                    new AclKey( entitySet.getId() ),
-                    getSecurableObjectType( entityTypes, entitySet.getEntityTypeId() ) );
+            authorizations.setSecurableObjectType( new AclKey( entitySet.getId() ), SecurableObjectType.EntitySet );
 
             authorizations.addPermission( new AclKey( entitySet.getId() ),
                     principal,
