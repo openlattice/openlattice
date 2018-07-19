@@ -82,9 +82,16 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<Organization> getOrganizations() {
         return getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) )
+                .parallel()
                 .filter( Predicates.notNull()::apply )
                 .map( AuthorizationUtils::getLastAclKeySafely )
                 .map( organizations::getOrganization )
+                .map( org -> new Organization(
+                        org.getSecurablePrincipal(),
+                        org.getAutoApprovedEmails(),
+                        org.getMembers(),
+                        getAuthorizedRoles( org.getId(), Permission.READ ),
+                        org.getApps() ) )
                 .filter( Predicates.notNull()::apply )
                 ::iterator;
     }
