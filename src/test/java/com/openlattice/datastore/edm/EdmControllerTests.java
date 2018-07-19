@@ -23,6 +23,7 @@ package com.openlattice.datastore.edm;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -47,7 +48,6 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
@@ -227,12 +227,12 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                 new MetadataUpdate(
                         Optional.of( newTitle ),
                         Optional.of( newDescription ),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent() ) );
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty() ) );
 
         PropertyType updatedPt = edm.getPropertyType( pt.getId() );
         Assert.assertEquals( newTitle, updatedPt.getTitle() );
@@ -247,14 +247,14 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
 
         edm.updatePropertyTypeMetadata( pt.getId(),
                 new MetadataUpdate(
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
                         Optional.of( newPtFqn ),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent()) );
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()) );
 
         PropertyType updatedPt = edm.getPropertyType( pt.getId() );
         Assert.assertEquals( newPtFqn, updatedPt.getType() );
@@ -271,12 +271,12 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                 new MetadataUpdate(
                         Optional.of( newTitle ),
                         Optional.of( newDescription ),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent()) );
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()) );
 
         EntityType updatedEt = edm.getEntityType( et.getId() );
         Assert.assertEquals( newTitle, updatedEt.getTitle() );
@@ -291,14 +291,14 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
 
         edm.updateEntityTypeMetadata( et.getId(),
                 new MetadataUpdate(
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
                         Optional.of( newEtFqn ),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent() ) );
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty() ) );
 
         EntityType updatedEt = edm.getEntityType( et.getId() );
         Assert.assertEquals( newEtFqn, updatedEt.getType() );
@@ -317,12 +317,12 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                 new MetadataUpdate(
                         Optional.of( newTitle ),
                         Optional.of( newDescription ),
-                        Optional.absent(),
+                        Optional.empty(),
                         Optional.of( newContacts ),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent() ) );
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty() ) );
 
         EntitySet updatedEs = edm.getEntitySet( es.getId() );
         Assert.assertEquals( newTitle, updatedEs.getTitle() );
@@ -338,14 +338,14 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
 
         edm.updateEntitySetMetadata( es.getId(),
                 new MetadataUpdate(
-                        Optional.absent(),
-                        Optional.absent(),
+                        Optional.empty(),
+                        Optional.empty(),
                         Optional.of( newEsName ),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent(),
-                        Optional.absent() ) );
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty() ) );
 
         EntitySet updatedEs = edm.getEntitySet( es.getId() );
         Assert.assertEquals( newEsName, updatedEs.getName() );
