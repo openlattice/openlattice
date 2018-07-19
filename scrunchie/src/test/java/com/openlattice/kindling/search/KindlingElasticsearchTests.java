@@ -20,21 +20,80 @@
 
 package com.openlattice.kindling.search;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
 public class KindlingElasticsearchTests extends BaseElasticsearchTest {
+
+    @Test
+    public void testEntitySetKeywordSearch() {
+        Set<Principal> principals = Sets.newHashSet();
+        principals.add( loomUser );
+
+        String query = "Employees";
+        elasticsearchApi.executeEntitySetMetadataSearch(
+                Optional.of( query ),
+                Optional.of( ENTITY_TYPE_ID ),
+                Optional.empty(),
+                ImmutableSet.of( new AclKey( chicagoEmployeesEntitySetId ) ),
+                0,
+                50 );
+    }
+
+    @Test
+    public void testUpdatePropertyTypes() {
+        elasticsearchApi.updatePropertyTypesInEntitySet( chicagoEmployeesEntitySetId, allPropertyTypesList );
+    }
+
+    @Test
+    public void testSearchEntityData() {
+        Set<UUID> authorizedPropertyTypes = Sets.newHashSet();
+        authorizedPropertyTypes.add( namePropertyId );
+        authorizedPropertyTypes.add( employeeTitlePropertyId );
+        authorizedPropertyTypes.add( employeeDeptPropertyId );
+        authorizedPropertyTypes.add( salaryPropertyId );
+        authorizedPropertyTypes.add( employeeIdPropertyId );
+        elasticsearchApi.executeEntitySetDataSearch( chicagoEmployeesEntitySetId,
+                "police",
+                0,
+                50,
+                authorizedPropertyTypes );
+    }
+
+    @Test
+    public void testSearchAcrossIndices() {
+        Set<UUID> entitySetIds = ImmutableSet.of( chicagoEmployeesEntitySetId, entitySet2Id );
+        Map<UUID, DelegatedStringSet> fieldSearches = Maps.newHashMap();
+        fieldSearches.put( employeeIdPropertyId, DelegatedStringSet.wrap( Sets.newHashSet( "12347" ) ) );
+        elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetIds, fieldSearches, 50, true );
+    }
+
+    @Test
+    public void testOrganizationKeywordSearch() {
+        Set<Principal> principals = Sets.newHashSet();
+        principals.add( owner );
+        elasticsearchApi.executeOrganizationSearch( "loom", ImmutableSet.of( new AclKey( organizationId ) ), 0, 50 );
+    }
+
+    @Test
+    public void testUpdateOrganization() throws InterruptedException {
+        String newDescription = "this is a new description";
+        elasticsearchApi.updateOrganization( organizationId, Optional.empty(), Optional.of( newDescription ) );
+    }
 
     @BeforeClass
     public static void createIndicesAndData() {
@@ -75,62 +134,6 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
         entitySet2PropertyValues.put( employeeIdPropertyId, Sets.newHashSet( "12347" ) );
         elasticsearchApi
                 .createEntityData( new EntityDataKey( entitySet2Id, UUID.randomUUID() ), entitySet2PropertyValues );
-    }
-
-    @Test
-    public void testEntitySetKeywordSearch() {
-        Set<Principal> principals = Sets.newHashSet();
-        principals.add( loomUser );
-
-        String query = "Employees";
-        elasticsearchApi.executeEntitySetMetadataSearch(
-                Optional.of( query ),
-                Optional.of( ENTITY_TYPE_ID ),
-                Optional.absent(),
-                ImmutableSet.of( new AclKey( chicagoEmployeesEntitySetId ) ),
-                0,
-                50 );
-    }
-
-    @Test
-    public void testUpdatePropertyTypes() {
-        elasticsearchApi.updatePropertyTypesInEntitySet( chicagoEmployeesEntitySetId, allPropertyTypesList );
-    }
-
-    @Test
-    public void testSearchEntityData() {
-        Set<UUID> authorizedPropertyTypes = Sets.newHashSet();
-        authorizedPropertyTypes.add( namePropertyId );
-        authorizedPropertyTypes.add( employeeTitlePropertyId );
-        authorizedPropertyTypes.add( employeeDeptPropertyId );
-        authorizedPropertyTypes.add( salaryPropertyId );
-        authorizedPropertyTypes.add( employeeIdPropertyId );
-        elasticsearchApi.executeEntitySetDataSearch( chicagoEmployeesEntitySetId,
-                "police",
-                0,
-                50,
-                authorizedPropertyTypes );
-    }
-
-    @Test
-    public void testSearchAcrossIndices() {
-        Set<UUID> entitySetIds = ImmutableSet.of( chicagoEmployeesEntitySetId, entitySet2Id);
-        Map<UUID, DelegatedStringSet> fieldSearches = Maps.newHashMap();
-        fieldSearches.put( employeeIdPropertyId, DelegatedStringSet.wrap( Sets.newHashSet( "12347" ) ) );
-        elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetIds, fieldSearches, 50, true );
-    }
-
-    @Test
-    public void testOrganizationKeywordSearch() {
-        Set<Principal> principals = Sets.newHashSet();
-        principals.add( owner );
-        elasticsearchApi.executeOrganizationSearch( "loom", ImmutableSet.of( new AclKey( organizationId ) ), 0, 50 );
-    }
-
-    @Test
-    public void testUpdateOrganization() throws InterruptedException {
-        String newDescription = "this is a new description";
-        elasticsearchApi.updateOrganization( organizationId, Optional.absent(), Optional.of( newDescription ) );
     }
 
     @AfterClass
