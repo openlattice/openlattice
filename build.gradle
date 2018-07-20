@@ -39,7 +39,7 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 
-apply from: "https//raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
 
 sourceCompatibility=JavaVersion.VERSION_1_10
 targetCompatibility=JavaVersion.VERSION_1_10
