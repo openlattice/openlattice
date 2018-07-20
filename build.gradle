@@ -18,25 +18,17 @@
  *
  *
  */
-buildscript {
-    repositories {
-        jcenter()
-    }
-
-    dependencies {
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.17"
-    }
-}
 
 plugins {
-    id "com.github.spotbugs" version "1.6.2"
-    id "java"
-    id "eclipse"
-    id "idea"
-    id "jacoco"
+    id 'java'
+    id 'eclipse'
+    id 'idea'
+    id 'jacoco'
     id 'checkstyle'
-    id 'findbugs'
-    id "org.jetbrains.kotlin.jvm" version "1.2.51"
+    id 'com.github.spotbugs' version '1.6.2'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.51'
+    id 'org.jetbrains.dokka' version '0.9.17'
 }
 
 description = "Conductor Client"
@@ -48,8 +40,6 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
-apply plugin: 'kotlin'
-apply plugin: 'org.jetbrains.dokka'
 
 sourceCompatibility=JavaVersion.VERSION_1_8
 
@@ -61,25 +51,18 @@ checkstyle {
   toolVersion = "${versions.checkstyle}"
 }
 
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
 spotbugs {
     toolVersion = '3.1.5'
 }
 
 tasks.withType(com.github.spotbugs.SpotBugsTask) {
-    reports {
-        xml.enabled = false
-        html.enabled = true
-    }
-}
-
-tasks.withType(FindBugs) {
-    reports {
-        xml.enabled = false
-        html.enabled = true
-    }
-}
-
-tasks.withType(Checkstyle) {
     reports {
         xml.enabled = false
         html.enabled = true
