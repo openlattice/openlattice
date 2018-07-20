@@ -56,13 +56,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class MapstoresTest extends HzAuthzTest {
     private static final Logger      logger   = LoggerFactory
@@ -102,7 +102,7 @@ public class MapstoresTest extends HzAuthzTest {
                         actual );
             }
             Assert.assertEquals( expected, actual );
-        } catch ( NotImplementedException | UnsupportedOperationException e ) {
+        } catch (  UnsupportedOperationException e ) {
             logger.info( "Mapstore not implemented." );
         } catch ( Exception e ) {
             logger.error( "Unable to r/w to mapstore {} value: ({},{})", permissions.getMapName(), key, expected, e );
