@@ -22,39 +22,41 @@ public class EnumTypesMapstore extends AbstractBasePostgresMapstore<UUID, EnumTy
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, EnumType value ) throws SQLException {
-        bind(ps,key, 1);
+        int parameterIndex = bind(ps,key, 1);
 
         FullQualifiedName fqn = value.getType();
-        ps.setString( 2, fqn.getNamespace() );
-        ps.setString( 3, fqn.getName() );
+        ps.setString( parameterIndex++, fqn.getNamespace() );
+        ps.setString( parameterIndex++, fqn.getName() );
 
-        ps.setString( 4, value.getTitle() );
-        ps.setString( 5, value.getDescription() );
+        ps.setString( parameterIndex++, value.getTitle() );
+        ps.setString( parameterIndex++, value.getDescription() );
 
         Array members = PostgresArrays.createTextArray( ps.getConnection(), value.getMembers().stream() );
-        ps.setArray( 6, members );
+        ps.setArray( parameterIndex++, members );
 
         Array schemas = PostgresArrays.createTextArray(
                 ps.getConnection(),
                 value.getSchemas().stream().map( FullQualifiedName::getFullQualifiedNameAsString ) );
-        ps.setArray( 7, schemas );
+        ps.setArray( parameterIndex++, schemas );
 
-        ps.setString( 8, value.getDatatype().name() );
-        ps.setBoolean( 9, value.isFlags() );
-        ps.setBoolean( 10, value.isPIIfield() );
-        ps.setString( 11, value.getAnalyzer().name() );
+        ps.setString( parameterIndex++, value.getDatatype().name() );
+        ps.setBoolean( parameterIndex++, value.isFlags() );
+        ps.setBoolean( parameterIndex++, value.isPIIfield() );
+        ps.setString( parameterIndex++, value.getAnalyzer().name() );
+        ps.setBoolean( parameterIndex++, value.isMultiValued() );
 
         // UPDATE
-        ps.setString( 12, fqn.getNamespace() );
-        ps.setString( 13, fqn.getName() );
-        ps.setString( 14, value.getTitle() );
-        ps.setString( 15, value.getDescription() );
-        ps.setArray( 16, members );
-        ps.setArray( 17, schemas );
-        ps.setString( 18, value.getDatatype().name() );
-        ps.setBoolean( 19, value.isFlags() );
-        ps.setBoolean( 20, value.isPIIfield() );
-        ps.setString( 21, value.getAnalyzer().name() );
+        ps.setString( parameterIndex++, fqn.getNamespace() );
+        ps.setString( parameterIndex++, fqn.getName() );
+        ps.setString( parameterIndex++, value.getTitle() );
+        ps.setString( parameterIndex++, value.getDescription() );
+        ps.setArray( parameterIndex++, members );
+        ps.setArray( parameterIndex++, schemas );
+        ps.setString( parameterIndex++, value.getDatatype().name() );
+        ps.setBoolean( parameterIndex++, value.isFlags() );
+        ps.setBoolean( parameterIndex++, value.isPIIfield() );
+        ps.setString( parameterIndex++, value.getAnalyzer().name() );
+        ps.setBoolean( parameterIndex++, value.isMultiValued() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {

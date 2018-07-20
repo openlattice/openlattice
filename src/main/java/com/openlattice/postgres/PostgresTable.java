@@ -210,7 +210,8 @@ public final class PostgresTable {
                             DATATYPE,
                             FLAGS,
                             PII,
-                            ANALYZER );
+                            ANALYZER,
+                            MULTI_VALUED );
     public static final PostgresTableDefinition GRAPH_QUERIES  =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )

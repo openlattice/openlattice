@@ -57,7 +57,7 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
         ps.setBoolean( parameterIndex++, value.isPIIfield() );
         ps.setString( parameterIndex++, value.getAnalyzer().name() );
         ps.setBoolean( parameterIndex++, value.isMultiValued() );
-        
+
         //UPDATE
         ps.setString( parameterIndex++, fqn.getNamespace() );
         ps.setString( parameterIndex++, fqn.getName() );
