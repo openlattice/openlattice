@@ -68,7 +68,7 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
         ps.setArray( 15, schemas );
         ps.setBoolean( 16, value.isPIIfield() );
         ps.setString( 17, value.getAnalyzer().name() );
-        ps.setBoolean( 18, value.getAnalyzer().name() );
+        ps.setBoolean( 18, value.isMultiValued() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
