@@ -56,7 +56,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.junit.Assert;
@@ -65,9 +64,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MapstoresTest extends HzAuthzTest {
-    private static final Logger      logger   = LoggerFactory
+    private static final Logger                                       logger   = LoggerFactory
             .getLogger( MapstoresTest.class );
-    private static final Set<String> excluded =
+    private static final Set<String>                                  excluded =
             ImmutableSet.of( HazelcastMap.EDGES.name(),
                     HazelcastMap.BACKEDGES.name(),
                     HazelcastMap.PERMISSIONS.name() );
@@ -102,7 +101,7 @@ public class MapstoresTest extends HzAuthzTest {
                         actual );
             }
             Assert.assertEquals( expected, actual );
-        } catch (  UnsupportedOperationException e ) {
+        } catch ( UnsupportedOperationException e ) {
             logger.info( "Mapstore not implemented." );
         } catch ( Exception e ) {
             logger.error( "Unable to r/w to mapstore {} value: ({},{})", permissions.getMapName(), key, expected, e );
@@ -198,7 +197,7 @@ public class MapstoresTest extends HzAuthzTest {
                         actual );
             }
             Assert.assertEquals( expected, actual );
-        } catch ( NotImplementedException | UnsupportedOperationException e ) {
+        } catch ( UnsupportedOperationException e ) {
             logger.info( "Mapstore not implemented." );
         } catch ( Exception e ) {
             logger.error( "Unable to r/w to mapstore {} value: ({},{})", ms.getMapName(), key, expected, e );
