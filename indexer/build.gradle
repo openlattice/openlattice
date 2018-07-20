@@ -35,7 +35,9 @@ plugins {
     id "eclipse"
     id "idea"
     id "jacoco"
-    id "org.jetbrains.kotlin.jvm" version "1.2.51"
+    id 'com.github.spotbugs' version '1.6.2'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.51'
 }
 
 description = "Conductor Server"
@@ -52,7 +54,7 @@ ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor.g
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
 apply plugin: 'kotlin'
-apply plugin:'license-report'
+apply plugin: 'license-report'
 
 def CONDUCTOR_XMS = "$System.env.CONDUCTOR_XMS"
 def CONDUCTOR_XMX = "$System.env.CONDUCTOR_XMX"
@@ -72,7 +74,7 @@ if (C_ARGS == 'null' || C_ARGS == null || C_ARGS == "") {
     C_ARGS = 'local postgres'
 }
 
-if( PARALLEL == 'null' || PARALLEL == null || PARALLEL == "" ) {
+if (PARALLEL == 'null' || PARALLEL == null || PARALLEL == "") {
     PARALLEL = "-Djava.util.concurrent.ForkJoinPool.common.parallelism=" + Runtime.runtime.availableProcessors()
 }
 
@@ -86,7 +88,7 @@ applicationDefaultJvmArgs = [CONDUCTOR_XMS, CONDUCTOR_XMX, "-server", GC, PARALL
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
 
-println "Using java args for running ${projectName}: " + Arrays.toString( applicationDefaultJvmArgs )
+println "Using java args for running ${projectName}: " + Arrays.toString(applicationDefaultJvmArgs)
 
 run {
     if (C_ARGS != null) {
@@ -114,6 +116,12 @@ sourceSets {
 }
 
 dependencies {
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+    compileOnly 'net.jcip:jcip-annotations:1.0'
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    testCompileOnly 'net.jcip:jcip-annotations:1.0'
+    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+
     compile "org.ow2.asm:asm:5.0.4"
     if (project.hasProperty('developmentMode') && project.developmentMode) {
         logger.quiet(project.name + " using project dependencies.")
