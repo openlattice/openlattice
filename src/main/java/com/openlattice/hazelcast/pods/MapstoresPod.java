@@ -89,7 +89,6 @@ import com.openlattice.postgres.mapstores.SchemasMapstore;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 import com.openlattice.postgres.mapstores.SyncIdsMapstore;
 import com.openlattice.postgres.mapstores.VertexIdsAfterLinkingMapstore;
-import com.openlattice.postgres.mapstores.data.DataMapstoreProxy;
 import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;

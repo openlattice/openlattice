@@ -198,7 +198,7 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): List<UUID> {
         val ids = idService.reserveIds(entitySetId, entities.size)
-        val entityMap = ids.mapIndexed({ i, id -> id to entities[i] }).toMap()
+        val entityMap = ids.mapIndexed { i, id -> id to entities[i] }.toMap()
         eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
         return ids
     }

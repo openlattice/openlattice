@@ -157,15 +157,13 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition EDGES =
             new PostgresTableDefinition( "edges" )
-                    .addColumns( SRC_ENTITY_KEY_ID,
+                    .addColumns(
                             SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_SET_ID,
                             EDGE_ENTITY_KEY_ID,
-                            SRC_TYPE_ID,
-                            DST_TYPE_ID,
-                            EDGE_TYPE_ID,
                             VERSION,
                             VERSIONS )
                     .primaryKey( SRC_ENTITY_KEY_ID,
@@ -328,26 +326,23 @@ public final class PostgresTable {
 
     static {
         EDGES.addIndexes(
-                new PostgresIndexDefinition( EDGES, SRC_ENTITY_KEY_ID )
-                        .name( "src_entity_key_id_idx" )
-                        .ifNotExists(),
                 new PostgresIndexDefinition( EDGES, SRC_ENTITY_SET_ID )
-                        .name( "src_entity_set_id_idx" )
+                        .name( "edges_src_entity_set_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( EDGES, SRC_ENTITY_KEY_ID )
+                        .name( "edges_src_entity_key_id_idx" )
+                        .ifNotExists(),
+                new PostgresIndexDefinition( EDGES, DST_ENTITY_SET_ID )
+                        .name( "edges_dst_entity_set_id_idx" )
                         .ifNotExists(),
                 new PostgresIndexDefinition( EDGES, DST_ENTITY_KEY_ID )
-                        .name( "dst_entity_key_id_idx" )
+                        .name( "edges_dst_entity_key_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, DST_ENTITY_KEY_ID )
-                        .name( "dst_entity_key_id_idx" )
+                new PostgresIndexDefinition( EDGES, EDGE_ENTITY_SET_ID )
+                        .name( "edges_edge_entity_set_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, SRC_TYPE_ID )
-                        .name( "src_entity_key_id_idx" )
-                        .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, DST_TYPE_ID )
-                        .name( "dst_entity_key_id_idx" )
-                        .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, EDGE_TYPE_ID )
-                        .name( "edge_entity_key_id_idx" )
+                new PostgresIndexDefinition( EDGES, EDGE_ENTITY_KEY_ID )
+                        .name( "edges_edge_entity_key_id_idx" )
                         .ifNotExists());
         IDS.addIndexes(
                 new PostgresIndexDefinition( IDS, ENTITY_SET_ID )
