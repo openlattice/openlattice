@@ -39,9 +39,10 @@ ext.scmUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor-client.git'
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "https//raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
 
-sourceCompatibility=JavaVersion.VERSION_1_8
+sourceCompatibility=JavaVersion.VERSION_1_10
+targetCompatibility=JavaVersion.VERSION_1_10
 
 def versions = [
   checkstyle: '7.4',
@@ -148,7 +149,7 @@ install {
 eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true
-    ext.sourceCompatibility=JavaVersion.VERSION_1_8
+    ext.sourceCompatibility=JavaVersion.VERSION_1_10
 }
 
 compileKotlin {
