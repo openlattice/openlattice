@@ -72,7 +72,6 @@ public class HzAuthzTest {
                 MapstoresPod.class,
                 JdbcPod.class,
                 PostgresPod.class,
-                TypeCodecsPod.class,
                 SharedStreamSerializersPod.class,
                 PostgresTablesPod.class,
                 NeuronPod.class

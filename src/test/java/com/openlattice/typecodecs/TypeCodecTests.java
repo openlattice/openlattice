@@ -25,6 +25,7 @@ package com.openlattice.typecodecs;
 import java.nio.ByteBuffer;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.openlattice.data.EntityKey;
@@ -35,6 +36,7 @@ import com.openlattice.conductor.codecs.EntityKeyTypeCodec;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Ignore
 public class TypeCodecTests {
 
     @Test
