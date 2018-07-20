@@ -271,6 +271,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public UUID createRole( @RequestBody Role role ) {
         ensureOwner( role.getOrganizationId() );
+        //We only create the role, but do not necessarily assign it to ourselves.
         organizations.createRoleIfNotExists( Principals.getCurrentUser(), role );
         return role.getId();
     }
@@ -358,8 +359,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ROLE_ID ) UUID roleId,
             @PathVariable( USER_ID ) String userId ) {
         ensureWriteAccess( new AclKey( organizationId ) );
-        principalService.addPrincipalToPrincipal( new AclKey( organizationId, roleId ),
-                principalService.lookup( new Principal( PrincipalType.USER, userId ) ) );
+        organizations
+                .addRoleToUserInOrganization( organizationId, roleId, new Principal( PrincipalType.USER, userId ) );
         return null;
     }
 

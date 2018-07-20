@@ -81,7 +81,7 @@ if (DS_ARGS == 'null' || DS_ARGS == null || DS_ARGS == "") {
 }
 
 
-if( PARALLEL == 'null' || PARALLEL == null || PARALLEL == "" ) {
+if (PARALLEL == 'null' || PARALLEL == null || PARALLEL == "") {
     PARALLEL = "-Djava.util.concurrent.ForkJoinPool.common.parallelism=" + Runtime.runtime.availableProcessors()
 }
 
@@ -108,6 +108,10 @@ println "Enabled profiles: " + Arrays.toString(run.args)
 configurations {
     tests
     published.extendsFrom tests, archives
+
+    compile {
+        exclude group: 'com.google.code.findbugs', module: 'jsr305'
+    }
 }
 
 ext.odata_version = '4.2.0'
@@ -138,11 +142,12 @@ dependencies {
         testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
 
+
+    compile 'javax.annotation:javax.annotation-api:1.3.2'
     compile "org.apache.olingo:odata-server-api:${odata_version}"
     compile "org.apache.olingo:odata-server-core:${odata_version}"
     compile "org.apache.olingo:odata-commons-api:${odata_version}"
     compile "org.apache.olingo:odata-commons-core:${odata_version}"
-
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     /*
