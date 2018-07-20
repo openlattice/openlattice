@@ -94,7 +94,14 @@ public class Range {
     }
 
     @Override public int hashCode() {
-
         return Objects.hash( base, msb, lsb );
+    }
+
+    @Override public String toString() {
+        return "Range{" +
+                "base=" + base +
+                ", msb=" + msb +
+                ", lsb=" + lsb +
+                '}';
     }
 }
