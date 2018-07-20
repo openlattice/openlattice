@@ -8,19 +8,20 @@ buildscript {
     }
 
     dependencies {
-        classpath('io.swagger:swagger-codegen:3.0.0-rc0')
+        classpath('io.swagger:swagger-codegen:3.0.0-rc1')
     }
 }
 
+
 plugins {
     id 'java'
-    id "org.jetbrains.kotlin.jvm" version "1.2.51"
-    id "com.github.spotbugs" version "1.6.2"
     id 'eclipse'
     id 'idea'
     id 'jacoco'
     id 'checkstyle'
-    //id 'findbugs'
+    id 'com.github.spotbugs' version '1.6.2'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.51'
 }
 
 description = "OpenLattice REST APIs"
@@ -31,30 +32,23 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
-apply plugin: 'kotlin'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_1_10
+targetCompatibility = JavaVersion.VERSION_1_10
 
 def versions = [
         checkstyle: '7.4',
 ]
 
-spotbugs {
-    toolVersion = '3.1.5'
-}
-
 checkstyle {
     toolVersion = "${versions.checkstyle}"
 }
 
-tasks.withType(com.github.spotbugs.SpotBugsTask) {
-    reports {
-        xml.enabled = false
-        html.enabled = true
-    }
+spotbugs {
+    toolVersion = '3.1.5'
 }
 
-tasks.withType(FindBugs) {
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
     reports {
         xml.enabled = false
         html.enabled = true
