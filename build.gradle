@@ -163,6 +163,31 @@ compileTestKotlin {
     }
 }
 
+def branch ="$System.env.bamboo_planRepository_branchName"
+
+def jarname = ""
+def scmUrl = ""
+def connectionUrl = ""
+def developerConnectionUrl = ""
+
+if( project.hasProperty('projectName') && project.hasProperty('scmUrl')  ) {
+    scmUrl = ext.scmUrl
+    connectionUrl = ext.connectionUrl
+    developerConnectionUrl = ext.developerConnectionUrl
+    jarname = ext.projectName
+} else {
+    jarname = project.name
+    scmUrl = "scm:git:https://github.com/openlattice/${project.name}.git"
+    connectionUrl = "scm:git:https://github.com/openlattice/${project.name}.git"
+    developerConnectionUrl = "scm:git:https://github.com/openlattice/${project.name}.git"
+}
+
+println "Basename for jars will be: " + jarname
+
+if( branch == null || branch == "" ) {
+   branch = 'develop'
+}
+
 if ( true ) {
     apply plugin: "maven-publish"
     apply plugin: "signing"
