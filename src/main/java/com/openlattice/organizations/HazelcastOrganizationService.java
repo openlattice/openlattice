@@ -215,7 +215,7 @@ public class HazelcastOrganizationService {
         checkState( orgAclKey.size() == 1, "Organization acl key should only be of length 1" );
         var organizationId = orgAclKey.get( 0 );
         membersOf.submitToKey( organizationId, new OrganizationMemberMerger( members ) );
-        addOrganizationToMembers( organizationId, members );
+//        addOrganizationToMembers( organizationId, members );
 
         members.stream().filter( PrincipalType.USER::equals )
                 .map( securePrincipalsManager::lookup )
