@@ -118,7 +118,6 @@ public class MapstoresTest extends HzAuthzTest {
     }
 
     @Test
-    @Ignore
     public void testDataMapstore() throws InterruptedException {
         EdmService edm = testServer.getContext().getBean( EdmService.class );
 

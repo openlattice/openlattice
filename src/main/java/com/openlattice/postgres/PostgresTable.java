@@ -44,10 +44,8 @@ import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_LINKING_VERTEX_ID;
-import static com.openlattice.postgres.PostgresColumn.DST_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID;
-import static com.openlattice.postgres.PostgresColumn.EDGE_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.EDGE_VALUE;
 import static com.openlattice.postgres.PostgresColumn.EDM_VERSION;
 import static com.openlattice.postgres.PostgresColumn.EDM_VERSION_NAME;
@@ -58,7 +56,6 @@ import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_IDS;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.EVENT_TYPE;
-import static com.openlattice.postgres.PostgresColumn.START_TIME;
 import static com.openlattice.postgres.PostgresColumn.FLAGS;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_DIAMETER;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
@@ -68,6 +65,7 @@ import static com.openlattice.postgres.PostgresColumn.KEY;
 import static com.openlattice.postgres.PostgresColumn.LSB;
 import static com.openlattice.postgres.PostgresColumn.MEMBERS;
 import static com.openlattice.postgres.PostgresColumn.MSB;
+import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
 import static com.openlattice.postgres.PostgresColumn.NAME;
 import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
 import static com.openlattice.postgres.PostgresColumn.NAME_SET;
@@ -91,7 +89,7 @@ import static com.openlattice.postgres.PostgresColumn.SRC;
 import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.SRC_LINKING_VERTEX_ID;
-import static com.openlattice.postgres.PostgresColumn.SRC_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.START_TIME;
 import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
 import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
@@ -114,21 +112,17 @@ public final class PostgresTable {
             new PostgresTableDefinition( "acl_keys" )
                     .addColumns( NAME, SECURABLE_OBJECTID )
                     .primaryKey( NAME );
-
+    public static final PostgresTableDefinition APPS =
+            new PostgresTableDefinition( "apps" )
+                    .addColumns( ID, NAME, TITLE, DESCRIPTION, CONFIG_TYPE_IDS, URL );
     public static final PostgresTableDefinition APP_CONFIGS =
             new PostgresTableDefinition( "app_configs" )
                     .addColumns( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID, PostgresColumn.PERMISSIONS, ENTITY_SET_ID )
                     .primaryKey( APP_ID, ORGANIZATION_ID, CONFIG_TYPE_ID );
-
+    //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
     public static final PostgresTableDefinition APP_TYPES =
             new PostgresTableDefinition( "app_types" )
                     .addColumns( ID, NAMESPACE, NAME, TITLE, DESCRIPTION, ENTITY_TYPE_ID );
-    //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
-
-    public static final PostgresTableDefinition APPS =
-            new PostgresTableDefinition( "apps" )
-                    .addColumns( ID, NAME, TITLE, DESCRIPTION, CONFIG_TYPE_IDS, URL );
-
     public static final PostgresTableDefinition ASSOCIATION_TYPES =
             new PostgresTableDefinition( "association_types" )
                     .addColumns( ID, SRC, DST, BIDIRECTIONAL );
@@ -178,17 +172,19 @@ public final class PostgresTable {
                     .addColumns( EDM_VERSION_NAME, EDM_VERSION )
                     .primaryKey( EDM_VERSION_NAME, EDM_VERSION )
                     .setUnique( EDM_VERSION_NAME, EDM_VERSION );
-
-    public static final PostgresTableDefinition ENTITY_SET_PROPERTY_METADATA =
-            new PostgresTableDefinition( "entity_set_property_metadata" )
-                    .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, SHOW )
-                    .primaryKey( ENTITY_SET_ID, PROPERTY_TYPE_ID );
-
+    public static final PostgresTableDefinition ENTITY_QUERIES =
+            new PostgresTableDefinition( "entity_graph_queries" )
+                    .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
+                    .primaryKey( QUERY_ID, ID_VALUE );
     public static final PostgresTableDefinition ENTITY_SETS =
             new PostgresTableDefinition( "entity_sets" )
                     .addColumns( ID, NAME, ENTITY_TYPE_ID, TITLE, DESCRIPTION, CONTACTS );
     //.setUnique( NAME );
-
+    public static final PostgresTableDefinition ENTITY_SET_PROPERTY_METADATA =
+            new PostgresTableDefinition( "entity_set_property_metadata" )
+                    .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, SHOW )
+                    .primaryKey( ENTITY_SET_ID, PROPERTY_TYPE_ID );
+    //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
     public static final PostgresTableDefinition ENTITY_TYPES =
             new PostgresTableDefinition( "entity_types" )
                     .addColumns( ID,
@@ -201,8 +197,7 @@ public final class PostgresTable {
                             BASE_TYPE,
                             SCHEMAS,
                             CATEGORY );
-    //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
-
+    //.setUnique( NAMESPACE, NAME );
     public static final PostgresTableDefinition ENUM_TYPES =
             new PostgresTableDefinition( "enum_types" )
                     .addColumns( ID,
@@ -216,99 +211,10 @@ public final class PostgresTable {
                             FLAGS,
                             PII,
                             ANALYZER );
-    //.setUnique( NAMESPACE, NAME );
-
-    public static final PostgresTableDefinition ID_GENERATION =
-            new PostgresTableDefinition( "id_gen" )
-                    .primaryKey( PARTITION_INDEX )
-                    .addColumns( PARTITION_INDEX, MSB, LSB );
-
-    public static final PostgresTableDefinition IDS =
-            new PostgresTableDefinition( "entity_key_ids" )
-                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID );
-
-    public static final PostgresTableDefinition LINKED_ENTITY_SETS =
-            new PostgresTableDefinition( "linked_entity_sets" )
-                    .addColumns( ID, ENTITY_SET_IDS );
-
-    public static final PostgresTableDefinition LINKED_ENTITY_TYPES =
-            new PostgresTableDefinition( "linked_entity_types" )
-                    .addColumns( ID, ENTITY_TYPE_IDS );
-
-    public static final PostgresTableDefinition LINKING_EDGES =
-            new PostgresTableDefinition( "linking_edges" )
-                    .addColumns( GRAPH_ID, SRC_LINKING_VERTEX_ID, EDGE_VALUE, DST_LINKING_VERTEX_ID )
-                    .primaryKey( GRAPH_ID, SRC_LINKING_VERTEX_ID, EDGE_VALUE, DST_LINKING_VERTEX_ID );
-
-    public static final PostgresTableDefinition LINKING_VERTICES =
-            new PostgresTableDefinition( "linking_vertices" )
-                    .addColumns( GRAPH_ID, VERTEX_ID, GRAPH_DIAMETER, ENTITY_KEY_IDS )
-                    .primaryKey( GRAPH_ID, VERTEX_ID );
-
-    public static final PostgresTableDefinition NAMES =
-            new PostgresTableDefinition( "names" )
-                    .addColumns( SECURABLE_OBJECTID, NAME )
-                    .primaryKey( SECURABLE_OBJECTID );
-
-    public static final PostgresTableDefinition ORGANIZATIONS =
-            new PostgresTableDefinition( "organizations" )
-                    .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
-
-    public static final PostgresTableDefinition PERMISSIONS =
-            new PostgresTableDefinition( "permissions" )
-                    .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS )
-                    .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition PRINCIPAL_TREES = new PostgresTableDefinition( "principal_tree" )
-            .addColumns( ACL_KEY, ACL_KEY_SET )
-            .primaryKey( ACL_KEY );
-
-    public static final PostgresTableDefinition PRINCIPALS =
-            new PostgresTableDefinition( "principals" )
-                    .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )
-                    .primaryKey( ACL_KEY )
-                    .setUnique( PRINCIPAL_TYPE, PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition PROPERTY_TYPES =
-            new PostgresTableDefinition( "property_types" )
-                    .addColumns( ID, NAMESPACE, NAME, DATATYPE, TITLE, DESCRIPTION, SCHEMAS, PII, ANALYZER );
-    //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
-
-    public static final PostgresTableDefinition REQUESTS =
-            new PostgresTableDefinition( "requests" )
-                    .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
-                    .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-
-    public static final PostgresTableDefinition SCHEMA =
-            new PostgresTableDefinition( "schemas" )
-                    .addColumns( NAMESPACE, NAME_SET )
-                    .primaryKey( NAMESPACE );
-
-    public static final PostgresTableDefinition SECURABLE_OBJECTS =
-            new PostgresTableDefinition( "securable_objects" )
-                    .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
-                    .primaryKey( ACL_KEY );
-
-    public static final PostgresTableDefinition SYNC_IDS =
-            new PostgresTableDefinition( "sync_ids" )
-                    .addColumns( ENTITY_SET_ID, SYNC_ID, CURRENT_SYNC_ID )
-                    .primaryKey( ENTITY_SET_ID, SYNC_ID )
-                    .setUnique( ENTITY_SET_ID, SYNC_ID );
-
-    public static final PostgresTableDefinition VERTEX_IDS_AFTER_LINKING =
-            new PostgresTableDefinition( "vertex_ids_after_linking" )
-                    .addColumns( GRAPH_ID, VERTEX_ID, NEW_VERTEX_ID )
-                    .primaryKey( GRAPH_ID, VERTEX_ID );
-
-    public static final PostgresTableDefinition ENTITY_QUERIES =
-            new PostgresTableDefinition( "entity_graph_queries" )
-                    .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
-                    .primaryKey( QUERY_ID, ID_VALUE );
-    public static final PostgresTableDefinition GRAPH_QUERIES =
+    public static final PostgresTableDefinition GRAPH_QUERIES  =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
                     .primaryKey( QUERY_ID );
-
     public static final List<PostgresColumnDefinition> HASH_ON =
             ImmutableList.of(
                     ID,
@@ -323,6 +229,80 @@ public final class PostgresTable {
                     ENTITY_SET_ID,
                     PRINCIPAL_ID
             );
+    public static final PostgresTableDefinition IDS =
+            new PostgresTableDefinition( "entity_key_ids" )
+                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID );
+    public static final PostgresTableDefinition ID_GENERATION =
+            new PostgresTableDefinition( "id_gen" )
+                    .primaryKey( PARTITION_INDEX )
+                    .addColumns( PARTITION_INDEX, MSB, LSB );
+    public static final PostgresTableDefinition LINKED_ENTITY_SETS =
+            new PostgresTableDefinition( "linked_entity_sets" )
+                    .addColumns( ID, ENTITY_SET_IDS );
+    public static final PostgresTableDefinition LINKED_ENTITY_TYPES =
+            new PostgresTableDefinition( "linked_entity_types" )
+                    .addColumns( ID, ENTITY_TYPE_IDS );
+    public static final PostgresTableDefinition LINKING_EDGES =
+            new PostgresTableDefinition( "linking_edges" )
+                    .addColumns( GRAPH_ID, SRC_LINKING_VERTEX_ID, EDGE_VALUE, DST_LINKING_VERTEX_ID )
+                    .primaryKey( GRAPH_ID, SRC_LINKING_VERTEX_ID, EDGE_VALUE, DST_LINKING_VERTEX_ID );
+    public static final PostgresTableDefinition LINKING_VERTICES =
+            new PostgresTableDefinition( "linking_vertices" )
+                    .addColumns( GRAPH_ID, VERTEX_ID, GRAPH_DIAMETER, ENTITY_KEY_IDS )
+                    .primaryKey( GRAPH_ID, VERTEX_ID );
+    public static final PostgresTableDefinition NAMES =
+            new PostgresTableDefinition( "names" )
+                    .addColumns( SECURABLE_OBJECTID, NAME )
+                    .primaryKey( SECURABLE_OBJECTID );
+    public static final PostgresTableDefinition ORGANIZATIONS =
+            new PostgresTableDefinition( "organizations" )
+                    .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
+    public static final PostgresTableDefinition PERMISSIONS =
+            new PostgresTableDefinition( "permissions" )
+                    .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS )
+                    .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
+    //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
+    public static final PostgresTableDefinition PRINCIPALS =
+            new PostgresTableDefinition( "principals" )
+                    .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )
+                    .primaryKey( ACL_KEY )
+                    .setUnique( PRINCIPAL_TYPE, PRINCIPAL_ID );
+    public static final PostgresTableDefinition PRINCIPAL_TREES = new PostgresTableDefinition( "principal_tree" )
+            .addColumns( ACL_KEY, ACL_KEY_SET )
+            .primaryKey( ACL_KEY );
+    public static final PostgresTableDefinition PROPERTY_TYPES =
+            new PostgresTableDefinition( "property_types" )
+                    .addColumns( ID,
+                            NAMESPACE,
+                            NAME,
+                            DATATYPE,
+                            TITLE,
+                            DESCRIPTION,
+                            SCHEMAS,
+                            PII,
+                            ANALYZER,
+                            MULTI_VALUED );
+    public static final PostgresTableDefinition REQUESTS =
+            new PostgresTableDefinition( "requests" )
+                    .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
+                    .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
+    public static final PostgresTableDefinition SCHEMA =
+            new PostgresTableDefinition( "schemas" )
+                    .addColumns( NAMESPACE, NAME_SET )
+                    .primaryKey( NAMESPACE );
+    public static final PostgresTableDefinition SECURABLE_OBJECTS =
+            new PostgresTableDefinition( "securable_objects" )
+                    .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
+                    .primaryKey( ACL_KEY );
+    public static final PostgresTableDefinition SYNC_IDS =
+            new PostgresTableDefinition( "sync_ids" )
+                    .addColumns( ENTITY_SET_ID, SYNC_ID, CURRENT_SYNC_ID )
+                    .primaryKey( ENTITY_SET_ID, SYNC_ID )
+                    .setUnique( ENTITY_SET_ID, SYNC_ID );
+    public static final PostgresTableDefinition VERTEX_IDS_AFTER_LINKING =
+            new PostgresTableDefinition( "vertex_ids_after_linking" )
+                    .addColumns( GRAPH_ID, VERTEX_ID, NEW_VERTEX_ID )
+                    .primaryKey( GRAPH_ID, VERTEX_ID );
 
     static {
         EDGES.addIndexes(
@@ -343,7 +323,7 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresIndexDefinition( EDGES, EDGE_ENTITY_KEY_ID )
                         .name( "edges_edge_entity_key_id_idx" )
-                        .ifNotExists());
+                        .ifNotExists() );
         IDS.addIndexes(
                 new PostgresIndexDefinition( IDS, ENTITY_SET_ID )
                         .name( "entity_key_ids_entity_set_id_idx" )
@@ -359,12 +339,13 @@ public final class PostgresTable {
                         .ifNotExists() );
         ENTITY_QUERIES.addIndexes(
                 new PostgresIndexDefinition( ENTITY_QUERIES, ID_VALUE )
-                .name( "entity_queries_id_idx" )
-                .ifNotExists(),
+                        .name( "entity_queries_id_idx" )
+                        .ifNotExists(),
                 new PostgresIndexDefinition( ENTITY_QUERIES, CLAUSES )
-        .name( "" ));
+                        .name( "" ) );
         GRAPH_QUERIES.addIndexes(
-                new PostgresIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "graph_queries_expiry_idx" ).ifNotExists() );
+                new PostgresIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "graph_queries_expiry_idx" )
+                        .ifNotExists() );
     }
 
     private PostgresTable() {
