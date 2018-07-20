@@ -128,7 +128,7 @@ public class HazelcastOrganizationService {
         createRoleIfNotExists( principal, adminRole );
 
         //We add the user that created the organization to the admin role for the organization
-        addRoleToUserInOrganization( organization.getId(), adminRole.getId(), principal );
+        addRoleToPrincipalInOrganization( organization.getId(), adminRole.getId(), principal );
         eventBus.post( new OrganizationCreatedEvent( organization ) );
     }
 
@@ -288,7 +288,7 @@ public class HazelcastOrganizationService {
         authorizations.addPermission( role.getAclKey(), orgPrincipal.getPrincipal(), EnumSet.of( Permission.READ ) );
     }
 
-    public void addRoleToUserInOrganization( UUID organizationId, UUID roleId, Principal user ) {
+    public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal user ) {
         securePrincipalsManager.addPrincipalToPrincipal( new AclKey( organizationId, roleId ),
                 securePrincipalsManager.lookup( user ) );
     }
