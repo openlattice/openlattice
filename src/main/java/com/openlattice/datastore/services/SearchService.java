@@ -529,24 +529,30 @@ public class SearchService {
                     : edge.getSrc().getEntitySetId();
 
             SetMultimap<FullQualifiedName, Object> edgeDetails = entities.get( edge.getEdge().getEntityKeyId() );
-            if ( authorizedEdgeESIdsToVertexESIds.get( edgeEntitySetId )
-                    .contains( neighborEntitySetId ) ) {
-                SetMultimap<FullQualifiedName, Object> neighborDetails = entities.get( neighborEntityKeyId );
-                return new NeighborEntityDetails(
-                        entitySetsById.get( edgeEntitySetId ),
-                        edgeDetails,
-                        entitySetsIdsToAuthorizedProps.get( edgeEntitySetId ).values(),
-                        entitySetsById.get( neighborEntitySetId ),
-                        neighborEntityKeyId,
-                        neighborDetails,
-                        entitySetsIdsToAuthorizedProps.get( neighborEntitySetId ).values(),
-                        vertexIsSrc );
-            } else {
-                return new NeighborEntityDetails(
-                        entitySetsById.get( edgeEntitySetId ),
-                        edgeDetails,
-                        entitySetsIdsToAuthorizedProps.get( edgeEntitySetId ).values(),
-                        vertexIsSrc );
+            if ( edgeDetails != null ) {
+                if ( authorizedEdgeESIdsToVertexESIds.get( edgeEntitySetId )
+                        .contains( neighborEntitySetId ) ) {
+                    SetMultimap<FullQualifiedName, Object> neighborDetails = entities.get( neighborEntityKeyId );
+
+                    if ( neighborDetails != null ) {
+                        return new NeighborEntityDetails(
+                                entitySetsById.get( edgeEntitySetId ),
+                                edgeDetails,
+                                entitySetsIdsToAuthorizedProps.get( edgeEntitySetId ).values(),
+                                entitySetsById.get( neighborEntitySetId ),
+                                neighborEntityKeyId,
+                                neighborDetails,
+                                entitySetsIdsToAuthorizedProps.get( neighborEntitySetId ).values(),
+                                vertexIsSrc );
+                    }
+
+                } else {
+                    return new NeighborEntityDetails(
+                            entitySetsById.get( edgeEntitySetId ),
+                            edgeDetails,
+                            entitySetsIdsToAuthorizedProps.get( edgeEntitySetId ).values(),
+                            vertexIsSrc );
+                }
             }
         }
         return null;
