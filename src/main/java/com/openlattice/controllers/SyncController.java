@@ -68,9 +68,9 @@ public class SyncController implements SyncApi, AuthorizingComponent {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.WRITE ) ) ) {
-            entities.executeOnEntries( new SyncFinalizer( OffsetDateTime.now() ),
-                    EntitySetPredicates.entitySet( entitySetId ) );
-            //            return datasourceManager.createNewSyncIdForEntitySet( entitySetId );
+//            entities.executeOnEntries( new SyncFinalizer( OffsetDateTime.now() ),
+//                    EntitySetPredicates.entitySet( entitySetId ) );
+                //            return datasourceManager.createNewSyncIdForEntitySet( entitySetId );
             return UUID.randomUUID();
         } else {
             throw new ForbiddenException(
