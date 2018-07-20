@@ -20,6 +20,7 @@
 
 package com.openlattice.ids;
 
+import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,5 +82,19 @@ public class Range {
 
     public long getLsb() {
         return lsb;
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof Range ) ) { return false; }
+        Range range = (Range) o;
+        return base == range.base &&
+                msb == range.msb &&
+                lsb == range.lsb;
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( base, msb, lsb );
     }
 }
