@@ -26,7 +26,6 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
@@ -44,11 +43,11 @@ public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Long, Ran
     }
 
     @Override public Long generateTestKey() {
-        return (long) TestDataFactory.integer();
+        return 1L;
     }
 
     @Override public Range generateTestValue() {
-        return new Range( 0, 1, 2 );
+        return new Range( generateTestKey() << 48L, 1, 2 );
     }
 
     @Override protected void bind( PreparedStatement ps, Long key, Range value ) throws SQLException {
@@ -72,7 +71,7 @@ public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Long, Ran
     }
 
     @Override protected int bind( PreparedStatement ps, Long key, int parameterIndex ) throws SQLException {
-        ps.setLong( parameterIndex++, key >>> 48L );
+        ps.setLong( parameterIndex++, key );
         return parameterIndex;
     }
 
