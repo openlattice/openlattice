@@ -23,6 +23,7 @@
 package com.openlattice.organizations;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.ImmutableList;
@@ -40,6 +41,8 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -74,18 +77,18 @@ import org.slf4j.LoggerFactory;
 
 public class HazelcastOrganizationService {
 
-    private static final Logger logger = LoggerFactory
+    private static final Logger                            logger = LoggerFactory
             .getLogger( HazelcastOrganizationService.class );
-    private final AuthorizationManager              authorizations;
-    private final HazelcastAclKeyReservationService reservations;
-    private final UserDirectoryService              principals;
-    private final SecurePrincipalsManager           securePrincipalsManager;
-    private final IMap<UUID, String>                titles;
-    private final IMap<UUID, String>                descriptions;
-    private final IMap<UUID, DelegatedStringSet>    autoApprovedEmailDomainsOf;
-    private final IMap<UUID, PrincipalSet>          membersOf;
-    private final IMap<UUID, DelegatedUUIDSet>      apps;
-    private final List<IMap<UUID, ?>>               allMaps;
+    private final        AuthorizationManager              authorizations;
+    private final        HazelcastAclKeyReservationService reservations;
+    private final        UserDirectoryService              principals;
+    private final        SecurePrincipalsManager           securePrincipalsManager;
+    private final        IMap<UUID, String>                titles;
+    private final        IMap<UUID, String>                descriptions;
+    private final        IMap<UUID, DelegatedStringSet>    autoApprovedEmailDomainsOf;
+    private final        IMap<UUID, PrincipalSet>          membersOf;
+    private final        IMap<UUID, DelegatedUUIDSet>      apps;
+    private final        List<IMap<UUID, ?>>               allMaps;
 
     @Inject
     private EventBus eventBus;
@@ -110,11 +113,22 @@ public class HazelcastOrganizationService {
                 apps );
         this.principals = checkNotNull( principals );
         this.securePrincipalsManager = securePrincipalsManager;
+        fixRoles();
     }
 
     public void createOrganization( Principal principal, Organization organization ) {
         securePrincipalsManager.createSecurablePrincipalIfNotExists( principal, organization.getSecurablePrincipal() );
         createOrganization( organization );
+
+        //Add the organization principal to the creator marking them as a member of the organization
+        addMembers( organization.getAclKey(), ImmutableSet.of( principal ) );
+
+        //Create the admin role for the organization.
+        var adminRole = createOrganizationAdminRole( organization.getSecurablePrincipal() );
+        createRoleIfNotExists( principal, adminRole );
+
+        //We add the user that created the organization to the admin role for the organization
+        addRoleToUserInOrganization( organization.getId(), adminRole.getId(), principal );
         eventBus.post( new OrganizationCreatedEvent( organization ) );
     }
 
@@ -194,9 +208,15 @@ public class HazelcastOrganizationService {
     }
 
     public void addMembers( UUID organizationId, Set<Principal> members ) {
+        addMembers( new AclKey( organizationId ), members );
+    }
+
+    public void addMembers( AclKey orgAclKey, Set<Principal> members ) {
+        checkState( orgAclKey.size() == 1, "Organization acl key should only be of length 1" );
+        var organizationId = orgAclKey.get( 0 );
         membersOf.submitToKey( organizationId, new OrganizationMemberMerger( members ) );
         addOrganizationToMembers( organizationId, members );
-        final AclKey orgAclKey = new AclKey( organizationId );
+
         members.stream().filter( PrincipalType.USER::equals )
                 .map( securePrincipalsManager::lookup )
                 .forEach( target -> securePrincipalsManager.addPrincipalToPrincipal( orgAclKey, target ) );
@@ -256,11 +276,21 @@ public class HazelcastOrganizationService {
     }
 
     public void createRoleIfNotExists( Principal callingUser, Role role ) {
-        securePrincipalsManager.createSecurablePrincipalIfNotExists( callingUser, role );
         final UUID organizationId = role.getOrganizationId();
-        final SecurablePrincipal orgPrincipal = securePrincipalsManager
+        final OrganizationPrincipal orgPrincipal = (OrganizationPrincipal) securePrincipalsManager
                 .getSecurablePrincipal( new AclKey( organizationId ) );
+        /*
+         * We set the organization to be the owner of the principal and grant everyone in the organization read access
+         * to the principal. This is done so that anyone in the organization can see the principal and the owners of
+         * an organization all have owner on the principal
+         */
+        securePrincipalsManager.createSecurablePrincipalIfNotExists( callingUser, role );
         authorizations.addPermission( role.getAclKey(), orgPrincipal.getPrincipal(), EnumSet.of( Permission.READ ) );
+    }
+
+    public void addRoleToUserInOrganization( UUID organizationId, UUID roleId, Principal user ) {
+        securePrincipalsManager.addPrincipalToPrincipal( new AclKey( organizationId, roleId ),
+                securePrincipalsManager.lookup( user ) );
     }
 
     private Collection<Role> getRolesInFull( UUID organizationId ) {
@@ -290,6 +320,39 @@ public class HazelcastOrganizationService {
 
     public Set<UUID> getOrganizationApps( UUID organizationId ) {
         return apps.get( organizationId );
+    }
+
+    private void fixRoles() {
+        checkNotNull( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() );
+        for ( SecurablePrincipal organization : securePrincipalsManager
+                .getSecurablePrincipals( PrincipalType.ORGANIZATION ) ) {
+            authorizations.setSecurableObjectType( organization.getAclKey(), SecurableObjectType.Organization );
+            authorizations.addPermission( organization.getAclKey(),
+                    AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal(),
+                    EnumSet.allOf( Permission.class ) );
+
+            var roles = securePrincipalsManager.getAllRolesInOrganization( organization.getId() );
+            for ( SecurablePrincipal role : roles ) {
+                authorizations.setSecurableObjectType( role.getAclKey(), SecurableObjectType.Role );
+                authorizations
+                        .addPermission( role.getAclKey(), organization.getPrincipal(), EnumSet.of( Permission.READ ) );
+            }
+
+            for ( Principal user : securePrincipalsManager.getAllUsersWithPrincipal( organization.getAclKey() ) ) {
+                authorizations.addPermission( organization.getAclKey(), user, EnumSet.of( Permission.READ ) );
+            }
+        }
+    }
+
+    public static Role createOrganizationAdminRole( SecurablePrincipal organization ) {
+        var principaleTitle = organization.getName() + " - ADMIN";
+        var principalId = organization.getId().toString() + "|" + principaleTitle;
+        var rolePrincipal = new Principal( PrincipalType.ROLE, principalId );
+        return new Role( Optional.empty(),
+                organization.getId(),
+                rolePrincipal,
+                organization.getName() + " - ADMIN",
+                Optional.of( "Administrators of this organization" ) );
     }
 
     private static Predicate getOrganizationPredicate( UUID organizationId ) {
