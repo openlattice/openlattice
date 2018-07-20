@@ -44,7 +44,7 @@ import javax.inject.Inject
  */
 @RestController
 @RequestMapping(GraphApi.CONTROLLER)
-open class GraphController
+class GraphController
 @Inject
 constructor(
         private val graphQueryService: GraphQueryService,
