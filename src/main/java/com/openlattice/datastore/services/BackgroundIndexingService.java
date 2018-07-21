@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -85,6 +84,7 @@ public class BackgroundIndexingService {
             while ( rs.next() && result.size() < BLOCK_SIZE ) {
                 result.add( ResultSetAdapters.id( rs ) );
             }
+            rs.close();
             return result;
         } catch ( SQLException e ) {
             logger.debug( "Unable to load all entity set ids", e );
@@ -125,10 +125,13 @@ public class BackgroundIndexingService {
                 while ( !finished ) {
                     Set<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId, offset );
 
-                    Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
-                            .getEntitiesById( entitySetId, propertyTypeMap, entityKeyIdsToIndex );
+                    if (entityKeyIdsToIndex.size() > 0) {
 
-                    elasticsearchApi.createBulkEntityData( entitySetId, entitiesById );
+                        Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
+                                .getEntitiesById( entitySetId, propertyTypeMap, entityKeyIdsToIndex );
+
+                        elasticsearchApi.createBulkEntityData( entitySetId, entitiesById );
+                    }
 
                     if ( entityKeyIdsToIndex.size() < BLOCK_SIZE ) {
                         finished = true;
