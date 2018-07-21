@@ -38,7 +38,9 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.search.requests.EntityKeyIdSearchResult;
 import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
+
 import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -206,6 +208,17 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
                     new EntityDataLambdas( edk, propertyValues, false ) ) ).get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "unable to save entity data to elasticsearch" );
+            return false;
+        }
+    }
+
+    @Override
+    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall.wrap(
+                    new BulkEntityDataLambdas( entitySetId, entitiesById ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity data to elasticsearch" );
             return false;
