@@ -745,7 +745,11 @@ public final class ResultSetAdapters {
                         objects = Arrays.asList( (Boolean[]) arr.getArray() );
                         break;
                     case Binary:
-                        objects = Arrays.asList( (byte[][]) arr.getArray() );
+                        Object o = arr.getArray();
+                        logger.info("Reading byte array with class: {}", o.getClass().getSimpleName());
+                        logger.info("Reading byte array with class: {}", o.getClass().getCanonicalName());
+                        byte[][] raw = (byte[][]) arr.getArray();
+                        objects = Arrays.asList( raw );
                         break;
                     default:
                         objects = null;
