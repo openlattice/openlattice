@@ -63,6 +63,7 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
@@ -689,7 +690,37 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
 
         return true;
+    }
 
+    @Override
+    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById ) {
+        try {
+            if ( !verifyElasticsearchConnection() ) { return false; }
+        } catch ( UnknownHostException e ) {
+            logger.debug( "not connected to elasticsearch" );
+            e.printStackTrace();
+        }
+
+        try {
+            String indexName = getIndexName( entitySetId );
+            String indexType = getTypeName( entitySetId );
+
+            BulkRequestBuilder requestBuilder = client.prepareBulk();
+            for ( Map.Entry<UUID, SetMultimap<UUID, Object>> entry : entitiesById.entrySet() ) {
+                UUID entityKeyId = entry.getKey();
+                String s = ObjectMappers.getJsonMapper().configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true )
+                        .writeValueAsString( entry.getValue() );
+
+                requestBuilder.add( new IndexRequest( indexName, indexType, entityKeyId.toString() ).source( s, XContentType.JSON ) );
+            }
+
+            requestBuilder.execute().actionGet();
+
+        } catch ( JsonProcessingException e ) {
+            logger.debug( "Error creating bulk entity data in elasticsearch for entity set {}", entitySetId, e );
+            return false;
+        }
+        return true;
     }
 
     @Override
