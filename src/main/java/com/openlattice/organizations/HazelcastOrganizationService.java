@@ -338,7 +338,7 @@ public class HazelcastOrganizationService {
 
     private void fixOrganizations() {
         checkNotNull( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() );
-        logger.info("Fixing organizations.");
+        logger.info( "Fixing organizations." );
         for ( SecurablePrincipal organization : securePrincipalsManager
                 .getSecurablePrincipals( PrincipalType.ORGANIZATION ) ) {
             authorizations.setSecurableObjectType( organization.getAclKey(), SecurableObjectType.Organization );
@@ -346,13 +346,13 @@ public class HazelcastOrganizationService {
                     AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal(),
                     EnumSet.allOf( Permission.class ) );
 
-            logger.info("Setting titles, descriptions, and autoApproved e-mails domains if not present.");
+            logger.info( "Setting titles, descriptions, and autoApproved e-mails domains if not present." );
             titles.putIfAbsent( organization.getId(), organization.getTitle() );
             descriptions.putIfAbsent( organization.getId(), organization.getDescription() );
             autoApprovedEmailDomainsOf.putIfAbsent( organization.getId(), DelegatedStringSet.wrap( new HashSet<>() ) );
-            apps.putIfAbsent( organization.getId(),DelegatedUUIDSet.wrap( new HashSet<>(  ) ) );
+            apps.putIfAbsent( organization.getId(), DelegatedUUIDSet.wrap( new HashSet<>() ) );
 
-            logger.info("Synchronizing roles");
+            logger.info( "Synchronizing roles" );
             var roles = securePrincipalsManager.getAllRolesInOrganization( organization.getId() );
 
             for ( SecurablePrincipal role : roles ) {
@@ -360,13 +360,19 @@ public class HazelcastOrganizationService {
                 authorizations
                         .addPermission( role.getAclKey(), organization.getPrincipal(), EnumSet.of( Permission.READ ) );
             }
-            logger.info("Synchronizing members");
+            logger.info( "Synchronizing members" );
             PrincipalSet principals = PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
                     .getAllUsersWithPrincipal( organization.getAclKey() ) ) );
             membersOf.putIfAbsent( organization.getId(), principals );
             for ( Principal user : principals ) {
                 authorizations.addPermission( organization.getAclKey(), user, EnumSet.of( Permission.READ ) );
             }
+            addMembers( organization.getAclKey(), principals );
+
+            addMembers( organization.getAclKey(),
+                    PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
+                            .getAllUsersWithPrincipal( securePrincipalsManager
+                                    .lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) ) ) ) );
 
         }
     }
