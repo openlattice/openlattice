@@ -20,6 +20,7 @@
 
 package com.openlattice.bootstrap;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.bootstrap.AuthorizationBootstrap.GLOBAL_ADMIN_ROLE;
 import static com.openlattice.bootstrap.AuthorizationBootstrap.OPENLATTICE_ROLE;
 
@@ -35,13 +36,27 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class OrganizationBootstrap {
-    public static final Organization OPENLATTICE = createOpenLatticeOrg();
-    public static final Organization GLOBAL      = createGlobalOrg();
-    private boolean initialized;
+    public static final Principal GLOBAL_ORG_PRINCIPAL      = new Principal( PrincipalType.ORGANIZATION, "globalOrg" );
+    public static final Principal OPENLATTICE_ORG_PRINCIPAL = new Principal( PrincipalType.ORGANIZATION,
+            "openlatticeOrg" );
+    private             boolean   initialized;
 
     public OrganizationBootstrap( HazelcastOrganizationService organizationService ) {
-        organizationService.createOrganization( OPENLATTICE_ROLE.getPrincipal(), OPENLATTICE );
-        organizationService.createOrganization( GLOBAL_ADMIN_ROLE.getPrincipal(), GLOBAL );
+        var globalOrg = organizationService.maybeGetOrganization( GLOBAL_ORG_PRINCIPAL );
+        var olOrg = organizationService.maybeGetOrganization( GLOBAL_ORG_PRINCIPAL );
+
+        if ( globalOrg.isPresent() ) {
+            checkState( BootstrapConstants.GLOBAL_ORGANIZATION_ID.equals( globalOrg.get().getId() ) );
+        } else {
+            organizationService.createOrganization( GLOBAL_ADMIN_ROLE.getPrincipal(), createGlobalOrg() );
+        }
+
+        if ( olOrg.isPresent() ) {
+            checkState( BootstrapConstants.OPENLATTICE_ORGANIZATION_ID.equals( olOrg.get().getId() ) );
+        } else {
+            organizationService.createOrganization( OPENLATTICE_ROLE.getPrincipal(), createOpenLatticeOrg() );
+        }
+
         initialized = true;
     }
 
@@ -49,12 +64,11 @@ public class OrganizationBootstrap {
         return initialized;
     }
 
-    public static Organization createGlobalOrg() {
+    private static Organization createGlobalOrg() {
         UUID id = BootstrapConstants.GLOBAL_ORGANIZATION_ID;
-        Principal org = new Principal( PrincipalType.ORGANIZATION, "globalOrg" );
         String title = "Global Organization";
         return new Organization( Optional.of( id ),
-                org,
+                GLOBAL_ORG_PRINCIPAL,
                 title,
                 Optional.empty(),
                 ImmutableSet.of(),
@@ -62,12 +76,11 @@ public class OrganizationBootstrap {
                 ImmutableSet.of() );
     }
 
-    public static Organization createOpenLatticeOrg() {
-        UUID id = new UUID( 0, 0 );
-        Principal org = new Principal( PrincipalType.ORGANIZATION, "openlatticeOrg" );
+    private static Organization createOpenLatticeOrg() {
+        UUID id = BootstrapConstants.OPENLATTICE_ORGANIZATION_ID;
         String title = "OpenLattice, Inc.";
         return new Organization( Optional.of( id ),
-                org,
+                OPENLATTICE_ORG_PRINCIPAL,
                 title,
                 Optional.empty(),
                 ImmutableSet.of(),

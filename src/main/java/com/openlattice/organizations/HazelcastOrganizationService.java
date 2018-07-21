@@ -116,8 +116,20 @@ public class HazelcastOrganizationService {
         fixRoles();
     }
 
+    public OrganizationPrincipal getOrganization( Principal p ) {
+        OrganizationPrincipal organizationPrincipal = (OrganizationPrincipal) securePrincipalsManager
+                .getPrincipal( p.getId() );
+        return checkNotNull( organizationPrincipal );
+    }
+
+    public Optional<SecurablePrincipal> maybeGetOrganization( Principal p ) {
+        return securePrincipalsManager.maybeGetSecurablePrincipal( p );
+    }
+
     public void createOrganization( Principal principal, Organization organization ) {
-        securePrincipalsManager.createSecurablePrincipalIfNotExists( principal, organization.getSecurablePrincipal() );
+        checkState( securePrincipalsManager
+                        .createSecurablePrincipalIfNotExists( principal, organization.getSecurablePrincipal() ),
+                "Unable to create securable principal for organization. This means the organization probably already exists." );
         createOrganization( organization );
 
         //Add the organization principal to the creator marking them as a member of the organization
@@ -215,7 +227,7 @@ public class HazelcastOrganizationService {
         checkState( orgAclKey.size() == 1, "Organization acl key should only be of length 1" );
         var organizationId = orgAclKey.get( 0 );
         membersOf.submitToKey( organizationId, new OrganizationMemberMerger( members ) );
-//        addOrganizationToMembers( organizationId, members );
+        //        addOrganizationToMembers( organizationId, members );
 
         members.stream().filter( PrincipalType.USER::equals )
                 .map( securePrincipalsManager::lookup )

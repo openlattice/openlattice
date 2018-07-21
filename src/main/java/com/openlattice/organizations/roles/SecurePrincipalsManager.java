@@ -31,6 +31,7 @@ import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.SecurablePrincipal;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,8 +40,9 @@ public interface SecurePrincipalsManager {
     /**
      * @param owner The owner of a role. Usually the organization.
      * @param principal The principal which to create.
+     * @return True if the securable principal was created false otherwise.
      */
-    void createSecurablePrincipalIfNotExists( Principal owner, SecurablePrincipal principal );
+    boolean createSecurablePrincipalIfNotExists( Principal owner, SecurablePrincipal principal );
 
     //    SecurablePrincipal getSecurablePrincipal( Principal principal );
 
@@ -53,6 +55,8 @@ public interface SecurePrincipalsManager {
     SecurablePrincipal getSecurablePrincipal( AclKey aclKey );
 
     SecurablePrincipal getPrincipal( String principalId );
+
+    Optional<SecurablePrincipal> maybeGetSecurablePrincipal( Principal p );
 
     Collection<SecurablePrincipal> getSecurablePrincipals( PrincipalType principalType );
 

@@ -56,6 +56,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -88,13 +89,15 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
     }
 
-    @Override public void createSecurablePrincipalIfNotExists(
+    @Override public boolean createSecurablePrincipalIfNotExists(
             Principal owner, SecurablePrincipal principal ) {
         try {
             createSecurablePrincipal( owner, principal );
+            return true;
         } catch ( TypeExistsException e ) {
             logger.warn( "Securable Principal {} already exists", principal );
             logger.debug( "Stack trace for securable principal already exists.", e );
+            return false;
         }
     }
 
@@ -142,8 +145,17 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     @Override
     public SecurablePrincipal getPrincipal( String principalId ) {
-        UUID id = checkNotNull( reservations.getId( principalId ), "AclKey not found for Principal" );
+        final UUID id = checkNotNull( reservations.getId( principalId ), "AclKey not found for Principal" );
         return Util.getSafely( principals, new AclKey( id ) );
+    }
+
+    @Override
+    public Optional<SecurablePrincipal> maybeGetSecurablePrincipal( Principal p ) {
+        final UUID id = reservations.getId( p.getId() );
+        if ( id == null ) {
+            return null;
+        }
+        return Optional.ofNullable( Util.getSafely( principals, new AclKey( id ) ) );
     }
 
     @Override public Collection<SecurablePrincipal> getSecurablePrincipals( PrincipalType principalType ) {
