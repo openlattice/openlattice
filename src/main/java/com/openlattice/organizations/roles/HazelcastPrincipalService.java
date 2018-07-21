@@ -153,7 +153,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     public Optional<SecurablePrincipal> maybeGetSecurablePrincipal( Principal p ) {
         final UUID id = reservations.getId( p.getId() );
         if ( id == null ) {
-            return null;
+            return Optional.empty();
         }
         return Optional.ofNullable( Util.getSafely( principals, new AclKey( id ) ) );
     }
