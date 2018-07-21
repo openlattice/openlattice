@@ -360,7 +360,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( USER_ID ) String userId ) {
         ensureWriteAccess( new AclKey( organizationId ) );
         organizations
-                .addRoleToUserInOrganization( organizationId, roleId, new Principal( PrincipalType.USER, userId ) );
+                .addRoleToPrincipalInOrganization( organizationId, roleId, new Principal( PrincipalType.USER, userId ) );
         return null;
     }
 
