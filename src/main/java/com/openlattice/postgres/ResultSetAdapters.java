@@ -131,6 +131,7 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+
 import java.sql.Array;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -150,6 +151,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -674,6 +676,86 @@ public final class ResultSetAdapters {
         return new AppType( id, type, title, description, entityTypeId );
     }
 
+    private static List<?> propertyValue( ResultSet rs, PropertyType propertyType ) throws SQLException {
+        final String fqn = propertyType.getType().getFullQualifiedNameAsString();
+        List<?> objects = null;
+        Array arr = rs.getArray( fqn );
+        if ( arr != null ) {
+            switch ( propertyType.getDatatype() ) {
+                case String:
+                    objects = Arrays.asList( (String[]) arr.getArray() );
+                    break;
+                case Guid:
+                    objects = Arrays.asList( (UUID[]) arr.getArray() );
+                    break;
+                case Byte:
+                    byte[] bytes = rs.getBytes( fqn );
+                    if ( bytes != null && bytes.length > 0 ) {
+                        objects = Arrays.asList( rs.getBytes( fqn ) );
+                    }
+                    break;
+                case Int16:
+                    objects = Arrays.asList( (Short[]) arr.getArray() );
+                    break;
+                case Int32:
+                    objects = Arrays.asList( (Integer[]) arr.getArray() );
+                    break;
+                case Duration:
+                case Int64:
+                    objects = Arrays.asList( (Long[]) arr.getArray() );
+                    break;
+                case Date:
+                    objects = Stream
+                            .of( (Date[]) arr.getArray() )
+                            .map( Date::toLocalDate )
+                            .collect( Collectors.toList() );
+                    break;
+                case TimeOfDay:
+                    objects = Stream
+                            .of( (Time[]) arr.getArray() )
+                            .map( Time::toLocalTime )
+                            .collect( Collectors.toList() );
+                    break;
+                case DateTimeOffset:
+                    objects = Stream
+                            .of( (Timestamp[]) arr.getArray() )
+                            .map( ts -> OffsetDateTime
+                                    .ofInstant( Instant.ofEpochMilli( ts.getTime() ), ZoneId.of( "UTC" ) ) )
+                            .collect( Collectors.toList() );
+                    break;
+                case Double:
+                    objects = Arrays.asList( (Double[]) arr.getArray() );
+                    break;
+                case Boolean:
+                    objects = Arrays.asList( (Boolean[]) arr.getArray() );
+                    break;
+                case Binary:
+                    objects = Arrays.asList( (byte[][]) arr.getArray() );
+                    break;
+                default:
+                    objects = null;
+                    logger.error( "Unable to read property type {}.", propertyType.getId() );
+            }
+        }
+        return objects;
+    }
+
+    public static SetMultimap<UUID, Object> implicitEntityValuesById(
+            ResultSet rs,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
+        final SetMultimap<UUID, Object> data = HashMultimap.create();
+
+        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
+            List<?> objects = propertyValue( rs, propertyType );
+
+            if ( objects != null ) {
+                data.putAll( propertyType.getId(), objects );
+            }
+        }
+
+        return data;
+    }
+
     public static SetMultimap<FullQualifiedName, Object> implicitEntity(
             ResultSet rs,
             Map<UUID, PropertyType> authorizedPropertyTypes,
@@ -692,72 +774,14 @@ public final class ResultSetAdapters {
         data.put( ID_FQN, entityKeyId );
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
-            final String fqn = propertyType.getType().getFullQualifiedNameAsString();
-            List<?> objects = null;
-            Array arr = rs.getArray( fqn );
-            if ( arr != null ) {
-                switch ( propertyType.getDatatype() ) {
-                    case String:
-                        objects = Arrays.asList( (String[]) arr.getArray() );
-                        break;
-                    case Guid:
-                        objects = Arrays.asList( (UUID[]) arr.getArray() );
-                        break;
-                    case Byte:
-                        byte[] bytes = rs.getBytes( fqn );
-                        if ( bytes != null && bytes.length > 0 ) {
-                            objects = Arrays.asList( rs.getBytes( fqn ) );
-                        }
-                        break;
-                    case Int16:
-                        objects = Arrays.asList( (Short[]) arr.getArray() );
-                        break;
-                    case Int32:
-                        objects = Arrays.asList( (Integer[]) arr.getArray() );
-                        break;
-                    case Duration:
-                    case Int64:
-                        objects = Arrays.asList( (Long[]) arr.getArray() );
-                        break;
-                    case Date:
-                        objects = Stream
-                                .of( (Date[]) arr.getArray() )
-                                .map( Date::toLocalDate )
-                                .collect( Collectors.toList() );
-                        break;
-                    case TimeOfDay:
-                        objects = Stream
-                                .of( (Time[]) arr.getArray() )
-                                .map( Time::toLocalTime )
-                                .collect( Collectors.toList() );
-                        break;
-                    case DateTimeOffset:
-                        objects = Stream
-                                .of( (Timestamp[]) arr.getArray() )
-                                .map( ts -> OffsetDateTime
-                                        .ofInstant( Instant.ofEpochMilli( ts.getTime() ), ZoneId.of( "UTC" ) ) )
-                                .collect( Collectors.toList() );
-                        break;
-                    case Double:
-                        objects = Arrays.asList( (Double[]) arr.getArray() );
-                        break;
-                    case Boolean:
-                        objects = Arrays.asList( (Boolean[]) arr.getArray() );
-                        break;
-                    case Binary:
-                        objects = Arrays.asList( (byte[][]) arr.getArray() );
-                        break;
-                    default:
-                        objects = null;
-                        logger.error( "Unable to read property type {} for entity {}.",
-                                propertyType.getId(),
-                                entityKeyId );
-                }
-                if ( objects != null ) {
-                    data.putAll( propertyType.getType(), objects );
-                }
+            List<?> objects = propertyValue( rs, propertyType );
+
+            if ( objects != null ) {
+
+                data.putAll( propertyType.getType(), objects );
             }
         }
+
         return data;
     }
 
