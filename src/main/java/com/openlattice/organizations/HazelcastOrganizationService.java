@@ -26,6 +26,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.dataloom.streams.StreamUtil;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -63,6 +64,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -113,7 +115,7 @@ public class HazelcastOrganizationService {
                 apps );
         this.principals = checkNotNull( principals );
         this.securePrincipalsManager = securePrincipalsManager;
-        fixRoles();
+        fixOrganizations();
     }
 
     public OrganizationPrincipal getOrganization( Principal p ) {
@@ -171,7 +173,7 @@ public class HazelcastOrganizationService {
         try {
             return new Organization(
                     principal,
-                    autoApprovedEmailDomains.get(),
+                    MoreObjects.firstNonNull( autoApprovedEmailDomains.get(), ImmutableSet.of() ),
                     members.get(),
                     roles,
                     apps );
@@ -334,8 +336,9 @@ public class HazelcastOrganizationService {
         return apps.get( organizationId );
     }
 
-    private void fixRoles() {
+    private void fixOrganizations() {
         checkNotNull( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() );
+        logger.info("Fixing organizations.");
         for ( SecurablePrincipal organization : securePrincipalsManager
                 .getSecurablePrincipals( PrincipalType.ORGANIZATION ) ) {
             authorizations.setSecurableObjectType( organization.getAclKey(), SecurableObjectType.Organization );
@@ -343,16 +346,28 @@ public class HazelcastOrganizationService {
                     AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal(),
                     EnumSet.allOf( Permission.class ) );
 
+            logger.info("Setting titles, descriptions, and autoApproved e-mails domains if not present.");
+            titles.putIfAbsent( organization.getId(), organization.getTitle() );
+            descriptions.putIfAbsent( organization.getId(), organization.getDescription() );
+            autoApprovedEmailDomainsOf.putIfAbsent( organization.getId(), DelegatedStringSet.wrap( new HashSet<>() ) );
+            apps.putIfAbsent( organization.getId(),DelegatedUUIDSet.wrap( new HashSet<>(  ) ) );
+
+            logger.info("Synchronizing roles");
             var roles = securePrincipalsManager.getAllRolesInOrganization( organization.getId() );
+
             for ( SecurablePrincipal role : roles ) {
                 authorizations.setSecurableObjectType( role.getAclKey(), SecurableObjectType.Role );
                 authorizations
                         .addPermission( role.getAclKey(), organization.getPrincipal(), EnumSet.of( Permission.READ ) );
             }
-
-            for ( Principal user : securePrincipalsManager.getAllUsersWithPrincipal( organization.getAclKey() ) ) {
+            logger.info("Synchronizing members");
+            PrincipalSet principals = PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
+                    .getAllUsersWithPrincipal( organization.getAclKey() ) ) );
+            membersOf.putIfAbsent( organization.getId(), principals );
+            for ( Principal user : principals ) {
                 authorizations.addPermission( organization.getAclKey(), user, EnumSet.of( Permission.READ ) );
             }
+
         }
     }
 
