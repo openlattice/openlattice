@@ -31,27 +31,36 @@ import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class OrganizationBootstrap {
-    public static final Principal GLOBAL_ORG_PRINCIPAL      = new Principal( PrincipalType.ORGANIZATION, "globalOrg" );
-    public static final Principal OPENLATTICE_ORG_PRINCIPAL = new Principal( PrincipalType.ORGANIZATION,
+    public static final  Principal GLOBAL_ORG_PRINCIPAL      = new Principal( PrincipalType.ORGANIZATION, "globalOrg" );
+    public static final  Principal OPENLATTICE_ORG_PRINCIPAL = new Principal( PrincipalType.ORGANIZATION,
             "openlatticeOrg" );
-    private             boolean   initialized;
+    private static final Logger    logger                    = LoggerFactory.getLogger( OrganizationBootstrap.class );
+    private              boolean   initialized;
 
     public OrganizationBootstrap( HazelcastOrganizationService organizationService ) {
         var globalOrg = organizationService.maybeGetOrganization( GLOBAL_ORG_PRINCIPAL );
         var olOrg = organizationService.maybeGetOrganization( GLOBAL_ORG_PRINCIPAL );
 
         if ( globalOrg.isPresent() ) {
+            logger.info( "Expected id = {}, Actual id = {}",
+                    BootstrapConstants.GLOBAL_ORGANIZATION_ID,
+                    globalOrg.get().getId() );
             checkState( BootstrapConstants.GLOBAL_ORGANIZATION_ID.equals( globalOrg.get().getId() ) );
         } else {
             organizationService.createOrganization( GLOBAL_ADMIN_ROLE.getPrincipal(), createGlobalOrg() );
         }
 
         if ( olOrg.isPresent() ) {
+            logger.info( "Expected id = {}, Actual id = {}",
+                    BootstrapConstants.OPENLATTICE_ORGANIZATION_ID,
+                    olOrg.get().getId() );
             checkState( BootstrapConstants.OPENLATTICE_ORGANIZATION_ID.equals( olOrg.get().getId() ) );
         } else {
             organizationService.createOrganization( OPENLATTICE_ROLE.getPrincipal(), createOpenLatticeOrg() );
