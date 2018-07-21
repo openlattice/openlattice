@@ -46,8 +46,7 @@ public class OrganizationBootstrap {
 
     public OrganizationBootstrap( HazelcastOrganizationService organizationService ) {
         var globalOrg = organizationService.maybeGetOrganization( GLOBAL_ORG_PRINCIPAL );
-        var olOrg = organizationService.maybeGetOrganization( GLOBAL_ORG_PRINCIPAL );
-
+        var olOrg = organizationService.maybeGetOrganization( OPENLATTICE_ORG_PRINCIPAL );
         if ( globalOrg.isPresent() ) {
             logger.info( "Expected id = {}, Actual id = {}",
                     BootstrapConstants.GLOBAL_ORGANIZATION_ID,
