@@ -87,8 +87,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     override fun storeAll(map: Map<AclKey, AclKeySet>) {
         hds.connection.use {
             val connection = it
-            val ps = connection.prepareStatement(insertSql)
             val ps2 = connection.prepareStatement(deleteNotIn)
+            val ps = connection.prepareStatement(insertSql)
             map.forEach {
                 val arrKey = connection.createArrayOf(
                         PostgresDatatype.UUID.sql(), (it.key as List<UUID>).toTypedArray()
@@ -104,8 +104,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     ps2.addBatch()
                 }
             }
-            ps.executeBatch()
             ps2.executeBatch()
+            ps.executeBatch()
 
         }
 
