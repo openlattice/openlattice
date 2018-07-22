@@ -39,6 +39,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.ResultSet
 import java.util.*
@@ -55,7 +56,7 @@ private val insertSql = "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${
 private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN (SELECT ?)"
 private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN (SELECT ?)"
 private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ? AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (SELECT ?)"
-
+private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)!!
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
 class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisteringMapStore<AclKey, AclKeySet> {
     @Timed
@@ -88,9 +89,11 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     override fun loadAllKeys(): MutableIterable<AclKey> {
         return PostgresIterable<AclKey>(Supplier {
+            logger.info("Load all iterator requested for ${this.mapName}")
             val connection = hds.connection
             val stmt = connection.createStatement()
-            val rs = stmt.executeQuery("SELECT * from principal_tree")
+            val rs = stmt.executeQuery("SELECT * from ${PRINCIPAL_TREES.name}")
+
             StatementHolder(connection, stmt, rs)
         }, Function<ResultSet, AclKey> { ResultSetAdapters.aclKey(it) }
         )
@@ -105,6 +108,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     override fun loadAll(keys: Collection<AclKey>): MutableMap<AclKey, AclKeySet> {
         val data = PostgresIterable<Pair<AclKey, AclKey>>(
                 Supplier {
+
                     val connection = hds.connection
                     val ps = connection.prepareStatement(selectSql)
                     val arr = PostgresArrays.createUuidArrayOfArrays(
