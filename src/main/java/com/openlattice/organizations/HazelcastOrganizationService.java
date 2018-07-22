@@ -227,7 +227,16 @@ public class HazelcastOrganizationService {
 
     public void addMembers( AclKey orgAclKey, Set<Principal> members ) {
         checkState( orgAclKey.size() == 1, "Organization acl key should only be of length 1" );
-        checkState( members.stream().allMatch( PrincipalType.USER::equals ), "Can only add users to organizations." );
+        checkState( members
+                .stream()
+                .peek( principal -> {
+                    if ( !principal.getType().equals( PrincipalType.USER ) ) {
+                        logger.info( "Attempting to add non-user principal {} to organization {}",
+                                principal,
+                                orgAclKey );
+                    }
+                } )
+                .allMatch( PrincipalType.USER::equals ), "Can only add users to organizations." );
         var organizationId = orgAclKey.get( 0 );
 
         //Add members to member list.
