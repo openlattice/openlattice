@@ -43,8 +43,6 @@ public class BackgroundIndexingService {
     private final IMap<UUID, EntityType>   entityTypes;
     private final IMap<UUID, EntitySet>    entitySets;
 
-    private final String getDirtyEntities;
-
     public BackgroundIndexingService(
             HikariDataSource hds,
             HazelcastInstance hazelcastInstance,
@@ -69,18 +67,15 @@ public class BackgroundIndexingService {
                 + " OFFSET ?";
     }
 
-    private Set<UUID> getDirtyEntityKeyIds( UUID entitySetId, long offset ) {
-        String entitySetTableName = DataTables.entityTableName( entitySetId );
-
+    private Set<UUID> getDirtyEntityKeyIds( UUID entitySetId ) {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( getDirtyEntitiesQuery( entitySetId ) ) ) {
-            ps.setString( 1, entitySetTableName );
-            ps.setLong( 2, offset );
 
+            ps.setFetchSize( BLOCK_SIZE );
             ResultSet rs = ps.executeQuery();
 
             Set<UUID> result = Sets.newHashSet();
-            while ( rs.next() && result.size() < BLOCK_SIZE ) {
+            while ( rs.next() ) {
                 result.add( ResultSetAdapters.id( rs ) );
             }
             rs.close();
@@ -107,38 +102,29 @@ public class BackgroundIndexingService {
         return result;
     }
 
-    @Scheduled( fixedDelay = 500 )
+    @Scheduled( fixedRate = 500 )
     public void indexUpdatedEntitySets() {
 
         Map<UUID, Map<UUID, PropertyType>> propertyTypesByEntityType = getPropertyTypesByEntityTypesById();
 
         entitySets.values().forEach( entitySet -> {
             if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
+
                 UUID entitySetId = entitySet.getId();
                 Map<UUID, PropertyType> propertyTypeMap = propertyTypesByEntityType
                         .get( entitySet.getEntityTypeId() );
 
-                long offset = 0;
-                boolean finished = false;
+                Set<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId );
+                while ( entityKeyIdsToIndex.size() > 0 ) {
 
-                while ( !finished ) {
-                    Set<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId, offset );
+                    Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
+                            .getEntitiesById( entitySetId, propertyTypeMap, entityKeyIdsToIndex );
 
-                    if ( entityKeyIdsToIndex.size() > 0 ) {
+                    elasticsearchApi.createBulkEntityData( entitySetId, entitiesById );
 
-                        Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
-                                .getEntitiesById( entitySetId, propertyTypeMap, entityKeyIdsToIndex );
-
-                        elasticsearchApi.createBulkEntityData( entitySetId, entitiesById );
-                    }
-
-                    if ( entityKeyIdsToIndex.size() < BLOCK_SIZE ) {
-                        finished = true;
-                    } else {
-                        offset += BLOCK_SIZE;
-                    }
-
+                    entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId );
                 }
+
             }
         } );
 
