@@ -388,9 +388,11 @@ public class HazelcastOrganizationService {
              * this up afterwards.
              */
 
-            var adminPrincipals = PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
-                    .getAllUsersWithPrincipal( securePrincipalsManager
-                            .lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) ) ) );
+            var adminPrincipals = PrincipalSet.wrap( securePrincipalsManager.getAllUsersWithPrincipal(
+                    securePrincipalsManager.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) )
+                    .stream()
+                    .filter( p -> p.getType().equals( PrincipalType.USER ) )
+                    .collect( Collectors.toSet() ) );
 
             addMembers( organization.getAclKey(), adminPrincipals );
             adminPrincipals.forEach( admin -> authorizations
