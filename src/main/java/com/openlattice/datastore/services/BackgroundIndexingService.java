@@ -58,23 +58,22 @@ public class BackgroundIndexingService {
         this.entityTypes = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPES.name() );
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
 
-        // Properties
-        String LAST_INDEX = PostgresColumn.LAST_INDEX_FIELD;
-        String LAST_WRITE = PostgresColumn.LAST_WRITE_FIELD;
-
-        this.getDirtyEntities =
-                "SELECT id FROM $ WHERE " + LAST_INDEX + " < " + LAST_WRITE + " LIMIT " + String.valueOf( BLOCK_SIZE )
-                        + " OFFSET $";
-
         indexUpdatedEntitySets();
 
+    }
+
+    private String getDirtyEntitiesQuery( UUID entitySetId ) {
+        return "SELECT * FROM " + DataTables.entityTableName( entitySetId ) + " WHERE "
+                + PostgresColumn.LAST_INDEX_FIELD + " < " + PostgresColumn.LAST_WRITE_FIELD + " LIMIT " + String
+                .valueOf( BLOCK_SIZE )
+                + " OFFSET ?";
     }
 
     private Set<UUID> getDirtyEntityKeyIds( UUID entitySetId, long offset ) {
         String entitySetTableName = DataTables.entityTableName( entitySetId );
 
         try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( getDirtyEntities ) ) {
+                PreparedStatement ps = connection.prepareStatement( getDirtyEntitiesQuery( entitySetId ) ) ) {
             ps.setString( 1, entitySetTableName );
             ps.setLong( 2, offset );
 
@@ -125,7 +124,7 @@ public class BackgroundIndexingService {
                 while ( !finished ) {
                     Set<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId, offset );
 
-                    if (entityKeyIdsToIndex.size() > 0) {
+                    if ( entityKeyIdsToIndex.size() > 0 ) {
 
                         Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
                                 .getEntitiesById( entitySetId, propertyTypeMap, entityKeyIdsToIndex );
