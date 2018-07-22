@@ -75,12 +75,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                 val vMap = it.value.groupBy { it.size }
 
                 it.value.forEach {
-                    val arr1 = connection.createArrayOf(
-                            PostgresDatatype.UUID.sql(), (vMap[1] ?: ImmutableList.of()).toTypedArray()
-                    )
-                    val arr2 = connection.createArrayOf(
-                            PostgresDatatype.UUID.sql(), (vMap[1] ?: ImmutableList.of()).toTypedArray()
-                    )
+                    val arr1 = PostgresArrays.createUuidArrayOfArrays (connection, (vMap[1] ?: ImmutableList.of()).map{ (it as List<UUID>).toTypedArray() }.stream() )
+                    val arr2 = PostgresArrays.createUuidArrayOfArrays (connection, (vMap[2] ?: ImmutableList.of()).map{ (it as List<UUID>).toTypedArray() }.stream() )
 
                     ps2.setObject(1, arrKey)
                     ps2.setArray(2, arr1)
@@ -125,6 +121,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     @Timed
     override fun loadAll(keys: Collection<AclKey>): MutableMap<AclKey, AclKeySet> {
         val keyMap = keys.groupBy { it.size }
+
         val data = PostgresIterable<Pair<AclKey, AclKey>>(
                 Supplier {
                     val connection = hds.connection
