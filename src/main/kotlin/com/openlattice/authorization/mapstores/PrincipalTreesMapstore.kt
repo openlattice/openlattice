@@ -99,7 +99,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
         }, Function<ResultSet, AclKey> { ResultSetAdapters.aclKey(it) }
         )
         logger.info("Keys: {}", keys.toSet())
-        return keys;
+        return keys.toMutableList()
     }
 
     @Timed
