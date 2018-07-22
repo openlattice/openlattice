@@ -118,7 +118,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
                     for (i in 1..2) {
                         val arr = PostgresArrays.createUuidArrayOfArrays(
-                                connection, keyMap[i]!!.map { (it as List<UUID>).toTypedArray() }.stream()
+                                connection,
+                                (keyMap[i] ?: ImmutableList.of()).map { (it as List<UUID>).toTypedArray() }.stream()
                         )
                         ps.setArray(i, arr)
                     }
@@ -144,7 +145,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             it.prepareStatement(deleteSql).use {
                 for (i in 1..2) {
                     val arr = PostgresArrays.createUuidArrayOfArrays(
-                            connection, keyMap[i]!!.map { (it as List<UUID>).toTypedArray() }.stream()
+                            connection,
+                            (keyMap[i] ?: ImmutableList.of()).map { (it as List<UUID>).toTypedArray() }.stream()
                     )
                     it.setArray(i, arr)
                 }
