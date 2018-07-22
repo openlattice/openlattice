@@ -77,6 +77,21 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class manages organizations.
+ *
+ * An organization is a collection of principals and applications.
+ *
+ * Access to organizations is handled by the organization manager.
+ *
+ * Membership in an organization is stored in the membersOf field whcih is accessed via an IMAP. Only principals of type
+ * {@link PrincipalType#USER}. This is mainly because we don't store the principal type field along with the principal id.
+ * This may change in the future.
+ *
+ * While roles may create organizations they cannot be members. That is an organization created by a role will have no members
+ * but principals with that role will have the relevant level of access to that role. In addition, roles that create an
+ * organization will not inherit the organization role (as they are not members).
+ */
 public class HazelcastOrganizationService {
 
     private static final Logger                            logger = LoggerFactory
@@ -134,14 +149,37 @@ public class HazelcastOrganizationService {
                 "Unable to create securable principal for organization. This means the organization probably already exists." );
         createOrganization( organization );
 
-        //Add the organization principal to the creator marking them as a member of the organization
-        addMembers( organization.getAclKey(), ImmutableSet.of( principal ) );
-
-        //Create the admin role for the organization.
+        //Create the admin role for the organization and give it ownership of organization.
         var adminRole = createOrganizationAdminRole( organization.getSecurablePrincipal() );
         createRoleIfNotExists( principal, adminRole );
+        authorizations
+                .addPermission( organization.getAclKey(), adminRole.getPrincipal(), EnumSet.allOf( Permission.class ) );
 
-        //We add the user that created the organization to the admin role for the organization
+        /*
+         * Roles shouldn't be members of an organizations.
+         *
+         * Membership is currently defined as your principal having the
+         * organization principal.
+         *
+         * In order to function roles must have READ access on the organization and
+         */
+
+        switch ( principal.getType() ) {
+            case USER:
+                //Add the organization principal to the creator marking them as a member of the organization
+                addMembers( organization.getAclKey(), ImmutableSet.of( principal ) );
+                //Fall throught by design
+                break;
+            case ROLE:
+                //For a role we ensure that it has
+                logger.debug( "Creating an organization with no members, but accessible by {}", principal );
+            default:
+                throw new IllegalStateException( "Only users and roles can create organizations." );
+        }
+
+        //Grant the creator of the organizations
+        authorizations.addPermission( organization.getAclKey(), principal, EnumSet.allOf( Permission.class ) );
+        //We add the user/role that created the organization to the admin role for the organization
         addRoleToPrincipalInOrganization( organization.getId(), adminRole.getId(), principal );
         eventBus.post( new OrganizationCreatedEvent( organization ) );
     }
@@ -227,13 +265,31 @@ public class HazelcastOrganizationService {
 
     public void addMembers( AclKey orgAclKey, Set<Principal> members ) {
         checkState( orgAclKey.size() == 1, "Organization acl key should only be of length 1" );
+        checkState( members
+                .stream()
+                .peek( principal -> {
+                    if ( !principal.getType().equals( PrincipalType.USER ) ) {
+                        logger.info( "Attempting to add non-user principal {} to organization {}",
+                                principal,
+                                orgAclKey );
+                    }
+                } )
+                .map( Principal::getType )
+                .allMatch( PrincipalType.USER::equals ), "Can only add users to organizations." );
         var organizationId = orgAclKey.get( 0 );
-        membersOf.submitToKey( organizationId, new OrganizationMemberMerger( members ) );
-        //        addOrganizationToMembers( organizationId, members );
 
-        members.stream().filter( PrincipalType.USER::equals )
+        //Add members to member list.
+        membersOf.submitToKey( organizationId, new OrganizationMemberMerger( members ) );
+
+        //Add the organization principal to each user
+        members.stream()
+                //Grant read on the organization
+                .peek( principal -> authorizations
+                        .addPermission( orgAclKey, principal, EnumSet.of( Permission.READ ) ) )
                 .map( securePrincipalsManager::lookup )
+                //Assign organization principal.
                 .forEach( target -> securePrincipalsManager.addPrincipalToPrincipal( orgAclKey, target ) );
+
     }
 
     public void setMembers( UUID organizationId, Set<Principal> members ) {
@@ -302,9 +358,9 @@ public class HazelcastOrganizationService {
         authorizations.addPermission( role.getAclKey(), orgPrincipal.getPrincipal(), EnumSet.of( Permission.READ ) );
     }
 
-    public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal user ) {
+    public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {
         securePrincipalsManager.addPrincipalToPrincipal( new AclKey( organizationId, roleId ),
-                securePrincipalsManager.lookup( user ) );
+                securePrincipalsManager.lookup( principal ) );
     }
 
     private Collection<Role> getRolesInFull( UUID organizationId ) {
@@ -351,28 +407,39 @@ public class HazelcastOrganizationService {
             descriptions.putIfAbsent( organization.getId(), organization.getDescription() );
             autoApprovedEmailDomainsOf.putIfAbsent( organization.getId(), DelegatedStringSet.wrap( new HashSet<>() ) );
             apps.putIfAbsent( organization.getId(), DelegatedUUIDSet.wrap( new HashSet<>() ) );
+            membersOf.putIfAbsent( organization.getId(), new PrincipalSet( ImmutableSet.of() ) );
 
             logger.info( "Synchronizing roles" );
             var roles = securePrincipalsManager.getAllRolesInOrganization( organization.getId() );
-
+            //Grant the organization principal read permission on each principal
             for ( SecurablePrincipal role : roles ) {
                 authorizations.setSecurableObjectType( role.getAclKey(), SecurableObjectType.Role );
                 authorizations
                         .addPermission( role.getAclKey(), organization.getPrincipal(), EnumSet.of( Permission.READ ) );
             }
+
             logger.info( "Synchronizing members" );
             PrincipalSet principals = PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
                     .getAllUsersWithPrincipal( organization.getAclKey() ) ) );
-            membersOf.putIfAbsent( organization.getId(), principals );
-            for ( Principal user : principals ) {
-                authorizations.addPermission( organization.getAclKey(), user, EnumSet.of( Permission.READ ) );
-            }
+            //Add all users who have the organization role to the organizaton.
             addMembers( organization.getAclKey(), principals );
 
-            addMembers( organization.getAclKey(),
-                    PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
-                            .getAllUsersWithPrincipal( securePrincipalsManager
-                                    .lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) ) ) ) );
+            /*
+             * This is a one time thing so that admins at this point in time have access to and can fix organizations.
+             *
+             * For simplicity we are going to add all admin users into all organizations. We will have to manually clean
+             * this up afterwards.
+             */
+
+            logger.info("Synchronizing admins.");
+            var adminPrincipals = PrincipalSet.wrap( securePrincipalsManager.getAllUsersWithPrincipal(
+                    securePrincipalsManager.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) )
+                    .stream()
+                    .collect( Collectors.toSet() ) );
+
+            addMembers( organization.getAclKey(), adminPrincipals );
+            adminPrincipals.forEach( admin -> authorizations
+                    .addPermission( organization.getAclKey(), admin, EnumSet.allOf( Permission.class ) ) );
 
         }
     }
@@ -384,7 +451,7 @@ public class HazelcastOrganizationService {
         return new Role( Optional.empty(),
                 organization.getId(),
                 rolePrincipal,
-                organization.getName() + " - ADMIN",
+                principaleTitle,
                 Optional.of( "Administrators of this organization" ) );
     }
 

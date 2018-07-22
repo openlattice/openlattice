@@ -27,6 +27,7 @@ import static com.openlattice.postgres.DataTables.LAST_WRITE;
 import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ACL_KEY_SET_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ANALYZER;
 import static com.openlattice.postgres.PostgresColumn.APP_ID;
 import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
@@ -65,6 +66,7 @@ import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_IDS;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
@@ -249,6 +251,10 @@ public final class ResultSetAdapters {
         long msb = rs.getLong( MSB_FIELD );
         long lsb = rs.getLong( LSB_FIELD );
         return new Range( base, msb, lsb );
+    }
+
+    public static AclKey principalOfAclKey( ResultSet rs ) throws SQLException {
+          return new AclKey( PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() ) );
     }
 
     public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {
@@ -731,8 +737,8 @@ public final class ResultSetAdapters {
                     break;
                 case Binary:
                     Object o = arr.getArray();
-                    logger.info("Reading byte array with class: {}", o.getClass().getSimpleName());
-                    logger.info("Reading byte array with class: {}", o.getClass().getCanonicalName());
+                    logger.info( "Reading byte array with class: {}", o.getClass().getSimpleName() );
+                    logger.info( "Reading byte array with class: {}", o.getClass().getCanonicalName() );
                     byte[][] raw = (byte[][]) arr.getArray();
                     objects = Arrays.asList( raw );
                     break;

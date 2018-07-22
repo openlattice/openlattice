@@ -38,11 +38,11 @@ import com.openlattice.edm.type.Analyzer;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public final class PostgresColumn {
-    public static final String                   ACL_KEY_FIELD               = "acl_key";
-    public static final PostgresColumnDefinition ACL_KEY                     =
+    public static final String                   ACL_KEY_FIELD     = "acl_key";
+    public static final PostgresColumnDefinition ACL_KEY           =
             new PostgresColumnDefinition( ACL_KEY_FIELD, UUID_ARRAY );
-    public static final String                   ACL_KEY_SET_FIELD           = "acl_key_set";
-    public static final PostgresColumnDefinition ACL_KEY_SET                 =
+    public static final String                   ACL_KEY_SET_FIELD = "acl_key_set";
+    public static final PostgresColumnDefinition ACL_KEY_SET       =
             new PostgresColumnDefinition( ACL_KEY_SET_FIELD, UUID_ARRAY_ARRAY );
     public static final String                   ALLOWED_EMAIL_DOMAINS_FIELD = "allowed_email_domains";
     public static final PostgresColumnDefinition ALLOWED_EMAIL_DOMAINS       =
@@ -229,6 +229,8 @@ public final class PostgresColumn {
     public static final String                   PRINCIPAL_ID_FIELD          = "principal_id";
     public static final PostgresColumnDefinition PRINCIPAL_ID                =
             new PostgresColumnDefinition( PRINCIPAL_ID_FIELD, TEXT );
+    public static final PostgresColumnDefinition PRINCIPAL_OF_ACL_KEY =
+            new PostgresColumnDefinition( "principal_of_acl_key", UUID_ARRAY );
     public static final String                   PRINCIPAL_TYPE_FIELD        = "principal_type";
     public static final PostgresColumnDefinition PRINCIPAL_TYPE              =
             new PostgresColumnDefinition( PRINCIPAL_TYPE_FIELD, TEXT );
