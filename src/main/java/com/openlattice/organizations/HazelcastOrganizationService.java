@@ -77,6 +77,21 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class manages organizations.
+ *
+ * An organization is a collection of principals and applications.
+ *
+ * Access to organizations is handled by the organization manager.
+ *
+ * Membership in an organization is stored in the membersOf field whcih is accessed via an IMAP. Only principals of type
+ * {@link PrincipalType#USER}. This is mainly because we don't store the principal type field along with the principal id.
+ * This may change in the future.
+ *
+ * While roles may create organizations they cannot be members. That is an organization created by a role will have no members
+ * but principals with that role will have the relevant level of access to that role. In addition, roles that create an
+ * organization will not inherit the organization role (as they are not members).
+ */
 public class HazelcastOrganizationService {
 
     private static final Logger                            logger = LoggerFactory
@@ -134,14 +149,37 @@ public class HazelcastOrganizationService {
                 "Unable to create securable principal for organization. This means the organization probably already exists." );
         createOrganization( organization );
 
-        //Add the organization principal to the creator marking them as a member of the organization
-        addMembers( organization.getAclKey(), ImmutableSet.of( principal ) );
-
-        //Create the admin role for the organization.
+        //Create the admin role for the organization and give it ownership of organization.
         var adminRole = createOrganizationAdminRole( organization.getSecurablePrincipal() );
         createRoleIfNotExists( principal, adminRole );
+        authorizations
+                .addPermission( organization.getAclKey(), adminRole.getPrincipal(), EnumSet.allOf( Permission.class ) );
 
-        //We add the user that created the organization to the admin role for the organization
+        /*
+         * Roles shouldn't be members of an organizations.
+         *
+         * Membership is currently defined as your principal having the
+         * organization principal.
+         *
+         * In order to function roles must have READ access on the organization and
+         */
+
+        switch ( principal.getType() ) {
+            case USER:
+                //Add the organization principal to the creator marking them as a member of the organization
+                addMembers( organization.getAclKey(), ImmutableSet.of( principal ) );
+                //Fall throught by design
+                break;
+            case ROLE:
+                //For a role we ensure that it has
+                logger.debug( "Creating an organization with no members, but accessible by {}", principal );
+            default:
+                throw new IllegalStateException( "Only users and roles can create organizations." );
+        }
+
+        //Grant the creator of the organizations
+        authorizations.addPermission( organization.getAclKey(), principal, EnumSet.allOf( Permission.class );
+        //We add the user/role that created the organization to the admin role for the organization
         addRoleToPrincipalInOrganization( organization.getId(), adminRole.getId(), principal );
         eventBus.post( new OrganizationCreatedEvent( organization ) );
     }
@@ -319,9 +357,9 @@ public class HazelcastOrganizationService {
         authorizations.addPermission( role.getAclKey(), orgPrincipal.getPrincipal(), EnumSet.of( Permission.READ ) );
     }
 
-    public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal user ) {
+    public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {
         securePrincipalsManager.addPrincipalToPrincipal( new AclKey( organizationId, roleId ),
-                securePrincipalsManager.lookup( user ) );
+                securePrincipalsManager.lookup( principal ) );
     }
 
     private Collection<Role> getRolesInFull( UUID organizationId ) {
@@ -395,7 +433,6 @@ public class HazelcastOrganizationService {
             var adminPrincipals = PrincipalSet.wrap( securePrincipalsManager.getAllUsersWithPrincipal(
                     securePrincipalsManager.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) )
                     .stream()
-                    .filter( p -> p.getType().equals( PrincipalType.USER ) )
                     .collect( Collectors.toSet() ) );
 
             addMembers( organization.getAclKey(), adminPrincipals );
@@ -412,7 +449,7 @@ public class HazelcastOrganizationService {
         return new Role( Optional.empty(),
                 organization.getId(),
                 rolePrincipal,
-                organization.getName() + " - ADMIN",
+                principaleTitle,
                 Optional.of( "Administrators of this organization" ) );
     }
 
