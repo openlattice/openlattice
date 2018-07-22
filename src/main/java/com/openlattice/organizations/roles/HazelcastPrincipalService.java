@@ -230,6 +230,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     public Collection<Principal> getAllUsersWithPrincipal( AclKey aclKey ) {
         return getAllPrincipalsWithPrincipal( aclKey )
                 .stream()
+                .filter( sp -> sp.getPrincipalType().equals( PrincipalType.USER ) )
                 .map( SecurablePrincipal::getPrincipal )
                 .collect( Collectors.toList() );
     }
