@@ -314,6 +314,7 @@ public final class PostgresTable {
     static {
         PRINCIPAL_TREES.addIndexes(
                 new PostgresIndexDefinition( PRINCIPAL_TREES, ACL_KEY )
+                        .method( IndexMethod.GIN )
                         .name( "principal_trees_acl_key_idx" )
                         .ifNotExists()
         );
