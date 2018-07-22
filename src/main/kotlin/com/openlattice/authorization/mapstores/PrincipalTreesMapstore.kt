@@ -21,6 +21,7 @@
 
 package com.openlattice.authorization.mapstores
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableList
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapStoreConfig
@@ -31,8 +32,9 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.ACL_KEY
-import com.openlattice.postgres.PostgresColumn.ACL_KEY_SET
+import com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY
 import com.openlattice.postgres.PostgresDatatype
+import com.openlattice.postgres.PostgresTable.PRINCIPAL_TREES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -45,45 +47,18 @@ import java.util.function.Supplier
 
 /**
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Quick and dirty mapstore for principal trees.
  */
-private val insertSql = "INSERT INTO principal_trees (${ACL_KEY.name},${ACL_KEY_SET.name}) " +
+private val insertSql = "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
         "VALUES (?, ?) " +
         "ON CONFLICT DO NOTHING"
-private val selectSql = "SELECT * FROM principal_trees WHERE ${ACL_KEY.name} IN (SELECT ?)"
-private val deleteSql = "DELETE FROM principal_trees WHERE ${ACL_KEY.name} IN (SELECT ?)"
-private val deleteNotIn = "DELETE FROM principal_trees WHERE ${ACL_KEY.name} = ? AND ${ACL_KEY_SET.name} NOT IN (SELECT ?)"
+private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN (SELECT ?)"
+private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN (SELECT ?)"
+private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ? AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (SELECT ?)"
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
 class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisteringMapStore<AclKey, AclKeySet> {
-    override fun getMapName(): String {
-        return HazelcastMap.PRINCIPAL_TREES.name;
-    }
-
-    override fun getTable(): String {
-        return "principal_trees";
-    }
-
-    override fun generateTestKey(): AclKey {
-        return TestDataFactory.aclKey()
-    }
-
-    override fun generateTestValue(): AclKeySet {
-        return AclKeySet(ImmutableList.of(generateTestKey(), generateTestKey(), generateTestKey()))
-    }
-
-    override fun getMapStoreConfig(): MapStoreConfig {
-        return MapStoreConfig()
-                .setImplementation(this)
-                .setEnabled(true)
-                .setWriteDelaySeconds(0)
-    }
-
-    override fun getMapConfig(): MapConfig {
-        return MapConfig(mapName)
-                .setMapStoreConfig(mapStoreConfig)
-    }
-
+    @Timed
     override fun storeAll(map: Map<AclKey, AclKeySet>) {
         hds.connection.use {
             val connection = it
@@ -121,10 +96,12 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
         )
     }
 
+    @Timed
     override fun store(key: AclKey, value: AclKeySet) {
         storeAll(mapOf(key to value))
     }
 
+    @Timed
     override fun loadAll(keys: Collection<AclKey>): MutableMap<AclKey, AclKeySet> {
         val data = PostgresIterable<Pair<AclKey, AclKey>>(
                 Supplier {
@@ -148,6 +125,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
         return map
     }
 
+    @Timed
     override fun deleteAll(keys: Collection<AclKey>) {
         hds.connection.use {
             val connection = it
@@ -161,13 +139,43 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
         }
     }
 
+    @Timed
     override fun load(key: AclKey): AclKeySet? {
         val loaded = loadAll(listOf(key))
         return loaded[key]
     }
 
+    @Timed
     override fun delete(key: AclKey) {
         deleteAll(listOf(key))
+    }
+
+    override fun generateTestKey(): AclKey {
+        return TestDataFactory.aclKey()
+    }
+
+    override fun generateTestValue(): AclKeySet {
+        return AclKeySet(ImmutableList.of(generateTestKey(), generateTestKey(), generateTestKey()))
+    }
+
+    override fun getMapStoreConfig(): MapStoreConfig {
+        return MapStoreConfig()
+                .setImplementation(this)
+                .setEnabled(true)
+                .setWriteDelaySeconds(0)
+    }
+
+    override fun getMapName(): String {
+        return HazelcastMap.PRINCIPAL_TREES.name;
+    }
+
+    override fun getTable(): String {
+        return PRINCIPAL_TREES.name
+    }
+
+    override fun getMapConfig(): MapConfig {
+        return MapConfig(mapName)
+                .setMapStoreConfig(mapStoreConfig)
     }
 
     companion object {

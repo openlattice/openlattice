@@ -304,10 +304,10 @@ public class MapstoresPod {
         return new VertexIdsAfterLinkingMapstore( hikariDataSource );
     }
 
-    @Bean
-    public SelfRegisteringMapStore<AclKey, AclKeySet> aclKeySetMapstore() {
-        return new PrincipalTreeMapstore( hikariDataSource );
-    }
+//    @Bean
+//    public SelfRegisteringMapStore<AclKey, AclKeySet> aclKeySetMapstore() {
+//        return new PrincipalTreeMapstore( hikariDataSource );
+//    }
 
     @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
