@@ -53,10 +53,10 @@ import java.util.function.Supplier
 private val insertSql = "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
         "VALUES (?, ?) " +
         "ON CONFLICT DO NOTHING"
-private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ANY(?::uuid[][]) OR ${ACL_KEY.name} = ANY(?::uuid[][])"
-private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ANY(?::uuid[][]) OR ${ACL_KEY.name} = ANY(?::uuid[][])"
+private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} <@ ? OR ${ACL_KEY.name} <@ ?"
+private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name}  <@ ? OR ${ACL_KEY.name} <@ ?"
 private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} " +
-        "WHERE ${ACL_KEY.name} = ? AND NOT( ${PRINCIPAL_OF_ACL_KEY.name} = ANY(?::uuid[][]) ) AND NOT ( ${PRINCIPAL_OF_ACL_KEY.name} = ANY(?::uuid[][]) )"
+        "WHERE ${ACL_KEY.name} = ? AND NOT( ${PRINCIPAL_OF_ACL_KEY.name} <@ ?) AND NOT ( ${PRINCIPAL_OF_ACL_KEY.name} <@ ? )"
 private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)!!
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
