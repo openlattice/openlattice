@@ -115,7 +115,7 @@ public class HazelcastOrganizationService {
                 apps );
         this.principals = checkNotNull( principals );
         this.securePrincipalsManager = securePrincipalsManager;
-//        fixOrganizations();
+                fixOrganizations();
     }
 
     public OrganizationPrincipal getOrganization( Principal p ) {
@@ -227,13 +227,21 @@ public class HazelcastOrganizationService {
 
     public void addMembers( AclKey orgAclKey, Set<Principal> members ) {
         checkState( orgAclKey.size() == 1, "Organization acl key should only be of length 1" );
+        checkState( members.stream().allMatch( PrincipalType.USER::equals ), "Can only add users to organizations." );
         var organizationId = orgAclKey.get( 0 );
-        membersOf.submitToKey( organizationId, new OrganizationMemberMerger( members ) );
-        //        addOrganizationToMembers( organizationId, members );
 
-        members.stream().filter( PrincipalType.USER::equals )
+        //Add members to member list.
+        membersOf.submitToKey( organizationId, new OrganizationMemberMerger( members ) );
+
+        //Add the organization principal to each user
+        members.stream()
+                //Grant read on the organization
+                .peek( principal -> authorizations
+                        .addPermission( orgAclKey, principal, EnumSet.of( Permission.READ ) ) )
                 .map( securePrincipalsManager::lookup )
+                //Assign organization principal.
                 .forEach( target -> securePrincipalsManager.addPrincipalToPrincipal( orgAclKey, target ) );
+
     }
 
     public void setMembers( UUID organizationId, Set<Principal> members ) {
@@ -354,25 +362,39 @@ public class HazelcastOrganizationService {
 
             logger.info( "Synchronizing roles" );
             var roles = securePrincipalsManager.getAllRolesInOrganization( organization.getId() );
-
+            //Grant the organization principal read permission on each principal
             for ( SecurablePrincipal role : roles ) {
                 authorizations.setSecurableObjectType( role.getAclKey(), SecurableObjectType.Role );
                 authorizations
                         .addPermission( role.getAclKey(), organization.getPrincipal(), EnumSet.of( Permission.READ ) );
             }
+
             logger.info( "Synchronizing members" );
             PrincipalSet principals = PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
                     .getAllUsersWithPrincipal( organization.getAclKey() ) ) );
             membersOf.putIfAbsent( organization.getId(), principals );
+            //Grant each user read permission on the organization
             for ( Principal user : principals ) {
                 authorizations.addPermission( organization.getAclKey(), user, EnumSet.of( Permission.READ ) );
             }
+
+            //Add all users who have the organization role to the organizaton.
             addMembers( organization.getAclKey(), principals );
 
-            addMembers( organization.getAclKey(),
-                    PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
-                            .getAllUsersWithPrincipal( securePrincipalsManager
-                                    .lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) ) ) ) );
+            /*
+             * This is a one time thing so that admins at this point in time have access to and can fix organizations.
+             *
+             * For simplicity we are going to add all admin users into all organizations. We will have to manually clean
+             * this up afterwards.
+             */
+
+            var adminPrincipals = PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
+                    .getAllUsersWithPrincipal( securePrincipalsManager
+                            .lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) ) ) );
+
+            addMembers( organization.getAclKey(), adminPrincipals );
+            adminPrincipals.forEach( admin -> authorizations
+                    .addPermission( organization.getAclKey(), admin, EnumSet.allOf( Permission.class ) ) );
 
         }
     }
