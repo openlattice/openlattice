@@ -62,9 +62,7 @@ public class BackgroundIndexingService {
 
     private String getDirtyEntitiesQuery( UUID entitySetId ) {
         return "SELECT * FROM " + DataTables.entityTableName( entitySetId ) + " WHERE "
-                + PostgresColumn.LAST_INDEX_FIELD + " < " + PostgresColumn.LAST_WRITE_FIELD + " LIMIT " + String
-                .valueOf( BLOCK_SIZE )
-                + " OFFSET ?";
+                + PostgresColumn.LAST_INDEX_FIELD + " < " + PostgresColumn.LAST_WRITE_FIELD;
     }
 
     private Set<UUID> getDirtyEntityKeyIds( UUID entitySetId ) {
