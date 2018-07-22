@@ -50,9 +50,9 @@ import java.util.function.Supplier
 private val insertSql = "INSERT INTO principal_tree (${ACL_KEY.name},${ACL_KEY_SET.name}) " +
         "VALUES (?, ?) " +
         "ON CONFLICT DO NOTHING"
-private val selectSql = "SELECT * FROM principal_tree WHERE ${ACL_KEY.name} IN (SELECT UNNEST( ?::uuid[] ))"
-private val deleteSql = "DELETE FROM principal_tree WHERE ${ACL_KEY.name} IN (SELECT UNNEST( ?::uuid[] ))"
-private val deleteNotIn = "DELETE FROM principal_tree WHERE ${ACL_KEY.name} = ? AND ${ACL_KEY_SET.name} NOT IN (SELECT UNNEST( ?::uuid[] ))"
+private val selectSql = "SELECT * FROM principal_tree WHERE ${ACL_KEY.name} IN (SELECT ?)"
+private val deleteSql = "DELETE FROM principal_tree WHERE ${ACL_KEY.name} IN (SELECT ?)"
+private val deleteNotIn = "DELETE FROM principal_tree WHERE ${ACL_KEY.name} = ? AND ${ACL_KEY_SET.name} NOT IN (SELECT ?)"
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
 class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisteringMapStore<AclKey, AclKeySet> {
@@ -91,7 +91,9 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             val ps2 = connection.prepareStatement(deleteNotIn)
             map.forEach {
                 val aclKey = it.key
-                val arrKey = connection.createArrayOf(PostgresDatatype.UUID.sql(), (aclKey as List<UUID>).toTypedArray())
+                val arrKey = connection.createArrayOf(
+                        PostgresDatatype.UUID.sql(), (aclKey as List<UUID>).toTypedArray()
+                )
                 it.value.forEach {
                     val arr = connection.createArrayOf(PostgresDatatype.UUID.sql(), (it as List<UUID>).toTypedArray())
                     ps.setObject(1, arrKey)
@@ -151,7 +153,6 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
         hds.connection.use {
             val connection = it
             it.prepareStatement(deleteSql).use {
-                val ps = it
                 val arr = PostgresArrays.createUuidArrayOfArrays(
                         connection, keys.map { (it as List<UUID>).toTypedArray() }.stream()
                 )
