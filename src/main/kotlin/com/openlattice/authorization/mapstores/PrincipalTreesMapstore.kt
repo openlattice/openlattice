@@ -53,9 +53,10 @@ import java.util.function.Supplier
 private val insertSql = "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
         "VALUES (?, ?) " +
         "ON CONFLICT DO NOTHING"
-private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN ? OR ${ACL_KEY.name} IN ?"
-private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN ? OR ${ACL_KEY.name} IN ?"
-private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ? AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (SELECT ?)"
+private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ANY(?) OR ${ACL_KEY.name} = ANY(?)"
+private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ANY(?) OR ${ACL_KEY.name} = ANY(?)"
+private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} " +
+        "WHERE ${ACL_KEY.name} = ? AND NOT( ${PRINCIPAL_OF_ACL_KEY.name} = ANY(?) ) AND NOT ( ${PRINCIPAL_OF_ACL_KEY.name} = ANY(?) )"
 private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)!!
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
@@ -70,15 +71,28 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                 val arrKey = connection.createArrayOf(
                         PostgresDatatype.UUID.sql(), (it.key as List<UUID>).toTypedArray()
                 )
+
+                val vMap = it.value.groupBy { it.size }
+
                 it.value.forEach {
-                    val arr = connection.createArrayOf(PostgresDatatype.UUID.sql(), (it as List<UUID>).toTypedArray())
-                    ps.setObject(1, arrKey)
-                    ps.setArray(2, arr)
-                    ps.addBatch()
+                    val arr1 = connection.createArrayOf(
+                            PostgresDatatype.UUID.sql(), (vMap[1] ?: ImmutableList.of()).toTypedArray()
+                    )
+                    val arr2 = connection.createArrayOf(
+                            PostgresDatatype.UUID.sql(), (vMap[1] ?: ImmutableList.of()).toTypedArray()
+                    )
 
                     ps2.setObject(1, arrKey)
-                    ps2.setArray(2, arr)
+                    ps2.setArray(2, arr1)
+                    ps2.setArray(3, arr2)
                     ps2.addBatch()
+
+                    ps.setObject(1, arrKey)
+                    ps.setArray(2, arr1)
+                    ps.addBatch()
+                    ps.setObject(1, arrKey)
+                    ps.setArray(2, arr2)
+                    ps.addBatch()
                 }
             }
             ps2.executeBatch()
