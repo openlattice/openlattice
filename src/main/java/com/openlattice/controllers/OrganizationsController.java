@@ -90,7 +90,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                         org.getSecurablePrincipal(),
                         org.getAutoApprovedEmails(),
                         org.getMembers(),
-                        getAuthorizedRoles( org.getId(), Permission.READ ),
+                        //TODO: If you're an organization you can view its roles.
+                        org.getRoles(),
                         org.getApps() ) )
                 .filter( Predicates.notNull()::apply )
                 ::iterator;
