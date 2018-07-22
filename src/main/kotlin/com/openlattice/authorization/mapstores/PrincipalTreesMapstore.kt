@@ -98,8 +98,9 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             StatementHolder(connection, stmt, rs)
         }, Function<ResultSet, AclKey> { ResultSetAdapters.aclKey(it) }
         )
-        logger.info("Keys: {}", keys.toSet())
-        return keys.toMutableList()
+        val keyList = keys.toMutableList()
+        logger.info("Keys: {}", keyList)
+        return keyList
     }
 
     @Timed
