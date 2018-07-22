@@ -90,9 +90,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             val ps = connection.prepareStatement(insertSql)
             val ps2 = connection.prepareStatement(deleteNotIn)
             map.forEach {
-                val aclKey = it.key
                 val arrKey = connection.createArrayOf(
-                        PostgresDatatype.UUID.sql(), (aclKey as List<UUID>).toTypedArray()
+                        PostgresDatatype.UUID.sql(), (it.key as List<UUID>).toTypedArray()
                 )
                 it.value.forEach {
                     val arr = connection.createArrayOf(PostgresDatatype.UUID.sql(), (it as List<UUID>).toTypedArray())
