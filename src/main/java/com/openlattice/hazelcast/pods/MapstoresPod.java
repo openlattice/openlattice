@@ -304,10 +304,10 @@ public class MapstoresPod {
         return new VertexIdsAfterLinkingMapstore( hikariDataSource );
     }
 
-//    @Bean
-//    public SelfRegisteringMapStore<AclKey, AclKeySet> aclKeySetMapstore() {
-//        return new PrincipalTreeMapstore( hikariDataSource );
-//    }
+    @Bean
+    public SelfRegisteringMapStore<AclKey, AclKeySet> aclKeySetMapstore() {
+        return new PrincipalTreeMapstore( hikariDataSource );
+    }
 
     @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
@@ -344,16 +344,6 @@ public class MapstoresPod {
     public SelfRegisteringMapStore<AppConfigKey, AppTypeSetting> appConfigMapstore() {
         return new AppConfigMapstore( hikariDataSource );
     }
-    //
-    //    @Bean
-    //    public SelfRegisteringMapStore<EntityDataKey, EntityDataValue> entityDataMapstore() {
-    //        return new DataMapstoreProxy(
-    //                ptMgr,
-    //                hikariDataSource,
-    //                propertyTypeMapstore(),
-    //                entitySetMapstore(),
-    //                entityTypeMapstore() );
-    //    }
 
     @Bean
     public SelfRegisteringMapStore<Long, Range> idGenerationMapstore() {

@@ -252,7 +252,7 @@ public final class ResultSetAdapters {
     }
 
     public static AclKey principalOfAclKey( ResultSet rs ) throws SQLException {
-        return new AclKey( PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() ) );
+          return new AclKey( PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() ) );
     }
 
     public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {
