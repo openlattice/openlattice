@@ -368,6 +368,7 @@ public class HazelcastOrganizationService {
             descriptions.putIfAbsent( organization.getId(), organization.getDescription() );
             autoApprovedEmailDomainsOf.putIfAbsent( organization.getId(), DelegatedStringSet.wrap( new HashSet<>() ) );
             apps.putIfAbsent( organization.getId(), DelegatedUUIDSet.wrap( new HashSet<>() ) );
+            membersOf.putIfAbsent( organization.getId(), new PrincipalSet( ImmutableSet.of() ) );
 
             logger.info( "Synchronizing roles" );
             var roles = securePrincipalsManager.getAllRolesInOrganization( organization.getId() );
@@ -381,12 +382,6 @@ public class HazelcastOrganizationService {
             logger.info( "Synchronizing members" );
             PrincipalSet principals = PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
                     .getAllUsersWithPrincipal( organization.getAclKey() ) ) );
-            membersOf.putIfAbsent( organization.getId(), principals );
-            //Grant each user read permission on the organization
-            for ( Principal user : principals ) {
-                authorizations.addPermission( organization.getAclKey(), user, EnumSet.of( Permission.READ ) );
-            }
-
             //Add all users who have the organization role to the organizaton.
             addMembers( organization.getAclKey(), principals );
 
