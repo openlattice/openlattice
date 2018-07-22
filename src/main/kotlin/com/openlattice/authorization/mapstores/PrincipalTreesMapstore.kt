@@ -47,12 +47,12 @@ import java.util.function.Supplier
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-private val insertSql = "INSERT INTO principal_tree (${ACL_KEY.name},${ACL_KEY_SET.name}) " +
+private val insertSql = "INSERT INTO principal_trees (${ACL_KEY.name},${ACL_KEY_SET.name}) " +
         "VALUES (?, ?) " +
         "ON CONFLICT DO NOTHING"
-private val selectSql = "SELECT * FROM principal_tree WHERE ${ACL_KEY.name} IN (SELECT ?)"
-private val deleteSql = "DELETE FROM principal_tree WHERE ${ACL_KEY.name} IN (SELECT ?)"
-private val deleteNotIn = "DELETE FROM principal_tree WHERE ${ACL_KEY.name} = ? AND ${ACL_KEY_SET.name} NOT IN (SELECT ?)"
+private val selectSql = "SELECT * FROM principal_trees WHERE ${ACL_KEY.name} IN (SELECT ?)"
+private val deleteSql = "DELETE FROM principal_trees WHERE ${ACL_KEY.name} IN (SELECT ?)"
+private val deleteNotIn = "DELETE FROM principal_trees WHERE ${ACL_KEY.name} = ? AND ${ACL_KEY_SET.name} NOT IN (SELECT ?)"
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
 class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisteringMapStore<AclKey, AclKeySet> {
