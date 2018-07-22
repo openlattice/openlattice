@@ -431,6 +431,7 @@ public class HazelcastOrganizationService {
              * this up afterwards.
              */
 
+            logger.info("Synchronizing admins.");
             var adminPrincipals = PrincipalSet.wrap( securePrincipalsManager.getAllUsersWithPrincipal(
                     securePrincipalsManager.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) )
                     .stream()
