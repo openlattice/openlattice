@@ -73,21 +73,22 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                 )
 
                 val vMap = it.value.groupBy { it.size }
+                val deleteArr1 = PostgresArrays.createUuidArrayOfArrays(
+                        connection, (vMap[1] ?: ImmutableList.of()).map { (it as List<UUID>).toTypedArray() }.stream()
+                )
+                val deleteArr2 = PostgresArrays.createUuidArrayOfArrays(
+                        connection, (vMap[2] ?: ImmutableList.of()).map { (it as List<UUID>).toTypedArray() }.stream()
+                )
+
+                ps2.setObject(1, arrKey)
+                ps2.setArray(2, deleteArr1)
+                ps2.setArray(3, deleteArr2)
+                ps2.addBatch()
 
                 it.value.forEach {
-                    val arr1 = PostgresArrays.createUuidArrayOfArrays (connection, (vMap[1] ?: ImmutableList.of()).map{ (it as List<UUID>).toTypedArray() }.stream() )
-                    val arr2 = PostgresArrays.createUuidArrayOfArrays (connection, (vMap[2] ?: ImmutableList.of()).map{ (it as List<UUID>).toTypedArray() }.stream() )
-
-                    ps2.setObject(1, arrKey)
-                    ps2.setArray(2, arr1)
-                    ps2.setArray(3, arr2)
-                    ps2.addBatch()
-
+                    val insertArr = PostgresArrays.createUuidArray(connection, it)
                     ps.setObject(1, arrKey)
-                    ps.setArray(2, arr1)
-                    ps.addBatch()
-                    ps.setObject(1, arrKey)
-                    ps.setArray(2, arr2)
+                    ps.setArray(2, insertArr)
                     ps.addBatch()
                 }
             }
