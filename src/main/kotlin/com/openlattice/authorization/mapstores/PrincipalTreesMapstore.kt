@@ -57,6 +57,7 @@ private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.n
 private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN (SELECT ?)"
 private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ? AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (SELECT ?)"
 private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)!!
+
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
 class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisteringMapStore<AclKey, AclKeySet> {
     @Timed
@@ -88,7 +89,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     override fun loadAllKeys(): MutableIterable<AclKey> {
-        return PostgresIterable<AclKey>(Supplier {
+        val keys = PostgresIterable<AclKey>(Supplier {
             logger.info("Load all iterator requested for ${this.mapName}")
             val connection = hds.connection
             val stmt = connection.createStatement()
@@ -97,6 +98,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             StatementHolder(connection, stmt, rs)
         }, Function<ResultSet, AclKey> { ResultSetAdapters.aclKey(it) }
         )
+        logger.info("Keys: {}", keys.toSet())
+        return keys;
     }
 
     @Timed
@@ -164,6 +167,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     override fun getMapStoreConfig(): MapStoreConfig {
         return MapStoreConfig()
+                .setInitialLoadMode(MapStoreConfig.InitialLoadMode.EAGER)
                 .setImplementation(this)
                 .setEnabled(true)
                 .setWriteDelaySeconds(0)
