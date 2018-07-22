@@ -52,6 +52,7 @@ private val insertSql = "INSERT INTO principal_tree (${ACL_KEY.name},${ACL_KEY_S
         "ON CONFLICT DO NOTHING"
 private val selectSql = "SELECT * FROM principal_tree WHERE ${ACL_KEY.name} IN (SELECT UNNEST( ?::uuid[] ))"
 private val deleteSql = "DELETE FROM principal_tree WHERE ${ACL_KEY.name} IN (SELECT UNNEST( ?::uuid[] ))"
+private val deleteNotIn = "DELETE FROM principal_tree WHERE ${ACL_KEY.name} = ? AND ${ACL_KEY_SET.name} NOT IN (SELECT UNNEST( ?::uuid[] ))"
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
 class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisteringMapStore<AclKey, AclKeySet> {
@@ -87,6 +88,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
         hds.connection.use {
             val connection = it
             val ps = connection.prepareStatement(insertSql)
+            val ps2 = connection.prepareStatement(deleteNotIn)
             map.forEach {
                 val aclKey = it.key
                 it.value.forEach {
@@ -94,10 +96,17 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     ps.setObject(1, aclKey)
                     ps.setArray(2, arr)
                     ps.addBatch()
+
+                    ps2.setObject(1, aclKey)
+                    ps2.setArray(2, arr)
+                    ps2.addBatch()
                 }
             }
             ps.executeBatch()
+            ps2.executeBatch()
+
         }
+
     }
 
     override fun loadAllKeys(): MutableIterable<AclKey> {
