@@ -274,6 +274,7 @@ public class HazelcastOrganizationService {
                                 orgAclKey );
                     }
                 } )
+                .map( Principal::getType )
                 .allMatch( PrincipalType.USER::equals ), "Can only add users to organizations." );
         var organizationId = orgAclKey.get( 0 );
 
