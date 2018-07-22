@@ -47,7 +47,7 @@ public class PrincipalTreeMapstore extends AbstractBasePostgresMapstore<AclKey, 
     public static final  String INDEX       = "index[any]";
 
     public PrincipalTreeMapstore( HikariDataSource hds ) {
-        super( HazelcastMap.PRINCIPAL_TREES.name(), PostgresTable.PRINCIPAL_TREES, hds );
+        super( HazelcastMap.PRINCIPAL_TREES.name(), PostgresTable.PRINCIPAL_TREE, hds );
     }
 
     @Override public AclKey generateTestKey() {
