@@ -43,10 +43,9 @@ import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
 import com.openlattice.authorization.mapstores.PrincipalMapstore;
 import com.openlattice.authorization.mapstores.PrincipalTreeMapstore;
+import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDataValue;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
@@ -109,9 +108,9 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @Import( { PostgresPod.class, Auth0Pod.class } )
 public class MapstoresPod {
-    private static final Logger logger = LoggerFactory.getLogger( MapstoresPod.class );
+    private static final Logger           logger = LoggerFactory.getLogger( MapstoresPod.class );
     @Inject
-    private HikariDataSource hikariDataSource;
+    private              HikariDataSource hikariDataSource;
 
     @Inject
     private PostgresTableManager ptMgr;
@@ -345,16 +344,16 @@ public class MapstoresPod {
     public SelfRegisteringMapStore<AppConfigKey, AppTypeSetting> appConfigMapstore() {
         return new AppConfigMapstore( hikariDataSource );
     }
-//
-//    @Bean
-//    public SelfRegisteringMapStore<EntityDataKey, EntityDataValue> entityDataMapstore() {
-//        return new DataMapstoreProxy(
-//                ptMgr,
-//                hikariDataSource,
-//                propertyTypeMapstore(),
-//                entitySetMapstore(),
-//                entityTypeMapstore() );
-//    }
+    //
+    //    @Bean
+    //    public SelfRegisteringMapStore<EntityDataKey, EntityDataValue> entityDataMapstore() {
+    //        return new DataMapstoreProxy(
+    //                ptMgr,
+    //                hikariDataSource,
+    //                propertyTypeMapstore(),
+    //                entitySetMapstore(),
+    //                entityTypeMapstore() );
+    //    }
 
     @Bean
     public SelfRegisteringMapStore<Long, Range> idGenerationMapstore() {
@@ -366,4 +365,8 @@ public class MapstoresPod {
         return new Auth0TokenProvider( auth0Configuration );
     }
 
+    @Bean
+    public PrincipalTreesMapstore principalTreesMapstore() {
+        return new PrincipalTreesMapstore( hikariDataSource );
+    }
 }
