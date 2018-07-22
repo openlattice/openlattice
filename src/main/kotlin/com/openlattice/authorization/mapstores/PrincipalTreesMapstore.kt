@@ -53,8 +53,8 @@ import java.util.function.Supplier
 private val insertSql = "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
         "VALUES (?, ?) " +
         "ON CONFLICT DO NOTHING"
-private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN (SELECT ?)"
-private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN (SELECT ?)"
+private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN ? OR ${ACL_KEY.name} IN ?"
+private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} IN ? OR ${ACL_KEY.name} IN ?"
 private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} = ? AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (SELECT ?)"
 private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)!!
 
@@ -89,18 +89,18 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     override fun loadAllKeys(): MutableIterable<AclKey> {
-        val keys = PostgresIterable<AclKey>(Supplier {
+        return PostgresIterable<AclKey>(Supplier {
             logger.info("Load all iterator requested for ${this.mapName}")
             val connection = hds.connection
             val stmt = connection.createStatement()
-            val rs = stmt.executeQuery("SELECT * from ${PRINCIPAL_TREES.name}")
+            val rs = stmt.executeQuery("SELECT distinct(acl_key) from ${PRINCIPAL_TREES.name}")
 
             StatementHolder(connection, stmt, rs)
         }, Function<ResultSet, AclKey> { ResultSetAdapters.aclKey(it) }
         )
-        val keyList = keys.toMutableList()
-        logger.info("Keys: {}", keyList)
-        return keyList
+//        val keyList = keys.toMutableList()
+//        logger.info("Keys: {}", keyList)
+//        return keyList
     }
 
     @Timed
@@ -110,20 +110,23 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     @Timed
     override fun loadAll(keys: Collection<AclKey>): MutableMap<AclKey, AclKeySet> {
+        val keyMap = keys.groupBy { it.size }
         val data = PostgresIterable<Pair<AclKey, AclKey>>(
                 Supplier {
-
                     val connection = hds.connection
                     val ps = connection.prepareStatement(selectSql)
-                    val arr = PostgresArrays.createUuidArrayOfArrays(
-                            connection, keys.map { (it as List<UUID>).toTypedArray() }.stream()
-                    )
-                    ps.setArray(1, arr)
+
+                    for (i in 1..2) {
+                        val arr = PostgresArrays.createUuidArrayOfArrays(
+                                connection, keyMap[i]!!.map { (it as List<UUID>).toTypedArray() }.stream()
+                        )
+                        ps.setArray(i, arr)
+                    }
                     StatementHolder(connection, ps, ps.executeQuery())
                 },
 
                 Function<ResultSet, Pair<AclKey, AclKey>> {
-                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.aclKeySetSingle(
+                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(
                             it
                     )
                 }
@@ -135,13 +138,16 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     @Timed
     override fun deleteAll(keys: Collection<AclKey>) {
+        val keyMap = keys.groupBy { it.size }
         hds.connection.use {
             val connection = it
             it.prepareStatement(deleteSql).use {
-                val arr = PostgresArrays.createUuidArrayOfArrays(
-                        connection, keys.map { (it as List<UUID>).toTypedArray() }.stream()
-                )
-                it.setArray(1, arr)
+                for (i in 1..2) {
+                    val arr = PostgresArrays.createUuidArrayOfArrays(
+                            connection, keyMap[i]!!.map { (it as List<UUID>).toTypedArray() }.stream()
+                    )
+                    it.setArray(i, arr)
+                }
                 it.executeUpdate()
             }
         }

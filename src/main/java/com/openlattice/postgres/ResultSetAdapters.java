@@ -66,6 +66,7 @@ import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PII;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_IDS;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
@@ -250,8 +251,8 @@ public final class ResultSetAdapters {
         return new Range( base, msb, lsb );
     }
 
-    public static AclKey aclKeySetSingle( ResultSet rs ) throws SQLException {
-        return new AclKey( PostgresArrays.getUuidArray( rs, ACL_KEY_SET_FIELD ) );
+    public static AclKey principalOfAclKey( ResultSet rs ) throws SQLException {
+        return new AclKey( PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() ) );
     }
 
     public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {
