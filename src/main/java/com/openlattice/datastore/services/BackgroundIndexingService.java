@@ -112,7 +112,7 @@ public class BackgroundIndexingService {
         return result;
     }
 
-    @Scheduled( fixedRate = 500 )
+    @Scheduled( fixedRate = 2000 )
     public void indexUpdatedEntitySets() {
         try {
             lock.lock();
