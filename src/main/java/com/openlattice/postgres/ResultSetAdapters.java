@@ -251,7 +251,14 @@ public final class ResultSetAdapters {
     }
 
     public static AclKey principalOfAclKey( ResultSet rs ) throws SQLException {
-        return new AclKey( PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() ) );
+        final UUID[] arr;
+        try {
+            arr = PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() );
+        } catch ( ClassCastException e ) {
+            logger.error( "Unable to read principal of acl key of acl key: {}", aclKey( rs ) );
+            throw new IllegalStateException( "Unable to read principal of acl key", e );
+        }
+        return new AclKey( arr );
     }
 
     public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {
