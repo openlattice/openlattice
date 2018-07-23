@@ -24,6 +24,7 @@ package com.openlattice.authorization.mapstores
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableList
 import com.hazelcast.config.MapConfig
+import com.hazelcast.config.MapIndexConfig
 import com.hazelcast.config.MapStoreConfig
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
 import com.openlattice.authorization.AclKey
@@ -99,7 +100,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     }
 
-    override fun loadAllKeys(): MutableIterable<AclKey> {
+    override fun loadAllKeys(): Iterable<AclKey> {
         return PostgresIterable<AclKey>(Supplier {
             logger.info("Load all iterator requested for ${this.mapName}")
             val connection = hds.connection
@@ -131,7 +132,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     for (i in 1..2) {
                         val arr = PostgresArrays.createUuidArrayOfArrays(
                                 connection,
-                                (keyMap[i] ?: ImmutableList.of()).map { (it as List<UUID>).toTypedArray() }.stream()
+                                (keyMap[i] ?: ImmutableList.of()).map { it.toTypedArray() }.stream()
                         )
                         ps.setArray(i, arr)
                     }
@@ -158,7 +159,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                 for (i in 1..2) {
                     val arr = PostgresArrays.createUuidArrayOfArrays(
                             connection,
-                            (keyMap[i] ?: ImmutableList.of()).map { (it as List<UUID>).toTypedArray() }.stream()
+                            (keyMap[i] ?: ImmutableList.of()).map { it.toTypedArray() }.stream()
                     )
                     it.setArray(i, arr)
                 }
@@ -205,6 +206,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     override fun getMapConfig(): MapConfig {
         return MapConfig(mapName)
                 .setMapStoreConfig(mapStoreConfig)
+                .addMapIndexConfig(  MapIndexConfig( INDEX, false ) )
     }
 
     companion object {
