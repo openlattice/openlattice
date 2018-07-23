@@ -389,7 +389,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
 fun updateLastIndexSql(entitySetId: UUID): String {
     val entitiesTable = quote(entityTableName(entitySetId))
-    return "UPDATE $entitiesTable SET set ${LAST_INDEX.name} = ? WHERE ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+    return "UPDATE $entitiesTable SET ${LAST_INDEX.name} = ? WHERE ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
 fun updateAllEntityVersions(entitySetId: UUID, version: Long): String {
