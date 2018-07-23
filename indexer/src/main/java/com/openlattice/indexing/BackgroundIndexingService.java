@@ -4,7 +4,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ILock;
+import com.hazelcast.core.IAtomicLong;
 import com.hazelcast.core.IMap;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.slf4j.Logger;
@@ -48,7 +47,7 @@ public class BackgroundIndexingService {
     private final IMap<UUID, PropertyType> propertyTypes;
     private final IMap<UUID, EntityType>   entityTypes;
     private final IMap<UUID, EntitySet>    entitySets;
-    private final ILock                    lock;
+    private final IAtomicLong              totalIndexed;
 
     public BackgroundIndexingService(
             HikariDataSource hds,
@@ -63,7 +62,8 @@ public class BackgroundIndexingService {
         this.entityTypes = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPES.name() );
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
 
-        lock = hazelcastInstance.getLock( "com.openlattice.datastore.services.BackgroundIndexingService" );
+        totalIndexed = hazelcastInstance
+                .getAtomicLong( "com.openlattice.datastore.services.BackgroundIndexingService" );
     }
 
     private String getDirtyEntitiesQuery( UUID entitySetId ) {
@@ -115,54 +115,57 @@ public class BackgroundIndexingService {
         return result;
     }
 
-    @Scheduled( fixedRate = 2000 )
+    @Scheduled( fixedRate = 2000, initialDelay = 180000 )
     public void indexUpdatedEntitySets() {
-        try {
-            lock.lock();
-            AtomicInteger totalIndexed = new AtomicInteger();
-            Stopwatch w = Stopwatch.createStarted();
+        Stopwatch w = Stopwatch.createStarted();
 
-            final Map<UUID, Map<UUID, PropertyType>> propertyTypesByEntityType = getPropertyTypesByEntityTypesById();
+        final Map<UUID, Map<UUID, PropertyType>> propertyTypesByEntityType = getPropertyTypesByEntityTypesById();
 
-            entitySets.values().parallelStream().forEach( entitySet -> {
-                logger.info( "Starting indexing for entity set {} with id {}", entitySet.getName(), entitySet.getId() );
-
-                if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
-                    Stopwatch esw = Stopwatch.createStarted();
-                    final UUID entitySetId = entitySet.getId();
-                    final Map<UUID, PropertyType> propertyTypeMap = propertyTypesByEntityType
-                            .get( entitySet.getEntityTypeId() );
-
-                    final PostgresIterable<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId );
-                    final PostgresIterable.PostgresIterator<UUID> toIndexIter = entityKeyIdsToIndex.iterator();
-                    int indexCount = 0;
-                    while ( toIndexIter.hasNext() ) {
-                        var batchToIndex = getBatch( toIndexIter );
-                        Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
-                                .getEntitiesById( entitySetId, propertyTypeMap, batchToIndex );
-
-                        if ( elasticsearchApi.createBulkEntityData( entitySetId, entitiesById ) ) {
-                            indexCount += dataQueryService.markAsIndexed( entitySetId, batchToIndex );
-                            logger.info( "Index count for {} ({}): {}",
-                                    entitySet.getName(),
-                                    entitySet.getId(),
-                                    indexCount );
-                        }
-                    }
-                    logger.info( "Finished indexing entity set {}. in {} ",
+        entitySets.values().parallelStream().forEach( entitySet -> {
+            if ( entitySets.tryLock( entitySet.getId() ) ) {
+                try {
+                    logger.info( "Starting indexing for entity set {} with id {}",
                             entitySet.getName(),
-                            esw.elapsed( TimeUnit.MILLISECONDS ) );
-                    logger.info( "Indexed {} elements in {} ms",
-                            totalIndexed.addAndGet( indexCount ),
-                            w.elapsed( TimeUnit.MILLISECONDS ) );
+                            entitySet.getId() );
+
+                    if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
+                        Stopwatch esw = Stopwatch.createStarted();
+                        final UUID entitySetId = entitySet.getId();
+                        final Map<UUID, PropertyType> propertyTypeMap = propertyTypesByEntityType
+                                .get( entitySet.getEntityTypeId() );
+
+                        final PostgresIterable<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId );
+                        final PostgresIterable.PostgresIterator<UUID> toIndexIter = entityKeyIdsToIndex.iterator();
+                        int indexCount = 0;
+                        while ( toIndexIter.hasNext() ) {
+                            var batchToIndex = getBatch( toIndexIter );
+                            Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
+                                    .getEntitiesById( entitySetId, propertyTypeMap, batchToIndex );
+
+                            if ( elasticsearchApi.createBulkEntityData( entitySetId, entitiesById ) ) {
+                                indexCount += dataQueryService.markAsIndexed( entitySetId, batchToIndex );
+                                logger.info( "Indexed batch of {} elements for {} ({}) in {} ms",
+                                        indexCount,
+                                        entitySet.getName(),
+                                        entitySet.getId(),
+                                        esw.elapsed( TimeUnit.MILLISECONDS ) );
+                            }
+                        }
+                        logger.info( "Finished indexing entity set {} in {} ms",
+                                entitySet.getName(),
+                                esw.elapsed( TimeUnit.MILLISECONDS ) );
+                        logger.info( "Indexed {} elements in {} ms",
+                                totalIndexed.addAndGet( indexCount ),
+                                w.elapsed( TimeUnit.MILLISECONDS ) );
+                    }
+                } finally {
+                    entitySets.unlock( entitySet.getId() );
                 }
-            } );
-            logger.info( "Indexed {} elements in {} ms",
-                    totalIndexed.get(),
-                    w.elapsed( TimeUnit.MILLISECONDS ) );
-        } finally {
-            lock.unlock();
-        }
+            }
+        } );
+        logger.info( "Indexed total number of {} elements in {} ms",
+                totalIndexed.get(),
+                w.elapsed( TimeUnit.MILLISECONDS ) );
     }
 
     private static Set<UUID> getBatch( Iterator<UUID> entityKeyIdStream ) {
