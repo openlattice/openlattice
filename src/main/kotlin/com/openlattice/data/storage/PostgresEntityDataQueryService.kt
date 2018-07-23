@@ -63,7 +63,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     ): Map<UUID, SetMultimap<UUID, Any>> {
         return PostgresIterable(
                 Supplier<StatementHolder> {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val statement = connection.createStatement()
                     val rs = statement.executeQuery(
                             selectEntitySetWithPropertyTypes(
@@ -492,10 +492,10 @@ fun selectEntitySetWithPropertyTypes(
             if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) {"${LAST_WRITE.name}" } else { "" },
             if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) {"${LAST_INDEX.name}" } else { "" })
             .union( authorizedPropertyTypes.values.map(::quote ) )
-    return "SELECT* FROM (SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
+    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} FROM (SELECT * \n" +
             "FROM $esTableName " +
-            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} AND " } else  { " WHERE " } +
-            "version > 0"
+            "WHERE version > 0 " +
+            if( entityKeyIdsClause.isPresent ) { "AND ${entityKeyIdsClause.get()} " } else  { " " } +
             ") as $esTableName" +
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value )} USING (${ID.name} )" }
@@ -530,10 +530,10 @@ fun selectEntitySetWithPropertyTypesAndVersion(
             if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) {"${LAST_INDEX.name}" } else { "" })
             .union( authorizedPropertyTypes.values.map(::quote ) )
 
-    return "SELECT* FROM ( SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
+    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} FROM ( SELECT * " +
             "FROM $esTableName " +
-            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} AND " } else  { " WHERE " } +
-            "version > 0 "
+            "WHERE version > 0 " +
+            if( entityKeyIdsClause.isPresent ) { "AND ${entityKeyIdsClause.get()} " } else  { " " } +
             ") as $esTableName" +
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version )} USING (${ID.name} )" }
