@@ -40,17 +40,17 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.spring' version '1.2.51'
 }
 
-description = "Conductor Server"
+description = "Indexing Server"
 group = "com.openlattice"
 
 distTar {
-    archiveName "conductor.tgz"
+    archiveName "indexer.tgz"
 }
 
-ext.projectName = "conductor"
-ext.scmUrl = 'scm:git:https://github.com/openlattice/conductor.git'
-ext.connectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
-ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor.git'
+ext.projectName = "indexer"
+ext.scmUrl = 'scm:git:https://github.com/openlattice/indexer.git'
+ext.connectionUrl = 'scm:git:https://github.com/openlattice/indexer.git'
+ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/indexer.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
 apply plugin: 'kotlin'
