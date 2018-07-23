@@ -133,7 +133,9 @@ public class BackgroundIndexingService {
                         Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
                                 .getEntitiesById( entitySetId, propertyTypeMap, batchToIndex );
 
-                        elasticsearchApi.createBulkEntityData( entitySetId, entitiesById );
+                        if ( elasticsearchApi.createBulkEntityData( entitySetId, entitiesById ) ) {
+                            dataQueryService.markAsIndexed( entitySetId, batchToIndex );
+                        }
                     }
                 }
             } );
