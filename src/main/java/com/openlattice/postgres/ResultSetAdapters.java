@@ -27,7 +27,6 @@ import static com.openlattice.postgres.DataTables.LAST_WRITE;
 import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
-import static com.openlattice.postgres.PostgresColumn.ACL_KEY_SET_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ANALYZER;
 import static com.openlattice.postgres.PostgresColumn.APP_ID;
 import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
@@ -133,7 +132,6 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
-
 import java.sql.Array;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -153,7 +151,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -254,7 +251,7 @@ public final class ResultSetAdapters {
     }
 
     public static AclKey principalOfAclKey( ResultSet rs ) throws SQLException {
-          return new AclKey( PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() ) );
+        return new AclKey( PostgresArrays.getUuidArray( rs, PRINCIPAL_OF_ACL_KEY.getName() ) );
     }
 
     public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {

@@ -130,7 +130,7 @@ public class HazelcastOrganizationService {
                 apps );
         this.principals = checkNotNull( principals );
         this.securePrincipalsManager = securePrincipalsManager;
-        fixOrganizations();
+//        fixOrganizations();
     }
 
     public OrganizationPrincipal getOrganization( Principal p ) {
