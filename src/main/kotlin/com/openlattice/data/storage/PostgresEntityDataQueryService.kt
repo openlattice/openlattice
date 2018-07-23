@@ -21,9 +21,7 @@
 
 package com.openlattice.data.storage
 
-import com.google.common.collect.HashMultimap
-import com.google.common.collect.Multimaps
-import com.google.common.collect.SetMultimap
+import com.google.common.collect.*
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
@@ -52,6 +50,36 @@ const val BATCH_SIZE = 10000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
+
+    fun getEntitiesById(
+            entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            entityKeyIds: Set<UUID>
+    ): Map<UUID, SetMultimap<UUID, Any>> {
+        val entitiesById: MutableMap<UUID, SetMultimap<UUID, Any>> = Maps.newHashMap();
+
+        PostgresIterable(
+                Supplier<StatementHolder> {
+                    val connection = hds.getConnection()
+                    val statement = connection.createStatement()
+                    val rs = statement.executeQuery(
+                            selectEntitySetWithPropertyTypes(
+                                    entitySetId,
+                                    entityKeyIds,
+                                    authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
+                                    ImmutableSet.of()
+                            )
+                    )
+                    StatementHolder(connection, statement, rs)
+                },
+                Function<ResultSet, Pair<UUID, SetMultimap<UUID, Any>>> {
+                    ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
+                }
+        ).forEach { entitiesById.put(it.first, it.second) }
+
+        return entitiesById
+    }
+
     fun streamableEntitySet(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
@@ -426,7 +454,7 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
             "WHERE EXCLUDED.${VERSION.name} > abs($propertyTable.version) "
 }
 
- fun selectEntitySetWithPropertyTypes(
+fun selectEntitySetWithPropertyTypes(
         entitySetId: UUID,
         entityKeyIds: Set<UUID>,
         authorizedPropertyTypes: Map<UUID, String>,

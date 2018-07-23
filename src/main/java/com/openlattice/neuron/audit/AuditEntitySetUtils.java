@@ -49,7 +49,7 @@ public class AuditEntitySetUtils {
     // TODO: where does this belong?
     public static final Principal OPEN_LATTICE_PRINCIPAL = new Principal( PrincipalType.USER, "OpenLattice" );
     private static final Logger logger = LoggerFactory.getLogger( AuditEntitySetUtils.class );
-    private static final String AUDIT_ENTITY_SET_NAME       = "OpenLattice Audit Entity Set";
+    public static final String AUDIT_ENTITY_SET_NAME       = "OpenLattice Audit Entity Set";
     private static final String OPENLATTICE_AUDIT_NAMESPACE = "OPENLATTICE_AUDIT";
     public static final FullQualifiedName DETAILS_PT_FQN = new FullQualifiedName( OPENLATTICE_AUDIT_NAMESPACE,
             "DETAILS" );
