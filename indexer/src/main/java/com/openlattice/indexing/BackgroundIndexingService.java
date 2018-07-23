@@ -158,7 +158,7 @@ public class BackgroundIndexingService {
                 }
             } );
             logger.info( "Indexed {} elements in {} ms",
-                    totalIndexed.addAndGet( indexCount ),
+                    totalIndexed.get(),
                     w.elapsed( TimeUnit.MILLISECONDS ) );
         } finally {
             lock.unlock();
