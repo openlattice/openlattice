@@ -31,10 +31,8 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.ACL_KEY
 import com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY
-import com.openlattice.postgres.PostgresDatatype
 import com.openlattice.postgres.PostgresTable.PRINCIPAL_TREES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -43,7 +41,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.ResultSet
-import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
 
@@ -54,10 +51,8 @@ import java.util.function.Supplier
 private val insertSql = "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
         "VALUES (?, ?) " +
         "ON CONFLICT DO NOTHING"
-private val selectSql = "SELECT * FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name} <@ ? OR ${ACL_KEY.name} <@ ?"
-private val deleteSql = "DELETE FROM ${PRINCIPAL_TREES.name} WHERE ${ACL_KEY.name}  <@ ? OR ${ACL_KEY.name} <@ ?"
 private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} " +
-        "WHERE ${ACL_KEY.name} = ? AND NOT( ${PRINCIPAL_OF_ACL_KEY.name} <@ ?) AND NOT ( ${PRINCIPAL_OF_ACL_KEY.name} <@ ? )"
+        "WHERE ${ACL_KEY.name} = ? AND NOT( ${PRINCIPAL_OF_ACL_KEY.name} = ANY(?) ) AND NOT ( ${PRINCIPAL_OF_ACL_KEY.name} = ANY(?) )"
 private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)!!
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
@@ -66,38 +61,26 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     override fun storeAll(map: Map<AclKey, AclKeySet>) {
         hds.connection.use {
             val connection = it
-            val ps2 = connection.prepareStatement(deleteNotIn)
-            val ps = connection.prepareStatement(insertSql)
+            val stmt = connection.createStatement()
+
             map.forEach {
-                val arrKey = connection.createArrayOf(
-                        PostgresDatatype.UUID.sql(), (it.key as List<UUID>).toTypedArray()
-                )
-
-                val vMap = it.value.groupBy { it.size }
-                val deleteArr1 = PostgresArrays.createUuidArrayOfArrays(
-                        connection, (vMap[1] ?: ImmutableList.of()).map { (it as List<UUID>).toTypedArray() }.stream()
-                )
-                val deleteArr2 = PostgresArrays.createUuidArrayOfArrays(
-                        connection, (vMap[2] ?: ImmutableList.of()).map { (it as List<UUID>).toTypedArray() }.stream()
-                )
-
-                ps2.setObject(1, arrKey)
-                ps2.setArray(2, deleteArr1)
-                ps2.setArray(3, deleteArr2)
-                ps2.addBatch()
-
+                val aclKey = it.key
+                val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
+                        "WHERE ${ACL_KEY.name} = '${toPostgres(it.key)}' AND ${PRINCIPAL_OF_ACL_KEY.name} " +
+                        "NOT IN ('{" + it.value.joinToString(",") { toPostgres(it) } + "}')"
+                stmt.addBatch(sql)
                 it.value.forEach {
-                    val insertArr = PostgresArrays.createUuidArray(connection, it)
-                    ps.setObject(1, arrKey)
-                    ps.setArray(2, insertArr)
-                    ps.addBatch()
+                    stmt.addBatch(
+                            "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
+                                    "VALUES ('${toPostgres(aclKey)}', '${toPostgres(it)}') ")
                 }
             }
-            ps2.executeBatch()
-            ps.executeBatch()
-
+            stmt.executeBatch()
         }
+    }
 
+    fun toPostgres(aclKey: AclKey): String {
+        return "{\"" + aclKey.joinToString("\",\"") + "\"}"
     }
 
     override fun loadAllKeys(): Iterable<AclKey> {
@@ -122,27 +105,22 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     @Timed
     override fun loadAll(keys: Collection<AclKey>): MutableMap<AclKey, AclKeySet> {
-        val keyMap = keys.groupBy { it.size }
+//        val keyMap = keys.groupBy { it.size }
 
         val data = PostgresIterable<Pair<AclKey, AclKey>>(
                 Supplier {
                     val connection = hds.connection
-                    val ps = connection.prepareStatement(selectSql)
+                    val stmt = connection.createStatement()
 
-                    for (i in 1..2) {
-                        val arr = PostgresArrays.createUuidArrayOfArrays(
-                                connection,
-                                (keyMap[i] ?: ImmutableList.of()).map { it.toTypedArray() }.stream()
-                        )
-                        ps.setArray(i, arr)
-                    }
-                    StatementHolder(connection, ps, ps.executeQuery())
+                    val sql = "SELECT * from ${PRINCIPAL_TREES.name} " +
+                            "WHERE ${ACL_KEY.name} " +
+                            "IN (" + keys.map { "'{\"" + it.joinToString("\",\"") + "\"}'" }.joinToString(",") + ")"
+
+                    StatementHolder(connection, stmt, stmt.executeQuery(sql))
                 },
 
                 Function<ResultSet, Pair<AclKey, AclKey>> {
-                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(
-                            it
-                    )
+                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
                 }
         )
         val map: MutableMap<AclKey, AclKeySet> = mutableMapOf()
@@ -152,19 +130,15 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     @Timed
     override fun deleteAll(keys: Collection<AclKey>) {
-        val keyMap = keys.groupBy { it.size }
         hds.connection.use {
             val connection = it
-            it.prepareStatement(deleteSql).use {
-                for (i in 1..2) {
-                    val arr = PostgresArrays.createUuidArrayOfArrays(
-                            connection,
-                            (keyMap[i] ?: ImmutableList.of()).map { it.toTypedArray() }.stream()
-                    )
-                    it.setArray(i, arr)
-                }
-                it.executeUpdate()
-            }
+            val stmt = connection.createStatement()
+
+            val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
+                    "WHERE ${ACL_KEY.name} " +
+                    "IN (" + keys.map { "'{\"" + it.joinToString("\",\"") + "\"}'" }.joinToString(",") + ")"
+
+            StatementHolder(connection, stmt, stmt.executeQuery(sql))
         }
     }
 
@@ -206,7 +180,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     override fun getMapConfig(): MapConfig {
         return MapConfig(mapName)
                 .setMapStoreConfig(mapStoreConfig)
-                .addMapIndexConfig(  MapIndexConfig( INDEX, false ) )
+                .addMapIndexConfig(MapIndexConfig(INDEX, false))
     }
 
     companion object {
