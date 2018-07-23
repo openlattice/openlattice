@@ -44,7 +44,6 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
-import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.HazelcastBlockingService;
 import com.openlattice.mail.config.MailServiceRequirements;
@@ -158,8 +157,4 @@ public class ConductorSparkPod {
         return new HazelcastBlockingService( hazelcastInstance );
     }
 
-    @Bean
-    public BackgroundIndexingService backgroundIndexingService() throws IOException {
-        return new BackgroundIndexingService( hikariDataSource, hazelcastInstance, elasticsearchApi(), dataQueryService() );
-    }
 }
