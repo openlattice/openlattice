@@ -85,8 +85,8 @@ if (GC == 'null' || GC == null || GC == "") {
 
 mainClassName = "com.openlattice.Conductor"
 applicationDefaultJvmArgs = [CONDUCTOR_XMS, CONDUCTOR_XMX, "-server", GC, PARALLEL]
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_1_10
+targetCompatibility = JavaVersion.VERSION_1_10
 
 println "Using java args for running ${projectName}: " + Arrays.toString(applicationDefaultJvmArgs)
 
@@ -148,8 +148,8 @@ eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true
 
-    ext.sourceCompatibility = JavaVersion.VERSION_1_8
-    ext.targetCompatibility = JavaVersion.VERSION_1_8
+    ext.sourceCompatibility = JavaVersion.VERSION_1_10
+    ext.targetCompatibility = JavaVersion.VERSION_1_10
 }
 
 eclipse.classpath.plusConfigurations += [configurations.provided]
