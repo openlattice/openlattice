@@ -37,8 +37,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 public class BackgroundIndexingService {
     private static final Logger logger     = LoggerFactory.getLogger( BackgroundIndexingService.class );
-    private static final int    INDEX_SIZE = 100000;
-    private static final int    FETCH_SIZE = 200000;
+    private static final int    INDEX_SIZE = 32000;
+    private static final int    FETCH_SIZE = 128000;
 
     private final HikariDataSource               hds;
     private final PostgresEntityDataQueryService dataQueryService;
