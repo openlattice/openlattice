@@ -42,6 +42,7 @@ import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.clustering.DistributedClusterer;
+import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.DatasourceManager;
@@ -53,14 +54,7 @@ import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.apps.services.AppService;
-import com.openlattice.datastore.services.AnalysisService;
-import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.LinkingService;
-import com.openlattice.datastore.services.ODataStorageService;
-import com.openlattice.datastore.services.PostgresEntitySetManager;
-import com.openlattice.datastore.services.SearchService;
-import com.openlattice.datastore.services.SyncTicketService;
+import com.openlattice.datastore.services.*;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -377,6 +371,16 @@ public class DatastoreServicesPod {
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
         return new Auth0TokenProvider( auth0Configuration );
+    }
+
+    @Bean
+    public ConductorElasticsearchApi conductorElasticsearchApi() {
+        return new DatastoreConductorElasticsearchApi( hazelcastInstance );
+    }
+
+    @Bean
+    public BackgroundIndexingService backgroundIndexingService() {
+        return new BackgroundIndexingService( hikariDataSource, hazelcastInstance, conductorElasticsearchApi(), dataQueryService() );
     }
 
     @PostConstruct
