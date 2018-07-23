@@ -378,11 +378,6 @@ public class DatastoreServicesPod {
         return new DatastoreConductorElasticsearchApi( hazelcastInstance );
     }
 
-    @Bean
-    public BackgroundIndexingService backgroundIndexingService() {
-        return new BackgroundIndexingService( hikariDataSource, hazelcastInstance, conductorElasticsearchApi(), dataQueryService() );
-    }
-
     @PostConstruct
     void initPrincipals() {
         Principals.init( principalService() );
