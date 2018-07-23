@@ -63,19 +63,22 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             val connection = it
             val stmt = connection.createStatement()
 
-            map.forEach {
-                val aclKey = it.key
-                val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
-                        "WHERE ${ACL_KEY.name} = '${toPostgres(it.key)}' AND ${PRINCIPAL_OF_ACL_KEY.name} " +
-                        "NOT IN ('{" + it.value.joinToString(",") { toPostgres(it) } + "}')"
-                stmt.addBatch(sql)
-                it.value.forEach {
-                    stmt.addBatch(
-                            "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
-                                    "VALUES ('${toPostgres(aclKey)}', '${toPostgres(it)}') ")
+            stmt.use {
+                map.forEach {
+                    val aclKey = it.key
+                    val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
+                            "WHERE ${ACL_KEY.name} = '${toPostgres(it.key)}' AND ${PRINCIPAL_OF_ACL_KEY.name} " +
+                            "NOT IN ('{" + it.value.joinToString(",") { toPostgres(it) } + "}')"
+                    stmt.addBatch(sql)
+                    it.value.forEach {
+                        stmt.addBatch(
+                                "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
+                                        "VALUES ('${toPostgres(aclKey)}', '${toPostgres(it)}') "
+                        )
+                    }
                 }
+                stmt.executeBatch()
             }
-            stmt.executeBatch()
         }
     }
 
