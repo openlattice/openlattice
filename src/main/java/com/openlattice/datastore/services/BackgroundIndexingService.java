@@ -60,7 +60,6 @@ public class BackgroundIndexingService {
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
 
         lock = hazelcastInstance.getLock( "com.openlattice.datastore.services.BackgroundIndexingService" );
-        indexUpdatedEntitySets();
     }
 
     private String getDirtyEntitiesQuery( UUID entitySetId ) {
