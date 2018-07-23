@@ -157,15 +157,15 @@ public class BackgroundIndexingService {
                                             esw.elapsed( TimeUnit.MILLISECONDS ) );
                                 }
                             }
+                            logger.info( "Finished indexing entity set {} in {} ms",
+                                    entitySet.getName(),
+                                    esw.elapsed( TimeUnit.MILLISECONDS ) );
+                            logger.info( "Indexed {} elements in {} ms",
+                                    totalIndexed.addAndGet( indexCount ),
+                                    w.elapsed( TimeUnit.MILLISECONDS ) );
                         } catch ( IOException e ) {
-                            logger.error("Somethibng went wrong while iterating." , e);
+                            logger.error( "Somethibng went wrong while iterating.", e );
                         }
-                        logger.info( "Finished indexing entity set {} in {} ms",
-                                entitySet.getName(),
-                                esw.elapsed( TimeUnit.MILLISECONDS ) );
-                        logger.info( "Indexed {} elements in {} ms",
-                                totalIndexed.addAndGet( indexCount ),
-                                w.elapsed( TimeUnit.MILLISECONDS ) );
                     }
                 } finally {
                     entitySets.unlock( entitySet.getId() );
