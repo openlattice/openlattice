@@ -115,7 +115,7 @@ public class BackgroundIndexingService {
         return result;
     }
 
-    @Scheduled( fixedRate = 2000, initialDelay = 180000 )
+    @Scheduled( fixedRate = 30000, initialDelay = 900000 )
     public void indexUpdatedEntitySets() {
         Stopwatch w = Stopwatch.createStarted();
 
