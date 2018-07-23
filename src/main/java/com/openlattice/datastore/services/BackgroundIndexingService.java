@@ -1,10 +1,9 @@
 package com.openlattice.datastore.services;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ILock;
 import com.hazelcast.core.IMap;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
@@ -16,20 +15,23 @@ import com.openlattice.neuron.audit.AuditEntitySetUtils;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.ResultSetAdapters;
+import com.openlattice.postgres.streams.PostgresIterable;
+import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 
 public class BackgroundIndexingService {
     private static final Logger logger     = LoggerFactory.getLogger( BackgroundIndexingService.class );
@@ -42,6 +44,7 @@ public class BackgroundIndexingService {
     private final IMap<UUID, PropertyType> propertyTypes;
     private final IMap<UUID, EntityType>   entityTypes;
     private final IMap<UUID, EntitySet>    entitySets;
+    private final ILock                    lock;
 
     public BackgroundIndexingService(
             HikariDataSource hds,
@@ -56,8 +59,8 @@ public class BackgroundIndexingService {
         this.entityTypes = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPES.name() );
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
 
+        lock = hazelcastInstance.getLock( "com.openlattice.datastore.services.BackgroundIndexingService" );
         indexUpdatedEntitySets();
-
     }
 
     private String getDirtyEntitiesQuery( UUID entitySetId ) {
@@ -65,23 +68,32 @@ public class BackgroundIndexingService {
                 + PostgresColumn.LAST_INDEX_FIELD + " < " + PostgresColumn.LAST_WRITE_FIELD;
     }
 
-    private Set<UUID> getDirtyEntityKeyIds( UUID entitySetId ) {
-        try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( getDirtyEntitiesQuery( entitySetId ) ) ) {
-
-            ps.setFetchSize( BLOCK_SIZE );
-            ResultSet rs = ps.executeQuery();
-
-            Set<UUID> result = Sets.newHashSet();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.id( rs ) );
-            }
-            rs.close();
-            return result;
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to load all entity set ids", e );
-            return ImmutableSet.of();
-        }
+    private PostgresIterable<UUID> getDirtyEntityKeyIds( UUID entitySetId ) {
+        return new PostgresIterable<>(
+                () -> {
+                    Connection connection = null;
+                    PreparedStatement ps;
+                    ResultSet rs;
+                    try {
+                        connection = hds.getConnection();
+                        ps = connection.prepareStatement( getDirtyEntitiesQuery( entitySetId ) );
+                        ps.setFetchSize( BLOCK_SIZE );
+                        rs = ps.executeQuery();
+                        return new StatementHolder( connection, ps, rs );
+                    } catch ( SQLException e ) {
+                        logger.error( "Unable to instantiate postgres iterable.", e );
+                        throw new IllegalStateException( "Unable to instantiate postgres iterable.", e );
+                    }
+                },
+                resultSet -> {
+                    try {
+                        return ResultSetAdapters.id( resultSet );
+                    } catch ( SQLException e ) {
+                        logger.error( "Unable to retrieve postgres value", e );
+                        throw new IllegalStateException( "Unable to instantiate postgres iterable.", e );
+                    }
+                }
+        );
     }
 
     private Map<UUID, Map<UUID, PropertyType>> getPropertyTypesByEntityTypesById() {
@@ -102,30 +114,42 @@ public class BackgroundIndexingService {
 
     @Scheduled( fixedRate = 500 )
     public void indexUpdatedEntitySets() {
+        try {
+            lock.lock();
+            Map<UUID, Map<UUID, PropertyType>> propertyTypesByEntityType = getPropertyTypesByEntityTypesById();
 
-        Map<UUID, Map<UUID, PropertyType>> propertyTypesByEntityType = getPropertyTypesByEntityTypesById();
+            entitySets.values().forEach( entitySet -> {
+                if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
 
-        entitySets.values().forEach( entitySet -> {
-            if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
+                    UUID entitySetId = entitySet.getId();
+                    Map<UUID, PropertyType> propertyTypeMap = propertyTypesByEntityType
+                            .get( entitySet.getEntityTypeId() );
 
-                UUID entitySetId = entitySet.getId();
-                Map<UUID, PropertyType> propertyTypeMap = propertyTypesByEntityType
-                        .get( entitySet.getEntityTypeId() );
+                    PostgresIterable<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId );
 
-                Set<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId );
-                while ( entityKeyIdsToIndex.size() > 0 ) {
+                    PostgresIterable.PostgresIterator<UUID> toIndexIter = entityKeyIdsToIndex.iterator();
 
-                    Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
-                            .getEntitiesById( entitySetId, propertyTypeMap, entityKeyIdsToIndex );
+                    while ( toIndexIter.hasNext() ) {
+                        var batchToIndex = getBatch( toIndexIter );
+                        Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
+                                .getEntitiesById( entitySetId, propertyTypeMap, batchToIndex );
 
-                    elasticsearchApi.createBulkEntityData( entitySetId, entitiesById );
-
-                    entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId );
+                        elasticsearchApi.createBulkEntityData( entitySetId, entitiesById );
+                    }
                 }
+            } );
+        } finally {
+            lock.unlock();
+        }
+    }
 
-            }
-        } );
+    private static Set<UUID> getBatch( Iterator<UUID> entityKeyIdStream ) {
+        var entityKeyIds = new HashSet<UUID>( BLOCK_SIZE );
 
+        for ( int i = 0; i < BLOCK_SIZE && entityKeyIdStream.hasNext(); ++i ) {
+            entityKeyIds.add( entityKeyIdStream.next() );
+        }
+        return entityKeyIds;
     }
 
 }
