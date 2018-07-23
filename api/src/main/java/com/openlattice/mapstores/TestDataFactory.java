@@ -66,7 +66,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
-@SuppressFBWarnings(value = "SECPR", justification = "Only used for testing.")
+@SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
     private static final SecurableObjectType[] securableObjectTypes = SecurableObjectType.values();
     private static final Permission[]          permissions          = Permission.values();
@@ -209,6 +209,18 @@ public final class TestDataFactory {
                 Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
+                Optional.of( r.nextBoolean() ),
+                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+    }
+
+    public static PropertyType binaryPropertyType() {
+        return new PropertyType(
+                UUID.randomUUID(),
+                fqn(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                ImmutableSet.of(),
+                EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
     }
