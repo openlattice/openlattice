@@ -29,14 +29,22 @@ import com.openlattice.data.DataEdge
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import org.apache.commons.lang.math.RandomUtils
 import org.apache.commons.lang3.RandomStringUtils
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.apache.olingo.commons.api.edm.geo.Geospatial
+import org.apache.olingo.commons.api.edm.geo.Point
+import org.joda.time.DateTime
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
+import java.io.IOException
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -79,6 +87,26 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val testData = TestDataFactory
                 .randomStringEntityData(numberOfEntries, et.properties)
+        MultipleAuthenticatedUsersBase.dataApi.replaceEntities(es.id, testData, false)
+        val ess = EntitySetSelection(Optional.of(et.properties))
+        val results = Sets.newHashSet(
+                MultipleAuthenticatedUsersBase.dataApi
+                        .loadEntitySetData(es.id, ess, FileType.json)
+        )
+
+        Assert.assertEquals(numberOfEntries.toLong(), results.size.toLong())
+    }
+
+
+    @Test
+    fun testCreateAndLoadBinaryEntityData() {
+        val pt = MultipleAuthenticatedUsersBase.getBinaryPropertyType()
+        val et = MultipleAuthenticatedUsersBase.createEntityType(pt.id)
+        waitForIt()
+        val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
+        waitForIt()
+
+        val testData = randomBinaryData(et.key.iterator().next(),pt.id)
         MultipleAuthenticatedUsersBase.dataApi.replaceEntities(es.id, testData, false)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
@@ -336,3 +364,5 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(expectedValues, resultValues)
     }
 }
+
+

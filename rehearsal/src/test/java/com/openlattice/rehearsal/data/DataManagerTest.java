@@ -483,7 +483,7 @@ public class DataManagerTest extends SetupEnvironment {
     /**
      * Generate a random double within [-a,a]
      */
-    private static double randomDouble( double a ) {
+    public static double randomDouble( double a ) {
         return 2 * a * random.nextDouble() - a;
     }
 }
