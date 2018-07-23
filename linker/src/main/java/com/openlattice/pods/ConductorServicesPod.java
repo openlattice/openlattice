@@ -114,7 +114,7 @@ public class ConductorServicesPod {
 
     @Bean
     public DbCredentialService dbcs() {
-        return new DbCredentialService(hazelcastInstance, pgUserApi );
+        return new DbCredentialService( hazelcastInstance, pgUserApi );
     }
 
     @Bean
