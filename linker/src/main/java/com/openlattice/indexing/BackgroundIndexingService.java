@@ -1,5 +1,7 @@
 package com.openlattice.indexing;
 
+import static com.openlattice.postgres.DataTables.quote;
+
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
@@ -28,6 +30,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -48,6 +51,7 @@ public class BackgroundIndexingService {
     private final IMap<UUID, EntityType>   entityTypes;
     private final IMap<UUID, EntitySet>    entitySets;
     private final IAtomicLong              totalIndexed;
+    private final Semaphore                backgroundLimiter;
 
     public BackgroundIndexingService(
             HikariDataSource hds,
@@ -64,11 +68,12 @@ public class BackgroundIndexingService {
 
         totalIndexed = hazelcastInstance
                 .getAtomicLong( "com.openlattice.datastore.services.BackgroundIndexingService" );
+        backgroundLimiter = new Semaphore( Math.max( 1, Runtime.getRuntime().availableProcessors() / 2 ) );
     }
 
     private String getDirtyEntitiesQuery( UUID entitySetId ) {
-        return "SELECT * FROM \"" + DataTables.entityTableName( entitySetId ) + "\" WHERE "
-                + PostgresColumn.LAST_INDEX_FIELD + " < " + PostgresColumn.LAST_WRITE_FIELD;
+        return "SELECT * FROM " + quote(DataTables.entityTableName( entitySetId )) + " WHERE "
+                + PostgresColumn.LAST_INDEX_FIELD + " < " + PostgresColumn.LAST_WRITE_FIELD + " LIMIT "  + FETCH_SIZE;
     }
 
     private PostgresIterable<UUID> getDirtyEntityKeyIds( UUID entitySetId ) {
@@ -80,7 +85,7 @@ public class BackgroundIndexingService {
                     try {
                         connection = hds.getConnection();
                         ps = connection.prepareStatement( getDirtyEntitiesQuery( entitySetId ) );
-                        ps.setFetchSize( FETCH_SIZE );
+//                        ps.setFetchSize( FETCH_SIZE );
                         rs = ps.executeQuery();
                         return new StatementHolder( connection, ps, rs );
                     } catch ( SQLException e ) {
@@ -115,14 +120,14 @@ public class BackgroundIndexingService {
         return result;
     }
 
-    @Scheduled( fixedRate = 30000, initialDelay = 900000 )
+    @Scheduled( fixedRate = 30000, initialDelay = 180000 )
     public void indexUpdatedEntitySets() {
         Stopwatch w = Stopwatch.createStarted();
 
         final Map<UUID, Map<UUID, PropertyType>> propertyTypesByEntityType = getPropertyTypesByEntityTypesById();
 
         entitySets.values().parallelStream().forEach( entitySet -> {
-            if ( entitySets.tryLock( entitySet.getId() ) ) {
+            if ( backgroundLimiter.tryAcquire() && entitySets.tryLock( entitySet.getId() ) ) {
                 try {
                     logger.info( "Starting indexing for entity set {} with id {}",
                             entitySet.getName(),
@@ -160,12 +165,16 @@ public class BackgroundIndexingService {
                     }
                 } finally {
                     entitySets.unlock( entitySet.getId() );
+                    backgroundLimiter.release();
                 }
+                logger.info( "Indexed total number of {} elements in {} ms",
+                        totalIndexed.get(),
+                        w.elapsed( TimeUnit.MILLISECONDS ) );
+            } else {
+                logger.info("Skipping indexing as thread limit hit.");
             }
         } );
-        logger.info( "Indexed total number of {} elements in {} ms",
-                totalIndexed.get(),
-                w.elapsed( TimeUnit.MILLISECONDS ) );
+
     }
 
     private static Set<UUID> getBatch( Iterator<UUID> entityKeyIdStream ) {
