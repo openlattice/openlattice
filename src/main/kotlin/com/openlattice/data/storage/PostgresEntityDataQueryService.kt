@@ -26,6 +26,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.JsonDeserializer
+import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -371,6 +373,23 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             return ps.executeBatch().sum()
         }
     }
+
+    fun markAsIndexed(entitySetId: UUID, batchToIndex: Set<UUID>): Int {
+        hds.connection.use {
+            it.prepareStatement(updateLastIndexSql(entitySetId)).use {
+                val arr = PostgresArrays.createUuidArray(it.connection, batchToIndex)
+                it.setObject(1, OffsetDateTime.now())
+                it.setArray(2, arr)
+                return it.executeUpdate()
+            }
+
+        }
+    }
+}
+
+fun updateLastIndexSql(entitySetId: UUID): String {
+    val entitiesTable = quote(entityTableName(entitySetId))
+    return "UPDATE $entitiesTable SET set ${LAST_INDEX.name} = ? WHERE ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
 fun updateAllEntityVersions(entitySetId: UUID, version: Long): String {
