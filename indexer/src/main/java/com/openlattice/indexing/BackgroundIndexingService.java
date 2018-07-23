@@ -129,56 +129,53 @@ public class BackgroundIndexingService {
 
         entitySets.values().parallelStream().forEach( entitySet -> {
             if ( backgroundLimiter.tryAcquire() && entitySets.tryLock( entitySet.getId() ) ) {
-                try {
-                    logger.info( "Starting indexing for entity set {} with id {}",
-                            entitySet.getName(),
-                            entitySet.getId() );
+                logger.info( "Starting indexing for entity set {} with id {}",
+                        entitySet.getName(),
+                        entitySet.getId() );
 
-                    if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
-                        Stopwatch esw = Stopwatch.createStarted();
-                        final UUID entitySetId = entitySet.getId();
-                        final Map<UUID, PropertyType> propertyTypeMap = propertyTypesByEntityType
-                                .get( entitySet.getEntityTypeId() );
-                        final PostgresIterable<UUID> entityKeyIdsToIndex = getDirtyEntityKeyIds( entitySetId );
-                        try ( final PostgresIterable.PostgresIterator<UUID> toIndexIter =
-                                entityKeyIdsToIndex.iterator() ) {
-                            int indexCount = 0;
-                            while ( toIndexIter.hasNext() ) {
-                                var batchToIndex = getBatch( toIndexIter );
-                                Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
-                                        .getEntitiesById( entitySetId, propertyTypeMap, batchToIndex );
+                if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
+                    Stopwatch esw = Stopwatch.createStarted();
+                    final UUID entitySetId = entitySet.getId();
+                    final Map<UUID, PropertyType> propertyTypeMap = propertyTypesByEntityType
+                            .get( entitySet.getEntityTypeId() );
+                    try ( final PostgresIterable.PostgresIterator<UUID> toIndexIter =
+                            getDirtyEntityKeyIds( entitySetId ).iterator() ) {
+                        int indexCount = 0;
+                        while ( toIndexIter.hasNext() ) {
+                            var batchToIndex = getBatch( toIndexIter );
+                            Map<UUID, SetMultimap<UUID, Object>> entitiesById = dataQueryService
+                                    .getEntitiesById( entitySetId, propertyTypeMap, batchToIndex );
 
-                                if ( elasticsearchApi.createBulkEntityData( entitySetId, entitiesById ) ) {
-                                    indexCount += dataQueryService.markAsIndexed( entitySetId, batchToIndex );
-                                    logger.info( "Indexed batch of {} elements for {} ({}) in {} ms",
-                                            indexCount,
-                                            entitySet.getName(),
-                                            entitySet.getId(),
-                                            esw.elapsed( TimeUnit.MILLISECONDS ) );
-                                }
+                            if ( elasticsearchApi.createBulkEntityData( entitySetId, entitiesById ) ) {
+                                indexCount += dataQueryService.markAsIndexed( entitySetId, batchToIndex );
+                                logger.info( "Indexed batch of {} elements for {} ({}) in {} ms",
+                                        indexCount,
+                                        entitySet.getName(),
+                                        entitySet.getId(),
+                                        esw.elapsed( TimeUnit.MILLISECONDS ) );
                             }
-                            logger.info( "Finished indexing entity set {} in {} ms",
-                                    entitySet.getName(),
-                                    esw.elapsed( TimeUnit.MILLISECONDS ) );
-                            logger.info( "Indexed {} elements in {} ms",
-                                    totalIndexed.addAndGet( indexCount ),
-                                    w.elapsed( TimeUnit.MILLISECONDS ) );
-                        } catch ( IOException e ) {
-                            logger.error( "Somethibng went wrong while iterating.", e );
+                            batchToIndex.clear();
                         }
+                        logger.info( "Finished indexing entity set {} in {} ms",
+                                entitySet.getName(),
+                                esw.elapsed( TimeUnit.MILLISECONDS ) );
+                        logger.info( "Indexed {} elements in {} ms",
+                                totalIndexed.addAndGet( indexCount ),
+                                w.elapsed( TimeUnit.MILLISECONDS ) );
+                    } catch ( IOException e ) {
+                        logger.error( "Somethibng went wrong while iterating.", e );
+                    } finally {
+                        entitySets.unlock( entitySet.getId() );
+                        backgroundLimiter.release();
                     }
-                } finally {
-                    entitySets.unlock( entitySet.getId() );
-                    backgroundLimiter.release();
+                    logger.info( "Indexed total number of {} elements in {} ms",
+                            totalIndexed.get(),
+                            w.elapsed( TimeUnit.MILLISECONDS ) );
+                } else {
+                    logger.info( "Skipping indexing as thread limit hit." );
                 }
-                logger.info( "Indexed total number of {} elements in {} ms",
-                        totalIndexed.get(),
-                        w.elapsed( TimeUnit.MILLISECONDS ) );
-            } else {
-                logger.info( "Skipping indexing as thread limit hit." );
             }
         } );
-
     }
 
     private static Set<UUID> getBatch( Iterator<UUID> entityKeyIdStream ) {
