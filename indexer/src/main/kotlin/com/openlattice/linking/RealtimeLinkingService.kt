@@ -25,6 +25,6 @@ package com.openlattice.linking
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class RealtimeLinkingService
-(){
+class RealtimeLinkingService(){
+
 }

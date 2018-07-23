@@ -35,6 +35,7 @@ import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.PostgresEntitySetManager;
@@ -43,6 +44,7 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.HazelcastBlockingService;
 import com.openlattice.mail.config.MailServiceRequirements;
@@ -129,6 +131,11 @@ public class ConductorSparkPod {
     }
 
     @Bean
+    public PostgresEntityDataQueryService dataQueryService() {
+        return new PostgresEntityDataQueryService( hikariDataSource );
+    }
+
+    @Bean
     public EdmManager dataModelService() {
         return new EdmService(
                 hikariDataSource,
@@ -149,5 +156,10 @@ public class ConductorSparkPod {
     @Bean
     public HazelcastBlockingService blockingService() {
         return new HazelcastBlockingService( hazelcastInstance );
+    }
+
+    @Bean
+    public BackgroundIndexingService backgroundIndexingService() throws IOException {
+        return new BackgroundIndexingService( hikariDataSource, hazelcastInstance, elasticsearchApi(), dataQueryService() );
     }
 }
