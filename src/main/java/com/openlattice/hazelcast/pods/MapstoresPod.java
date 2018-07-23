@@ -305,11 +305,6 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<AclKey, AclKeySet> aclKeySetMapstore() {
-        return new PrincipalTreeMapstore( hikariDataSource );
-    }
-
-    @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
         return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
     }
