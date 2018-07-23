@@ -15,4 +15,5 @@ include 'scrunchie'
 include 'shuttle'
 include 'scribe'
 include 'socrates'
+include 'indexer'
 
