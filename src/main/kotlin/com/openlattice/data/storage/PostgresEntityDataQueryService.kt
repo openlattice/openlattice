@@ -21,7 +21,10 @@
 
 package com.openlattice.data.storage
 
-import com.google.common.collect.*
+import com.google.common.collect.HashMultimap
+import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Multimaps
+import com.google.common.collect.SetMultimap
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
@@ -58,9 +61,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             entityKeyIds: Set<UUID>
     ): Map<UUID, SetMultimap<UUID, Any>> {
-        val entitiesById: MutableMap<UUID, SetMultimap<UUID, Any>> = Maps.newHashMap();
-
-        PostgresIterable(
+        return PostgresIterable(
                 Supplier<StatementHolder> {
                     val connection = hds.getConnection()
                     val statement = connection.createStatement()
@@ -77,9 +78,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                 Function<ResultSet, Pair<UUID, SetMultimap<UUID, Any>>> {
                     ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
                 }
-        ).forEach { entitiesById.put(it.first, it.second) }
-
-        return entitiesById
+        ).toMap()
     }
 
     fun streamableEntitySet(
@@ -480,6 +479,7 @@ fun selectEntitySetWithPropertyTypes(
         metadataOptions: Set<MetadataOption>
 ): String {
     val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
+
     val entityKeyIdsClause: Optional<String> =
             if (entityKeyIds.isEmpty()) {
                 Optional.empty()
@@ -492,13 +492,20 @@ fun selectEntitySetWithPropertyTypes(
             if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) {"${LAST_WRITE.name}" } else { "" },
             if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) {"${LAST_INDEX.name}" } else { "" })
             .union( authorizedPropertyTypes.values.map(::quote ) )
-
-    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
-            "FROM $esTableName \n" +
+    return "SELECT* FROM (SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
+            "FROM $esTableName " +
+            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} AND " } else  { " WHERE " } +
+            "version > 0"
+            ") as $esTableName" +
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value )} USING (${ID.name} )" }
-                    .joinToString("\n" ) +
-            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} " } else  { " " }
+                    .joinToString("\n" )
+//    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
+//            "FROM $esTableName " +
+//            authorizedPropertyTypes
+//                    .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value )} USING (${ID.name} )" }
+//                    .joinToString("\n" ) +
+//            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} " } else  { " " }
     //@formatter:on
 }
 
@@ -523,12 +530,21 @@ fun selectEntitySetWithPropertyTypesAndVersion(
             if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) {"${LAST_INDEX.name}" } else { "" })
             .union( authorizedPropertyTypes.values.map(::quote ) )
 
-    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
-            "FROM $esTableName \n" +
+    return "SELECT* FROM ( SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
+            "FROM $esTableName " +
+            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} AND " } else  { " WHERE " } +
+            "version > 0 "
+            ") as $esTableName" +
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version )} USING (${ID.name} )" }
-                    .joinToString("\n" ) +
-            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} " } else  { " " }
+                    .joinToString("\n" )
+//
+//    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
+//            "FROM $esTableName \n" +
+//            authorizedPropertyTypes
+//                    .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version )} USING (${ID.name} )" }
+//                    .joinToString("\n" ) +
+//            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} " } else  { " " }
     //@formatter:on
 }
 
