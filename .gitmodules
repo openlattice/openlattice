@@ -46,3 +46,6 @@
 [submodule "shuttle"]
 	path = shuttle
 	url = git@github.com:openlattice/shuttle.git
+[submodule "indexer"]
+	path = indexer
+	url = git@github.com:openlattice/indexer.git
