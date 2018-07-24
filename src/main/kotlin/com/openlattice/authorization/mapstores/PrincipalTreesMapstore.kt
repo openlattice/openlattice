@@ -85,7 +85,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     fun toPostgres(aclKey: AclKey): String {
-        return "{\"" + aclKey.joinToString("\",\"") + "\"}"
+        return "{\"" + aclKey.joinToString("\",\"") + "}"
     }
 
     override fun loadAllKeys(): Iterable<AclKey> {
