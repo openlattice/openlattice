@@ -173,6 +173,7 @@ public class HazelcastOrganizationService {
             case ROLE:
                 //For a role we ensure that it has
                 logger.debug( "Creating an organization with no members, but accessible by {}", principal );
+                break;
             default:
                 throw new IllegalStateException( "Only users and roles can create organizations." );
         }
