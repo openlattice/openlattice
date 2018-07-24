@@ -73,9 +73,8 @@ public class PostgresEntitySetManager {
                 entitySet = ResultSetAdapters.entitySet( rs );
             }
             rs.close();
-            connection.close();
         } catch ( SQLException e ) {
-            logger.debug( "Unable to load entity set {}", entitySetName, e );
+            logger.error( "Unable to load entity set {}", entitySetName, e );
         }
         return entitySet;
     }
@@ -90,7 +89,7 @@ public class PostgresEntitySetManager {
             }
             return result;
         } catch ( SQLException e ) {
-            logger.debug( "Unable to load all entity sets", e );
+            logger.error( "Unable to load all entity sets", e );
             return ImmutableList.of();
         }
     }
