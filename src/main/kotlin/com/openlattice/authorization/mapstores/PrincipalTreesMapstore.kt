@@ -75,7 +75,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     it.value.forEach {
                         stmt.addBatch(
                                 "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
-                                        "VALUES ('${toPostgres(aclKey)}', '${toPostgres(it)}') "
+                                        "VALUES ('${toPostgres(aclKey)}', '${toPostgres(it)}') ON CONFLICT DO NOTHING"
                         )
                     }
                 }
