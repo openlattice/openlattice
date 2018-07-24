@@ -23,9 +23,11 @@ package com.openlattice.authorization.mapstores
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableList
+import com.hazelcast.config.EvictionPolicy
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
 import com.hazelcast.config.MapStoreConfig
+import com.hazelcast.map.eviction.MapEvictionPolicy
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
@@ -63,19 +65,22 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             val connection = it
             val stmt = connection.createStatement()
 
-            map.forEach {
-                val aclKey = it.key
-                val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
-                        "WHERE ${ACL_KEY.name} = '${toPostgres(it.key)}' AND ${PRINCIPAL_OF_ACL_KEY.name} " +
-                        "NOT IN ('{" + it.value.joinToString(",") { toPostgres(it) } + "}')"
-                stmt.addBatch(sql)
-                it.value.forEach {
-                    stmt.addBatch(
-                            "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
-                                    "VALUES ('${toPostgres(aclKey)}', '${toPostgres(it)}') ")
+            stmt.use {
+                map.forEach {
+                    val aclKey = it.key
+                    val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
+                            "WHERE ${ACL_KEY.name} = '${toPostgres(it.key)}' AND ${PRINCIPAL_OF_ACL_KEY.name} " +
+                            "NOT IN ('{" + it.value.joinToString(",") { toPostgres(it) } + "}')"
+                    stmt.addBatch(sql)
+                    it.value.forEach {
+                        stmt.addBatch(
+                                "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
+                                        "VALUES ('${toPostgres(aclKey)}', '${toPostgres(it)}') "
+                        )
+                    }
                 }
+                stmt.executeBatch()
             }
-            stmt.executeBatch()
         }
     }
 
@@ -170,7 +175,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     override fun getMapName(): String {
-        return HazelcastMap.PRINCIPAL_TREES.name;
+        return HazelcastMap.PRINCIPAL_TREES.name
     }
 
     override fun getTable(): String {

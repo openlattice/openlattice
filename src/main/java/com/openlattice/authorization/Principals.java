@@ -64,7 +64,7 @@ public final class Principals {
 
             principals = CacheBuilder
                     .newBuilder()
-                    .expireAfterWrite( 1, TimeUnit.SECONDS )
+                    .expireAfterWrite( 30, TimeUnit.SECONDS )
                     .build( new CacheLoader<String, NavigableSet<Principal>>() {
                         @Override public NavigableSet<Principal> load( String principalId ) throws Exception {
                             SecurablePrincipal sp = users.getUnchecked( principalId );
