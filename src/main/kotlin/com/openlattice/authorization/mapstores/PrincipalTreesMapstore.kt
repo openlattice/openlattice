@@ -23,9 +23,11 @@ package com.openlattice.authorization.mapstores
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableList
+import com.hazelcast.config.EvictionPolicy
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
 import com.hazelcast.config.MapStoreConfig
+import com.hazelcast.map.eviction.MapEvictionPolicy
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
@@ -173,7 +175,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     override fun getMapName(): String {
-        return HazelcastMap.PRINCIPAL_TREES.name;
+        return HazelcastMap.PRINCIPAL_TREES.name
     }
 
     override fun getTable(): String {

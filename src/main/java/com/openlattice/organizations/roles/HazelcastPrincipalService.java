@@ -72,7 +72,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private final AuthorizationManager                  authorizations;
     private final HazelcastAclKeyReservationService     reservations;
     private final IMap<AclKey, SecurablePrincipal>      principals;
-    private final IMap<AclKey, AclKeySet>               principalTrees; // RoleName -> Member RoleNames
+    private final IMap<AclKey, AclKeySet>                principalTrees; // RoleName -> Member RoleNames
     private final IMap<String, Auth0UserBasic>          users;
     private final IMap<List<UUID>, SecurableObjectType> securableObjectTypes;
 
