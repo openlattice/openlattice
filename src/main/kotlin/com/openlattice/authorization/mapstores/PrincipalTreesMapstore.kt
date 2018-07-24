@@ -70,7 +70,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     val aclKey = it.key
                     val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
                             "WHERE ${ACL_KEY.name} = '${toPostgres(it.key)}' AND ${PRINCIPAL_OF_ACL_KEY.name} " +
-                            "NOT IN ('" + it.value.joinToString(",") { toPostgres(it) } + "')"
+                            "NOT IN (" + it.value.joinToString(",") { toPostgres(it) } + ")"
                     stmt.addBatch(sql)
                     it.value.forEach {
                         stmt.addBatch(
@@ -85,7 +85,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     fun toPostgres(aclKey: AclKey): String {
-        return "{\"" + aclKey.joinToString("\",\"") + "}"
+        return "'{\"" + aclKey.joinToString("\",\"") + "\"}'"
     }
 
     override fun loadAllKeys(): Iterable<AclKey> {
