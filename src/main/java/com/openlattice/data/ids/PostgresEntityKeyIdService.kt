@@ -66,7 +66,7 @@ class PostgresEntityKeyIdService(
     }
 
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(INSERT_SQL)
             entityKeyIds.forEach {
@@ -97,14 +97,14 @@ class PostgresEntityKeyIdService(
     }
 
     override fun getEntityKeyId(entityKey: EntityKey): UUID {
-        return loadEntityKeyId(entityKey.entitySetId, entityKey.entityId) ?:
-                storeEntityKeyIds(genEntityKeyIds(setOf(entityKey)))[entityKey]!!
+        return loadEntityKeyId(entityKey.entitySetId, entityKey.entityId) ?: storeEntityKeyIds(
+                genEntityKeyIds(setOf(entityKey))
+        )[entityKey]!!
     }
 
     private fun loadEntityKeyId(entitySetId: UUID, entityId: String): UUID? {
-        val connection = hds.getConnection()
-        connection.use {
-            val ps = connection.prepareStatement(entityKeyIdSql)
+        return hds.connection.use {
+            val ps = it.prepareStatement(entityKeyIdSql)
             ps.setObject(1, entitySetId)
             ps.setString(2, entityId)
             val rs = ps.executeQuery()
@@ -118,22 +118,24 @@ class PostgresEntityKeyIdService(
     }
 
     private fun loadEntityKeyIds(entityIds: SetMultimap<UUID, String>): MutableMap<EntityKey, UUID> {
-        val connection = hds.getConnection()
-        val ids = HashMap<EntityKey, UUID>(entityIds.size())
+        return hds.connection.use {
+            val connection = it
+            val ids = HashMap<EntityKey, UUID>(entityIds.size())
 
-        Multimaps
-                .asMap(entityIds)
-                .forEach {
-                    val ps = connection.prepareStatement(entityKeyIdsSql)
-                    ps.setObject(1, it.key)
-                    ps.setArray(2, PostgresArrays.createTextArray(connection, it.value))
-                    val rs = ps.executeQuery()
-                    while (rs.next()) {
-                        ids.put(ResultSetAdapters.entityKey(rs), ResultSetAdapters.id(rs))
+            Multimaps
+                    .asMap(entityIds)
+                    .forEach {
+                        val ps = connection.prepareStatement(entityKeyIdsSql)
+                        ps.setObject(1, it.key)
+                        ps.setArray(2, PostgresArrays.createTextArray(connection, it.value))
+                        val rs = ps.executeQuery()
+                        while (rs.next()) {
+                            ids[ResultSetAdapters.entityKey(rs)] = ResultSetAdapters.id(rs)
+                        }
                     }
-                }
 
-        return ids
+            return ids
+        }
     }
 
     override fun getEntityKeyIds(
@@ -163,7 +165,7 @@ class PostgresEntityKeyIdService(
     }
 
     private fun loadEntityKeys(entityKeyIds: Set<UUID>): MutableMap<UUID, EntityKey> {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         val entries = HashMap<UUID, EntityKey>(entityKeyIds.size)
 
         connection.use {
