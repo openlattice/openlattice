@@ -159,7 +159,14 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                         .forEach {
                             val propertyTypeId = it.key
                             val properties = it.value
-                            properties.forEach {
+                            properties.forEach p@{
+                                if (it == null) {
+                                    logger.error(
+                                            "Encountered null property value of type {} for entity set{} with entity key id {}",
+                                            propertyTypeId, entitySetId, entityKeyId
+                                    )
+                                    return@p
+                                }
                                 val ps = preparedStatements[propertyTypeId]
                                 ps?.setObject(1, entityKeyId)
                                 ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
