@@ -121,6 +121,7 @@ class BackgroundIndexingService(
 
     @Scheduled(fixedRate = INDEX_RATE)
     fun indexUpdatedEntitySets() {
+        logger.info("Starting background indexing task.")
         //Keep number of indexing jobs under control
         if (backgroundLimiter.tryAcquire()) {
             try {
@@ -172,7 +173,7 @@ class BackgroundIndexingService(
                                         w.elapsed(TimeUnit.MILLISECONDS)
                                 )
                             }
-
+                            indexingLocks.delete(entitySetId)
                             logger.info(
                                     "Indexed total number of {} elements in {} ms",
                                     totalIndexed.get(),
