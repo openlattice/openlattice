@@ -130,7 +130,7 @@ public class HazelcastOrganizationService {
                 apps );
         this.principals = checkNotNull( principals );
         this.securePrincipalsManager = securePrincipalsManager;
-//        fixOrganizations();
+        //        fixOrganizations();
     }
 
     public OrganizationPrincipal getOrganization( Principal p ) {
@@ -212,15 +212,18 @@ public class HazelcastOrganizationService {
 
         try {
             PrincipalSet orgMembers = members.get();
-            if( orgMembers == null ) {
+            if ( orgMembers == null ) {
                 logger.error( "Encountered null principal set for organization: {}" );
+            }
+            if ( apps == null ) {
+                logger.error( "Encounter null application" );
             }
             return new Organization(
                     principal,
                     MoreObjects.firstNonNull( autoApprovedEmailDomains.get(), ImmutableSet.of() ),
                     MoreObjects.firstNonNull( orgMembers, ImmutableSet.of() ),
                     roles,
-                    apps );
+                    MoreObjects.firstNonNull( apps, ImmutableSet.of() ) );
         } catch ( InterruptedException | ExecutionException e ) {
             logger.error( "Unable to load organization. {}", organizationId, e );
             return null;
@@ -229,7 +232,7 @@ public class HazelcastOrganizationService {
 
     public void destroyOrganization( UUID organizationId ) {
         // Remove all roles
-        authorizations.deletePermissions( new AclKey( (organizationId) ) );
+        authorizations.deletePermissions( new AclKey( ( organizationId ) ) );
         securePrincipalsManager.deleteAllRolesInOrganization( organizationId );
         allMaps.stream().forEach( m -> m.delete( organizationId ) );
         reservations.release( organizationId );
@@ -438,7 +441,7 @@ public class HazelcastOrganizationService {
              * this up afterwards.
              */
 
-            logger.info("Synchronizing admins.");
+            logger.info( "Synchronizing admins." );
             var adminPrincipals = PrincipalSet.wrap( securePrincipalsManager.getAllUsersWithPrincipal(
                     securePrincipalsManager.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) )
                     .stream()
