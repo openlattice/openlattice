@@ -80,7 +80,7 @@ class PostgresEntityDataQueryServiceTest {
                 "Entity set query: {}",
                 selectEntitySetWithPropertyTypes(
                         entitySetId,
-                        entityKeyIds,
+                        Optional.of(entityKeyIds),
                         propertyTypeMap,
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX)
                 )
@@ -98,7 +98,7 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(
                 "SQL Query: {}",
                 selectVersionOfPropertyTypeInEntitySet(
-                        entitySetId, Optional.of(entityKeyIdsClause(setOf(entityKeyId))), propertyTypeId, fqn, version
+                        entitySetId, entityKeyIdsClause(setOf(entityKeyId)), propertyTypeId, fqn, version
                 )
         )
     }

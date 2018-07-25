@@ -58,8 +58,23 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
     fun getEntitiesById(
             entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Map<UUID, SetMultimap<UUID, Any>> {
+        return getEntitiesById(entitySetId, authorizedPropertyTypes, Optional.empty())
+    }
+
+    fun getEntitiesById(
+            entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             entityKeyIds: Set<UUID>
+    ): Map<UUID, SetMultimap<UUID, Any>> {
+        return getEntitiesById(entitySetId, authorizedPropertyTypes, Optional.of(entityKeyIds))
+    }
+
+    private fun getEntitiesById(
+            entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            entityKeyIds: Optional<Set<UUID>>
     ): Map<UUID, SetMultimap<UUID, Any>> {
         return PostgresIterable(
                 Supplier<StatementHolder> {
@@ -87,12 +102,24 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             metadataOptions: Set<MetadataOption>,
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
-        return streamableEntitySet(entitySetId, setOf(), authorizedPropertyTypes, metadataOptions, version)
+        return streamableEntitySet(entitySetId, Optional.empty(), authorizedPropertyTypes, metadataOptions, version)
     }
 
     fun streamableEntitySet(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            metadataOptions: Set<MetadataOption>,
+            version: Optional<Long> = Optional.empty()
+    ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
+        return streamableEntitySet(
+                entitySetId, Optional.of(entityKeyIds), authorizedPropertyTypes, metadataOptions, version
+        )
+    }
+
+    private fun streamableEntitySet(
+            entitySetId: UUID,
+            entityKeyIds: Optional<Set<UUID>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             metadataOptions: Set<MetadataOption>,
             version: Optional<Long> = Optional.empty()
@@ -481,18 +508,13 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
 
 fun selectEntitySetWithPropertyTypes(
         entitySetId: UUID,
-        entityKeyIds: Set<UUID>,
+        entityKeyIds: Optional<Set<UUID>>,
         authorizedPropertyTypes: Map<UUID, String>,
         metadataOptions: Set<MetadataOption>
 ): String {
     val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
 
-    val entityKeyIdsClause: Optional<String> =
-            if (entityKeyIds.isEmpty()) {
-                Optional.empty()
-            } else {
-                Optional.of(entityKeyIdsClause(entityKeyIds))
-            }
+    val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
     val columns = setOf(
             "${ID_VALUE.name}",
@@ -501,8 +523,7 @@ fun selectEntitySetWithPropertyTypes(
             .union( authorizedPropertyTypes.values.map(::quote ) )
     return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} FROM (SELECT * \n" +
             "FROM $esTableName " +
-            "WHERE version > 0 " +
-            if( entityKeyIdsClause.isPresent ) { "AND ${entityKeyIdsClause.get()} " } else  { " " } +
+            "WHERE version > 0 $entityKeyIdsClause" +
             ") as $esTableName" +
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value )} USING (${ID.name} )" }
@@ -518,18 +539,13 @@ fun selectEntitySetWithPropertyTypes(
 
 fun selectEntitySetWithPropertyTypesAndVersion(
         entitySetId: UUID,
-        entityKeyIds: Set<UUID>,
+        entityKeyIds: Optional<Set<UUID>>,
         authorizedPropertyTypes: Map<UUID, String>,
         metadataOptions: Set<MetadataOption>,
         version: Long
 ): String {
     val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
-    val entityKeyIdsClause: Optional<String> =
-            if (entityKeyIds.isEmpty()) {
-                Optional.empty()
-            } else {
-                Optional.of(entityKeyIdsClause(entityKeyIds))
-            }
+    val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
     val columns = setOf(
             "${ID_VALUE.name}",
@@ -539,8 +555,7 @@ fun selectEntitySetWithPropertyTypesAndVersion(
 
     return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} FROM ( SELECT * " +
             "FROM $esTableName " +
-            "WHERE version > 0 " +
-            if( entityKeyIdsClause.isPresent ) { "AND ${entityKeyIdsClause.get()} " } else  { " " } +
+            "WHERE version > 0 $entityKeyIdsClause" +
             ") as $esTableName" +
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version )} USING (${ID.name} )" }
@@ -557,7 +572,7 @@ fun selectEntitySetWithPropertyTypesAndVersion(
 
 internal fun selectVersionOfPropertyTypeInEntitySet(
         entitySetId: UUID,
-        entityKeyIdsClause: Optional<String>,
+        entityKeyIdsClause: String,
         propertyTypeId: UUID,
         fqn: String,
         version: Long
@@ -570,13 +585,13 @@ internal fun selectVersionOfPropertyTypeInEntitySet(
             "FROM ${subSelectFilteredVersionOfPropertyTypeInEntitySet(
                     entitySetId, entityKeyIdsClause, propertyTypeId, fqn, version
             )}" +
-            "WHERE ARRAY[$MAX_PREV_VERSION] <@ versions) as $propertyTable AND ${entityKeyIdsClause.get()}"
+            "WHERE ARRAY[$MAX_PREV_VERSION] <@ versions) as $propertyTable AND $entityKeyIdsClause"
 }
 
 // We could combine latest and versioned reads, but it's easier to understand if they are separate.
 internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
         entitySetId: UUID,
-        entityKeyIdsClause: Optional<String>,
+        entityKeyIdsClause: String,
         propertyTypeId: UUID,
         fqn: String
 ): String {
@@ -586,16 +601,13 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
             " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)}," +
             " ${VERSION.name} " +
             "FROM $propertyTable " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} >= 0 " +
-            //@formatter:off
-            if( entityKeyIdsClause.isPresent ) { " AND ${entityKeyIdsClause.get()} " } else { " " } +
-            //@formatter:on
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} >= 0 $entityKeyIdsClause" +
             "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${HASH.name})) as $propertyTable "
 }
 
 fun subSelectFilteredVersionOfPropertyTypeInEntitySet(
         entitySetId: UUID,
-        entityKeyIdsClause: Optional<String>,
+        entityKeyIdsClause: String,
         propertyTypeId: UUID,
         fqn: String,
         version: Long
@@ -608,10 +620,7 @@ fun subSelectFilteredVersionOfPropertyTypeInEntitySet(
             " array_agg($EXPANDED_VERSIONS) as versions," +
             " max(abs($EXPANDED_VERSIONS)) as $MAX_PREV_VERSION " +
             "FROM $propertyTable, unnest(versions) as $EXPANDED_VERSIONS " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND abs($EXPANDED_VERSIONS) <= $version " +
-            //@formatter:off
-            if( entityKeyIdsClause.isPresent ) { " AND ${entityKeyIdsClause.get()} " } else { " " } +
-            //@formatter:on
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND abs($EXPANDED_VERSIONS) <= $version $entityKeyIdsClause" +
             "GROUP BY (${ENTITY_SET_ID.name}," +
             "   ${ID_VALUE.name}," +
             "   ${HASH.name})" +

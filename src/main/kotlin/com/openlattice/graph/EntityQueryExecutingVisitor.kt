@@ -165,7 +165,7 @@ class EntityQueryExecutingVisitor(
         val sql = "INSERT INTO ${ENTITY_QUERIES.name}(${QUERY_ID.name},${ID_VALUE.name},${CLAUSES.name}) " +
                 "SELECT distint $queryId,id,$clauseId FROM (" + selectEntitySetWithPropertyTypes(
                 entitySetId,
-                setOf(),
+                Optional.empty(),
                 authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
                 EnumSet.noneOf(MetadataOption::class.java)
         ) + clausesSql + ") ON CONFLICT DO " +
