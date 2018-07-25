@@ -123,20 +123,24 @@ class BackgroundIndexingService(
     fun indexUpdatedEntitySets() {
         //Keep number of indexing jobs under control
         if (backgroundLimiter.tryAcquire()) {
-            val w = Stopwatch.createStarted()
-            val propertyTypesByEntityType = getPropertyTypesByEntityTypesById()
-            entitySets.values.parallelStream().forEach { entitySet ->
-                val entitySetId = entitySet.id
-                if (indexingLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS) == null) {
-                    logger.info(
-                            "Starting indexing for entity set {} with id {}",
-                            entitySet.name,
-                            entitySetId
-                    )
-                    if (entitySet.name != AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME) {
-                        val esw = Stopwatch.createStarted()
-                        val propertyTypeMap = propertyTypesByEntityType[entitySet.entityTypeId]!!
-                        try {
+            try {
+                val w = Stopwatch.createStarted()
+                val propertyTypesByEntityType = getPropertyTypesByEntityTypesById()
+                entitySets.values.parallelStream().forEach { entitySet ->
+                    val entitySetId = entitySet.id
+                    if (indexingLocks.putIfAbsent(
+                                    entitySetId,
+                                    System.currentTimeMillis() + EXPIRATION_MILLIS
+                            ) == null) {
+                        logger.info(
+                                "Starting indexing for entity set {} with id {}",
+                                entitySet.name,
+                                entitySetId
+                        )
+                        if (entitySet.name != AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME) {
+                            val esw = Stopwatch.createStarted()
+                            val propertyTypeMap = propertyTypesByEntityType[entitySet.entityTypeId]!!
+
                             getDirtyEntityKeyIds(entitySetId).iterator().use { toIndexIter ->
                                 var indexCount = 0
                                 while (toIndexIter.hasNext()) {
@@ -163,24 +167,24 @@ class BackgroundIndexingService(
                                         esw.elapsed(TimeUnit.MILLISECONDS)
                                 )
                                 logger.info(
-                                        "Indexed {} elements in {} ms",
+                                        "Indexed {} elements in {} ms so far",
                                         totalIndexed.addAndGet(indexCount.toLong()),
                                         w.elapsed(TimeUnit.MILLISECONDS)
                                 )
                             }
-                        } catch (e: IOException) {
-                            logger.error("Something went wrong while iterating.", e)
-                        } finally {
-                            entitySets.unlock(entitySet.id)
-                            backgroundLimiter.release()
+
+                            logger.info(
+                                    "Indexed total number of {} elements in {} ms",
+                                    totalIndexed.get(),
+                                    w.elapsed(TimeUnit.MILLISECONDS)
+                            )
                         }
-                        logger.info(
-                                "Indexed total number of {} elements in {} ms",
-                                totalIndexed.get(),
-                                w.elapsed(TimeUnit.MILLISECONDS)
-                        )
                     }
                 }
+            } catch (e: IOException) {
+                logger.error("Something went wrong while iterating.", e)
+            } finally {
+                backgroundLimiter.release()
             }
         } else {
             logger.info("Skipping indexing as thread limit hit.")
