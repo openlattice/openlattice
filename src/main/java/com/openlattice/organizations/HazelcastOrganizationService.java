@@ -232,8 +232,10 @@ public class HazelcastOrganizationService {
 
     public void destroyOrganization( UUID organizationId ) {
         // Remove all roles
-        authorizations.deletePermissions( new AclKey( ( organizationId ) ) );
+        var aclKey = new AclKey( organizationId );
+        authorizations.deletePermissions( aclKey );
         securePrincipalsManager.deleteAllRolesInOrganization( organizationId );
+        securePrincipalsManager.deletePrincipal( aclKey );
         allMaps.stream().forEach( m -> m.delete( organizationId ) );
         reservations.release( organizationId );
         eventBus.post( new OrganizationDeletedEvent( organizationId ) );
