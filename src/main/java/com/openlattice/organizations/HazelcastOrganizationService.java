@@ -213,7 +213,7 @@ public class HazelcastOrganizationService {
         try {
             PrincipalSet orgMembers = members.get();
             if ( orgMembers == null ) {
-                logger.error( "Encountered null principal set for organization: {}":organizationId );
+                logger.error( "Encountered null principal set for organization: {}", organizationId );
             }
             if ( apps == null ) {
                 logger.error( "Encounter null application: {}", organizationId );
