@@ -209,11 +209,16 @@ public class HazelcastOrganizationService {
         OrganizationPrincipal principal = (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrgs );
         Set<Role> roles = getRoles( organizationId );
         Set<UUID> apps = getOrganizationApps( organizationId );
+
         try {
+            PrincipalSet orgMembers = members.get();
+            if( orgMembers == null ) {
+                logger.error( "Encountered null principal set for organization: {}" );
+            }
             return new Organization(
                     principal,
                     MoreObjects.firstNonNull( autoApprovedEmailDomains.get(), ImmutableSet.of() ),
-                    members.get(),
+                    MoreObjects.firstNonNull( orgMembers, ImmutableSet.of() ),
                     roles,
                     apps );
         } catch ( InterruptedException | ExecutionException e ) {
@@ -224,6 +229,7 @@ public class HazelcastOrganizationService {
 
     public void destroyOrganization( UUID organizationId ) {
         // Remove all roles
+        authorizations.deletePermissions( new AclKey( (organizationId) ) );
         securePrincipalsManager.deleteAllRolesInOrganization( organizationId );
         allMaps.stream().forEach( m -> m.delete( organizationId ) );
         reservations.release( organizationId );
