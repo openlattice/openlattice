@@ -132,7 +132,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Any>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         connection.use {
             val version = System.currentTimeMillis()
             val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId, version))
@@ -208,7 +208,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     fun deleteEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         return connection.use {
             return authorizedPropertyTypes
                     .map {

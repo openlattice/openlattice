@@ -20,6 +20,9 @@
 
 package com.openlattice.edm;
 
+import static com.openlattice.postgres.DataTables.propertyTableName;
+import static com.openlattice.postgres.DataTables.quote;
+
 import com.codahale.metrics.annotation.ExceptionMetered;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
@@ -28,6 +31,7 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.edm.events.EntitySetCreatedEvent;
 import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeFqnChangedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresTableDefinition;
@@ -83,10 +87,10 @@ public class PostgresEdmManager implements DbEdmManager {
 
     @Override public void removePropertiesFromEntitySet(
             EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
-//        for ( PropertyType propertyType : propertyTypes ) {
-//            PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( entitySet, propertyType );
-//            dropTable( ptd.getName() );
-//        }
+        //        for ( PropertyType propertyType : propertyTypes ) {
+        //            PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( entitySet, propertyType );
+        //            dropTable( ptd.getName() );
+        //        }
     }
 
     public void dropTable( String table ) {
@@ -113,7 +117,7 @@ public class PostgresEdmManager implements DbEdmManager {
         tables.add( DataTables.entityTableName( entitySet.getId() ) );
 
         for ( PropertyType pt : propertyTypes ) {
-            tables.add( DataTables.propertyTableName( pt.getId() ) );
+            tables.add( propertyTableName( pt.getId() ) );
         }
 
         String principalId = principal.getId();
@@ -141,6 +145,10 @@ public class PostgresEdmManager implements DbEdmManager {
 
     private String grantOnTable( String table, String principalId, String permission ) {
         return String.format( "GRANT %s ON TABLE %s TO %s", permission, table, principalId );
+    }
+
+    private String renameColumn( String table, String current, String update ) {
+        return String.format( "ALTER TABLE %s RENAME COLUMN %s TO %s", table, current, update );
     }
 
     private void createEntitySetTable( EntitySet entitySet ) throws SQLException {
@@ -174,8 +182,29 @@ public class PostgresEdmManager implements DbEdmManager {
     @Subscribe
     @ExceptionMetered
     @Timed
-    public void handlePropertyTypeCreated(PropertyTypeCreatedEvent propertyTypeCreatedEvent ) {
+    public void handlePropertyTypeFqnChanged( PropertyTypeFqnChangedEvent fqnChangedEvent ) {
+        try ( final Connection conn = hds.getConnection(); final Statement s = conn.createStatement() ) {
+            s.execute( renameColumn(
+                    quote( propertyTableName( fqnChangedEvent.getPropertyTypeId() ) ),
+                    quote( fqnChangedEvent.getCurrent().getFullQualifiedNameAsString() ),
+                    quote( fqnChangedEvent.getUpdate().getFullQualifiedNameAsString() ) ) );
+        } catch ( SQLException e ) {
+            logger.error( "Unable to process property type update.", e );
 
+        }
+    }
+
+    @Subscribe
+    @ExceptionMetered
+    @Timed
+    public void handlePropertyTypeCreated( PropertyTypeCreatedEvent propertyTypeCreatedEvent ) {
+        try ( final Connection conn = hds.getConnection(); final Statement s = conn.createStatement() ) {
+            PostgresTableDefinition ptd = DataTables
+                    .buildPropertyTableDefinition( propertyTypeCreatedEvent.getPropertyType() );
+            ptm.registerTables( ptd );
+        } catch ( SQLException e ) {
+            logger.error( "Unable to process property type creation.", e );
+        }
     }
 
 }

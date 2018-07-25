@@ -36,6 +36,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
@@ -669,9 +670,6 @@ public class EdmService implements EdmManager {
     @Override
     public Iterable<EntitySet> getEntitySets() {
         return entitySetManager.getAllEntitySets();
-        // return StreamSupport
-        // .stream( entitySetIds.spliterator(), false )
-        // .map( Util.getSafeMapper( entitySets ) )::iterator;
     }
 
     @Override
@@ -905,6 +903,7 @@ public class EdmService implements EdmManager {
     public void updatePropertyTypeMetadata( UUID propertyTypeId, MetadataUpdate update ) {
         if ( update.getType().isPresent() ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
+
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
         // get all entity sets containing the property type, and re-index them.

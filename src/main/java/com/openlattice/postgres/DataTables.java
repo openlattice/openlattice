@@ -144,6 +144,7 @@ public class DataTables {
         return ptd;
     }
 
+    @Deprecated
     public static PostgresTableDefinition buildPropertyTableDefinition(
             EntitySet entitySet,
             PropertyType propertyType ) {
