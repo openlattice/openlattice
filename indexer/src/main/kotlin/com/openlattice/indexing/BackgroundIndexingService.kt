@@ -179,11 +179,11 @@ class BackgroundIndexingService(
                                 totalIndexed.get(),
                                 w.elapsed(TimeUnit.MILLISECONDS)
                         )
-                    } else {
-                        logger.info("Skipping indexing as thread limit hit.")
                     }
                 }
             }
+        } else {
+            logger.info("Skipping indexing as thread limit hit.")
         }
     }
 
