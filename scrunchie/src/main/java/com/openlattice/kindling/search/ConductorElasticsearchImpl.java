@@ -23,6 +23,7 @@ package com.openlattice.kindling.search;
 import com.dataloom.mappers.ObjectMappers;
 import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -85,16 +86,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
+    private static final ObjectMapper mapper = ObjectMappers.newJsonMapper();
+    private static final Logger       logger = LoggerFactory
+            .getLogger( ConductorElasticsearchImpl.class );
 
-    private static final Logger logger = LoggerFactory.getLogger( ConductorElasticsearchImpl.class );
+    static {
+        mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true );
+    }
+
     private final MultiLayerNetwork                   net;
     private final ThreadLocal                         modelThread;
     private       Client                              client;
     private       ElasticsearchTransportClientFactory factory;
-    private boolean connected = true;
-    private String server;
-    private String cluster;
-    private int    port;
+    private       boolean                             connected = true;
+    private       String                              server;
+    private       String                              cluster;
+    private       int                                 port;
 
     public ConductorElasticsearchImpl( SearchConfiguration config ) {
         this( config, Optional.empty() );
@@ -678,8 +685,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         UUID entityKeyId = edk.getEntityKeyId();
 
         try {
-            String s = ObjectMappers.getJsonMapper().configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true )
-                    .writeValueAsString( propertyValues );
+            String s = mapper.writeValueAsString( propertyValues );
 
             client.prepareIndex( getIndexName( entitySetId ), getTypeName( entitySetId ), entityKeyId.toString() )
                     .setSource( s, XContentType.JSON )
@@ -708,10 +714,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             BulkRequestBuilder requestBuilder = client.prepareBulk();
             for ( Map.Entry<UUID, SetMultimap<UUID, Object>> entry : entitiesById.entrySet() ) {
                 UUID entityKeyId = entry.getKey();
-                String s = ObjectMappers.getJsonMapper().configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true )
-                        .writeValueAsString( entry.getValue() );
+                String s = mapper.writeValueAsString( entry.getValue() );
 
-                requestBuilder.add( new IndexRequest( indexName, indexType, entityKeyId.toString() ).source( s, XContentType.JSON ) );
+                requestBuilder.add( new IndexRequest( indexName, indexType, entityKeyId.toString() )
+                        .source( s, XContentType.JSON ) );
             }
 
             requestBuilder.execute().actionGet();
