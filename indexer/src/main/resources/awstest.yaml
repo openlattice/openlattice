@@ -1,3 +1,3 @@
 bucket: "lattice-test-config"
-folder: "conductor-test"
+folder: "datastore-test"
 region: "us-west-1"
