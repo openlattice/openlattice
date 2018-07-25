@@ -99,7 +99,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         return PostgresIterable(
                 Supplier<StatementHolder> {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val statement = connection.createStatement()
                     val rs = statement.executeQuery(
                             if (version.isPresent) {

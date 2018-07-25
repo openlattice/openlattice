@@ -178,7 +178,7 @@ open class DataGraphService(
     ): Map<String, UUID> {
         //We need to fix this to avoid remapping. Skipping for expediency.
         return doIntegrateEntities(entitySetId, entities, authorizedPropertyTypes)
-                .asSequence().map { it.key.entityId to it.value }.toMap()
+                .map { it.key.entityId to it.value }.toMap()
     }
 
     private fun doIntegrateEntities(
