@@ -162,6 +162,8 @@ class BackgroundIndexingService(
                                     }
                                     batchToIndex.clear()
                                 }
+                                //Since
+                                indexingLocks.delete(entitySetId)
                                 logger.info(
                                         "Finished indexing entity set {} in {} ms",
                                         entitySet.name,
@@ -173,7 +175,6 @@ class BackgroundIndexingService(
                                         w.elapsed(TimeUnit.MILLISECONDS)
                                 )
                             }
-                            indexingLocks.delete(entitySetId)
                             logger.info(
                                     "Indexed total number of {} elements in {} ms",
                                     totalIndexed.get(),
