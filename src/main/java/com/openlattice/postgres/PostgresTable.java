@@ -313,51 +313,51 @@ public final class PostgresTable {
 
     static {
         PRINCIPAL_TREES.addIndexes(
-                new PostgresIndexDefinition( PRINCIPAL_TREES, ACL_KEY )
+                new PostgresColumnsIndexDefinition( PRINCIPAL_TREES, ACL_KEY )
                         .method( IndexMethod.GIN )
                         .name( "principal_trees_acl_key_idx" )
                         .ifNotExists()
         );
         EDGES.addIndexes(
-                new PostgresIndexDefinition( EDGES, SRC_ENTITY_SET_ID )
+                new PostgresColumnsIndexDefinition( EDGES, SRC_ENTITY_SET_ID )
                         .name( "edges_src_entity_set_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, SRC_ENTITY_KEY_ID )
+                new PostgresColumnsIndexDefinition( EDGES, SRC_ENTITY_KEY_ID )
                         .name( "edges_src_entity_key_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, DST_ENTITY_SET_ID )
+                new PostgresColumnsIndexDefinition( EDGES, DST_ENTITY_SET_ID )
                         .name( "edges_dst_entity_set_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, DST_ENTITY_KEY_ID )
+                new PostgresColumnsIndexDefinition( EDGES, DST_ENTITY_KEY_ID )
                         .name( "edges_dst_entity_key_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, EDGE_ENTITY_SET_ID )
+                new PostgresColumnsIndexDefinition( EDGES, EDGE_ENTITY_SET_ID )
                         .name( "edges_edge_entity_set_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( EDGES, EDGE_ENTITY_KEY_ID )
+                new PostgresColumnsIndexDefinition( EDGES, EDGE_ENTITY_KEY_ID )
                         .name( "edges_edge_entity_key_id_idx" )
                         .ifNotExists() );
         IDS.addIndexes(
-                new PostgresIndexDefinition( IDS, ENTITY_SET_ID )
+                new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID )
                         .name( "entity_key_ids_entity_set_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
+                new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
                         .unique()
                         .name( "entity_key_ids_entity_key_idx" )
                         .ifNotExists()
         );
         APPS.addIndexes(
-                new PostgresIndexDefinition( APPS, ID )
+                new PostgresColumnsIndexDefinition( APPS, ID )
                         .name( "apps_id_idx" )
                         .ifNotExists() );
         ENTITY_QUERIES.addIndexes(
-                new PostgresIndexDefinition( ENTITY_QUERIES, ID_VALUE )
+                new PostgresColumnsIndexDefinition( ENTITY_QUERIES, ID_VALUE )
                         .name( "entity_queries_id_idx" )
                         .ifNotExists(),
-                new PostgresIndexDefinition( ENTITY_QUERIES, CLAUSES )
+                new PostgresColumnsIndexDefinition( ENTITY_QUERIES, CLAUSES )
                         .name( "" ) );
         GRAPH_QUERIES.addIndexes(
-                new PostgresIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "graph_queries_expiry_idx" )
+                new PostgresColumnsIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "graph_queries_expiry_idx" )
                         .ifNotExists() );
     }
 
