@@ -84,7 +84,7 @@ class BackgroundIndexingService(
     private var totalIndexed: IAtomicLong = hazelcastInstance.getAtomicLong(
             "com.openlattice.datastore.services.BackgroundIndexingService.totalIndexed"
     )
-    private var backgroundLimiter: Semaphore = Semaphore(Math.max(1, Runtime.getRuntime().availableProcessors() / 2))
+    private val backgroundLimiter: Semaphore = Semaphore(Math.max(1, Runtime.getRuntime().availableProcessors() / 2))
 
     private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
         return "SELECT * FROM ${quote(DataTables.entityTableName(entitySetId))} " +
@@ -162,7 +162,7 @@ class BackgroundIndexingService(
                                     }
                                     batchToIndex.clear()
                                 }
-                                //Since
+                                //Free this entity set so another thread
                                 indexingLocks.delete(entitySetId)
                                 logger.info(
                                         "Finished indexing entity set {} in {} ms",
@@ -197,14 +197,15 @@ class BackgroundIndexingService(
         indexingLocks.set(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS)
     }
 
-    private fun getBatch(entityKeyIdStream: Iterator<UUID>): MutableSet<UUID> {
+    private fun getBatch( entityKeyIdStream: PostgresIterable.PostgresIterator<UUID>): MutableSet<UUID> {
         val entityKeyIds = HashSet<UUID>(INDEX_SIZE)
 
         var i = 0
-        while (i < INDEX_SIZE && entityKeyIdStream.hasNext()) {
+        while (entityKeyIdStream.hasNext() && i < INDEX_SIZE ) {
             entityKeyIds.add(entityKeyIdStream.next())
             ++i
         }
+
         return entityKeyIds
     }
 }

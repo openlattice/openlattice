@@ -19,16 +19,15 @@
  *
  */
 
-package com.openlattice.linking
+package com.openlattice.linking.blocking
+
+import com.openlattice.data.EntityDataKey
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class RealtimeLinkingService
-(
-        val blocker : Blocker,
-        val matcher : Matcher
-){
-    val dbl = 0.0
+interface Clusterer {
+    fun updateClusterInfo( matchedBlock : Map<EntityDataKey, Map<EntityDataKey, Double>>)
+    fun
 }
