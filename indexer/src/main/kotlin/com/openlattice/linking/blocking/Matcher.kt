@@ -19,16 +19,27 @@
  *
  */
 
-package com.openlattice.linking
+package com.openlattice.linking.blocking
+
+import com.google.common.collect.SetMultimap
+import com.openlattice.data.EntityDataKey
+import java.util.*
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class RealtimeLinkingService
-(
-        val blocker : Blocker,
-        val matcher : Matcher
-){
-    val dbl = 0.0
+interface Matcher {
+    /**
+     * Computes an approximation of the discrete metric of every pair of blocked entities.
+     *
+     * A computed match of 0.0 is 'close' and a match of 1.0 is 'far'.
+     *
+     * @param block An entity paired to a set of entities from across zero or more entity sets mapped by data key.
+     * @return The computed match between all unique entities pairs in the block.
+     */
+    fun match(
+            block: Map<EntityDataKey, SetMultimap<UUID, Any>>
+    ): Map<EntityDataKey, Map<EntityDataKey, Double>>
+
 }

@@ -1,0 +1,56 @@
+/*
+ * Copyright (C) 2018. OpenLattice, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ *
+ *
+ */
+
+package com.openlattice.linking.blocking
+
+import com.google.common.collect.SetMultimap
+import com.openlattice.data.EntityDataKey
+import java.util.*
+
+/**
+ *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ */
+interface Blocker {
+    /**
+     * Retrieves the top 1000 matches per entity set. This can be a large number of search results 1000 * # entity sets.
+     * @param entitySetId The entity set id of the entity upon which to perform blocking.
+     * @param entityKeyId The entity key id of the entity upon which to perform blocking.
+     *
+     * @return A block of potentially matching objects as a mapping from entity data keys to entity properties
+     */
+    fun block(
+            entitySetId: UUID,
+            entityKeyId: UUID,
+            top: Int = 1000
+    ): Map<EntityDataKey, SetMultimap<UUID, Any>>
+
+    /**
+     * Retrieves the top 1000 matches per entity set. This can be a large number of search results 1000 * # entity sets.
+     *
+     *  @param entityDataKey The entity data key id of the entity upon which to perform blocking.
+     * @return A block of potentially matching objects as a mapping from entity data keys to entity properties
+     */
+    fun block(
+            entityDataKey: EntityDataKey,
+            top: Int = 1000
+    ): Map<EntityDataKey, SetMultimap<UUID, Any>>
+}
