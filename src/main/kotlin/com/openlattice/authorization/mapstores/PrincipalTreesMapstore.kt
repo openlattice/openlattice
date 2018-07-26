@@ -23,11 +23,9 @@ package com.openlattice.authorization.mapstores
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.ImmutableList
-import com.hazelcast.config.EvictionPolicy
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
 import com.hazelcast.config.MapStoreConfig
-import com.hazelcast.map.eviction.MapEvictionPolicy
 import com.kryptnostic.rhizome.mapstores.TestableSelfRegisteringMapStore
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AclKeySet
@@ -136,14 +134,13 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     @Timed
     override fun deleteAll(keys: Collection<AclKey>) {
         hds.connection.use {
-            val connection = it
-            val stmt = connection.createStatement()
+            it.createStatement().use {
+                val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
+                        "WHERE ${ACL_KEY.name} " +
+                        "IN (" + keys.map { "'{\"" + it.joinToString("\",\"") + "\"}'" }.joinToString(",") + ")"
 
-            val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
-                    "WHERE ${ACL_KEY.name} " +
-                    "IN (" + keys.map { "'{\"" + it.joinToString("\",\"") + "\"}'" }.joinToString(",") + ")"
-
-            StatementHolder(connection, stmt, stmt.executeQuery(sql))
+                it.executeUpdate(sql)
+            }
         }
     }
 
