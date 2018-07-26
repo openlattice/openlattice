@@ -331,7 +331,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     private fun tombstone(
             entitySetId: UUID, entityKeyIds: Set<UUID>, propertyTypesToTombstone: Collection<PropertyType>
     ): Int {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         connection.use {
             val tombstoneVersion = -System.currentTimeMillis()
 
@@ -354,7 +354,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
      * Tombstones specific property values through hash id
      */
     private fun tombstone(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>): Int {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         return connection.use {
             val tombstoneVersion = -System.currentTimeMillis()
             val propertyTypePreparedStatements = entities.values
