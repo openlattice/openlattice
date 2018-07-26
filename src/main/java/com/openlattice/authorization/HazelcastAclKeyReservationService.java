@@ -22,28 +22,27 @@
 
 package com.openlattice.authorization;
 
-import com.openlattice.authorization.securable.AbstractSecurableObject;
-import com.openlattice.authorization.securable.AbstractSecurableType;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.exceptions.AclKeyConflictException;
-import com.openlattice.edm.exceptions.TypeExistsException;
-import com.openlattice.hazelcast.HazelcastMap;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.openlattice.authorization.securable.AbstractSecurableObject;
+import com.openlattice.authorization.securable.AbstractSecurableType;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.datastore.util.Util;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.exceptions.AclKeyConflictException;
+import com.openlattice.edm.exceptions.TypeExistsException;
+import com.openlattice.hazelcast.HazelcastMap;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class HazelcastAclKeyReservationService {
     public static final  String                               PRIVATE_NAMESPACE     = "_private";
@@ -222,8 +221,9 @@ public class HazelcastAclKeyReservationService {
         /*
          * We always issue the delete, even if sometimes there is no aclKey registered for that FQN.
          */
-
-        aclKeys.delete( name );
+        if ( name != null ) {
+            aclKeys.delete( name );
+        }
     }
 
     private static String getPlaceholder( String objName ) {
