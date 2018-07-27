@@ -163,7 +163,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class ResultSetAdapters {
     private static final Logger  logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
-    private static final Decoder DECODER = Base64.getDecoder();
+    private static final Decoder DECODER = Base64.getMimeDecoder();
 
     public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
         final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
