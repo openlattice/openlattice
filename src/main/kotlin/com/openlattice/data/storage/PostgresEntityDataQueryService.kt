@@ -259,7 +259,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     }
 
     fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         return connection.use {
             authorizedPropertyTypes
                     .map {
@@ -603,7 +603,7 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
     val arrayAgg = if (binary) {
-        " array_agg(encode(${DataTables.quote(fqn)}, 'base64'})) as ${DataTables.quote(fqn)},"
+        " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)},"
     } else {
         " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)},"
     }
@@ -626,7 +626,7 @@ fun subSelectFilteredVersionOfPropertyTypeInEntitySet(
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
     val arrayAgg = if (binary) {
-        " array_agg(encode(${DataTables.quote(fqn)}, 'base64'})) as ${DataTables.quote(fqn)},"
+        " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)},"
     } else {
         " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)},"
     }
