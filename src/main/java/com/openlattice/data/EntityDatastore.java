@@ -22,7 +22,6 @@
 
 package com.openlattice.data;
 
-import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.edm.type.PropertyType;
@@ -67,17 +66,14 @@ public interface EntityDatastore {
 
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.
-     * @param entitySetId
-     * @param entities
-     * @param authorizedPropertyTypes
-     * @return
      */
     int createOrUpdateEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
-    @Timed int integrateEntities(
+    @Deprecated
+    int integrateEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
