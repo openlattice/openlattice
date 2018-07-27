@@ -422,12 +422,6 @@ public class DataController implements DataApi, AuthorizingComponent {
                 WRITE_PERMISSION,
                 dms.getPropertyTypesAsMap( entity.keySet() ) );
 
-        Map<UUID, EdmPrimitiveTypeKind> propertyTypes = dms.getEntityTypeByEntitySetId( entitySetId ).getProperties()
-                .stream().peek( propertyTypeId -> {
-                    ensureWriteAccess( new AclKey( entitySetId, propertyTypeId ) );
-                } ).map( propertyTypeId -> dms.getPropertyType( propertyTypeId ) ).collect( Collectors
-                        .toMap( propertyType -> propertyType.getId(), propertyType -> propertyType.getDatatype() ) );
-
         dgm.replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
         return null;
     }
