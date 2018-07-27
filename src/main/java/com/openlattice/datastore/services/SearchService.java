@@ -40,6 +40,7 @@ import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
@@ -201,6 +202,10 @@ public class SearchService {
         elasticsearchApi.deleteOrganization( event.getOrganizationId() );
     }
 
+    @Subscribe
+    public void indexEntities( EntitiesUpsertedEvent event) {
+        elasticsearchApi.createBulkEntityData( event.getEntitySetId(), event.getEntities() );
+    }
     @Subscribe
     public void createEntityData( EntityDataCreatedEvent event ) {
         EntityDataKey edk = event.getEntityDataKey();
