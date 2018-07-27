@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.apps.controllers;
 
+import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.openlattice.apps.App;
@@ -37,12 +38,6 @@ import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import javax.inject.Inject;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -52,6 +47,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.inject.Inject;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping( AppApi.CONTROLLER )
@@ -66,6 +68,7 @@ public class AppController implements AppApi, AuthorizingComponent {
     @Inject
     private HazelcastOrganizationService organizations;
 
+    @Timed
     @Override
     @RequestMapping(
             method = RequestMethod.GET,
@@ -75,6 +78,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getApps();
     }
 
+    @Timed
     @Override
     @RequestMapping(
             method = RequestMethod.POST,
@@ -86,6 +90,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.createApp( app );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = TYPE_PATH,
@@ -98,6 +103,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.createAppType( appType );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ID_PATH,
@@ -108,6 +114,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getApp( id );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = LOOKUP_PATH + NAME_PATH,
@@ -118,6 +125,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getApp( name );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = TYPE_PATH + ID_PATH,
@@ -128,6 +136,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getAppType( id );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = TYPE_PATH + LOOKUP_PATH + NAMESPACE_PATH + NAME_PATH,
@@ -138,6 +147,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getAppType( new FullQualifiedName( namespace, name ) );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = TYPE_PATH + BULK_PATH,
@@ -149,6 +159,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getAppTypes( appTypeIds );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ID_PATH,
@@ -159,6 +170,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.deleteApp( id );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = TYPE_PATH + ID_PATH,
@@ -169,6 +181,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.deleteAppType( id );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH + PREFIX_PATH,
@@ -190,6 +203,7 @@ public class AppController implements AppApi, AuthorizingComponent {
                 .filter( organization -> organization != null )::iterator;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = CONFIG_PATH + ID_PATH,
@@ -200,6 +214,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         return appService.getAvailableConfigs( appId, Principals.getCurrentPrincipals(), orgs );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH,
@@ -209,6 +224,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.addAppTypesToApp( appId, ImmutableSet.of( appTypeId ) );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH,
@@ -218,6 +234,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.removeAppTypesFromApp( appId, ImmutableSet.of( appTypeId ) );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = UPDATE_PATH + ID_PATH + APP_ID_PATH + APP_TYPE_ID_PATH + ENTITY_SET_ID_PATH,
@@ -231,6 +248,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.updateAppConfigEntitySetId( organizationId, appId, appTypeId, entitySetId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = UPDATE_PATH + ID_PATH + APP_ID_PATH + APP_TYPE_ID_PATH,
@@ -245,6 +263,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.updateAppConfigPermissions( organizationId, appId, appTypeId, EnumSet.copyOf( permissions ) );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = UPDATE_PATH + ID_PATH,
@@ -257,6 +276,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.updateAppMetadata( appId, metadataUpdate );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = TYPE_PATH + UPDATE_PATH + ID_PATH,
@@ -269,7 +289,8 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.updateAppTypeMetadata( appTypeId, metadataUpdate );
     }
 
-    @Override public AuthorizationManager getAuthorizationManager() {
+    @Override
+    public AuthorizationManager getAuthorizationManager() {
         return authorizations;
     }
 
