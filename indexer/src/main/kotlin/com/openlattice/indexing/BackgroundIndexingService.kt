@@ -23,7 +23,6 @@ package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IAtomicLong
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
@@ -44,11 +43,11 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
-import java.io.IOException
 import java.sql.ResultSet
 import java.util.*
-import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
 import java.util.function.Supplier
 
@@ -81,33 +80,7 @@ class BackgroundIndexingService(
         indexingLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
     }
 
-    private var totalIndexed: IAtomicLong = hazelcastInstance.getAtomicLong(
-            "com.openlattice.datastore.services.BackgroundIndexingService.totalIndexed"
-    )
-    private val backgroundLimiter: Semaphore = Semaphore(Math.max(1, Runtime.getRuntime().availableProcessors() / 2))
-
-    private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
-        return "SELECT * FROM ${quote(DataTables.entityTableName(entitySetId))} " +
-                "WHERE ${LAST_INDEX.name} < ${LAST_WRITE.name} LIMIT $FETCH_SIZE"
-    }
-
-    private fun getDirtyEntityKeyIds(entitySetId: UUID): PostgresIterable<UUID> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            val stmt = connection.createStatement()
-            val rs = stmt.executeQuery(getDirtyEntitiesQuery(entitySetId))
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, UUID> { ResultSetAdapters.id(it) })
-    }
-
-    private fun getPropertyTypesByEntityTypesById(): Map<UUID, Map<UUID, PropertyType>> {
-        return entityTypes.entries.map {
-            it.key to propertyTypes
-                    .getAll(it.value.properties)
-                    .filter { it.value.datatype == EdmPrimitiveTypeKind.Binary }
-                    .toMap()
-        }.toMap()
-    }
+    private var taskLock = ReentrantLock()
 
     @Scheduled(fixedRate = EXPIRATION_MILLIS)
     fun scavengeIndexingLocks() {
@@ -123,74 +96,124 @@ class BackgroundIndexingService(
     fun indexUpdatedEntitySets() {
         logger.info("Starting background indexing task.")
         //Keep number of indexing jobs under control
-        if (backgroundLimiter.tryAcquire()) {
+        if (taskLock.tryLock()) {
             try {
+                val totalIndexed = AtomicInteger()
                 val w = Stopwatch.createStarted()
-                val propertyTypesByEntityType = getPropertyTypesByEntityTypesById()
-                entitySets.values.parallelStream().forEach { entitySet ->
-                    val entitySetId = entitySet.id
-                    if (indexingLocks.putIfAbsent(
-                                    entitySetId,
-                                    System.currentTimeMillis() + EXPIRATION_MILLIS
-                            ) == null) {
-                        logger.info(
-                                "Starting indexing for entity set {} with id {}",
-                                entitySet.name,
-                                entitySetId
-                        )
-                        if (entitySet.name != AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME) {
-                            val esw = Stopwatch.createStarted()
-                            val propertyTypeMap = propertyTypesByEntityType[entitySet.entityTypeId]!!
-
-                            getDirtyEntityKeyIds(entitySetId).iterator().use { toIndexIter ->
-                                var indexCount = 0
-                                while (toIndexIter.hasNext()) {
-                                    updateExpiration(entitySetId)
-                                    val batchToIndex = getBatch(toIndexIter)
-                                    val entitiesById = dataQueryService
-                                            .getEntitiesById(entitySetId, propertyTypeMap, batchToIndex)
-
-                                    if (elasticsearchApi.createBulkEntityData(entitySetId, entitiesById)) {
-                                        indexCount += dataQueryService.markAsIndexed(entitySetId, batchToIndex)
-                                        logger.info(
-                                                "Indexed batch of {} elements for {} ({}) in {} ms",
-                                                indexCount,
-                                                entitySet.name,
-                                                entitySet.id,
-                                                esw.elapsed(TimeUnit.MILLISECONDS)
-                                        )
-                                    }
-                                    batchToIndex.clear()
-                                }
-                                //Free this entity set so another thread
-                                indexingLocks.delete(entitySetId)
-                                logger.info(
-                                        "Finished indexing entity set {} in {} ms",
-                                        entitySet.name,
-                                        esw.elapsed(TimeUnit.MILLISECONDS)
-                                )
-                                logger.info(
-                                        "Indexed {} elements in {} ms so far",
-                                        totalIndexed.addAndGet(indexCount.toLong()),
-                                        w.elapsed(TimeUnit.MILLISECONDS)
-                                )
-                            }
+                entitySets.values.parallelStream()
+                        .filter { it.name != AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME }
+                        .mapToInt(this::indexEntitySet)
+                        .peek {
                             logger.info(
-                                    "Indexed total number of {} elements in {} ms",
-                                    totalIndexed.get(),
+                                    "Processed {} elements in {} ms",
+                                    totalIndexed.addAndGet(it),
                                     w.elapsed(TimeUnit.MILLISECONDS)
                             )
                         }
-                    }
-                }
-            } catch (e: IOException) {
-                logger.error("Something went wrong while iterating.", e)
+                        .sum()
+                logger.info(
+                        "Completed indexing {} elements in {} ms",
+                        totalIndexed.get(),
+                        w.elapsed(TimeUnit.MILLISECONDS)
+                )
             } finally {
-                backgroundLimiter.release()
+                taskLock.unlock()
             }
         } else {
             logger.info("Skipping indexing as thread limit hit.")
         }
+    }
+
+    private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
+        return "SELECT * FROM ${quote(DataTables.entityTableName(entitySetId))} " +
+                "WHERE ${LAST_INDEX.name} < ${LAST_WRITE.name} LIMIT $FETCH_SIZE"
+    }
+
+    private fun getDirtyEntityKeyIds(entitySetId: UUID): PostgresIterable<UUID> {
+        return PostgresIterable(Supplier<StatementHolder> {
+            val connection = hds.connection
+            val stmt = connection.createStatement()
+            val rs = stmt.executeQuery(getDirtyEntitiesQuery(entitySetId))
+            StatementHolder(connection, stmt, rs)
+        }, Function<ResultSet, UUID> { ResultSetAdapters.id(it) })
+    }
+
+    private fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
+        return propertyTypes
+                .getAll(entityTypes[entityTypeId]?.properties ?: setOf())
+                .filter { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+    }
+
+    private fun getPropertyTypesByEntityTypesById(): Map<UUID, Map<UUID, PropertyType>> {
+        return entityTypes.entries.map {
+            it.key to propertyTypes
+                    .getAll(it.value.properties)
+                    .filter { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                    .toMap()
+        }.toMap()
+    }
+
+    private fun indexEntitySet(entitySet: EntitySet): Int {
+        logger.info(
+                "Starting indexing for entity set {} with id {}",
+                entitySet.name,
+                entitySet.id
+        )
+
+        val esw = Stopwatch.createStarted()
+        val entityKeyIds = getDirtyEntityKeyIds(entitySet.id)
+        val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
+
+        var indexCount = 0
+        var entityKeyIdsIterator = entityKeyIds.iterator()
+
+        while (entityKeyIdsIterator.hasNext()) {
+            updateExpiration(entitySet.id)
+            while (entityKeyIdsIterator.hasNext()) {
+                val batch = getBatch(entityKeyIdsIterator)
+                indexCount += indexEntities(entitySet, batch, propertyTypes)
+            }
+            entityKeyIdsIterator = entityKeyIds.iterator()
+        }
+
+        logger.info(
+                "Finished indexing {} elements from entity set {} in {} ms",
+                indexCount,
+                entitySet.name,
+                esw.elapsed(TimeUnit.MILLISECONDS)
+        )
+
+        return indexCount
+    }
+
+    private fun indexEntities(
+            entitySet: EntitySet,
+            batchToIndex: Set<UUID>,
+            propertyTypeMap: Map<UUID, PropertyType>
+    ): Int {
+        val esb = Stopwatch.createStarted()
+        val entitySetId = entitySet.id
+        var indexCount = 0
+        updateExpiration(entitySetId)
+        val entitiesById = dataQueryService.getEntitiesById(
+                entitySetId,
+                propertyTypeMap,
+                batchToIndex
+        )
+
+        if (elasticsearchApi.createBulkEntityData(entitySetId, entitiesById)) {
+            indexCount += dataQueryService.markAsIndexed(entitySetId, batchToIndex)
+            logger.info(
+                    "Indexed batch of {} elements for {} ({}) in {} ms",
+                    indexCount,
+                    entitySet.name,
+                    entitySet.id,
+                    esb.elapsed(TimeUnit.MILLISECONDS)
+            )
+            updateExpiration(entitySet.id)
+        }
+
+        return indexCount
     }
 
     private fun updateExpiration(entitySetId: UUID) {
