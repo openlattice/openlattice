@@ -31,6 +31,7 @@ import com.openlattice.graph.query.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.ENTITY_QUERIES
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -167,8 +168,9 @@ class EntityQueryExecutingVisitor(
                 entitySetId,
                 Optional.empty(),
                 authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
-                EnumSet.noneOf(MetadataOption::class.java)
-        ) + clausesSql + ") ON CONFLICT DO " +
+                EnumSet.noneOf(MetadataOption::class.java),
+                authorizedPropertyTypes.map { it.key to (it.value.datatype == EdmPrimitiveTypeKind.Binary) }.toMap()
+                ) + clausesSql + ") ON CONFLICT DO " +
                 "UPDATE SET ${ENTITY_QUERIES.name}.${CLAUSES.name} = ${ENTITY_QUERIES.name}.${CLAUSES.name}|| EXCLUDE.${CLAUSES.name}"
 
         hds.connection.use {

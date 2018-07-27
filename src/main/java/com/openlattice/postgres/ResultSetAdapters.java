@@ -749,7 +749,7 @@ public final class ResultSetAdapters {
                         logger.info( "Contents of string: {}", objArray[ 0 ] );
                         logger.info( "Reading byte array with class: {}", objArray[ 0 ].getClass().getCanonicalName() );
                     }
-                    
+
                     byte[][] raw = new byte[ objArray.length ][];
                     for ( int i = 0; i < objArray.length; ++i ) {
                         raw[ i ] = DECODER.decode( objArray[ i ] );
