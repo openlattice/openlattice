@@ -46,4 +46,33 @@ public class IntegrationResults {
         this.entitySetEntityKeyIds = entitySetEntityKeyIds;
         this.associationEntityKeyIds = associationEntityKeyIds;
     }
+
+    @JsonProperty( SerializationConstants.ENTITY_COUNT)
+    public int getEntityCount() {
+        return entityCount;
+    }
+
+    @JsonProperty( SerializationConstants.ASSOCIATION_COUNT)
+    public int getAssociationCount() {
+        return associationCount;
+    }
+
+    @JsonProperty(SerializationConstants.ASSOCIATIONS_ENTITY_KEY_MAPPINGS )
+    public Optional<Map<UUID, Map<String, UUID>>> getEntitySetEntityKeyIds() {
+        return entitySetEntityKeyIds;
+    }
+
+    @JsonProperty(SerializationConstants.ENTITY_SETS_ENTITY_KEY_MAPPINGS)
+    public Optional<Map<UUID, Map<String, UUID>>> getAssociationEntityKeyIds() {
+        return associationEntityKeyIds;
+    }
+
+    @Override public String toString() {
+        return "IntegrationResults{" +
+                "entityCount=" + entityCount +
+                ", associationCount=" + associationCount +
+                ", entitySetEntityKeyIds=" + entitySetEntityKeyIds +
+                ", associationEntityKeyIds=" + associationEntityKeyIds +
+                '}';
+    }
 }
