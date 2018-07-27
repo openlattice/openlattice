@@ -155,7 +155,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.postgresql.util.PGobject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,6 +164,7 @@ import org.slf4j.LoggerFactory;
 public final class ResultSetAdapters {
     private static final Logger  logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
     private static final Decoder DECODER = Base64.getDecoder();
+
     public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
         final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
         final State state = State.valueOf( rs.getString( STATE.getName() ) );
@@ -746,8 +746,10 @@ public final class ResultSetAdapters {
                     String[] objArray = (String[]) arr.getArray();
 
                     if ( objArray.length > 0 ) {
+                        logger.info( "Contents of string: {}", objArray[ 0 ] );
                         logger.info( "Reading byte array with class: {}", objArray[ 0 ].getClass().getCanonicalName() );
                     }
+                    
                     byte[][] raw = new byte[ objArray.length ][];
                     for ( int i = 0; i < objArray.length; ++i ) {
                         raw[ i ] = DECODER.decode( objArray[ i ] );
