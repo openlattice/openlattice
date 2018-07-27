@@ -35,6 +35,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
@@ -85,7 +86,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                                     entitySetId,
                                     entityKeyIds,
                                     authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
-                                    ImmutableSet.of()
+                                    ImmutableSet.of(),
+                                    authorizedPropertyTypes.map { it.key to (it.value.datatype == EdmPrimitiveTypeKind.Binary) }.toMap()
                             )
                     )
                     StatementHolder(connection, statement, rs)
@@ -135,14 +137,16 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                                         entityKeyIds,
                                         authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
                                         metadataOptions,
-                                        version.get()
+                                        version.get(),
+                                        authorizedPropertyTypes.map { it.key to (it.value.datatype == EdmPrimitiveTypeKind.Binary) }.toMap()
                                 )
                             } else {
                                 selectEntitySetWithPropertyTypes(
                                         entitySetId,
                                         entityKeyIds,
                                         authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
-                                        metadataOptions
+                                        metadataOptions,
+                                        authorizedPropertyTypes.map { it.key to (it.value.datatype == EdmPrimitiveTypeKind.Binary) }.toMap()
                                 )
                             }
                     )
@@ -508,14 +512,15 @@ fun selectEntitySetWithPropertyTypes(
         entitySetId: UUID,
         entityKeyIds: Optional<Set<UUID>>,
         authorizedPropertyTypes: Map<UUID, String>,
-        metadataOptions: Set<MetadataOption>
+        metadataOptions: Set<MetadataOption>,
+        binaryPropertyTypes: Map<UUID, Boolean>
 ): String {
     val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
 
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
     val columns = setOf(
-            "${ID_VALUE.name}",
+            ID_VALUE.name,
             if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) {"${LAST_WRITE.name}" } else { "" },
             if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) {"${LAST_INDEX.name}" } else { "" })
             .union( authorizedPropertyTypes.values.map(::quote ) )
@@ -524,7 +529,7 @@ fun selectEntitySetWithPropertyTypes(
             "WHERE version > 0 $entityKeyIdsClause" +
             ") as $esTableName" +
             authorizedPropertyTypes
-                    .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value )} USING (${ID.name} )" }
+                    .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, binaryPropertyTypes[it.key]!! )} USING (${ID.name} )" }
                     .joinToString("\n" )
 //    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
 //            "FROM $esTableName " +
@@ -540,7 +545,8 @@ fun selectEntitySetWithPropertyTypesAndVersion(
         entityKeyIds: Optional<Set<UUID>>,
         authorizedPropertyTypes: Map<UUID, String>,
         metadataOptions: Set<MetadataOption>,
-        version: Long
+        version: Long,
+        binaryPropertyTypes: Map<UUID, Boolean>
 ): String {
     val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
@@ -556,7 +562,7 @@ fun selectEntitySetWithPropertyTypesAndVersion(
             "WHERE version > 0 $entityKeyIdsClause" +
             ") as $esTableName" +
             authorizedPropertyTypes
-                    .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version )} USING (${ID.name} )" }
+                    .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version, binaryPropertyTypes[it.key]!! )} USING (${ID.name} )" }
                     .joinToString("\n" )
 //
 //    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
@@ -573,7 +579,8 @@ internal fun selectVersionOfPropertyTypeInEntitySet(
         entityKeyIdsClause: String,
         propertyTypeId: UUID,
         fqn: String,
-        version: Long
+        version: Long,
+        binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
     return "(SELECT ${ENTITY_SET_ID.name}, " +
@@ -581,7 +588,7 @@ internal fun selectVersionOfPropertyTypeInEntitySet(
             "   ${DataTables.quote(fqn)}, " +
             "   $MAX_PREV_VERSION " +
             "FROM ${subSelectFilteredVersionOfPropertyTypeInEntitySet(
-                    entitySetId, entityKeyIdsClause, propertyTypeId, fqn, version
+                    entitySetId, entityKeyIdsClause, propertyTypeId, fqn, version, binary
             )}" +
             "WHERE ARRAY[$MAX_PREV_VERSION] <@ versions) as $propertyTable AND $entityKeyIdsClause"
 }
@@ -591,12 +598,18 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
         entitySetId: UUID,
         entityKeyIdsClause: String,
         propertyTypeId: UUID,
-        fqn: String
+        fqn: String,
+        binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
+    val arrayAgg = if (binary) {
+        " array_agg(encode(${DataTables.quote(fqn)}, 'base64'})) as ${DataTables.quote(fqn)},"
+    } else {
+        " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)},"
+    }
     return "(SELECT ${ENTITY_SET_ID.name}," +
             " ${ID_VALUE.name}," +
-            " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)}," +
+            " $arrayAgg," +
             " ${VERSION.name} " +
             "FROM $propertyTable " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} >= 0 $entityKeyIdsClause" +
@@ -608,13 +621,19 @@ fun subSelectFilteredVersionOfPropertyTypeInEntitySet(
         entityKeyIdsClause: String,
         propertyTypeId: UUID,
         fqn: String,
-        version: Long
+        version: Long,
+        binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
+    val arrayAgg = if (binary) {
+        " array_agg(encode(${DataTables.quote(fqn)}, 'base64'})) as ${DataTables.quote(fqn)},"
+    } else {
+        " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)},"
+    }
     return "(SELECT ${ENTITY_SET_ID.name}," +
             " ${ID_VALUE.name}, " +
             " ${HASH.name}, " +
-            " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)}," +
+            " $arrayAgg" +
             " array_agg($EXPANDED_VERSIONS) as versions," +
             " max(abs($EXPANDED_VERSIONS)) as $MAX_PREV_VERSION " +
             "FROM $propertyTable, unnest(versions) as $EXPANDED_VERSIONS " +
