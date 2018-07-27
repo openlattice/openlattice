@@ -116,6 +116,7 @@ public class ConductorSparkPod {
     }
 
     @Bean
+
     public HazelcastAclKeyReservationService aclKeyReservationService() {
         return new HazelcastAclKeyReservationService( hazelcastInstance );
     }

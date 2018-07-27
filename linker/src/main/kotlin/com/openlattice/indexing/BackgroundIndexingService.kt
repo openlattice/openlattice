@@ -78,7 +78,7 @@ class BackgroundIndexingService(
         indexingLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
     }
 
-    private var taskLock = ReentrantLock()
+    private val taskLock = ReentrantLock()
 
     @Scheduled(fixedRate = EXPIRATION_MILLIS)
     fun scavengeIndexingLocks() {
@@ -140,14 +140,14 @@ class BackgroundIndexingService(
     private fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
         return propertyTypes
                 .getAll(entityTypes[entityTypeId]?.properties ?: setOf())
-                .filter { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
     }
 
     private fun getPropertyTypesByEntityTypesById(): Map<UUID, Map<UUID, PropertyType>> {
         return entityTypes.entries.map {
             it.key to propertyTypes
                     .getAll(it.value.properties)
-                    .filter { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                    .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
                     .toMap()
         }.toMap()
     }
