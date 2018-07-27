@@ -22,7 +22,14 @@ package com.openlattice.datastore.services;
 
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
@@ -40,6 +47,7 @@ import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
@@ -76,7 +84,6 @@ import com.openlattice.search.requests.EntityKeyIdSearchResult;
 import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
 import com.openlattice.search.requests.SearchTerm;
-
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -87,7 +94,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -171,6 +177,15 @@ public class SearchService {
 
     @Timed
     @Subscribe
+    public void deleteEntities( EntitiesDeletedEvent event ) {
+        event.getEntityKeyIds()
+                .stream()
+                .map( id -> new EntityDataKey( event.getEntitySetId(), id ) )
+                .forEach( elasticsearchApi::deleteEntityData );
+    }
+
+    @Timed
+    @Subscribe
     public void createOrganization( OrganizationCreatedEvent event ) {
         elasticsearchApi.createOrganization( event.getOrganization() );
     }
@@ -203,9 +218,16 @@ public class SearchService {
     }
 
     @Subscribe
-    public void indexEntities( EntitiesUpsertedEvent event) {
-        elasticsearchApi.createBulkEntityData( event.getEntitySetId(), event.getEntities() );
+    public void indexEntities( EntitiesUpsertedEvent event ) {
+        if ( event.isUpdate() ) {
+            event.getEntities()
+                    .forEach( ( entitKeyId, entity ) -> elasticsearchApi
+                            .updateEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
+        } else {
+            elasticsearchApi.createBulkEntityData( event.getEntitySetId(), event.getEntities() );
+        }
     }
+
     @Subscribe
     public void createEntityData( EntityDataCreatedEvent event ) {
         EntityDataKey edk = event.getEntityDataKey();
@@ -568,8 +590,7 @@ public class SearchService {
             EntityKeyIdSearchResult result,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         //TODO: Create a set from the beginning to avoid copy
-        if ( result.getEntityKeyIds().size() == 0 )
-            return ImmutableList.of();
+        if ( result.getEntityKeyIds().size() == 0 ) { return ImmutableList.of(); }
         return dataManager
                 .getEntities( entitySetId, ImmutableSet.copyOf( result.getEntityKeyIds() ), authorizedPropertyTypes )
                 .collect( Collectors.toList() );
