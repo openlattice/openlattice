@@ -160,6 +160,6 @@ public class ConductorSparkPod {
 
     @Bean
     public BackgroundIndexingService backgroundIndexingService() throws IOException {
-        return new BackgroundIndexingService( hikariDataSource, hazelcastInstance, elasticsearchApi(), dataQueryService() );
+        return new BackgroundIndexingService( hikariDataSource, hazelcastInstance, dataQueryService(), elasticsearchApi() );
     }
 }
