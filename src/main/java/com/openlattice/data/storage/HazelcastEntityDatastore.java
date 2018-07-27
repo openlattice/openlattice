@@ -153,7 +153,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         //Uncomment to renable data creation.
-        //eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, true ) );
+        eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, true ) );
         return count;
     }
 
@@ -185,13 +185,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     @Override public int clearEntitySet(
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return 0;
+        return dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
     }
 
     @Timed
     @Override public int clearEntities(
             UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return 0;
+        return dataQueryService.clearEntities( entitySetId, entityKeyId, authorizedPropertyTypes );
     }
 
     private Map<EntityDataKey, SetMultimap<FullQualifiedName, Object>> getAllEntities(

@@ -223,8 +223,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         }
     }
 
-    fun clearEntitySet(entitySetId: UUID): Int {
-        return tombstone(entitySetId)
+    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
+        return  tombstone(entitySetId) + tombstone(entitySetId, authorizedPropertyTypes.values)
     }
 
     /**
@@ -341,13 +341,34 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             return propertyTypesToTombstone
                     .map {
                         val ps = connection.prepareStatement(
-                                updatePropertyVersion(entitySetId, it.id, tombstoneVersion)
+                                updatePropertyVersionForDataKey(entitySetId, it.id, tombstoneVersion)
                         )
                         entityKeyIds.forEach {
                             ps.setObject(1, it)
                             ps.addBatch()
                         }
                         ps.executeBatch().sum()
+                    }
+                    .sum()
+        }
+    }
+
+    /**
+     * Tombstones the provided set of property types for each provided entity key.
+     */
+    private fun tombstone(entitySetId: UUID, propertyTypesToTombstone: Collection<PropertyType>): Int {
+        val connection = hds.connection
+        connection.use {
+            val tombstoneVersion = -System.currentTimeMillis()
+
+            return propertyTypesToTombstone
+                    .map {
+                        val propertyTypeId = it.id
+                        connection.createStatement().use {
+                            it.executeUpdate(
+                                    updatePropertyVersionForEntitySet(entitySetId, propertyTypeId, tombstoneVersion)
+                            )
+                        }
                     }
                     .sum()
         }
@@ -390,7 +411,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     }
 
     private fun tombstone(entitySetId: UUID): Int {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         return connection.use {
             val ps = it.prepareStatement(updateAllEntityVersions(entitySetId, System.currentTimeMillis()))
             return ps.executeUpdate()
@@ -398,7 +419,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     }
 
     private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
-        val connection = hds.getConnection()
+        val connection = hds.connection
         return connection.use {
             val ps = connection.prepareStatement(updateEntityVersion(entitySetId, System.currentTimeMillis()))
             entityKeyIds.forEach {
@@ -436,14 +457,20 @@ fun updateEntityVersion(entitySetId: UUID, version: Long): String {
     return updateAllEntityVersions(entitySetId, version) + " WHERE ${ID_VALUE.name} = ? "
 }
 
-fun updatePropertyVersion(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
+fun updatePropertyVersionForDataKey(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
     return "UPDATE $propertyTable SET versions = versions || $version, version = $version " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId'::uuid AND ${ID_VALUE.name} = ? "
 }
 
+fun updatePropertyVersionForEntitySet(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
+    val propertyTable = quote(propertyTableName(propertyTypeId))
+    return "UPDATE $propertyTable SET versions = versions || $version, version = $version " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId'::uuid "
+}
+
 fun updatePropertyValueVersion(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
-    return updatePropertyVersion(entitySetId, propertyTypeId, version) +
+    return updatePropertyVersionForDataKey(entitySetId, propertyTypeId, version) +
             "AND ${HASH.name} = ?"
 }
 
