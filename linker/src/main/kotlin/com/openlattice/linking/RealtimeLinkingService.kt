@@ -27,8 +27,8 @@ package com.openlattice.linking
  */
 class RealtimeLinkingService
 (
-        val blocker : Blocker,
-        val matcher : Matcher
+//        val blocker : com.openlattice.linking.Blocker,
+//        val matcher : Matcher
 ){
     val dbl = 0.0
 }

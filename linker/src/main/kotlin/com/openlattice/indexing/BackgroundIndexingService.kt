@@ -107,7 +107,7 @@ class BackgroundIndexingService(
                         .parallelStream()
                         .mapToInt(this::indexEntitySet)
                         .sum()
-                
+
                 lockedEntitySets.forEach( indexingLocks::delete )
 
                 logger.info(
