@@ -45,10 +45,12 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.data.PropertyMetadata;
+import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.JsonDeserializer;
@@ -72,6 +74,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HazelcastEntityDatastore implements EntityDatastore {
+    private static final int BATCH_INDEX_THRESHOLD = 256;
     private static final Logger logger = LoggerFactory
             .getLogger( HazelcastEntityDatastore.class );
 
@@ -153,7 +156,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         //Uncomment to renable data creation.
-        eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, true ) );
+        signalCreatedEntities( entitySetId, entities );
         return count;
     }
 
@@ -162,7 +165,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        final var count =  dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        signalUpdatedEntities( entitySetId, entities );
+        return count;
     }
 
     @Timed
@@ -170,7 +175,30 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        final var count =  dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        signalUpdatedEntities( entitySetId, entities );
+        return count;
+    }
+
+    private void signalCreatedEntities( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entities ) {
+        if(entities.size() < BATCH_INDEX_THRESHOLD ) {
+            eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, false ) );
+        }
+    }
+
+    private void signalUpdatedEntities( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entities) {
+        if(entities.size() < BATCH_INDEX_THRESHOLD ) {
+            eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, true ) );
+        }
+    }
+    private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
+        if(entities.size() < BATCH_INDEX_THRESHOLD ) {
+            eventBus.post( new EntitiesDeletedEvent( entitySetId,entityKeyIds ) );
+        }
+    }
+
+    private void signalEntitySetDeleted( UUID entitySetId ) {
+        eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
     }
 
     @Timed
@@ -185,13 +213,17 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     @Override public int clearEntitySet(
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
+        final var count = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
+        signalEntitySetDeleted( entitySetId );
+        return count;
     }
 
     @Timed
     @Override public int clearEntities(
-            UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService.clearEntities( entitySetId, entityKeyId, authorizedPropertyTypes );
+            UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        final var count = dataQueryService.clearEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
+        signalDeletedEntities( entitySetId, entityKeyIds );
+        return count;
     }
 
     private Map<EntityDataKey, SetMultimap<FullQualifiedName, Object>> getAllEntities(
