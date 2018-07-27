@@ -29,5 +29,5 @@ import com.openlattice.data.EntityDataKey
  */
 interface Clusterer {
     fun updateClusterInfo( matchedBlock : Map<EntityDataKey, Map<EntityDataKey, Double>>)
-    fun
+
 }
