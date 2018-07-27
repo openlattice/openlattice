@@ -74,8 +74,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HazelcastEntityDatastore implements EntityDatastore {
-    private static final int BATCH_INDEX_THRESHOLD = 256;
-    private static final Logger logger = LoggerFactory
+    private static final int    BATCH_INDEX_THRESHOLD = 256;
+    private static final Logger logger                = LoggerFactory
             .getLogger( HazelcastEntityDatastore.class );
 
     private final ObjectMapper                   mapper;
@@ -167,7 +167,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
-        signalUpdatedEntities( entitySetId, entities );
+        signalCreatedEntities( entitySetId,
+                dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
     }
 
@@ -176,8 +177,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        final var count =  dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
-        signalUpdatedEntities( entitySetId, entities );
+        final var count = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        signalCreatedEntities( entitySetId,
+                dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
     }
 
@@ -186,25 +188,27 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        final var count =  dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
-        signalUpdatedEntities( entitySetId, entities );
+        final var count = dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        signalCreatedEntities( entitySetId,
+                dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
     }
 
     private void signalCreatedEntities( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entities ) {
-        if(entities.size() < BATCH_INDEX_THRESHOLD ) {
+        if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, false ) );
         }
     }
 
-    private void signalUpdatedEntities( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entities) {
-        if(entities.size() < BATCH_INDEX_THRESHOLD ) {
+    private void signalUpdatedEntities( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entities ) {
+        if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, true ) );
         }
     }
+
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
-        if(entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
-            eventBus.post( new EntitiesDeletedEvent( entitySetId,entityKeyIds ) );
+        if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
+            eventBus.post( new EntitiesDeletedEvent( entitySetId, entityKeyIds ) );
         }
     }
 
