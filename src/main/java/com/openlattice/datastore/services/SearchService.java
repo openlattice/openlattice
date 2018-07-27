@@ -227,7 +227,9 @@ public class SearchService {
                     .forEach( ( entitKeyId, entity ) -> elasticsearchApi
                             .updateEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
         } else {
-            elasticsearchApi.createBulkEntityData( event.getEntitySetId(), event.getEntities() );
+            event.getEntities()
+                    .forEach( ( entitKeyId, entity ) -> elasticsearchApi
+                            .createEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
         }
     }
 
@@ -651,7 +653,7 @@ public class SearchService {
             if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
                 triggerEntitySetDataIndex( entitySet.getId() );
             }
-        } )
+        } );
     }
 
     public void triggerAppIndex( List<App> apps ) {
