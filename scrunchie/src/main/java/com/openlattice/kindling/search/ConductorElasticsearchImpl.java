@@ -20,6 +20,8 @@
 
 package com.openlattice.kindling.search;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.dataloom.mappers.ObjectMappers;
 import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -64,7 +66,6 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
@@ -129,8 +130,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             network = null;
             logger.error( "Unable to load neural net", e );
         }
-        this.net = network;
-        modelThread = ThreadLocal.withInitial( () -> net.clone() );
+        this.net = checkNotNull( network );
+
+        modelThread = ThreadLocal.withInitial( net::clone );
     }
 
     private void init( SearchConfiguration config ) {
@@ -713,11 +715,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
             BulkRequestBuilder requestBuilder = client.prepareBulk();
             for ( Map.Entry<UUID, SetMultimap<UUID, Object>> entry : entitiesById.entrySet() ) {
-                UUID entityKeyId = entry.getKey();
-                String s = mapper.writeValueAsString( entry.getValue() );
-
-                requestBuilder.add( new IndexRequest( indexName, indexType, entityKeyId.toString() )
-                        .source( s, XContentType.JSON ) );
+                final UUID entityKeyId = entry.getKey();
+                final byte[] s = mapper.writeValueAsBytes( entry.getValue() );
+                requestBuilder.add(
+                        client.prepareIndex( indexName, indexType, entityKeyId.toString() )
+                                .setSource( s, XContentType.JSON ) );
+                //                requestBuilder.add( new IndexRequest( indexName, indexType, entityKeyId.toString() )
+                //                        .source( s, XContentType.JSON ) );
             }
 
             requestBuilder.execute().actionGet();
