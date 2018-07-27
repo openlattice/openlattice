@@ -192,7 +192,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         }
     }
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
-        if(entities.size() < BATCH_INDEX_THRESHOLD ) {
+        if(entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesDeletedEvent( entitySetId,entityKeyIds ) );
         }
     }
