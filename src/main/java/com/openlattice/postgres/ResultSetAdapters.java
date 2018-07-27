@@ -740,10 +740,14 @@ public final class ResultSetAdapters {
                     objects = Arrays.asList( (Boolean[]) arr.getArray() );
                     break;
                 case Binary:
-                    Object o = arr.getArray();
-                    logger.info( "Reading byte array with class: {}", o.getClass().getSimpleName() );
-                    logger.info( "Reading byte array with class: {}", o.getClass().getCanonicalName() );
-                    byte[][] raw = (byte[][]) arr.getArray();
+                    Object[] objArray = (Object[]) arr.getArray();
+                    if ( objArray.length > 0 ) {
+                        logger.info( "Reading byte array with class: {}", objArray[ 0 ].getClass().getCanonicalName() );
+                    }
+                    byte[][] raw = new byte[ objArray.length ][];//(byte[][]) arr.getArray();
+                    for ( int i = 0; i < objArray.length; ++i ) {
+                        raw[ i ] = ( (byte[]) objArray[ i ] );
+                    }
                     objects = Arrays.asList( raw );
                     break;
                 default:

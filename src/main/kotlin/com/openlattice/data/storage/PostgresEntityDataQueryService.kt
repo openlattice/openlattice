@@ -23,7 +23,7 @@ package com.openlattice.data.storage
 
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Multimaps
+import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
@@ -181,28 +181,27 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                 val entityKeyId = it.key
                 val entityData = JsonDeserializer.validateFormatAndNormalize(it.value, datatypes)
 
-                Multimaps
-                        .asMap(entityData)
+                asMap(entityData)
                         .forEach {
                             val propertyTypeId = it.key
                             val properties = it.value
-                            properties.forEach p@{
+                            properties.forEach {
                                 if (it == null) {
                                     logger.error(
-                                            "Encountered null property value of type {} for entity set{} with entity key id {}",
+                                            "Encountered null property value of type {} for entity set {} with entity key id {}",
                                             propertyTypeId, entitySetId, entityKeyId
                                     )
-                                    return@p
-                                }
-                                val ps = preparedStatements[propertyTypeId]
-                                ps?.setObject(1, entityKeyId)
-                                ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
-                                ps?.setObject(3, it)
-                                ps?.addBatch()
-                                if (ps == null) {
-                                    logger.warn(
-                                            "Skipping unauthorized property in entity $entityKeyId from entity set $entitySetId"
-                                    )
+                                } else {
+                                    val ps = preparedStatements[propertyTypeId]
+                                    ps?.setObject(1, entityKeyId)
+                                    ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
+                                    ps?.setObject(3, it)
+                                    ps?.addBatch()
+                                    if (ps == null) {
+                                        logger.warn(
+                                                "Skipping unauthorized property in entity $entityKeyId from entity set $entitySetId"
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -369,8 +368,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
             entities.forEach {
                 val entityKeyId = it.key
-                Multimaps
-                        .asMap(it.value)
+                asMap(it.value)
                         .map {
                             val ps = propertyTypePreparedStatements[it.key]!!
                             //TODO: We're currently doing this one hash at a time and we should consider doing it using in query

@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
@@ -46,6 +45,7 @@ import com.openlattice.data.EntityKey;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.data.PropertyMetadata;
+import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
@@ -54,7 +54,6 @@ import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.JsonDeserializer;
 import com.openlattice.postgres.streams.PostgresIterable.PostgresIterator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
@@ -67,7 +66,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -153,7 +151,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
+        int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
+        //Uncomment to renable data creation.
+        //eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, true ) );
+        return count;
     }
 
     @Timed
@@ -263,12 +264,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         Multimaps
                 .asMap( entitySetIdsToEntityKeyIds )
-                .forEach( ( entitySetId, entityKeyIds ) -> entities.putAll( entitySetId, dataQueryService.streamableEntitySet(
-                        entitySetId,
-                        entityKeyIds,
-                        authorizedPropertyTypesByEntitySet.get( entitySetId ),
-                        EnumSet.noneOf( MetadataOption.class ),
-                        Optional.empty() ) ) );
+                .forEach( ( entitySetId, entityKeyIds ) -> entities
+                        .putAll( entitySetId, dataQueryService.streamableEntitySet(
+                                entitySetId,
+                                entityKeyIds,
+                                authorizedPropertyTypesByEntitySet.get( entitySetId ),
+                                EnumSet.noneOf( MetadataOption.class ),
+                                Optional.empty() ) ) );
 
         return entities;
     }
