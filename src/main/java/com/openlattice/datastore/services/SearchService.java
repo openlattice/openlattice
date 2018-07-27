@@ -568,6 +568,8 @@ public class SearchService {
             EntityKeyIdSearchResult result,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         //TODO: Create a set from the beginning to avoid copy
+        if ( result.getEntityKeyIds().size() == 0 )
+            return ImmutableList.of();
         return dataManager
                 .getEntities( entitySetId, ImmutableSet.copyOf( result.getEntityKeyIds() ), authorizedPropertyTypes )
                 .collect( Collectors.toList() );
