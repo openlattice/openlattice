@@ -82,7 +82,8 @@ class PostgresEntityDataQueryServiceTest {
                         entitySetId,
                         Optional.of(entityKeyIds),
                         propertyTypeMap,
-                        setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX)
+                        setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
+                        propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
                 )
         )
 //        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
@@ -98,7 +99,7 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(
                 "SQL Query: {}",
                 selectVersionOfPropertyTypeInEntitySet(
-                        entitySetId, entityKeyIdsClause(setOf(entityKeyId)), propertyTypeId, fqn, version
+                        entitySetId, entityKeyIdsClause(setOf(entityKeyId)), propertyTypeId, fqn, version,false
                 )
         )
     }

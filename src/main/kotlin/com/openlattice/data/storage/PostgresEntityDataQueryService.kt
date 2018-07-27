@@ -609,7 +609,7 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
     }
     return "(SELECT ${ENTITY_SET_ID.name}," +
             " ${ID_VALUE.name}," +
-            " $arrayAgg," +
+            " $arrayAgg" +
             " ${VERSION.name} " +
             "FROM $propertyTable " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} >= 0 $entityKeyIdsClause" +
