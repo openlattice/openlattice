@@ -111,7 +111,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return new EntitySetData<>(
                 orderedPropertyNames,
                 dataQueryService.streamableEntitySet( entitySetId,
-                        ImmutableSet.of(),
                         authorizedPropertyTypes,
                         EnumSet
                                 .of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
@@ -127,7 +126,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         UUID entityKeyId = idService.getEntityKeyId( new EntityKey( entitySetId, entityId ) );
         PostgresIterator<SetMultimap<FullQualifiedName, Object>> pgIter = dataQueryService
                 .streamableEntitySet( entitySetId,
-                        ImmutableSet.of(),
                         authorizedPropertyTypes,
                         EnumSet
                                 .of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
