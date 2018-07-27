@@ -74,6 +74,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.graph.edge.Edge;
+import com.openlattice.neuron.audit.AuditEntitySetUtils;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
@@ -644,7 +645,10 @@ public class SearchService {
     }
 
     public void triggerAllEntitySetDataIndex() {
-        dataModelService.getEntitySets().forEach( entitySet -> triggerEntitySetDataIndex( entitySet.getId() ) );
+        dataModelService.getEntitySets().forEach( entitySet -> {
+            if (entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ))
+            triggerEntitySetDataIndex( entitySet.getId() );
+        } );
     }
 
     public void triggerAppIndex( List<App> apps ) {
