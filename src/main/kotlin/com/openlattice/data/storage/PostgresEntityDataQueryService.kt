@@ -227,7 +227,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         return  tombstone(entitySetId) + tombstone(entitySetId, authorizedPropertyTypes.values)
     }
 
-    /**
+    /**int
      * Tombstones (writes a negative version) for the provided entities.
      * @param entitySetId The entity set to operate on.
      * @param entityKeyIds The entity key ids to tombstone.

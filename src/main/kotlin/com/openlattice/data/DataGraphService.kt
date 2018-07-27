@@ -188,7 +188,7 @@ open class DataGraphService(
     ): Map<EntityKey, UUID> {
         val ids = idService.getEntityKeyIds(entities.keys.map { EntityKey(entitySetId, it) }.toSet())
         val identifiedEntities = ids.map { it.value to entities[it.key.entityId] }.toMap()
-        eds.createOrUpdateEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
+        eds.integrateEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
         return ids
     }
 

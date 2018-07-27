@@ -150,13 +150,24 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     @Timed
-    @Override public int createOrUpdateEntities(
+    @Override
+    public int createOrUpdateEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
-        //Uncomment to renable data creation.
         signalCreatedEntities( entitySetId, entities );
+        return count;
+    }
+
+    @Timed
+    @Override
+    public int integrateEntities(
+            UUID entitySetId,
+            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
+        signalUpdatedEntities( entitySetId, entities );
         return count;
     }
 
