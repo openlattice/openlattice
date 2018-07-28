@@ -165,7 +165,7 @@ public interface DataApi {
     Void replaceEntityInEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Body SetMultimap<UUID, Object> entity );
+            @Body Map<UUID, Set<Object>> entity );
 
     /**
      * Replaces a single entity from an entity set.
@@ -178,7 +178,7 @@ public interface DataApi {
     Void replaceEntityInEntitySetUsingFqns(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Body SetMultimap<FullQualifiedName, Object> entityByFqns );
+            @Body Map<FullQualifiedName, Set<Object>> entityByFqns );
 
     /**
      * Gets the number of entities in an entity set.
