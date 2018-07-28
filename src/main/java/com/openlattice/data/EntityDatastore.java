@@ -84,7 +84,7 @@ public interface EntityDatastore {
      */
     int replaceEntities(
             UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**

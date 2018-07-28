@@ -9,11 +9,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Type;
@@ -27,11 +24,11 @@ public class JsonDeserializer {
     private static final String         geographyPointRegex = "(\\-)?[0-9]+(\\.){1}[0-9]+(\\,){1}(\\-)?[0-9]+(\\.){1}[0-9]+";
 
     public static SetMultimap<UUID, Object> validateFormatAndNormalize(
-            SetMultimap<UUID, Object> propertyValues,
+            Map<UUID, Set<Object>> propertyValues,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
         SetMultimap<UUID, Object> normalizedPropertyValues = HashMultimap.create();
 
-        for ( Map.Entry<UUID, Collection<Object>> entry : propertyValues.asMap().entrySet() ) {
+        for ( Map.Entry<UUID, Set<Object>> entry : propertyValues.entrySet() ) {
             UUID propertyTypeId = entry.getKey();
             EdmPrimitiveTypeKind dataType = authorizedPropertiesWithDataType.get( propertyTypeId );
             for ( Object value : entry.getValue() ) {
