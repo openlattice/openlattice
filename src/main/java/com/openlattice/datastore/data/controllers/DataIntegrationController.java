@@ -90,7 +90,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override public IntegrationResults integrateEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" ) boolean detailedResults,
-            @RequestBody Map<String, SetMultimap<UUID, Object>> entities ) {
+            @RequestBody Map<String, Map<UUID, Set<Object>>> entities ) {
         //Ensure that we have read access to entity set metadata.
         ensureReadAccess( new AclKey( entitySetId ) );
         //Load authorized property types
