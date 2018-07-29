@@ -60,7 +60,7 @@ public interface DataIntegrationApi {
     IntegrationResults integrateEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Query( DETAILED_RESULTS ) boolean detailedResults,
-            @Body Map<String, SetMultimap<UUID, Object>> entities );
+            @Body Map<String, Map<UUID, Set<Object>>> entities );
 
     /**
      * Creates a new set of associations.
