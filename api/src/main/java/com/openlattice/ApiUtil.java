@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -43,14 +44,14 @@ public class ApiUtil {
 
     private ApiUtil() {}
 
-    public static String generateDefaultEntityId( List<UUID> keys, SetMultimap<UUID, Object> entityDetails ) {
+    public static String generateDefaultEntityId( List<UUID> keys, Map<UUID, Set<Object>> entityDetails ) {
         return generateDefaultEntityId(
                 Preconditions.checkNotNull( keys, "Key properties must be configured for entity id generation." )
                         .stream(),
                 entityDetails );
     }
 
-    public static String generateDefaultEntityId( Stream<UUID> keys, SetMultimap<UUID, Object> entityDetails ) {
+    public static String generateDefaultEntityId( Stream<UUID> keys, Map<UUID, Set<Object>> entityDetails ) {
         String entityId = keys.map( entityDetails::get )
                 .map( ApiUtil::joinObjectsAsString )
                 .map( ApiUtil::toUtf8Bytes )
