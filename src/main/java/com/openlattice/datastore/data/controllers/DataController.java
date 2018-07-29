@@ -413,7 +413,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
             method = RequestMethod.PUT )
-    public Void replaceEntityInEntitySet(
+    public Integer replaceEntityInEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody SetMultimap<UUID, Object> entity ) {
@@ -422,15 +422,14 @@ public class DataController implements DataApi, AuthorizingComponent {
                 WRITE_PERMISSION,
                 dms.getPropertyTypesAsMap( entity.keySet() ) );
 
-        dgm.replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
-        return null;
+        return dgm.replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
     }
 
     @Override
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
             method = RequestMethod.POST )
-    public Void replaceEntityInEntitySetUsingFqns(
+    public Integer replaceEntityInEntitySetUsingFqns(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody SetMultimap<FullQualifiedName, Object> entityByFqns ) {
