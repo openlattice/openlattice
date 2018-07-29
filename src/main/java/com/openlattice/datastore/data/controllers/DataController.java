@@ -64,6 +64,7 @@ import com.openlattice.edm.type.PropertyType;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -245,12 +246,15 @@ public class DataController implements DataApi, AuthorizingComponent {
                     entities,
                     dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
         } else {
-            return dgm.replaceEntities( entitySetId, entities, dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+            return dgm.replaceEntities( entitySetId,
+                    transformValues( entities, Multimaps::asMap ),
+                    dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
         }
     }
 
     @PatchMapping( value = "/" + ENTITY_SET + "/" + SET_ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
-    @Override public Integer replaceEntityProperties(
+    @Override
+    public Integer replaceEntityProperties(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
         ensureReadAccess( new AclKey( entitySetId ) );
@@ -265,7 +269,8 @@ public class DataController implements DataApi, AuthorizingComponent {
                 dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
     }
 
-    @Override public Integer createAssociations( Set<DataEdgeKey> associations ) {
+    @Override
+    public Integer createAssociations( Set<DataEdgeKey> associations ) {
         Set<UUID> entitySetIds = associations.stream()
                 .flatMap( edgeKey -> Stream.of(
                         edgeKey.getSrc().getEntitySetId(),
@@ -341,8 +346,9 @@ public class DataController implements DataApi, AuthorizingComponent {
                         transformValues( association.getValue(), DataEdge::getData ),
                         authorizedPropertyTypes );
             } else {
+
                 return dgm.replaceEntities( entitySetId,
-                        transformValues( association.getValue(), DataEdge::getData ),
+                        transformValues( association.getValue(), assoc -> Multimaps.asMap( assoc.getData() ) ),
                         authorizedPropertyTypes );
             }
         } ).sum();
@@ -405,7 +411,8 @@ public class DataController implements DataApi, AuthorizingComponent {
         return null;
     }
 
-    @Override public Void clearEntitySet( UUID entitySetId ) {
+    @Override
+    public Void clearEntitySet( UUID entitySetId ) {
         return null;
     }
 
@@ -416,7 +423,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     public Integer replaceEntityInEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestBody SetMultimap<UUID, Object> entity ) {
+            @RequestBody Map<UUID, Set<Object>> entity ) {
         ensureReadAccess( new AclKey( entitySetId ) );
         Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,
                 WRITE_PERMISSION,
@@ -432,10 +439,11 @@ public class DataController implements DataApi, AuthorizingComponent {
     public Integer replaceEntityInEntitySetUsingFqns(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
-            @RequestBody SetMultimap<FullQualifiedName, Object> entityByFqns ) {
-        SetMultimap<UUID, Object> entity = HashMultimap.create();
-        Multimaps.asMap( entityByFqns )
-                .forEach( ( fqn, properties ) -> entity.putAll( dms.getPropertyTypeId( fqn ), properties ) );
+            @RequestBody Map<FullQualifiedName, Set<Object>> entityByFqns ) {
+        final Map<UUID, Set<Object>> entity = new HashMap<>();
+
+        entityByFqns
+                .forEach( ( fqn, properties ) -> entity.put( dms.getPropertyTypeId( fqn ), properties ) );
 
         return replaceEntityInEntitySet( entitySetId, entityKeyId, entity );
     }
