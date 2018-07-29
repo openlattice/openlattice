@@ -73,6 +73,8 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.google.common.collect.Maps.transformValues;
+
 public class HazelcastEntityDatastore implements EntityDatastore {
     private static final int    BATCH_INDEX_THRESHOLD = 256;
     private static final Logger logger                = LoggerFactory
@@ -155,7 +157,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
+        int count = dataQueryService.upsertEntities( entitySetId, transformValues(entities,Multimaps::asMap), authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities );
         return count;
     }
@@ -166,7 +168,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
+        int count = dataQueryService.upsertEntities( entitySetId, transformValues(entities,Multimaps::asMap), authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
@@ -175,7 +177,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     @Override public int replaceEntities(
             UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var count = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
@@ -188,7 +190,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        final var count = dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        final var count = dataQueryService.partialReplaceEntities( entitySetId, transformValues(entities,Multimaps::asMap), authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
@@ -397,8 +399,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             String entityId,
             SetMultimap<UUID, Object> entityDetails ) {
         //TODO: Keep full local copy of PropertyTypes EDM
-        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType = Maps
-                .transformValues( authorizedPropertyTypes, PropertyType::getDatatype );
+        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType =transformValues( authorizedPropertyTypes, PropertyType::getDatatype );
         Set<UUID> authorizedProperties = authorizedPropertiesWithDataType.keySet();
         // does not write the row if some property values that user is trying to write to are not authorized.
         //TODO: Don't fail silently
@@ -414,7 +415,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         SetMultimap<UUID, Object> normalizedPropertyValues;
         try {
-            normalizedPropertyValues = JsonDeserializer.validateFormatAndNormalize( entityDetails,
+            normalizedPropertyValues = JsonDeserializer.validateFormatAndNormalize( Multimaps.asMap(entityDetails),
                     authorizedPropertiesWithDataType );
         } catch ( Exception e ) {
             logger.error( "Entity {} not written because some property values are of invalid format.",
@@ -428,7 +429,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final UUID id = idService.getEntityKeyId( entitySetId, entityId );
         final EntityDataKey edk = new EntityDataKey( entitySetId, id );
         dataQueryService.upsertEntities( entitySetId,
-                ImmutableMap.of( id, normalizedPropertyValues ),
+                ImmutableMap.of( id, Multimaps.asMap(normalizedPropertyValues )),
                 authorizedPropertyTypes );
         eventBus.post( new EntityDataCreatedEvent( edk, normalizedPropertyValues, true ) );
         return id;

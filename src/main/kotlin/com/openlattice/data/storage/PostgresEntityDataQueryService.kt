@@ -23,6 +23,7 @@ package com.openlattice.data.storage
 
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableSet
+import com.google.common.collect.Multimaps
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.edm.type.PropertyType
@@ -160,7 +161,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
 
     fun upsertEntities(
-            entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Any>>,
+            entitySetId: UUID, entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         val connection = hds.connection
@@ -277,7 +278,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
      */
     fun replaceEntities(
             entitySetId: UUID,
-            entities: Map<UUID, SetMultimap<UUID, Any>>,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         tombstone(entitySetId, entities.keys, authorizedPropertyTypes.values)
@@ -286,14 +287,14 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
     fun partialReplaceEntities(
             entitySetId: UUID,
-            entities: Map<UUID, SetMultimap<UUID, Any>>,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         //Only tombstone properties being replaced.
         entities.forEach {
             val entity = it.value
             //Implied access enforcement as it will raise exception if lacking permission
-            tombstone(entitySetId, setOf(it.key), entity.keySet().map { authorizedPropertyTypes[it]!! }.toSet())
+            tombstone(entitySetId, setOf(it.key), entity.keys.map { authorizedPropertyTypes[it]!! }.toSet())
         }
         return upsertEntities(entitySetId, entities, authorizedPropertyTypes)
     }
@@ -317,15 +318,10 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
     private fun extractValues(
             replacementProperties: SetMultimap<UUID, Map<ByteBuffer, Any>>
-    ): SetMultimap<UUID, Any> {
-        val values: SetMultimap<UUID, Any> = HashMultimap.create()
-        replacementProperties.asMap().forEach {
-            values.putAll(
-                    it.key,
-                    it.value.asSequence().flatMap { it.values.asSequence() }.asIterable()
-            )
-        }
-        return values
+    ): Map<UUID, Set<Any>> {
+        return replacementProperties.asMap().map {
+                    it.key to it.value.flatMap { it.values }.toSet()
+        }.toMap()
     }
 
     /**

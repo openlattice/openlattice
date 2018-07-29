@@ -101,7 +101,7 @@ interface DataGraphManager {
 
     fun replaceEntities(
             entitySetId: UUID,
-            entities: Map<UUID, SetMultimap<UUID, Any>>,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int
 
