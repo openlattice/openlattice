@@ -224,7 +224,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     }
 
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
-        return  tombstone(entitySetId) + tombstone(entitySetId, authorizedPropertyTypes.values)
+        return tombstone(entitySetId) + tombstone(entitySetId, authorizedPropertyTypes.values)
     }
 
     /**int
@@ -610,17 +610,26 @@ internal fun selectVersionOfPropertyTypeInEntitySet(
         binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
+    val dataKeys = subSelectFilteredVersionOfPropertyTypeInEntitySet(
+            entitySetId,
+            entityKeyIdsClause,
+            propertyTypeId,
+            fqn,
+            version,
+            binary
+    )
+
     return "(SELECT ${ENTITY_SET_ID.name}, " +
             "   ${ID_VALUE.name}, " +
-            "   ${DataTables.quote(fqn)}, " +
-            "   $MAX_PREV_VERSION " +
+            "   ${DataTables.quote(fqn)} " +
             "FROM ${subSelectFilteredVersionOfPropertyTypeInEntitySet(
                     entitySetId, entityKeyIdsClause, propertyTypeId, fqn, version, binary
             )}" +
-            "WHERE ARRAY[$MAX_PREV_VERSION] <@ versions) as $propertyTable AND $entityKeyIdsClause"
+            "LEFT JOIN $propertyTable ON(entity_set_id, id) WHERE max_abs=abs_max) as $propertyTable"
+//            "WHERE ARRAY[$MAX_PREV_VERSION] <@ versions) as $propertyTable AND $entityKeyIdsClause"
 }
 
-// We could combine latest and versioned reads, but it's easier to understand if they are separate.
+
 internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
         entitySetId: UUID,
         entityKeyIdsClause: String,
@@ -630,20 +639,20 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
     val arrayAgg = if (binary) {
-        " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)},"
+        " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)} "
     } else {
-        " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)},"
+        " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
     }
     return "(SELECT ${ENTITY_SET_ID.name}," +
             " ${ID_VALUE.name}," +
             " $arrayAgg" +
-            " ${VERSION.name} " +
+//            " ${VERSION.name} " +
             "FROM $propertyTable " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} >= 0 $entityKeyIdsClause" +
-            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}, ${HASH.name})) as $propertyTable "
+            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name})) as $propertyTable "
 }
 
-fun subSelectFilteredVersionOfPropertyTypeInEntitySet(
+internal fun subSelectFilteredVersionOfPropertyTypeInEntitySet(
         entitySetId: UUID,
         entityKeyIdsClause: String,
         propertyTypeId: UUID,
@@ -652,25 +661,37 @@ fun subSelectFilteredVersionOfPropertyTypeInEntitySet(
         binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    val arrayAgg = if (binary) {
-        " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)},"
-    } else {
-        " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)},"
-    }
-    return "(SELECT ${ENTITY_SET_ID.name}," +
-            " ${ID_VALUE.name}, " +
-            " ${HASH.name}, " +
-            " $arrayAgg" +
-            " array_agg($EXPANDED_VERSIONS) as versions," +
-            " max(abs($EXPANDED_VERSIONS)) as $MAX_PREV_VERSION " +
-            "FROM $propertyTable, unnest(versions) as $EXPANDED_VERSIONS " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND abs($EXPANDED_VERSIONS) <= $version $entityKeyIdsClause" +
-            "GROUP BY (${ENTITY_SET_ID.name}," +
-            "   ${ID_VALUE.name}," +
-            "   ${HASH.name})" +
-            ") as $propertyTable "
+//    val arrayAgg = if (binary) {
+//        " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)},"
+//    } else {
+//        " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)},"
+//    }
+
+
+    //SELECT entity_set_id, id, max(versions) abs_max, max(abs(versions)) as max_abs, array_agg(versions) as av  FROM (SELECT entity_set_id, id, unnest(versions) as versions  FROM " pt_7b038634 -a0b4 - 4 ce1 -a04f - 85 d1775937aa " WHERE entity_set_id = 'ed5716db-830b-41b7-9905-24fa82761ace' AND 0 < ANY( versions ) ORDER BY versions ASC LIMIT 1000000) as foo WHERE abs(versions) <= 1527102624987  GROUP BY(entity_set_id,id);
+
+    return "(SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name}, max(versions) as abs_max, max(abs(versions)) as max_abs " +
+            "FROM (SELECT entity_set_id, id, unnest(versions) as versions FROM $propertyTable " +
+            "WHERE ${ENTITY_SET_ID.name}='$entitySetId' $entityKeyIdsClause) as $EXPANDED_VERSIONS " +
+            "WHERE abs(versions) <= $version " +
+            "GROUP BY(${ENTITY_SET_ID.name},${ID_VALUE.name})) as $propertyTable "
+
+
+
+
+//    return "(SELECT ${ENTITY_SET_ID.name}," +
+//            " ${ID_VALUE.name}, " +
+//            " $arrayAgg" +
+//            " array_agg($EXPANDED_VERSIONS) as versions," +
+//            " max(abs($EXPANDED_VERSIONS)) as $MAX_PREV_VERSION " +
+//            "FROM $propertyTable, unnest(versions) as $EXPANDED_VERSIONS " +
+//            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND abs($EXPANDED_VERSIONS) <= $version $entityKeyIdsClause" +
+//            "GROUP BY (${ENTITY_SET_ID.name},${ID_VALUE.name})" +
+//            ") as $propertyTable "
 }
 
 internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
+    //TODO: Potential Latent bug-- shouldn't break anything but when empty set is passed it will do IN('') which may
+    //cause a type exception
     return "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
 }

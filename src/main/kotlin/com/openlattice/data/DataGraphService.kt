@@ -133,13 +133,15 @@ open class DataGraphService(
     override fun clearEntitySet(
             entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        return 0
+        return eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
     }
 
     override fun clearEntities(
-            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        return 0
+        return eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
     override fun clearAssociations(key: Set<EdgeKey>): Int {
