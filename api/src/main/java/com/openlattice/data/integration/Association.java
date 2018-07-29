@@ -39,26 +39,27 @@
 
 package com.openlattice.data.integration;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.data.EntityKey;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.SetMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.data.EntityKey;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class Association {
-    private final EntityKey                 key;
-    private final EntityKey                 src;
-    private final EntityKey                 dst;
+    private final EntityKey              key;
+    private final EntityKey              src;
+    private final EntityKey              dst;
     // This is the actual values of the LinkSet, which can be thought of as "association details" of this association
-    private final SetMultimap<UUID, Object> details;
+    private final Map<UUID, Set<Object>> details;
 
     @JsonCreator
     public Association(
             @JsonProperty( SerializationConstants.KEY_FIELD ) EntityKey key,
             @JsonProperty( SerializationConstants.SRC ) EntityKey src,
             @JsonProperty( SerializationConstants.DST ) EntityKey dst,
-            @JsonProperty( SerializationConstants.DETAILS_FIELD ) SetMultimap<UUID, Object> details ) {
+            @JsonProperty( SerializationConstants.DETAILS_FIELD ) Map<UUID, Set<Object>> details ) {
         this.key = key;
         this.src = src;
         this.dst = dst;
@@ -81,7 +82,7 @@ public class Association {
     }
 
     @JsonProperty( SerializationConstants.DETAILS_FIELD )
-    public SetMultimap<UUID, Object> getDetails() {
+    public Map<UUID, Set<Object>> getDetails() {
         return details;
     }
 

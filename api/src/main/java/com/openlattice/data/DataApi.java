@@ -156,26 +156,24 @@ public interface DataApi {
 
     /**
      * Replaces a single entity from an entity set.
-     *
-     * @param entitySetId The id of the entity set the entity belongs to.
+     *  @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
      * @param entity The new entity details object that will replace the old value, with property type ids as keys.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    Void replaceEntityInEntitySet(
+    Integer replaceEntityInEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
             @Body SetMultimap<UUID, Object> entity );
 
     /**
      * Replaces a single entity from an entity set.
-     *
-     * @param entitySetId The id of the entity set the entity belongs to.
+     *  @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
      * @param entityByFqns The new entity details object that will replace the old value, with property type FQNs as keys.
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    Void replaceEntityInEntitySetUsingFqns(
+    Integer replaceEntityInEntitySetUsingFqns(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
             @Body SetMultimap<FullQualifiedName, Object> entityByFqns );

@@ -45,16 +45,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class Entity {
     private final EntityKey                 key;
-    private final SetMultimap<UUID, Object> details;
+    private final Map<UUID, Set<Object>> details;
 
     @JsonCreator
     public Entity(
             @JsonProperty( SerializationConstants.KEY_FIELD ) EntityKey key,
-            @JsonProperty( SerializationConstants.DETAILS_FIELD ) SetMultimap<UUID, Object> details ) {
+            @JsonProperty( SerializationConstants.DETAILS_FIELD ) Map<UUID, Set<Object>> details ) {
         this.key = key;
         this.details = details;
     }
@@ -65,7 +67,7 @@ public class Entity {
     }
 
     @JsonProperty( SerializationConstants.DETAILS_FIELD )
-    public SetMultimap<UUID, Object> getDetails() {
+    public Map<UUID, Set<Object>> getDetails() {
         return details;
     }
 

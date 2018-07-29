@@ -38,9 +38,8 @@
 
 package com.openlattice.data.requests;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.SetMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import com.openlattice.data.integration.BulkDataCreation;
 import com.openlattice.data.integration.Entity;
 import com.openlattice.mapstores.TestDataFactory;
@@ -51,6 +50,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
@@ -61,7 +62,7 @@ import org.junit.Test;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-@SuppressFBWarnings(value="SECOBDES", justification = "This is a test.")
+@SuppressFBWarnings( value = "SECOBDES", justification = "This is a test." )
 public class BulkDataCreationSerializationTest {
 
     @Test
@@ -81,12 +82,17 @@ public class BulkDataCreationSerializationTest {
         Assert.assertEquals( bdc, actual );
     }
 
-    public SetMultimap<UUID, Object> getObjects() {
-        return HashMultimap.create( ImmutableSetMultimap.of(
-                UUID.randomUUID(), RandomUtils.nextDouble( 0.0, 1e6 ),
-                UUID.randomUUID(), DateTime.now(),
-                UUID.randomUUID(), RandomStringUtils.random( 10 ),
-                UUID.randomUUID(), RandomUtils.nextInt( 0, 10000 ),
-                UUID.randomUUID(), RandomUtils.nextLong( 0, 1 << 35 ) ) );
+    public Map<UUID, Set<Object>> getObjects() {
+        return ImmutableMap.of(
+                UUID.randomUUID(),
+                Sets.newHashSet( RandomUtils.nextDouble( 0.0, 1e6 ), RandomUtils.nextDouble( 0.0, 1e6 ) ),
+                UUID.randomUUID(),
+                Sets.newHashSet( DateTime.now() ),
+                UUID.randomUUID(),
+                Sets.newHashSet( RandomStringUtils.random( 10 ) ),
+                UUID.randomUUID(),
+                Sets.newHashSet( RandomUtils.nextInt( 0, 10000 ) ),
+                UUID.randomUUID(),
+                Sets.newHashSet( RandomUtils.nextLong( 0, 1 << 35 ) ) );
     }
 }

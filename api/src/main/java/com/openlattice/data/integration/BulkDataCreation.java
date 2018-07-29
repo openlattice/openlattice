@@ -42,8 +42,6 @@ package com.openlattice.data.integration;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
@@ -52,13 +50,15 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-@SuppressFBWarnings(value="SECOBDES", justification = "Java serialization for this class only occurs client side.")
+@SuppressFBWarnings( value = "SECOBDES", justification = "Java serialization for this class only occurs client side." )
 public class BulkDataCreation implements Serializable {
     static {
         FullQualifiedNameJacksonSerializer.registerWithMapper( ObjectMappers.getJsonMapper() );
@@ -111,7 +111,7 @@ public class BulkDataCreation implements Serializable {
         int entityCount = ois.readInt();
         for ( int i = 0; i < entityCount; ++i ) {
             EntityKey ek = deserializeEntityKey( ois );
-            SetMultimap<UUID, Object> details = deserializeEntityDetails( ois );
+            Map<UUID, Set<Object>> details = deserializeEntityDetails( ois );
             entities.add( new Entity( ek, details ) );
         }
 
@@ -120,7 +120,7 @@ public class BulkDataCreation implements Serializable {
             EntityKey src = deserializeEntityKey( ois );
             EntityKey dst = deserializeEntityKey( ois );
             EntityKey key = deserializeEntityKey( ois );
-            SetMultimap<UUID, Object> details = deserializeEntityDetails( ois );
+            Map<UUID, Set<Object>> details = deserializeEntityDetails( ois );
             associations.add( new Association( key, src, dst, details ) );
         }
     }
@@ -161,29 +161,35 @@ public class BulkDataCreation implements Serializable {
         return new UUID( msb, lsb );
     }
 
-    private static SetMultimap<UUID, Object> deserializeEntityDetails( ObjectInputStream ois ) throws IOException {
+    private static Map<UUID, Set<Object>> deserializeEntityDetails( ObjectInputStream ois ) throws IOException {
         //        Input input = new Input( ois );
         //        return (SetMultimap<UUID, Object>) kryoThreadLocal.get().readClassAndObject( input );
         int detailCount = ois.readInt();
-        SetMultimap<UUID, Object> details = HashMultimap.create();
+        Map<UUID, Set<Object>> details = new HashMap<>( detailCount );
         for ( int i = 0; i < detailCount; ++i ) {
             UUID propertyId = deserializeUUID( ois );
-            Object detail = null;
-            try {
-                detail = ois.readObject();
-            } catch ( ClassNotFoundException e ) {
-                throw new IOException( "Unable to locate class", e );
+            int valueCount = ois.readInt();
+            Set<Object> values = new HashSet<>( valueCount );
+            for ( int j = 0; j < valueCount; ++j ) {
+                try {
+                    values.add( ois.readObject() );
+                } catch ( ClassNotFoundException e ) {
+                    throw new IOException( "Unable to locate class", e );
+                }
             }
-            details.put( propertyId, detail );
+            details.put( propertyId, values );
         }
         return details;
     }
 
-    private static void serialize( ObjectOutputStream oos, SetMultimap<UUID, Object> details ) throws IOException {
+    private static void serialize( ObjectOutputStream oos, Map<UUID, Set<Object>> details ) throws IOException {
         oos.writeInt( details.size() );
-        for ( Entry<UUID, Object> entry : details.entries() ) {
+        for ( Entry<UUID, Set<Object>> entry : details.entrySet() ) {
             serialize( oos, entry.getKey() );
-            oos.writeObject( entry.getValue() );
+            oos.writeInt( entry.getValue().size() );
+            for ( Object o : entry.getValue() ) {
+                oos.writeObject( o );
+            }
         }
     }
 
