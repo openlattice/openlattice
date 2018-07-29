@@ -89,7 +89,7 @@ interface DataGraphManager {
 
     fun integrateEntities(
             entitySetId: UUID,
-            entities: Map<String, SetMultimap<UUID, Any>>,
+            entities: Map<String, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Map<String, UUID>
 

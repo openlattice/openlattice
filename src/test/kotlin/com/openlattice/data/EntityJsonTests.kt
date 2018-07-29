@@ -73,8 +73,8 @@ class EntityJsonTests {
     fun serdes() {
         val entity = ObjectMappers.getJsonMapper().readValue(json, Entity::class.java)
 
-        Assert.assertTrue(entity.details.get(p1).all { it != null })
-        Assert.assertTrue(entity.details.get(p2).all { it != null })
+        Assert.assertTrue(entity.details.get(p1)?.all { it != null } ?: false )
+        Assert.assertTrue(entity.details.get(p2)?.all { it != null } ?: false)
     }
 
     @Test

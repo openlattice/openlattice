@@ -175,7 +175,7 @@ open class DataGraphService(
 
     override fun integrateEntities(
             entitySetId: UUID,
-            entities: Map<String, SetMultimap<UUID, Any>>,
+            entities: Map<String, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Map<String, UUID> {
         //We need to fix this to avoid remapping. Skipping for expediency.
@@ -185,7 +185,7 @@ open class DataGraphService(
 
     private fun doIntegrateEntities(
             entitySetId: UUID,
-            entities: Map<String, SetMultimap<UUID, Any>>,
+            entities: Map<String, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Map<EntityKey, UUID> {
         val ids = idService.getEntityKeyIds(entities.keys.map { EntityKey(entitySetId, it) }.toSet())
@@ -304,7 +304,7 @@ open class DataGraphService(
             associations: Set<Association>,
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): IntegrationResults? {
-        val entitiesByEntitySet = HashMap<UUID, MutableMap<String, SetMultimap<UUID, Any>>>()
+        val entitiesByEntitySet = HashMap<UUID, MutableMap<String, Map<UUID, Set<Any>>>>()
 
         for (entity in entities) {
             val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { HashMap() }

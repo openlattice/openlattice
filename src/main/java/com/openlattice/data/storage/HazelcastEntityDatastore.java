@@ -166,9 +166,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override
     public int integrateEntities(
             UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        int count = dataQueryService.upsertEntities( entitySetId, transformValues(entities,Multimaps::asMap), authorizedPropertyTypes );
+        int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
