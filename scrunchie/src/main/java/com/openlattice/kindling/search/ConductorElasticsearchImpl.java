@@ -92,7 +92,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             .getLogger( ConductorElasticsearchImpl.class );
 
     static {
-        mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true );
+        mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false );
     }
 
     private final MultiLayerNetwork                   net;
