@@ -21,14 +21,32 @@
 
 package com.openlattice.linking
 
+import com.openlattice.postgres.streams.PostgresIterable
+import java.util.*
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class RealtimeLinkingService
 (
-//        val blocker : com.openlattice.linking.Blocker,
-//        val matcher : Matcher
-){
-    val dbl = 0.0
+        val blocker: Blocker,
+        private val matcher: Matcher,
+        private val clusterer: Clusterer
+) {
+
+    /**
+     * Performs an update of the existing links for recently written data.
+     */
+    fun update(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
+        entityKeyIds
+                .map { blocker.block(entitySetId, it) }
+                .map(matcher::match)
+                .forEach(clusterer::cluster)
+    }
+
+    fun delete(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+
+    }
+
 }

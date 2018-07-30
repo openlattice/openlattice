@@ -19,9 +19,8 @@
  *
  */
 
-package com.openlattice.linking.blocking
+package com.openlattice.linking
 
-import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
 import java.util.*
 
@@ -38,8 +37,6 @@ interface Matcher {
      * @param block An entity paired to a set of entities from across zero or more entity sets mapped by data key.
      * @return The computed match between all unique entities pairs in the block.
      */
-    fun match(
-            block: Map<EntityDataKey, SetMultimap<UUID, Any>>
-    ): Map<EntityDataKey, Map<EntityDataKey, Double>>
+    fun match(block: Map<EntityDataKey, Map<UUID, Set<Any>>>): Map<EntityDataKey, Map<EntityDataKey, Double>>
 
 }
