@@ -19,15 +19,15 @@
  *
  */
 
-package com.openlattice.linking.blocking
+package com.openlattice.linking
 
-import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
 import java.util.*
 
 /**
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Interface for components that can perform the blocking step in the linking process.
+ *
  */
 interface Blocker {
     /**
@@ -41,16 +41,18 @@ interface Blocker {
             entitySetId: UUID,
             entityKeyId: UUID,
             top: Int = 1000
-    ): Map<EntityDataKey, SetMultimap<UUID, Any>>
+    ): Map<EntityDataKey, Map<UUID, Set<Any>>> {
+        return block(EntityDataKey(entitySetId, entityKeyId), top)
+    }
 
     /**
      * Retrieves the top 1000 matches per entity set. This can be a large number of search results 1000 * # entity sets.
      *
-     *  @param entityDataKey The entity data key id of the entity upon which to perform blocking.
+     * @param entityDataKey The entity data key id of the entity upon which to perform blocking.
      * @return A block of potentially matching objects as a mapping from entity data keys to entity properties
      */
     fun block(
             entityDataKey: EntityDataKey,
             top: Int = 1000
-    ): Map<EntityDataKey, SetMultimap<UUID, Any>>
+    ): Map<EntityDataKey, Map<UUID, Set<Any>>>
 }

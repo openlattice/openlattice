@@ -19,15 +19,21 @@
  *
  */
 
-package com.openlattice.linking.blocking
+package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.postgres.streams.PostgresIterable
+import java.util.*
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface Clusterer {
-    fun updateClusterInfo( matchedBlock : Map<EntityDataKey, Map<EntityDataKey, Double>>)
+    fun cluster( matchedBlock : Map<EntityDataKey, Map<EntityDataKey, Double>>)
 
+    fun trimAndMerge( matchedBlock: Map<EntityDataKey, Map<EntityDataKey, Double>> )
+    fun getNeighborhood( entityDataKey : EntityDataKey ) : PostgresIterable<EntityDataKey>
+    fun getAdjacentClusters( entityDataKey: EntityDataKey) : PostgresIterable<UUID>
+    fun getCluster( entityDataKey: EntityDataKey) : Optional<UUID>
 }
