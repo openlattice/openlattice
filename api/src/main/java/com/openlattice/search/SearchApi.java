@@ -18,24 +18,23 @@
 
 package com.openlattice.search;
 
+import com.openlattice.data.requests.NeighborEntityDetails;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.search.requests.AdvancedSearch;
+import com.openlattice.search.requests.DataSearchResult;
 import com.openlattice.search.requests.FQNSearchTerm;
 import com.openlattice.search.requests.Search;
 import com.openlattice.search.requests.SearchResult;
+import com.openlattice.search.requests.SearchTerm;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import com.openlattice.data.requests.NeighborEntityDetails;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.search.requests.DataSearchResult;
-import com.openlattice.search.requests.SearchTerm;
-
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 public interface SearchApi {
     /*
@@ -63,8 +62,9 @@ public interface SearchApi {
     String EDM               = "/edm";
     String INDEX             = "/index";
     String KEYWORD           = "kw";
-    String ENTITY_TYPE_ID    = "eid";
-    String PROPERTY_TYPE_ID  = "pid";
+    String ENTITY_TYPE_ID   = "eid";
+    String MODE             = "MODE";
+    String PROPERTY_TYPE_ID = "pid";
 
     String ENTITY_SET_ID = "entitySetId";
     String NUM_RESULTS   = "numResults";
@@ -122,7 +122,8 @@ public interface SearchApi {
     @POST( BASE + ENTITY_SET_ID_PATH )
     DataSearchResult executeEntitySetDataQuery(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body SearchTerm searchTerm );
+            @Body SearchTerm searchTerm,
+            @Query( MODE ) String mode );
 
     /**
      * Executes a search over the data of a given entity set to find rows matching the specified property type values

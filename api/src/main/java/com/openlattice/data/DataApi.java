@@ -66,12 +66,14 @@ public interface DataApi {
     String PARTIAL   = "partial";
     String FILE_TYPE = "fileType";
     String TOKEN     = "token";
+    String MODE = "mode";
 
     @GET( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Iterable<SetMultimap<FullQualifiedName, Object>> loadEntitySetData(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Query( FILE_TYPE ) FileType fileType,
-            @Query( TOKEN ) String token );
+            @Query( TOKEN ) String token,
+            @Query( MODE ) String mode );
 
     /**
      * @param req If syncId is not specified in the request, will retrieve the data from the current syncIds. If
@@ -82,7 +84,8 @@ public interface DataApi {
     Iterable<SetMultimap<FullQualifiedName, Object>> loadEntitySetData(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntitySetSelection req,
-            @Query( FILE_TYPE ) FileType fileType );
+            @Query( FILE_TYPE ) FileType fileType,
+            @Query( MODE ) String mode );
 
     @POST( BASE + "/" + ENTITY_SET + "/" )
     List<UUID> createOrMergeEntities(
