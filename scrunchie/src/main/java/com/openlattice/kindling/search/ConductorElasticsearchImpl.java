@@ -627,12 +627,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return UUID.fromString( index.substring( SECURABLE_OBJECT_INDEX_PREFIX.length() ) );
     }
 
-    @Override
-    public List<UUID> executeEntitySetFieldSearch(
-            UUID entitySetId,
-            Map<UUID, DelegatedStringSet> fieldSearches,
-            int size,
-            boolean explain ) {
+    @Override public List<UUID> executeEntitySetDataSearchAcrossIndices(
+            Iterable<UUID> entitySetIds, Map<UUID, DelegatedStringSet> fieldSearches, int size, boolean explain ) {
         if ( !verifyElasticsearchConnection() ) { return null; }
 
         BoolQueryBuilder query = new BoolQueryBuilder();
@@ -650,7 +646,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .map( id -> getIndexName( id ) )
                 .collect( Collectors.toList() );
 
-        SearchResponse response = client.prepareSearch( indexNames.toArray( new String[ indexNames.size() ] ) )
+        SearchResponse response = client.prepareSearch( indexNames.toArray( new String[ 0 ] ) )
                 .setQuery( query )
                 .setFrom( 0 )
                 .setSize( size )
