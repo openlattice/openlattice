@@ -19,21 +19,19 @@
  *
  */
 
-package com.openlattice.linking
+package com.openlattice.linking.matching
 
 import com.openlattice.data.EntityDataKey
-import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.linking.Matcher
 import java.util.*
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-interface Clusterer {
-    fun cluster(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>)
+class SocratesMatcher : Matcher {
+    override fun match(block: Map<EntityDataKey, Map<UUID, Set<Any>>>): Map<EntityDataKey, Map<EntityDataKey, Double>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
-    fun trimAndMerge(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>)
-    fun getNeighborhood(entityDataKey: EntityDataKey): PostgresIterable<EntityDataKey>
-    fun getAdjacentClusters(entityDataKey: EntityDataKey): PostgresIterable<UUID>
-    fun getCluster(entityDataKey: EntityDataKey): Optional<UUID>
 }

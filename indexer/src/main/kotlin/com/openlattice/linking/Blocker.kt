@@ -40,9 +40,10 @@ interface Blocker {
     fun block(
             entitySetId: UUID,
             entityKeyId: UUID,
+            entity: Optional<Map<UUID, Set<Any>>> = Optional.empty(),
             top: Int = 1000
-    ): Map<EntityDataKey, Map<UUID, Set<Any>>> {
-        return block(EntityDataKey(entitySetId, entityKeyId), top)
+    ): Pair<EntityDataKey,Map<EntityDataKey, Map<UUID, Set<Any>>>> {
+        return block(EntityDataKey(entitySetId, entityKeyId), entity, top)
     }
 
     /**
@@ -53,6 +54,8 @@ interface Blocker {
      */
     fun block(
             entityDataKey: EntityDataKey,
+            entity: Optional<Map<UUID, Set<Any>>> = Optional.empty(),
             top: Int = 1000
-    ): Map<EntityDataKey, Map<UUID, Set<Any>>>
+    ): Pair<EntityDataKey,Map<EntityDataKey, Map<UUID, Set<Any>>>>
+
 }
