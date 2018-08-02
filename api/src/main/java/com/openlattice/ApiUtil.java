@@ -53,6 +53,7 @@ public class ApiUtil {
 
     public static String generateDefaultEntityId( Stream<UUID> keys, Map<UUID, Set<Object>> entityDetails ) {
         String entityId = keys.map( entityDetails::get )
+                .filter( obj -> obj != null )
                 .map( ApiUtil::joinObjectsAsString )
                 .map( ApiUtil::toUtf8Bytes )
                 .map( encoder::encodeToString )
