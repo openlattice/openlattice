@@ -58,6 +58,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
@@ -179,11 +180,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
  // @formatter:on
 
     private boolean initializeEntitySetDataModelIndex() {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         boolean exists = client.admin().indices()
                 .prepareExists( ENTITY_SET_DATA_MODEL ).execute().actionGet().isExists();
@@ -218,11 +215,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean initializeOrganizationIndex() {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         boolean exists = client.admin().indices()
                 .prepareExists( ORGANIZATIONS ).execute().actionGet().isExists();
@@ -254,11 +247,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean initializeEntityTypeIndex() {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         boolean exists = client.admin().indices()
                 .prepareExists( ENTITY_TYPE_INDEX ).execute().actionGet().isExists();
@@ -278,11 +267,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean initializeAssociationTypeIndex() {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         boolean exists = client.admin().indices()
                 .prepareExists( ASSOCIATION_TYPE_INDEX ).execute().actionGet().isExists();
@@ -302,11 +287,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean initializePropertyTypeIndex() {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         boolean exists = client.admin().indices()
                 .prepareExists( PROPERTY_TYPE_INDEX ).execute().actionGet().isExists();
@@ -326,11 +307,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean initializeAppIndex() {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         boolean exists = client.admin().indices()
                 .prepareExists( APP_INDEX ).execute().actionGet().isExists();
@@ -350,11 +327,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean initializeAppTypeIndex() {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         boolean exists = client.admin().indices()
                 .prepareExists( APP_TYPE_INDEX ).execute().actionGet().isExists();
@@ -450,11 +423,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean createSecurableObjectIndex( UUID securableObjectId, List<PropertyType> propertyTypes ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         String indexName = getIndexName( securableObjectId );
         String typeName = getTypeName( securableObjectId );
@@ -500,12 +469,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
         Map<String, Object> entitySetDataModel = Maps.newHashMap();
         entitySetDataModel.put( ENTITY_SET, entitySet );
         entitySetDataModel.put( PROPERTY_TYPES, propertyTypes );
@@ -531,12 +495,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Set<AclKey> authorizedAclKeys,
             int start,
             int maxHits ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
         BoolQueryBuilder authorizedFilterQuery = new BoolQueryBuilder();
         for ( AclKey aclKey : authorizedAclKeys ) {
@@ -585,12 +544,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> newPropertyTypes ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         Map<String, Object> propertyTypes = Maps.newHashMap();
         propertyTypes.put( PROPERTY_TYPES, newPropertyTypes );
@@ -610,12 +564,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean deleteEntitySet( UUID entitySetId ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         client.prepareDelete( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySetId.toString() ).execute().actionGet();
 
@@ -634,17 +583,58 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public List<UUID> executeEntitySetDataSearchAcrossIndices(
+    public List<EntityDataKey> searchEntitySets(
             Iterable<UUID> entitySetIds,
             Map<UUID, DelegatedStringSet> fieldSearches,
             int size,
             boolean explain ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return null; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return null; }
+
+        BoolQueryBuilder query = new BoolQueryBuilder();
+        fieldSearches.entrySet().stream().forEach( entry -> {
+            BoolQueryBuilder fieldQuery = new BoolQueryBuilder();
+            entry.getValue().stream().forEach( searchTerm -> fieldQuery.should(
+                    QueryBuilders.matchQuery( entry.getKey().toString(), searchTerm ).fuzziness( Fuzziness.AUTO )
+                            .lenient( true ) ) );
+            fieldQuery.minimumShouldMatch( 1 );
+            query.should( fieldQuery );
+        } );
+
+        query.minimumShouldMatch( 1 );
+
+        return StreamUtil.stream( entitySetIds )
+                .parallel()
+                .map( entitySetId -> Pair.of( entitySetId,
+                        client.prepareSearch( getIndexName( entitySetId ) )
+                                .setQuery( query )
+                                .setFrom( 0 )
+                                .setSize( size )
+                                .setExplain( explain )
+                                .execute()
+                                .actionGet().getHits() ) )
+                .flatMap( hit ->
+                        Stream
+                                .of( hit.getValue().getHits() )
+                                .map( SearchHit::getId )
+                                .map( UUID::fromString )
+                                .map( id -> new EntityDataKey( hit.getKey(), id ) ) )
+                .collect( Collectors.toList() );
+
+        )
+    }
+
+    private UUID getEntitySetIdFromIndex( String index ) {
+        return UUID.fromString( index.substring( SECURABLE_OBJECT_INDEX_PREFIX.length() ) );
+    }
+
+    @Override
+    public List<UUID> executeEntitySetFieldSearch(
+            UUID entitySetId,
+            Map<UUID, DelegatedStringSet> fieldSearches,
+            int size,
+            boolean explain ) {
+        if ( !verifyElasticsearchConnection() ) { return null; }
+
         BoolQueryBuilder query = new BoolQueryBuilder();
         fieldSearches.entrySet().stream().forEach( entry -> {
             BoolQueryBuilder fieldQuery = new BoolQueryBuilder();
@@ -676,12 +666,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean createEntityData( EntityDataKey edk, SetMultimap<UUID, Object> propertyValues ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         UUID entitySetId = edk.getEntitySetId();
         UUID entityKeyId = edk.getEntityKeyId();
@@ -702,12 +687,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         try {
             String indexName = getIndexName( entitySetId );
@@ -735,12 +715,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean updateEntityData( EntityDataKey edk, SetMultimap<UUID, Object> propertyValues ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         UUID entitySetId = edk.getEntitySetId();
         UUID entityKeyId = edk.getEntityKeyId();
@@ -758,12 +734,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean deleteEntityData( EntityDataKey edk ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         UUID entitySetId = edk.getEntitySetId();
         UUID entityKeyId = edk.getEntityKeyId();
@@ -776,12 +747,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean updateEntitySetMetadata( EntitySet entitySet ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         Map<String, Object> entitySetObj = Maps.newHashMap();
         entitySetObj.put( ENTITY_SET, entitySet );
@@ -801,12 +767,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean createOrganization( Organization organization ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
         Map<String, Object> organizationObject = Maps.newHashMap();
         organizationObject.put( TITLE, organization.getTitle() );
         organizationObject.put( DESCRIPTION, organization.getDescription() );
@@ -825,12 +787,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean deleteOrganization( UUID organizationId ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         client.prepareDelete( ORGANIZATIONS, ORGANIZATION_TYPE, organizationId.toString() ).execute().actionGet();
 
@@ -852,12 +809,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             int start,
             int maxHits,
             Set<UUID> authorizedPropertyTypes ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return new EntityKeyIdSearchResult( 0, Lists.newArrayList() ); }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return new EntityKeyIdSearchResult( 0, Lists.newArrayList() ); }
 
         Map<String, Float> fieldsMap = Maps.newHashMap();
         String[] authorizedPropertyTypeFields = authorizedPropertyTypes
@@ -893,12 +845,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Set<AclKey> authorizedOrganizationIds,
             int start,
             int maxHits ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
         BoolQueryBuilder authorizedFilterQuery = new BoolQueryBuilder();
         for ( AclKey aclKey : authorizedOrganizationIds ) {
@@ -931,12 +878,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean updateOrganization( UUID id, Optional<String> optionalTitle, Optional<String> optionalDescription ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         Map<String, Object> updatedFields = Maps.newHashMap();
         if ( optionalTitle.isPresent() ) {
@@ -957,7 +899,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return false;
     }
 
-    public boolean verifyElasticsearchConnection() throws UnknownHostException {
+    public boolean verifyElasticsearchConnection() {
         if ( connected ) {
             if ( !factory.isConnected( client ) ) {
                 connected = false;
@@ -978,7 +920,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public EntityKeyIdSearchResult executeAdvancedEntitySetDataSearch(
+    public EntityKeyIdSearchResult
+    executeAdvancedEntitySetDataSearch(
             UUID entitySetId,
             List<SearchDetails> searches,
             int start,
@@ -1207,12 +1150,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean saveObjectToElasticsearch( String index, String type, Object obj, String id ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
         try {
             String s = ObjectMappers.getJsonMapper().writeValueAsString( obj );
             client.prepareIndex( index, type, id )
@@ -1226,12 +1165,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean deleteObjectById( String index, String type, String id ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         client.prepareDelete( index, type, id ).execute().actionGet();
         return true;
@@ -1244,12 +1178,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             int start,
             int maxHits,
             Map<String, Float> fieldsMap ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
         QueryBuilder query = QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) ).fields( fieldsMap )
                 .lenient( true );
@@ -1276,12 +1205,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String name,
             int start,
             int maxHits ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
         BoolQueryBuilder query = new BoolQueryBuilder();
         query.must( QueryBuilders.regexpQuery( TYPE + "." + NAMESPACE, ".*" + namespace + ".*" ) )
