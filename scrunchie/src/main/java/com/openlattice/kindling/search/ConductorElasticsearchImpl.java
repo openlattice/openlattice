@@ -619,8 +619,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                                 .map( UUID::fromString )
                                 .map( id -> new EntityDataKey( hit.getKey(), id ) ) )
                 .collect( Collectors.toList() );
-
-        )
     }
 
     private UUID getEntitySetIdFromIndex( String index ) {
@@ -923,12 +921,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             int start,
             int maxHits,
             Set<UUID> authorizedPropertyTypes ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return new EntityKeyIdSearchResult( 0, Lists.newArrayList() ); }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return new EntityKeyIdSearchResult( 0, Lists.newArrayList() ); }
 
         Map<String, Float> fieldsMap = Maps.newHashMap();
         String[] authorizedPropertyTypeFields = authorizedPropertyTypes
@@ -1256,12 +1249,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String type,
             Iterable<? extends Object> objects,
             Function<Object, String> idFn ) {
-        try {
-            if ( !verifyElasticsearchConnection() ) { return false; }
-        } catch ( UnknownHostException e ) {
-            logger.debug( "not connected to elasticsearch" );
-            e.printStackTrace();
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         BoolQueryBuilder deleteQuery = QueryBuilders.boolQuery();
         BulkRequestBuilder bulkRequest = client.prepareBulk();
