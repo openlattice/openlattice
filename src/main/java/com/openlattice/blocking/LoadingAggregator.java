@@ -44,7 +44,8 @@ public class LoadingAggregator
         this( graphId, authorizedPropertyTypes, Maps.newHashMap() );
     }
 
-    @Override public void accumulate( Map.Entry<EntityDataKey, EntityDataValue> input ) {
+    @Override
+    public void accumulate( Map.Entry<EntityDataKey, EntityDataValue> input ) {
         EntityDataKey key = input.getKey();
         UUID entityKeyId = key.getEntityKeyId();
         UUID entitySetId = key.getEntitySetId();
@@ -55,6 +56,7 @@ public class LoadingAggregator
 
         entity.addAll( HazelcastEntityDatastore
                 .fromEntityDataValue( input.getValue(), authorizedPropertyTypes.get( entitySetId ).keySet() ) );
+
         entities.put( graphEntityPair, entity );
 
     }

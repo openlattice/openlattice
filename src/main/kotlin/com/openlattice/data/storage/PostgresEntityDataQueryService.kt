@@ -611,14 +611,7 @@ internal fun selectVersionOfPropertyTypeInEntitySet(
     } else {
         " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
     }
-    val dataKeys = subSelectFilteredVersionOfPropertyTypeInEntitySet(
-            entitySetId,
-            entityKeyIdsClause,
-            propertyTypeId,
-            fqn,
-            version,
-            binary
-    )
+
     return "(SELECT ${ENTITY_SET_ID.name}, " +
             "   ${ID_VALUE.name}, " +
             "   $arrayAgg " +
@@ -646,7 +639,6 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
     return "(SELECT ${ENTITY_SET_ID.name}," +
             " ${ID_VALUE.name}," +
             " $arrayAgg" +
-//            " ${VERSION.name} " +
             "FROM $propertyTable " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} >= 0 $entityKeyIdsClause" +
             "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name})) as $propertyTable "
