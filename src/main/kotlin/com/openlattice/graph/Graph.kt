@@ -40,6 +40,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
+import org.slf4j.LoggerFactory
 import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
@@ -49,9 +50,9 @@ import kotlin.streams.toList
 
 /**
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
+private val logger = LoggerFactory.getLogger(Graph::class.java)
 class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
 
     override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
@@ -212,6 +213,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 Supplier {
                     val connection = hds.connection
                     val stmt = connection.createStatement()
+                    logger.info("Executing top utilizer query: {}", query )
                     val rs = stmt.executeQuery(query)
                     StatementHolder(connection, stmt, rs)
                 },
@@ -345,14 +347,14 @@ internal fun getTopUtilizersFromSrc(entitySetId: UUID, filters: SetMultimap<UUID
     val countColumn = "src_count"
     return "SELECT ${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
             "FROM EDGES WHERE ${srcClauses(entitySetId, filters)} " +
-            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name})"
+            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
 internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "dst_count"
     return "SELECT ${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
             "FROM EDGES WHERE ${dstClauses(entitySetId, filters)} " +
-            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name})"
+            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
 private val SELECT_SQL = "SELECT * FROM ${EDGES.name} " +
