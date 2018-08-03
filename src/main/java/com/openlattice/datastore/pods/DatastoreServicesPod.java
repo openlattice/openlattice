@@ -337,7 +337,8 @@ public class DatastoreServicesPod {
                 eventBus,
                 graphApi(),
                 idService(),
-                entityDatastore() );
+                entityDatastore(),
+                dataModelService() );
     }
 
     @Bean
