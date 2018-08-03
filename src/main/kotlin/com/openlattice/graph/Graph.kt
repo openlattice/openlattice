@@ -223,21 +223,13 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     override fun getNeighborEntitySets(entitySetId: UUID?): List<NeighborSets> {
         val neighbors: MutableList<NeighborSets> = ArrayList()
-        val srcQuery = getNeighborEntitySets(entitySetId)
-                "SELECT DISTINCT(${DST_ENTITY_SET_ID.name}) " +
-                        "FROM ${EDGES.name} " +
-                        "WHERE ${SRC_ENTITY_SET_ID.name} = ?"
-        val dstQuery =
-                "SELECT DISTINCT(${SRC_ENTITY_SET_ID.name}) " +
-                        "FROM ${EDGES.name} " +
-                        "WHERE ${DST_ENTITY_SET_ID.name} = ?"
 
-        val query = "SELECT DISTINCT(${SRC_ENTITY_SET_ID.name},${EDGE_ENTITY_SET_ID.name}, ${DST_ENTITY_SET_ID.name}) " +
+        val query = "SELECT DISTINCT ${SRC_ENTITY_SET_ID.name},${EDGE_ENTITY_SET_ID.name}, ${DST_ENTITY_SET_ID.name} " +
                 "FROM ${EDGES.name} " +
                 "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ?"
         val connection = hds.connection
         connection.use {
-            val ps = connection.prepareStatement(srcQuery)
+            val ps = connection.prepareStatement(query)
             ps.use {
                 ps.setObject(1, entitySetId)
                 ps.setObject(2, entitySetId)
@@ -250,9 +242,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             NeighborSets(srcEntitySetId, edgeEntitySetId, dstEntitySetId)
                     )
                 }
-            }
-            ps.execute() {
-
             }
         }
         return neighbors
