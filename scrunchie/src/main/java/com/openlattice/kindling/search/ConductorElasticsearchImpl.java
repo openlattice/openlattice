@@ -58,7 +58,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
@@ -583,7 +582,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public List<EntityDataKey> searchEntitySets(
+    public Map<UUID, Set<UUID>> searchEntitySets(
             Iterable<UUID> entitySetIds,
             Map<UUID, DelegatedStringSet> fieldSearches,
             int size,
@@ -604,21 +603,18 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         return StreamUtil.stream( entitySetIds )
                 .parallel()
-                .map( entitySetId -> Pair.of( entitySetId,
-                        client.prepareSearch( getIndexName( entitySetId ) )
-                                .setQuery( query )
-                                .setFrom( 0 )
-                                .setSize( size )
-                                .setExplain( explain )
-                                .execute()
-                                .actionGet().getHits() ) )
-                .flatMap( hit ->
-                        Stream
-                                .of( hit.getValue().getHits() )
-                                .map( SearchHit::getId )
-                                .map( UUID::fromString )
-                                .map( id -> new EntityDataKey( hit.getKey(), id ) ) )
-                .collect( Collectors.toList() );
+                .collect(
+                        Collectors.toConcurrentMap( Function.identity(), entitySetId ->
+                                Stream.of( client.prepareSearch( getIndexName( entitySetId ) )
+                                        .setQuery( query )
+                                        .setFrom( 0 )
+                                        .setSize( size )
+                                        .setExplain( explain )
+                                        .execute()
+                                        .actionGet().getHits().getHits() )
+                                        .map( SearchHit::getId )
+                                        .map( UUID::fromString )
+                                        .collect( Collectors.toSet() ) ) );
     }
 
     private UUID getEntitySetIdFromIndex( String index ) {
