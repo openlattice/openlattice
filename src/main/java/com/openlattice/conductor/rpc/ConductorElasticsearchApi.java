@@ -25,7 +25,6 @@ package com.openlattice.conductor.rpc;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -185,6 +184,12 @@ public interface ConductorElasticsearchApi {
             int start,
             int maxHits,
             Set<UUID> authorizedPropertyTypes );
+
+    Map<UUID, Set<UUID>> searchEntitySets(
+            Iterable<UUID> entitySetIds,
+            Map<UUID, DelegatedStringSet> fieldSearches,
+            int size,
+            boolean explain );
 
     List<UUID> executeEntitySetDataSearchAcrossIndices(
             Iterable<UUID> entitySetIds,

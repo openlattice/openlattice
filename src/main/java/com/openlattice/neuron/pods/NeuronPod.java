@@ -143,7 +143,8 @@ public class NeuronPod {
                 eventBus,
                 graphApi(),
                 idService(),
-                entityDatastore()
+                entityDatastore(),
+                dataModelService()
         );
     }
 
