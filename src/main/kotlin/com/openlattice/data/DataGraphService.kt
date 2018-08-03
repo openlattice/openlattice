@@ -22,7 +22,6 @@
 package com.openlattice.data
 
 import com.codahale.metrics.annotation.Timed
-
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
@@ -42,6 +41,8 @@ import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.postgres.DataTables.COUNT_FQN
+import com.openlattice.postgres.DataTables.ID_FQN
 import org.apache.commons.collections4.keyvalue.MultiKey
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -51,6 +52,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
+import kotlin.streams.toList
 
 /**
  *
@@ -361,12 +363,18 @@ open class DataGraphService(
         } else {
             utilizers = maybeUtilizers
         }
-        //TODO: this returns unsorted data.
-        val utilizerIds = arrayOfNulls<UUID>(utilizers.size)
-        for (i in utilizers.indices) {
-            utilizerIds[i] = utilizers[i].id
-        }
-        return eds.getEntities(entitySetId, ImmutableSet.copyOf<UUID>(utilizerIds), authorizedPropertyTypes)
+
+        val entities = eds
+                .getEntities(entitySetId, utilizers.map { it.id }.toSet(), authorizedPropertyTypes)
+                .map { it[ID_FQN] as UUID to it }
+                .toList()
+                .toMap()
+
+        return utilizers.map {
+            val entity = entities[it.id]!!
+            entity.put(COUNT_FQN, it.weight)
+            entity
+        }.stream()
     }
 
 
