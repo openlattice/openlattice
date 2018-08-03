@@ -45,6 +45,7 @@ import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Stream
+import kotlin.streams.toList
 
 /**
  *
@@ -187,14 +188,24 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun computeGraphAggregation(
-            limit: Int, entitySetId: UUID?, srcFilters: SetMultimap<UUID, UUID>?, dstFilters: SetMultimap<UUID, UUID>?
+            limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Array<IncrementableWeightId> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return topEntitiesOld(limit, entitySetId, srcFilters, dstFilters).toList().toTypedArray()
     }
 
-    override fun topEntities(
+    override fun topEntitiesOld(
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
-    ): Stream<EntityDataKey> {
+    ): Stream<IncrementableWeightId> {
+        return topEntitiesWorker(limit, entitySetId, srcFilters, dstFilters).map {
+            IncrementableWeightId(
+                    it.first.entityKeyId, it.second
+            )
+        }
+    }
+
+    private fun topEntitiesWorker(
+            limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
+    ): Stream<Pair<EntityDataKey, Long>> {
         val countColumn = quote(COUNT_FQN.fullQualifiedNameAsString)
         val query = "SELECT ${ENTITY_SET_ID.name}, " +
                 "${caseExpression(entitySetId)} as ${ID_VALUE.name}, " +
@@ -211,7 +222,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val rs = stmt.executeQuery(query)
                     StatementHolder(connection, stmt, rs)
                 },
-                Function<ResultSet, EntityDataKey> { ResultSetAdapters.entityDataKey(it) }
+                Function<ResultSet, Pair<EntityDataKey, Long>> {
+                    ResultSetAdapters.entityDataKey(it) to it.getLong(
+                            COUNT_FQN.fullQualifiedNameAsString
+                    )
+                }
         ).stream()
     }
 
@@ -313,7 +328,7 @@ private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToStri
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
 private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
-        "WHERE ${KEY_COLUMNS.joinToString(        " = ? AND ")} = ? "
+        "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
