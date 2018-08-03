@@ -30,8 +30,11 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class SocratesMatcher : Matcher {
-    override fun match(block: Map<EntityDataKey, Map<UUID, Set<Any>>>): Map<EntityDataKey, Map<EntityDataKey, Double>> {
+    override fun match(
+            block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
+    ): Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
+
 
 }
