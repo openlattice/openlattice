@@ -280,6 +280,9 @@ private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, 
 private fun associationClauses(
         entitySetColumn: String, entitySetId: UUID, neighborColumn: String, associationFilters: SetMultimap<UUID, UUID>
 ): String {
+    if( associationFilters.isEmpty ) {
+        return " false "
+    }
     return Multimaps
             .asMap(associationFilters)
             .asSequence()
