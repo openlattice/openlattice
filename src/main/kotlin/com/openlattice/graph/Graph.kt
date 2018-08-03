@@ -206,26 +206,17 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     private fun topEntitiesWorker(
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Stream<Pair<EntityDataKey, Long>> {
-        val countColumn = quote(COUNT_FQN.fullQualifiedNameAsString)
-        val query = "SELECT ${ENTITY_SET_ID.name}, " +
-                "${caseExpression(entitySetId)} as ${ID_VALUE.name}, " +
-                "count(*) as $countColumn " +
-                "FROM edges " +
-                "WHERE ${srcClauses(entitySetId, srcFilters)} " +
-                "AND ${dstClauses(entitySetId, dstFilters)}" +
-                "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) " +
-                "ORDER BY $countColumn DESC"
+        val countColumn = "total_count"
+        val query = getTopUtilizersSql(entitySetId,srcFilters,dstFilters, limit)
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val stmt = connection.createStatement()
                     val rs = stmt.executeQuery(query)
                     StatementHolder(connection, stmt, rs)
                 },
                 Function<ResultSet, Pair<EntityDataKey, Long>> {
-                    ResultSetAdapters.entityDataKey(it) to it.getLong(
-                            COUNT_FQN.fullQualifiedNameAsString
-                    )
+                    ResultSetAdapters.entityDataKey(it) to it.getLong(countColumn)
                 }
         ).stream()
     }
@@ -281,7 +272,7 @@ private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, 
  * @param entitySetColumn The column to use for filtering allowed entity set ids.
  * @param entitySetId The entity set id for which the aggregation will be performed.
  * @param neighborColumn The column for the neighbors that will be counted.
- * @param associationFilters A multimap from association entity set ids to allowed entity set ids.
+ * @param associationFilters A multimap from association entity set ids to allowed neighbor entity set ids.
  */
 private fun associationClauses(
         entitySetColumn: String, entitySetId: UUID, neighborColumn: String, associationFilters: SetMultimap<UUID, UUID>
@@ -290,10 +281,10 @@ private fun associationClauses(
             .asMap(associationFilters)
             .asSequence()
             .map {
-                "$entitySetColumn = $entitySetId AND ${EDGE_ENTITY_SET_ID.name} = ${it.key} " +
-                        "$neighborColumn IN (${it.value.map { "'$it'" }.joinToString(",")}) "
+                "($entitySetColumn = '$entitySetId' AND ${EDGE_ENTITY_SET_ID.name} = '${it.key}' " +
+                        "AND $neighborColumn IN (${it.value.map { "'$it'" }.joinToString(",")}) ) "
             }
-            .joinToString(",")
+            .joinToString(" OR ")
 }
 
 //TODO: Extract string constants.
@@ -320,6 +311,48 @@ private val INSERT_COLUMNS = setOf(
         VERSION,
         VERSIONS
 ).map { it.name }.toSet()
+
+/**
+ * Builds the SQL query for top utilizers.
+ *
+ * filter keys are allowed association entity set ids
+ *
+ * filter values are allowed neighbor entity set ids
+ *
+ * The simple version of top utilizers should count the number of allowed neighbors.
+ *
+ * That is for each
+ */
+internal fun getTopUtilizersSql(
+        entitySetId: UUID,
+        srcFilters: SetMultimap<UUID, UUID>,
+        dstFilters: SetMultimap<UUID, UUID>,
+        top: Int = 100
+): String {
+
+    return "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, (COALESCE(src_count,0) + COALESCE(dst_count,0)) as total_count " +
+            "FROM (${getTopUtilizersFromSrc(entitySetId, srcFilters)}) as src_counts " +
+            "FULL OUTER JOIN (${getTopUtilizersFromDst(entitySetId, dstFilters)}) as dst_counts " +
+            "USING(${ENTITY_SET_ID.name}, ${ID_VALUE.name}) " +
+//            "WHERE total_count IS NOT NULL " +
+            "ORDER BY total_count DESC " +
+            "LIMIT $top"
+
+}
+
+internal fun getTopUtilizersFromSrc(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
+    val countColumn = "src_count"
+    return "SELECT ${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
+            "FROM EDGES WHERE ${srcClauses(entitySetId, filters)} " +
+            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name})"
+}
+
+internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
+    val countColumn = "dst_count"
+    return "SELECT ${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
+            "FROM EDGES WHERE ${dstClauses(entitySetId, filters)} " +
+            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name})"
+}
 
 private val SELECT_SQL = "SELECT * FROM ${EDGES.name} " +
         "WHERE (${KEY_COLUMNS.joinToString(",")}) IN "

@@ -35,6 +35,7 @@ import com.openlattice.analysis.requests.TopUtilizerDetails
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
+import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
@@ -62,7 +63,8 @@ open class DataGraphService(
         private val eventBus: EventBus,
         private val lm: GraphService,
         private val idService: EntityKeyIdService,
-        private val eds: EntityDatastore
+        private val eds: EntityDatastore,
+        private val edm: EdmManager
 ) : DataGraphManager {
     //TODO: Move to a utility class
     companion object {
@@ -345,10 +347,13 @@ open class DataGraphService(
             val dstFilters = HashMultimap.create<UUID, UUID>()
 
             topUtilizerDetailsList.forEach { details ->
-                (if (details.utilizerIsSrc) srcFilters else dstFilters).putAll(
-                        details.associationTypeId, details.neighborTypeIds
-                )
-
+                val associationSets = edm.getEntitySetsOfType(details.associationTypeId).map { it.id }
+                val neighborSets = details.neighborTypeIds.flatMap {
+                    edm.getEntitySetsOfType(it).map { it.id }
+                }.toList()
+                associationSets.forEach {
+                    (if (details.utilizerIsSrc) srcFilters else dstFilters).putAll(it, neighborSets)
+                }
             }
             utilizers = lm.computeGraphAggregation(numResults, entitySetId, srcFilters, dstFilters)
 
@@ -363,6 +368,7 @@ open class DataGraphService(
         }
         return eds.getEntities(entitySetId, ImmutableSet.copyOf<UUID>(utilizerIds), authorizedPropertyTypes)
     }
+
 
     override fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets> {
         return lm.getNeighborEntitySets(entitySetId)
