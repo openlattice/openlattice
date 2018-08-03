@@ -42,15 +42,17 @@ package com.openlattice.data.integration;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.data.EntityKey;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 public class Entity {
-    private final EntityKey                 key;
+    private final EntityKey              key;
     private final Map<UUID, Set<Object>> details;
 
     @JsonCreator
@@ -59,6 +61,10 @@ public class Entity {
             @JsonProperty( SerializationConstants.DETAILS_FIELD ) Map<UUID, Set<Object>> details ) {
         this.key = key;
         this.details = details;
+    }
+
+    public Entity( EntityKey key, SetMultimap<UUID, Object> details ) {
+        this( key, Multimaps.asMap( details ) );
     }
 
     @JsonProperty( SerializationConstants.KEY_FIELD )
