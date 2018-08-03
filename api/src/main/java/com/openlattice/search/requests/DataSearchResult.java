@@ -18,6 +18,7 @@
 
 package com.openlattice.search.requests;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -29,6 +30,7 @@ public class DataSearchResult implements Serializable {
     private final long                                         numHits;
     private final List<SetMultimap<FullQualifiedName, Object>> hits;
 
+    @JsonCreator
     public DataSearchResult(
             @JsonProperty( SerializationConstants.NUM_HITS ) long numHits,
             @JsonProperty( SerializationConstants.HITS ) List<SetMultimap<FullQualifiedName, Object>> hits ) {
