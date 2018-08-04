@@ -366,7 +366,7 @@ open class DataGraphService(
 
         val entities = eds
                 .getEntities(entitySetId, utilizers.map { it.id }.toSet(), authorizedPropertyTypes)
-                .map { it[ID_FQN] as UUID to it }
+                .map { it[ID_FQN].first() as UUID to it }
                 .toList()
                 .toMap()
 
