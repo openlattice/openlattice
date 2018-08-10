@@ -93,7 +93,7 @@ public interface EntityDatastore {
      */
     int partialReplaceEntities(
             UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entity,
+            Map<UUID, Map<UUID, Set<Object>>> entity,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**

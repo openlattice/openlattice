@@ -29,6 +29,7 @@ import com.openlattice.data.integration.Entity
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.EdgeKey
+import com.openlattice.data.EntitySetData;
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
 import java.util.*
@@ -107,7 +108,7 @@ interface DataGraphManager {
 
     fun partialReplaceEntities(
             entitySetId: UUID,
-            entities: Map<UUID, SetMultimap<UUID, Any>>,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int
 
