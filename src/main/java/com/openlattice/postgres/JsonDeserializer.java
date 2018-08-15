@@ -34,7 +34,7 @@ public class JsonDeserializer {
             EdmPrimitiveTypeKind dataType = authorizedPropertiesWithDataType.get( propertyTypeId );
             Set<Object> valueSet = entry.getValue();
             if ( valueSet != null ) {
-                for ( Object value : entry.getValue() ) {
+                for ( Object value : valueSet ) {
                     normalizedPropertyValues
                             .put( propertyTypeId, validateFormatAndNormalize( dataType, propertyTypeId, value ) );
                 }
