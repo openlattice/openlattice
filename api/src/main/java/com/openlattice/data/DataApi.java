@@ -127,7 +127,7 @@ public interface DataApi {
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer replaceEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<UUID, SetMultimap<UUID, Object>> entities,
+            @Body Map<UUID, Map<UUID, Set<Object>>> entities,
             @Query( PARTIAL ) boolean partialReplace );
 
 
