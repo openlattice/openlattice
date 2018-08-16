@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -31,9 +32,12 @@ public class JsonDeserializer {
         for ( Map.Entry<UUID, Set<Object>> entry : propertyValues.entrySet() ) {
             UUID propertyTypeId = entry.getKey();
             EdmPrimitiveTypeKind dataType = authorizedPropertiesWithDataType.get( propertyTypeId );
-            for ( Object value : entry.getValue() ) {
-                normalizedPropertyValues
-                        .put( propertyTypeId, validateFormatAndNormalize( dataType, propertyTypeId, value ) );
+            Set<Object> valueSet = entry.getValue();
+            if ( valueSet != null ) {
+                for ( Object value : valueSet ) {
+                    normalizedPropertyValues
+                            .put( propertyTypeId, validateFormatAndNormalize( dataType, propertyTypeId, value ) );
+                }
             }
         }
 
