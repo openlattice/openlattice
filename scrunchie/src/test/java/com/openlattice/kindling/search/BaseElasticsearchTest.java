@@ -31,15 +31,18 @@ import com.openlattice.conductor.rpc.SearchConfiguration;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@SuppressFBWarnings( "MS_PKGPROTECT" )
 public class BaseElasticsearchTest {
 
     protected static final UUID                       ENTITY_SET_ID               = UUID
@@ -66,23 +69,23 @@ public class BaseElasticsearchTest {
     protected static final String                     ELASTICSEARCH_URL           = "localhost";
     protected static final Logger                     logger                      = LoggerFactory
             .getLogger( BaseElasticsearchTest.class );
-    protected static       UUID                       namePropertyId              = UUID
+    protected static final UUID                       namePropertyId              = UUID
             .fromString( "12926a46-7b2d-4b9c-98db-d6a8aff047f0" );
-    protected static       UUID                       employeeIdPropertyId        = UUID
+    protected static final UUID                       employeeIdPropertyId        = UUID
             .fromString( "65d76d13-0d91-4d78-8dbd-cf6ce6e6162f" );
-    protected static       UUID                       salaryPropertyId            = UUID
+    protected static final UUID                       salaryPropertyId            = UUID
             .fromString( "60de791c-df3e-462b-8299-ea36dc3beb16" );
-    protected static       UUID                       employeeDeptPropertyId      = UUID
+    protected static final UUID                       employeeDeptPropertyId      = UUID
             .fromString( "4328a8e7-16e1-42a3-ad5b-adf4b06921ec" );
-    protected static       UUID                       employeeTitlePropertyId     = UUID
+    protected static final UUID                       employeeTitlePropertyId     = UUID
             .fromString( "4a6f084d-cd44-4d5b-9188-947d7151bf84" );
-    protected static       List<PropertyType>         propertyTypesList           = Lists.newArrayList();
-    protected static       List<PropertyType>         allPropertyTypesList        = Lists.newArrayList();
-    protected static       UUID                       chicagoEmployeesEntitySetId = UUID
+    protected static final List<PropertyType>         propertyTypesList           = Lists.newArrayList();
+    protected static final List<PropertyType>         allPropertyTypesList        = Lists.newArrayList();
+    protected static final UUID                       chicagoEmployeesEntitySetId = UUID
             .fromString( "15d8f726-74eb-420f-b63e-9774ebc95c3f" );
-    protected static       UUID                       entitySet2Id                = UUID
+    protected static final UUID                       entitySet2Id                = UUID
             .fromString( "4c767353-8fcc-4b37-9ff9-bb3ad0ab96e4" );
-    protected static       UUID                       organizationId              = UUID
+    protected static final UUID                       organizationId              = UUID
             .fromString( "93e64078-d1a4-4306-a66c-2448d2fd3504" );
     protected static       PropertyType               name;
     protected static       PropertyType               id;
@@ -92,7 +95,7 @@ public class BaseElasticsearchTest {
     protected static       EntitySet                  chicagoEmployees;
     protected static       EntitySet                  entitySet2;
     protected static       Principal                  owner;
-    protected static       Principal                  loomUser;
+    protected static       Principal                  openlatticeUser;
     protected static       Organization               organization;
     protected static       ConductorElasticsearchImpl elasticsearchApi;
 
@@ -170,7 +173,7 @@ public class BaseElasticsearchTest {
                 Optional.of( true ) );
 
         owner = new Principal( PrincipalType.USER, "support@openlattice.com" );
-        loomUser = new Principal( PrincipalType.ROLE, "loomUser" );
+        openlatticeUser = new Principal( PrincipalType.ROLE, "openlatticeUser" );
 
         organization = new Organization(
                 Optional.of( organizationId ),

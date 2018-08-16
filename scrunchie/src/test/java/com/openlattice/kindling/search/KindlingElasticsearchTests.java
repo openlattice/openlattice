@@ -42,7 +42,7 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
     @Test
     public void testEntitySetKeywordSearch() {
         Set<Principal> principals = Sets.newHashSet();
-        principals.add( loomUser );
+        principals.add( openlatticeUser );
 
         String query = "Employees";
         elasticsearchApi.executeEntitySetMetadataSearch(

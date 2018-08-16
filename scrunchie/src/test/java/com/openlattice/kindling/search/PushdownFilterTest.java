@@ -25,7 +25,7 @@ import org.junit.Test;
 public class PushdownFilterTest extends BaseKindlingSparkTest {
     // TEST: testing pushdown for spark join
     @Test
-    public void TestPushDown(){
+    public void testPushDown(){
         
         //Load DataSet from "Employees" Table
 //        Dataset<Row> dfEmployee = sparkSession
