@@ -94,7 +94,7 @@ public interface DataApi {
      * Replaces a single entity from an entity set.
      * @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
-     * @param entity The new entity details object that will replace the old value, with property type ids as keys.
+     * @param entity The new entity details object that will be merged into old values, with property type ids as keys.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Integer mergeIntoEntityInEntitySet(
@@ -118,9 +118,7 @@ public interface DataApi {
      * Fully replaces entities.
      *
      * @param entitySetId The id of the entity set to write to.
-     * @param entities A map describing the entities to create. Each key will be used as the entity id and must be unique
-     * and stable across repeated integrations of data. If either constraint is violated then data may be
-     * overwritten or duplicated.
+     * @param entities A map of entity key ids to entities to create.
      * @param partialReplace Controls whether replace is full or partial. Default behavior is full replacement.
      * @return The UUID assigned to each entity id during creation.
      */
@@ -130,6 +128,17 @@ public interface DataApi {
             @Body Map<UUID, Map<UUID, Set<Object>>> entities,
             @Query( PARTIAL ) boolean partialReplace );
 
+    /**
+     * Fully replaces entities.
+     *
+     * @param entitySetId The id of the entity set to write to.
+     * @param entities A map of entity key ids to entities to merge
+     * @return The total number of entities updated.
+     */
+    @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    Integer mergeIntoEntitiesInEntitySet(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body Map<UUID, Map<UUID, Set<Object>>> entities );
 
     @PATCH( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer replaceEntityProperties(
