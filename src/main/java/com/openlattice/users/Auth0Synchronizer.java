@@ -71,7 +71,8 @@ public class Auth0Synchronizer {
     private final HazelcastOrganizationService organizationService;
     private final AclKey                       userRoleAclKey;
     private final AclKey                       adminRoleAclKey;
-    private final AclKey                       organizationAclKey;
+    private final AclKey                       globalOrganizationAclKey;
+    private final AclKey                       openlatticeOrganizationAclKey;
 
     public Auth0Synchronizer(
             HazelcastInstance hazelcastInstance,
@@ -91,7 +92,8 @@ public class Auth0Synchronizer {
         this.dbCredentialService = dbCredentialService;
         this.spm = spm;
         this.organizationService = organizationService;
-        this.organizationAclKey = spm.lookup( OrganizationBootstrap.GLOBAL_ORG_PRINCIPAL );
+        this.globalOrganizationAclKey = spm.lookup( OrganizationBootstrap.GLOBAL_ORG_PRINCIPAL );
+        this.openlatticeOrganizationAclKey = spm.lookup( OrganizationBootstrap.OPENLATTICE_ORG_PRINCIPAL );
         this.userRoleAclKey = spm.lookup( AuthorizationBootstrap.GLOBAL_USER_ROLE.getPrincipal() );
         this.adminRoleAclKey = spm.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() );
         memberIds.add( localMemberId );
@@ -151,16 +153,16 @@ public class Auth0Synchronizer {
         spm.createSecurablePrincipalIfNotExists( principal,
                 new SecurablePrincipal( Optional.empty(), principal, title, Optional.empty() ) );
 
-        AclKey userAclKey = spm.lookup( principal );
-
-        organizationService.addMembers( organizationAclKey, ImmutableSet.of( principal ) );
-
         if ( user.getRoles().contains( SystemRole.AUTHENTICATED_USER.getName() ) ) {
-            spm.addPrincipalToPrincipal( userRoleAclKey, userAclKey );
+            organizationService.addMembers( globalOrganizationAclKey, ImmutableSet.of( principal ) );
+            organizationService
+                    .addRoleToPrincipalInOrganization( userRoleAclKey.get( 0 ), userRoleAclKey.get( 1 ), principal );
         }
 
         if ( user.getRoles().contains( SystemRole.ADMIN.getName() ) ) {
-            spm.addPrincipalToPrincipal( adminRoleAclKey, userAclKey );
+            organizationService.addMembers( openlatticeOrganizationAclKey, ImmutableSet.of( principal ) );
+            organizationService
+                    .addRoleToPrincipalInOrganization( adminRoleAclKey.get( 0 ), adminRoleAclKey.get( 1 ), principal );
         }
     }
 
