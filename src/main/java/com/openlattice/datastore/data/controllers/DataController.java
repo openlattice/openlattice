@@ -286,7 +286,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             value = "/" + ENTITY_SET + "/",
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
-    public List<UUID> createOrMergeEntities(
+    public List<UUID> createEntities(
             @RequestParam( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody List<SetMultimap<UUID, Object>> entities ) {
         //Ensure that we have read access to entity set metadata.
@@ -364,7 +364,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         //First create the entities so we have entity key ids to work with
         Multimaps.asMap( data.getEntities() )
                 .forEach( ( entitySetId, entities ) ->
-                        entityKeyIds.putAll( entitySetId, createOrMergeEntities( entitySetId, entities ) ) );
+                        entityKeyIds.putAll( entitySetId, createEntities( entitySetId, entities ) ) );
         final ListMultimap<UUID, DataEdge> toBeCreated = ArrayListMultimap.create();
         Multimaps.asMap( data.getAssociations() )
                 .forEach( ( entitySetId, associations ) -> {
@@ -412,8 +412,9 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
-    public Void clearEntitySet( UUID entitySetId ) {
-        return null;
+    public Integer clearEntitySet( UUID entitySetId ) {
+        ensureOwnerAccess( new AclKey( entitySetId ) );
+        return dgm.clearEntitySet( entitySetId,authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
     }
 
     @Override
