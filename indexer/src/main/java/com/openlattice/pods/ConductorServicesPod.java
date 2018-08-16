@@ -50,8 +50,10 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.zaxxer.hikari.HikariDataSource;
+
 import java.io.IOException;
 import javax.inject.Inject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -169,7 +171,11 @@ public class ConductorServicesPod {
 
     @Bean
     public Auth0Synchronizer auth0Refresher() {
-        return new Auth0Synchronizer( hazelcastInstance, principalService(), dbcs(), auth0TokenProvider() );
+        return new Auth0Synchronizer( hazelcastInstance,
+                principalService(),
+                organizationsManager(),
+                dbcs(),
+                auth0TokenProvider() );
     }
 
     @Bean
