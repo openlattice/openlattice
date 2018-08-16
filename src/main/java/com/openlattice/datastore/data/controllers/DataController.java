@@ -233,7 +233,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer replaceEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody Map<UUID, SetMultimap<UUID, Object>> entities,
+            @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities,
             @RequestParam( value = PARTIAL, required = false, defaultValue = "false" ) boolean partialReplace ) {
         ensureReadAccess( new AclKey( entitySetId ) );
         final Set<UUID> requiredPropertyTypes = requiredEntitySetPropertyTypes( entities );
@@ -246,9 +246,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                     entities,
                     dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
         } else {
-            return dgm.replaceEntities( entitySetId,
-                    transformValues( entities, Multimaps::asMap ),
-                    dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+            return dgm.replaceEntities( entitySetId, entities, dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
         }
     }
 
@@ -343,7 +341,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             final UUID entitySetId = association.getKey();
             if ( partial ) {
                 return dgm.partialReplaceEntities( entitySetId,
-                        transformValues( association.getValue(), DataEdge::getData ),
+                        transformValues( association.getValue(), dataEdge -> Multimaps.asMap( dataEdge.getData() ) ),
                         authorizedPropertyTypes );
             } else {
 
@@ -521,8 +519,8 @@ public class DataController implements DataApi, AuthorizingComponent {
         return propertyTypesByEntitySet;
     }
 
-    private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, SetMultimap<UUID, Object>> entities ) {
-        return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
+    private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
+        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 

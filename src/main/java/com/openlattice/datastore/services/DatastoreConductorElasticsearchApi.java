@@ -41,6 +41,7 @@ import com.openlattice.search.requests.SearchResult;
 
 import java.util.Optional;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -271,6 +272,11 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             logger.debug( "unable to execute entity set data search" );
             return new EntityKeyIdSearchResult( 0, Lists.newArrayList() );
         }
+    }
+
+    @Override public Map<UUID, Set<UUID>> searchEntitySets(
+            Iterable<UUID> entitySetIds, Map<UUID, DelegatedStringSet> fieldSearches, int size, boolean explain ) {
+        throw new NotImplementedException( "BLAME MTR. This is for linking only." );
     }
 
     @Override
