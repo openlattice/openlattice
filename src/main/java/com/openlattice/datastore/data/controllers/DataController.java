@@ -519,8 +519,8 @@ public class DataController implements DataApi, AuthorizingComponent {
         return propertyTypesByEntitySet;
     }
 
-    private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, SetMultimap<UUID, Object>> entities ) {
-        return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
+    private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
+        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 
