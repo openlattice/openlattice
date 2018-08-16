@@ -1008,6 +1008,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             case yaml:
                 response.setContentType( CustomMediaType.TEXT_YAML_VALUE );
                 break;
+            case json:
             default:
                 response.setContentType( MediaType.APPLICATION_JSON_VALUE );
                 break;
