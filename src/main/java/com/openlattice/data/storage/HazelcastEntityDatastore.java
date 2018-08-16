@@ -188,9 +188,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     @Override public int partialReplaceEntities(
             UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        final var count = dataQueryService.partialReplaceEntities( entitySetId, transformValues(entities,Multimaps::asMap), authorizedPropertyTypes );
+        final var count = dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;

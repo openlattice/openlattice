@@ -219,7 +219,7 @@ open class DataGraphService(
 
     override fun partialReplaceEntities(
             entitySetId: UUID,
-            entities: Map<UUID, SetMultimap<UUID, Any>>,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         return eds.partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes)
