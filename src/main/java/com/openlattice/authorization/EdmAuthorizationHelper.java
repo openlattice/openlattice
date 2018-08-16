@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 
 public class EdmAuthorizationHelper implements AuthorizingComponent {
     public static final EnumSet<Permission> WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
-    public static final EnumSet<Permission> READ_PERMISSION = EnumSet.of( Permission.WRITE );
+    public static final EnumSet<Permission> READ_PERMISSION  = EnumSet.of( Permission.WRITE );
 
     private final EdmManager           edm;
     private final AuthorizationManager authz;
@@ -115,6 +115,14 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
 
     @Override public AuthorizationManager getAuthorizationManager() {
         return authz;
+    }
+
+    public static Map<AclKey, EnumSet<Permission>> aclKeysForAccessCheck(
+            UUID entitySetId,
+            Set<UUID> propertyTypeIds,
+            EnumSet<Permission> requiredPermission ) {
+        return propertyTypeIds.stream().map( ptId -> new AclKey( entitySetId, ptId ) )
+                .collect( Collectors.toMap( Function.identity(), e -> requiredPermission ) );
     }
 
     public static Map<AclKey, EnumSet<Permission>> aclKeysForAccessCheck(
