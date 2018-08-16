@@ -409,7 +409,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     private fun tombstone(entitySetId: UUID): Int {
         val connection = hds.connection
         return connection.use {
-            val ps = it.prepareStatement(updateAllEntityVersions(entitySetId, System.currentTimeMillis()))
+            val ps = it.prepareStatement(updateAllEntityVersions(entitySetId, -System.currentTimeMillis()))
             return ps.executeUpdate()
         }
     }
@@ -417,7 +417,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
         val connection = hds.connection
         return connection.use {
-            val ps = connection.prepareStatement(updateEntityVersion(entitySetId, System.currentTimeMillis()))
+            val ps = connection.prepareStatement(updateEntityVersion(entitySetId, -System.currentTimeMillis()))
             entityKeyIds.forEach {
                 ps.setObject(1, it)
                 ps.addBatch()
