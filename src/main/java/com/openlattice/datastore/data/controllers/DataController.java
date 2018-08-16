@@ -89,6 +89,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -250,6 +251,19 @@ public class DataController implements DataApi, AuthorizingComponent {
         }
     }
 
+    @Override
+    @PutMapping(
+            value = "/" + ENTITY_SET + "/" + SET_ID_PATH,
+    consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Integer mergeIntoEntitiesInEntitySet(
+            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
+            @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities ) {
+        ensureReadAccess( new AclKey( entitySetId ) );
+        var authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,EnumSet.of(Permission.WRITE) );
+        accessCheck( authorizedPropertyTypes, requiredEntitySetPropertyTypes( entities ) );
+        return dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
+    }
+
     @PatchMapping( value = "/" + ENTITY_SET + "/" + SET_ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
     @Override
     public Integer replaceEntityProperties(
@@ -294,6 +308,19 @@ public class DataController implements DataApi, AuthorizingComponent {
                 .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
         return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
     }
+
+    @Override
+    @PutMapping(
+            value = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Integer mergeIntoEntityInEntitySet(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
+            @RequestBody Map<UUID, Set<Object>> entity ) {
+        final var entities = ImmutableMap.of( entityKeyId, entity );
+        return mergeIntoEntitiesInEntitySet( entitySetId, entities );
+    }
+
 
     @Override
     public AuthorizationManager getAuthorizationManager() {
@@ -409,10 +436,16 @@ public class DataController implements DataApi, AuthorizingComponent {
         return null;
     }
 
+    @Override public Integer deleteEntityProperties(
+            UUID entitySetId, Map<UUID, Map<UUID, Set<ByteBuffer>>> entityProperties ) {
+        return null;
+    }
+
     @Override
     public Integer clearEntitySet( UUID entitySetId ) {
         ensureOwnerAccess( new AclKey( entitySetId ) );
-        return dgm.clearEntitySet( entitySetId,authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
+        return dgm
+                .clearEntitySet( entitySetId, authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
     }
 
     @Override
