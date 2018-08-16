@@ -23,18 +23,46 @@ package com.openlattice.linking.matching
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.Matcher
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
+import org.deeplearning4j.util.ModelSerializer
+import org.deeplearning4j.util.ModelSerializer.restoreMultiLayerNetwork
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.lang.ThreadLocal.withInitial
 import java.util.*
+import java.util.function.Supplier
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class SocratesMatcher : Matcher {
+class SocratesMatcher( model: MultiLayerNetwork ) : Matcher {
+    private var inputStreamSupplier = memoizeModelAsStream(model)
+
+    //            Thread.currentThread().contextClassLoader.getResourceAsStream("model.bin") }
+    private val model: ThreadLocal<MultiLayerNetwork> = withInitial {
+        restoreMultiLayerNetwork(inputStreamSupplier.get())
+    }
+
+    override fun updateMatchingModel(model: MultiLayerNetwork)  {
+        inputStreamSupplier = memoizeModelAsStream(model)
+    }
+
+    private fun memoizeModelAsStream(model: MultiLayerNetwork) : Supplier<InputStream> {
+        val outputStream  = ByteArrayOutputStream()
+        ModelSerializer.writeModel(model, outputStream,true )
+        return  Supplier { ByteArrayInputStream( outputStream.toByteArray() ) }
+    }
+
     override fun match(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>> {
+        val model = model.get()
+
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
+
 
 
 }
