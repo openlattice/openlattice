@@ -94,6 +94,9 @@ class ElasticsearchBlocker(
         )
     }
 
+    /**
+     * Handles rendering an object into field searches for blocking.
+     */
     private fun getFieldSearches(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
         return entity.map { it.key to DelegatedStringSet.wrap(it.value.map { it.toString() }.toSet()) }.toMap()
     }

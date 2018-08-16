@@ -49,4 +49,7 @@ class RealtimeLinkingService
 
     }
 
+    fun updateModel( serializedModel :ByteArray ) {
+
+    }
 }
