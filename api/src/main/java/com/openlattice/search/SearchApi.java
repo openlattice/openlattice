@@ -76,6 +76,8 @@ public interface SearchApi {
     String ENTITY_ID_PATH     = "/{" + ENTITY_ID + "}";
     String START_PATH         = "/{" + START + "}";
 
+    int MAX_SEARCH_RESULTS = 10000;
+
     /**
      * The query, entityType, and propertyTypes params are all optional, but at least one must be specified otherwise an
      * error will be thrown. All specified params are required to be present in each entity set returned. If entityType
