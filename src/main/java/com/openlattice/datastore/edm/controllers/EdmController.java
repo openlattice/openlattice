@@ -1001,6 +1001,11 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {
 
+        if ( fileType == null ) {
+            response.setContentType( MediaType.APPLICATION_JSON_VALUE );
+            return;
+        }
+
         switch ( fileType ) {
             case csv:
                 response.setContentType( CustomMediaType.TEXT_CSV_VALUE );
