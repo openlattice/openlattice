@@ -98,7 +98,9 @@ public class FeatureExtractionAggregator extends Aggregator<Map.Entry<GraphEntit
 
             double[] dist = PersonMetric.pDistance( e1, e2, propertyTypeIdIndexedByFqn );
             double[][] features = new double[ 1 ][ 0 ];
+
             features[ 0 ] = dist;
+
             double weight = elasticsearchApi.getModelScore( features );
             lightest = Math.min( lightest, weight );
             graphs.setEdgeWeight( edge, weight );

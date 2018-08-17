@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class LinkingEntity implements Serializable {
+public class LinkingEntity {
     private static final long serialVersionUID = 3577378946466844645L;
 
     @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
