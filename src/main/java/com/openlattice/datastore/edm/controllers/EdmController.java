@@ -188,8 +188,8 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @Override
     @RequestMapping(
             path = VERSION_PATH,
-            method = RequestMethod.GET,
-            consumes = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_YAML_VALUE } )
+            method = RequestMethod.GET
+    )
     @ResponseStatus( HttpStatus.OK )
     public UUID getEntityDataModelVersion() {
         return modelService.getCurrentEntityDataModelVersion();
