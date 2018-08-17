@@ -46,14 +46,12 @@ import org.springframework.scheduling.annotation.Scheduled
 import java.sql.ResultSet
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
 import java.util.function.Supplier
 
 /**
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
 private const val EXPIRATION_MILLIS = 60000L
@@ -80,7 +78,7 @@ class BackgroundIndexingService(
         indexingLocks.addIndex(QueryConstants.THIS_ATTRIBUTE_NAME.value(), true)
     }
 
-    private var taskLock = ReentrantLock()
+    private val taskLock = ReentrantLock()
 
     @Scheduled(fixedRate = EXPIRATION_MILLIS)
     fun scavengeIndexingLocks() {
@@ -98,22 +96,23 @@ class BackgroundIndexingService(
         //Keep number of indexing jobs under control
         if (taskLock.tryLock()) {
             try {
-                val totalIndexed = AtomicInteger()
                 val w = Stopwatch.createStarted()
-                entitySets.values.parallelStream()
+                //We shuffle entity sets to make sure we have a chance to work share and index everything
+                val lockedEntitySets = entitySets.values
+                        .shuffled()
+                        .filter { tryLockEntitySet(it.id) }
                         .filter { it.name != AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME }
+
+                val totalIndexed = lockedEntitySets
+                        .parallelStream()
                         .mapToInt(this::indexEntitySet)
-                        .peek {
-                            logger.info(
-                                    "Processed {} elements in {} ms",
-                                    totalIndexed.addAndGet(it),
-                                    w.elapsed(TimeUnit.MILLISECONDS)
-                            )
-                        }
                         .sum()
+
+                lockedEntitySets.forEach( indexingLocks::delete )
+
                 logger.info(
                         "Completed indexing {} elements in {} ms",
-                        totalIndexed.get(),
+                        totalIndexed,
                         w.elapsed(TimeUnit.MILLISECONDS)
                 )
             } finally {
@@ -216,18 +215,23 @@ class BackgroundIndexingService(
         return indexCount
     }
 
+    private fun tryLockEntitySet(entitySetId: UUID): Boolean {
+        return indexingLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
+    }
+
     private fun updateExpiration(entitySetId: UUID) {
         indexingLocks.set(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS)
     }
 
-    private fun getBatch(entityKeyIdStream: Iterator<UUID>): MutableSet<UUID> {
+    private fun getBatch(entityKeyIdStream: PostgresIterable.PostgresIterator<UUID>): MutableSet<UUID> {
         val entityKeyIds = HashSet<UUID>(INDEX_SIZE)
 
         var i = 0
-        while (i < INDEX_SIZE && entityKeyIdStream.hasNext()) {
+        while (entityKeyIdStream.hasNext() && i < INDEX_SIZE) {
             entityKeyIds.add(entityKeyIdStream.next())
             ++i
         }
+
         return entityKeyIds
     }
 }

@@ -21,6 +21,7 @@
 
 package com.openlattice.linking
 
+import com.openlattice.data.EntityDataKey
 import com.openlattice.postgres.streams.PostgresIterable
 import java.util.*
 
@@ -28,28 +29,11 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class RealtimeLinkingService
-(
-        val blocker: Blocker,
-        private val matcher: Matcher,
-        private val clusterer: Clusterer
-) {
+interface Clusterer {
+    fun cluster(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>)
 
-    /**
-     * Performs an update of the existing links for recently written data.
-     */
-    fun update(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
-        entityKeyIds
-                .map { blocker.block(entitySetId, it) }
-                .map(matcher::match)
-                .forEach(clusterer::cluster)
-    }
-
-    fun delete(entitySetId: UUID, entityKeyIds: Set<UUID>) {
-
-    }
-
-    fun updateModel( serializedModel :ByteArray ) {
-
-    }
+    fun trimAndMerge(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>)
+    fun getNeighborhood(entityDataKey: EntityDataKey): PostgresIterable<EntityDataKey>
+    fun getAdjacentClusters(entityDataKey: EntityDataKey): PostgresIterable<UUID>
+    fun getCluster(entityDataKey: EntityDataKey): Optional<UUID>
 }
