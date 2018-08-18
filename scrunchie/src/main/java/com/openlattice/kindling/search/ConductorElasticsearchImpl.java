@@ -163,11 +163,16 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                                 .field( ENCODER, METAPHONE )
                                 .field( REPLACE, false )
                             .endObject()
+                            .startObject( SHINGLE_FILTER )
+                                .field( TYPE, SHINGLE )
+                                .field( OUTPUT_UNIGRAMS, true )
+                                .field( TOKEN_SEPARATOR, "" )
+                            .endObject()
                         .endObject()
             	        .startObject( ANALYZER )
                 	        .startObject( METAPHONE_ANALYZER )
                 	            .field( TOKENIZER, STANDARD )
-                	            .field( FILTER, Lists.newArrayList( STANDARD, LOWERCASE, METAPHONE_FILTER ) )
+                	            .field( FILTER, Lists.newArrayList( STANDARD, LOWERCASE, SHINGLE_FILTER, METAPHONE_FILTER ) )
                 	        .endObject()
                 	    .endObject()
         	        .endObject()
@@ -932,7 +937,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
         searches.forEach( search -> {
             QueryStringQueryBuilder queryString = QueryBuilders
-                    .queryStringQuery( getFormattedFuzzyString( search.getSearchTerm() ) )
+                    .queryStringQuery( search.getSearchTerm() )
                     .field( search.getPropertyType().toString(), Float.valueOf( "1" ) ).lenient( true );
             if ( search.getExactMatch() ) {
                 query.must( queryString );
@@ -1131,7 +1136,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     private String getFormattedFuzzyString( String searchTerm ) {
         return Stream.of( searchTerm.split( " " ) )
-                .map( term -> term.endsWith( "~" ) ? term : term + "~" ).collect( Collectors.joining( " " ) );
+                .map( term -> term.endsWith( "~" ) || term.endsWith( "\"" ) ? term : term + "~" )
+                .collect( Collectors.joining( " " ) );
     }
 
     private boolean saveObjectToElasticsearch( String index, String type, Object obj, String id ) {
