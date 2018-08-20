@@ -25,6 +25,7 @@ import java.util.UUID;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.search.SearchApi;
 
 public class Search {
 
@@ -45,7 +46,7 @@ public class Search {
         this.optionalEntityType = entityType;
         this.optionalPropertyTypes = propertyTypes;
         this.start = start;
-        this.maxHits = maxHits;
+        this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
     }
 
     @JsonProperty( SerializationConstants.KEYWORD )
