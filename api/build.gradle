@@ -12,7 +12,6 @@ buildscript {
     }
 }
 
-
 plugins {
     id 'java'
     id 'eclipse'
@@ -20,8 +19,8 @@ plugins {
     id 'jacoco'
     id 'checkstyle'
     id 'com.github.spotbugs' version '1.6.2'
-    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.51'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.60'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.60'
 }
 
 description = "OpenLattice REST APIs"
@@ -110,8 +109,6 @@ task swaggerJava {
         new DefaultGenerator().opts(config.toClientOptInput()).generate()
     }
 }
-
-
 
 clean.doFirst {
     delete(swaggerOutputDir)
