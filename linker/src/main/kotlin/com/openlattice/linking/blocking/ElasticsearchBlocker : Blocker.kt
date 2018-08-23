@@ -34,11 +34,13 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.Blocker
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.*
 
 
 private const val PERSON_FQN = "general.person"
+private val logger = LoggerFactory.getLogger(ElasticsearchBlocker::class.java)
 
 /**
  * Instantiates a blocking strategy that relies upon elasticsearch to compute initial blocks.
@@ -71,6 +73,10 @@ class ElasticsearchBlocker(
                 false
         )
 
+        if (blockedEntitySetSearchResults[entityDataKey.entitySetId]?.contains(entityDataKey.entityKeyId) == false) {
+            logger.error("Entity {} did not block to itself.", entityDataKey)
+        }
+
         return entityDataKey to blockedEntitySetSearchResults
                 .flatMap {
                     val entitySetId = it.key
@@ -78,7 +84,6 @@ class ElasticsearchBlocker(
                             .getEntitiesById(entitySetId, authorizedPropertyTypes, it.value)
                             .map { EntityDataKey(entitySetId, it.key) to Multimaps.asMap(it.value) }
                 }.toMap()
-
 
     }
 

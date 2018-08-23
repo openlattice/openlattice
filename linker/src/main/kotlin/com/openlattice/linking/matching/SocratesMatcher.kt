@@ -21,48 +21,69 @@
 
 package com.openlattice.linking.matching
 
+import com.google.common.base.Suppliers
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.linking.Matcher
+import com.openlattice.linking.util.PersonMetric
+import com.openlattice.rhizome.hazelcast.DelegatedStringSet
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.deeplearning4j.util.ModelSerializer
 import org.deeplearning4j.util.ModelSerializer.restoreMultiLayerNetwork
+import org.nd4j.linalg.factory.Nd4j
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.InputStream
 import java.lang.ThreadLocal.withInitial
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
+
+const val MODEL_CACHE_TTL_MILLIS = 60000L
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class SocratesMatcher( model: MultiLayerNetwork ) : Matcher {
-    private var inputStreamSupplier = memoizeModelAsStream(model)
+class SocratesMatcher(model: MultiLayerNetwork, val fqnToIdMap: Map<FullQualifiedName, UUID>) : Matcher {
+    private var localModel = ThreadLocal.withInitial { model }
 
     //            Thread.currentThread().contextClassLoader.getResourceAsStream("model.bin") }
-    private val model: ThreadLocal<MultiLayerNetwork> = withInitial {
-        restoreMultiLayerNetwork(inputStreamSupplier.get())
+
+    override fun updateMatchingModel(model: MultiLayerNetwork) {
+        localModel = ThreadLocal.withInitial { model }
     }
 
-    override fun updateMatchingModel(model: MultiLayerNetwork)  {
-        inputStreamSupplier = memoizeModelAsStream(model)
-    }
-
-    private fun memoizeModelAsStream(model: MultiLayerNetwork) : Supplier<InputStream> {
-        val outputStream  = ByteArrayOutputStream()
-        ModelSerializer.writeModel(model, outputStream,true )
-        return  Supplier { ByteArrayInputStream( outputStream.toByteArray() ) }
-    }
-
+    /**
+     * Computes the pairwise matching values for a block.
+     * @param block The resulting block around for the entity data key in block.first
+     * @return The matches scored by the current model.
+     */
     override fun match(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
-    ): Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>> {
-        val model = model.get()
+    ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
+        val model = localModel.get()
 
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val entityDataKey = block.first
+        val entities = block.second
+
+        val extractedEntities = entities.mapValues { extractProperties(it.value) }
+
+        val matchedEntities = extractedEntities.mapValues {
+            val entity = it.value
+            extractedEntities
+                    .mapValues { model.getModelScore(arrayOf(PersonMetric.pDistance(entity, it.value, fqnToIdMap))) }
+                    .toMutableMap()
+        }.toMutableMap()
+
+        return block.first to matchedEntities
     }
 
+    private fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
+        return entity.map { it.key to DelegatedStringSet.wrap(it.value.map { it.toString() }.toSet()) }.toMap()
+    }
+}
 
-
+fun MultiLayerNetwork.getModelScore(features: Array<DoubleArray>): Double {
+    return output(Nd4j.create(features)).getDouble(1)
 }
