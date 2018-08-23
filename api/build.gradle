@@ -6,10 +6,6 @@ buildscript {
     configurations.classpath {
         exclude module: 'slf4j-simple'
     }
-
-//    dependencies {
-//        classpath('io.swagger:swagger-codegen:3.0.0-rc1')
-//    }
 }
 
 
@@ -80,53 +76,6 @@ swaggerSources {
         }
     }
 }
-
-//import io.swagger.codegen.DefaultGenerator
-//import io.swagger.codegen.config.CodegenConfigurator
-//
-
-//task swaggerDocs {
-//    inputs.file(swaggerInput)
-//    outputs.dir(swaggerOutputDir)
-//    doLast {
-//        def config = new CodegenConfigurator()
-//        config.setInputSpec(swaggerInput)
-//        config.setOutputDir(swaggerOutputDir.path)
-//        config.setLang('java')
-//        config.setAdditionalProperties([
-//                'invokerPackage': 'com.openlattice.client',
-//                'modelPackage'  : 'com.openlattice.client.model',
-//                'apiPackage'    : 'com.openlattice.client.api',
-//                'dateLibrary'   : 'java8'
-//        ])
-////        config.setImportMappings([
-////                'Dog': 'io.swagger.petstore.client.model.Dog'
-////        ])
-//        new DefaultGenerator().opts(config.toClientOptInput()).generate()
-//    }
-//}
-//
-//task swaggerJava {
-//    inputs.file(swaggerInput)
-//    outputs.dir(swaggerOutputDir)
-//    doLast {
-//        def config = new CodegenConfigurator()
-//        config.setInputSpec(swaggerInput)
-//        config.setOutputDir(swaggerOutputDir.path)
-//        config.setLang('java')
-//        config.setAdditionalProperties([
-//                'invokerPackage': 'com.openlattice.client',
-//                'modelPackage'  : 'com.openlattice.client.model',
-//                'apiPackage'    : 'com.openlattice.client.api',
-//                'dateLibrary'   : 'java8'
-//        ])
-//        config.setImportMappings([
-//                'Dog': 'io.swagger.petstore.client.model.Dog'
-//        ])
-//        new DefaultGenerator().opts(config.toClientOptInput()).generate()
-//    }
-//}
-
 
 
 clean.doFirst {
