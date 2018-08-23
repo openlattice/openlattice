@@ -42,7 +42,7 @@ interface Matcher {
      */
     fun match(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
-    ): Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>
+    ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
 
     /**
      * Allow inplace updating of the model used for peforming the matching.

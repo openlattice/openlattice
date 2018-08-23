@@ -30,9 +30,9 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface Clusterer {
-    fun cluster(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>)
+    fun cluster(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>)
 
-    fun trimAndMerge(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>)
+    fun trimAndMerge(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>)
     fun getNeighborhood(entityDataKey: EntityDataKey): PostgresIterable<EntityDataKey>
     fun getAdjacentClusters(entityDataKey: EntityDataKey): PostgresIterable<UUID>
     fun getCluster(entityDataKey: EntityDataKey): Optional<UUID>

@@ -33,12 +33,12 @@ const val THRESHOLD = 0.25
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class HierarchicalAgglomeratriveClusterer : Clusterer {
-    override fun cluster(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>) {
+    override fun cluster(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     override fun trimAndMerge(
-            matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>
+            matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
     ) {
         //Trim non-center matching thigns.
         matchedBlock.second[matchedBlock.first] = matchedBlock.second[matchedBlock.first]?.filter { it.value > THRESHOLD } ?: mapOf()

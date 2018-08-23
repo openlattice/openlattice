@@ -39,6 +39,7 @@ class RealtimeLinkingService
      * Performs an update of the existing links for recently written data.
      */
     fun update(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
+        //TODO: Parallelize
         entityKeyIds
                 .map { blocker.block(entitySetId, it) }
                 .map(matcher::match)
@@ -49,7 +50,7 @@ class RealtimeLinkingService
 
     }
 
-    fun updateModel( serializedModel :ByteArray ) {
+    fun updateModel(serializedModel: ByteArray) {
 
     }
 }
