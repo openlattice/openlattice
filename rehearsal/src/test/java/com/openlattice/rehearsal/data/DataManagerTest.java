@@ -65,6 +65,10 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import static com.google.common.collect.Maps.transformValues; //added import statement
 
 //TODO: Make these tests useful.
 public class DataManagerTest extends SetupEnvironment {
@@ -200,7 +204,8 @@ public class DataManagerTest extends SetupEnvironment {
                 if ( count++ < paging_constant ) {
                     entities.put( UUID.randomUUID(), entity );
                 } else {
-                    dataApi.replaceEntities( entitySetId, entities, false );
+                    //added transformValues()
+                    dataApi.replaceEntities( entitySetId, transformValues(entities, Multimaps::asMap), false );
 
                     entities = new HashMap<>();
                     count = 0;
@@ -215,7 +220,7 @@ public class DataManagerTest extends SetupEnvironment {
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType ) {
         System.out.println( "Writing Data..." );
-        dataApi.replaceEntities( entitySetId, entities, false );
+        dataApi.replaceEntities( entitySetId, transformValues(entities, Multimaps::asMap), false );
         System.out.println( "Writing done." );
     }
 
