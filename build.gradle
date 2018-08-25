@@ -123,7 +123,7 @@ dependencies {
         testCompile( project(path: ":rhizome-client", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
-        compile "com.openlattice:api:0.0.10-SNAPSHOT"
+        compile "com.openlattice:api:${api_version}"
         compile "com.openlattice:rhizome:${rhizome_version}"
 
         testCompile "com.openlattice:api:0.0.10-SNAPSHOT:tests"

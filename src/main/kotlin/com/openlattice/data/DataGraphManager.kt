@@ -148,6 +148,7 @@ interface DataGraphManager {
     ): Stream<SetMultimap<FullQualifiedName, Any>>
 
     fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets>
+
     fun mergeEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
