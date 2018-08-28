@@ -446,8 +446,9 @@ public class DataController implements DataApi, AuthorizingComponent {
                         authorizedPropertyTypesOnNeighborAES
                 );
 
-                if ( neighbor.getNeighborId().isPresent() && neighbor.getNeighborEntitySet().isPresent() ) {
-                    UUID neighborEntityKeyId = neighbor.getNeighborId().get();
+                if ( neighbor.getNeighborDetails().isPresent() && neighbor.getNeighborEntitySet().isPresent() ) {
+                    SetMultimap<FullQualifiedName, Object> neighborDetails = neighbor.getNeighborDetails().get();
+                    UUID neighborEntityKeyId = (UUID) neighborDetails.get( ID_FQN ).iterator().next();
                     UUID neighborEntitySetId = neighbor.getNeighborEntitySet().get().getId();
                     Map<UUID, PropertyType> authorizedPropertyTypesOnNeighborES = authzHelper
                             .getAuthorizedPropertyTypes( neighborEntitySetId, WRITE_PERMISSION );
