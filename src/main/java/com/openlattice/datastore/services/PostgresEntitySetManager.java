@@ -20,22 +20,27 @@
 
 package com.openlattice.datastore.services;
 
+import com.openlattice.data.Entity;
 import com.openlattice.edm.EntitySet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.openlattice.edm.type.PropertyType;
+import com.openlattice.data.PropertySummary;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
+import com.openlattice.postgres.streams.PostgresIterable;
+import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class PostgresEntitySetManager {
     private static final Logger logger = LoggerFactory.getLogger( PostgresEntitySetManager.class );
@@ -44,12 +49,14 @@ public class PostgresEntitySetManager {
     private final String getAllEntitySets;
     private final String getEntitySet;
     private final String getEntitySetsByType;
+    //private final String getPropertyTypeSummary;
 
     public PostgresEntitySetManager( HikariDataSource hds ) {
         this.hds = hds;
 
         // Tables
         String ENTITY_SETS = PostgresTable.ENTITY_SETS.getName();
+        //String PROPERTY_TYPES = PostgresTable.PROPERTY_TYPES.getName(); <- not sure if I use this here or not
 
         // Properties
         String NAME = PostgresColumn.NAME.getName();
@@ -61,6 +68,11 @@ public class PostgresEntitySetManager {
                 .concat( " = ?;" );
         this.getEntitySetsByType = "SELECT * FROM ".concat( ENTITY_SETS ).concat( " WHERE " ).concat( ENTITY_TYPE_ID )
                 .concat( " = ?;" );
+        /*
+        this.getPropertyTypeSummary = "SELECT entity_type_id, entity_set_id, count(*) FROM "
+                .concat( PROPERTY_TYPES ).concat(" LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
+                        "GROUP BY (entity_type_id,entity_set_id);");
+                        */
     }
 
     public EntitySet getEntitySet( String entitySetName ) {
@@ -110,6 +122,33 @@ public class PostgresEntitySetManager {
             logger.debug( "Unable to load entity sets for entity type id {}", entityTypeId.toString(), e );
             return ImmutableList.of();
         }
+    }
+
+    public Stream<PropertySummary> getPropertySummary( String propertyTableName) {
+            return new PostgresIterable<>( () -> {
+                final ResultSet rs;
+                final Connection connection;
+                final PreparedStatement statement;
+                String propertySummaryQuery = "SELECT entity_type_id, entity_set_id, count(*) FROM "
+                        .concat( propertyTableName ).concat(" LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
+                                "GROUP BY (entity_type_id,entity_set_id);");
+                try {
+                    connection = hds.getConnection();
+                    statement = connection.prepareStatement( propertySummaryQuery );
+                    rs = statement.executeQuery();
+                    return new StatementHolder( connection, statement, rs );
+                } catch ( SQLException e ) {
+                    logger.error( "Unable to create statement holder!", e );
+                    throw new IllegalStateException( "Unable to create statement holder.", e );
+                }
+            }, rs -> {
+                try {
+                    return ResultSetAdapters.propertySummary( rs );
+                } catch ( SQLException e ) {
+                    logger.error( "Unable to load entity information.", e );
+                    throw new IllegalStateException( "Unable to load entity information.", e );
+                }
+            } ).stream();
     }
 
 }
