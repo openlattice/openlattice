@@ -108,6 +108,7 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDataMetadata;
 import com.openlattice.data.EntityKey;
 import com.openlattice.data.PropertyMetadata;
+import com.openlattice.data.PropertySummary;
 import com.openlattice.data.PropertyValueKey;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.storage.MetadataOption;
@@ -831,6 +832,19 @@ public final class ResultSetAdapters {
             }
         }
         return new Entity( entityKeyId, data );
+    }
+
+    /*
+    make a method called propertySummary. This is where you will loop through the results of the ResultsSet
+    and turn it into a JSON. You will need to implement a class like Entity.java used in the above entity() method.
+    It will return a JSON like whatever Leland drew in your notebook.
+     */
+    public static PropertySummary propertySummary( ResultSet rs ) throws SQLException {
+        UUID id = id( rs );
+        UUID entityTypeID = (UUID) rs.getObject("entity_type_id");
+        UUID entitySetId = (UUID) rs.getObject( "entity_set_id" );
+        int count = rs.getInt("count");
+        return new PropertySummary( id, entityTypeID, entitySetId, count);
     }
 
 }
