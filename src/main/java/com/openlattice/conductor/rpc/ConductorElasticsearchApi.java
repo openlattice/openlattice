@@ -53,12 +53,16 @@ public interface ConductorElasticsearchApi {
     final String ANALYZER           = "analyzer";
     final String ENCODER            = "encoder";
     final String REPLACE            = "replace";
+    final String OUTPUT_UNIGRAMS    = "output_unigrams";
+    final String TOKEN_SEPARATOR    = "token_separator";
     final String TOKENIZER          = "tokenizer";
     final String STANDARD           = "standard";
     final String LOWERCASE          = "lowercase";
     final String PHONETIC           = "phonetic";
     final String METAPHONE          = "metaphone";
+    final String SHINGLE            = "shingle";
     final String METAPHONE_FILTER   = "metaphone_filter";
+    final String SHINGLE_FILTER     = "shingle_filter";
     final String METAPHONE_ANALYZER = "MetaphoneAnalyzer";
 
     final String ES_PROPERTIES = "properties";
