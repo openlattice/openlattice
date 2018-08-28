@@ -419,46 +419,55 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Override
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/graph" },
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS },
             method = RequestMethod.DELETE
     )
     public Void clearEntityAndNeighborEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_ID ) UUID entityId
+            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId
     ) {
 
         ensureReadAccess( new AclKey( entitySetId ) );
         Map<UUID, List<NeighborEntityDetails>> result = searchService
-                .executeEntityNeighborSearch( entitySetId, ImmutableSet.of( entityId ) );
+                .executeEntityNeighborSearch( entitySetId, ImmutableSet.of( entityKeyId ) );
 
-        if ( result != null && !result.containsKey( entityId ) ) {
+        if ( result != null && result.containsKey( entityKeyId ) ) {
 
-            List<NeighborEntityDetails> neighbors = result.get( entityId );
+            List<NeighborEntityDetails> neighbors = result.get( entityKeyId );
             neighbors.parallelStream().forEach( neighbor -> {
 
-                UUID associationEntityId = (UUID) neighbor.getAssociationDetails().get( ID_FQN ).iterator().next();
+                UUID associationEntityKeyId = (UUID) neighbor.getAssociationDetails().get( ID_FQN ).iterator().next();
                 UUID associationEntitySetId = neighbor.getAssociationEntitySet().getId();
                 Map<UUID, PropertyType> authorizedPropertyTypesOnNeighborAES = authzHelper
                         .getAuthorizedPropertyTypes( associationEntitySetId, WRITE_PERMISSION );
                 dgm.clearEntities(
                         neighbor.getAssociationEntitySet().getId(),
-                        ImmutableSet.of( associationEntityId ),
+                        ImmutableSet.of( associationEntityKeyId ),
                         authorizedPropertyTypesOnNeighborAES
                 );
 
                 if ( neighbor.getNeighborId().isPresent() && neighbor.getNeighborEntitySet().isPresent() ) {
-                    UUID neighborEntityId = neighbor.getNeighborId().get();
+                    UUID neighborEntityKeyId = neighbor.getNeighborId().get();
                     UUID neighborEntitySetId = neighbor.getNeighborEntitySet().get().getId();
                     Map<UUID, PropertyType> authorizedPropertyTypesOnNeighborES = authzHelper
                             .getAuthorizedPropertyTypes( neighborEntitySetId, WRITE_PERMISSION );
                     dgm.clearEntities(
                             neighborEntitySetId,
-                            ImmutableSet.of( neighborEntityId ),
+                            ImmutableSet.of( neighborEntityKeyId ),
                             authorizedPropertyTypesOnNeighborES
                     );
                 }
             } );
         }
+
+        Map<UUID, PropertyType> authorizedPropertyTypesOnEntityES = authzHelper
+                .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
+        dgm.clearEntities(
+                entitySetId,
+                ImmutableSet.of( entityKeyId ),
+                authorizedPropertyTypesOnEntityES
+        );
+
         return null;
     }
 
