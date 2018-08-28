@@ -50,6 +50,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.PropertySummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntityDataModel;
@@ -95,11 +96,12 @@ import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
 import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
+import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.zaxxer.hikari.HikariDataSource;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+
+import java.sql.*;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -119,6 +121,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 public class EdmService implements EdmManager {
 
@@ -670,6 +673,12 @@ public class EdmService implements EdmManager {
     @Override
     public Iterable<EntitySet> getEntitySets() {
         return entitySetManager.getAllEntitySets();
+    }
+
+    @Override
+    public Stream<PropertySummary> getPropertySummary( UUID propertyTypeId ) {
+        String propertyTableName = DataTables.propertyTableName(propertyTypeId);
+        return entitySetManager.getPropertySummary(propertyTableName);
     }
 
     @Override
