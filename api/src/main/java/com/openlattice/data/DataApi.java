@@ -53,7 +53,6 @@ public interface DataApi {
     String ENTITY_SET  = "set";
     String ASSOCIATION = "association";
 
-    String ENTITY_ID        = "entityId";
     String ENTITY_SET_ID    = "setId";
     String ENTITY_KEY_ID    = "entityKeyId";
     String PROPERTY_TYPE_ID = "propertyTypeId";
@@ -161,12 +160,12 @@ public interface DataApi {
      * Clears the Entity matching the given Entity id and all of its neighbor Entities
      *
      * @param entitySetId the id of the EntitySet to delete from
-     * @param entityId the id of the Entity to delete
+     * @param entityKeyId the id of the Entity to delete
      */
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS )
     Void clearEntityAndNeighborEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId
+            @Path( ENTITY_KEY_ID ) UUID entityKeyId
     );
 
     /**
