@@ -79,6 +79,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entitySet'
     delete: # lattice-js l.696
       summary: Deletes the EntitySet definition for the given EntitySet UUID.
       operationId: deleteEntitySet
@@ -134,6 +138,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entitySetId'
   /datastore/edm/entity/set:
     get: # lattice-js l.628
       summary: Get all EntitySet definitions.
@@ -145,6 +153,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entitySets'
     post: # lattice-js l.651
       summary: Create new EntitySet definitions if they don't exist.
       operationId: createEntitySets
@@ -178,6 +190,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyTypes'
   /datastore/edm/entity/set/{entitySetId}/property/type/{propertyTypeId}/:
     get: # lattice-js l.2376
       summary: Get specified property type metadata for an entity set.
@@ -200,6 +216,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyType'
     post: #lattice-js l.2418
       summary: Updates the property type metadata for the given entity set.
       operationId: updateEntitySetPropertyMetadata
@@ -269,6 +289,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entityType'
     delete: #lattice-js l.997
       summary: Deletes the EntityType definition for the given EntityType UUID.
       operationId: deleteEntityType
@@ -335,6 +359,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entityTypeId'
   /datastore/edm/entity/type/{entityTypeId}/{propertyTypeId}:
     put: #lattice-js l.1017
       summary: Updates the EntityType definition for the given EntityType UUID by adding the given PropertyType UUID.
@@ -411,6 +439,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entityTypes'
     post: #lattice-js l/932
       summary: Creates a new EntityType definition, if it doesn't exist.
       operationId: createEntityType
@@ -436,6 +468,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entityTypes'
     post: #lattice-js l.1762
       summary: Creates a new AssociationType definition, if it doesn't exist.
       operationId: createAssociationType
@@ -530,6 +566,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyType'
     delete: #lattice-js l.1480
       summary: Deletes the PropertyType definition for the given PropertyType UUID.
       operationId: deletePropertyType
@@ -607,6 +647,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyTypeId'
   /datastore/edm/property/type/:
     get: #lattice-js l.1378
       summary: Gets all PropertyType definitions.
@@ -618,6 +662,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyTypes'
     post: #lattice-js l.1435
       summary: Creates a new PropertyType definition, if it doesn't exist.
       operationId: createPropertyType
@@ -652,6 +700,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyTypes'
 
   ############################
   ## Association Type API's ##
@@ -693,6 +745,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/associationType'
     delete: #lattice-js l.1803
       summary: Delete the AssociationType definition for the given AssociationType UUID.
       operationId: deleteAssociationType
@@ -724,9 +780,13 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/associationType'
   /datastore/edm/association/type/{associationTypeId}/available:
     get: # lattice-js l.1727
-      summary: Get all available assocations for the given AssociationType UUID.
+      summary: Get all available associations for the given AssociationType UUID.
       operationId: getAllAvailableAssociationTypes
       tags:
         - associationtype
@@ -741,6 +801,10 @@ paths:
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/associationTypes'
   /datastore/edm/association/type/{associationTypeId}/dst/{entityTypeId}:
     put: # lattice-js l.2216
       summary: Update the AssociationType dst entity types for the given AssociationType UUID by adding the given EntityType UUID.
@@ -1054,6 +1118,8 @@ components:
         datatype: string
         piiField: false
         analyzer: STANDARD
+    propertyTypes:
+      multipleOf: propertyType
 
     ########################
     ## entitytype-schema's #
@@ -1063,6 +1129,9 @@ components:
       type: string
       format: uuid
       example: 73f4b728-6c1d-49ee-bc5a-a618adf68590
+    entityTypeIds:
+      multipleOf: entityTypeId
+      example: [73f4b728-6c1d-49ee-bc5a-a618adf68590, 73f4b728-6c1d-49ee-bc5a-a618adf68590]
     entityType:
       title: An entity type
       type: object
@@ -1095,6 +1164,10 @@ components:
           name: myschema
         key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
         properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
+    entityTypes:
+      multipleOf: entityType
+      title: An array of entityTypes
+
 
     ##############################
     ## association type-schema's #
@@ -1132,6 +1205,12 @@ components:
         dst: [4b08e1f9-4a00-4169-92ea-10e377070220]
         description: AssociationType Description
         bidirectional: true
+    associationTypes:
+      multipleOf: associationType
+      title: An array of associationTypes
+    associationTypeIds:
+      multipleOf: associationTypeId
+      title: An array of associationTypeIds
 
     # SyncTicket:
     #   type: "string"
