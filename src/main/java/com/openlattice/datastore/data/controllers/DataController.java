@@ -465,7 +465,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                     );
                 }
                 UUID associationEntityKeyId = (UUID) neighbor.getAssociationDetails().get( ID_FQN ).iterator().next();
-                neighborEntitiesMap.put( associationEntitySetId, associationEntityKeyId);
+                neighborEntitiesMap.put( associationEntitySetId, associationEntityKeyId );
 
                 /*
                  * neighbor EntitySet
@@ -481,7 +481,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                     if ( neighbor.getNeighborDetails().isPresent() ) {
                         SetMultimap<FullQualifiedName, Object> neighborDetails = neighbor.getNeighborDetails().get();
                         UUID neighborEntityKeyId = (UUID) neighborDetails.get( ID_FQN ).iterator().next();
-                        neighborEntitiesMap.put( neighborEntitySetId, neighborEntityKeyId);
+                        neighborEntitiesMap.put( neighborEntitySetId, neighborEntityKeyId );
                     }
                 }
             } );
