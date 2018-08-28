@@ -58,6 +58,7 @@ public final class SerializationConstants {
     public static final String CONFIG                           = "config";
     public static final String CONFLICTS                        = "conflicts";
     public static final String CONTACTS                         = "contacts";
+    public static final String COUNT                            = "count";
     public static final String CURRENT_SYNC                     = "currentSync";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";

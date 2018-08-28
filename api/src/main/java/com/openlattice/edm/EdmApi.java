@@ -18,6 +18,8 @@
 
 package com.openlattice.edm;
 
+import com.fasterxml.jackson.databind.util.JSONPObject;
+import com.openlattice.data.PropertySummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
@@ -33,6 +35,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
+
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
@@ -98,6 +102,7 @@ public interface EdmApi {
     String CLEAR_PATH            = "/clear";
     String FORCE_PATH            = "/force";
     String KEY_PATH              = "/key";
+    String SUMMARY_PATH          = "/summary";
 
     String NAMESPACE_PATH           = "/{" + NAMESPACE + "}";
     String NAME_PATH                = "/{" + NAME + "}";
@@ -111,6 +116,7 @@ public interface EdmApi {
     String ENTITY_TYPE_BASE_PATH      = BASE + ENTITY_TYPE_PATH;
     String PROPERTY_TYPE_BASE_PATH    = BASE + PROPERTY_TYPE_PATH;
     String ASSOCIATION_TYPE_BASE_PATH = BASE + ASSOCIATION_TYPE_PATH;
+    String SUMMARY_BASE_PATH          = BASE + SUMMARY_PATH;
 
     @DELETE( BASE + CLEAR_PATH )
     void clearAllData();
@@ -366,6 +372,13 @@ public interface EdmApi {
      */
     @GET( ENTITY_SETS_BASE_PATH )
     Iterable<EntitySet> getEntitySets();
+
+    @GET( SUMMARY_BASE_PATH )
+    Map<UUID, Stream<PropertySummary>> getAllPropertySummaries( @Body EdmRequest request );
+
+
+    @GET( SUMMARY_BASE_PATH + ID_PATH )
+    Stream<PropertySummary> getPropertySummary( @Path( ID ) UUID propertyTypeId );
 
     /**
      * Creates multiple entity sets if they do not exist.
