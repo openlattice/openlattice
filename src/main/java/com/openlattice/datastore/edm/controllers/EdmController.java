@@ -38,6 +38,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDatastore;
+import com.openlattice.data.PropertySummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.exceptions.BadRequestException;
@@ -63,18 +64,15 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.exceptions.ApiExceptions;
 import com.openlattice.exceptions.ErrorsDTO;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+
+import java.time.OffsetDateTime;
+import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -419,6 +417,28 @@ public class EdmController implements EdmApi, AuthorizingComponent {
                 EnumSet.of( Permission.READ ) )
                 .map( AuthorizationUtils::getLastAclKeySafely )
                 .map( modelService::getEntitySet )::iterator;
+    }
+
+    @Override
+    @RequestMapping(
+            path = SUMMARY_BASE_PATH,
+            method = RequestMethod.GET )
+    public Map<UUID, Stream<PropertySummary>> getAllPropertySummaries( @RequestBody EdmRequest request ) {
+        final Set<UUID> propertyTypeIds = request.getPropertyTypes();
+        Map<UUID, Stream<PropertySummary>> allPropertySummaries= Maps.newHashMapWithExpectedSize( propertyTypeIds.size() );
+        for ( UUID propertyTypeId : propertyTypeIds ) {
+            allPropertySummaries.put(propertyTypeId, modelService.getPropertySummary( propertyTypeId ));
+        }
+        return allPropertySummaries;
+    }
+
+    @Override
+    @RequestMapping(
+            path = SUMMARY_BASE_PATH + ID_PATH,
+            method = RequestMethod.GET )
+    public Stream<PropertySummary> getPropertySummary(@PathVariable ( ID ) UUID propertyTypeId) {
+        ensureAdminAccess();
+        return modelService.getPropertySummary(propertyTypeId);
     }
 
     @Override
