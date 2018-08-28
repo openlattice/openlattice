@@ -18,9 +18,15 @@
 
 package com.openlattice.mapstores;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.Ace;
 import com.openlattice.authorization.Acl;
 import com.openlattice.authorization.AclData;
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Action;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
@@ -28,6 +34,7 @@ import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
@@ -43,19 +50,13 @@ import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
-import com.datastax.driver.core.utils.UUIDs;
-import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
-import com.openlattice.authorization.AclKey;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -65,6 +66,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
+@SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
     private static final SecurableObjectType[] securableObjectTypes = SecurableObjectType.values();
     private static final Permission[]          permissions          = Permission.values();
@@ -74,6 +76,10 @@ public final class TestDataFactory {
     private static final Random                r                    = new Random();
 
     private TestDataFactory() {
+    }
+
+    public static EntityDataKey entityDataKey() {
+        return new EntityDataKey( UUID.randomUUID(), UUID.randomUUID() );
     }
 
     public static Long longValue() {
@@ -119,7 +125,7 @@ public final class TestDataFactory {
                 k,
                 Sets.newLinkedHashSet( Sets
                         .union( k, propertyTypes ) ),
-                Optional.fromNullable( parentId ),
+                Optional.ofNullable( parentId ),
                 Optional.of( SecurableObjectType.EntityType ) );
     }
 
@@ -203,6 +209,18 @@ public final class TestDataFactory {
                 Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
+                Optional.of( r.nextBoolean() ),
+                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+    }
+
+    public static PropertyType binaryPropertyType() {
+        return new PropertyType(
+                UUID.randomUUID(),
+                fqn(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                ImmutableSet.of(),
+                EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
     }
@@ -324,12 +342,12 @@ public final class TestDataFactory {
                 TestDataFactory.requestStatus() );
     }
 
-    public static Map<String, SetMultimap<UUID, Object>> randomStringEntityData(
+    public static Map<UUID, SetMultimap<UUID, Object>> randomStringEntityData(
             int numberOfEntries,
             Set<UUID> propertyIds ) {
-        Map<String, SetMultimap<UUID, Object>> data = new HashMap<>();
+        Map<UUID, SetMultimap<UUID, Object>> data = new HashMap<>();
         for ( int i = 0; i < numberOfEntries; i++ ) {
-            String entityId = UUID.randomUUID().toString();
+            UUID entityId = UUID.randomUUID();
             SetMultimap<UUID, Object> entity = HashMultimap.create();
             for ( UUID propertyId : propertyIds ) {
                 entity.put( propertyId, RandomStringUtils.randomAlphanumeric( 5 ) );
@@ -345,11 +363,7 @@ public final class TestDataFactory {
     }
 
     public static EntityKey entityKey( UUID entitySetId ) {
-        return entityKey( entitySetId, UUIDs.timeBased() );
-    }
-
-    public static EntityKey entityKey( UUID entitySetId, UUID syncId ) {
-        return new EntityKey( entitySetId, RandomStringUtils.random( 10 ).replace( Character.MIN_VALUE, '0' ), syncId );
+        return new EntityKey( entitySetId, RandomStringUtils.random( 10 ).replace( Character.MIN_VALUE, '0' ) );
     }
 
     public static ComplexType complexType() {
@@ -360,7 +374,7 @@ public final class TestDataFactory {
                 Optional.of( "test complex type" ),
                 ImmutableSet.of( fqn(), fqn() ),
                 Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
-                Optional.absent(),
+                Optional.empty(),
                 SecurableObjectType.ComplexType );
     }
 
@@ -375,6 +389,7 @@ public final class TestDataFactory {
                 Optional.of( EdmPrimitiveTypeKind.Int32 ),
                 false,
                 Optional.of( true ),
+                Optional.empty(),
                 Optional.of( Analyzer.METAPHONE ) );
     }
 
@@ -399,7 +414,7 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.absent() );
+                        Optional.empty() );
         }
     }
 
@@ -407,13 +422,13 @@ public final class TestDataFactory {
         return new EntityType( UUID.randomUUID(),
                 fqn(),
                 RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.absent(),
+                Optional.empty(),
                 ImmutableSet.of(),
                 Stream.of( key ).map( PropertyType::getId )
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
                 Stream.concat( Stream.of( key ), Stream.of( propertyTypes ) ).map( PropertyType::getId )
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
-                Optional.absent(),
-                Optional.absent() );
+                Optional.empty(),
+                Optional.empty() );
     }
 }

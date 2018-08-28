@@ -21,14 +21,16 @@ package com.openlattice.edm;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.openlattice.authorization.securable.AbstractSecurableObject;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
+import com.openlattice.authorization.securable.AbstractSecurableObject;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
@@ -38,9 +40,11 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class EntitySet extends AbstractSecurableObject {
     private final UUID        entityTypeId;
+    private final boolean     linking;
+    private final Set<UUID>   linkedEntitySets;
+    private final boolean     external;
     private       String      name;
     private       Set<String> contacts;
-    private final boolean     external;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
@@ -53,20 +57,27 @@ public class EntitySet extends AbstractSecurableObject {
     @JsonCreator
     public EntitySet(
             @JsonProperty( SerializationConstants.ID_FIELD ) Optional<UUID> id,
-            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD ) UUID entityTypeId,
+            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId,
             @JsonProperty( SerializationConstants.NAME_FIELD ) String name,
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
             @JsonProperty( SerializationConstants.CONTACTS ) Set<String> contacts,
+            @JsonProperty( SerializationConstants.LINKING ) Optional<Boolean> linking,
+            @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS ) Optional<Set<UUID>> linkedEntitySets,
             @JsonProperty( SerializationConstants.EXTERNAL ) Optional<Boolean> external ) {
         super( id, title, description );
+        this.linking = linking.orElse( false );
+        this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
         checkArgument( StringUtils.isNotBlank( name ), "Entity set name cannot be blank." );
+        checkArgument( this.linkedEntitySets.isEmpty() || this.linking,
+                "You cannot specify linked entity sets unless this is a linking entity set." );
+
         // Temporary
         //        checkArgument( contacts != null && !contacts.isEmpty(), "Contacts cannot be blank." );
         this.name = name;
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
-        this.external = external.or( true ); //Default to external
+        this.external = external.orElse( true ); //Default to external
     }
 
     public EntitySet(
@@ -76,7 +87,15 @@ public class EntitySet extends AbstractSecurableObject {
             String title,
             Optional<String> description,
             Set<String> contacts ) {
-        this( Optional.of( id ), entityTypeId, name, title, description, contacts, Optional.of(true ));
+        this( Optional.of( id ),
+                entityTypeId,
+                name,
+                title,
+                description,
+                contacts,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of( true ) );
     }
 
     public EntitySet(
@@ -85,10 +104,18 @@ public class EntitySet extends AbstractSecurableObject {
             String title,
             Optional<String> description,
             Set<String> contacts ) {
-        this( Optional.absent(), entityTypeId, name, title, description, contacts, Optional.of( true )) ;
+        this( Optional.empty(),
+                entityTypeId,
+                name,
+                title,
+                description,
+                contacts,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of( true ) );
     }
 
-    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD )
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
     public UUID getEntityTypeId() {
         return entityTypeId;
     }
@@ -111,37 +138,51 @@ public class EntitySet extends AbstractSecurableObject {
         this.contacts = contacts;
     }
 
-    @JsonProperty(SerializationConstants.EXTERNAL)
+    @JsonProperty( SerializationConstants.EXTERNAL )
     public boolean isExternal() {
         return external;
+    }
+
+    @JsonProperty( SerializationConstants.LINKING )
+    public boolean isLinking() {
+        return linking;
+    }
+
+    @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS )
+    public Set<UUID> getLinkedEntitySets() {
+        return linkedEntitySets;
     }
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof EntitySet ) ) { return false; }
         if ( !super.equals( o ) ) { return false; }
-
         EntitySet entitySet = (EntitySet) o;
-
-        if ( external != entitySet.external ) { return false; }
-        if ( !entityTypeId.equals( entitySet.entityTypeId ) ) { return false; }
-        if ( !name.equals( entitySet.name ) ) { return false; }
-        return contacts.equals( entitySet.contacts );
+        return linking == entitySet.linking &&
+                external == entitySet.external &&
+                Objects.equals( entityTypeId, entitySet.entityTypeId ) &&
+                Objects.equals( linkedEntitySets, entitySet.linkedEntitySets ) &&
+                Objects.equals( name, entitySet.name ) &&
+                Objects.equals( contacts, entitySet.contacts );
     }
 
     @Override public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + entityTypeId.hashCode();
-        result = 31 * result + ( external ? 1 : 0 );
-        result = 31 * result + name.hashCode();
-        result = 31 * result + contacts.hashCode();
-        return result;
+
+        return Objects.hash( super.hashCode(), entityTypeId, linking, linkedEntitySets, external, name, contacts );
     }
 
-    @Override
-    public String toString() {
-        return "EntitySet [entityTypeId=" + entityTypeId + ", name=" + name + ", contacts=" + contacts + ", id=" + id
-                + ", title=" + title + ", description=" + description + "]";
+    @Override public String toString() {
+        return "EntitySet{" +
+                "entityTypeId=" + entityTypeId +
+                ", linking=" + linking +
+                ", linkedEntitySets=" + linkedEntitySets +
+                ", external=" + external +
+                ", name='" + name + '\'' +
+                ", contacts=" + contacts +
+                ", id=" + id +
+                ", title='" + title + '\'' +
+                ", description='" + description + '\'' +
+                '}';
     }
 
     @Override

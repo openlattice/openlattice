@@ -18,10 +18,12 @@
 
 package com.openlattice.authorization.securable;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.UUID;
@@ -30,8 +32,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Base class for all securable objects in the system.
  */
+@JsonInclude(value= Include.NON_ABSENT) //This means empty collections will not be included in generated JSON.
 public abstract class AbstractSecurableObject {
     protected final UUID    id;
     //This is only a descriptive property so relax finality.
@@ -61,7 +64,7 @@ public abstract class AbstractSecurableObject {
             Optional<UUID> id,
             String title,
             Optional<String> description ) {
-        this( id.or( UUID::randomUUID ), title, description, id.isPresent() );
+        this( id.orElseGet( UUID::randomUUID ), title, description, id.isPresent() );
     }
 
     /**
@@ -83,7 +86,7 @@ public abstract class AbstractSecurableObject {
         checkArgument( StringUtils.isNotBlank( title ), "Title cannot be blank." );
         this.id = checkNotNull( id );
         this.idPresent = idPresent;
-        this.description = description.or( "" );
+        this.description = description.orElse( "" );
         this.title = title;
     }
 

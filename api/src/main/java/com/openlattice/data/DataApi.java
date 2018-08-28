@@ -18,17 +18,24 @@
 
 package com.openlattice.data;
 
-import com.openlattice.data.requests.Association;
-import com.openlattice.data.requests.BulkDataCreation;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
-import com.google.common.collect.SetMultimap;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import retrofit2.http.*;
-
+import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import retrofit2.http.Body;
+import retrofit2.http.DELETE;
+import retrofit2.http.GET;
+import retrofit2.http.PATCH;
+import retrofit2.http.POST;
+import retrofit2.http.PUT;
+import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 public interface DataApi {
     /*
@@ -42,147 +49,134 @@ public interface DataApi {
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
-    String HISTORICAL       = "historical";
-    String ENTITY_DATA      = "entitydata";
-    String ASSOCIATION_DATA = "associationndata";
+    String ENTITY_SET  = "set";
+    String ASSOCIATION = "association";
 
-    String ENTITY_KEY_ID = "entityKeyId";
-    String SET_ID        = "setId";
-    String SYNC_ID       = "syncId";
-    String TICKET        = "ticket";
-    String COUNT         = "count";
-    String UPDATE        = "update";
+    String ENTITY_SET_ID    = "setId";
+    String ENTITY_KEY_ID    = "entityKeyId";
+    String PROPERTY_TYPE_ID = "propertyTypeId";
 
-    String ENTITY_KEY_ID_PATH = "{" + ENTITY_KEY_ID + "}";
-    String SET_ID_PATH        = "{" + SET_ID + "}";
-    String SYNC_ID_PATH       = "{" + SYNC_ID + "}";
-    String TICKET_PATH        = "{" + TICKET + "}";
+    String COUNT  = "count";
+    String UPDATE = "update";
 
+    String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
+    String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
+    String PROPERTY_TYPE_ID_PATH = "{" + PROPERTY_TYPE_ID + "}";
+
+    String PARTIAL   = "partial";
     String FILE_TYPE = "fileType";
     String TOKEN     = "token";
 
-    @POST( BASE + "/" + TICKET + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH )
-    UUID acquireSyncTicket( @Path( SET_ID ) UUID entitySetId, @Path( SYNC_ID ) UUID syncId );
-
-    @DELETE( BASE + "/" + TICKET + "/" + TICKET_PATH )
-    Void releaseSyncTicket( @Path( TICKET ) UUID ticket );
-
-    @PATCH( BASE + "/" + ENTITY_DATA + "/" + TICKET_PATH + "/" + SYNC_ID_PATH )
-    Void storeEntityData(
-            @Path( TICKET ) UUID ticket,
-            @Path( SYNC_ID ) UUID syncId,
-            @Body Map<String, SetMultimap<UUID, Object>> entities );
-
-    @GET( BASE + "/" + ENTITY_DATA + "/" + SET_ID_PATH )
+    @GET( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Iterable<SetMultimap<FullQualifiedName, Object>> loadEntitySetData(
-            @Path( SET_ID ) UUID entitySetId,
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Query( FILE_TYPE ) FileType fileType,
             @Query( TOKEN ) String token );
 
     /**
-     * @param entitySetId
-     * @param req         If syncId is not specified in the request, will retrieve the data from the current syncIds. If
-     *                    selectedProperties are not specified, all readable properties will be fetched.
-     * @param fileType
+     * @param req If syncId is not specified in the request, will retrieve the data from the current syncIds. If
+     * selectedProperties are not specified, all readable properties will be fetched.
      * @return An iterable containing the entity data, using property type FQNs as keys
      */
-    @POST( BASE + "/" + ENTITY_DATA + "/" + SET_ID_PATH )
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Iterable<SetMultimap<FullQualifiedName, Object>> loadEntitySetData(
-            @Path( SET_ID ) UUID entitySetId,
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntitySetSelection req,
             @Query( FILE_TYPE ) FileType fileType );
 
-    /**
-     * Creates a new set of entities.
-     *
-     * @param entitySetId The id of the entity set to write to.
-     * @param syncId      A uuid retrieved from data source api.
-     * @param entities    A map describing the entities to create. Each key will be used as the entity id and must be unique
-     *                    and stable across repeated integrations of data. If either constraint is violated then data may be
-     *                    overwritten or duplicated.
-     * @return
-     */
-    @PUT( BASE + "/" + ENTITY_DATA + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH )
-    Void createEntityData(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( SYNC_ID ) UUID syncId,
-            @Body Map<String, SetMultimap<UUID, Object>> entities );
+    @POST( BASE + "/" + ENTITY_SET + "/" )
+    List<UUID> createOrMergeEntities(
+            @Query( ENTITY_SET_ID ) UUID entitySetId,
+            @Body List<SetMultimap<UUID, Object>> entities );
 
     /**
-     * Creates a new set of entities for the specified entity set's current sync id.
+     * Fully replaces entities.
      *
      * @param entitySetId The id of the entity set to write to.
-     * @param entities    A map describing the entities to create. Each key will be used as the entity id and must be unique.
-     *                    and stable across repeated integrations of data. If either constraint is violated then data may be
-     *                    overwritten or duplicated.
-     * @return
+     * @param entities A map describing the entities to create. Each key will be used as the entity id and must be unique
+     * and stable across repeated integrations of data. If either constraint is violated then data may be
+     * overwritten or duplicated.
+     * @param partialReplace Controls whether replace is full or partial. Default behavior is full replacement.
+     * @return The UUID assigned to each entity id during creation.
      */
-    @PUT( BASE + "/" + ENTITY_DATA + "/" + SET_ID_PATH )
-    Void createEntityData(
-            @Path( SET_ID ) UUID entitySetId,
-            @Body Map<String, SetMultimap<UUID, Object>> entities );
+    @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    Integer replaceEntities(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body Map<UUID, Map<UUID, Set<Object>>> entities,
+            @Query( PARTIAL ) boolean partialReplace );
+
+    @PATCH( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    Integer replaceEntityProperties(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities );
+
 
     /**
      * Creates a new set of associations.
      *
-     * @param entitySetId  The id of the edge entity set to write to.
-     * @param syncId       A uuid retrieved from data source api.
      * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
-     *                     UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
-     * @return
+     * UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
      */
-    @PUT( BASE + "/" + ASSOCIATION_DATA + "/" + SET_ID_PATH + "/" + SYNC_ID_PATH )
-    Void createAssociationData(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( SYNC_ID ) UUID syncId,
-            @Body Set<Association> associations );
+    @PUT( BASE + "/" + ASSOCIATION )
+    Integer createAssociations( @Body Set<DataEdgeKey> associations );
+    /**
 
-    @PATCH( BASE + "/" + ASSOCIATION_DATA + "/" + TICKET_PATH + "/" + SYNC_ID_PATH )
-    Void storeAssociationData(
-            @Path( TICKET ) UUID ticket,
-            @Path( SYNC_ID ) UUID syncId,
-            @Body Set<Association> associations );
+     * Creates a new set of associations.
+     *
+     * @param associations Set of associations to create. Keys are association entity set ids and values for each keys
+     * are the data to be created.
+     */
+    @POST( BASE + "/" + ASSOCIATION )
+    ListMultimap<UUID, UUID> createAssociations( @Body ListMultimap<UUID, DataEdge> associations );
 
-    @PATCH( BASE + "/" + ENTITY_DATA )
-    Void createEntityAndAssociationData( @Body BulkDataCreation data );
+    @PATCH( BASE + "/" + ASSOCIATION )
+    Integer replaceAssociationData(
+            @Body Map<UUID, Map<UUID, DataEdge>> associations,
+            @Query( PARTIAL ) boolean partial );
+
+    @POST( BASE )
+    DataGraphIds createEntityAndAssociationData( @Body DataGraph data );
 
     /**
-     * Deletes a single entity from an entity set.
+     * Clears a single entity from an entity set.
      *
      * @param entitySetId The id of the entity set to delete from.
      * @param entityKeyId The id of the entity to delete.
-     * @return
      */
-    @DELETE( BASE + "/" + ENTITY_DATA + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    Void deleteEntityFromEntitySet( @Path( SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    Void clearEntityFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
+
+    /**
+     * Clears the data from a single entity set.
+     *
+     * @param entitySetId The id of the entity set to delete from.
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    Void clearEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId );
 
     /**
      * Replaces a single entity from an entity set.
-     *
-     * @param entitySetId The id of the entity set the entity belongs to.
+     *  @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
-     * @param entity      The new entity details object that will replace the old value, with property type ids as keys.
-     * @return
+     * @param entity The new entity details object that will replace the old value, with property type ids as keys.
      */
-    @PUT( BASE + "/" + ENTITY_DATA + "/" + UPDATE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    Void replaceEntityInEntitySet(
-            @Path( SET_ID ) UUID entitySetId,
+    @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    Integer replaceEntityInEntitySet(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Body SetMultimap<UUID, Object> entity );
+            @Body Map<UUID, Set<Object>> entity );
 
     /**
      * Replaces a single entity from an entity set.
-     *
-     * @param entitySetId  The id of the entity set the entity belongs to.
-     * @param entityKeyId  The id of the entity to replace.
+     *  @param entitySetId The id of the entity set the entity belongs to.
+     * @param entityKeyId The id of the entity to replace.
      * @param entityByFqns The new entity details object that will replace the old value, with property type FQNs as keys.
-     * @return
      */
-    @POST( BASE + "/" + ENTITY_DATA + "/" + UPDATE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    Void replaceEntityInEntitySetUsingFqns(
-            @Path( SET_ID ) UUID entitySetId,
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    Integer replaceEntityInEntitySetUsingFqns(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Body SetMultimap<FullQualifiedName, Object> entityByFqns );
+            @Body Map<FullQualifiedName, Set<Object>> entityByFqns );
 
     /**
      * Gets the number of entities in an entity set.
@@ -191,7 +185,7 @@ public interface DataApi {
      * @return The number of entities in the entity set.
      */
     @GET( BASE + "/" + SET_ID_PATH + "/" + COUNT )
-    long getEntitySetSize( @Path( SET_ID ) UUID entitySetId );
+    long getEntitySetSize( @Path( ENTITY_SET_ID ) UUID entitySetId );
 
     /**
      * Loads a single entity by its entityKeyId and entitySetId
@@ -202,6 +196,12 @@ public interface DataApi {
      */
     @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     SetMultimap<FullQualifiedName, Object> getEntity(
-            @Path( SET_ID ) UUID entitySetId,
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId );
+
+    @GET( BASE + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH )
+    Set<Object> getEntity(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Path( ENTITY_KEY_ID ) UUID entityKeyId,
+            @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId );
 }

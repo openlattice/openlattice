@@ -5,8 +5,8 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import java.util.Optional;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import java.util.UUID;
@@ -21,7 +21,7 @@ public class AppType extends AbstractSecurableType {
             @JsonProperty( SerializationConstants.TYPE_FIELD ) FullQualifiedName type,
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
-            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD ) UUID entityTypeId ) {
+            @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId ) {
         super( id, type, title, description );
         Preconditions.checkNotNull( entityTypeId, "entityTypeId cannot be null for an AppType" );
         this.entityTypeId = entityTypeId;
@@ -32,14 +32,14 @@ public class AppType extends AbstractSecurableType {
     }
 
     public AppType( FullQualifiedName type, String title, Optional<String> description, UUID entityTypeId ) {
-        this( Optional.absent(), type, title, description, entityTypeId );
+        this( Optional.empty(), type, title, description, entityTypeId );
     }
 
     @Override public SecurableObjectType getCategory() {
         return SecurableObjectType.AppType;
     }
 
-    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID_FIELD )
+    @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
     public UUID getEntityTypeId() {
         return entityTypeId;
     }

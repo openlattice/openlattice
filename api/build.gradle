@@ -2,19 +2,27 @@ buildscript {
     repositories {
         mavenCentral()
     }
+
     dependencies {
-        classpath('io.swagger:swagger-codegen:3.0.0-rc0')
+        classpath "org.openapitools:openapi-generator-gradle-plugin:3.2.2"
+    }
+
+    configurations.classpath {
+        exclude module: 'slf4j-simple'
     }
 }
 
+
 plugins {
     id 'java'
-    id "org.jetbrains.kotlin.jvm" version "1.2.30"
     id 'eclipse'
     id 'idea'
     id 'jacoco'
     id 'checkstyle'
-    id 'findbugs'
+    id 'com.github.spotbugs' version '1.6.2'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.51'
+    id 'org.hidetake.swagger.generator' version '2.12.0'
 }
 
 description = "OpenLattice REST APIs"
@@ -25,9 +33,10 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
-apply plugin: 'kotlin'
+apply plugin: 'org.openapi.generator'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_1_10
+targetCompatibility = JavaVersion.VERSION_1_10
 
 def versions = [
         checkstyle: '7.4',
@@ -37,7 +46,11 @@ checkstyle {
     toolVersion = "${versions.checkstyle}"
 }
 
-tasks.withType(FindBugs) {
+spotbugs {
+    toolVersion = '3.1.5'
+}
+
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
     reports {
         xml.enabled = false
         html.enabled = true
@@ -53,60 +66,61 @@ tasks.withType(Checkstyle) {
 
 //TODO: Once Swagger 3.0 has working OpenAPI support finish wiring all this in.
 
-import io.swagger.codegen.DefaultGenerator
-import io.swagger.codegen.config.CodegenConfigurator
-
 def swaggerInput = "openlattice.yaml"
 def swaggerOutputDir = file('build/swagger')
-task swaggerDocs {
-    inputs.file(swaggerInput)
-    outputs.dir(swaggerOutputDir)
-    doLast {
-        def config = new CodegenConfigurator()
-        config.setInputSpec(swaggerInput)
-        config.setOutputDir(swaggerOutputDir.path)
-        config.setLang('java')
-        config.setAdditionalProperties([
-                'invokerPackage': 'com.openlattice.client',
-                'modelPackage'  : 'com.openlattice.client.model',
-                'apiPackage'    : 'com.openlattice.client.api',
-                'dateLibrary'   : 'java8'
-        ])
-//        config.setImportMappings([
-//                'Dog': 'io.swagger.petstore.client.model.Dog'
-//        ])
-        new DefaultGenerator().opts(config.toClientOptInput()).generate()
+
+swaggerSources {
+    openlattice {
+        inputFile = file(swaggerInput)
+        code {
+            language = 'java'
+            configFile = file('oas-java.json')
+            outputDir = swaggerOutputDir
+            //Disabled due to https://github.com/int128/gradle-swagger-generator-plugin/issues/86
+//            dependsOn validation
+        }
     }
 }
 
-task swaggerJava {
-    inputs.file(swaggerInput)
-    outputs.dir(swaggerOutputDir)
-    doLast {
-        def config = new CodegenConfigurator()
-        config.setInputSpec(swaggerInput)
-        config.setOutputDir(swaggerOutputDir.path)
-        config.setLang('java')
-        config.setAdditionalProperties([
-                'invokerPackage': 'com.openlattice.client',
-                'modelPackage'  : 'com.openlattice.client.model',
-                'apiPackage'    : 'com.openlattice.client.api',
-                'dateLibrary'   : 'java8'
-        ])
-        config.setImportMappings([
-                'Dog': 'io.swagger.petstore.client.model.Dog'
-        ])
-        new DefaultGenerator().opts(config.toClientOptInput()).generate()
-    }
+task generatePythonClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = "python"
+    inputSpec = file("openlattice.yaml").getAbsolutePath()
+    outputDir = file("build/openapi/python").getAbsolutePath()
 }
 
+task generateRClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = "r"
+    inputSpec = file("openlattice.yaml").getAbsolutePath()
+    outputDir = file("build/openapi/r").getAbsolutePath()
+}
 
+task generateKotlinClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = "kotlin"
+    inputSpec = file("openlattice.yaml").getAbsolutePath()
+    outputDir = file("build/openapi/kotlin").getAbsolutePath()
+    apiPackage = "com.openlattice.client.api"
+    invokerPackage = "com.openlattice.client"
+    modelPackage = "com.openlattice.client.model"
+    configOptions = [
+            dateLibrary: "java8"
+    ]
+}
 
 clean.doFirst {
     delete(swaggerOutputDir)
+    delete(file("build/openapi"))
 }
 
 dependencies {
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+    compileOnly 'net.jcip:jcip-annotations:1.0'
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    testCompileOnly 'net.jcip:jcip-annotations:1.0'
+    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+
+    swaggerCodegen 'io.swagger:swagger-codegen-cli:3.0.0-rc1'
+    swaggerUI 'org.webjars:swagger-ui:3.18.1'
+
     /*
      * SL4J
      */
@@ -176,6 +190,10 @@ dependencies {
     /*
      * TESTING
      */
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "${log4j_version}"
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-api', version: "${log4j_version}"
+    testCompile group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4j_version}"
+
     testCompile "junit:junit:${junit_version}"
     testCompile("org.mockito:mockito-all:${mockito_version}") {
         exclude module: 'hamcrest'

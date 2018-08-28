@@ -18,21 +18,17 @@
 
 package com.openlattice.authorization;
 
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
-import org.junit.BeforeClass;
-
-import com.openlattice.data.serializers.FullQualifiedNameJacksonDeserializer;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.mapstores.TestDataFactory;
+import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import org.junit.BeforeClass;
 
 public class AceSerializerTest extends AbstractJacksonSerializationTest<Ace> {
 
     @BeforeClass
     public static void configureSerializer() {
         FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
-        FullQualifiedNameJacksonDeserializer.registerWithMapper( mapper );
         FullQualifiedNameJacksonSerializer.registerWithMapper( smile );
-        FullQualifiedNameJacksonDeserializer.registerWithMapper( smile );
     }
 
     @Override

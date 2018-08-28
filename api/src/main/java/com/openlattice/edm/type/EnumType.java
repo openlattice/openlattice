@@ -18,16 +18,18 @@
 
 package com.openlattice.edm.type;
 
-import java.util.*;
-
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -54,6 +56,7 @@ public class EnumType extends PropertyType {
             @JsonProperty( SerializationConstants.DATATYPE_FIELD ) Optional<EdmPrimitiveTypeKind> datatype,
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) boolean flags,
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
+            @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
             @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer ) {
         super(
                 id,
@@ -61,8 +64,9 @@ public class EnumType extends PropertyType {
                 title,
                 description,
                 schemas,
-                datatype.or( EdmPrimitiveTypeKind.Int32 ),
+                datatype.orElse( EdmPrimitiveTypeKind.Int32 ),
                 piiField,
+                multiValued,
                 analyzer );
         Preconditions.checkState( ALLOWED_UNDERLYING_TYPES.contains( this.datatype ),
                 "%s is not one of %s",

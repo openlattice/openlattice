@@ -6,10 +6,10 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.organization.Organization;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.openlattice.authorization.SecurablePrincipal;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class AppConfig extends SecurablePrincipal {

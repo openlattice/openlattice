@@ -1,24 +1,23 @@
 package com.openlattice.apps;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import org.apache.commons.lang3.StringUtils;
-
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import org.apache.commons.lang3.StringUtils;
 
 public class App extends AbstractSecurableObject {
 
+    private final LinkedHashSet<UUID> appTypeIds;
     private       String              name;
     private       String              url;
-    private final LinkedHashSet<UUID> appTypeIds;
 
     @JsonCreator
     public App(
@@ -51,7 +50,7 @@ public class App extends AbstractSecurableObject {
             Optional<String> description,
             LinkedHashSet<UUID> configTypeIds,
             String url ) {
-        this( Optional.absent(), name, title, description, configTypeIds, url );
+        this( Optional.empty(), name, title, description, configTypeIds, url );
     }
 
     @JsonProperty( SerializationConstants.NAME_FIELD )
@@ -59,10 +58,18 @@ public class App extends AbstractSecurableObject {
         return name;
     }
 
+    public void setName( String name ) {
+        this.name = name;
+    }
+
     @JsonProperty( SerializationConstants.URL )
     public String getUrl() {
         return url;
 
+    }
+
+    public void setUrl( String url ) {
+        this.url = url;
     }
 
     @Override public SecurableObjectType getCategory() {
@@ -74,14 +81,6 @@ public class App extends AbstractSecurableObject {
         return appTypeIds;
     }
 
-    public void setName( String name ) {
-        this.name = name;
-    }
-
-    public void setUrl( String url ) {
-        this.url = url;
-    }
-
     public void addAppTypeIds( Set<UUID> appTypeIds ) {
         this.appTypeIds.addAll( appTypeIds );
     }
@@ -91,19 +90,14 @@ public class App extends AbstractSecurableObject {
     }
 
     @Override public boolean equals( Object o ) {
-        if ( this == o )
-            return true;
-        if ( o == null || getClass() != o.getClass() )
-            return false;
-        if ( !super.equals( o ) )
-            return false;
+        if ( this == o ) { return true; }
+        if ( o == null || getClass() != o.getClass() ) { return false; }
+        if ( !super.equals( o ) ) { return false; }
 
         App app = (App) o;
 
-        if ( name != null ? !name.equals( app.name ) : app.name != null )
-            return false;
-        if ( appTypeIds != null ? !appTypeIds.equals( app.appTypeIds ) : app.appTypeIds != null )
-            return false;
+        if ( name != null ? !name.equals( app.name ) : app.name != null ) { return false; }
+        if ( appTypeIds != null ? !appTypeIds.equals( app.appTypeIds ) : app.appTypeIds != null ) { return false; }
         return url != null ? url.equals( app.url ) : app.url == null;
     }
 

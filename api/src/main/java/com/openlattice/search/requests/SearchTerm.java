@@ -20,6 +20,7 @@ package com.openlattice.search.requests;
 
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.search.SearchApi;
 
 public class SearchTerm {
     
@@ -33,7 +34,7 @@ public class SearchTerm {
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
         this.searchTerm = searchTerm.trim();
         this.start = start;
-        this.maxHits = maxHits;
+        this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
     }
     
     @JsonProperty( SerializationConstants.SEARCH_TERM )

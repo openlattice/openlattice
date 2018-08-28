@@ -18,22 +18,53 @@
 
 package com.openlattice.graph;
 
-import com.openlattice.data.EntityKey;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.SetMultimap;
+import com.openlattice.graph.query.GraphQuery;
+import com.openlattice.graph.query.GraphQueryState;
+import com.openlattice.graph.query.GraphQueryState.Option;
+import java.util.Set;
+import java.util.UUID;
+import retrofit2.http.Body;
+import retrofit2.http.GET;
+import retrofit2.http.POST;
+import retrofit2.http.Path;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Used for performing graph queries on the backend.
  */
 public interface GraphApi {
-    /*
-     * These determine the service routing for the LB
-     */
-    String SERVICE    = "/datastore";
     String CONTROLLER = "/graph";
+    String ID      = "id";
+    String ID_PATH = "/{" + ID + "}";
+    //@formatter:on
+    String QUERY  = "/query";
+    String RESULT = "/result";
+    //@formatter:off
+    String SERVICE    = "/datastore";
     String BASE       = SERVICE + CONTROLLER;
 
-    EntityKey getEdge( DirectedEdge edge );
+    @POST( BASE + QUERY )
+    GraphQueryState submit( GraphQuery query );
 
-    Void createOrUpdateEdge( DirectedEdge edge , EntityKey entityKey );
-    Void deleteEdge( DirectedEdge edge );
+    @POST( BASE + QUERY + ID_PATH )
+    GraphQueryState getQueryState( @Path( ID ) UUID queryId, @Body Set<Option> options );
+
+    /**
+     * Retrieves the graph query state with any additional options. Equivalent to {@code getQueryState(queryId, Collections.EMPTY_SET) }
+     */
+    @GET( BASE + QUERY + ID_PATH )
+    GraphQueryState getQueryState( @Path( ID ) UUID queryId );
+
+    @GET( BASE + QUERY + ID_PATH + RESULT )
+    SubGraph getResults( UUID queryId );
+
+    /**
+     *
+     * @param ops
+     * @return
+     */
+    ListMultimap<UUID, SetMultimap<UUID, SetMultimap<UUID, Object>>> graphQuery( GraphQuery ops ); // Entity Key Id -> Property Type Id -> Entity Set Id
+    //That is a list of entities along with properties annotated with which entity set they came from.
 
 }

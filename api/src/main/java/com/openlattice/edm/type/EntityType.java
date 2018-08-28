@@ -18,21 +18,19 @@
 
 package com.openlattice.edm.type;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.UUID;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -61,7 +59,7 @@ public class EntityType extends ComplexType {
                 schemas,
                 properties,
                 baseType,
-                category.or( SecurableObjectType.EntityType ) );
+                category.orElse( SecurableObjectType.EntityType ) );
         this.key = Preconditions.checkNotNull( key, "Entity set key properties cannot be null" );
         Preconditions.checkArgument( !key.isEmpty() || baseType.isPresent(), "Key properties cannot be empty" );
         Preconditions.checkNotNull( properties, "Entity set properties cannot be null" );
@@ -94,7 +92,7 @@ public class EntityType extends ComplexType {
             Optional<UUID> baseType,
             Optional<SecurableObjectType> category ) {
         this(
-                Optional.absent(),
+                Optional.empty(),
                 type,
                 title,
                 Optional.of( description ),
@@ -126,17 +124,13 @@ public class EntityType extends ComplexType {
 
     @Override
     public boolean equals( Object o ) {
-        if ( this == o )
-            return true;
-        if ( o == null || getClass() != o.getClass() )
-            return false;
-        if ( !super.equals( o ) )
-            return false;
+        if ( this == o ) { return true; }
+        if ( o == null || getClass() != o.getClass() ) { return false; }
+        if ( !super.equals( o ) ) { return false; }
 
         EntityType that = (EntityType) o;
 
-        if ( !key.equals( that.key ) )
-            return false;
+        if ( !key.equals( that.key ) ) { return false; }
         return baseType.equals( that.baseType );
     }
 

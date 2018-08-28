@@ -18,13 +18,14 @@
 
 package com.openlattice.search.requests;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import com.openlattice.search.SearchApi;
 
 public class Search {
 
@@ -41,11 +42,11 @@ public class Search {
             @JsonProperty( SerializationConstants.PROPERTY_TYPE_IDS ) Optional<Set<UUID>> propertyTypes,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
-        this.optionalKeyword = keyword.isPresent() ? Optional.of( keyword.get().trim() ) : Optional.absent();
+        this.optionalKeyword = keyword.isPresent() ? Optional.of( keyword.get().trim() ) : Optional.empty();
         this.optionalEntityType = entityType;
         this.optionalPropertyTypes = propertyTypes;
         this.start = start;
-        this.maxHits = maxHits;
+        this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
     }
 
     @JsonProperty( SerializationConstants.KEYWORD )

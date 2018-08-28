@@ -26,6 +26,7 @@ import java.util.UUID;
 import com.openlattice.data.requests.FileType;
 import com.google.common.collect.SetMultimap;
 
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.*;
 
 public interface AnalysisApi {
@@ -56,7 +57,7 @@ public interface AnalysisApi {
      * @return
      */
     @POST( BASE + ENTITY_SET_ID_PATH + NUM_RESULTS_PATH )
-    Iterable<SetMultimap<Object, Object>> getTopUtilizers(
+    Iterable<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( NUM_RESULTS ) int numResults,
             @Body List<TopUtilizerDetails> topUtilizerDetails,

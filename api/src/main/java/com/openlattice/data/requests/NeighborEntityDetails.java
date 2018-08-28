@@ -18,40 +18,43 @@
 
 package com.openlattice.data.requests;
 
-import java.util.Collection;
-import java.util.UUID;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.type.PropertyType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.type.PropertyType;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import java.util.Collection;
+import java.util.UUID;
 
 public class NeighborEntityDetails {
-    private EntitySet                                        associationEntitySet;
-    private SetMultimap<FullQualifiedName, Object>           associationDetails;
-    private Collection<PropertyType>                         associationPropertyTypes;
+    private final EntitySet                              associationEntitySet;
+    private final SetMultimap<FullQualifiedName, Object> associationDetails;
+    private final Collection<PropertyType>               associationPropertyTypes;
 
-    private Optional<EntitySet>                              neighborEntitySet;
-    private Optional<UUID>                                   neighborId;
-    private Optional<SetMultimap<FullQualifiedName, Object>> neighborDetails;
-    private Optional<Collection<PropertyType>>               neighborPropertyTypes;
+    private final Optional<EntitySet>                              neighborEntitySet;
+    private final Optional<UUID>                                   neighborId;
+    private final Optional<SetMultimap<FullQualifiedName, Object>> neighborDetails;
+    private final Optional<Collection<PropertyType>>               neighborPropertyTypes;
 
-    private boolean                                          entityIsSrc;
+    private final boolean entityIsSrc;
 
     @JsonCreator
     public NeighborEntityDetails(
             @JsonProperty( SerializationConstants.ASSOCIATION_ENTITY_SET ) EntitySet associationEntitySet,
-            @JsonProperty( SerializationConstants.ASSOCIATION_DETAILS ) SetMultimap<FullQualifiedName, Object> associationDetails,
-            @JsonProperty( SerializationConstants.ASSOCIATION_PROPERTY_TYPES ) Collection<PropertyType> associationPropertyTypes,
+            @JsonProperty( SerializationConstants.ASSOCIATION_DETAILS )
+                    SetMultimap<FullQualifiedName, Object> associationDetails,
+            @JsonProperty( SerializationConstants.ASSOCIATION_PROPERTY_TYPES )
+                    Collection<PropertyType> associationPropertyTypes,
             @JsonProperty( SerializationConstants.NEIGHBOR_ENTITY_SET ) Optional<EntitySet> neighborEntitySet,
             @JsonProperty( SerializationConstants.NEIGHBOR_ID ) Optional<UUID> neighborId,
-            @JsonProperty( SerializationConstants.NEIGHBOR_DETAILS ) Optional<SetMultimap<FullQualifiedName, Object>> neighborDetails,
-            @JsonProperty( SerializationConstants.NEIGHBOR_PROPERTY_TYPES ) Optional<Collection<PropertyType>> neighborPropertyTypes,
+            @JsonProperty( SerializationConstants.NEIGHBOR_DETAILS )
+                    Optional<SetMultimap<FullQualifiedName, Object>> neighborDetails,
+            @JsonProperty( SerializationConstants.NEIGHBOR_PROPERTY_TYPES )
+                    Optional<Collection<PropertyType>> neighborPropertyTypes,
             @JsonProperty( SerializationConstants.SRC ) boolean entityIsSrc ) {
         this.associationEntitySet = associationEntitySet;
         this.associationDetails = associationDetails;

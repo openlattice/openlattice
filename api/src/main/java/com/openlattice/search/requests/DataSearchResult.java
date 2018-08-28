@@ -18,20 +18,22 @@
 
 package com.openlattice.search.requests;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
-
 import java.io.Serializable;
 import java.util.List;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class DataSearchResult implements Serializable {
-    private final long                              numHits;
-    private final List<SetMultimap<Object, Object>> hits;
+    private final long                                         numHits;
+    private final List<SetMultimap<FullQualifiedName, Object>> hits;
 
+    @JsonCreator
     public DataSearchResult(
             @JsonProperty( SerializationConstants.NUM_HITS ) long numHits,
-            @JsonProperty( SerializationConstants.HITS ) List<SetMultimap<Object, Object>> hits ) {
+            @JsonProperty( SerializationConstants.HITS ) List<SetMultimap<FullQualifiedName, Object>> hits ) {
         this.numHits = numHits;
         this.hits = hits;
     }
@@ -42,7 +44,7 @@ public class DataSearchResult implements Serializable {
     }
 
     @JsonProperty( SerializationConstants.HITS )
-    public List<SetMultimap<Object, Object>> getHits() {
+    public List<SetMultimap<FullQualifiedName, Object>> getHits() {
         return hits;
     }
 
@@ -57,20 +59,14 @@ public class DataSearchResult implements Serializable {
 
     @Override
     public boolean equals( Object obj ) {
-        if ( this == obj )
-            return true;
-        if ( obj == null )
-            return false;
-        if ( getClass() != obj.getClass() )
-            return false;
+        if ( this == obj ) { return true; }
+        if ( obj == null ) { return false; }
+        if ( getClass() != obj.getClass() ) { return false; }
         DataSearchResult other = (DataSearchResult) obj;
         if ( hits == null ) {
-            if ( other.hits != null )
-                return false;
-        } else if ( !hits.equals( other.hits ) )
-            return false;
-        if ( numHits != other.numHits )
-            return false;
+            if ( other.hits != null ) { return false; }
+        } else if ( !hits.equals( other.hits ) ) { return false; }
+        if ( numHits != other.numHits ) { return false; }
         return true;
     }
 }

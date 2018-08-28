@@ -18,15 +18,14 @@
 
 package com.openlattice.requests;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.AclKey;
-import java.util.EnumSet;
-
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import java.util.EnumSet;
+import java.util.Optional;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -52,7 +51,7 @@ public class Status {
             String reason,
             Principal principal,
             RequestStatus status ) {
-        this( new Request( aclKey, permissions, Optional.fromNullable( reason ) ), principal, status );
+        this( new Request( aclKey, permissions, Optional.ofNullable( reason ) ), principal, status );
     }
 
     @JsonProperty( SerializationConstants.REQUEST )
@@ -82,17 +81,17 @@ public class Status {
 
     @Override
     public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
+        if ( this == obj ) { return true; }
+        if ( obj == null ) { return false; }
+        if ( getClass() != obj.getClass() ) { return false; }
         Status other = (Status) obj;
         if ( principal == null ) {
-            if ( other.principal != null ) return false;
-        } else if ( !principal.equals( other.principal ) ) return false;
+            if ( other.principal != null ) { return false; }
+        } else if ( !principal.equals( other.principal ) ) { return false; }
         if ( request == null ) {
-            if ( other.request != null ) return false;
-        } else if ( !request.equals( other.request ) ) return false;
-        if ( status != other.status ) return false;
+            if ( other.request != null ) { return false; }
+        } else if ( !request.equals( other.request ) ) { return false; }
+        if ( status != other.status ) { return false; }
         return true;
     }
 

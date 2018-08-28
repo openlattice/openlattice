@@ -1,6 +1,27 @@
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ *
+ *
+ */
+
+/*
+ * Copyright (C) 2018. OpenLattice, Inc.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,32 +37,40 @@
  * You can contact the owner of the copyright at support@openlattice.com
  */
 
-package com.openlattice.data.requests;
+package com.openlattice.data.integration;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.data.EntityKey;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.data.EntityKey;
+
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class Association {
-    private final EntityKey                 key;
-    private final EntityKey                 src;
-    private final EntityKey                 dst;
+    private final EntityKey              key;
+    private final EntityKey              src;
+    private final EntityKey              dst;
     // This is the actual values of the LinkSet, which can be thought of as "association details" of this association
-    private final SetMultimap<UUID, Object> details;
+    private final Map<UUID, Set<Object>> details;
 
     @JsonCreator
     public Association(
             @JsonProperty( SerializationConstants.KEY_FIELD ) EntityKey key,
             @JsonProperty( SerializationConstants.SRC ) EntityKey src,
             @JsonProperty( SerializationConstants.DST ) EntityKey dst,
-            @JsonProperty( SerializationConstants.DETAILS_FIELD ) SetMultimap<UUID, Object> details ) {
+            @JsonProperty( SerializationConstants.DETAILS_FIELD ) Map<UUID, Set<Object>> details ) {
         this.key = key;
         this.src = src;
         this.dst = dst;
         this.details = details;
+    }
+
+    public Association( EntityKey key, EntityKey src, EntityKey dst, SetMultimap<UUID, Object> details ) {
+        this( key, src, dst, Multimaps.asMap( details ) );
     }
 
     @JsonProperty( SerializationConstants.KEY_FIELD )
@@ -60,7 +89,7 @@ public class Association {
     }
 
     @JsonProperty( SerializationConstants.DETAILS_FIELD )
-    public SetMultimap<UUID, Object> getDetails() {
+    public Map<UUID, Set<Object>> getDetails() {
         return details;
     }
 

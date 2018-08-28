@@ -18,63 +18,56 @@
 
 package com.openlattice.data.requests;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.openlattice.client.serialization.SerializationConstants;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-
 public class EntitySetSelection {
-    private Optional<UUID> syncId;
-    private Optional<Set<UUID>> selectedProperties;
+    private final Optional<Set<UUID>> properties;
+    private final Optional<Set<UUID>> entityKeyIds;
 
     @JsonCreator
     public EntitySetSelection(
-            @JsonProperty( SerializationConstants.SYNC_ID ) Optional<UUID> syncId,
-            @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) Optional<Set<UUID>> selectedProperties ) {
-        this.syncId = syncId;
-        this.selectedProperties = selectedProperties;
+            @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) Optional<Set<UUID>> properties,
+            @JsonProperty( SerializationConstants.IDS ) Optional<Set<UUID>> entityKeyIds ) {
+        this.properties = properties;
+        this.entityKeyIds = entityKeyIds;
     }
-    
-    @JsonProperty( SerializationConstants.SYNC_ID )
-    public Optional<UUID> getSyncId() {
-        return syncId;
+
+    public EntitySetSelection( Optional<Set<UUID>> properties ) {
+        this( properties, Optional.empty() );
     }
-    
+
     @JsonProperty( SerializationConstants.PROPERTIES_FIELD )
-    public Optional<Set<UUID>> getSelectedProperties() {
-        return selectedProperties;
+    public Optional<Set<UUID>> getProperties() {
+        return properties;
     }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( selectedProperties == null ) ? 0 : selectedProperties.hashCode() );
-        result = prime * result + ( ( syncId == null ) ? 0 : syncId.hashCode() );
-        return result;
+    @JsonProperty( SerializationConstants.IDS )
+    public Optional<Set<UUID>> getEntityKeyIds() {
+        return entityKeyIds;
     }
 
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        EntitySetSelection other = (EntitySetSelection) obj;
-        if ( selectedProperties == null ) {
-            if ( other.selectedProperties != null ) return false;
-        } else if ( !selectedProperties.equals( other.selectedProperties ) ) return false;
-        if ( syncId == null ) {
-            if ( other.syncId != null ) return false;
-        } else if ( !syncId.equals( other.syncId ) ) return false;
-        return true;
+    @Override public String toString() {
+        return "EntitySetSelection{" +
+                "properties=" + properties +
+                ", entityKeyIds=" + entityKeyIds +
+                '}';
     }
 
-    @Override
-    public String toString() {
-        return "EntitySetSelection [syncId=" + syncId + ", selectedProperties=" + selectedProperties + "]";
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof EntitySetSelection ) ) { return false; }
+        EntitySetSelection that = (EntitySetSelection) o;
+        return Objects.equals( properties, that.properties ) &&
+                Objects.equals( entityKeyIds, that.entityKeyIds );
     }
 
+    @Override public int hashCode() {
+        return Objects.hash( properties, entityKeyIds );
+    }
 }

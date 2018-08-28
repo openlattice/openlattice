@@ -18,29 +18,29 @@
 
 package com.openlattice.edm.type;
 
-import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.client.serialization.SerializationConstants;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
-import java.util.Set;
-import java.util.UUID;
-
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- *
  */
 public class PropertyType extends AbstractSchemaAssociatedSecurableType {
 
-    protected EdmPrimitiveTypeKind datatype;
-    protected boolean              piiField;
-    protected Analyzer             analyzer;
-    private transient int          h = 0;
+    protected final   boolean              multiValued;
+    protected         EdmPrimitiveTypeKind datatype;
+    protected         boolean              piiField;
+    protected         Analyzer             analyzer;
+    private transient int                  h = 0;
 
     @JsonCreator
     public PropertyType(
@@ -51,6 +51,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.SCHEMAS ) Set<FullQualifiedName> schemas,
             @JsonProperty( SerializationConstants.DATATYPE_FIELD ) EdmPrimitiveTypeKind datatype,
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
+            @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
             @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer ) {
         super(
                 id,
@@ -59,8 +60,9 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 description,
                 schemas );
         this.datatype = datatype;
-        this.piiField = piiField.or( false );
-        this.analyzer = analyzer.or( Analyzer.STANDARD );
+        this.piiField = piiField.orElse( false );
+        this.multiValued = multiValued.orElse( true );
+        this.analyzer = analyzer.orElse( Analyzer.STANDARD );
     }
 
     public PropertyType(
@@ -72,7 +74,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             EdmPrimitiveTypeKind datatype,
             Optional<Boolean> piiField,
             Optional<Analyzer> analyzer ) {
-        this( Optional.of( id ), fqn, title, description, schemas, datatype, piiField, analyzer );
+        this( Optional.of( id ), fqn, title, description, schemas, datatype, piiField, Optional.empty(), analyzer );
     }
 
     public PropertyType(
@@ -83,7 +85,15 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             Set<FullQualifiedName> schemas,
             EdmPrimitiveTypeKind datatype,
             Optional<Boolean> piiField ) {
-        this( Optional.of( id ), fqn, title, description, schemas, datatype, piiField, Optional.absent() );
+        this( Optional.of( id ),
+                fqn,
+                title,
+                description,
+                schemas,
+                datatype,
+                piiField,
+                Optional.empty(),
+                Optional.empty() );
     }
 
     public PropertyType(
@@ -93,7 +103,15 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             Optional<String> description,
             Set<FullQualifiedName> schemas,
             EdmPrimitiveTypeKind datatype ) {
-        this( Optional.of( id ), fqn, title, description, schemas, datatype, Optional.absent(), Optional.absent() );
+        this( Optional.of( id ),
+                fqn,
+                title,
+                description,
+                schemas,
+                datatype,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
     }
 
     public PropertyType(
@@ -102,7 +120,15 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             Optional<String> description,
             Set<FullQualifiedName> schemas,
             EdmPrimitiveTypeKind datatype ) {
-        this( Optional.absent(), fqn, title, description, schemas, datatype, Optional.absent(), Optional.absent() );
+        this( Optional.empty(),
+                fqn,
+                title,
+                description,
+                schemas,
+                datatype,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
     }
 
     @JsonProperty( SerializationConstants.DATATYPE_FIELD )
@@ -115,6 +141,11 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         return piiField;
     }
 
+    @JsonProperty( SerializationConstants.MULTI_VALUED )
+    public boolean isMultiValued() {
+        return multiValued;
+    }
+
     @JsonProperty( SerializationConstants.ANALYZER )
     public Analyzer getAnalyzer() {
         return analyzer;
@@ -125,37 +156,23 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         this.piiField = pii;
     }
 
-    @Override
-    public int hashCode() {
-        if ( h == 0 ) {
-            final int prime = 31;
-            int result = super.hashCode();
-            result = prime * result + ( ( datatype == null ) ? 0 : datatype.hashCode() );
-            result = prime * result + ( piiField ? 1231 : 1237 );
-            h = result;
-        }
-        return h;
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof PropertyType ) ) { return false; }
+        if ( !super.equals( o ) ) { return false; }
+        PropertyType that = (PropertyType) o;
+        return multiValued == that.multiValued &&
+                piiField == that.piiField &&
+                datatype == that.datatype &&
+                analyzer == that.analyzer;
     }
 
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) {
-            return true;
+    @Override public int hashCode() {
+        if ( h == 0 ) {
+            return h = Objects.hash( super.hashCode(), multiValued, datatype, piiField, analyzer );
+        } else {
+            return h;
         }
-        if ( !super.equals( obj ) ) {
-            return false;
-        }
-        if ( !( obj instanceof PropertyType ) ) {
-            return false;
-        }
-        PropertyType other = (PropertyType) obj;
-        if ( datatype != other.datatype ) {
-            return false;
-        }
-        if ( piiField != other.piiField ) {
-            return false;
-        }
-        return true;
     }
 
     @Override
