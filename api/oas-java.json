@@ -2,5 +2,5 @@
 	"invokerPackage": "com.openlattice.client",
 	"modelPackage": "com.openlattice.client.model",
 	"apiPackage": "com.openlattice.client.api",
-	"dataLibrary": "java8"
+	"dateLibrary": "java8"
 }

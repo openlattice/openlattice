@@ -3,6 +3,10 @@ buildscript {
         mavenCentral()
     }
 
+    dependencies {
+        classpath "org.openapitools:openapi-generator-gradle-plugin:3.2.2"
+    }
+
     configurations.classpath {
         exclude module: 'slf4j-simple'
     }
@@ -29,6 +33,7 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/api.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply plugin: 'org.openapi.generator'
 
 sourceCompatibility = JavaVersion.VERSION_1_10
 targetCompatibility = JavaVersion.VERSION_1_10
@@ -77,9 +82,33 @@ swaggerSources {
     }
 }
 
+task generatePythonClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = "python"
+    inputSpec = file("openlattice.yaml").getAbsolutePath()
+    outputDir = file("build/openapi/python").getAbsolutePath()
+}
+
+task generateRClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = "r"
+    inputSpec = file("openlattice.yaml").getAbsolutePath()
+    outputDir = file("build/openapi/r").getAbsolutePath()
+}
+
+task generateKotlinClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = "kotlin"
+    inputSpec = file("openlattice.yaml").getAbsolutePath()
+    outputDir = file("build/openapi/kotlin").getAbsolutePath()
+    apiPackage = "com.openlattice.client.api"
+    invokerPackage = "com.openlattice.client"
+    modelPackage = "com.openlattice.client.model"
+    configOptions = [
+            dateLibrary: "java8"
+    ]
+}
 
 clean.doFirst {
     delete(swaggerOutputDir)
+    delete(file("build/openapi"))
 }
 
 dependencies {
