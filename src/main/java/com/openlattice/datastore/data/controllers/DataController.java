@@ -20,12 +20,6 @@
 
 package com.openlattice.datastore.data.controllers;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
-
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.cache.LoadingCache;
@@ -56,26 +50,12 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.type.PropertyType;
-import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -94,6 +74,29 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Maps.transformValues;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
+import static com.openlattice.postgres.DataTables.ID_FQN;
 
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
@@ -411,6 +414,51 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Override
     public Void clearEntitySet( UUID entitySetId ) {
+        return null;
+    }
+
+    @Override
+    @RequestMapping(
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/graph" },
+            method = RequestMethod.DELETE
+    )
+    public Void clearEntityAndNeighborEntities(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable( ENTITY_ID ) UUID entityId
+    ) {
+
+        ensureReadAccess( new AclKey( entitySetId ) );
+        Map<UUID, List<NeighborEntityDetails>> result = searchService
+                .executeEntityNeighborSearch( entitySetId, ImmutableSet.of( entityId ) );
+
+        if ( result != null && !result.containsKey( entityId ) ) {
+
+            List<NeighborEntityDetails> neighbors = result.get( entityId );
+            neighbors.parallelStream().forEach( neighbor -> {
+
+                UUID associationEntityId = (UUID) neighbor.getAssociationDetails().get( ID_FQN ).iterator().next();
+                UUID associationEntitySetId = neighbor.getAssociationEntitySet().getId();
+                Map<UUID, PropertyType> authorizedPropertyTypesOnNeighborAES = authzHelper
+                        .getAuthorizedPropertyTypes( associationEntitySetId, WRITE_PERMISSION );
+                dgm.clearEntities(
+                        neighbor.getAssociationEntitySet().getId(),
+                        ImmutableSet.of( associationEntityId ),
+                        authorizedPropertyTypesOnNeighborAES
+                );
+
+                if ( neighbor.getNeighborId().isPresent() && neighbor.getNeighborEntitySet().isPresent() ) {
+                    UUID neighborEntityId = neighbor.getNeighborId().get();
+                    UUID neighborEntitySetId = neighbor.getNeighborEntitySet().get().getId();
+                    Map<UUID, PropertyType> authorizedPropertyTypesOnNeighborES = authzHelper
+                            .getAuthorizedPropertyTypes( neighborEntitySetId, WRITE_PERMISSION );
+                    dgm.clearEntities(
+                            neighborEntitySetId,
+                            ImmutableSet.of( neighborEntityId ),
+                            authorizedPropertyTypesOnNeighborES
+                    );
+                }
+            } );
+        }
         return null;
     }
 
