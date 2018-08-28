@@ -446,11 +446,17 @@ public class DataController implements DataApi, AuthorizingComponent {
         if ( result != null && result.containsKey( entityKeyId ) ) {
 
             /*
-             * 1.1 - collect authorized PropertyTypes per EntitySet
+             * 1.1 - collect authorized PropertyTypes per EntitySet and entities to clear per EntitySet
              */
 
             List<NeighborEntityDetails> neighbors = result.get( entityKeyId );
+            SetMultimap<UUID, UUID> neighborEntitiesMap = HashMultimap.create();
+
             neighbors.parallelStream().forEach( neighbor -> {
+
+                /*
+                 * association EntitySet
+                 */
                 UUID associationEntitySetId = neighbor.getAssociationEntitySet().getId();
                 if ( !authorizedPropertyTypes.containsKey( associationEntitySetId ) ) {
                     authorizedPropertyTypes.put(
@@ -458,6 +464,12 @@ public class DataController implements DataApi, AuthorizingComponent {
                             authzHelper.getAuthorizedPropertyTypes( associationEntitySetId, WRITE_PERMISSION )
                     );
                 }
+                UUID associationEntityKeyId = (UUID) neighbor.getAssociationDetails().get( ID_FQN ).iterator().next();
+                neighborEntitiesMap.put( associationEntitySetId, associationEntityKeyId);
+
+                /*
+                 * neighbor EntitySet
+                 */
                 if ( neighbor.getNeighborEntitySet().isPresent() ) {
                     UUID neighborEntitySetId = neighbor.getNeighborEntitySet().get().getId();
                     if ( !authorizedPropertyTypes.containsKey( neighborEntitySetId ) ) {
@@ -466,6 +478,11 @@ public class DataController implements DataApi, AuthorizingComponent {
                                 authzHelper.getAuthorizedPropertyTypes( neighborEntitySetId, WRITE_PERMISSION )
                         );
                     }
+                    if ( neighbor.getNeighborDetails().isPresent() ) {
+                        SetMultimap<FullQualifiedName, Object> neighborDetails = neighbor.getNeighborDetails().get();
+                        UUID neighborEntityKeyId = (UUID) neighborDetails.get( ID_FQN ).iterator().next();
+                        neighborEntitiesMap.put( neighborEntitySetId, neighborEntityKeyId);
+                    }
                 }
             } );
 
@@ -473,24 +490,13 @@ public class DataController implements DataApi, AuthorizingComponent {
              * 1.2 - clear all neighbor and association entities
              */
 
-            neighbors.parallelStream().forEach( neighbor -> {
-                UUID associationEntityKeyId = (UUID) neighbor.getAssociationDetails().get( ID_FQN ).iterator().next();
-                UUID associationEntitySetId = neighbor.getAssociationEntitySet().getId();
+            neighborEntitiesMap.keySet().forEach( neighborEntitySetId -> {
+                Set<UUID> neighborEntityKeyIds = neighborEntitiesMap.get( neighborEntitySetId );
                 dgm.clearEntities(
-                        associationEntitySetId,
-                        ImmutableSet.of( associationEntityKeyId ),
-                        authorizedPropertyTypes.get( associationEntitySetId )
+                        neighborEntitySetId,
+                        neighborEntityKeyIds,
+                        authorizedPropertyTypes.get( neighborEntitySetId )
                 );
-                if ( neighbor.getNeighborDetails().isPresent() && neighbor.getNeighborEntitySet().isPresent() ) {
-                    SetMultimap<FullQualifiedName, Object> neighborDetails = neighbor.getNeighborDetails().get();
-                    UUID neighborEntityKeyId = (UUID) neighborDetails.get( ID_FQN ).iterator().next();
-                    UUID neighborEntitySetId = neighbor.getNeighborEntitySet().get().getId();
-                    dgm.clearEntities(
-                            neighborEntitySetId,
-                            ImmutableSet.of( neighborEntityKeyId ),
-                            authorizedPropertyTypes.get( neighborEntitySetId )
-                    );
-                }
             } );
         }
 
