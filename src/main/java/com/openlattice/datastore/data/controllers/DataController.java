@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
@@ -428,45 +429,79 @@ public class DataController implements DataApi, AuthorizingComponent {
     ) {
 
         ensureReadAccess( new AclKey( entitySetId ) );
+
+        Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = Maps.newHashMap();
+        authorizedPropertyTypes.put(
+                entitySetId,
+                authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION )
+        );
+
+        /*
+         * 1 - get the entity neighbors
+         */
+
         Map<UUID, List<NeighborEntityDetails>> result = searchService
                 .executeEntityNeighborSearch( entitySetId, ImmutableSet.of( entityKeyId ) );
 
         if ( result != null && result.containsKey( entityKeyId ) ) {
 
+            /*
+             * 1.1 - collect authorized PropertyTypes per EntitySet
+             */
+
             List<NeighborEntityDetails> neighbors = result.get( entityKeyId );
             neighbors.parallelStream().forEach( neighbor -> {
+                UUID associationEntitySetId = neighbor.getAssociationEntitySet().getId();
+                if ( !authorizedPropertyTypes.containsKey( associationEntitySetId ) ) {
+                    authorizedPropertyTypes.put(
+                            associationEntitySetId,
+                            authzHelper.getAuthorizedPropertyTypes( associationEntitySetId, WRITE_PERMISSION )
+                    );
+                }
+                if ( neighbor.getNeighborEntitySet().isPresent() ) {
+                    UUID neighborEntitySetId = neighbor.getNeighborEntitySet().get().getId();
+                    if ( !authorizedPropertyTypes.containsKey( neighborEntitySetId ) ) {
+                        authorizedPropertyTypes.put(
+                                neighborEntitySetId,
+                                authzHelper.getAuthorizedPropertyTypes( neighborEntitySetId, WRITE_PERMISSION )
+                        );
+                    }
+                }
+            } );
 
+            /*
+             * 1.2 - clear all neighbor and association entities
+             */
+
+            neighbors.parallelStream().forEach( neighbor -> {
                 UUID associationEntityKeyId = (UUID) neighbor.getAssociationDetails().get( ID_FQN ).iterator().next();
                 UUID associationEntitySetId = neighbor.getAssociationEntitySet().getId();
-                Map<UUID, PropertyType> authorizedPropertyTypesOnNeighborAES = authzHelper
-                        .getAuthorizedPropertyTypes( associationEntitySetId, WRITE_PERMISSION );
                 dgm.clearEntities(
-                        neighbor.getAssociationEntitySet().getId(),
+                        associationEntitySetId,
                         ImmutableSet.of( associationEntityKeyId ),
-                        authorizedPropertyTypesOnNeighborAES
+                        authorizedPropertyTypes.get( associationEntitySetId )
                 );
-
                 if ( neighbor.getNeighborDetails().isPresent() && neighbor.getNeighborEntitySet().isPresent() ) {
                     SetMultimap<FullQualifiedName, Object> neighborDetails = neighbor.getNeighborDetails().get();
                     UUID neighborEntityKeyId = (UUID) neighborDetails.get( ID_FQN ).iterator().next();
                     UUID neighborEntitySetId = neighbor.getNeighborEntitySet().get().getId();
-                    Map<UUID, PropertyType> authorizedPropertyTypesOnNeighborES = authzHelper
-                            .getAuthorizedPropertyTypes( neighborEntitySetId, WRITE_PERMISSION );
                     dgm.clearEntities(
                             neighborEntitySetId,
                             ImmutableSet.of( neighborEntityKeyId ),
-                            authorizedPropertyTypesOnNeighborES
+                            authorizedPropertyTypes.get( neighborEntitySetId )
                     );
                 }
             } );
         }
 
-        Map<UUID, PropertyType> authorizedPropertyTypesOnEntityES = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
+        /*
+         * 2 - clear the given entity itself
+         */
+
         dgm.clearEntities(
                 entitySetId,
                 ImmutableSet.of( entityKeyId ),
-                authorizedPropertyTypesOnEntityES
+                authorizedPropertyTypes.get( entitySetId )
         );
 
         return null;
