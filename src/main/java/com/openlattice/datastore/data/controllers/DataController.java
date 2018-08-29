@@ -57,6 +57,7 @@ import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.graph.Graph;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -108,7 +109,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     private SyncTicketService sts;
 
     @Inject
-    private EdmService dms;
+    private EdmService edmService;
 
     @Inject
     private DataGraphManager dgm;
@@ -127,6 +128,9 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Inject
     private SearchService searchService;
+
+    @Inject
+    private Graph graph;
 
     private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
@@ -210,7 +214,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId,
                         EnumSet.of( Permission.READ ),
-                        dms.getPropertyTypesAsMap( selectedProperties ) );
+                        edmService.getPropertyTypesAsMap( selectedProperties ) );
 
         final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
 
@@ -248,9 +252,11 @@ public class DataController implements DataApi, AuthorizingComponent {
         if ( partialReplace ) {
             return dgm.partialReplaceEntities( entitySetId,
                     entities,
-                    dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+                    edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
         } else {
-            return dgm.replaceEntities( entitySetId, entities, dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+            return dgm.replaceEntities( entitySetId,
+                    entities,
+                    edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
         }
     }
 
@@ -268,7 +274,7 @@ public class DataController implements DataApi, AuthorizingComponent {
 
         return dgm.replacePropertiesInEntities( entitySetId,
                 entities,
-                dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+                edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
     }
 
     @Override
@@ -339,7 +345,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
         accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
 
-        final Map<UUID, PropertyType> authorizedPropertyTypes = dms
+        final Map<UUID, PropertyType> authorizedPropertyTypes = edmService
                 .getPropertyTypesAsMap( ImmutableSet.copyOf( requiredPropertyTypes.values() ) );
         return associations.entrySet().stream().mapToInt( association -> {
             final UUID entitySetId = association.getKey();
@@ -428,87 +434,73 @@ public class DataController implements DataApi, AuthorizingComponent {
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId
     ) {
 
-        ensureReadAccess( new AclKey( entitySetId ) );
-
-        Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = Maps.newHashMap();
-        authorizedPropertyTypes.put(
-                entitySetId,
-                authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION )
-        );
-
         /*
-         * 1 - get the entity neighbors
+         * 1 - check permissions for the given EntitySet as well as all of its neighbor EntitySets
          */
 
-        Map<UUID, List<NeighborEntityDetails>> result = searchService
-                .executeEntityNeighborSearch( entitySetId, ImmutableSet.of( entityKeyId ) );
+        // getNeighborEntitySetIds() returns source, destination, and edge EntitySet ids
+        Set<UUID> neighborEntitySetIds = dgm.getNeighborEntitySetIds( entitySetId );
+        Set<UUID> allEntitySetIds = ImmutableSet.<UUID>builder()
+                .add( entitySetId )
+                .addAll( neighborEntitySetIds )
+                .build();
 
-        if ( result != null && result.containsKey( entityKeyId ) ) {
+        Map<AclKey, EnumSet<Permission>> entitySetsAccessRequestMap = allEntitySetIds
+                .parallelStream()
+                .map( AclKey::new )
+                // TODO: should this only be READ? what about OWNER?
+                .collect( Collectors.toConcurrentMap( Function.identity(), aclKey -> READ_PERMISSION ) );
 
-            /*
-             * 1.1 - collect authorized PropertyTypes per EntitySet and entities to clear per EntitySet
-             */
+        accessCheck( entitySetsAccessRequestMap );
 
-            List<NeighborEntityDetails> neighbors = result.get( entityKeyId );
-            SetMultimap<UUID, UUID> neighborEntitiesMap = HashMultimap.create();
+        /*
+         * 2 - check permissions for PropertyTypes
+         */
 
-            neighbors.parallelStream().forEach( neighbor -> {
+        Map<UUID, Map<UUID, PropertyType>> entitySetIdToPropertyTypesMap = Maps.newHashMap();
+        Map<AclKey, EnumSet<Permission>> propertyTypesAccessRequestMap = allEntitySetIds
+                .parallelStream()
+                .flatMap( esId -> {
+                    Map<UUID, PropertyType> propertyTypes = edmService.getPropertyTypesForEntitySet( esId );
+                    entitySetIdToPropertyTypesMap.put( esId, propertyTypes );
+                    return entitySetIdToPropertyTypesMap.keySet().stream().map( ptId -> new AclKey( esId, ptId ) );
+                } )
+                // TODO: should this only be WRITE? what about OWNER?
+                .collect( Collectors.toConcurrentMap( Function.identity(), aclKey -> WRITE_PERMISSION ) );
 
-                /*
-                 * association EntitySet
-                 */
-                UUID associationEntitySetId = neighbor.getAssociationEntitySet().getId();
-                if ( !authorizedPropertyTypes.containsKey( associationEntitySetId ) ) {
-                    authorizedPropertyTypes.put(
-                            associationEntitySetId,
-                            authzHelper.getAuthorizedPropertyTypes( associationEntitySetId, WRITE_PERMISSION )
-                    );
-                }
-                UUID associationEntityKeyId = (UUID) neighbor.getAssociationDetails().get( ID_FQN ).iterator().next();
-                neighborEntitiesMap.put( associationEntitySetId, associationEntityKeyId );
+        accessCheck( propertyTypesAccessRequestMap );
 
-                /*
-                 * neighbor EntitySet
-                 */
-                if ( neighbor.getNeighborEntitySet().isPresent() ) {
-                    UUID neighborEntitySetId = neighbor.getNeighborEntitySet().get().getId();
-                    if ( !authorizedPropertyTypes.containsKey( neighborEntitySetId ) ) {
-                        authorizedPropertyTypes.put(
-                                neighborEntitySetId,
-                                authzHelper.getAuthorizedPropertyTypes( neighborEntitySetId, WRITE_PERMISSION )
-                        );
-                    }
-                    if ( neighbor.getNeighborDetails().isPresent() ) {
-                        SetMultimap<FullQualifiedName, Object> neighborDetails = neighbor.getNeighborDetails().get();
-                        UUID neighborEntityKeyId = (UUID) neighborDetails.get( ID_FQN ).iterator().next();
-                        neighborEntitiesMap.put( neighborEntitySetId, neighborEntityKeyId );
-                    }
-                }
-            } );
+        /*
+         * 3 - collect all neighbor entities, organized by EntitySet
+         */
 
-            /*
-             * 1.2 - clear all neighbor and association entities
-             */
+        SetMultimap<UUID, UUID> entitySetIdToEntityKeyIdsMap = HashMultimap.create();
+        entitySetIdToEntityKeyIdsMap.put( entitySetId, entityKeyId );
 
-            neighborEntitiesMap.keySet().forEach( neighborEntitySetId -> {
-                Set<UUID> neighborEntityKeyIds = neighborEntitiesMap.get( neighborEntitySetId );
+        graph.getEdgesAndNeighborsForVertex( entitySetId, entityKeyId ).forEach( edge -> {
+            // TODO: need to confirm if these if-statements are necessary; they will probably always be true
+            if ( allEntitySetIds.contains( edge.getEdge().getEntitySetId() ) ) {
+                entitySetIdToEntityKeyIdsMap.put( edge.getEdge().getEntitySetId(), edge.getEdge().getEntityKeyId() );
+            }
+            if ( allEntitySetIds.contains( edge.getDst().getEntitySetId() ) ) {
+                entitySetIdToEntityKeyIdsMap.put( edge.getDst().getEntitySetId(), edge.getDst().getEntityKeyId() );
+            }
+            if ( allEntitySetIds.contains( edge.getSrc().getEntitySetId() ) ) {
+                entitySetIdToEntityKeyIdsMap.put( edge.getSrc().getEntitySetId(), edge.getSrc().getEntityKeyId() );
+            }
+        } );
+
+        /*
+         * 4 - clear all entities
+         */
+
+        entitySetIdToEntityKeyIdsMap.keySet().parallelStream().forEach( esId -> {
                 dgm.clearEntities(
-                        neighborEntitySetId,
-                        neighborEntityKeyIds,
-                        authorizedPropertyTypes.get( neighborEntitySetId )
+                        esId,
+                        entitySetIdToEntityKeyIdsMap.get( esId ),
+                        entitySetIdToPropertyTypesMap.get( esId )
                 );
-            } );
-        }
-
-        /*
-         * 2 - clear the given entity itself
-         */
-
-        dgm.clearEntities(
-                entitySetId,
-                ImmutableSet.of( entityKeyId ),
-                authorizedPropertyTypes.get( entitySetId )
-        );
+        } );
 
         return null;
     }
@@ -524,7 +516,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         ensureReadAccess( new AclKey( entitySetId ) );
         Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,
                 WRITE_PERMISSION,
-                dms.getPropertyTypesAsMap( entity.keySet() ) );
+                edmService.getPropertyTypesAsMap( entity.keySet() ) );
 
         return dgm.replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
     }
@@ -540,7 +532,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         final Map<UUID, Set<Object>> entity = new HashMap<>();
 
         entityByFqns
-                .forEach( ( fqn, properties ) -> entity.put( dms.getPropertyTypeId( fqn ), properties ) );
+                .forEach( ( fqn, properties ) -> entity.put( edmService.getPropertyTypeId( fqn ), properties ) );
 
         return replaceEntityInEntitySet( entitySetId, entityKeyId, entity );
     }
@@ -562,7 +554,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
-        Map<UUID, PropertyType> authorizedPropertyTypes = dms
+        Map<UUID, PropertyType> authorizedPropertyTypes = edmService
                 .getPropertyTypesAsMap( authzHelper
                         .getAuthorizedPropertiesOnEntitySet( entitySetId, READ_PERMISSION ) );
         return dgm.getEntity( entitySetId, entityKeyId, authorizedPropertyTypes );
@@ -575,7 +567,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     public Set<Object> getEntity( UUID entitySetId, UUID entityKeyId, UUID propertyTypeId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
         ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
-        Map<UUID, PropertyType> authorizedPropertyTypes = dms
+        Map<UUID, PropertyType> authorizedPropertyTypes = edmService
                 .getPropertyTypesAsMap( ImmutableSet.of( propertyTypeId ) );
 
         return dgm.getEntity( entitySetId, entitySetId, authorizedPropertyTypes )
