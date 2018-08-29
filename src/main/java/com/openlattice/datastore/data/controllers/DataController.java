@@ -51,13 +51,11 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
-import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.graph.Graph;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -98,7 +96,6 @@ import static com.google.common.collect.Maps.transformValues;
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
-import static com.openlattice.postgres.DataTables.ID_FQN;
 
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
@@ -128,9 +125,6 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Inject
     private SearchService searchService;
-
-    @Inject
-    private Graph graph;
 
     private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
@@ -477,7 +471,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         SetMultimap<UUID, UUID> entitySetIdToEntityKeyIdsMap = HashMultimap.create();
         entitySetIdToEntityKeyIdsMap.put( entitySetId, entityKeyId );
 
-        graph.getEdgesAndNeighborsForVertex( entitySetId, entityKeyId ).forEach( edge -> {
+        dgm.getEdgesAndNeighborsForVertex( entitySetId, entityKeyId ).forEach( edge -> {
             // TODO: need to confirm if these if-statements are necessary; they will probably always be true
             if ( allEntitySetIds.contains( edge.getEdge().getEntitySetId() ) ) {
                 entitySetIdToEntityKeyIdsMap.put( edge.getEdge().getEntitySetId(), edge.getEdge().getEntityKeyId() );
