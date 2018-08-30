@@ -419,82 +419,74 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
+    @Timed
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS },
             method = RequestMethod.DELETE
     )
     public Void clearEntityAndNeighborEntities(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId
+            @PathVariable( ENTITY_SET_ID ) UUID vertexEntitySetId,
+            @PathVariable( ENTITY_KEY_ID ) UUID vertexEntityKeyId
     ) {
 
         /*
-         * 1 - check permissions for the given EntitySet as well as all of its neighbor EntitySets
+         * 1 - collect all relevant EntitySets and PropertyTypes
          */
 
         // getNeighborEntitySetIds() returns source, destination, and edge EntitySet ids
-        Set<UUID> neighborEntitySetIds = dgm.getNeighborEntitySetIds( entitySetId );
+        Set<UUID> neighborEntitySetIds = dgm.getNeighborEntitySetIds( vertexEntitySetId );
         Set<UUID> allEntitySetIds = ImmutableSet.<UUID>builder()
-                .add( entitySetId )
+                .add( vertexEntitySetId )
                 .addAll( neighborEntitySetIds )
                 .build();
 
         Map<AclKey, EnumSet<Permission>> entitySetsAccessRequestMap = allEntitySetIds
-                .parallelStream()
+                .stream()
                 .map( AclKey::new )
-                // TODO: should this only be READ? what about OWNER?
-                .collect( Collectors.toConcurrentMap( Function.identity(), aclKey -> READ_PERMISSION ) );
-
-        accessCheck( entitySetsAccessRequestMap );
-
-        /*
-         * 2 - check permissions for PropertyTypes
-         */
+                .collect( Collectors.toMap( Function.identity(), aclKey -> READ_PERMISSION ) );
 
         Map<UUID, Map<UUID, PropertyType>> entitySetIdToPropertyTypesMap = Maps.newHashMap();
         Map<AclKey, EnumSet<Permission>> propertyTypesAccessRequestMap = allEntitySetIds
-                .parallelStream()
+                .stream()
                 .flatMap( esId -> {
                     Map<UUID, PropertyType> propertyTypes = edmService.getPropertyTypesForEntitySet( esId );
                     entitySetIdToPropertyTypesMap.put( esId, propertyTypes );
                     return entitySetIdToPropertyTypesMap.keySet().stream().map( ptId -> new AclKey( esId, ptId ) );
                 } )
-                // TODO: should this only be WRITE? what about OWNER?
-                .collect( Collectors.toConcurrentMap( Function.identity(), aclKey -> WRITE_PERMISSION ) );
+                .collect( Collectors.toMap( Function.identity(), aclKey -> WRITE_PERMISSION ) );
 
-        accessCheck( propertyTypesAccessRequestMap );
+        /*
+         * 2 - check permissions for all relevant EntitySets and PropertyTypes
+         */
+
+        Map<AclKey, EnumSet<Permission>> accessRequestMap = Maps.newHashMap();
+        accessRequestMap.putAll( entitySetsAccessRequestMap );
+        accessRequestMap.putAll( propertyTypesAccessRequestMap );
+
+        accessCheck( accessRequestMap );
 
         /*
          * 3 - collect all neighbor entities, organized by EntitySet
          */
 
-        SetMultimap<UUID, UUID> entitySetIdToEntityKeyIdsMap = HashMultimap.create();
-        entitySetIdToEntityKeyIdsMap.put( entitySetId, entityKeyId );
-
-        dgm.getEdgesAndNeighborsForVertex( entitySetId, entityKeyId ).forEach( edge -> {
-            // TODO: need to confirm if these if-statements are necessary; they will probably always be true
-            if ( allEntitySetIds.contains( edge.getEdge().getEntitySetId() ) ) {
-                entitySetIdToEntityKeyIdsMap.put( edge.getEdge().getEntitySetId(), edge.getEdge().getEntityKeyId() );
-            }
-            if ( allEntitySetIds.contains( edge.getDst().getEntitySetId() ) ) {
-                entitySetIdToEntityKeyIdsMap.put( edge.getDst().getEntitySetId(), edge.getDst().getEntityKeyId() );
-            }
-            if ( allEntitySetIds.contains( edge.getSrc().getEntitySetId() ) ) {
-                entitySetIdToEntityKeyIdsMap.put( edge.getSrc().getEntitySetId(), edge.getSrc().getEntityKeyId() );
-            }
-        } );
+        Map<UUID, Set<EntityDataKey>> entitySetIdToEntityDataKeysMap = dgm
+                .getEdgesAndNeighborsForVertex( vertexEntitySetId, vertexEntityKeyId )
+                .flatMap( edge -> Stream.of( edge.getSrc(), edge.getDst(), edge.getEdge() ) )
+                .collect( Collectors.groupingBy( EntityDataKey::getEntitySetId, Collectors.toSet() ) );
 
         /*
          * 4 - clear all entities
          */
 
-        entitySetIdToEntityKeyIdsMap.keySet().parallelStream().forEach( esId -> {
-                dgm.clearEntities(
-                        esId,
-                        entitySetIdToEntityKeyIdsMap.get( esId ),
-                        entitySetIdToPropertyTypesMap.get( esId )
-                );
-        } );
+        if ( allEntitySetIds.containsAll( entitySetIdToEntityDataKeysMap.keySet() ) ) {
+            entitySetIdToEntityDataKeysMap.forEach( ( entitySetId, entityDataKeys ) -> dgm.clearEntities(
+                    entitySetId,
+                    entityDataKeys.stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
+                    entitySetIdToPropertyTypesMap.get( entitySetId ) )
+            );
+        } else {
+            throw new ForbiddenException( "Insufficient permissions to perform operation." );
+        }
 
         return null;
     }
