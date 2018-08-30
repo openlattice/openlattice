@@ -984,13 +984,15 @@ components:
       description: Success
   securitySchemes:
     openlattice_auth:
-        type: "http"
-        scheme: "bearer"
-        bearerFormat: "JWT"
-    api_key:
-        type: "apiKey"
-        name: "api_key"
-        in: "header"
+        type: apiKey
+        in: header
+        name: Authorization
+        # scheme: "bearer"
+        # bearerFormat: "JWT"
+    # apiKey:
+    #     type: apiKey
+    #     in: header
+    #     name: Authorization
 
   schemas:
 
@@ -1017,14 +1019,14 @@ components:
         title:
           type: string
         contacts:
-          type: array
+          type: object
         id:
           type: string
           format: uuid
         linking:
           type: boolean
         linked_entity_sets:
-          type: array
+          type: object
         external:
           type: boolean
       example:
@@ -1054,7 +1056,7 @@ components:
         name:
           type: string
         contacts:
-          type: array
+          type: object
         type:
           $ref: "#/components/schemas/FullQualifiedName"
         pii:
@@ -1147,9 +1149,9 @@ components:
         schemas:
           $ref: "#/components/schemas/FullQualifiedName"
         key:
-          type: array
+          type: object
         properties:
-          type: array
+          type: object
         basetype:
           type: string
         category:
