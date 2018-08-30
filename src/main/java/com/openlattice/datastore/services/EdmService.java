@@ -679,8 +679,13 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public Set<UUID> getAllPropertyTypeIds() {
+        return entitySetManager.getAllPropertyTypeIds();
+    }
+
+    @Override
     public Iterable<PropertySummary> getPropertySummary( UUID propertyTypeId ) {
-        String propertyTableName = DataTables.propertyTableName( propertyTypeId );
+        String propertyTableName = DataTables.quote(DataTables.propertyTableName( propertyTypeId ));
         return entitySetManager.getPropertySummary( propertyTableName );
     }
 
