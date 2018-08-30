@@ -117,11 +117,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 public class EdmService implements EdmManager {
 
@@ -281,7 +281,8 @@ public class EdmService implements EdmManager {
     @Override
     public void deletePropertyType( UUID propertyTypeId ) {
         Stream<EntityType> entityTypes = entityTypeManager
-                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet.of( propertyTypeId ) );
+                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
+                        .of( propertyTypeId ) );
         if ( entityTypes
                 .allMatch( et -> Iterables.isEmpty( entitySetManager.getAllEntitySetsForType( et.getId() ) ) ) ) {
             forceDeletePropertyType( propertyTypeId );
@@ -294,9 +295,11 @@ public class EdmService implements EdmManager {
     @Override
     public void forceDeletePropertyType( UUID propertyTypeId ) {
         Stream<EntityType> entityTypes = entityTypeManager
-                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet.of( propertyTypeId ) );
+                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
+                        .of( propertyTypeId ) );
         entityTypes.forEach( et -> {
-            forceRemovePropertyTypesFromEntityType( et.getId(), ImmutableSet.of( propertyTypeId ) );
+            forceRemovePropertyTypesFromEntityType( et.getId(),
+                    ImmutableSet.of( propertyTypeId ) );
         } );
 
         propertyTypes.delete( propertyTypeId );
@@ -410,7 +413,7 @@ public class EdmService implements EdmManager {
         final int startSize = entitySet.getLinkedEntitySets().size();
         //TODO: Turn this into an entity processor
         entitySet.getLinkedEntitySets().addAll( linkedEntitySets );
-        entitySets.set(entitySetId, entitySet );
+        entitySets.set( entitySetId, entitySet );
         return entitySet.getLinkedEntitySets().size() - startSize;
     }
 
@@ -419,7 +422,7 @@ public class EdmService implements EdmManager {
         final int startSize = entitySet.getLinkedEntitySets().size();
         //TODO: Turn this into an entity processor
         entitySet.getLinkedEntitySets().removeAll( linkedEntitySets );
-        entitySets.set(entitySetId, entitySet );
+        entitySets.set( entitySetId, entitySet );
         return startSize - entitySet.getLinkedEntitySets().size();
     }
 
@@ -676,9 +679,9 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Stream<PropertySummary> getPropertySummary( UUID propertyTypeId ) {
-        String propertyTableName = DataTables.propertyTableName(propertyTypeId);
-        return entitySetManager.getPropertySummary(propertyTableName);
+    public Iterable<PropertySummary> getPropertySummary( UUID propertyTypeId ) {
+        String propertyTableName = DataTables.propertyTableName( propertyTypeId );
+        return entitySetManager.getPropertySummary( propertyTableName );
     }
 
     @Override
@@ -796,13 +799,15 @@ public class EdmService implements EdmManager {
     public void forceRemovePropertyTypesFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
         Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
         EntityType entityType = getEntityType( entityTypeId );
+
         if ( entityType.getBaseType().isPresent() ) {
             EntityType baseType = getEntityType( entityType.getBaseType().get() );
             Preconditions.checkArgument( Sets.intersection( propertyTypeIds, baseType.getProperties() ).isEmpty(),
                     "Inherited property types cannot be removed." );
         }
 
-        List<UUID> childrenIds = entityTypeManager.getEntityTypeChildrenIdsDeep( entityTypeId )
+        List<UUID> childrenIds = entityTypeManager
+                .getEntityTypeChildrenIdsDeep( entityTypeId )
                 .collect( Collectors.<UUID>toList() );
 
         Map<UUID, Boolean> childrenIdsToLocks = childrenIds.stream()
@@ -816,6 +821,7 @@ public class EdmService implements EdmManager {
                         "Unable to modify the entity data model right now--please try again." );
             }
         } );
+
         childrenIds.forEach( id -> {
             entityTypes.executeOnKey( id, new RemovePropertyTypesFromEntityTypeProcessor( propertyTypeIds ) );
             EntityType childEntityType = getEntityType( id );
