@@ -421,11 +421,11 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     @Override
     @RequestMapping(
-            path = SUMMARY_BASE_PATH,
+            path = SUMMARY_PATH,
             method = RequestMethod.GET )
-    public Map<UUID, Stream<PropertySummary>> getAllPropertySummaries( @RequestBody EdmRequest request ) {
-        final Set<UUID> propertyTypeIds = request.getPropertyTypes();
-        Map<UUID, Stream<PropertySummary>> allPropertySummaries= Maps.newHashMapWithExpectedSize( propertyTypeIds.size() );
+    public Map<UUID, Iterable<PropertySummary>> getAllPropertySummaries() {
+        Set<UUID> propertyTypeIds = modelService.getAllPropertyTypeIds();
+        Map<UUID, Iterable<PropertySummary>> allPropertySummaries= Maps.newHashMapWithExpectedSize( propertyTypeIds.size() );
         for ( UUID propertyTypeId : propertyTypeIds ) {
             allPropertySummaries.put(propertyTypeId, modelService.getPropertySummary( propertyTypeId ));
         }
@@ -434,9 +434,9 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     @Override
     @RequestMapping(
-            path = SUMMARY_BASE_PATH + ID_PATH,
+            path = SUMMARY_PATH + ID_PATH,
             method = RequestMethod.GET )
-    public Stream<PropertySummary> getPropertySummary(@PathVariable ( ID ) UUID propertyTypeId) {
+    public Iterable<PropertySummary> getPropertySummary(@PathVariable ( ID ) UUID propertyTypeId) {
         ensureAdminAccess();
         return modelService.getPropertySummary(propertyTypeId);
     }
