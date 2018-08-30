@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.services;
 
+import com.google.common.collect.Sets;
 import com.openlattice.data.Entity;
 import com.openlattice.edm.EntitySet;
 import com.google.common.collect.ImmutableList;
@@ -49,6 +50,7 @@ public class PostgresEntitySetManager {
     private final String getAllEntitySets;
     private final String getEntitySet;
     private final String getEntitySetsByType;
+    private final String getAllPropertyTypeIds;
     private final String getPropertyTypeSummary;
 
     public PostgresEntitySetManager( HikariDataSource hds ) {
@@ -68,17 +70,9 @@ public class PostgresEntitySetManager {
                 .concat( " = ?;" );
         this.getEntitySetsByType = "SELECT * FROM ".concat( ENTITY_SETS ).concat( " WHERE " ).concat( ENTITY_TYPE_ID )
                 .concat( " = ?;" );
-
-        /* the string implementation of the sql query below
-
-        this.getPropertyTypeSummary = "SELECT entity_type_id, entity_set_id, count(*) FROM"
-                .concat( " ? " ).concat( " LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
-                        "GROUP BY (entity_type_id,entity_set_id);" );*/
-
-        this.getPropertyTypeSummary = "SELECT ".concat( ENTITY_TYPE_ID ).concat( ", " ).concat( ENTITY_SET_ID )
-                .concat( ", count(*) FROM ? LEFT JOIN " ).concat( ENTITY_SETS )
-                .concat( " on entity_set_id = entity_sets.id GROUP BY (" ).concat( ENTITY_TYPE_ID ).concat( "," )
-                .concat( ENTITY_SET_ID ).concat( ");" );
+        this.getAllPropertyTypeIds = "SELECT id from \"property_types\";"; //fix later
+        this.getPropertyTypeSummary = "SELECT entity_type_id, entity_set_id, count(*) FROM $propertyTableName LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
+                        "GROUP BY (entity_type_id,entity_set_id);";
     }
 
     public EntitySet getEntitySet( String entitySetName ) {
@@ -130,17 +124,30 @@ public class PostgresEntitySetManager {
         }
     }
 
+    public Set<UUID> getAllPropertyTypeIds() {
+        try ( Connection connection = hds.getConnection();
+                PreparedStatement ps = connection.prepareStatement( getAllPropertyTypeIds ) ) {
+            Set<UUID> result = Sets.newHashSet();
+            ResultSet rs = ps.executeQuery();
+            while ( rs.next() ) {
+                result.add( ResultSetAdapters.id( rs ) );
+            }
+
+            connection.close();
+            return result;
+        } catch ( SQLException e ) {
+            logger.error( "Unable to load property type ids", e );
+            throw new IllegalStateException( "Unable to load property type ids.", e );
+        }
+    }
+
     public Iterable<PropertySummary> getPropertySummary( String propertyTableName ) {
         return new PostgresIterable<>( () -> {
-            final ResultSet rs;
-            final Connection connection;
-            final PreparedStatement statement;
             try {
-                connection = hds.getConnection();
-                statement = connection.prepareStatement( getPropertyTypeSummary );
-                statement.setObject( 1, propertyTableName );
-                rs = statement.executeQuery();
-                return new StatementHolder( connection, statement, rs );
+                Connection connection = hds.getConnection();
+                PreparedStatement ps = connection.prepareStatement( getPropertyTypeSummary.replace("$propertyTableName", propertyTableName) );
+                ResultSet rs = ps.executeQuery();
+                return new StatementHolder( connection, ps, rs );
             } catch ( SQLException e ) {
                 logger.error( "Unable to create statement holder!", e );
                 throw new IllegalStateException( "Unable to create statement holder.", e );
@@ -149,8 +156,8 @@ public class PostgresEntitySetManager {
             try {
                 return ResultSetAdapters.propertySummary( rs );
             } catch ( SQLException e ) {
-                logger.error( "Unable to load entity information.", e );
-                throw new IllegalStateException( "Unable to load entity information.", e );
+                logger.error( "Unable to load property summary information.", e );
+                throw new IllegalStateException( "Unable to load property summary information.", e );
             }
         } );
     }
