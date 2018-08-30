@@ -71,7 +71,7 @@ public interface EdmManager {
     @Timed
     Map<UUID, PropertyType> getPropertyTypesForEntitySet( UUID entitySetId );
 
-    Stream<PropertySummary> getPropertySummary( UUID propertyTypeId );
+    Iterable<PropertySummary> getPropertySummary( UUID propertyTypeId );
 
     void createEntitySet( Principal principal, EntitySet entitySet );
 
