@@ -836,11 +836,6 @@ public final class ResultSetAdapters {
         return new Entity( entityKeyId, data );
     }
 
-    /*
-    make a method called propertySummary. This is where you will loop through the results of the ResultsSet
-    and turn it into a JSON. You will need to implement a class like Entity.java used in the above entity() method.
-    It will return a JSON like whatever Leland drew in your notebook.
-     */
     public static PropertySummary propertySummary( ResultSet rs ) throws SQLException {
         UUID id = id( rs );
         UUID entityTypeID = (UUID) rs.getObject(ENTITY_TYPE_ID_FIELD);
