@@ -35,6 +35,7 @@ import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
+import static com.openlattice.postgres.PostgresColumn.COUNT;
 import static com.openlattice.postgres.PostgresColumn.CURRENT_SYNC_ID;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
@@ -46,6 +47,7 @@ import static com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.FLAGS;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_DIAMETER;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
@@ -841,9 +843,9 @@ public final class ResultSetAdapters {
      */
     public static PropertySummary propertySummary( ResultSet rs ) throws SQLException {
         UUID id = id( rs );
-        UUID entityTypeID = (UUID) rs.getObject("entity_type_id");
-        UUID entitySetId = (UUID) rs.getObject( "entity_set_id" );
-        int count = rs.getInt("count");
+        UUID entityTypeID = (UUID) rs.getObject(ENTITY_TYPE_ID_FIELD);
+        UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
+        int count = rs.getInt(COUNT);
         return new PropertySummary( id, entityTypeID, entitySetId, count);
     }
 
