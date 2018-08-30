@@ -64,7 +64,7 @@ private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 open class DataGraphService(
         hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
-        private val lm: GraphService,
+        private val graphService: GraphService,
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore,
         private val edm: EdmManager
@@ -120,7 +120,7 @@ open class DataGraphService(
     }
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
-        lm.deleteVerticesInEntitySet(entitySetId)
+        graphService.deleteVerticesInEntitySet(entitySetId)
         return eds.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
     }
 
@@ -159,7 +159,7 @@ open class DataGraphService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        lm.deleteVertices(entitySetId, entityKeyIds)
+        graphService.deleteVertices(entitySetId, entityKeyIds)
         return eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
@@ -171,7 +171,7 @@ open class DataGraphService(
             entitySetsToEntityKeyIds.put(it.edge.entitySetId, it.edge.entityKeyId)
         }
 
-        return lm.deleteEdges(keys) + Multimaps.asMap(entitySetsToEntityKeyIds)
+        return graphService.deleteEdges(keys) + Multimaps.asMap(entitySetsToEntityKeyIds)
                 .entries
                 .stream()
                 .mapToInt { e -> eds.deleteEntities(e.key, e.value, authorizedPropertyTypes) }
@@ -252,7 +252,7 @@ open class DataGraphService(
                     val edgeKeys = it.value.asSequence().mapIndexed { index, dataEdge ->
                         EdgeKey(dataEdge.src, dataEdge.dst, EntityDataKey(entitySetId, ids[index]))
                     }.toSet()
-                    lm.createEdges(edgeKeys)
+                    graphService.createEdges(edgeKeys)
                 }
 
         return entityKeyIds
@@ -299,7 +299,7 @@ open class DataGraphService(
                     EdgeKey(src, dst, edge)
                 }
                 .toSet()
-        lm.createEdges(edges)
+        graphService.createEdges(edges)
 
         return integrationResults
     }
@@ -358,7 +358,7 @@ open class DataGraphService(
                     (if (details.utilizerIsSrc) srcFilters else dstFilters).putAll(it, neighborSets)
                 }
             }
-            utilizers = lm.computeGraphAggregation(numResults, entitySetId, srcFilters, dstFilters)
+            utilizers = graphService.computeGraphAggregation(numResults, entitySetId, srcFilters, dstFilters)
 
             queryCache.put(MultiKey(entitySetId, topUtilizerDetailsList), utilizers)
         } else {
@@ -380,7 +380,7 @@ open class DataGraphService(
 
 
     override fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets> {
-        return lm.getNeighborEntitySets(entitySetId)
+        return graphService.getNeighborEntitySets(entitySetId)
     }
 
     override fun getNeighborEntitySetIds(entitySetId: UUID): Set<UUID> {
@@ -391,6 +391,6 @@ open class DataGraphService(
     }
 
     override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge> {
-        return lm.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
+        return graphService.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
     }
 }
