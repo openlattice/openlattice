@@ -21,15 +21,17 @@
 
 package com.openlattice.linking
 
+import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
 import com.openlattice.postgres.streams.PostgresIterable
 import java.util.*
+import java.util.stream.Stream
 
 /**
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-interface Clusterer {
-    fun addToCluster(clusterId: UUID, dataKey: EntityDataKey)
-    fun getCandidateClusters(dataKeys: Set<EntityDataKey>): Set<UUID>
+interface DataLoader {
+    fun getEntity(dataKey: EntityDataKey): Map<UUID, Set<Any>>
+    fun getEntities(dataKeys: Set<EntityDataKey>): Map<EntityDataKey, Map<UUID, Set<Any>>>
+    fun getEntityStream(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<Pair<UUID, SetMultimap<UUID, Any>>>
 }

@@ -22,6 +22,7 @@
 package com.openlattice.linking.blocking
 
 import com.google.common.collect.Multimaps
+import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
@@ -33,13 +34,18 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.Blocker
+import com.openlattice.linking.DataLoader
+import com.openlattice.linking.PERSON_FQN
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import org.springframework.util.concurrent.ListenableFuture
 import java.util.*
+import java.util.concurrent.Callable
+import java.util.stream.Stream
+import kotlin.streams.asSequence
 
 
-private const val PERSON_FQN = "general.person"
 private val logger = LoggerFactory.getLogger(ElasticsearchBlocker::class.java)
 
 /**
@@ -49,8 +55,10 @@ private val logger = LoggerFactory.getLogger(ElasticsearchBlocker::class.java)
 class ElasticsearchBlocker(
         private val elasticsearch: ConductorElasticsearchApi,
         private val dataQueryService: PostgresEntityDataQueryService,
+        private val dataLoader: DataLoader,
         hazelcast: HazelcastInstance
 ) : Blocker {
+
     private val entitySets: IMap<UUID, EntitySet> = hazelcast.getMap(HazelcastMap.ENTITY_SETS.name)
     private val entityTypes: IMap<UUID, EntityType> = hazelcast.getMap(HazelcastMap.ENTITY_TYPES.name)
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcast.getMap(HazelcastMap.PROPERTY_TYPES.name)
@@ -68,7 +76,7 @@ class ElasticsearchBlocker(
 
         val blockedEntitySetSearchResults = elasticsearch.searchEntitySets(
                 entitySets.values.map(EntitySet::getId),
-                getFieldSearches(entity.orElseGet { getEntity(entityDataKey, authorizedPropertyTypes) }),
+                getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
                 top,
                 false
         )
@@ -76,14 +84,18 @@ class ElasticsearchBlocker(
         if (blockedEntitySetSearchResults[entityDataKey.entitySetId]?.contains(entityDataKey.entityKeyId) == false) {
             logger.error("Entity {} did not block to itself.", entityDataKey)
         }
-
         return entityDataKey to blockedEntitySetSearchResults
-                .flatMap {
-                    val entitySetId = it.key
-                    dataQueryService
-                            .getEntitiesById(entitySetId, authorizedPropertyTypes, it.value)
-                            .map { EntityDataKey(entitySetId, it.key) to Multimaps.asMap(it.value) }
-                }.toMap()
+                .entries
+                .parallelStream()
+                .flatMap { entry ->
+                    dataLoader
+                            .getEntityStream(entry.key, entry.value)
+                            .stream()
+                            .map { EntityDataKey(entry.key, it.first) to Multimaps.asMap(it.second) }
+                }
+                .asSequence()
+                .toMap()
+
 
     }
 
