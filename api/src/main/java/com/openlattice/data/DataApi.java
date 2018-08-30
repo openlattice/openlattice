@@ -112,7 +112,6 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities );
 
-
     /**
      * Creates a new set of associations.
      *
@@ -121,8 +120,8 @@ public interface DataApi {
      */
     @PUT( BASE + "/" + ASSOCIATION )
     Integer createAssociations( @Body Set<DataEdgeKey> associations );
-    /**
 
+    /**
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. Keys are association entity set ids and values for each keys
@@ -159,13 +158,13 @@ public interface DataApi {
     /**
      * Clears the Entity matching the given Entity id and all of its neighbor Entities
      *
-     * @param entitySetId the id of the EntitySet to delete from
-     * @param entityKeyId the id of the Entity to delete
+     * @param vertexEntitySetId the id of the EntitySet to delete from
+     * @param vertexEntityKeyId the id of the Entity to delete
      */
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS )
-    Void clearEntityAndNeighborEntities(
-            @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Path( ENTITY_KEY_ID ) UUID entityKeyId
+    Long clearEntityAndNeighborEntities(
+            @Path( ENTITY_SET_ID ) UUID vertexEntitySetId,
+            @Path( ENTITY_KEY_ID ) UUID vertexEntityKeyId
     );
 
     /**
