@@ -424,7 +424,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS },
             method = RequestMethod.DELETE
     )
-    public Void clearEntityAndNeighborEntities(
+    public Long clearEntityAndNeighborEntities(
             @PathVariable( ENTITY_SET_ID ) UUID vertexEntitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID vertexEntityKeyId
     ) {
@@ -484,11 +484,14 @@ public class DataController implements DataApi, AuthorizingComponent {
                     entityDataKeys.stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
                     entitySetIdToPropertyTypesMap.get( entitySetId ) )
             );
+            return entitySetIdToEntityDataKeysMap
+                    .entrySet()
+                    .stream()
+                    .mapToLong( entry -> entry.getValue().size() )
+                    .sum();
         } else {
             throw new ForbiddenException( "Insufficient permissions to perform operation." );
         }
-
-        return null;
     }
 
     @Override
