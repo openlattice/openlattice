@@ -43,24 +43,24 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class PostgresEntitySetManager {
-    private static final Logger logger = LoggerFactory.getLogger( PostgresEntitySetManager.class );
-    private final HikariDataSource hds;
+    private static final Logger           logger = LoggerFactory.getLogger( PostgresEntitySetManager.class );
+    private final        HikariDataSource hds;
 
     private final String getAllEntitySets;
     private final String getEntitySet;
     private final String getEntitySetsByType;
-    //private final String getPropertyTypeSummary;
+    private final String getPropertyTypeSummary;
 
     public PostgresEntitySetManager( HikariDataSource hds ) {
         this.hds = hds;
 
         // Tables
         String ENTITY_SETS = PostgresTable.ENTITY_SETS.getName();
-        //String PROPERTY_TYPES = PostgresTable.PROPERTY_TYPES.getName(); <- not sure if I use this here or not
 
         // Properties
         String NAME = PostgresColumn.NAME.getName();
         String ENTITY_TYPE_ID = PostgresColumn.ENTITY_TYPE_ID.getName();
+        String ENTITY_SET_ID = PostgresColumn.ENTITY_SET_ID.getName();
 
         // SQL queries
         this.getAllEntitySets = "SELECT * FROM ".concat( ENTITY_SETS ).concat( ";" );
@@ -68,11 +68,17 @@ public class PostgresEntitySetManager {
                 .concat( " = ?;" );
         this.getEntitySetsByType = "SELECT * FROM ".concat( ENTITY_SETS ).concat( " WHERE " ).concat( ENTITY_TYPE_ID )
                 .concat( " = ?;" );
-        /*
-        this.getPropertyTypeSummary = "SELECT entity_type_id, entity_set_id, count(*) FROM "
-                .concat( PROPERTY_TYPES ).concat(" LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
-                        "GROUP BY (entity_type_id,entity_set_id);");
-                        */
+
+        /* the string implementation of the sql query below
+
+        this.getPropertyTypeSummary = "SELECT entity_type_id, entity_set_id, count(*) FROM"
+                .concat( " ? " ).concat( " LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
+                        "GROUP BY (entity_type_id,entity_set_id);" );*/
+
+        this.getPropertyTypeSummary = "SELECT ".concat( ENTITY_TYPE_ID ).concat( ", " ).concat( ENTITY_SET_ID )
+                .concat( ", count(*) FROM ? LEFT JOIN " ).concat( ENTITY_SETS )
+                .concat( " on entity_set_id = entity_sets.id GROUP BY (" ).concat( ENTITY_TYPE_ID ).concat( "," )
+                .concat( ENTITY_SET_ID ).concat( ");" );
     }
 
     public EntitySet getEntitySet( String entitySetName ) {
@@ -94,7 +100,7 @@ public class PostgresEntitySetManager {
     public Iterable<EntitySet> getAllEntitySets() {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
-                ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery() ) {
             List<EntitySet> result = Lists.newArrayList();
             while ( rs.next() ) {
                 result.add( ResultSetAdapters.entitySet( rs ) );
@@ -124,31 +130,29 @@ public class PostgresEntitySetManager {
         }
     }
 
-    public Stream<PropertySummary> getPropertySummary( String propertyTableName) {
-            return new PostgresIterable<>( () -> {
-                final ResultSet rs;
-                final Connection connection;
-                final PreparedStatement statement;
-                String propertySummaryQuery = "SELECT entity_type_id, entity_set_id, count(*) FROM "
-                        .concat( propertyTableName ).concat(" LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
-                                "GROUP BY (entity_type_id,entity_set_id);");
-                try {
-                    connection = hds.getConnection();
-                    statement = connection.prepareStatement( propertySummaryQuery );
-                    rs = statement.executeQuery();
-                    return new StatementHolder( connection, statement, rs );
-                } catch ( SQLException e ) {
-                    logger.error( "Unable to create statement holder!", e );
-                    throw new IllegalStateException( "Unable to create statement holder.", e );
-                }
-            }, rs -> {
-                try {
-                    return ResultSetAdapters.propertySummary( rs );
-                } catch ( SQLException e ) {
-                    logger.error( "Unable to load entity information.", e );
-                    throw new IllegalStateException( "Unable to load entity information.", e );
-                }
-            } ).stream();
+    public Iterable<PropertySummary> getPropertySummary( String propertyTableName ) {
+        return new PostgresIterable<>( () -> {
+            final ResultSet rs;
+            final Connection connection;
+            final PreparedStatement statement;
+            try {
+                connection = hds.getConnection();
+                statement = connection.prepareStatement( getPropertyTypeSummary );
+                statement.setObject( 1, propertyTableName );
+                rs = statement.executeQuery();
+                return new StatementHolder( connection, statement, rs );
+            } catch ( SQLException e ) {
+                logger.error( "Unable to create statement holder!", e );
+                throw new IllegalStateException( "Unable to create statement holder.", e );
+            }
+        }, rs -> {
+            try {
+                return ResultSetAdapters.propertySummary( rs );
+            } catch ( SQLException e ) {
+                logger.error( "Unable to load entity information.", e );
+                throw new IllegalStateException( "Unable to load entity information.", e );
+            }
+        } );
     }
 
 }
