@@ -39,6 +39,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
+import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.DataTables.COUNT_FQN
@@ -380,5 +381,16 @@ open class DataGraphService(
 
     override fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets> {
         return lm.getNeighborEntitySets(entitySetId)
+    }
+
+    override fun getNeighborEntitySetIds(entitySetId: UUID): Set<UUID> {
+        return getNeighborEntitySets(entitySetId)
+                .asSequence()
+                .flatMap { sequenceOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
+                .toSet()
+    }
+
+    override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge> {
+        return lm.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
     }
 }
