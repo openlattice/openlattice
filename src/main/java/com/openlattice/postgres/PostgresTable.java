@@ -32,6 +32,7 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.BLOCK_ID;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLAUSES;
+import static com.openlattice.postgres.PostgresColumn.CLUSTER_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -63,6 +64,7 @@ import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.KEY;
 import static com.openlattice.postgres.PostgresColumn.LSB;
+import static com.openlattice.postgres.PostgresColumn.MATCH_ID;
 import static com.openlattice.postgres.PostgresColumn.MEMBERS;
 import static com.openlattice.postgres.PostgresColumn.MSB;
 import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
@@ -83,6 +85,7 @@ import static com.openlattice.postgres.PostgresColumn.QUERY;
 import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCORE;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.SHOW;
@@ -105,7 +108,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Tables definitions for all tables used in the OpenLattice platform.
  */
 public final class PostgresTable {
 
@@ -251,6 +254,19 @@ public final class PostgresTable {
             new PostgresTableDefinition( "linking_vertices" )
                     .addColumns( GRAPH_ID, VERTEX_ID, GRAPH_DIAMETER, ENTITY_KEY_IDS )
                     .primaryKey( GRAPH_ID, VERTEX_ID );
+    public static final PostgresTableDefinition        MATCHED_ENTITIES             =
+            new PostgresTableDefinition( "matched_entities" )
+                    .addColumns( CLUSTER_ID,
+                            SRC_ENTITY_SET_ID,
+                            SRC_LINKING_VERTEX_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_LINKING_VERTEX_ID,
+                            SCORE )
+                    .primaryKey( MATCH_ID,
+                            SRC_ENTITY_SET_ID,
+                            SRC_LINKING_VERTEX_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_LINKING_VERTEX_ID );
     public static final PostgresTableDefinition        NAMES                        =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )
@@ -262,7 +278,6 @@ public final class PostgresTable {
             new PostgresTableDefinition( "permissions" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-    //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
     public static final PostgresTableDefinition        PRINCIPALS                   =
             new PostgresTableDefinition( "principals" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )

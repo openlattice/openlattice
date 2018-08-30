@@ -32,6 +32,7 @@ import static com.openlattice.postgres.PostgresColumn.APP_ID;
 import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
 import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
+import static com.openlattice.postgres.PostgresColumn.CLUSTER_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -39,6 +40,8 @@ import static com.openlattice.postgres.PostgresColumn.CURRENT_SYNC_ID;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.EDM_VERSION;
 import static com.openlattice.postgres.PostgresColumn.EDM_VERSION_NAME;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_ID_FIELD;
@@ -73,10 +76,14 @@ import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
 import static com.openlattice.postgres.PostgresColumn.REASON;
 import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
 import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCORE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
 import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
 import static com.openlattice.postgres.PostgresColumn.SHOW;
 import static com.openlattice.postgres.PostgresColumn.SRC;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.START_TIME;
 import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
@@ -155,6 +162,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -164,6 +173,10 @@ import org.slf4j.LoggerFactory;
 public final class ResultSetAdapters {
     private static final Logger  logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
     private static final Decoder DECODER = Base64.getMimeDecoder();
+
+    public static UUID clusterId( ResultSet rs ) throws SQLException {
+        return (UUID) rs.getObject( CLUSTER_ID_FIELD );
+    }
 
     public static GraphQueryState graphQueryState( ResultSet rs ) throws SQLException {
         final UUID queryId = (UUID) rs.getObject( QUERY_ID.getName() );
@@ -177,6 +190,10 @@ public final class ResultSetAdapters {
                 Optional.empty() );
     }
 
+    public static EntityDataKey entityDataKey( ResultSet rs ) throws SQLException {
+        return new EntityDataKey( entitySetId( rs ), id( rs ) );
+    }
+
     public static DataKey dataKey( ResultSet rs ) throws SQLException {
         UUID id = (UUID) rs.getObject( "id" );
         UUID entitySetId = (UUID) rs.getObject( "entity_set_id" );
@@ -187,8 +204,20 @@ public final class ResultSetAdapters {
         return new DataKey( id, entitySetId, entityId, propertyTypeId, hash );
     }
 
-    public static EntityDataKey entityDataKey( ResultSet rs ) throws SQLException {
-        return new EntityDataKey( entitySetId( rs ), id( rs ) );
+    public static EntityDataKey srcEntityDataKey( ResultSet rs ) throws SQLException {
+        final UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID_FIELD );
+        final UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID_FIELD );
+        return new EntityDataKey( srcEntitySetId, srcEntityKeyId );
+    }
+
+    public static EntityDataKey dstEntityDataKey( ResultSet rs ) throws SQLException {
+        final UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID_FIELD );
+        final UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID_FIELD );
+        return new EntityDataKey( dstEntitySetId, dstEntityKeyId );
+    }
+
+    public static Double score( ResultSet rs ) throws SQLException {
+        return rs.getDouble( SCORE_FIELD );
     }
 
     public static PropertyValueKey propertyValueKey( String propertyName, ResultSet rs ) throws SQLException {
@@ -745,10 +774,10 @@ public final class ResultSetAdapters {
                 case Binary:
                     String[] objArray = (String[]) arr.getArray();
 
-//                    if ( objArray.length > 0 ) {
-//                        logger.info( "Contents of string: {}", objArray[ 0 ] );
-//                        logger.info( "Reading byte array with class: {}", objArray[ 0 ].getClass().getCanonicalName() );
-//                    }
+                    //                    if ( objArray.length > 0 ) {
+                    //                        logger.info( "Contents of string: {}", objArray[ 0 ] );
+                    //                        logger.info( "Reading byte array with class: {}", objArray[ 0 ].getClass().getCanonicalName() );
+                    //                    }
 
                     byte[][] raw = new byte[ objArray.length ][];
                     for ( int i = 0; i < objArray.length; ++i ) {
