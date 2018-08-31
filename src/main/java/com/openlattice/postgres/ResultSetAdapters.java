@@ -837,11 +837,10 @@ public final class ResultSetAdapters {
     }
 
     public static PropertySummary propertySummary( ResultSet rs ) throws SQLException {
-        UUID id = id( rs );
         UUID entityTypeID = (UUID) rs.getObject(ENTITY_TYPE_ID_FIELD);
         UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
         int count = rs.getInt(COUNT);
-        return new PropertySummary( id, entityTypeID, entitySetId, count);
+        return new PropertySummary( entityTypeID, entitySetId, count);
     }
 
 }
