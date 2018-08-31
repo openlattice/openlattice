@@ -240,6 +240,10 @@ public final class PostgresTable {
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
                     .addColumns( PARTITION_INDEX, MSB, LSB );
+    public static final PostgresTableDefinition        LINKED_ENTITIES              =
+            new PostgresTableDefinition( "linked_entities" )
+                    .addColumns( CLUSTER_ID, ENTITY_SET_ID, ID_VALUE )
+                    .primaryKey( CLUSTER_ID, ENTITY_SET_ID, ID_VALUE );
     public static final PostgresTableDefinition        LINKED_ENTITY_SETS           =
             new PostgresTableDefinition( "linked_entity_sets" )
                     .addColumns( ID, ENTITY_SET_IDS );
