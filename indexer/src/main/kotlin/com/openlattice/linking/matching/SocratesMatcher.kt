@@ -67,6 +67,26 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         return initializedBlock
     }
 
+    override fun match(
+            elem: Map<UUID, Set<Any>>, entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
+    ): MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>> {
+        val model = localModel.get()
+
+        val entityDataKey = block.first
+        val entities = block.second
+
+        val extractedEntities = entities.mapValues { extractProperties(it.value) }
+
+        val matchedEntities = extractedEntities.mapValues {
+            val entity = it.value
+            extractedEntities
+                    .mapValues { model.getModelScore(arrayOf(PersonMetric.pDistance(entity, it.value, fqnToIdMap))) }
+                    .toMutableMap()
+        }.toMutableMap()
+
+        return entityDataKey to matchedEntities
+    }
+
     /**
      * Computes the pairwise matching values for a block.
      * @param block The resulting block around for the entity data key in block.first
