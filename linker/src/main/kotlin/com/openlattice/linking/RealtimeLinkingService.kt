@@ -21,14 +21,18 @@
 
 package com.openlattice.linking
 
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheLoader
+import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.linking.clustering.ClusterUpdate
 import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
-import kotlin.streams.asSequence
 
 
 /**
@@ -38,6 +42,8 @@ import kotlin.streams.asSequence
 internal val LINKING_ENTITY_SET_ID = UUID(0, 0)
 internal const val PERSON_FQN = "general.person"
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 10000L
+internal const val LOCK_TTL_SECS = 600L
+
 /**
  *
  * Performs realtime linking of individuals as they are integrated ino the system.
@@ -46,82 +52,78 @@ class RealtimeLinkingService
 (
         val blocker: Blocker,
         private val matcher: Matcher,
-        private val clusterer: Clusterer,
         private val ids: EntityKeyIdService,
-        private val gqs: LinkingQueryService
+        private val loader: DataLoader,
+        private val gqs: LinkingQueryService,
+        private val executor: ListeningExecutorService
 
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
+        private val lockCache = CacheBuilder.newBuilder()
+                .expireAfterAccess(LOCK_TTL_SECS, TimeUnit.SECONDS)
+                .build(CacheLoader.from { clusterId: UUID? ->
+                    clusterId!!
+                    ReentrantLock()
+                })
     }
 
     /**
      * Linking:
-     * 1) For each new person entity perform blocking and identify candidate clusters
+     * 1) For each new person entity perform blocking
+     * 2) Use the results of block to identify candidate clusters
+     * 3) Insert the results of the match scores
+     *
+     * We achieve parallelism by allow non-overlapping
      */
-    /**
-     * Performs an update of the existing links for recently written data. The main challenge here is clustering
-     * after matching. Our approach is to
-     */
-    private fun blockAndInitializeMatching(
+
+    private fun runIterativeLinking(
             entitySetId: UUID,
-            entityKeyIds: Stream<UUID>,
-            count: Optional<Int> = Optional.empty()
+            entityKeyIds: Iterable<UUID>
     ) {
-        val reservedIds = count.map { ids.reserveIds(LINKING_ENTITY_SET_ID, it) }
-        val index = AtomicInteger()
-        /*
-         * Perform an update of matching scores.
-         *
-         * 1)  We initialize a cluster from each block
-         *
-         * 2)
-         */
-        entityKeyIds
-                .parallel()
-                .map { blocker.block(entitySetId, it) }
-                .peek {
-                    val initializedBlock = matcher.initialize(it)
-                    gqs.insertMatchScores(
-                            reservedIds
-                                    .map { it[index.getAndIncrement()] }
-                                    .orElseGet { ids.reserveIds(LINKING_ENTITY_SET_ID, 1)[0] },
-                            initializedBlock.second
-                    )
-                }
-                .map(matcher::initialize)
-
-    }
-
-
-    private fun updateLinks(
-            entitySetId: UUID,
-            entityKeyIds: Iterable<UUID>,
-            count: Optional<Int> = Optional.empty()
-    ) {
-
         entityKeyIds
                 .asSequence()
-                .map { blocker.block(entitySetId, it ) }
+                .map { blocker.block(entitySetId, it) }
                 .map {
-                    //Remember initialized block contains itself.
-        val initializedBlock = matcher.initialize(it)
-                    clusterer.getCandidateClusters(it.second.keys)
-        gqs.insertMatchScores(
-                reservedIds
-                        .map { it[index.getAndIncrement()] }
-                        .orElseGet { ids.reserveIds(LINKING_ENTITY_SET_ID, 1)[0] },
-                initializedBlock.second
-        ) }
-                .map ( clusterer::getCandidateClusters )
-                .map ( gqs.load)
-                .map ( matcher::scoreBestCluster )
-                .forEach ( clusterer::addToCluster )
+                    //block contains element being blocked
+                    val blockKey = it.first
+                    val elem = it.second[blockKey]!!
+                    val initializedBlock = matcher.initialize(it)
+                    val dataKeys = collectKeys(initializedBlock.second)
+                    val clusters = gqs.getClustersContaining(dataKeys)
 
+                    if (clusters.isEmpty()) {
+                        val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
+                        return@map ClusterUpdate(clusterId, blockKey, matcher.match(elem, mapOf(blockKey to elem)))
+                    }
 
+                    var maybeBestCluster: Pair<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>? = null
+                    var lowestAvgScore: Double = -10.0 //Arbitrary any negative value should suffice
+
+                    clusters
+                            .forEach {
+                                val matchedCluster = matcher.match(elem, loader.getEntities(collectKeys(it.value)))
+                                val clusterSize = matchedCluster.values.sumBy { it.size }
+                                val avgScore = (matchedCluster.values.sumByDouble { it.values.sum() } / clusterSize)
+                                if (lowestAvgScore > avgScore || lowestAvgScore < 0) {
+                                    lowestAvgScore = avgScore
+                                    maybeBestCluster = it.key to matchedCluster
+                                }
+                            }
+                    val bestCluster = maybeBestCluster!!
+                    ClusterUpdate(bestCluster.first, blockKey, bestCluster.second)
+                }
+                .forEach { clusterUpdate ->
+                    gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
+                    gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+                }
     }
 
-    private fun clearNeighborhood(entitySetId: UUID, entityKeyIds: Stream<UUID>) {
+    private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
+        return m!!.keys + m.values.flatMap { it.keys }
+    }
+
+    private fun clearNeighborhoods(entitySetId: UUID, entityKeyIds: Stream<UUID>) {
         logger.debug("Starting neighborhood cleanup of {}", entitySetId)
         val clearedCount = entityKeyIds
                 .parallel()
@@ -132,15 +134,14 @@ class RealtimeLinkingService
     }
 
     fun refreshLinks(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
-        clearNeighborhood(entitySetId, entityKeyIds.stream())
-        blockAndInitializeMatching(entitySetId, entityKeyIds.stream())
-        clusterer.cluster(0.25)
+        clearNeighborhoods(entitySetId, entityKeyIds.stream())
+        runIterativeLinking(entitySetId, entityKeyIds)
     }
 
 
     fun refreshLinks(entitySetId: UUID, entityKeyIds: Collection<UUID>) {
-        clearNeighborhood(entitySetId, entityKeyIds.stream())
-        blockAndInitializeMatching(entitySetId, entityKeyIds.stream(), Optional.of(entityKeyIds.size()))
+        clearNeighborhoods(entitySetId, entityKeyIds.stream())
+        runIterativeLinking(entitySetId, entityKeyIds)
     }
 
     fun delete(entitySetId: UUID, entityKeyIds: Set<UUID>) {

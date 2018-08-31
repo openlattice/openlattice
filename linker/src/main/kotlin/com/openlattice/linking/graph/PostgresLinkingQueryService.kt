@@ -26,6 +26,7 @@ import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresTable.LINKED_ENTITIES
 import com.openlattice.postgres.PostgresTable.MATCHED_ENTITIES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -45,28 +46,40 @@ private const val AVG_SCORE_FIELD = "avg_score"
  * @param hds A hikari datasource that can be used for executing SQL.
  */
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
-    override fun getClustersContaining(dataKeys: Set<EntityDataKey>): Map<UUID, List<EntityDataKey>> {
-        return PostgresIterable<Iterable<Pair<UUID, EntityDataKey>>>(
+    override fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int {
+        hds.connection.use {
+            it.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use {
+                it.setObject(1, clusterId)
+                it.setObject(2, newMember.entitySetId)
+                it.setObject(3, newMember.entityKeyId)
+                return it.executeUpdate()
+            }
+        }
+    }
+
+    override fun getClustersContaining(
+            dataKeys: Set<EntityDataKey>
+    ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
+        return PostgresIterable<Pair<UUID, Pair<EntityDataKey, Pair<EntityDataKey, Double>>>>(
                 Supplier {
                     val connection = hds.connection
                     val keys = PostgresArrays.createUuidArrayOfArrays(
                             connection,
-                            dataKeys.stream().map {
-                                arrayOf(it.entitySetId, it.entityKeyId)
-                            })
+                            dataKeys.stream().map { arrayOf(it.entitySetId, it.entityKeyId) })
                     val ps = connection.prepareStatement(CLUSTERS_CONTAINING_SQL)
                     ps.setObject(1, keys)
                     ps.setObject(2, keys)
-                    StatementHolder(connection,ps,ps.executeQuery())
+                    StatementHolder(connection, ps, ps.executeQuery())
                 },
                 Function {
-                    val clusterId = ResultSetAdapters.clusterId( it )
-                    val src = ResultSetAdapters.srcEntityDataKey( it )
+                    val clusterId = ResultSetAdapters.clusterId(it)
+                    val src = ResultSetAdapters.srcEntityDataKey(it)
                     val dst = ResultSetAdapters.dstEntityDataKey(it)
-                    listOf( clusterId to src,clusterId to dst )
+                    val score = ResultSetAdapters.score(it)
+                    clusterId to (src to (dst to score))
                 })
-                .flatMap { it }
-                .groupBy({it.first},{it.second})
+                .groupBy({ it.first }, { it.second })
+                .mapValues { it.value.groupBy({ it.first }, { it.second }).mapValues { it.value.toMap() } }
     }
 
     override fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>> {
@@ -231,3 +244,6 @@ private val BLOCKS_BY_SIZE_SQL = "SELECT ${SRC_ENTITY_SET_ID.name} as entity_set
 private val CLUSTERS_CONTAINING_SQL = "SELECT DISTINCT ${CLUSTER_ID.name} FROM ${MATCHED_ENTITIES.name} " +
         "WHERE ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ? " +
         "OR ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ?"
+
+private val UPDATE_LINKED_ENTITIES_SQL = "INSERT INTO ${LINKED_ENTITIES.name} (${CLUSTER_ID.name}, ${ENTITY_SET_ID.name}, ${ID_VALUE.name}) " +
+        "VALUES (?,?,?)"

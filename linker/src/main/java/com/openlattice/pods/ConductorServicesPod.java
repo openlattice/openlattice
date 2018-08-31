@@ -43,6 +43,8 @@ import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
+import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.users.Auth0Synchronizer;
 import com.openlattice.users.Auth0Synchronizer.Auth0SyncDriver;
 import com.openlattice.directory.UserDirectoryService;
@@ -180,6 +182,11 @@ public class ConductorServicesPod {
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
         return new Auth0TokenProvider( auth0Configuration );
+    }
+
+    @Bean
+    public LinkingQueryService linkingQueryService() {
+        return new PostgresLinkingQueryService( hikariDataSource );
     }
 
 }
