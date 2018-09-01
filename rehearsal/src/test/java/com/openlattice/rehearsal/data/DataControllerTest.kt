@@ -101,7 +101,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
 
         val entries = ImmutableList.copyOf(testData.values)
-        val ids = dataApi.createOrMergeEntities(es.id, entries)
+        val ids = dataApi.createEntities(es.id, entries)
 
         val indexExpected = entries.mapIndexed { index, data -> ids[index] to keyByFqn(data) }.toMap()
 
@@ -174,10 +174,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
 
         val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
-        val idsSrc = dataApi.createOrMergeEntities(esSrc.id, entriesSrc)
+        val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
 
         val entriesDst = ImmutableList.copyOf(testDataDst.values)
-        val idsDst = dataApi.createOrMergeEntities(esDst.id, entriesDst)
+        val idsDst = dataApi.createEntities(esDst.id, entriesDst)
 
         val indexExpectedSrc = entriesSrc.mapIndexed { index, data -> idsSrc[index] to keyByFqn(data) }.toMap()
         val indexExpectedDst = entriesSrc.mapIndexed { index, data -> idsDst[index] to keyByFqn(data) }.toMap()
