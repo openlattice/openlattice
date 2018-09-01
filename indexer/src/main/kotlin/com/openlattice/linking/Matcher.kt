@@ -47,7 +47,9 @@ interface Matcher {
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
 
     fun match(
-            elem: Map<UUID, Set<Any>>, entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
+            dataKey: EntityDataKey,
+            elem: Map<UUID, Set<Any>>,
+            entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
     ): MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>
 
     fun trimAndMerge(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>)
@@ -60,6 +62,5 @@ interface Matcher {
 
     fun updateMatchingModel(model: MultiLayerNetwork)
 
-    fun scoreBestCluster()
 }
 
