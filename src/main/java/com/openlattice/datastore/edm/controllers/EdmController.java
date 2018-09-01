@@ -188,8 +188,8 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @Override
     @RequestMapping(
             path = VERSION_PATH,
-            method = RequestMethod.GET,
-            consumes = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_YAML_VALUE } )
+            method = RequestMethod.GET
+    )
     @ResponseStatus( HttpStatus.OK )
     public UUID getEntityDataModelVersion() {
         return modelService.getCurrentEntityDataModelVersion();
@@ -1000,10 +1000,23 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     }
 
     private static void setDownloadContentType( HttpServletResponse response, FileType fileType ) {
-        if ( fileType == FileType.json ) {
+
+        if ( fileType == null ) {
             response.setContentType( MediaType.APPLICATION_JSON_VALUE );
-        } else {
-            response.setContentType( CustomMediaType.TEXT_YAML_VALUE );
+            return;
+        }
+
+        switch ( fileType ) {
+            case csv:
+                response.setContentType( CustomMediaType.TEXT_CSV_VALUE );
+                break;
+            case yaml:
+                response.setContentType( CustomMediaType.TEXT_YAML_VALUE );
+                break;
+            case json:
+            default:
+                response.setContentType( MediaType.APPLICATION_JSON_VALUE );
+                break;
         }
     }
 
@@ -1012,8 +1025,10 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             String fileName,
             FileType fileType ) {
         if ( fileType == FileType.yaml || fileType == FileType.json ) {
-            response.setHeader( "Content-Disposition",
-                    "attachment; filename=" + fileName + "." + fileType.toString() );
+            response.setHeader(
+                    "Content-Disposition",
+                    "attachment; filename=" + fileName + "." + fileType.toString()
+            );
         }
     }
 }

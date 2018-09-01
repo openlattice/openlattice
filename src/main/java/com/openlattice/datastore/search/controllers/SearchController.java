@@ -119,7 +119,7 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                         Optional.empty(),
                         Optional.empty(),
                         start,
-                        maxHits );
+                        Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS ) );
     }
 
     @Override
