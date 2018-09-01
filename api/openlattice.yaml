@@ -9,12 +9,952 @@ info:
   license:
     name: "Apache 2.0"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+
 servers:
     - url: "https://api.openlattice.com"
       description: "Production OpenLattice API"
     - url: "https://api.staging.openlattice.com"
       description: "Staging OpenLattice API"
+    - url: "http://localhost:8080"
+      description: "Local OpenLattice API"
+
 paths:
+
+  #       ....           ....           ....           ....
+  #      ||             ||             ||             ||
+  #  /"""l|\        /"""l|\        /"""l|\        /"""l|\
+  # /_______\      /_______\      /_______\      /_______\
+  # |  .-.  |------|  .-.  |------|  .-.  |------|  .-.  |------
+  #  __|L|__| .--. |__|L|__| .--. |__|L|__| .--. |__|L|__| .--.
+  # _\  \\p__`o-o'__\  \\p__`o-o'__\  \\p__`o-o'__\  \\p__`o-o'_
+  # ------------------------------------------------------------
+  # ------------------------------------------------------------
+  #
+  #               ENTITY DATA MODEL API
+  #
+  ##############################################################
+
+  ## MISSING
+  # complex type API's
+  # enum type API's
+  # schema API's
+
+  ######################
+  ## Entity Set API's ##
+  ######################
+
+     #             .,,.
+     #           *******,
+     #         **********
+     #       ************
+     #     ************.
+     #   *********(((/**
+     # ,********(((/*****
+     # *******(((/*******
+     # .****(((/********
+     #   .///******(((*
+     #  ********/(((*****
+     # ********(((*******
+     # *****/(((/*******,
+     #  .*/(((*********
+     #  .************
+     # ************
+     # **********
+     #  *******
+
+  /datastore/edm/entity/set/{entitySetId}:
+    get: # lattice-js l.564
+      summary: Get the EntitySet definition for the given EntitySet UUID.
+      operationId: getEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entitySetId"
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entitySet'
+    delete: # lattice-js l.696
+      summary: Deletes the EntitySet definition for the given EntitySet UUID.
+      operationId: deleteEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entitySetId"
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+    patch: # lattice-js l.728
+      summary: Updates the EntityType definition for the given EntitySet UUID with the given metadata.
+      operationId: updateEntitySetMetaData
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entitySetId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/entitySet'
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/ids/entity/set/{entitySetName}:
+    get: # lattice-js l.596
+      summary: Gets the EntitySet UUID for the given EntitySet name.
+      operationId: getEntitySetId
+      parameters:
+        - name: entitySetName
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entitySetName"
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entitySetId'
+  /datastore/edm/entity/set:
+    get: # lattice-js l.628
+      summary: Get all EntitySet definitions.
+      operationId: getAllEntitySets
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entitySets'
+    post: # lattice-js l.651
+      summary: Create new EntitySet definitions if they don't exist.
+      operationId: createEntitySets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/entitySets'
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/entity/set/{entitySetId}/property/type:
+    get: # lattice-js l.2344
+      summary: Get all property type metadata for an entity set.
+      operationId: getAllEntitySetPropertyMetadata
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entitySetId"
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyTypes'
+  /datastore/edm/entity/set/{entitySetId}/property/type/{propertyTypeId}/:
+    get: # lattice-js l.2376
+      summary: Get specified property type metadata for an entity set.
+      operationId: getEntitySetPropertyMetadata
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entitySetId"
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyType'
+    post: #lattice-js l.2418
+      summary: Updates the property type metadata for the given entity set.
+      operationId: updateEntitySetPropertyMetadata
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entitySetId"
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/metaDataUpdate'
+      responses:
+        '200':
+          description: Success
+      responses:
+        '200':
+          description: Success
+
+  #######################
+  ## Entity Type API's ##
+  #######################
+
+     #             .,,.
+     #           *******,
+     #         **********
+     #       ************
+     #     ************.
+     #   *********(((/**
+     # ,********(((/*****
+     # *******(((/*******
+     # .****(((/********
+     #   .///******(((*
+     #  ********/(((*****
+     # ********(((*******
+     # *****/(((/*******,
+     #  .*/(((*********
+     #  .************
+     # ************
+     # **********
+     #  *******
+
+  /datastore/edm/entity/type/{entityTypeId}:
+    get: # lattice-js l.826
+      summary: Gets the EntityType definition for the given EntityType UUID.
+      operationId: getEntityType
+      tags:
+        - entitytype
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entityType'
+    delete: #lattice-js l.997
+      summary: Deletes the EntityType definition for the given EntityType UUID.
+      operationId: deleteEntityType
+      tags:
+        - entitytype
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+      responses:
+        '200':
+          description: Success
+    patch: #lattice-js l.1188
+      summary: Updates the EntityType definition for the given EntityType UUID with the given metadata.
+      operationId: updateEntityTypeMetaData
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+      requestBody:
+        required: true
+        description: 'eg: `[{
+        "type": {namespace: LATTICE, name: UpdatedEntitySet},
+        "name": "MyEntity",
+        "title": "Title of the entity.",
+        "description": "Entity set description",
+        "contacts": ["<joke@openlattice.com>"]
+      }]`'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/entityType'
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/ids/entity/type/{namespace}/{name}:
+    get: # lattice-js l.848
+      summary: Gets the EntityType UUID for the given EntityType FQN.
+      operationId: getEntityTypeId
+      tags:
+        - entitytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+            example: openlattice
+        - name: name
+          in: path
+          required: true
+          schema:
+            example: myentitytype
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entityTypeId'
+  /datastore/edm/entity/type/{entityTypeId}/{propertyTypeId}:
+    put: #lattice-js l.1017
+      summary: Updates the EntityType definition for the given EntityType UUID by adding the given PropertyType UUID.
+      operationId: addPropertyTypeToEntityType
+      tags:
+        - entitytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      responses:
+        '200':
+          description: Success
+    delete: #lattice-js l.1061
+      summary: Updates the EntityType definition for the given EntityType UUID by removing the given PropertyType UUID.
+      operationId: removePropertyTypeFromEntityType
+      tags:
+        - entitytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/entity/type/{entityTypeId}/{propertyTypeId}/force:
+    delete: #lattice-js l.1101
+      summary: Updates the EntityType definition for the given EntityType UUID by removing the given PropertyType UUID, regardless of whether or not there is data associated with the entity type.
+      operationId: forceRemovePropertyTypeFromEntityType
+      tags:
+        - entitytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/entity/type/:
+    get: # lattice-js l.882
+      summary: Gets all EntityType definitions.
+      operationId: getAllEntityTypes
+      tags:
+        - entitytype
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entityTypes'
+    post: #lattice-js l/932
+      summary: Creates a new EntityType definition, if it doesn't exist.
+      operationId: createEntityType
+      tags:
+        - entitytype
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/entityType'
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/association/type/:
+    get: # lattice-js l.906
+      summary: Gets all association EntityType definitions.
+      operationId: getAllAssociationEntityTypes
+      tags:
+        - entitytype
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entityTypes'
+    post: #lattice-js l.1762
+      summary: Creates a new AssociationType definition, if it doesn't exist.
+      operationId: createAssociationType
+      tags:
+        - associationtype
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/associationType'
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/entity/type/{entityTypeId}/property/type:
+    patch: #lattice-js l.1145
+      summary: Updates the EntityType definition for the given EntityType UUID by reordering its properties as specified by the provided list.
+      operationId: reorderPropertyTypesInEntityType
+      tags:
+        - entitytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+        - name: propertyTypeIds
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeIds"
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/entity/type/{entityTypeId}/hierarchy:
+    patch: #lattice-js l.1268
+      summary: Get the EntityType hierarchy for the given EntityType UUID.
+      operationId: getEntityTypeHierarchy
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+      tags:
+        - entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+
+  #########################
+  ## Property Type API's ##
+  #########################
+
+     #             .,,.
+     #           *******,
+     #         **********
+     #       ************
+     #     ************.
+     #   *********(((/**
+     # ,********(((/*****
+     # *******(((/*******
+     # .****(((/********
+     #   .///******(((*
+     #  ********/(((*****
+     # ********(((*******
+     # *****/(((/*******,
+     #  .*/(((*********
+     #  .************
+     # ************
+     # **********
+     #  *******
+
+  /datastore/edm/property/type/{propertyTypeId}:
+    get: #lattice-js l.1309
+      summary: Gets the PropertyType definition for the given PropertyType UUID.
+      operationId: getPropertyType
+      tags:
+        - propertytype
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyType'
+    delete: #lattice-js l.1480
+      summary: Deletes the PropertyType definition for the given PropertyType UUID.
+      operationId: deletePropertyType
+      tags:
+        - propertytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      responses:
+        '200':
+          description: Success
+    patch: #lattice-js l.1545
+      summary: Updates the PropertyType definition for the given PropertyType UUID with the given metadata.
+      operationId: updatePropertyTypeMetaData
+      tags:
+        - propertytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/metaDataUpdate'
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/property/type/{propertyTypeId}/force:
+    delete: #lattice-js l.1512
+      summary: Deletes the PropertyType definition for the given PropertyType UUID regardless of whether or not there is data associated with it.
+      operationId: forceDeletePropertyType
+      tags:
+        - propertytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/ids/property/type/{namespace}/{name}:
+    get: #lattice-js l.1342
+      summary: Gets the PropertyType UUID for the given PropertyType FQN.
+      operationId: getPropertyTypeId
+      tags:
+        - propertytype
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyTypeId'
+  /datastore/edm/property/type/:
+    get: #lattice-js l.1378
+      summary: Gets all PropertyType definitions.
+      operationId: getAllPropertyTypes
+      tags:
+        - propertytype
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyTypes'
+    post: #lattice-js l.1435
+      summary: Creates a new PropertyType definition, if it doesn't exist.
+      operationId: createPropertyType
+      tags:
+        - propertytype
+      security:
+        - openlattice_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/propertyType'
+      responses:
+        '200':
+          description: Success
+
+  /datastore/edm/property/type/namespace/{namespace}:
+    get: #lattice-js l.1402
+      summary: Gets all PropertyType definitions under the given namespace.
+      operationId: getAllPropertyTypesInNamespace
+      tags:
+        - propertytype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/propertyTypes'
+
+  ############################
+  ## Association Type API's ##
+  ############################
+
+     #             .,,.
+     #           *******,
+     #         **********
+     #       ************
+     #     ************.
+     #   *********(((/**
+     # ,********(((/*****
+     # *******(((/*******
+     # .****(((/********
+     #   .///******(((*
+     #  ********/(((*****
+     # ********(((*******
+     # *****/(((/*******,
+     #  .*/(((*********
+     #  .************
+     # ************
+     # **********
+     #  *******
+
+  /datastore/edm/association/type/{associationTypeId}:
+    get: # lattice-js l.1631
+      summary: Get the AssociationType definition for the given AssociationType UUID.
+      operationId: getAssociationType
+      tags:
+        - associationtype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/associationTypeId"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/associationType'
+    delete: #lattice-js l.1803
+      summary: Delete the AssociationType definition for the given AssociationType UUID.
+      operationId: deleteAssociationType
+      tags:
+        - associationtype
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/associationTypeId"
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/association/type/{associationTypeId}/detailed:
+    get: # lattice-js l.1631
+      summary: Get details about the AssociationType for the given AssociationType UUID.
+      operationId: getAssociationTypeDetails
+      tags:
+        - associationtype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/associationTypeId"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/associationType'
+  /datastore/edm/association/type/{associationTypeId}/available:
+    get: # lattice-js l.1727
+      summary: Get all available associations for the given AssociationType UUID.
+      operationId: getAllAvailableAssociationTypes
+      tags:
+        - associationtype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/associationTypeId"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/associationTypes'
+  /datastore/edm/association/type/{associationTypeId}/dst/{entityTypeId}:
+    put: # lattice-js l.2216
+      summary: Update the AssociationType dst entity types for the given AssociationType UUID by adding the given EntityType UUID.
+      operationId: addDstEntityTypeToAssociationType
+      tags:
+        - associationtype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/associationTypeId"
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+      responses:
+        '200':
+          description: Success
+    delete: # lattice-js l.2301
+      summary: Updates the AssociationType dst entity types for the given AssociationType UUID by removing the given EntityType UUID.
+      operationId: removeDstEntityTypeFromAssociationType
+      tags:
+        - associationtype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/associationTypeId"
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+      responses:
+        '200':
+          description: Success
+  /datastore/edm/association/type/{associationTypeId}/src/{entityTypeId}:
+    put: # lattice-js l.2174
+      summary: Update the AssociationType src entity types for the given AssociationType UUID by adding the given EntityType UUID.
+      operationId: addSrcEntityTypeToAssociationType
+      tags:
+        - associationtype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/associationTypeId"
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+      responses:
+        '200':
+          description: Success
+    delete: # lattice-js l.2258
+      summary: Updates the AssociationType src entity types for the given AssociationType UUID by removing the given EntityType UUID.
+      operationId: removeSrcEntityTypeFromAssociationType
+      tags:
+        - associationtype
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/associationTypeId"
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entityTypeId"
+      responses:
+        '200':
+          description: Success
+
+  #       ....           ....           ....           ....
+  #      ||             ||             ||             ||
+  #  /"""l|\        /"""l|\        /"""l|\        /"""l|\
+  # /_______\      /_______\      /_______\      /_______\
+  # |  .-.  |------|  .-.  |------|  .-.  |------|  .-.  |------
+  #  __|L|__| .--. |__|L|__| .--. |__|L|__| .--. |__|L|__| .--.
+  # _\  \\p__`o-o'__\  \\p__`o-o'__\  \\p__`o-o'__\  \\p__`o-o'_
+  # ------------------------------------------------------------
+  # ------------------------------------------------------------
+  #
+  #               PERMISSIONS API
+  #
+  ##############################################################
+
+  /datastore/permissions:
+    post: #lattice-js l.29
+      summary: Get the ACL for the given ACL Key, only if the user is the owner of the ACL Key.
+      operationId: getAcl
+      tags:
+        - permissions
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: aclKey
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/aclKey"
+      responses:
+        '200':
+          description: Success
+    patch: #lattice-js l.29
+      summary: Updates the ACL for a particular ACL Key, only if the user is the owner of the ACL Key.
+      operationId: updateAcl
+      tags:
+        - permissions
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: aclKey
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/aclKey"
+      responses:
+        '200':
+          description: Success
+
+  #       ....           ....           ....           ....
+  #      ||             ||             ||             ||
+  #  /"""l|\        /"""l|\        /"""l|\        /"""l|\
+  # /_______\      /_______\      /_______\      /_______\
+  # |  .-.  |------|  .-.  |------|  .-.  |------|  .-.  |------
+  #  __|L|__| .--. |__|L|__| .--. |__|L|__| .--. |__|L|__| .--.
+  # _\  \\p__`o-o'__\  \\p__`o-o'__\  \\p__`o-o'__\  \\p__`o-o'_
+  # ------------------------------------------------------------
+  # ------------------------------------------------------------
+  #
+  #               OTHER API
+  #
+  ##############################################################
+
+
   /data/ticket/{entitySetId}/{syncId}:
     post:
       summary: "Acquires a sync ticket"
@@ -35,99 +975,296 @@ paths:
       responses:
         200:
           description: "A 128-bit random session id for synchronizing data."
+
 components:
+  responses:
+    ServerError:
+      description: Server Error
+    Success:
+      description: Success
   securitySchemes:
-    petstore_auth:
-      type: "oauth2"
-      flows:
-        implicit:
-          authorizationUrl: "http://petstore.swagger.io/oauth/dialog"
-          scopes:
-            write:pets: "modify pets in your account"
-            read:pets: "read your pets"
     openlattice_auth:
-        type: "http"
-        scheme: "bearer"
-        bearerFormat: "JWT"
-    api_key:
-        type: "apiKey"
-        name: "api_key"
-        in: "header"
+        type: apiKey
+        in: header
+        name: Authorization
+        # scheme: "bearer"
+        # bearerFormat: "JWT"
+    # apiKey:
+    #     type: apiKey
+    #     in: header
+    #     name: Authorization
+
   schemas:
-    SyncTicket:
-      type: "string"
-      format: "uuid"
-    EntitySetId:
-      type: "string"
-      format: "uuid"
-    SyncId:
-      type: "string"
-      format: "uuid"
-    FullQualifiedName:
-      type: "string"
-      format: "FullQualifiedName"
-    PropertyValues:
-      oneOf:
-        - type: string
-        - type: number
-        - type: boolean
-    Property:
-      type: "array"
-      items:
-        $ref: '#/components/schemas/PropertyValues'
-    Entity:
+
+    #######################
+    ## entityset-schema's #
+    #######################
+
+    entitySetId:
+      type: string
+      format: uuid
+      example: 73f4b728-6c1d-49ee-bc5a-a618adf68590
+    entitySetName:
+      title: Entity set name
+      type: string
+      example: PoliceRecords
+    entitySet:
+      title: An entity set
       type: object
-      additionalProperties:
-        $ref: '#/components/schemas/Property'
-    User:
-      type: "object"
+      properties:
+        name:
+          type: string
+        entitySetId:
+          $ref: "#/components/schemas/entitySetId"
+        title:
+          type: string
+        contacts:
+          type: object
+        id:
+          type: string
+          format: uuid
+        linking:
+          type: boolean
+        linked_entity_sets:
+          type: object
+        external:
+          type: boolean
+      example:
+        entityTypeId: 963b597b-b28d-4f59-b2e6-4d443499e464
+        name: entitySetName
+        title: This is the title of the entitySet
+        contacts: ['support@openlattice.com']
+    entitySets:
+      multipleOf: entitySet
+      example:
+        - entityTypeId: 963b597b-b28d-4f59-b2e6-4d443499e464
+          name: entitySetName1
+          title: This is the title of the first entitySet
+          contacts: ['support@openlattice.com']
+        - entityTypeId: 963b597b-b28d-4f59-b2e6-4654516847de
+          name: entitySetName2
+          title: This is the title of the second entitySet
+          contacts: ['support@openlattice.com']
+    metaDataUpdate:
+      title: A meta update
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        name:
+          type: string
+        contacts:
+          type: object
+        type:
+          $ref: "#/components/schemas/FullQualifiedName"
+        pii:
+          type: boolean
+        defaultShow:
+          type: boolean
+        url:
+          type: string
+      example:
+        type:
+          namespace: lattice
+          name: propertyname
+        title: a more descriptive explanation of the property
+        defaultShow: false
+
+    ###########################
+    ## property-type-schema's #
+    ###########################
+
+    propertyTypeId:
+      type: string
+      format: uuid
+      example: 73f4b728-6c1d-49ee-bc5a-a618adf68590
+    propertyTypeIds:
+      multipleOf: propertyTypeId
+      example: [73f4b728-6c1d-49ee-bc5a-a618adf68590, 73f4b728-6c1d-49ee-bc5a-a618adf68590]
+    propertyType:
+      type: object
+      title: A property type
       properties:
         id:
-          type: "integer"
-          format: "int64"
-        username:
-          type: "string"
-        firstName:
-          type: "string"
-        lastName:
-          type: "string"
-        email:
-          type: "string"
-        password:
-          type: "string"
-        phone:
-          type: "string"
-        userStatus:
-          type: "integer"
-          format: "int32"
-          description: "User Status"
-      xml:
-        name: "User"
-    ApiResponse:
-      type: "object"
-      properties:
-        code:
-          type: "integer"
-          format: "int32"
+          type: string
+        description:
+          type: string
+        schemas:
+          type: string
+        datatype:
+          type: string
+        piiField:
+          type: boolean
+        multiValued:
+          type: boolean
+        analyzer:
+          type: boolean
         type:
-          type: "string"
-        message:
-          type: "string"
+          $ref: "#/components/schemas/FullQualifiedName"
+        name:
+          type: string
+        title:
+          type: string
+      example:
+        id: 73f4b728-6c1d-49ee-bc5a-a618adf68590
+        description: This is the description of my property
+        title: myproperty
+        type:
+          namespace: lattice
+          name: propertyname
+        schemas:
+          namespace: lattice
+          name: schemaname
+        datatype: string
+        piiField: false
+        analyzer: STANDARD
+    propertyTypes:
+      multipleOf: propertyType
 
+    ########################
+    ## entitytype-schema's #
+    ########################
+
+    entityTypeId:
+      type: string
+      format: uuid
+      example: 73f4b728-6c1d-49ee-bc5a-a618adf68590
+    entityTypeIds:
+      multipleOf: entityTypeId
+      example: [73f4b728-6c1d-49ee-bc5a-a618adf68590, 73f4b728-6c1d-49ee-bc5a-a618adf68590]
+    entityType:
+      title: An entity type
+      type: object
+      properties:
+        id:
+          type: entityTypeId
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: "#/components/schemas/FullQualifiedName"
+        schemas:
+          $ref: "#/components/schemas/FullQualifiedName"
+        key:
+          type: object
+        properties:
+          type: object
+        basetype:
+          type: string
+        category:
+          type: string
+      example:
+        id: ec6865e6-e60e-424b-a071-6a9c1603d735
+        type:
+          namespace: lattice
+          name: myentity
+        schemas:
+          namespace: lattice
+          name: myschema
+        key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
+        properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
+    entityTypes:
+      multipleOf: entityType
+      title: An array of entityTypes
+
+
+    ##############################
+    ## association type-schema's #
+    ##############################
+
+    associationTypeId:
+      type: string
+      format: uuid
+      example: 73f4b728-6c1d-49ee-bc5a-a618adf68590
+    associationType:
+      type: object
+      properties:
+        entityType:
+          $ref: "#/components/schemas/entityType"
+        src:
+          type: string
+        dst:
+          type: string
+        bidirectional:
+          type: boolean
+        description:
+          type: string
+      example:
+        entityType:
+          id: ec6865e6-e60e-424b-a071-6a9c1603d735
+          type:
+            namespace: lattice
+            name: myentity
+          schemas:
+            namespace: lattice
+            name: myschema
+          key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
+          properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
+        src: [ec6865e6-e60e-424b-a071-6a9c1603d735]
+        dst: [4b08e1f9-4a00-4169-92ea-10e377070220]
+        description: AssociationType Description
+        bidirectional: true
+    associationTypes:
+      multipleOf: associationType
+      title: An array of associationTypes
+    associationTypeIds:
+      multipleOf: associationTypeId
+      title: An array of associationTypeIds
+
+    # SyncTicket:
+    #   type: "string"
+    #   format: "uuid"
+    aclKey:
+      type: string
+      format: uuid
+    FullQualifiedName:
+      title: "Fullqualified name (eg. entity type / association type)"
+      type: "string"
+      properties:
+        namespace:
+          type: string
+        name:
+          type: string
+    # ApiResponse:
+    #   type: "object"
+    #   properties:
+    #     code:
+    #       type: "integer"
+    #       format: "int32"
+    #     type:
+    #       type: "string"
+    #     message:
+    #       type: "string"
 
 tags:
-- name: "pet"
-  description: "Everything about your Pets"
+- name: entityset
+  description: Entity Set API's
   externalDocs:
-    description: "Find out more"
-    url: "http://swagger.io"
-- name: "store"
-  description: "Access to Petstore orders"
-- name: "user"
-  description: "Operations about user"
+    description: OpenLattice help pages
+    url: https://help.openlattice.com/
+- name: entitytype
+  description: Entity Type API's
   externalDocs:
-    description: "Find out more about our store"
-    url: "http://swagger.io"
+    description: OpenLattice help pages
+    url: https://help.openlattice.com/
+- name: propertytype
+  description: Property Type API's
+  externalDocs:
+    description: OpenLattice help pages
+    url: https://help.openlattice.com/
+- name: associationtype
+  description: Association Type API's
+  externalDocs:
+    description: OpenLattice help pages
+    url: https://help.openlattice.com/
+- name: permissions
+  description: Permissions API's
+  externalDocs:
+    description: OpenLattice help pages
+    url: https://help.openlattice.com/
 externalDocs:
-  description: "Find out more about Swagger"
-  url: "http://swagger.io"
+  description: "Find out more about OpenLattice"
+  url: "https://openlattice.com/"
