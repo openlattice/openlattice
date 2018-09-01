@@ -21,6 +21,7 @@
 
 package com.openlattice.data.storage
 
+import com.google.common.collect.Multimaps
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.edm.type.PropertyType
@@ -112,9 +113,11 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             metadataOptions: Set<MetadataOption>,
             version: Optional<Long> = Optional.empty()
-    ): PostgresIterable<Pair<UUID, SetMultimap<UUID, Any>>> {
-        val adapter = Function<ResultSet, Pair<UUID, SetMultimap<UUID, Any>>> {
-            ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
+    ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
+        val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
+            ResultSetAdapters.id(it) to Multimaps.asMap(
+                    ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
+            ).toMap()
         }
         return streamableEntitySet(
                 entitySetId,
