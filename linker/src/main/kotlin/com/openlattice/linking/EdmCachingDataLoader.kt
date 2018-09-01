@@ -49,10 +49,7 @@ class EdmCachingDataLoader(
         hazelcast: HazelcastInstance
 ) : DataLoader {
     companion object {
-
         private val logger = LoggerFactory.getLogger(EdmCachingDataLoader::class.java)
-        private val inProgress = ReentrantReadWriteLock()
-        private val lockedEntities: MutableSet<EntityDataKey> = mutableSetOf()
     }
 
     private val entityTypes: IMap<UUID, EntityType> = hazelcast.getMap(HazelcastMap.ENTITY_TYPES.name)
@@ -68,16 +65,22 @@ class EdmCachingDataLoader(
     )
 
     override fun getEntity(dataKey: EntityDataKey): Map<UUID, Set<Any>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return getEntities(setOf(dataKey)).entries.first().value
     }
 
     override fun getEntities(dataKeys: Set<EntityDataKey>): Map<EntityDataKey, Map<UUID, Set<Any>>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return dataKeys
+                .groupBy({ it.entitySetId }, { it.entityKeyId })
+                .mapValues { it.value.toSet() }
+                .flatMap { edkp ->
+                    getEntityStream(edkp.key, edkp.value).map { EntityDataKey(edkp.key, it.first) to it.second }
+                }
+                .toMap()
     }
 
     override fun getEntityStream(
             entitySetId: UUID, entityKeyIds: Set<UUID>
-    ): PostgresIterable<Pair<UUID, SetMultimap<UUID, Any>>> {
+    ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         return dataQueryService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
                 entitySetId,
                 Optional.of(entityKeyIds),

@@ -94,7 +94,8 @@ class RealtimeLinkingService
 
                     if (clusters.isEmpty()) {
                         val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
-                        return@map ClusterUpdate(clusterId, blockKey, matcher.match(elem, mapOf(blockKey to elem)))
+                        val block = blockKey to mapOf(blockKey to elem)
+                        return@map ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
                     }
 
                     var maybeBestCluster: Pair<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>? = null
@@ -102,7 +103,9 @@ class RealtimeLinkingService
 
                     clusters
                             .forEach {
-                                val matchedCluster = matcher.match(elem, loader.getEntities(collectKeys(it.value)))
+                                val block = blockKey to loader.getEntities(collectKeys(it.value) + blockKey)
+                                val matchedBlock = matcher.match(block)
+                                val matchedCluster = matchedBlock.second
                                 val clusterSize = matchedCluster.values.sumBy { it.size }
                                 val avgScore = (matchedCluster.values.sumByDouble { it.values.sum() } / clusterSize)
                                 if (lowestAvgScore > avgScore || lowestAvgScore < 0) {

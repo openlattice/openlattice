@@ -68,12 +68,11 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
     }
 
     override fun match(
-            elem: Map<UUID, Set<Any>>, entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
+            dataKey: EntityDataKey,
+            elem: Map<UUID, Set<Any>>,
+            entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
     ): MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>> {
         val model = localModel.get()
-
-        val entityDataKey = block.first
-        val entities = block.second
 
         val extractedEntities = entities.mapValues { extractProperties(it.value) }
 
@@ -84,7 +83,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
                     .toMutableMap()
         }.toMutableMap()
 
-        return entityDataKey to matchedEntities
+        return dataKey to matchedEntities
     }
 
     /**
