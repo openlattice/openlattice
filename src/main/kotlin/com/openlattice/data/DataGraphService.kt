@@ -385,8 +385,7 @@ open class DataGraphService(
 
     override fun getNeighborEntitySetIds(entitySetId: UUID): Set<UUID> {
         return getNeighborEntitySets(entitySetId)
-                .asSequence()
-                .flatMap { sequenceOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
+                .flatMap { listOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
                 .toSet()
     }
 
