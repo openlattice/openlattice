@@ -37,6 +37,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 public class PropertyType extends AbstractSchemaAssociatedSecurableType {
 
     protected final   boolean              multiValued;
+    protected final   boolean              postgresIndexed;
     protected         EdmPrimitiveTypeKind datatype;
     protected         boolean              piiField;
     protected         Analyzer             analyzer;

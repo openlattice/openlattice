@@ -22,11 +22,6 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -36,6 +31,12 @@ import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public interface DataApi {
     /*
@@ -57,6 +58,7 @@ public interface DataApi {
     String PROPERTY_TYPE_ID = "propertyTypeId";
 
     String COUNT  = "count";
+    String NEIGHBORS  = "neighbors";
     String UPDATE = "update";
 
     String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
@@ -188,8 +190,21 @@ public interface DataApi {
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Void clearEntityFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
 
+    /**
+     * Clears the Entity matching the given Entity id and all of its neighbor Entities
+     *
+     * @param vertexEntitySetId the id of the EntitySet to delete from
+     * @param vertexEntityKeyId the id of the Entity to delete
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS )
+    Long clearEntityAndNeighborEntities(
+            @Path( ENTITY_SET_ID ) UUID vertexEntitySetId,
+            @Path( ENTITY_KEY_ID ) UUID vertexEntityKeyId
+    );
+
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer deleteEntityProperties(
+
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Map<UUID, Map<UUID,Set<ByteBuffer>>> entityProperties );
 
