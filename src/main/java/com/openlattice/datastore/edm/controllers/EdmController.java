@@ -23,7 +23,6 @@ package com.openlattice.datastore.edm.controllers;
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
@@ -38,7 +37,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDatastore;
-import com.openlattice.data.PropertySummary;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.exceptions.BadRequestException;
@@ -65,11 +64,8 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.exceptions.ApiExceptions;
 import com.openlattice.exceptions.ErrorsDTO;
 
-import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 
@@ -423,11 +419,14 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @RequestMapping(
             path = SUMMARY_PATH,
             method = RequestMethod.GET )
-    public Map<UUID, Iterable<PropertySummary>> getAllPropertySummaries() {
+    public Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries() {
         Set<UUID> propertyTypeIds = modelService.getAllPropertyTypeIds();
-        Map<UUID, Iterable<PropertySummary>> allPropertySummaries= Maps.newHashMapWithExpectedSize( propertyTypeIds.size() );
+        //removes AUDIT types, which don't get populated locally
+        propertyTypeIds.remove(UUID.fromString( "f1a0bda3-406a-42d4-a24b-79e1042a1535" ));
+        propertyTypeIds.remove(UUID.fromString( "19e02f52-a2c5-4f77-81fb-1ebf2638ba01" ));
+        Map<UUID, Iterable<PropertyUsageSummary>> allPropertySummaries= Maps.newHashMapWithExpectedSize( propertyTypeIds.size() );
         for ( UUID propertyTypeId : propertyTypeIds ) {
-            allPropertySummaries.put(propertyTypeId, modelService.getPropertySummary( propertyTypeId ));
+            allPropertySummaries.put(propertyTypeId, modelService.getPropertyUsageSummary( propertyTypeId ));
         }
         return allPropertySummaries;
     }
@@ -436,9 +435,9 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @RequestMapping(
             path = SUMMARY_PATH + ID_PATH,
             method = RequestMethod.GET )
-    public Iterable<PropertySummary> getPropertySummary(@PathVariable ( ID ) UUID propertyTypeId) {
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary(@PathVariable ( ID ) UUID propertyTypeId) {
         ensureAdminAccess();
-        return modelService.getPropertySummary(propertyTypeId);
+        return modelService.getPropertyUsageSummary(propertyTypeId);
     }
 
     @Override
