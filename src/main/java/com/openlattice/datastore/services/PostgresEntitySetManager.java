@@ -21,12 +21,10 @@
 package com.openlattice.datastore.services;
 
 import com.google.common.collect.Sets;
-import com.openlattice.data.Entity;
 import com.openlattice.edm.EntitySet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.openlattice.edm.type.PropertyType;
-import com.openlattice.data.PropertySummary;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -40,8 +38,6 @@ import java.sql.*;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class PostgresEntitySetManager {
     private static final Logger           logger = LoggerFactory.getLogger( PostgresEntitySetManager.class );
@@ -141,7 +137,7 @@ public class PostgresEntitySetManager {
         }
     }
 
-    public Iterable<PropertySummary> getPropertySummary( String propertyTableName ) {
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( String propertyTableName ) {
         return new PostgresIterable<>( () -> {
             try {
                 Connection connection = hds.getConnection();
@@ -154,7 +150,7 @@ public class PostgresEntitySetManager {
             }
         }, rs -> {
             try {
-                return ResultSetAdapters.propertySummary( rs );
+                return ResultSetAdapters.propertyUsageSummary( rs );
             } catch ( SQLException e ) {
                 logger.error( "Unable to load property summary information.", e );
                 throw new IllegalStateException( "Unable to load property summary information.", e );

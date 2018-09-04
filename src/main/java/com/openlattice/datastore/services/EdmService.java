@@ -36,7 +36,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
@@ -50,7 +49,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DatasourceManager;
-import com.openlattice.data.PropertySummary;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntityDataModel;
@@ -684,9 +683,9 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Iterable<PropertySummary> getPropertySummary( UUID propertyTypeId ) {
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
         String propertyTableName = DataTables.quote(DataTables.propertyTableName( propertyTypeId ));
-        return entitySetManager.getPropertySummary( propertyTableName );
+        return entitySetManager.getPropertyUsageSummary( propertyTableName );
     }
 
     @Override

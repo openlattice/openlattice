@@ -105,13 +105,8 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.Entity;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDataMetadata;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.PropertyMetadata;
-import com.openlattice.data.PropertySummary;
-import com.openlattice.data.PropertyValueKey;
+import com.openlattice.data.*;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
@@ -836,11 +831,11 @@ public final class ResultSetAdapters {
         return new Entity( entityKeyId, data );
     }
 
-    public static PropertySummary propertySummary( ResultSet rs ) throws SQLException {
+    public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
         UUID entityTypeID = (UUID) rs.getObject(ENTITY_TYPE_ID_FIELD);
         UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
-        int count = rs.getInt(COUNT);
-        return new PropertySummary( entityTypeID, entitySetId, count);
+        long count = rs.getLong(COUNT);
+        return new PropertyUsageSummary( entityTypeID, entitySetId, count);
     }
 
 }
