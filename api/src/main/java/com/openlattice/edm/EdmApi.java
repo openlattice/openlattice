@@ -34,7 +34,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -373,11 +372,11 @@ public interface EdmApi {
     Iterable<EntitySet> getEntitySets();
 
     @GET( SUMMARY_BASE_PATH )
-    Map<UUID, Stream<PropertyUsageSummary>> getAllPropertySummaries( @Body EdmRequest request );
+    Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries();
 
 
     @GET( SUMMARY_BASE_PATH + ID_PATH )
-    Stream<PropertyUsageSummary> getPropertySummary( @Path( ID ) UUID propertyTypeId );
+    Iterable<PropertyUsageSummary> getPropertyUsageSummary( @Path( ID ) UUID propertyTypeId );
 
     /**
      * Creates multiple entity sets if they do not exist.
