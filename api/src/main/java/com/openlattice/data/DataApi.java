@@ -22,11 +22,6 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -36,6 +31,12 @@ import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public interface DataApi {
     /*
@@ -57,6 +58,7 @@ public interface DataApi {
     String PROPERTY_TYPE_ID = "propertyTypeId";
 
     String COUNT  = "count";
+    String NEIGHBORS  = "neighbors";
     String UPDATE = "update";
 
     String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
@@ -110,7 +112,6 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities );
 
-
     /**
      * Creates a new set of associations.
      *
@@ -119,8 +120,8 @@ public interface DataApi {
      */
     @PUT( BASE + "/" + ASSOCIATION )
     Integer createAssociations( @Body Set<DataEdgeKey> associations );
-    /**
 
+    /**
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. Keys are association entity set ids and values for each keys
@@ -153,6 +154,18 @@ public interface DataApi {
      */
     @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Void clearEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId );
+
+    /**
+     * Clears the Entity matching the given Entity id and all of its neighbor Entities
+     *
+     * @param vertexEntitySetId the id of the EntitySet to delete from
+     * @param vertexEntityKeyId the id of the Entity to delete
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS )
+    Long clearEntityAndNeighborEntities(
+            @Path( ENTITY_SET_ID ) UUID vertexEntitySetId,
+            @Path( ENTITY_KEY_ID ) UUID vertexEntityKeyId
+    );
 
     /**
      * Replaces a single entity from an entity set.
