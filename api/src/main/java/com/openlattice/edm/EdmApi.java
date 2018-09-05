@@ -18,8 +18,7 @@
 
 package com.openlattice.edm;
 
-import com.fasterxml.jackson.databind.util.JSONPObject;
-import com.openlattice.data.PropertySummary;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
@@ -374,11 +373,11 @@ public interface EdmApi {
     Iterable<EntitySet> getEntitySets();
 
     @GET( SUMMARY_BASE_PATH )
-    Map<UUID, Stream<PropertySummary>> getAllPropertySummaries( @Body EdmRequest request );
+    Map<UUID, Stream<PropertyUsageSummary>> getAllPropertySummaries( @Body EdmRequest request );
 
 
     @GET( SUMMARY_BASE_PATH + ID_PATH )
-    Stream<PropertySummary> getPropertySummary( @Path( ID ) UUID propertyTypeId );
+    Stream<PropertyUsageSummary> getPropertySummary( @Path( ID ) UUID propertyTypeId );
 
     /**
      * Creates multiple entity sets if they do not exist.
