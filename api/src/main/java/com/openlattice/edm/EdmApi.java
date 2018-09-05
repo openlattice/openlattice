@@ -18,7 +18,6 @@
 
 package com.openlattice.edm;
 
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.openlattice.data.PropertySummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.requests.EdmDetailsSelector;
@@ -35,7 +34,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -374,11 +372,11 @@ public interface EdmApi {
     Iterable<EntitySet> getEntitySets();
 
     @GET( SUMMARY_BASE_PATH )
-    Map<UUID, Stream<PropertySummary>> getAllPropertySummaries( @Body EdmRequest request );
+    Map<UUID, Iterable<PropertySummary>> getAllPropertySummaries();
 
 
     @GET( SUMMARY_BASE_PATH + ID_PATH )
-    Stream<PropertySummary> getPropertySummary( @Path( ID ) UUID propertyTypeId );
+    Iterable<PropertySummary> getPropertySummary( @Path( ID ) UUID propertyTypeId );
 
     /**
      * Creates multiple entity sets if they do not exist.
