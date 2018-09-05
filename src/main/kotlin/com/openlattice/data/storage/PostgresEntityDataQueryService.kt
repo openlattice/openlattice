@@ -479,11 +479,28 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
         }
     }
+
+    fun markAsLinked(entitySetId: UUID, processedEntities: Set<UUID>): Int {
+        hds.connection.use {
+            it.prepareStatement(updateLastLinkSql(entitySetId)).use {
+                val arr = PostgresArrays.createUuidArray(it.connection, processedEntities)
+                it.setObject(1, OffsetDateTime.now())
+                it.setArray(2, arr)
+                return it.executeUpdate()
+            }
+
+        }
+    }
 }
 
 fun updateLastIndexSql(entitySetId: UUID): String {
     val entitiesTable = quote(entityTableName(entitySetId))
     return "UPDATE $entitiesTable SET ${LAST_INDEX.name} = ? WHERE ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+}
+
+fun updateLastLinkSql(entitySetId: UUID): String {
+    val entitiesTable = quote(entityTableName(entitySetId))
+    return "UPDATE $entitiesTable SET ${LAST_LINK.name} = ? WHERE ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
 fun updateAllEntityVersions(entitySetId: UUID, version: Long): String {
@@ -540,10 +557,11 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             VERSION.name,
             VERSIONS.name,
             LAST_WRITE.name,
-            LAST_INDEX.name
+            LAST_INDEX.name,
+            LAST_LINK.name
     )
     return "INSERT INTO $esTableName (${columns.joinToString(",")}) " +
-            "VALUES( ?,$version,ARRAY[$version],now(),'-infinity') " +
+            "VALUES( ?,$version,ARRAY[$version],now(),'-infinity','-infinity') " +
             "ON CONFLICT (${ID_VALUE.name}) " +
             "DO UPDATE SET versions = $esTableName.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
@@ -586,8 +604,9 @@ fun selectEntitySetWithPropertyTypes(
     //@formatter:off
     val columns = setOf(
             ID_VALUE.name,
-            if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) {"${LAST_WRITE.name}" } else { "" },
-            if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) {"${LAST_INDEX.name}" } else { "" })
+            if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) { LAST_WRITE.name } else { "" },
+            if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) { LAST_INDEX.name } else { "" },
+            if(metadataOptions.contains(MetadataOption.LAST_LINK) ) { LAST_LINK.name } else { "" })
             .union( authorizedPropertyTypes.values.map(::quote ) )
     return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} FROM (SELECT * \n" +
             "FROM $esTableName " +
@@ -618,8 +637,9 @@ fun selectEntitySetWithPropertyTypesAndVersion(
     //@formatter:off
     val columns = setOf(
             "${ID_VALUE.name}",
-            if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) {"${LAST_WRITE.name}" } else { "" },
-            if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) {"${LAST_INDEX.name}" } else { "" })
+            if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) { LAST_WRITE.name } else { "" },
+            if(metadataOptions.contains(MetadataOption.LAST_INDEX) )  {LAST_INDEX.name } else { "" },
+            if(metadataOptions.contains(MetadataOption.LAST_LINK) )  {LAST_LINK.name } else { "" })
             .union( authorizedPropertyTypes.values.map(::quote ) )
 
     return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} FROM ( SELECT * " +

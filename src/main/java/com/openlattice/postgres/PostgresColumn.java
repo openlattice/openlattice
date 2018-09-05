@@ -184,6 +184,7 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition KEY                         =
             new PostgresColumnDefinition( KEY_FIELD, UUID_ARRAY ).notNull();
     public static final String                   LAST_INDEX_FIELD            = "last_index";
+    public static final String                   LAST_LINK_FIELD            = "last_link";
     public static final String                   LAST_WRITE_FIELD            = "last_write";
     public static final String                   LSB_FIELD                   = "lsb";
     public static final PostgresColumnDefinition LSB                         =
