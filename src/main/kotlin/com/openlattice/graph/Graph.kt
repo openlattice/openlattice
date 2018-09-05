@@ -154,6 +154,25 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
+    override fun getEdgesContainingEntities(entityDataKey: EntityDataKey): Stream<Edge> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.getConnection()
+                    val stmt = connection.prepareStatement(EDGES_CONTAINING_ENTITIES_SQL)
+                    stmt.setObject(1, entityDataKey.getEntitySetId())
+                    stmt.setObject(2, entityDataKey.getEntityKeyId())
+                    stmt.setObject(3, entityDataKey.getEntitySetId())
+                    stmt.setObject(4, entityDataKey.getEntityKeyId())
+                    stmt.setObject(5, entityDataKey.getEntitySetId())
+                    stmt.setObject(6, entityDataKey.getEntityKeyId())
+                    val rs = stmt.executeQuery()
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, Edge> {ResultSetAdapters.edge(it)}
+
+        ).stream()
+    }
+
     override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, vertexId: UUID): Stream<Edge> {
 
         return PostgresIterable(
@@ -369,6 +388,11 @@ private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToStri
 private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+
+    private val EDGES_CONTAINING_ENTITIES_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
+            "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +
+            "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?) OR " +
+            "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ?)"
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +

@@ -21,9 +21,11 @@
 package com.openlattice.graph.core;
 
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,6 +56,8 @@ public interface GraphService {
     Map<EdgeKey, Edge> getEdgesAsMap( Set<EdgeKey> keys );
 
     Stream<Edge> getEdges( Set<EdgeKey> keys );
+
+    Stream<Edge> getEdgesContainingEntities( EntityDataKey entityDataKeys );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 
