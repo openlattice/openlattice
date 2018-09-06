@@ -87,8 +87,6 @@ task generatePythonClient(type: org.openapitools.generator.gradle.plugin.tasks.G
     outputDir = file("build/openapi/python").getAbsolutePath()
 }
 
-<<<<<<< HEAD
-=======
 task generateRClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
     generatorName = "r"
     inputSpec = file("openlattice.yaml").getAbsolutePath()
@@ -107,7 +105,6 @@ task generateKotlinClient(type: org.openapitools.generator.gradle.plugin.tasks.G
     ]
 }
 
->>>>>>> develop
 clean.doFirst {
     delete(swaggerOutputDir)
     delete(file("build/openapi"))
