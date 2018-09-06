@@ -21,6 +21,8 @@
 package com.openlattice.datastore.data;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.datastore.authentication.MultipleAuthenticatedUsersBase;
@@ -50,7 +52,10 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         EntitySet es = createEntitySet( et );
 
         dataApi.replaceEntities( es.getId(),
-                TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ), false );
+                Maps.transformValues(
+                        TestDataFactory.randomStringEntityData( numberOfEntries, et.getProperties() ),
+                        Multimaps::asMap ),
+                false );
 
         Iterable<SetMultimap<FullQualifiedName, Object>> results = dataApi.loadEntitySetData( es.getId(), null, "" );
         Assert.assertEquals( numberOfEntries, Iterables.size( results ) );
@@ -62,8 +67,8 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         EntitySet es = createEntitySet( et );
         UUID syncId = syncApi.getCurrentSyncId( es.getId() );
 
-        Map<UUID, SetMultimap<UUID, Object>> entities = TestDataFactory.randomStringEntityData( numberOfEntries,
-                et.getProperties() );
+        Map<UUID, Map<UUID, Set<Object>>> entities = Maps.transformValues( TestDataFactory.randomStringEntityData( numberOfEntries,
+                et.getProperties() ),Multimaps::asMap);
         dataApi.replaceEntities( es.getId(), entities, false );
 
         // load selected data
@@ -81,9 +86,9 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
         }
 
         Set<Set<String>> expectedValues = new HashSet<>();
-        for ( SetMultimap<UUID, Object> entity : entities.values() ) {
+        for ( Map<UUID, Set<Object>> entity : entities.values() ) {
             expectedValues
-                    .add( entity.asMap().entrySet().stream()
+                    .add( entity.entrySet().stream()
                             // filter the entries with key (propertyId) in the selected set
                             .filter( e -> ( selectedProperties.isEmpty() || selectedProperties
                                     .contains( e.getKey() ) ) )
