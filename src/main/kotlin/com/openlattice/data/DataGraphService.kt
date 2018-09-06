@@ -146,20 +146,13 @@ open class DataGraphService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        var entityDataKeys = mutableListOf<EntityDataKey>()
-        var edgeKeys = mutableSetOf<EdgeKey>()
-        //converts input entitySetId and entityKeyIds into a list of EntityDataKey objects
-        entityKeyIds.forEach{
-            entityDataKeys.add(EntityDataKey(entitySetId, it))
-        }
-        //gets EdgeKeys of any edge that contains an EntityDataKey as a src, dst, or edge and puts the EdgeKey in a set
-        entityDataKeys.forEach{
-            graphService.getEdgesContainingEntities(it).forEach{
-                edgeKeys.add(it.getKey())
-            }
-        }
-        //clears those Edges
+        val edgeKeys = entityKeyIds
+                .flatMap { graphService.getEdgeKeysContainingEntity(entitySetId, it) }
+                .toSet()
         graphService.clearEdges(edgeKeys)
+        edgeKeys.forEach {
+            eds.clearEntities(it.edge.entitySetId, setOf(it.edge.entityKeyId), authorizedPropertyTypes)
+        }
         return eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 

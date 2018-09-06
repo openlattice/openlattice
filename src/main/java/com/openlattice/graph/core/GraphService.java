@@ -57,7 +57,7 @@ public interface GraphService {
 
     Stream<Edge> getEdges( Set<EdgeKey> keys );
 
-    Stream<Edge> getEdgesContainingEntities( EntityDataKey entityDataKeys );
+    Iterable<EdgeKey> getEdgeKeysContainingEntity( UUID entitySetId, UUID entityKeyId );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 

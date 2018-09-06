@@ -53,6 +53,7 @@ import kotlin.streams.toList
  */
 
 private val logger = LoggerFactory.getLogger(Graph::class.java)
+
 class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
 
     override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
@@ -154,23 +155,20 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
-    override fun getEdgesContainingEntities(entityDataKey: EntityDataKey): Stream<Edge> {
+    override fun getEdgeKeysContainingEntity(entitySetId: UUID, entityKeyId: UUID): Iterable<EdgeKey> {
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
-                    val stmt = connection.prepareStatement(EDGES_CONTAINING_ENTITIES_SQL)
-                    stmt.setObject(1, entityDataKey.getEntitySetId())
-                    stmt.setObject(2, entityDataKey.getEntityKeyId())
-                    stmt.setObject(3, entityDataKey.getEntitySetId())
-                    stmt.setObject(4, entityDataKey.getEntityKeyId())
-                    stmt.setObject(5, entityDataKey.getEntitySetId())
-                    stmt.setObject(6, entityDataKey.getEntityKeyId())
+                    val connection = hds.connection
+                    val stmt = connection.prepareStatement(NEIGHBORHOOD_SQL)
+                    stmt.setObject(1, entitySetId)
+                    stmt.setObject(2, entityKeyId)
+                    stmt.setObject(3, entitySetId)
+                    stmt.setObject(4, entityKeyId)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
-                Function<ResultSet, Edge> {ResultSetAdapters.edge(it)}
-
-        ).stream()
+                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+        )
     }
 
     override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, vertexId: UUID): Stream<Edge> {
@@ -227,12 +225,12 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Stream<Pair<EntityDataKey, Long>> {
         val countColumn = "total_count"
-        val query = getTopUtilizersSql(entitySetId,srcFilters,dstFilters, limit)
+        val query = getTopUtilizersSql(entitySetId, srcFilters, dstFilters, limit)
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
                     val stmt = connection.createStatement()
-                    logger.info("Executing top utilizer query: {}", query )
+                    logger.info("Executing top utilizer query: {}", query)
                     val rs = stmt.executeQuery(query)
                     StatementHolder(connection, stmt, rs)
                 },
@@ -299,7 +297,7 @@ private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, 
 private fun associationClauses(
         entitySetColumn: String, entitySetId: UUID, neighborColumn: String, associationFilters: SetMultimap<UUID, UUID>
 ): String {
-    if( associationFilters.isEmpty ) {
+    if (associationFilters.isEmpty) {
         return " false "
     }
     return Multimaps
@@ -388,11 +386,6 @@ private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToStri
 private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
-
-    private val EDGES_CONTAINING_ENTITIES_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-            "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +
-            "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?) OR " +
-            "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ?)"
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +
