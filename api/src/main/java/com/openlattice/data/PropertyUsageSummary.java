@@ -6,16 +6,16 @@ import com.openlattice.client.serialization.SerializationConstants;
 
 import java.util.UUID;
 
-public class PropertySummary {
+public class PropertyUsageSummary {
     private final UUID entityTypeID;
     private final UUID entitySetID;
-    private final int count;
+    private final long count;
 
     @JsonCreator
-    public PropertySummary(
+    public PropertyUsageSummary(
             @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeID,
             @JsonProperty( SerializationConstants.ENTITY_SET_ID ) UUID entitySetID,
-            @JsonProperty( SerializationConstants.COUNT) int count ) {
+            @JsonProperty( SerializationConstants.COUNT) long count ) {
         this.entityTypeID = entityTypeID;
         this.entitySetID = entitySetID;
         this.count = count;
@@ -32,7 +32,7 @@ public class PropertySummary {
     }
 
     @JsonProperty( SerializationConstants.COUNT )
-    public int getCount() {
+    public long getCount() {
         return count;
     }
 }
