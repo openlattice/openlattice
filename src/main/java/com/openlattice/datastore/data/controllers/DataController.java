@@ -20,12 +20,6 @@
 
 package com.openlattice.datastore.data.controllers;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
-
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.cache.LoadingCache;
@@ -35,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
@@ -61,21 +56,6 @@ import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.type.PropertyType;
-import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -95,6 +75,28 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Maps.transformValues;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
+
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent {
@@ -104,7 +106,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     private SyncTicketService sts;
 
     @Inject
-    private EdmService dms;
+    private EdmService edmService;
 
     @Inject
     private DataGraphManager dgm;
@@ -206,7 +208,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId,
                         EnumSet.of( Permission.READ ),
-                        dms.getPropertyTypesAsMap( selectedProperties ) );
+                        edmService.getPropertyTypesAsMap( selectedProperties ) );
 
         final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
 
@@ -244,9 +246,11 @@ public class DataController implements DataApi, AuthorizingComponent {
         if ( partialReplace ) {
             return dgm.partialReplaceEntities( entitySetId,
                     entities,
-                    dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+                    edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
         } else {
-            return dgm.replaceEntities( entitySetId, entities, dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+            return dgm.replaceEntities( entitySetId,
+                    entities,
+                    edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
         }
     }
 
@@ -264,7 +268,7 @@ public class DataController implements DataApi, AuthorizingComponent {
 
         return dgm.replacePropertiesInEntities( entitySetId,
                 entities,
-                dms.getPropertyTypesAsMap( requiredPropertyTypes ) );
+                edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
     }
 
     @Override
@@ -335,7 +339,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         final SetMultimap<UUID, UUID> requiredPropertyTypes = requiredAssociationPropertyTypes( associations );
         accessCheck( aclKeysForAccessCheck( requiredPropertyTypes, WRITE_PERMISSION ) );
 
-        final Map<UUID, PropertyType> authorizedPropertyTypes = dms
+        final Map<UUID, PropertyType> authorizedPropertyTypes = edmService
                 .getPropertyTypesAsMap( ImmutableSet.copyOf( requiredPropertyTypes.values() ) );
         return associations.entrySet().stream().mapToInt( association -> {
             final UUID entitySetId = association.getKey();
@@ -415,6 +419,82 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
+    @Timed
+    @RequestMapping(
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS },
+            method = RequestMethod.DELETE
+    )
+    public Long clearEntityAndNeighborEntities(
+            @PathVariable( ENTITY_SET_ID ) UUID vertexEntitySetId,
+            @PathVariable( ENTITY_KEY_ID ) UUID vertexEntityKeyId
+    ) {
+
+        /*
+         * 1 - collect all relevant EntitySets and PropertyTypes
+         */
+
+        // getNeighborEntitySetIds() returns source, destination, and edge EntitySet ids
+        Set<UUID> neighborEntitySetIds = dgm.getNeighborEntitySetIds( vertexEntitySetId );
+        Set<UUID> allEntitySetIds = ImmutableSet.<UUID>builder()
+                .add( vertexEntitySetId )
+                .addAll( neighborEntitySetIds )
+                .build();
+
+        Map<AclKey, EnumSet<Permission>> entitySetsAccessRequestMap = allEntitySetIds
+                .stream()
+                .map( AclKey::new )
+                .collect( Collectors.toMap( Function.identity(), aclKey -> READ_PERMISSION ) );
+
+        Map<UUID, Map<UUID, PropertyType>> entitySetIdToPropertyTypesMap = Maps.newHashMap();
+        Map<AclKey, EnumSet<Permission>> propertyTypesAccessRequestMap = allEntitySetIds
+                .stream()
+                .flatMap( esId -> {
+                    Map<UUID, PropertyType> propertyTypes = edmService.getPropertyTypesForEntitySet( esId );
+                    entitySetIdToPropertyTypesMap.put( esId, propertyTypes );
+                    return entitySetIdToPropertyTypesMap.keySet().stream().map( ptId -> new AclKey( esId, ptId ) );
+                } )
+                .collect( Collectors.toMap( Function.identity(), aclKey -> WRITE_PERMISSION ) );
+
+        /*
+         * 2 - check permissions for all relevant EntitySets and PropertyTypes
+         */
+
+        Map<AclKey, EnumSet<Permission>> accessRequestMap = Maps.newHashMap();
+        accessRequestMap.putAll( entitySetsAccessRequestMap );
+        accessRequestMap.putAll( propertyTypesAccessRequestMap );
+
+        accessCheck( accessRequestMap );
+
+        /*
+         * 3 - collect all neighbor entities, organized by EntitySet
+         */
+
+        Map<UUID, Set<EntityDataKey>> entitySetIdToEntityDataKeysMap = dgm
+                .getEdgesAndNeighborsForVertex( vertexEntitySetId, vertexEntityKeyId )
+                .flatMap( edge -> Stream.of( edge.getSrc(), edge.getDst(), edge.getEdge() ) )
+                .collect( Collectors.groupingBy( EntityDataKey::getEntitySetId, Collectors.toSet() ) );
+
+        /*
+         * 4 - clear all entities
+         */
+
+        if ( allEntitySetIds.containsAll( entitySetIdToEntityDataKeysMap.keySet() ) ) {
+            entitySetIdToEntityDataKeysMap.forEach( ( entitySetId, entityDataKeys ) -> dgm.clearEntities(
+                    entitySetId,
+                    entityDataKeys.stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
+                    entitySetIdToPropertyTypesMap.get( entitySetId ) )
+            );
+            return entitySetIdToEntityDataKeysMap
+                    .entrySet()
+                    .stream()
+                    .mapToLong( entry -> entry.getValue().size() )
+                    .sum();
+        } else {
+            throw new ForbiddenException( "Insufficient permissions to perform operation." );
+        }
+    }
+
+    @Override
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
             method = RequestMethod.PUT )
@@ -425,7 +505,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         ensureReadAccess( new AclKey( entitySetId ) );
         Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,
                 WRITE_PERMISSION,
-                dms.getPropertyTypesAsMap( entity.keySet() ) );
+                edmService.getPropertyTypesAsMap( entity.keySet() ) );
 
         return dgm.replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
     }
@@ -441,7 +521,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         final Map<UUID, Set<Object>> entity = new HashMap<>();
 
         entityByFqns
-                .forEach( ( fqn, properties ) -> entity.put( dms.getPropertyTypeId( fqn ), properties ) );
+                .forEach( ( fqn, properties ) -> entity.put( edmService.getPropertyTypeId( fqn ), properties ) );
 
         return replaceEntityInEntitySet( entitySetId, entityKeyId, entity );
     }
@@ -463,7 +543,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
-        Map<UUID, PropertyType> authorizedPropertyTypes = dms
+        Map<UUID, PropertyType> authorizedPropertyTypes = edmService
                 .getPropertyTypesAsMap( authzHelper
                         .getAuthorizedPropertiesOnEntitySet( entitySetId, READ_PERMISSION ) );
         return dgm.getEntity( entitySetId, entityKeyId, authorizedPropertyTypes );
@@ -476,7 +556,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     public Set<Object> getEntity( UUID entitySetId, UUID entityKeyId, UUID propertyTypeId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
         ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
-        Map<UUID, PropertyType> authorizedPropertyTypes = dms
+        Map<UUID, PropertyType> authorizedPropertyTypes = edmService
                 .getPropertyTypesAsMap( ImmutableSet.of( propertyTypeId ) );
 
         return dgm.getEntity( entitySetId, entitySetId, authorizedPropertyTypes )
