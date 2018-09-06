@@ -23,7 +23,6 @@ package com.openlattice.datastore.edm.controllers;
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
@@ -38,6 +37,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDatastore;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.exceptions.BadRequestException;
@@ -63,18 +63,12 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.exceptions.ApiExceptions;
 import com.openlattice.exceptions.ErrorsDTO;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentSkipListSet;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -419,6 +413,31 @@ public class EdmController implements EdmApi, AuthorizingComponent {
                 EnumSet.of( Permission.READ ) )
                 .map( AuthorizationUtils::getLastAclKeySafely )
                 .map( modelService::getEntitySet )::iterator;
+    }
+
+    @Override
+    @RequestMapping(
+            path = SUMMARY_PATH,
+            method = RequestMethod.GET )
+    public Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries() {
+        Set<UUID> propertyTypeIds = modelService.getAllPropertyTypeIds();
+        //removes AUDIT types, which don't get populated locally
+        propertyTypeIds.remove(UUID.fromString( "f1a0bda3-406a-42d4-a24b-79e1042a1535" ));
+        propertyTypeIds.remove(UUID.fromString( "19e02f52-a2c5-4f77-81fb-1ebf2638ba01" ));
+        Map<UUID, Iterable<PropertyUsageSummary>> allPropertySummaries= Maps.newHashMapWithExpectedSize( propertyTypeIds.size() );
+        for ( UUID propertyTypeId : propertyTypeIds ) {
+            allPropertySummaries.put(propertyTypeId, modelService.getPropertyUsageSummary( propertyTypeId ));
+        }
+        return allPropertySummaries;
+    }
+
+    @Override
+    @RequestMapping(
+            path = SUMMARY_PATH + ID_PATH,
+            method = RequestMethod.GET )
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary(@PathVariable ( ID ) UUID propertyTypeId) {
+        ensureAdminAccess();
+        return modelService.getPropertyUsageSummary(propertyTypeId);
     }
 
     @Override
