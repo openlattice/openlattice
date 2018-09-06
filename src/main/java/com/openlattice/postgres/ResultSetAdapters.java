@@ -35,6 +35,7 @@ import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
+import static com.openlattice.postgres.PostgresColumn.COUNT;
 import static com.openlattice.postgres.PostgresColumn.CURRENT_SYNC_ID;
 import static com.openlattice.postgres.PostgresColumn.DATATYPE;
 import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
@@ -46,6 +47,7 @@ import static com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.FLAGS;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_DIAMETER;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
@@ -103,12 +105,8 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.Entity;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDataMetadata;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.PropertyMetadata;
-import com.openlattice.data.PropertyValueKey;
+import com.openlattice.data.*;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
@@ -831,6 +829,13 @@ public final class ResultSetAdapters {
             }
         }
         return new Entity( entityKeyId, data );
+    }
+
+    public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
+        UUID entityTypeID = (UUID) rs.getObject(ENTITY_TYPE_ID_FIELD);
+        UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
+        long count = rs.getLong(COUNT);
+        return new PropertyUsageSummary( entityTypeID, entitySetId, count);
     }
 
 }

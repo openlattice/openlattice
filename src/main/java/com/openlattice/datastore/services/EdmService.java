@@ -36,7 +36,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
@@ -50,6 +49,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntityDataModel;
@@ -95,11 +95,12 @@ import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
 import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
+import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.zaxxer.hikari.HikariDataSource;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+
+import java.sql.*;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -115,6 +116,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -278,7 +280,8 @@ public class EdmService implements EdmManager {
     @Override
     public void deletePropertyType( UUID propertyTypeId ) {
         Stream<EntityType> entityTypes = entityTypeManager
-                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet.of( propertyTypeId ) );
+                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
+                        .of( propertyTypeId ) );
         if ( entityTypes
                 .allMatch( et -> Iterables.isEmpty( entitySetManager.getAllEntitySetsForType( et.getId() ) ) ) ) {
             forceDeletePropertyType( propertyTypeId );
@@ -291,9 +294,11 @@ public class EdmService implements EdmManager {
     @Override
     public void forceDeletePropertyType( UUID propertyTypeId ) {
         Stream<EntityType> entityTypes = entityTypeManager
-                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet.of( propertyTypeId ) );
+                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
+                        .of( propertyTypeId ) );
         entityTypes.forEach( et -> {
-            forceRemovePropertyTypesFromEntityType( et.getId(), ImmutableSet.of( propertyTypeId ) );
+            forceRemovePropertyTypesFromEntityType( et.getId(),
+                    ImmutableSet.of( propertyTypeId ) );
         } );
 
         propertyTypes.delete( propertyTypeId );
@@ -407,7 +412,7 @@ public class EdmService implements EdmManager {
         final int startSize = entitySet.getLinkedEntitySets().size();
         //TODO: Turn this into an entity processor
         entitySet.getLinkedEntitySets().addAll( linkedEntitySets );
-        entitySets.set(entitySetId, entitySet );
+        entitySets.set( entitySetId, entitySet );
         return entitySet.getLinkedEntitySets().size() - startSize;
     }
 
@@ -416,7 +421,7 @@ public class EdmService implements EdmManager {
         final int startSize = entitySet.getLinkedEntitySets().size();
         //TODO: Turn this into an entity processor
         entitySet.getLinkedEntitySets().removeAll( linkedEntitySets );
-        entitySets.set(entitySetId, entitySet );
+        entitySets.set( entitySetId, entitySet );
         return startSize - entitySet.getLinkedEntitySets().size();
     }
 
@@ -673,6 +678,17 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public Set<UUID> getAllPropertyTypeIds() {
+        return entitySetManager.getAllPropertyTypeIds();
+    }
+
+    @Override
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
+        String propertyTableName = DataTables.quote(DataTables.propertyTableName( propertyTypeId ));
+        return entitySetManager.getPropertyUsageSummary( propertyTableName );
+    }
+
+    @Override
     public PropertyType getPropertyType( FullQualifiedName propertyType ) {
         return checkNotNull(
                 Util.getSafely( propertyTypes, Util.getSafely( aclKeys, Util.fqnToString( propertyType ) ) ),
@@ -787,13 +803,15 @@ public class EdmService implements EdmManager {
     public void forceRemovePropertyTypesFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
         Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
         EntityType entityType = getEntityType( entityTypeId );
+
         if ( entityType.getBaseType().isPresent() ) {
             EntityType baseType = getEntityType( entityType.getBaseType().get() );
             Preconditions.checkArgument( Sets.intersection( propertyTypeIds, baseType.getProperties() ).isEmpty(),
                     "Inherited property types cannot be removed." );
         }
 
-        List<UUID> childrenIds = entityTypeManager.getEntityTypeChildrenIdsDeep( entityTypeId )
+        List<UUID> childrenIds = entityTypeManager
+                .getEntityTypeChildrenIdsDeep( entityTypeId )
                 .collect( Collectors.<UUID>toList() );
 
         Map<UUID, Boolean> childrenIdsToLocks = childrenIds.stream()
@@ -807,6 +825,7 @@ public class EdmService implements EdmManager {
                         "Unable to modify the entity data model right now--please try again." );
             }
         } );
+
         childrenIds.forEach( id -> {
             entityTypes.executeOnKey( id, new RemovePropertyTypesFromEntityTypeProcessor( propertyTypeIds ) );
             EntityType childEntityType = getEntityType( id );

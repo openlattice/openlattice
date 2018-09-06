@@ -25,6 +25,7 @@ package com.openlattice.datastore.services;
 import com.codahale.metrics.annotation.Timed;
 import com.hazelcast.map.EntryProcessor;
 import com.openlattice.authorization.Principal;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.EntitySet;
@@ -42,6 +43,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public interface EdmManager {
@@ -67,6 +69,10 @@ public interface EdmManager {
 
     @Timed
     Map<UUID, PropertyType> getPropertyTypesForEntitySet( UUID entitySetId );
+
+    Set<UUID> getAllPropertyTypeIds();
+
+    Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId );
 
     void createEntitySet( Principal principal, EntitySet entitySet );
 

@@ -20,30 +20,34 @@
 
 package com.openlattice.datastore.services;
 
+import com.google.common.collect.Sets;
 import com.openlattice.edm.EntitySet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
+import com.openlattice.postgres.streams.PostgresIterable;
+import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class PostgresEntitySetManager {
-    private static final Logger logger = LoggerFactory.getLogger( PostgresEntitySetManager.class );
-    private final HikariDataSource hds;
+    private static final Logger           logger = LoggerFactory.getLogger( PostgresEntitySetManager.class );
+    private final        HikariDataSource hds;
 
     private final String getAllEntitySets;
     private final String getEntitySet;
     private final String getEntitySetsByType;
+    private final String getAllPropertyTypeIds;
+    private final String getPropertyTypeSummary;
 
     public PostgresEntitySetManager( HikariDataSource hds ) {
         this.hds = hds;
@@ -54,6 +58,7 @@ public class PostgresEntitySetManager {
         // Properties
         String NAME = PostgresColumn.NAME.getName();
         String ENTITY_TYPE_ID = PostgresColumn.ENTITY_TYPE_ID.getName();
+        String ENTITY_SET_ID = PostgresColumn.ENTITY_SET_ID.getName();
 
         // SQL queries
         this.getAllEntitySets = "SELECT * FROM ".concat( ENTITY_SETS ).concat( ";" );
@@ -61,6 +66,9 @@ public class PostgresEntitySetManager {
                 .concat( " = ?;" );
         this.getEntitySetsByType = "SELECT * FROM ".concat( ENTITY_SETS ).concat( " WHERE " ).concat( ENTITY_TYPE_ID )
                 .concat( " = ?;" );
+        this.getAllPropertyTypeIds = "SELECT id from \"property_types\";"; //fix later
+        this.getPropertyTypeSummary = "SELECT entity_type_id, entity_set_id, count(*) FROM $propertyTableName LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
+                        "GROUP BY (entity_type_id,entity_set_id);";
     }
 
     public EntitySet getEntitySet( String entitySetName ) {
@@ -82,7 +90,7 @@ public class PostgresEntitySetManager {
     public Iterable<EntitySet> getAllEntitySets() {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
-                ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery() ) {
             List<EntitySet> result = Lists.newArrayList();
             while ( rs.next() ) {
                 result.add( ResultSetAdapters.entitySet( rs ) );
@@ -110,6 +118,44 @@ public class PostgresEntitySetManager {
             logger.debug( "Unable to load entity sets for entity type id {}", entityTypeId.toString(), e );
             return ImmutableList.of();
         }
+    }
+
+    public Set<UUID> getAllPropertyTypeIds() {
+        try ( Connection connection = hds.getConnection();
+                PreparedStatement ps = connection.prepareStatement( getAllPropertyTypeIds ) ) {
+            Set<UUID> result = Sets.newHashSet();
+            ResultSet rs = ps.executeQuery();
+            while ( rs.next() ) {
+                result.add( ResultSetAdapters.id( rs ) );
+            }
+
+            connection.close();
+            return result;
+        } catch ( SQLException e ) {
+            logger.error( "Unable to load property type ids", e );
+            throw new IllegalStateException( "Unable to load property type ids.", e );
+        }
+    }
+
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( String propertyTableName ) {
+        return new PostgresIterable<>( () -> {
+            try {
+                Connection connection = hds.getConnection();
+                PreparedStatement ps = connection.prepareStatement( getPropertyTypeSummary.replace("$propertyTableName", propertyTableName) );
+                ResultSet rs = ps.executeQuery();
+                return new StatementHolder( connection, ps, rs );
+            } catch ( SQLException e ) {
+                logger.error( "Unable to create statement holder!", e );
+                throw new IllegalStateException( "Unable to create statement holder.", e );
+            }
+        }, rs -> {
+            try {
+                return ResultSetAdapters.propertyUsageSummary( rs );
+            } catch ( SQLException e ) {
+                logger.error( "Unable to load property summary information.", e );
+                throw new IllegalStateException( "Unable to load property summary information.", e );
+            }
+        } );
     }
 
 }
