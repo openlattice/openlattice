@@ -266,7 +266,7 @@ public final class PostgresTable {
                             DST_ENTITY_SET_ID,
                             DST_LINKING_VERTEX_ID,
                             SCORE )
-                    .primaryKey( MATCH_ID,
+                    .primaryKey( CLUSTER_ID,
                             SRC_ENTITY_SET_ID,
                             SRC_LINKING_VERTEX_ID,
                             DST_ENTITY_SET_ID,
