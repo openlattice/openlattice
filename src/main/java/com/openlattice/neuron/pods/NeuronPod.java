@@ -42,7 +42,7 @@ import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.PostgresEntitySetManager;
+import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -52,6 +52,7 @@ import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.neuron.Neuron;
+import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.inject.Inject;
 import org.springframework.context.annotation.Bean;
@@ -127,8 +128,8 @@ public class NeuronPod {
     }
 
     @Bean
-    public PostgresEntitySetManager entitySetManager() {
-        return new PostgresEntitySetManager( hikariDataSource );
+    public PostgresEdmManager edmManager() {
+        return new PostgresEdmManager( hikariDataSource );
     }
 
     @Bean
@@ -160,7 +161,7 @@ public class NeuronPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                entitySetManager(),
+                edmManager(),
                 entityTypeManager(),
                 schemaManager(),
                 dataSourceManager() );

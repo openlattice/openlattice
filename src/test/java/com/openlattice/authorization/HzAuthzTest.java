@@ -89,9 +89,7 @@ public class HzAuthzTest {
                 aqs,
                 testServer.getContext().getBean( EventBus.class )
         );
-
-        PostgresTableManager ptm = testServer.getContext().getBean( PostgresTableManager.class );
-        testServer.getContext().getBean( EventBus.class ).register( new PostgresEdmManager( ptm, hds ) );
+        testServer.getContext().getBean( EventBus.class ).register( new PostgresEdmManager( hds ) );
     }
 
     @Test
