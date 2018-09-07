@@ -265,8 +265,8 @@ public class DataController implements DataApi, AuthorizingComponent {
         ensureReadAccess( new AclKey( entitySetId ) );
         var authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
-        accessCheck( authorizedPropertyTypes, requiredEntitySetPropertyTypes( entities ) );
-        return dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
+        //accessCheck( authorizedPropertyTypes, requiredEntitySetPropertyTypes( entities ) );
+        return null;// dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
     @PatchMapping( value = "/" + ENTITY_SET + "/" + SET_ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )

@@ -158,11 +158,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public PostgresEntitySetManager entitySetManager() {
-        return new PostgresEntitySetManager( hikariDataSource );
-    }
-
-    @Bean
     public HazelcastSchemaManager schemaManager() {
         return new HazelcastSchemaManager(
                 hazelcastInstance,
@@ -186,7 +181,7 @@ public class DatastoreServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                entitySetManager(),
+                pgEdmManager(),
                 entityTypeManager(),
                 schemaManager(),
                 datasourceManager() );
@@ -365,7 +360,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEdmManager pgEdmManager() {
-        PostgresEdmManager pgEdmManager = new PostgresEdmManager( tableManager, hikariDataSource );
+        PostgresEdmManager pgEdmManager = new PostgresEdmManager( hikariDataSource );
         eventBus.register( pgEdmManager );
         return pgEdmManager;
     }
