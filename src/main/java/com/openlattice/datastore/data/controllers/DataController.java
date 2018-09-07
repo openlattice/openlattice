@@ -56,7 +56,7 @@ import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.SearchService;
+import com.openlattice.search.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.type.PropertyType;
 import org.apache.commons.lang3.StringUtils;
