@@ -38,7 +38,7 @@ import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.PostgresEntitySetManager;
+import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -101,8 +101,8 @@ public class ConductorSparkPod {
     }
 
     @Bean
-    public PostgresEntitySetManager entitySetManager() {
-        return new PostgresEntitySetManager( hikariDataSource );
+    public PostgresEdmManager edmManager() {
+        return new PostgresEdmManager( hikariDataSource );
     }
 
     @Bean
@@ -143,7 +143,7 @@ public class ConductorSparkPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                entitySetManager(),
+                edmManager(),
                 entityTypeManager(),
                 schemaManager(),
                 datasourceManager() );
