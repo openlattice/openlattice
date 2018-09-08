@@ -169,9 +169,10 @@ public class ConductorServicesPod {
                 "Checkpoint organization bootstrap." );
     }
 
+
     @Bean
     public Auth0Synchronizer auth0Refresher() {
-        return new Auth0Synchronizer( hazelcastInstance, principalService(), dbcs(), auth0TokenProvider() );
+        return new Auth0Synchronizer( hazelcastInstance, principalService(), organizationsManager(), dbcs(), auth0TokenProvider() );
     }
 
     @Bean
