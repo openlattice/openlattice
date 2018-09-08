@@ -46,12 +46,6 @@ interface Matcher {
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
 
-    fun match(
-            dataKey: EntityDataKey,
-            elem: Map<UUID, Set<Any>>,
-            entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
-    ): MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>
-
     fun trimAndMerge(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>)
     /**
      * Allow inplace updating of the model used for peforming the matching.

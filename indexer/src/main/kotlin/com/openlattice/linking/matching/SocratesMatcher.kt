@@ -30,7 +30,6 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.nd4j.linalg.factory.Nd4j
 import java.util.*
 
-const val MODEL_CACHE_TTL_MILLIS = 60000L
 const val THRESHOLD = 0.25
 
 /**
@@ -65,25 +64,6 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         val initializedBlock = entityDataKey to mutableMapOf(entityDataKey to matchedEntities)
         trimAndMerge(initializedBlock)
         return initializedBlock
-    }
-
-    override fun match(
-            dataKey: EntityDataKey,
-            elem: Map<UUID, Set<Any>>,
-            entities: Map<EntityDataKey, Map<UUID, Set<Any>>>
-    ): MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>> {
-        val model = localModel.get()
-
-        val extractedEntities = entities.mapValues { extractProperties(it.value) }
-
-        val matchedEntities = extractedEntities.mapValues {
-            val entity = it.value
-            extractedEntities
-                    .mapValues { model.getModelScore(arrayOf(PersonMetric.pDistance(entity, it.value, fqnToIdMap))) }
-                    .toMutableMap()
-        }.toMutableMap()
-
-        return dataKey to matchedEntities
     }
 
     /**

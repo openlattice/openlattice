@@ -45,18 +45,16 @@ internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 10000L
 internal const val LOCK_TTL_SECS = 600L
 
 /**
- *
  * Performs realtime linking of individuals as they are integrated ino the system.
  */
 class RealtimeLinkingService
 (
-        val blocker: Blocker,
+        private val blocker: Blocker,
         private val matcher: Matcher,
         private val ids: EntityKeyIdService,
         private val loader: DataLoader,
         private val gqs: LinkingQueryService,
         private val executor: ListeningExecutorService
-
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
@@ -73,10 +71,8 @@ class RealtimeLinkingService
      * 1) For each new person entity perform blocking
      * 2) Use the results of block to identify candidate clusters
      * 3) Insert the results of the match scores
-     *
-     * We achieve parallelism by allow non-overlapping
+     * 4) Update the linked entities table.
      */
-
     private fun runIterativeLinking(
             entitySetId: UUID,
             entityKeyIds: Iterable<UUID>
@@ -145,13 +141,5 @@ class RealtimeLinkingService
     fun refreshLinks(entitySetId: UUID, entityKeyIds: Collection<UUID>) {
         clearNeighborhoods(entitySetId, entityKeyIds.stream())
         runIterativeLinking(entitySetId, entityKeyIds)
-    }
-
-    fun delete(entitySetId: UUID, entityKeyIds: Set<UUID>) {
-
-    }
-
-    fun updateModel(serializedModel: ByteArray) {
-
     }
 }

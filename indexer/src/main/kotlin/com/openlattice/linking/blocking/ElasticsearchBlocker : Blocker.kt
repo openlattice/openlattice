@@ -91,7 +91,7 @@ class ElasticsearchBlocker(
                     dataLoader
                             .getEntityStream(entry.key, entry.value)
                             .stream()
-                            .map { EntityDataKey(entry.key, it.first) to Multimaps.asMap(it.second) }
+                            .map { EntityDataKey(entry.key, it.first) to it.second }
                 }
                 .asSequence()
                 .toMap()
