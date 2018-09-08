@@ -22,7 +22,7 @@
 package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
-import com.openlattice.Conductor;
+import com.openlattice.Indexer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,16 +30,16 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class ConductorBootstrap {
-    protected static final Conductor conductor;
+    protected static final Indexer INDEXER;
 
     static {
-        conductor = new Conductor();
+        INDEXER = new Indexer();
         if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
             LoggerFactory.getLogger( ConductorBootstrap.class ).info("Running on bamboo!");
-            conductor.sprout( "awstest", "postgres" );
+            INDEXER.sprout( "awstest", "postgres" );
         } else {
             LoggerFactory.getLogger( ConductorBootstrap.class ).info("Not running on bamboo!");
-            conductor.sprout( "local", "postgres" );
+            INDEXER.sprout( "local", "postgres" );
         }
     }
 

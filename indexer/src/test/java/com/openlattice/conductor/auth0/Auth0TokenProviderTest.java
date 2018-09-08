@@ -34,7 +34,7 @@ import org.junit.Test;
 public class Auth0TokenProviderTest extends ConductorBootstrap {
     @Test
     public void testAuth0TokenProvider() {
-        Auth0Configuration configuration = conductor.getContext().getBean( Auth0Configuration.class );
+        Auth0Configuration configuration = INDEXER.getContext().getBean( Auth0Configuration.class );
         Assert.assertNotNull( configuration );
         Assert.assertTrue( StringUtils.isNotBlank( configuration.getClientSecret() ) );
         Assert.assertTrue( StringUtils.isNotBlank( configuration.getManagementApiUrl() ) );
