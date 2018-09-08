@@ -34,6 +34,7 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntityDataModel;
@@ -52,6 +53,7 @@ import com.openlattice.edm.type.*;
 import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
+import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.zaxxer.hikari.HikariDataSource;
@@ -349,6 +351,17 @@ public class EdmService implements EdmManager {
         aclKeyReservations.release( entitySetId );
         syncIds.remove( entitySetId );
         eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
+    }
+
+    @Override
+    public Set<UUID> getAllPropertyTypeIds() {
+        return propertyTypes.keySet();
+    }
+
+    @Override
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary(UUID propertyTypeId ) {
+        String propertyTableName = DataTables.quote(DataTables.propertyTableName( propertyTypeId ));
+        return entitySetManager.getPropertyUsageSummary( propertyTableName );
     }
 
     @Override public int addLinkedEntitySets( UUID entitySetId, Set<UUID> linkedEntitySets ) {
