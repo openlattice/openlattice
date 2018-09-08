@@ -96,18 +96,23 @@ class Auth0SyncTask(
         }
 
         @Transient
+        @JvmStatic
         private lateinit var hazelcastInstance: HazelcastInstance
 
         @Transient
+        @JvmStatic
         private lateinit var spm: SecurePrincipalsManager
 
         @Transient
+        @JvmStatic
         private lateinit var organizationService: HazelcastOrganizationService
 
         @Transient
+        @JvmStatic
         private lateinit var dbCredentialService: DbCredentialService
 
         @Transient
+        @JvmStatic
         private lateinit var auth0TokenProvider: Auth0TokenProvider
     }
 
