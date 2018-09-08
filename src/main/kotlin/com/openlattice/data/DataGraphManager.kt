@@ -149,6 +149,12 @@ interface DataGraphManager {
 
     fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets>
 
+    fun mergeEntities(
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int
+
     fun getNeighborEntitySetIds(entitySetId: UUID): Set<UUID>
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>

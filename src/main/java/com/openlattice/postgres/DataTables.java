@@ -25,6 +25,7 @@ import static com.openlattice.postgres.PostgresColumn.HASH;
 import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.LAST_INDEX_FIELD;
+import static com.openlattice.postgres.PostgresColumn.LAST_LINK_FIELD;
 import static com.openlattice.postgres.PostgresColumn.LAST_WRITE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.VERSION;
 import static com.openlattice.postgres.PostgresColumn.VERSIONS;
@@ -48,28 +49,38 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataTables {
-    public static final FullQualifiedName COUNT_FQN      = new FullQualifiedName( "openlattice", "@count" );
-    public static final FullQualifiedName ID_FQN         = new FullQualifiedName( "openlattice", "@id" );
-    public static final PostgresColumnDefinition LAST_INDEX  = new PostgresColumnDefinition( LAST_INDEX_FIELD,
+    public static final  FullQualifiedName                  COUNT_FQN      = new FullQualifiedName( "openlattice",
+            "@count" );
+    public static final  FullQualifiedName                  ID_FQN         = new FullQualifiedName( "openlattice",
+            "@id" );
+    public static final  PostgresColumnDefinition           LAST_INDEX     = new PostgresColumnDefinition(
+            LAST_INDEX_FIELD,
             TIMESTAMPTZ )
             .notNull();
-    public static final FullQualifiedName LAST_INDEX_FQN = new FullQualifiedName( "openlattice", "@lastIndex" );
-    public static final PostgresColumnDefinition LAST_WRITE  = new PostgresColumnDefinition( LAST_WRITE_FIELD,
+    public static final  FullQualifiedName                  LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
+            "@lastIndex" );
+    public static final  PostgresColumnDefinition           LAST_LINK      = new PostgresColumnDefinition(
+            LAST_LINK_FIELD,
             TIMESTAMPTZ )
             .notNull();
-    public static final FullQualifiedName LAST_WRITE_FQN = new FullQualifiedName( "openlattice", "@lastWrite" );
-    public static final PostgresColumnDefinition OWNERS      = new PostgresColumnDefinition(
+    public static final  PostgresColumnDefinition           LAST_WRITE     = new PostgresColumnDefinition(
+            LAST_WRITE_FIELD,
+            TIMESTAMPTZ )
+            .notNull();
+    public static final  FullQualifiedName                  LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
+            "@lastWrite" );
+    public static final  PostgresColumnDefinition           OWNERS         = new PostgresColumnDefinition(
             "owners",
             PostgresDatatype.UUID );
-    public static final PostgresColumnDefinition READERS     = new PostgresColumnDefinition(
+    public static final  PostgresColumnDefinition           READERS        = new PostgresColumnDefinition(
             "readers",
             PostgresDatatype.UUID );
-    public static final String                   VALUE_FIELD = "value";
-    public static final PostgresColumnDefinition WRITERS     = new PostgresColumnDefinition(
+    public static final  String                             VALUE_FIELD    = "value";
+    public static final  PostgresColumnDefinition           WRITERS        = new PostgresColumnDefinition(
             "writers",
             PostgresDatatype.UUID );
-    private static final Map<UUID, PostgresTableDefinition> ES_TABLES = Maps.newConcurrentMap();
-    private static final Encoder                            encoder   = Base64.getEncoder();
+    private static final Map<UUID, PostgresTableDefinition> ES_TABLES      = Maps.newConcurrentMap();
+    private static final Encoder                            encoder        = Base64.getEncoder();
 
     private static Set<FullQualifiedName> unindexedProperties = Sets
             .newConcurrentHashSet( Arrays
@@ -114,7 +125,7 @@ public class DataTables {
 
     public static PostgresTableDefinition doBuildEntitySetTableDefinition( UUID entitySetId ) {
         PostgresTableDefinition ptd = new PostgresTableDefinition( quote( entityTableName( entitySetId ) ) )
-                .addColumns( ID, VERSION, VERSIONS, LAST_WRITE, LAST_INDEX, READERS, WRITERS, OWNERS );
+                .addColumns( ID, VERSION, VERSIONS, LAST_WRITE, LAST_INDEX, LAST_LINK, READERS, WRITERS, OWNERS );
 
         String idxPrefix = entityTableName( entitySetId );
 
@@ -123,6 +134,10 @@ public class DataTables {
                 .ifNotExists()
                 .desc();
         PostgresIndexDefinition lastIndexedIndex = new PostgresColumnsIndexDefinition( ptd, LAST_INDEX )
+                .name( quote( idxPrefix + "_last_indexed_idx" ) )
+                .ifNotExists()
+                .desc();
+        PostgresIndexDefinition lastLinkedIndex = new PostgresColumnsIndexDefinition( ptd, LAST_LINK )
                 .name( quote( idxPrefix + "_last_indexed_idx" ) )
                 .ifNotExists()
                 .desc();
@@ -139,10 +154,21 @@ public class DataTables {
 
         PostgresIndexDefinition indexingIndex = new PostgresExpressionIndexDefinition( ptd,
                 "(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
-                .name( quote( idxPrefix + "_indexing_idx"))
+                .name( quote( idxPrefix + "_indexing_idx" ) )
                 .ifNotExists();
 
-        ptd.addIndexes( lastWriteIndex, lastIndexedIndex, readersIndex, writersIndex, ownersIndex, indexingIndex );
+        PostgresIndexDefinition linkedIndex = new PostgresExpressionIndexDefinition( ptd,
+                "(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")" )
+                .name( quote( idxPrefix + "_linked_idx" ) )
+                .ifNotExists();
+
+        ptd.addIndexes( lastWriteIndex,
+                lastIndexedIndex,
+                readersIndex,
+                writersIndex,
+                ownersIndex,
+                indexingIndex,
+                linkedIndex );
 
         return ptd;
     }

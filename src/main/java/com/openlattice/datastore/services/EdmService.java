@@ -48,7 +48,6 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
@@ -99,8 +98,8 @@ import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.zaxxer.hikari.HikariDataSource;
-
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -116,7 +115,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -144,7 +142,6 @@ public class EdmService implements EdmManager {
     private final PostgresEntitySetManager          entitySetManager;
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
-    private final DatasourceManager                 datasourceManager;
 
     private final HazelcastInstance hazelcastInstance;
     private final HikariDataSource  hds;
@@ -159,8 +156,7 @@ public class EdmService implements EdmManager {
             AuthorizationManager authorizations,
             PostgresEntitySetManager entitySetManager,
             PostgresTypeManager entityTypeManager,
-            HazelcastSchemaManager schemaManager,
-            DatasourceManager datasourceManager ) {
+            HazelcastSchemaManager schemaManager ) {
 
         this.authorizations = authorizations;
         this.entitySetManager = entitySetManager;
@@ -181,7 +177,6 @@ public class EdmService implements EdmManager {
         this.entitySetPropertyMetadata = hazelcastInstance.getMap( HazelcastMap.ENTITY_SET_PROPERTY_METADATA.name() );
         this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
         this.aclKeyReservations = aclKeyReservations;
-        this.datasourceManager = datasourceManager;
         propertyTypes.values().forEach( propertyType -> logger.debug( "Property type read: {}", propertyType ) );
         entityTypes.values().forEach( entityType -> logger.debug( "Object type read: {}", entityType ) );
     }
@@ -405,6 +400,11 @@ public class EdmService implements EdmManager {
         aclKeyReservations.release( entitySetId );
         syncIds.remove( entitySetId );
         eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
+    }
+
+    @Override
+    public Set<UUID> getAllPropertyTypeIds() {
+        return propertyTypes.keySet();
     }
 
     @Override public int addLinkedEntitySets( UUID entitySetId, Set<UUID> linkedEntitySets ) {
@@ -675,11 +675,6 @@ public class EdmService implements EdmManager {
     @Override
     public Iterable<EntitySet> getEntitySets() {
         return entitySetManager.getAllEntitySets();
-    }
-
-    @Override
-    public Set<UUID> getAllPropertyTypeIds() {
-        return entitySetManager.getAllPropertyTypeIds();
     }
 
     @Override
