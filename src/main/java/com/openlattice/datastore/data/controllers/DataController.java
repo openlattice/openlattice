@@ -46,7 +46,6 @@ import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.DataGraph;
 import com.openlattice.data.DataGraphIds;
 import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.data.requests.EntitySetSelection;
@@ -69,6 +68,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -119,9 +119,6 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Inject
     private AuthenticationManager authProvider;
-
-    @Inject
-    private DatasourceManager datasourceManager;
 
     @Inject
     private SearchService searchService;
@@ -231,7 +228,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     @Override
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
-            method = RequestMethod.PUT,
+            method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer replaceEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
@@ -252,6 +249,20 @@ public class DataController implements DataApi, AuthorizingComponent {
                     entities,
                     edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
         }
+    }
+
+    @Override
+    @PutMapping(
+            value = "/" + ENTITY_SET + "/" + SET_ID_PATH,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Integer mergeIntoEntitiesInEntitySet(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities ) {
+        ensureReadAccess( new AclKey( entitySetId ) );
+        var authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
+        accessCheck( authorizedPropertyTypes, requiredEntitySetPropertyTypes( entities ) );
+        return dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
     @PatchMapping( value = "/" + ENTITY_SET + "/" + SET_ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
@@ -288,7 +299,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             value = "/" + ENTITY_SET + "/",
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
-    public List<UUID> createOrMergeEntities(
+    public List<UUID> createEntities(
             @RequestParam( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody List<SetMultimap<UUID, Object>> entities ) {
         //Ensure that we have read access to entity set metadata.
@@ -297,6 +308,18 @@ public class DataController implements DataApi, AuthorizingComponent {
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
         return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
+    }
+
+    @Override
+    @PutMapping(
+            value = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Integer mergeIntoEntityInEntitySet(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
+            @RequestBody Map<UUID, Set<Object>> entity ) {
+        final var entities = ImmutableMap.of( entityKeyId, entity );
+        return mergeIntoEntitiesInEntitySet( entitySetId, entities );
     }
 
     @Override
@@ -366,7 +389,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         //First create the entities so we have entity key ids to work with
         Multimaps.asMap( data.getEntities() )
                 .forEach( ( entitySetId, entities ) ->
-                        entityKeyIds.putAll( entitySetId, createOrMergeEntities( entitySetId, entities ) ) );
+                        entityKeyIds.putAll( entitySetId, createEntities( entitySetId, entities ) ) );
         final ListMultimap<UUID, DataEdge> toBeCreated = ArrayListMultimap.create();
         Multimaps.asMap( data.getAssociations() )
                 .forEach( ( entitySetId, associations ) -> {
@@ -413,12 +436,18 @@ public class DataController implements DataApi, AuthorizingComponent {
         return null;
     }
 
-    @Override
-    public Void clearEntitySet( UUID entitySetId ) {
+    @Override public Integer deleteEntityProperties(
+            UUID entitySetId, Map<UUID, Map<UUID, Set<ByteBuffer>>> entityProperties ) {
         return null;
     }
 
     @Override
+    public Integer clearEntitySet( UUID entitySetId ) {
+        ensureOwnerAccess( new AclKey( entitySetId ) );
+        return dgm
+                .clearEntitySet( entitySetId, authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
+    }
+
     @Timed
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS },

@@ -29,10 +29,8 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityKey;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.datastore.services.LinkingService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.LinkingEntitySet;
 import com.openlattice.linking.HazelcastListingService;
@@ -67,11 +65,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
     @Inject
     private HazelcastListingService listings;
 
-    @Inject
-    private LinkingService linkingService;
-
-    @Inject
-    private DatasourceManager datasourceManager;
 
     @Override
     @PostMapping(
@@ -80,7 +73,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
     public UUID linkEntitySets( @RequestBody LinkingRequest linkingRequest ) {
         LinkingEntitySet linkingEntitySet = linkingRequest.getLinkingEntitySet();
         Set<Map<UUID, UUID>> linkingProperties = linkingEntitySet.getLinkingProperties();
-        Set<UUID> linkingES = LinkingService.getLinkingSets( linkingProperties );
         EntitySet entitySet = linkingEntitySet.getEntitySet();
 
         // Validate, compute the ownable property types after merging.
@@ -91,15 +83,7 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
 
         edm.createEntitySet( Principals.getCurrentUser(), entitySet, ownablePropertyTypes );
         UUID linkedEntitySetId = entitySet.getId();
-        datasourceManager.setCurrentSyncId( linkedEntitySetId,
-                datasourceManager.createNewSyncIdForEntitySet( linkedEntitySetId ) );
-
-        listings.setLinkedEntitySets( linkedEntitySetId, linkingES );
-
-        return linkingService.link( linkedEntitySetId,
-                linkingProperties,
-                ownablePropertyTypes,
-                propertyTypesToPopulate );
+        return linkedEntitySetId;
     }
 
     @Override

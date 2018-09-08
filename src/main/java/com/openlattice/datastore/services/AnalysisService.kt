@@ -27,7 +27,6 @@ import com.openlattice.analysis.requests.NeighborType
 import com.openlattice.analysis.requests.TopUtilizerDetails
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
-import com.openlattice.data.DatasourceManager
 import com.openlattice.edm.type.PropertyType
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -46,9 +45,6 @@ class AnalysisService {
 
     @Inject
     private lateinit var dgm: DataGraphManager
-
-    @Inject
-    private lateinit var datasourceManager: DatasourceManager
 
     @Inject
     private lateinit var authorizations: AuthorizationManager

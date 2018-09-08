@@ -35,7 +35,6 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
@@ -112,9 +111,6 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     @Inject
     private EntityDatastore dataManager;
-
-    @Inject
-    private DatasourceManager datasourceManager;
 
     @Inject
     private EdmAuthorizationHelper authzHelper;
