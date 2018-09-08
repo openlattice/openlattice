@@ -16,22 +16,22 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.pods;
+package com.openlattice.linking
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import com.google.common.collect.SetMultimap
+import com.openlattice.data.EntityDataKey
+import com.openlattice.postgres.streams.PostgresIterable
+import java.util.*
+import java.util.stream.Stream
 
-@Configuration
-@EnableWebSecurity
-public class ConductorSecurityPod extends WebSecurityConfigurerAdapter {
-
-    @Override
-    protected void configure( HttpSecurity http ) throws Exception {
-        http.authorizeRequests().antMatchers( "/**" ).permitAll().and().csrf().disable();
-    }
-
+/**
+ *
+ */
+interface DataLoader {
+    fun getEntity(dataKey: EntityDataKey): Map<UUID, Set<Any>>
+    fun getEntities(dataKeys: Set<EntityDataKey>): Map<EntityDataKey, Map<UUID, Set<Any>>>
+    fun getEntityStream(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>>
 }

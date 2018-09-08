@@ -5,9 +5,10 @@
 # Set to false to disable persistence 
 enable-persistence:  false
 session-clustering-enabled: false
-
+# Indexer cannot be server as it is unable to deserialize tasks, in particular ones that have external dependencies that
+# that are static and should be initialized by spring startup.
 hazelcast:
-    server: true
+    server: false
     group: "local"
     password: "trellis"
     seed-nodes: 
