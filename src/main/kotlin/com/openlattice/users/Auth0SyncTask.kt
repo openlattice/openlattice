@@ -57,75 +57,18 @@ private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 class Auth0SyncTask(
 
 ) : Runnable {
-    companion object {
 
-        //Commented lines are due to https://youtrack.jetbrains.com/issue/KT-21862
-        @JvmStatic
-        fun setHazelcastInstance(hazelcastInstance: HazelcastInstance) {
-//            if (!this::hazelcastInstance.isInitialized) {
-                this.hazelcastInstance = hazelcastInstance
-//            }
-        }
 
-        @JvmStatic
-        fun setPrincipalManager(spm: SecurePrincipalsManager) {
-//            if (!this::spm.isInitialized) {
-                this.spm = spm
-//            }
-        }
-
-        @JvmStatic
-        fun setOrganizationService(organizationService: HazelcastOrganizationService) {
-//            if (!this::organizationService.isInitialized) {
-                this.organizationService = organizationService
-//            }
-        }
-
-        @JvmStatic
-        fun setDbCredentialService(dbCredentialService: DbCredentialService) {
-//            if (!this::dbCredentialService.isInitialized) {
-                this.dbCredentialService = dbCredentialService
-//            }
-        }
-
-        @JvmStatic
-        fun setAuth0TokenProvider(auth0TokenProvider: Auth0TokenProvider) {
-//            if (!this::auth0TokenProvider.isInitialized) {
-                this.auth0TokenProvider = auth0TokenProvider
-//            }
-        }
-
-        @Transient
-        @JvmStatic
-        private lateinit var hazelcastInstance: HazelcastInstance
-
-        @Transient
-        @JvmStatic
-        private lateinit var spm: SecurePrincipalsManager
-
-        @Transient
-        @JvmStatic
-        private lateinit var organizationService: HazelcastOrganizationService
-
-        @Transient
-        @JvmStatic
-        private lateinit var dbCredentialService: DbCredentialService
-
-        @Transient
-        @JvmStatic
-        private lateinit var auth0TokenProvider: Auth0TokenProvider
-    }
-
-    private val users: IMap<String, Auth0UserBasic> = hazelcastInstance.getMap(HazelcastMap.USERS.name)
+    private val users: IMap<String, Auth0UserBasic> = Auth0SyncHelpers.hazelcastInstance.getMap(HazelcastMap.USERS.name)
     private val retrofit: Retrofit = RetrofitFactory.newClient(
-            auth0TokenProvider.managementApiUrl
-    ) { auth0TokenProvider.token }
+            Auth0SyncHelpers.auth0TokenProvider.managementApiUrl
+    ) { Auth0SyncHelpers.auth0TokenProvider.token }
     private val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
-    private val userRoleAclKey: AclKey = spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
-    private val adminRoleAclKey: AclKey = spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
+    private val userRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
+    private val adminRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
 
-    private val globalOrganizationAclKey: AclKey = spm.lookup(OrganizationBootstrap.GLOBAL_ORG_PRINCIPAL)
-    private val openlatticeOrganizationAclKey: AclKey = spm.lookup(OrganizationBootstrap.OPENLATTICE_ORG_PRINCIPAL)
+    private val globalOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(OrganizationBootstrap.GLOBAL_ORG_PRINCIPAL)
+    private val openlatticeOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(OrganizationBootstrap.OPENLATTICE_ORG_PRINCIPAL)
 
 
     override fun run() {
@@ -142,7 +85,7 @@ class Auth0SyncTask(
                         .forEach { user ->
                             val userId = user.userId
                             users.set(userId, user)
-                            if (dbCredentialService.createUserIfNotExists(userId) != null) {
+                            if (Auth0SyncHelpers.dbCredentialService.createUserIfNotExists(userId) != null) {
                                 createPrincipal(user, userId)
                             }
                         }
@@ -170,20 +113,20 @@ class Auth0SyncTask(
         else
             user.email
 
-        spm.createSecurablePrincipalIfNotExists(
+        Auth0SyncHelpers.spm.createSecurablePrincipalIfNotExists(
                 principal,
                 SecurablePrincipal(Optional.empty(), principal, title, Optional.empty())
         )
 
         if (user.roles.contains(SystemRole.AUTHENTICATED_USER.getName())) {
-            organizationService.addMembers(globalOrganizationAclKey, ImmutableSet.of(principal))
-            organizationService
+            Auth0SyncHelpers.organizationService.addMembers(globalOrganizationAclKey, ImmutableSet.of(principal))
+            Auth0SyncHelpers.organizationService
                     .addRoleToPrincipalInOrganization(userRoleAclKey[0], userRoleAclKey[1], principal)
         }
 
         if (user.roles.contains(SystemRole.ADMIN.getName())) {
-            organizationService.addMembers(openlatticeOrganizationAclKey, ImmutableSet.of(principal))
-            organizationService
+            Auth0SyncHelpers.organizationService.addMembers(openlatticeOrganizationAclKey, ImmutableSet.of(principal))
+            Auth0SyncHelpers.organizationService
                     .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal)
         }
     }
