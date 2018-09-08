@@ -26,8 +26,7 @@ package com.openlattice.hazelcast;
  * Simplifies management of type ids within Hazelcast for serialization. Can be re-ordered safely unless doing hot
  * upgrade. <b>NOTE: Leave first entry in place</b>
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
+ *  */
 public enum StreamSerializerTypeIds {
     /**
      * Move this one, break everything.
@@ -172,5 +171,6 @@ public enum StreamSerializerTypeIds {
     NEIGHBOR_TRIPLET_SET,
     ADD_PRIMARY_KEYS_TO_ENTITY_TYPE_PROCESSOR,
     REMOVE_PRIMARY_KEYS_FROM_ENTITY_TYPE_PROCESSOR,
-    RANGE
+    RANGE,
+    AUTH0_SYNC_TASK
 }
