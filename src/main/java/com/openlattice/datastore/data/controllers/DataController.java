@@ -228,7 +228,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     @Override
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
-            method = RequestMethod.PUT,
+            method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer replaceEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
