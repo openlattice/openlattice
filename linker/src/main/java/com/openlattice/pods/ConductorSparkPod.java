@@ -20,12 +20,9 @@
 
 package com.openlattice.pods;
 
-import com.dataloom.mappers.ObjectMappers;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.kryptnostic.rhizome.core.Cutting;
 import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
@@ -34,7 +31,6 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -46,7 +42,6 @@ import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
-import com.openlattice.linking.HazelcastBlockingService;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
@@ -66,19 +61,12 @@ public class ConductorSparkPod {
     @Inject
     private EventBus eventBus;
 
-    @Inject
-    private Cutting cutting;
-
-    @Inject
+        @Inject
     private HikariDataSource hikariDataSource;
 
     @Inject
     private ListeningExecutorService executorService;
 
-    @Bean
-    public ObjectMapper defaultObjectMapper() {
-        return ObjectMappers.getJsonMapper();
-    }
 
     @Bean
     public AuthorizationQueryService authorizationQueryService() {
@@ -126,10 +114,6 @@ public class ConductorSparkPod {
         return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
     }
 
-    @Bean
-    public DatasourceManager datasourceManager() {
-        return new DatasourceManager( hikariDataSource, hazelcastInstance );
-    }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
@@ -145,18 +129,12 @@ public class ConductorSparkPod {
                 authorizationManager(),
                 entitySetManager(),
                 entityTypeManager(),
-                schemaManager(),
-                datasourceManager() );
+                schemaManager() );
     }
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
         return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
-    }
-
-    @Bean
-    public HazelcastBlockingService blockingService() {
-        return new HazelcastBlockingService( hazelcastInstance );
     }
 
     @Bean
