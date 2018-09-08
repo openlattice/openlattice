@@ -44,7 +44,6 @@ import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.requests.RequestsApi;
 import com.openlattice.search.SearchApi;
-import com.openlattice.sync.SyncApi;
 import com.google.common.collect.ImmutableSet;
 
 import retrofit2.Retrofit;
@@ -59,7 +58,6 @@ public class MultipleAuthenticatedUsersBase extends IntegrationTestsBootstrap {
     protected static DataApi               dataApi;
     protected static SearchApi             searchApi;
     protected static OrganizationsApi      organizationsApi;
-    protected static SyncApi               syncApi;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -85,7 +83,6 @@ public class MultipleAuthenticatedUsersBase extends IntegrationTestsBootstrap {
         dataApi = currentRetrofit.create( DataApi.class );
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
-        syncApi = currentRetrofit.create( SyncApi.class );
     }
 
     /**
