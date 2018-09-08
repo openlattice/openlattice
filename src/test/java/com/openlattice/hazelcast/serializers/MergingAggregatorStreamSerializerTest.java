@@ -20,11 +20,9 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.MergingAggregatorStreamSerializer;
 import com.openlattice.linking.LinkingEdge;
 import com.openlattice.linking.LinkingVertexKey;
 import com.openlattice.linking.WeightedLinkingEdge;
-import com.openlattice.linking.aggregators.MergingAggregator;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomUtils;

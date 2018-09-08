@@ -23,11 +23,9 @@
 package com.openlattice.linking;
 
 import com.dataloom.streams.StreamUtil;
-import com.datastax.driver.core.utils.UUIDs;
 import com.google.common.collect.Sets;
 import com.hazelcast.core.IMap;
 import com.openlattice.authorization.HzAuthzTest;
-import com.openlattice.clustering.DistributedClusterer;
 import com.openlattice.data.EntityKey;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
