@@ -7,7 +7,7 @@ enable-persistence:  false
 session-clustering-enabled: false
 
 hazelcast:
-    server: true
+    server: false
     group: "local"
     password: "trellis"
     seed-nodes: 
