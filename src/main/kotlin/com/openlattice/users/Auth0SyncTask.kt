@@ -58,45 +58,56 @@ class Auth0SyncTask(
 
 ) : Runnable {
     companion object {
+
+        //Commented lines are due to https://youtrack.jetbrains.com/issue/KT-21862
         @JvmStatic
         fun setHazelcastInstance(hazelcastInstance: HazelcastInstance) {
-            if (!this::hazelcastInstance.isInitialized) {
+//            if (!this::hazelcastInstance.isInitialized) {
                 this.hazelcastInstance = hazelcastInstance
-            }
+//            }
         }
 
         @JvmStatic
         fun setPrincipalManager(spm: SecurePrincipalsManager) {
-            if (!this::spm.isInitialized) {
+//            if (!this::spm.isInitialized) {
                 this.spm = spm
-            }
+//            }
         }
 
         @JvmStatic
         fun setOrganizationService(organizationService: HazelcastOrganizationService) {
-            if (!this::organizationService.isInitialized) {
+//            if (!this::organizationService.isInitialized) {
                 this.organizationService = organizationService
-            }
+//            }
         }
 
         @JvmStatic
         fun setDbCredentialService(dbCredentialService: DbCredentialService) {
-            if (!this::dbCredentialService.isInitialized) {
+//            if (!this::dbCredentialService.isInitialized) {
                 this.dbCredentialService = dbCredentialService
-            }
+//            }
         }
 
         @JvmStatic
         fun setAuth0TokenProvider(auth0TokenProvider: Auth0TokenProvider) {
-            if (!this::auth0TokenProvider.isInitialized) {
+//            if (!this::auth0TokenProvider.isInitialized) {
                 this.auth0TokenProvider = auth0TokenProvider
-            }
+//            }
         }
 
+        @Transient
         private lateinit var hazelcastInstance: HazelcastInstance
+
+        @Transient
         private lateinit var spm: SecurePrincipalsManager
+
+        @Transient
         private lateinit var organizationService: HazelcastOrganizationService
+
+        @Transient
         private lateinit var dbCredentialService: DbCredentialService
+
+        @Transient
         private lateinit var auth0TokenProvider: Auth0TokenProvider
     }
 

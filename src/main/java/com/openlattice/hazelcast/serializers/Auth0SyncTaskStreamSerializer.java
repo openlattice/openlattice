@@ -26,11 +26,14 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.users.Auth0SyncTask;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 
 /**
  * Stream
  */
+@Component
 public class Auth0SyncTaskStreamSerializer implements SelfRegisteringStreamSerializer<Auth0SyncTask> {
 
     @Override public Class<Auth0SyncTask> getClazz() {
