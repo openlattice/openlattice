@@ -28,14 +28,11 @@ import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDataValue;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.hazelcast.predicates.EntitySetPredicates;
-import com.openlattice.hazelcast.processors.SyncFinalizer;
 import com.openlattice.sync.SyncApi;
-import java.time.OffsetDateTime;
+
 import java.util.EnumSet;
 import java.util.UUID;
 import javax.inject.Inject;

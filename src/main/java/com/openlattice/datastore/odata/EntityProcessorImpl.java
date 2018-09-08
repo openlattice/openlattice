@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore.odata;
 
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.datastore.DatastoreUtil;
 import com.openlattice.datastore.services.ODataStorageService;
 import java.io.InputStream;

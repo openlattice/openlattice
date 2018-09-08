@@ -29,7 +29,6 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityKey;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.LinkingService;

@@ -21,7 +21,6 @@
 package com.openlattice.datastore.odata.controllers;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.datastore.odata.EntityCollectionProcessorImpl;
 import com.openlattice.datastore.odata.EntityProcessorImpl;
 import com.openlattice.datastore.odata.EdmProviderImpl;
