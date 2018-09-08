@@ -31,7 +31,6 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.data.EntityKey;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.datastore.services.LinkingService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.LinkingEntitySet;
 import com.openlattice.linking.HazelcastListingService;

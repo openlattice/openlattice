@@ -113,9 +113,6 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     private EntityDatastore dataManager;
 
     @Inject
-    private DatasourceManager datasourceManager;
-
-    @Inject
     private EdmAuthorizationHelper authzHelper;
 
     @RequestMapping(

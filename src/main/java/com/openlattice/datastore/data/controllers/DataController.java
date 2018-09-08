@@ -121,9 +121,6 @@ public class DataController implements DataApi, AuthorizingComponent {
     private AuthenticationManager authProvider;
 
     @Inject
-    private DatasourceManager datasourceManager;
-
-    @Inject
     private SearchService searchService;
 
     private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;

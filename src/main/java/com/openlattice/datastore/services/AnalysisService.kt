@@ -47,9 +47,6 @@ class AnalysisService {
     private lateinit var dgm: DataGraphManager
 
     @Inject
-    private lateinit var datasourceManager: DatasourceManager
-
-    @Inject
     private lateinit var authorizations: AuthorizationManager
 
     @Inject

@@ -22,7 +22,6 @@ package com.openlattice.datastore.pods;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.controllers.OrganizationsController;
-import com.openlattice.controllers.SyncController;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.controllers.EntitySetsController;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
