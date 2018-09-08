@@ -26,21 +26,17 @@ import javax.inject.Inject;
 
 import org.springframework.context.annotation.Configuration;
 
-import com.openlattice.data.DatasourceManager;
-import com.openlattice.neuron.audit.AuditEntitySetUtils;
 import com.openlattice.datastore.services.EdmManager;
 
 @Configuration
 public class AuditEntitySetPod {
 
-    @Inject
-    private DatasourceManager dataSourceManager;
 
     @Inject
     private EdmManager entityDataModelManager;
 
     @PostConstruct
     public void initializeAuditEntitySet() {
-        AuditEntitySetUtils.initialize( dataSourceManager, entityDataModelManager );
+        AuditEntitySetUtils.initialize( entityDataModelManager );
     }
 }

@@ -27,9 +27,12 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISS
 
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.edm.type.PropertyType;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -87,6 +90,17 @@ public interface AuthorizingComponent {
 
     default Map<AclKey, EnumMap<Permission, Boolean>> authorize( Map<AclKey, EnumSet<Permission>> requiredPermissionsByAclKey ) {
         return getAuthorizationManager().authorize( requiredPermissionsByAclKey, Principals.getCurrentPrincipals() );
+    }
+
+    default void accessCheck( Map<UUID, PropertyType> authorizedPropertyTypes, Set<UUID> requiredPropertyTypes ) {
+        final boolean authorized = authorizedPropertyTypes.keySet().containsAll( requiredPropertyTypes );
+        if ( !authorized ) {
+            logger.warn( "Authorization failed. Required {} but only found {}.",
+                    requiredPropertyTypes,
+                    authorizedPropertyTypes.keySet() );
+            throw new ForbiddenException( "Insufficient permissions to perform operation." );
+        }
+
     }
 
     default void accessCheck( Map<AclKey, EnumSet<Permission>> requiredPermissionsByAclKey ) {
