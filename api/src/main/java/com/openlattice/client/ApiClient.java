@@ -30,11 +30,11 @@ import com.openlattice.data.DataApi;
 import com.openlattice.data.DataIntegrationApi;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.search.SearchApi;
-import com.openlattice.sync.SyncApi;
-import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Retrofit;
+
+import java.util.concurrent.ExecutionException;
 
 public class ApiClient implements ApiFactoryFactory {
 
@@ -78,10 +78,6 @@ public class ApiClient implements ApiFactoryFactory {
 
     public EdmApi getEdmApi() throws ExecutionException {
         return (EdmApi) get().create( EdmApi.class );
-    }
-
-    public SyncApi getSyncApi() throws ExecutionException {
-        return (SyncApi) get().create( SyncApi.class );
     }
 
     public SearchApi getSearchApi() {

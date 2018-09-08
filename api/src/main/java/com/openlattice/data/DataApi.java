@@ -124,7 +124,7 @@ public interface DataApi {
      * @param partialReplace Controls whether replace is full or partial. Default behavior is full replacement.
      * @return The UUID assigned to each entity id during creation.
      */
-    @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer replaceEntities(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body Map<UUID, Map<UUID, Set<Object>>> entities,
