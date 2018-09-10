@@ -37,7 +37,6 @@ import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.rehearsal.SetupEnvironment;
 import com.openlattice.requests.RequestsApi;
 import com.openlattice.search.SearchApi;
-import com.openlattice.sync.SyncApi;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -60,7 +59,6 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static DataApi           dataApi;
     protected static SearchApi         searchApi;
     protected static OrganizationsApi  organizationsApi;
-    protected static SyncApi           syncApi;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -86,7 +84,6 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         dataApi = currentRetrofit.create( DataApi.class );
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
-        syncApi = currentRetrofit.create( SyncApi.class );
     }
 
     /**
