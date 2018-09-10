@@ -71,8 +71,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-public class ConductorServicesPod {
-    private static Logger logger = LoggerFactory.getLogger( ConductorServicesPod.class );
+public class IndexerServicesPod {
+    private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
     @Inject
     private HazelcastInstance hazelcastInstance;
@@ -247,8 +247,7 @@ public class ConductorServicesPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager(),
-                datasourceManager() );
+                schemaManager() );
     }
 
     @Bean

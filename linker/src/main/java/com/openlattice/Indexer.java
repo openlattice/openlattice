@@ -26,14 +26,13 @@ import com.kryptnostic.rhizome.pods.CassandraPod;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
-import com.openlattice.conductor.codecs.pods.TypeCodecsPod;
 import com.openlattice.datastore.cassandra.CassandraTablesPod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
-import com.openlattice.pods.ConductorServicesPod;
+import com.openlattice.pods.IndexerServicesPod;
 import com.openlattice.pods.ConductorSparkPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
@@ -41,15 +40,14 @@ import com.openlattice.postgres.PostgresTablesPod;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Conductor extends RhizomeApplicationServer {
+public class Indexer extends RhizomeApplicationServer {
     public static final Class<?>[] rhizomePods = new Class<?>[] {
             CassandraPod.class,
             RegistryBasedHazelcastInstanceConfigurationPod.class };
 
     public static final Class<?>[] conductorPods = new Class<?>[] {
             ConductorSparkPod.class,
-            ConductorServicesPod.class,
-            TypeCodecsPod.class,
+            IndexerServicesPod.class,
             SharedStreamSerializersPod.class,
             PlasmaCoupling.class,
             MailServicePod.class,
@@ -64,7 +62,7 @@ public class Conductor extends RhizomeApplicationServer {
             AwsS3Pod.class
     };
 
-    public Conductor() {
+    public Indexer() {
         super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, rhizomePods, conductorPods ) );
     }
 
@@ -75,6 +73,6 @@ public class Conductor extends RhizomeApplicationServer {
     }
 
     public static void main( String[] args ) {
-        new Conductor().sprout( args );
+        new Indexer().sprout( args );
     }
 }
