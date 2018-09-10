@@ -34,7 +34,6 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
@@ -50,10 +49,11 @@ import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.neuron.Neuron;
 import com.zaxxer.hikari.HikariDataSource;
+
 import javax.inject.Inject;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -148,10 +148,6 @@ public class NeuronPod {
         );
     }
 
-    @Bean
-    public DatasourceManager dataSourceManager() {
-        return new DatasourceManager( hikariDataSource, hazelcastInstance );
-    }
 
     @Bean
     public EdmManager dataModelService() {
@@ -162,8 +158,7 @@ public class NeuronPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager(),
-                dataSourceManager() );
+                schemaManager());
     }
 
     @Bean
@@ -179,11 +174,6 @@ public class NeuronPod {
     @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
         return new HazelcastAclKeyReservationService( hazelcastInstance );
-    }
-
-    @Bean
-    public HazelcastLinkingGraphs linkingGraph() {
-        return new HazelcastLinkingGraphs( hazelcastInstance );
     }
 
     @Bean
@@ -207,5 +197,4 @@ public class NeuronPod {
     public SchemaQueryService schemaQueryService() {
         return new PostgresSchemaQueryService( hikariDataSource );
     }
-
 }

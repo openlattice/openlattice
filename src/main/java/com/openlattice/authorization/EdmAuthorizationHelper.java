@@ -118,6 +118,14 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     }
 
     public static Map<AclKey, EnumSet<Permission>> aclKeysForAccessCheck(
+            UUID entitySetId,
+            Set<UUID> propertyTypeIds,
+            EnumSet<Permission> requiredPermission ) {
+        return propertyTypeIds.stream().map( ptId -> new AclKey( entitySetId, ptId ) )
+                .collect( Collectors.toMap( Function.identity(), e -> requiredPermission ) );
+    }
+
+    public static Map<AclKey, EnumSet<Permission>> aclKeysForAccessCheck(
             SetMultimap<UUID, UUID> rawAclKeys,
             EnumSet<Permission> requiredPermission ) {
         return rawAclKeys.entries().stream()

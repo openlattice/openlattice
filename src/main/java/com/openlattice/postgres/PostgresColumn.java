@@ -78,6 +78,10 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( CATEGORY_FIELD, TEXT ).notNull();
     public static final PostgresColumnDefinition CLAUSES                     = new PostgresColumnDefinition( "clauses",
             INTEGER_ARRAY );
+    public static final String                   CLUSTER_ID_FIELD            = "cluster_id";
+    public static final PostgresColumnDefinition CLUSTER_ID                  = new PostgresColumnDefinition(
+            CLUSTER_ID_FIELD,
+            UUID );
     public static final String                   CONFIG_TYPE_IDS_FIELD       = "config_type_ids";
     public static final PostgresColumnDefinition CONFIG_TYPE_IDS             =
             new PostgresColumnDefinition( CONFIG_TYPE_IDS_FIELD, UUID_ARRAY );
@@ -181,10 +185,15 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition KEY                         =
             new PostgresColumnDefinition( KEY_FIELD, UUID_ARRAY ).notNull();
     public static final String                   LAST_INDEX_FIELD            = "last_index";
+    public static final String                   LAST_LINK_FIELD            = "last_link";
     public static final String                   LAST_WRITE_FIELD            = "last_write";
     public static final String                   LSB_FIELD                   = "lsb";
     public static final PostgresColumnDefinition LSB                         =
             new PostgresColumnDefinition( LSB_FIELD, BIGINT ).notNull();
+    public static final String                   MATCH_ID_FIELD              = "match_id";
+    public static final PostgresColumnDefinition MATCH_ID                    = new PostgresColumnDefinition(
+            MATCH_ID_FIELD,
+            UUID );
     public static final String                   MEMBERS_FIELD               = "members";
     public static final PostgresColumnDefinition MEMBERS                     =
             new PostgresColumnDefinition( MEMBERS_FIELD, TEXT_ARRAY );
@@ -257,6 +266,9 @@ public final class PostgresColumn {
     public static final String                   SCHEMAS_FIELD               = "schemas";
     public static final PostgresColumnDefinition SCHEMAS                     =
             new PostgresColumnDefinition( SCHEMAS_FIELD, TEXT_ARRAY ).notNull();
+    public static final String                   SCORE_FIELD                 = "score";
+    public static final PostgresColumnDefinition SCORE                       =
+            new PostgresColumnDefinition( SCORE_FIELD, PostgresDatatype.DOUBLE );
     public static final String                   SECURABLE_OBJECTID_FIELD    = "securable_objectid";
     public static final PostgresColumnDefinition SECURABLE_OBJECTID          =
             new PostgresColumnDefinition( SECURABLE_OBJECTID_FIELD, UUID ).notNull();

@@ -41,7 +41,6 @@ public class MergeVertexAggregator extends Aggregator<Map.Entry<LinkingVertexKey
     @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
     private           Map<UUID, PropertyType>         propertyTypesById;
     private           UUID                            graphId;
-    private           UUID                            syncId;
     private           Map<UUID, Set<UUID>>            propertyTypeIdsByEntitySet;
     private           Set<UUID>                       propertyTypesToPopulate;
     private           Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataTypeForLinkedEntitySet;
@@ -51,13 +50,11 @@ public class MergeVertexAggregator extends Aggregator<Map.Entry<LinkingVertexKey
 
     public MergeVertexAggregator(
             UUID graphId,
-            UUID syncId,
             Map<UUID, Set<UUID>> propertyTypeIdsByEntitySet,
             Map<UUID, PropertyType> propertyTypesById,
             Set<UUID> propertyTypesToPopulate,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataTypeForLinkedEntitySet ) {
         this.graphId = graphId;
-        this.syncId = syncId;
         this.propertyTypeIdsByEntitySet = propertyTypeIdsByEntitySet;
         this.propertyTypesById = propertyTypesById;
         this.propertyTypesToPopulate = propertyTypesToPopulate;
@@ -105,10 +102,6 @@ public class MergeVertexAggregator extends Aggregator<Map.Entry<LinkingVertexKey
 
     public UUID getGraphId() {
         return graphId;
-    }
-
-    public UUID getSyncId() {
-        return syncId;
     }
 
     public Map<UUID, Set<UUID>> getPropertyTypeIdsByEntitySet() {
