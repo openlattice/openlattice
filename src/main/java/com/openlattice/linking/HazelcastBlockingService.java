@@ -22,7 +22,6 @@ package com.openlattice.linking;
 
 import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ICountDownLatch;
 import com.hazelcast.core.IMap;
 import com.openlattice.blocking.GraphEntityPair;
 import com.openlattice.blocking.LinkingEntity;

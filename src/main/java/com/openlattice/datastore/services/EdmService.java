@@ -95,6 +95,7 @@ import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
+import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.*;
@@ -148,6 +149,9 @@ public class EdmService implements EdmManager {
 
     @Inject
     private EventBus eventBus;
+
+    @Inject
+    private EsEdmService esEdmService;
 
     public EdmService(
             HikariDataSource hds,
@@ -242,6 +246,10 @@ public class EdmService implements EdmManager {
 
         if ( dbRecord == null ) {
             propertyType.getSchemas().forEach( schemaManager.propertyTypesSchemaAdder( propertyType.getId() ) );
+
+            edmManager.createPropertyTypeIfNotExist( propertyType );
+            esEdmService.createPropertyType( propertyType );
+
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         } else {
             logger.error(
@@ -453,7 +461,7 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public void createEntitySet( Principal principal, EntitySet entitySet, Set<UUID> ownablePropertyTypes ) {
+    public void createEntitySet( Principal principal, EntitySet entitySet, Set<UUID> ownablePropertyTypeIDs ) {
         Principals.ensureUser( principal );
         createEntitySet( entitySet );
 
@@ -466,18 +474,20 @@ public class EdmService implements EdmManager {
                     principal,
                     EnumSet.allOf( Permission.class ) );
 
-            ownablePropertyTypes.stream()
+            ownablePropertyTypeIDs.stream()
                     .map( propertyTypeId -> new AclKey( entitySet.getId(), propertyTypeId ) )
                     .peek( aclKey -> {
                         authorizations.setSecurableObjectType( aclKey,
                                 SecurableObjectType.PropertyTypeInEntitySet );
-                    } ).forEach( aclKey -> authorizations.addPermission(
-                    aclKey,
-                    principal,
-                    EnumSet.allOf( Permission.class ) ) );
+                    } )
+                    .forEach( aclKey -> authorizations.addPermission( aclKey, principal, EnumSet.allOf( Permission.class ) ) );
 
-            eventBus.post( new EntitySetCreatedEvent( entitySet,
-                    Lists.newArrayList( propertyTypes.getAll( ownablePropertyTypes ).values() ) ) );
+            List<PropertyType> ownablePropertyTypes = Lists.newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
+            edmManager.createEntitySet( entitySet, ownablePropertyTypes );
+            esEdmService.createEntitySet(entitySet, ownablePropertyTypes );
+
+            // No subscribers currently
+            eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
 
         } catch ( Exception e ) {
             logger.error( "Unable to create entity set {} for principal {}", entitySet, principal, e );
@@ -932,7 +942,12 @@ public class EdmService implements EdmManager {
                             .forEach( es -> eventBus
                                     .post( new PropertyTypesInEntitySetUpdatedEvent( es.getId(), properties ) ) );
                 } );
-        eventBus.post( new PropertyTypeCreatedEvent( getPropertyType( propertyTypeId ) ) );
+
+        PropertyType propertyType = getPropertyType( propertyTypeId );
+        edmManager.createPropertyTypeIfNotExist( propertyType );
+        esEdmService.createPropertyType( propertyType );
+
+        eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
     }
 
     @Override

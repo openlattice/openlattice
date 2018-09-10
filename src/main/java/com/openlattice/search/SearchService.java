@@ -63,12 +63,10 @@ import com.openlattice.edm.events.AppTypeDeletedEvent;
 import com.openlattice.edm.events.AssociationTypeCreatedEvent;
 import com.openlattice.edm.events.AssociationTypeDeletedEvent;
 import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
 import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
 import com.openlattice.edm.events.EntityTypeCreatedEvent;
 import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
 import com.openlattice.edm.events.PropertyTypeDeletedEvent;
 import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.type.AssociationType;
@@ -88,15 +86,8 @@ import com.openlattice.search.requests.SearchDetails;
 import com.openlattice.search.requests.SearchResult;
 import com.openlattice.search.requests.SearchTerm;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -140,8 +131,7 @@ public class SearchService {
     @Inject
     private PostgresDataManager postgresDataManager;
 
-    @PostConstruct
-    public void initializeBus() {
+    public SearchService( EventBus eventBus ) {
         eventBus.register( this );
     }
 
@@ -166,12 +156,6 @@ public class SearchService {
                 authorizedEntitySetIds,
                 start,
                 maxHits );
-    }
-
-    @Timed
-    @Subscribe
-    public void createEntitySet( EntitySetCreatedEvent event ) {
-        elasticsearchApi.saveEntitySetToElasticsearch( event.getEntitySet(), event.getPropertyTypes() );
     }
 
     @Timed
@@ -343,12 +327,6 @@ public class SearchService {
     public void createAssociationType( AssociationTypeCreatedEvent event ) {
         AssociationType associationType = event.getAssociationType();
         elasticsearchApi.saveAssociationTypeToElasticsearch( associationType );
-    }
-
-    @Subscribe
-    public void createPropertyType( PropertyTypeCreatedEvent event ) {
-        PropertyType propertyType = event.getPropertyType();
-        elasticsearchApi.savePropertyTypeToElasticsearch( propertyType );
     }
 
     @Subscribe

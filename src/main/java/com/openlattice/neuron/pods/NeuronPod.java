@@ -52,7 +52,6 @@ import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.neuron.Neuron;
-import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.inject.Inject;
 import org.springframework.context.annotation.Bean;
@@ -208,4 +207,5 @@ public class NeuronPod {
     public SchemaQueryService schemaQueryService() {
         return new PostgresSchemaQueryService( hikariDataSource );
     }
+
 }
