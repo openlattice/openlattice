@@ -26,7 +26,6 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
@@ -69,18 +68,17 @@ public class AuditEntitySetUtils {
     // @formatter:on
 
     // PlasmaCoupling magic
-    public static void initialize( DatasourceManager dataSourceManager, EdmManager entityDataModelManager ) {
+    public static void initialize( EdmManager entityDataModelManager ) {
 
         EntitySet maybeAuditEntitySet = entityDataModelManager.getEntitySet( AUDIT_ENTITY_SET_NAME );
 
         if ( maybeAuditEntitySet == null ) {
             initializePropertyTypes( entityDataModelManager );
             initializeEntityType( entityDataModelManager );
-            initializeEntitySet( dataSourceManager, entityDataModelManager );
+            initializeEntitySet( entityDataModelManager );
         } else {
             AUDIT_ENTITY_SET = maybeAuditEntitySet;
             AUDIT_ENTITY_TYPE = entityDataModelManager.getEntityType( AUDIT_ENTITY_SET.getEntityTypeId() );
-            AUDIT_ENTITY_SET_SYNC_ID = dataSourceManager.getCurrentSyncId( AUDIT_ENTITY_SET.getId() );
             TYPE_PROPERTY_TYPE = entityDataModelManager.getPropertyType( TYPE_PT_FQN );
             DETAILS_PROPERTY_TYPE = entityDataModelManager.getPropertyType( DETAILS_PT_FQN );
             PROPERTIES = entityDataModelManager.getPropertyTypes( AUDIT_ENTITY_TYPE.getProperties() );
@@ -158,7 +156,7 @@ public class AuditEntitySetUtils {
         }
     }
 
-    private static void initializeEntitySet( DatasourceManager dataSourceManager, EdmManager entityDataModelManager ) {
+    private static void initializeEntitySet( EdmManager entityDataModelManager ) {
 
         try {
             AUDIT_ENTITY_SET = entityDataModelManager.getEntitySet( AUDIT_ENTITY_SET_NAME );
@@ -176,9 +174,6 @@ public class AuditEntitySetUtils {
             );
             entityDataModelManager.createEntitySet( OPEN_LATTICE_PRINCIPAL, AUDIT_ENTITY_SET );
         }
-
-        AUDIT_ENTITY_SET_SYNC_ID = dataSourceManager.createNewSyncIdForEntitySet( AUDIT_ENTITY_SET.getId() );
-        dataSourceManager.setCurrentSyncId( AUDIT_ENTITY_SET.getId(), AUDIT_ENTITY_SET_SYNC_ID );
     }
 
     public static UUID getId() {

@@ -71,6 +71,7 @@ open class DataGraphService(
 ) : DataGraphManager {
     //TODO: Move to a utility class
     companion object {
+
         @JvmStatic
         fun tryGetAndLogErrors(f: ListenableFuture<*>) {
             try {
@@ -82,8 +83,8 @@ open class DataGraphService(
             }
         }
     }
-
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+
     private val typeIds: LoadingCache<UUID, UUID> = CacheBuilder.newBuilder()
             .maximumSize(100000) // 100K * 16 = 16000K = 16MB
             .build(
@@ -95,7 +96,6 @@ open class DataGraphService(
                         }
                     }
             )
-
     private val queryCache = CacheBuilder.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(30, TimeUnit.SECONDS)
@@ -109,7 +109,6 @@ open class DataGraphService(
         return eds.getEntitySetData(entitySetId, orderedPropertyNames, authorizedPropertyTypes)
     }
 
-
     override fun getEntitySetData(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -118,6 +117,7 @@ open class DataGraphService(
     ): EntitySetData<FullQualifiedName> {
         return eds.getEntities(entitySetId, entityKeyIds, orderedPropertyNames, authorizedPropertyTypes)
     }
+
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         graphService.deleteVerticesInEntitySet(entitySetId)
@@ -212,9 +212,17 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): List<UUID> {
         val ids = idService.reserveIds(entitySetId, entities.size)
-        val entityMap = ids.mapIndexed { i, id -> id to entities[i] }.toMap()
+        val entityMap = ids.mapIndexed { i, id -> id to Multimaps.asMap(entities[i]) }.toMap()
         eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
         return ids
+    }
+
+    override fun mergeEntities(
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int {
+        return eds.createOrUpdateEntities(entitySetId,entities,authorizedPropertyTypes)
     }
 
     override fun replaceEntities(

@@ -189,6 +189,14 @@ public interface ConductorElasticsearchApi {
             int maxHits,
             Set<UUID> authorizedPropertyTypes );
 
+    /**
+     * Performs a capped size search across several entity sets.
+     * @param entitySetIds The entity sets to search.
+     * @param fieldSearches The values for each field that is being searched.
+     * @param size The size cap on the results per entity set.
+     * @param explain
+     * @return A map entity set ids to entity key ids of results for each entity set.
+     */
     Map<UUID, Set<UUID>> searchEntitySets(
             Iterable<UUID> entitySetIds,
             Map<UUID, DelegatedStringSet> fieldSearches,

@@ -155,10 +155,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override
     public int createOrUpdateEntities(
             UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        int count = dataQueryService.upsertEntities( entitySetId, transformValues(entities,Multimaps::asMap), authorizedPropertyTypes );
-        signalCreatedEntities( entitySetId, entities );
+        int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
+        signalCreatedEntitiesCompat( entitySetId, entities );
         return count;
     }
 
@@ -194,6 +194,20 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         signalCreatedEntities( entitySetId,
                 dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
+    }
+
+    //TODO: Fix LATTICE-1185
+    @Deprecated
+    private void signalCreatedEntitiesCompat( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
+        signalCreatedEntities( entitySetId,
+                ImmutableMap.copyOf( Maps.transformValues( entities, HazelcastEntityDatastore::setMultimapFromMap ) ) );
+
+    }
+
+    private static SetMultimap<UUID, Object> setMultimapFromMap( Map<UUID, Set<Object>> m ) {
+        final SetMultimap<UUID, Object> entity = HashMultimap.create();
+        m.forEach( entity::putAll );
+        return entity;
     }
 
     private void signalCreatedEntities( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entities ) {
@@ -399,7 +413,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             String entityId,
             SetMultimap<UUID, Object> entityDetails ) {
         //TODO: Keep full local copy of PropertyTypes EDM
-        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType =transformValues( authorizedPropertyTypes, PropertyType::getDatatype );
+        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType = transformValues( authorizedPropertyTypes,
+                PropertyType::getDatatype );
         Set<UUID> authorizedProperties = authorizedPropertiesWithDataType.keySet();
         // does not write the row if some property values that user is trying to write to are not authorized.
         //TODO: Don't fail silently
@@ -415,7 +430,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         SetMultimap<UUID, Object> normalizedPropertyValues;
         try {
-            normalizedPropertyValues = JsonDeserializer.validateFormatAndNormalize( Multimaps.asMap(entityDetails),
+            normalizedPropertyValues = JsonDeserializer.validateFormatAndNormalize( Multimaps.asMap( entityDetails ),
                     authorizedPropertiesWithDataType );
         } catch ( Exception e ) {
             logger.error( "Entity {} not written because some property values are of invalid format.",
@@ -429,7 +444,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final UUID id = idService.getEntityKeyId( entitySetId, entityId );
         final EntityDataKey edk = new EntityDataKey( entitySetId, id );
         dataQueryService.upsertEntities( entitySetId,
-                ImmutableMap.of( id, Multimaps.asMap(normalizedPropertyValues )),
+                ImmutableMap.of( id, Multimaps.asMap( normalizedPropertyValues ) ),
                 authorizedPropertyTypes );
         eventBus.post( new EntityDataCreatedEvent( edk, normalizedPropertyValues, true ) );
         return id;

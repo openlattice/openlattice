@@ -20,24 +20,25 @@
 
 package com.openlattice.datastore.services;
 
-import com.google.common.collect.Sets;
-import com.openlattice.edm.EntitySet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.openlattice.data.PropertyUsageSummary;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 public class PostgresEntitySetManager {
     private static final Logger           logger = LoggerFactory.getLogger( PostgresEntitySetManager.class );
@@ -66,10 +67,14 @@ public class PostgresEntitySetManager {
                 .concat( " = ?;" );
         this.getEntitySetsByType = "SELECT * FROM ".concat( ENTITY_SETS ).concat( " WHERE " ).concat( ENTITY_TYPE_ID )
                 .concat( " = ?;" );
+
         this.getAllPropertyTypeIds = "SELECT id from \"property_types\";"; //fix later
         this.getPropertyTypeSummary = "SELECT entity_type_id, entity_set_id, count(*) FROM $propertyTableName LEFT JOIN entity_sets on entity_set_id = entity_sets.id " +
                         "GROUP BY (entity_type_id,entity_set_id);";
+
     }
+
+
 
     public EntitySet getEntitySet( String entitySetName ) {
         EntitySet entitySet = null;
@@ -117,23 +122,6 @@ public class PostgresEntitySetManager {
         } catch ( SQLException e ) {
             logger.debug( "Unable to load entity sets for entity type id {}", entityTypeId.toString(), e );
             return ImmutableList.of();
-        }
-    }
-
-    public Set<UUID> getAllPropertyTypeIds() {
-        try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( getAllPropertyTypeIds ) ) {
-            Set<UUID> result = Sets.newHashSet();
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.id( rs ) );
-            }
-
-            connection.close();
-            return result;
-        } catch ( SQLException e ) {
-            logger.error( "Unable to load property type ids", e );
-            throw new IllegalStateException( "Unable to load property type ids.", e );
         }
     }
 

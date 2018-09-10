@@ -34,7 +34,6 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
@@ -50,19 +49,20 @@ import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.neuron.Neuron;
 import com.zaxxer.hikari.HikariDataSource;
+
 import javax.inject.Inject;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 @Configuration
-@Import( {
+@Import({
         AuditEntitySetPod.class,
         CassandraPod.class
-} )
+})
 public class NeuronPod {
 
     @Inject
@@ -85,7 +85,7 @@ public class NeuronPod {
 
     @Bean
     public Neuron neuron() {
-        return new Neuron( dataGraphService(), idService(), hikariDataSource );
+        return new Neuron(dataGraphService(), idService(), hikariDataSource);
     }
 
     /*
@@ -96,22 +96,22 @@ public class NeuronPod {
 
     @Bean
     public AuthorizationQueryService authorizationQueryService() {
-        return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );
+        return new AuthorizationQueryService(hikariDataSource, hazelcastInstance);
     }
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService( hazelcastInstance, authorizationQueryService(), eventBus );
+        return new HazelcastAuthorizationService(hazelcastInstance, authorizationQueryService(), eventBus);
     }
 
     @Bean
     public PostgresDataManager postgresDataManager() {
-        return new PostgresDataManager( hikariDataSource );
+        return new PostgresDataManager(hikariDataSource);
     }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource );
+        return new PostgresEntityDataQueryService(hikariDataSource);
     }
 
     @Bean
@@ -128,12 +128,12 @@ public class NeuronPod {
 
     @Bean
     public PostgresEntitySetManager entitySetManager() {
-        return new PostgresEntitySetManager( hikariDataSource );
+        return new PostgresEntitySetManager(hikariDataSource);
     }
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource );
+        return new PostgresTypeManager(hikariDataSource);
     }
 
     @Bean
@@ -148,10 +148,6 @@ public class NeuronPod {
         );
     }
 
-    @Bean
-    public DatasourceManager dataSourceManager() {
-        return new DatasourceManager( hikariDataSource, hazelcastInstance );
-    }
 
     @Bean
     public EdmManager dataModelService() {
@@ -162,40 +158,34 @@ public class NeuronPod {
                 authorizationManager(),
                 entitySetManager(),
                 entityTypeManager(),
-                schemaManager(),
-                dataSourceManager() );
+                schemaManager());
     }
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastInstance, hikariDataSource, idGenerationService() );
+        return new PostgresEntityKeyIdService(hazelcastInstance, hikariDataSource, idGenerationService());
     }
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService( hazelcastInstance );
+        return new HazelcastIdGenerationService(hazelcastInstance);
     }
 
     @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
-        return new HazelcastAclKeyReservationService( hazelcastInstance );
-    }
-
-    @Bean
-    public HazelcastLinkingGraphs linkingGraph() {
-        return new HazelcastLinkingGraphs( hazelcastInstance );
+        return new HazelcastAclKeyReservationService(hazelcastInstance);
     }
 
     @Bean
     public HazelcastSchemaManager schemaManager() {
         return new HazelcastSchemaManager(
                 hazelcastInstance,
-                schemaQueryService() );
+                schemaQueryService());
     }
 
     @Bean
     public GraphService graphApi() {
-        return new Graph( hikariDataSource, dataModelService() );
+        return new Graph(hikariDataSource, dataModelService());
     }
 
     @Bean
@@ -205,6 +195,6 @@ public class NeuronPod {
 
     @Bean
     public SchemaQueryService schemaQueryService() {
-        return new PostgresSchemaQueryService( hikariDataSource );
+        return new PostgresSchemaQueryService(hikariDataSource);
     }
 }

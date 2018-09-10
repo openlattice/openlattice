@@ -21,11 +21,14 @@
 
 package com.openlattice.data.storage;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public enum MetadataOption {
-    LAST_WRITE,
     LAST_INDEX,
+    LAST_LINK,
+    LAST_WRITE,
     VERSION
 }
