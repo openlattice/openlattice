@@ -307,7 +307,6 @@ public class DataController implements DataApi, AuthorizingComponent {
         return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
-    @Timed
     @Override
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH,
@@ -627,23 +626,16 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
-        return entities.values().stream()
-                .map( Map::keySet )
-                .flatMap( Set::stream )
+        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 
     private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
-        return entities.values().stream()
-                .map( SetMultimap::keySet )
-                .flatMap( Set::stream )
+        return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 
     private static Set<UUID> requiredPropertyAuthorizations( Collection<SetMultimap<UUID, Object>> entities ) {
-        return entities.stream()
-                .map( SetMultimap::keySet )
-                .flatMap( Set::stream )
-                .collect( Collectors.toSet() );
+        return entities.stream().map( SetMultimap::keySet ).flatMap( Set::stream ).collect( Collectors.toSet() );
     }
 }

@@ -63,6 +63,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
+import com.openlattice.search.EsEdmService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
@@ -228,11 +229,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public SearchService searchService() {
-        return new SearchService(eventBus);
-    }
-
-    @Bean
     public EdmAuthorizationHelper edmAuthorizationHelper() {
         return new EdmAuthorizationHelper(dataModelService(), authorizationManager());
     }
@@ -320,6 +316,12 @@ public class DatastoreServicesPod {
     public ConductorElasticsearchApi conductorElasticsearchApi() {
         return new DatastoreConductorElasticsearchApi(hazelcastInstance);
     }
+
+    @Bean
+    public EsEdmService esEdmService() { return new EsEdmService(); }
+
+    @Bean
+    public SearchService searchService() { return new SearchService(eventBus); }
 
     @PostConstruct
     void initPrincipals() {
