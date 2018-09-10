@@ -16,29 +16,23 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice;
+package com.openlattice.linking.clustering
 
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.hazelcast.serializers.ConductorElasticsearchCallStreamSerializer;
+import com.openlattice.data.Entity
+import com.openlattice.data.EntityDataKey
+import java.util.*
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
+/**
+ *
+ *
+ */
+class ClusterUpdate(
+        val clusterId: UUID,
+        val newMember: EntityDataKey,
+        val scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
+        ) {
 
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class PlasmaCoupling {
-
-    @Inject
-    private ConductorElasticsearchApi elasticsearchApi;
-
-    @Inject
-    private ConductorElasticsearchCallStreamSerializer cecss;
-
-    @PostConstruct
-    public void connect() {
-        cecss.setConductorElasticsearchApi(elasticsearchApi);
-    }
 }

@@ -23,15 +23,17 @@ package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
-import java.io.InputStream
 import java.util.*
-import java.util.function.Supplier
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 interface Matcher {
+    fun initialize(
+            block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
+    ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
+
     /**
      * Computes an approximation of the discrete metric of every pair of blocked entities.
      *
@@ -42,13 +44,17 @@ interface Matcher {
      */
     fun match(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
-    ): Pair<EntityDataKey, MutableMap<EntityDataKey, Map<EntityDataKey, Double>>>
+    ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
 
+    fun trimAndMerge(matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>)
     /**
      * Allow inplace updating of the model used for peforming the matching.
      *
      * @param modelSource A supplier that returns an input stream to a serialized MultiLayerNetwork
      *
      */
+
     fun updateMatchingModel(model: MultiLayerNetwork)
+
 }
+
