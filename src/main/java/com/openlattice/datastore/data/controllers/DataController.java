@@ -46,7 +46,6 @@ import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.DataGraph;
 import com.openlattice.data.DataGraphIds;
 import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntitySetData;
 import com.openlattice.data.requests.EntitySetSelection;
@@ -120,9 +119,6 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Inject
     private AuthenticationManager authProvider;
-
-    @Inject
-    private DatasourceManager datasourceManager;
 
     @Inject
     private SearchService searchService;

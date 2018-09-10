@@ -20,7 +20,6 @@
 
 package com.openlattice.datastore.odata;
 
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.datastore.DatastoreUtil;
 import com.openlattice.datastore.services.ODataStorageService;
 import java.io.InputStream;
@@ -48,14 +47,12 @@ import org.apache.olingo.server.api.uri.UriResourceEntitySet;
 
 public class EntityProcessorImpl implements EntityProcessor {
     private final ODataStorageService storage;
-    private final DatasourceManager   dsm;
 
     private OData           odata;
     private ServiceMetadata serviceMetadata;
 
-    public EntityProcessorImpl( ODataStorageService storage, DatasourceManager dsm ) {
+    public EntityProcessorImpl( ODataStorageService storage) {
         this.storage = storage;
-        this.dsm = dsm;
     }
 
     @Override

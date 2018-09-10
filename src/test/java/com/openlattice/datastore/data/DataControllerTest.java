@@ -65,7 +65,6 @@ public class DataControllerTest extends MultipleAuthenticatedUsersBase {
     public void testLoadSelectedEntityData() {
         EntityType et = createEntityType();
         EntitySet es = createEntitySet( et );
-        UUID syncId = syncApi.getCurrentSyncId( es.getId() );
 
         Map<UUID, Map<UUID, Set<Object>>> entities = Maps.transformValues( TestDataFactory.randomStringEntityData( numberOfEntries,
                 et.getProperties() ),Multimaps::asMap);

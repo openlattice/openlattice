@@ -20,8 +20,6 @@
 
 package com.openlattice.datastore.pods;
 
-import static com.openlattice.datastore.util.Util.returnAndLog;
-
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
@@ -31,17 +29,7 @@ import com.kryptnostic.rhizome.pods.CassandraPod;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationQueryService;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.HazelcastAbstractSecurableObjectResolveTypeService;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.HazelcastAuthorizationService;
-import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.authorization.Principals;
-import com.openlattice.clustering.DistributedClusterer;
+import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
@@ -66,12 +54,8 @@ import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.HazelcastLinkingGraphs;
 import com.openlattice.linking.HazelcastListingService;
 import com.openlattice.linking.HazelcastVertexMergingService;
-import com.openlattice.linking.components.Clusterer;
-import com.openlattice.matching.DistributedMatcher;
-import com.openlattice.merging.DistributedMerger;
 import com.openlattice.neuron.Neuron;
 import com.openlattice.neuron.pods.NeuronPod;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -83,12 +67,15 @@ import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.EsEdmService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+
+import static com.openlattice.datastore.util.Util.returnAndLog;
 
 @Configuration
 @Import( {
@@ -123,7 +110,7 @@ public class DatastoreServicesPod {
     @Bean
     public ObjectMapper defaultObjectMapper() {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
-        FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
+        FullQualifiedNameJacksonSerializer.registerWithMapper(mapper);
 
         return mapper;
     }
@@ -184,8 +171,7 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 pgEdmManager(),
                 entityTypeManager(),
-                schemaManager(),
-                datasourceManager() );
+                schemaManager());
     }
 
     @Bean
@@ -207,7 +193,7 @@ public class DatastoreServicesPod {
     public ODataStorageService odataStorageService() {
         return new ODataStorageService(
                 hazelcastInstance,
-                dataModelService() );
+                dataModelService());
     }
 
     @Bean
@@ -243,11 +229,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public DatasourceManager datasourceManager() {
-        return new DatasourceManager( hikariDataSource, hazelcastInstance );
-    }
-
-    @Bean
     public UserDirectoryService userDirectoryService() {
         return new UserDirectoryService( auth0TokenProvider(), hazelcastInstance );
     }
@@ -270,36 +251,6 @@ public class DatastoreServicesPod {
     @Bean
     public HazelcastRequestsManager hazelcastRequestsManager() {
         return new HazelcastRequestsManager( hazelcastInstance, rqs(), neuron );
-    }
-
-    @Bean
-    public Clusterer clusterer() {
-        return new DistributedClusterer( hazelcastInstance );
-    }
-
-    @Bean
-    public DistributedMatcher matcher() {
-        return new DistributedMatcher( hazelcastInstance, dataModelService() );
-    }
-
-    @Bean
-    public DistributedMerger merger() {
-        return new DistributedMerger( hazelcastInstance,
-                hazelcastListingService(),
-                dataModelService(),
-                datasourceManager() );
-    }
-
-    @Bean
-    public LinkingService linkingService() {
-        return returnAndLog( new LinkingService(
-                linkingGraph(),
-                matcher(),
-                clusterer(),
-                merger(),
-                eventBus,
-                dataModelService(),
-                datasourceManager() ), "Checkpoint linking service" );
     }
 
     @Bean

@@ -22,7 +22,6 @@ package com.openlattice.datastore.pods;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.controllers.OrganizationsController;
-import com.openlattice.controllers.SyncController;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.controllers.EntitySetsController;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
@@ -41,8 +40,10 @@ import com.openlattice.datastore.search.controllers.SearchController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.graph.controllers.GraphController;
 import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
+
 import java.util.List;
 import javax.inject.Inject;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -58,20 +59,19 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
 
 @Configuration
 @ComponentScan(
-        basePackageClasses = { DataController.class, SearchController.class,
+        basePackageClasses = {DataController.class, SearchController.class,
                 PermissionsController.class, AuthorizationsController.class,
                 PrincipalDirectoryController.class,
                 EdmController.class, OrganizationsController.class,
                 DataStoreExceptionHandler.class, LinkingController.class, AnalysisController.class,
-                SyncController.class, RequestsController.class, AppController.class, GraphController.class,
-                EntitySetsController.class },
+                RequestsController.class, AppController.class, GraphController.class, EntitySetsController.class},
         includeFilters = @ComponentScan.Filter(
-                value = { org.springframework.stereotype.Controller.class,
-                        org.springframework.web.bind.annotation.RestControllerAdvice.class },
-                type = FilterType.ANNOTATION ) )
+                value = {org.springframework.stereotype.Controller.class,
+                        org.springframework.web.bind.annotation.RestControllerAdvice.class},
+                type = FilterType.ANNOTATION))
 @EnableAsync
 @EnableMetrics(
-        proxyTargetClass = true )
+        proxyTargetClass = true)
 public class DatastoreMvcPod extends WebMvcConfigurationSupport {
 
     @Inject
@@ -81,37 +81,37 @@ public class DatastoreMvcPod extends WebMvcConfigurationSupport {
     private DatastoreSecurityPod datastoreSecurityPod;
 
     @Override
-    protected void configureMessageConverters( List<HttpMessageConverter<?>> converters ) {
-        super.addDefaultHttpMessageConverters( converters );
-        for ( HttpMessageConverter<?> converter : converters ) {
-            if ( converter instanceof MappingJackson2HttpMessageConverter ) {
+    protected void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+        super.addDefaultHttpMessageConverters(converters);
+        for (HttpMessageConverter<?> converter : converters) {
+            if (converter instanceof MappingJackson2HttpMessageConverter) {
                 MappingJackson2HttpMessageConverter jackson2HttpMessageConverter = (MappingJackson2HttpMessageConverter) converter;
-                jackson2HttpMessageConverter.setObjectMapper( defaultObjectMapper );
+                jackson2HttpMessageConverter.setObjectMapper(defaultObjectMapper);
             }
         }
-        converters.add( new CsvHttpMessageConverter() );
-        converters.add( new YamlHttpMessageConverter() );
+        converters.add(new CsvHttpMessageConverter());
+        converters.add(new YamlHttpMessageConverter());
     }
 
     // TODO: We need to lock this down. Since all endpoints are stateless + authenticated this is more a
     // defense-in-depth measure.
     @Override
-    protected void addCorsMappings( CorsRegistry registry ) {
+    protected void addCorsMappings(CorsRegistry registry) {
         registry
-                .addMapping( "/**" )
-                .allowedMethods( "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH" )
-                .allowedOrigins( "*" );
-        super.addCorsMappings( registry );
+                .addMapping("/**")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+                .allowedOrigins("*");
+        super.addCorsMappings(registry);
     }
 
     @Override
-    protected void configureContentNegotiation( ContentNegotiationConfigurer configurer ) {
-        configurer.parameterName( DataApi.FILE_TYPE )
-                .favorParameter( true )
-                .mediaType( "csv", CustomMediaType.TEXT_CSV )
-                .mediaType( "json", MediaType.APPLICATION_JSON )
-                .mediaType( "yaml", CustomMediaType.TEXT_YAML )
-                .defaultContentType( MediaType.APPLICATION_JSON );
+    protected void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
+        configurer.parameterName(DataApi.FILE_TYPE)
+                .favorParameter(true)
+                .mediaType("csv", CustomMediaType.TEXT_CSV)
+                .mediaType("json", MediaType.APPLICATION_JSON)
+                .mediaType("yaml", CustomMediaType.TEXT_YAML)
+                .defaultContentType(MediaType.APPLICATION_JSON);
     }
 
     @Bean
