@@ -34,15 +34,24 @@ import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationQueryService;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.HazelcastAuthorizationService;
-import com.openlattice.authorization.PostgresUserApi;
+import com.openlattice.authorization.*;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
+import com.openlattice.data.DatasourceManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.edm.PostgresEdmManager;
+import com.openlattice.edm.properties.PostgresTypeManager;
+import com.openlattice.edm.schemas.SchemaQueryService;
+import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
+import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
+import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.indexing.BackgroundIndexingService;
+import com.openlattice.linking.HazelcastBlockingService;
+import com.openlattice.mail.config.MailServiceRequirements;
+import com.openlattice.search.EsEdmService;
 import com.openlattice.users.Auth0Synchronizer;
 import com.openlattice.users.Auth0Synchronizer.Auth0SyncDriver;
 import com.openlattice.directory.UserDirectoryService;
@@ -187,5 +196,62 @@ public class ConductorServicesPod {
     public Auth0TokenProvider auth0TokenProvider() {
         return new Auth0TokenProvider( auth0Configuration );
     }
+
+    @Bean
+    public HazelcastBlockingService blockingService() {
+        return new HazelcastBlockingService( hazelcastInstance );
+    }
+
+    @Bean
+    public AbstractSecurableObjectResolveTypeService securableObjectTypes() {
+        return new HazelcastAbstractSecurableObjectResolveTypeService( hazelcastInstance );
+    }
+
+    @Bean
+    public SchemaQueryService schemaQueryService() {
+        return new PostgresSchemaQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public PostgresEdmManager edmManager() {
+        return new PostgresEdmManager( hikariDataSource );
+    }
+
+    @Bean
+    public HazelcastSchemaManager schemaManager() {
+        return new HazelcastSchemaManager( hazelcastInstance, schemaQueryService() );
+    }
+
+    @Bean
+    public PostgresTypeManager entityTypeManager() {
+        return new PostgresTypeManager( hikariDataSource );
+    }
+
+
+    @Bean
+    public MailServiceRequirements mailServiceRequirements() {
+        return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
+    }
+
+    @Bean
+    public DatasourceManager datasourceManager() {
+        return new DatasourceManager( hikariDataSource, hazelcastInstance );
+    }
+
+    @Bean
+    public EdmManager dataModelService() {
+        return new EdmService(
+                hikariDataSource,
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                edmManager(),
+                entityTypeManager(),
+                schemaManager(),
+                datasourceManager() );
+    }
+
+    @Bean
+    public EsEdmService esEdmService() { return new EsEdmService(); }
 
 }
