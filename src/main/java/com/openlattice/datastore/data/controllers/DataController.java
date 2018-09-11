@@ -327,7 +327,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     @Timed
     @Override
     @RequestMapping(
-            path = { "/" + ASSOCIATION + "/" + SET_ID_PATH },
+            path = { "/" + ASSOCIATION },
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public ListMultimap<UUID, UUID> createAssociations( @RequestBody ListMultimap<UUID, DataEdge> associations ) {
