@@ -290,6 +290,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             value = "/" + ENTITY_SET + "/",
@@ -306,6 +307,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH,
@@ -327,7 +329,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     @Override
     @RequestMapping(
             path = { "/" + ASSOCIATION + "/" + SET_ID_PATH },
-            method = RequestMethod.PUT,
+            method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public ListMultimap<UUID, UUID> createAssociations( @RequestBody ListMultimap<UUID, DataEdge> associations ) {
         //Ensure that we have read access to entity set metadata.
