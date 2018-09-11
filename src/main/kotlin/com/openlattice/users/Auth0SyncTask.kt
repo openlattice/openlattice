@@ -52,6 +52,8 @@ private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 
 
 /**
+ * This is the auth0 synchronization task that runs every REFRESH_INTERVAL_MILLIS in Hazelcast. It requires that
+ * Auth0SyncHelpers be initialized within the same JVM in order to function properly.
  *
  */
 class Auth0SyncTask(
