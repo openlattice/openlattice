@@ -148,17 +148,17 @@ public class DatastoreServicesPod {
     public HazelcastSchemaManager schemaManager() {
         return new HazelcastSchemaManager(
                 hazelcastInstance,
-                schemaQueryService() );
+                schemaQueryService());
     }
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager( hikariDataSource );
+        return new PostgresTypeManager(hikariDataSource);
     }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource );
+        return new PostgresEntityDataQueryService(hikariDataSource);
     }
 
     @Bean
@@ -175,14 +175,13 @@ public class DatastoreServicesPod {
 
     @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
-        return new HazelcastAclKeyReservationService(hazelcastInstance);
+        return new HazelcastAclKeyReservationService( hazelcastInstance );
     }
 
     @Bean
     public HazelcastListingService hazelcastListingService() {
-        return new HazelcastListingService(hazelcastInstance);
+        return new HazelcastListingService( hazelcastInstance );
     }
-
 
     @Bean
     public ODataStorageService odataStorageService() {
