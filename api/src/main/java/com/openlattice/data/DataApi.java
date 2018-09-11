@@ -39,35 +39,31 @@ import java.util.Set;
 import java.util.UUID;
 
 public interface DataApi {
-    /*
-     * These determine the service routing for the LB
-     */
-    String SERVICE    = "/datastore";
-    String CONTROLLER = "/data";
-    String BASE       = SERVICE + CONTROLLER;
-
+    String ASSOCIATION           = "association";
+    String CONTROLLER            = "/data";
+    String COUNT                 = "count";
+    String ENTITY_KEY_ID         = "entityKeyId";
+    String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
     /**
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
-    String ENTITY_SET  = "set";
-    String ASSOCIATION = "association";
-
-    String ENTITY_SET_ID    = "setId";
-    String ENTITY_KEY_ID    = "entityKeyId";
-    String PROPERTY_TYPE_ID = "propertyTypeId";
-
-    String COUNT  = "count";
-    String NEIGHBORS  = "neighbors";
-    String UPDATE = "update";
-
-    String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
-    String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
+    String ENTITY_SET            = "set";
+    String ENTITY_SET_ID         = "setId";
+    String FILE_TYPE             = "fileType";
+    String NEIGHBORS             = "neighbors";
+    String PARTIAL               = "partial";
+    String PROPERTY_TYPE_ID      = "propertyTypeId";
     String PROPERTY_TYPE_ID_PATH = "{" + PROPERTY_TYPE_ID + "}";
-
-    String PARTIAL   = "partial";
-    String FILE_TYPE = "fileType";
-    String TOKEN     = "token";
+    /*
+     * These determine the service routing for the LB
+     */
+    String SERVICE               = "/datastore";
+    String BASE                  = SERVICE + CONTROLLER;
+    String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
+    String TOKEN                 = "token";
+    String TYPE                  = "type";
+    String UPDATE                = "update";
 
     @GET( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Iterable<SetMultimap<FullQualifiedName, Object>> loadEntitySetData(
@@ -91,9 +87,9 @@ public interface DataApi {
             @Query( ENTITY_SET_ID ) UUID entitySetId,
             @Body List<SetMultimap<UUID, Object>> entities );
 
-
     /**
      * Replaces a single entity from an entity set.
+     *
      * @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
      * @param entity The new entity details object that will be merged into old values, with property type ids as keys.
@@ -106,6 +102,7 @@ public interface DataApi {
 
     /**
      * Replaces a single entity from an entity set.
+     *
      * @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
      * @param entity The new entity details object that will replace the old value, with property type ids as keys.
@@ -117,30 +114,25 @@ public interface DataApi {
             @Body Map<UUID, Set<Object>> entity );
 
     /**
-     * Fully replaces entities.
+     * Perform one of the following bulk update operations on entities.
      *
-     * @param entitySetId The id of the entity set to write to.
-     * @param entities A map of entity key ids to entities to create.
-     * @param partialReplace Controls whether replace is full or partial. Default behavior is full replacement.
-     * @return The UUID assigned to each entity id during creation.
-     */
-    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Integer replaceEntities(
-            @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<UUID, Map<UUID, Set<Object>>> entities,
-            @Query( PARTIAL ) boolean partialReplace );
-
-    /**
-     * Fully replaces entities.
+     * <ul>
+     * <li>{@link UpdateType#Merge} adds new properties without affecting existing data.</li>
+     * <li>{@link UpdateType#PartialReplace} replaces all values for supplied property types, but does not not affect
+     * other property types for an entity</li>
+     * <li>{@link UpdateType#Replace} replaces all entity data with the supplied properties.</li>
+     * </ul>
      *
      * @param entitySetId The id of the entity set to write to.
      * @param entities A map of entity key ids to entities to merge
+     * @param updateType The update type to perform.
      * @return The total number of entities updated.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Integer mergeIntoEntitiesInEntitySet(
+    Integer updateEntitiesInEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<UUID, Map<UUID, Set<Object>>> entities );
+            @Body Map<UUID, Map<UUID, Set<Object>>> entities,
+            @Query( TYPE ) UpdateType updateType );
 
     @PATCH( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer replaceEntityProperties(
@@ -206,11 +198,12 @@ public interface DataApi {
     Integer deleteEntityProperties(
 
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<UUID, Map<UUID,Set<ByteBuffer>>> entityProperties );
+            @Body Map<UUID, Map<UUID, Set<ByteBuffer>>> entityProperties );
 
     /**
      * Replaces a single entity from an entity set.
-     *  @param entitySetId The id of the entity set the entity belongs to.
+     *
+     * @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
      * @param entityByFqns The new entity details object that will replace the old value, with property type FQNs as keys.
      */
