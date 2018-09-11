@@ -22,6 +22,8 @@ package com.openlattice.datastore.data.controllers;
 
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
+import com.datastax.driver.core.querybuilder.Update;
+import com.google.common.base.Preconditions;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
@@ -48,6 +50,8 @@ import com.openlattice.data.DataGraphIds;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntitySetData;
+import com.openlattice.data.Property;
+import com.openlattice.data.UpdateType;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
@@ -226,46 +230,38 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
-    @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
-            method = RequestMethod.POST,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Integer replaceEntities(
-            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities,
-            @RequestParam( value = PARTIAL, required = false, defaultValue = "false" ) boolean partialReplace ) {
-        ensureReadAccess( new AclKey( entitySetId ) );
-        final Set<UUID> requiredPropertyTypes = requiredEntitySetPropertyTypes( entities );
-
-        accessCheck( aclKeysForAccessCheck( ImmutableSetMultimap.<UUID, UUID>builder()
-                        .putAll( entitySetId, requiredPropertyTypes ).build(),
-                WRITE_PERMISSION ) );
-        if ( partialReplace ) {
-            return dgm.partialReplaceEntities( entitySetId,
-                    entities,
-                    edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
-        } else {
-            return dgm.replaceEntities( entitySetId,
-                    entities,
-                    edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
-        }
-    }
-
-    @Override
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH,
             consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Integer mergeIntoEntitiesInEntitySet(
+    public Integer updateEntitiesInEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities ) {
+            @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities,
+            @RequestParam( value = TYPE, defaultValue = "Merge" ) UpdateType updateType ) {
+        Preconditions.checkNotNull( updateType, "An invalid update type value was specified." );
         ensureReadAccess( new AclKey( entitySetId ) );
-        var authorizedPropertyTypes = authzHelper
+        var allAuthorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) );
-        accessCheck( authorizedPropertyTypes, requiredEntitySetPropertyTypes( entities ) );
-        return dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
+        var requiredPropertyTypes = requiredEntitySetPropertyTypes( entities );
+
+        accessCheck( allAuthorizedPropertyTypes, requiredPropertyTypes );
+
+        var authorizedPropertyTypes = Maps.asMap( requiredPropertyTypes, allAuthorizedPropertyTypes::get );
+
+        switch ( updateType ) {
+            case Replace:
+                return dgm.replaceEntities( entitySetId,entities,authorizedPropertyTypes );
+            case PartialReplace:
+                return dgm.partialReplaceEntities( entitySetId, entities,authorizedPropertyTypes );
+            case Merge:
+                return dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
+            default:
+                return 0;
+        }
     }
 
-    @PatchMapping( value = "/" + ENTITY_SET + "/" + SET_ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE )
+    @PatchMapping(
+            value = "/" + ENTITY_SET + "/" + SET_ID_PATH,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
     @Override
     public Integer replaceEntityProperties(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
@@ -319,7 +315,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody Map<UUID, Set<Object>> entity ) {
         final var entities = ImmutableMap.of( entityKeyId, entity );
-        return mergeIntoEntitiesInEntitySet( entitySetId, entities );
+        return updateEntitiesInEntitySet( entitySetId, entities, UpdateType.Merge );
     }
 
     @Override
@@ -629,16 +625,23 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
-        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
+        return entities.values().stream()
+                .map( Map::keySet )
+                .flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 
     private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
-        return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
+        return entities.values().stream()
+                .map( SetMultimap::keySet )
+                .flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 
     private static Set<UUID> requiredPropertyAuthorizations( Collection<SetMultimap<UUID, Object>> entities ) {
-        return entities.stream().map( SetMultimap::keySet ).flatMap( Set::stream ).collect( Collectors.toSet() );
+        return entities.stream()
+                .map( SetMultimap::keySet )
+                .flatMap( Set::stream )
+                .collect( Collectors.toSet() );
     }
 }
