@@ -29,6 +29,7 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.conductor.rpc.Employee;
 import com.openlattice.data.DataApi;
+import com.openlattice.data.UpdateType;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.EdmApi;
@@ -205,7 +206,7 @@ public class DataManagerTest extends SetupEnvironment {
                     entities.put( UUID.randomUUID(), entity );
                 } else {
                     //added transformValues()
-                    dataApi.replaceEntities( entitySetId, transformValues(entities, Multimaps::asMap), false );
+                    dataApi.updateEntitiesInEntitySet( entitySetId, transformValues(entities, Multimaps::asMap), UpdateType.Replace );
 
                     entities = new HashMap<>();
                     count = 0;
@@ -220,7 +221,7 @@ public class DataManagerTest extends SetupEnvironment {
             Map<UUID, SetMultimap<UUID, Object>> entities,
             Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType ) {
         System.out.println( "Writing Data..." );
-        dataApi.replaceEntities( entitySetId, transformValues(entities, Multimaps::asMap), false );
+        dataApi.updateEntitiesInEntitySet( entitySetId, transformValues(entities, Multimaps::asMap), UpdateType.Replace );
         System.out.println( "Writing done." );
     }
 
