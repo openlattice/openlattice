@@ -23,14 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
-import com.openlattice.authorization.Ace;
-import com.openlattice.authorization.Acl;
-import com.openlattice.authorization.AclData;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Action;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -51,17 +44,13 @@ import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
+
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -270,6 +259,11 @@ public final class TestDataFactory {
                 .collect( Collectors.toCollection( () -> EnumSet.noneOf( Permission.class ) ) );
     }
 
+    public static Date date() {
+        LocalDate localDate = LocalDate.now();
+        return Date.from( localDate.atStartOfDay( ZoneId.systemDefault() ).toInstant() );
+    }
+
     public static EnumSet<Permission> nonEmptyPermissions() {
         EnumSet<Permission> ps = permissions();
         while ( ps.isEmpty() ) {
@@ -280,6 +274,14 @@ public final class TestDataFactory {
 
     public static Ace ace() {
         return new Ace( userPrincipal(), permissions() );
+    }
+
+    public static AceValue aceValue() {
+        return new AceValue(
+                permissions(),
+                securableObjectType(),
+                Optional.of( date() )
+        );
     }
 
     public static Acl acl() {
