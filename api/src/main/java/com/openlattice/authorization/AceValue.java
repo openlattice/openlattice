@@ -23,24 +23,23 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.openlattice.authorization.securable.SecurableObjectType;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.Spliterator;
+
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class    AceValue implements Set<Permission> {
+public class AceValue implements Set<Permission> {
     private final EnumSet<Permission> permissions;
     private       SecurableObjectType securableObjectType;
+    private       Date                expirationDate;
 
-    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType ) {
+    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType, Date expirationDate ) {
         this.permissions = permissions;
         this.securableObjectType = checkNotNull( objectType, "Securable Object Type cannot be null" );
+        this.expirationDate = expirationDate;
     }
 
     public EnumSet<Permission> getPermissions() {
@@ -51,8 +50,16 @@ public class    AceValue implements Set<Permission> {
         return securableObjectType;
     }
 
+    public Date getExpirationDate() {
+        return expirationDate;
+    }
+
     public void setSecurableObjectType( SecurableObjectType securableObjectType ) {
         this.securableObjectType = securableObjectType;
+    }
+
+    public void setExpirationDate(Date expirationDate) {
+        this.expirationDate = expirationDate;
     }
 
     @Override public String toString() {
