@@ -220,7 +220,4 @@ public class IndexerServicesPod {
                 schemaManager() );
     }
 
-    @Bean
-    public EsEdmService esEdmService() { return new EsEdmService(); }
-
 }
