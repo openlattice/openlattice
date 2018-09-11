@@ -142,8 +142,8 @@ public interface DataApi {
     /**
      * Creates a new set of associations.
      *
-     * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
-     * UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
+     * @param associations Set of associations to create. An association is the triple of source, destination, and edge
+     * entitiy key ids.
      */
     @PUT( BASE + "/" + ASSOCIATION )
     Integer createAssociations( @Body Set<DataEdgeKey> associations );
