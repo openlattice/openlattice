@@ -34,12 +34,17 @@ import java.util.stream.Stream;
 public class AceValue implements Set<Permission> {
     private final EnumSet<Permission> permissions;
     private       SecurableObjectType securableObjectType;
-    private       Date                expirationDate;
+    private       Optional<Date>      optionalExpirationDate;
 
-    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType, Date expirationDate ) {
+    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType) {
         this.permissions = permissions;
         this.securableObjectType = checkNotNull( objectType, "Securable Object Type cannot be null" );
-        this.expirationDate = expirationDate;
+        this.optionalExpirationDate = Optional.empty();
+    }
+    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType, Optional<Date> expirationDate ) {
+        this.permissions = permissions;
+        this.securableObjectType = checkNotNull( objectType, "Securable Object Type cannot be null" );
+        this.optionalExpirationDate = expirationDate;
     }
 
     public EnumSet<Permission> getPermissions() {
@@ -50,16 +55,16 @@ public class AceValue implements Set<Permission> {
         return securableObjectType;
     }
 
-    public Date getExpirationDate() {
-        return expirationDate;
+    public Optional<Date> getOptionalExpirationDate() {
+        return optionalExpirationDate;
     }
 
     public void setSecurableObjectType( SecurableObjectType securableObjectType ) {
         this.securableObjectType = securableObjectType;
     }
 
-    public void setExpirationDate(Date expirationDate) {
-        this.expirationDate = expirationDate;
+    public void setOptionalExpirationDate( Optional<Date> expirationDate ) {
+        this.optionalExpirationDate = expirationDate;
     }
 
     @Override public String toString() {
