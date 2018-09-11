@@ -38,8 +38,6 @@ import com.openlattice.authorization.*;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
-import com.openlattice.data.DatasourceManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.PostgresEdmManager;
@@ -48,12 +46,8 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
-import com.openlattice.indexing.BackgroundIndexingService;
-import com.openlattice.linking.HazelcastBlockingService;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.search.EsEdmService;
-import com.openlattice.users.Auth0Synchronizer;
-import com.openlattice.users.Auth0Synchronizer.Auth0SyncDriver;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
@@ -179,27 +173,8 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public Auth0Synchronizer auth0Refresher() {
-        return new Auth0Synchronizer( hazelcastInstance,
-                principalService(),
-                organizationsManager(),
-                dbcs(),
-                auth0TokenProvider() );
-    }
-
-    @Bean
-    public Auth0SyncDriver auth0RefreshDriver() {
-        return new Auth0SyncDriver( auth0Refresher() );
-    }
-
-    @Bean
     public Auth0TokenProvider auth0TokenProvider() {
         return new Auth0TokenProvider( auth0Configuration );
-    }
-
-    @Bean
-    public HazelcastBlockingService blockingService() {
-        return new HazelcastBlockingService( hazelcastInstance );
     }
 
     @Bean
@@ -231,11 +206,6 @@ public class IndexerServicesPod {
     @Bean
     public MailServiceRequirements mailServiceRequirements() {
         return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
-    }
-
-    @Bean
-    public DatasourceManager datasourceManager() {
-        return new DatasourceManager( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
