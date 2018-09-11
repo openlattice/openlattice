@@ -44,7 +44,6 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.DatasourceManager;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
@@ -109,9 +108,6 @@ public class SearchService {
 
     @Inject
     private ConductorElasticsearchApi elasticsearchApi;
-
-    @Inject
-    private DatasourceManager datasourceManager;
 
     @Inject
     private EdmManager dataModelService;
