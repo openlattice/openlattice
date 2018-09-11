@@ -32,7 +32,6 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.datastore.pods.DatastoreSecurityPod;
 import com.openlattice.datastore.pods.DatastoreServicesPod;
 import com.openlattice.datastore.pods.DatastoreServletsPod;
-import com.openlattice.datastore.pods.SparkDependencyPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
@@ -43,8 +42,6 @@ public class Datastore extends BaseRhizomeServer {
             TypeCodecsPod.class,
             SharedStreamSerializersPod.class,
             AwsS3Pod.class,
-            //TODO: Why is this here?
-            SparkDependencyPod.class,
             JdbcPod.class,
             PostgresPod.class
     };

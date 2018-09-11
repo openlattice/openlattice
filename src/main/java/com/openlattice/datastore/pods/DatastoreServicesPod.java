@@ -317,7 +317,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public EsEdmService esEdmService() { return new EsEdmService(); }
+    public EsEdmService esEdmService() { return new EsEdmService(conductorElasticsearchApi()); }
 
     @Bean
     public SearchService searchService() { return new SearchService(eventBus); }
