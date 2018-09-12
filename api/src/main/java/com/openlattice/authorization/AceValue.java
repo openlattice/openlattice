@@ -24,6 +24,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.openlattice.authorization.securable.SecurableObjectType;
 
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -34,17 +35,18 @@ import java.util.stream.Stream;
 public class AceValue implements Set<Permission> {
     private final EnumSet<Permission> permissions;
     private       SecurableObjectType securableObjectType;
-    private       Optional<Date>      optionalExpirationDate;
+    private       OffsetDateTime      expirationDate;
 
-    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType) {
+    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType ) {
         this.permissions = permissions;
         this.securableObjectType = checkNotNull( objectType, "Securable Object Type cannot be null" );
-        this.optionalExpirationDate = Optional.empty();
+        this.expirationDate = OffsetDateTime.MAX;
     }
-    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType, Optional<Date> expirationDate ) {
+
+    public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType, OffsetDateTime expirationDate ) {
         this.permissions = permissions;
         this.securableObjectType = checkNotNull( objectType, "Securable Object Type cannot be null" );
-        this.optionalExpirationDate = expirationDate;
+        this.expirationDate = expirationDate;
     }
 
     public EnumSet<Permission> getPermissions() {
@@ -55,16 +57,16 @@ public class AceValue implements Set<Permission> {
         return securableObjectType;
     }
 
-    public Optional<Date> getOptionalExpirationDate() {
-        return optionalExpirationDate;
+    public OffsetDateTime getExpirationDate() {
+        return expirationDate;
     }
 
     public void setSecurableObjectType( SecurableObjectType securableObjectType ) {
         this.securableObjectType = securableObjectType;
     }
 
-    public void setOptionalExpirationDate( Optional<Date> expirationDate ) {
-        this.optionalExpirationDate = expirationDate;
+    public void setOptionalExpirationDate( OffsetDateTime expirationDate ) {
+        this.expirationDate = expirationDate;
     }
 
     @Override public String toString() {
