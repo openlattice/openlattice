@@ -105,6 +105,7 @@ import static com.openlattice.postgres.PostgresColumn.VERSIONS;
 import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
 
 import com.google.common.collect.ImmutableList;
+
 import java.util.List;
 
 /**
@@ -280,7 +281,11 @@ public final class PostgresTable {
                     .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
     public static final PostgresTableDefinition        PERMISSIONS                  =
             new PostgresTableDefinition( "permissions" )
-                    .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS )
+                    .addColumns( ACL_KEY,
+                            PRINCIPAL_TYPE,
+                            PRINCIPAL_ID,
+                            PostgresColumn.PERMISSIONS,
+                            PostgresColumn.EXPIRATION_DATE )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
     public static final PostgresTableDefinition        PRINCIPALS                   =
             new PostgresTableDefinition( "principals" )
