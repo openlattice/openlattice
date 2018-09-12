@@ -21,42 +21,32 @@
 
 package com.openlattice.rehearsal.data
 
-import com.dataloom.mappers.ObjectMappers
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
+import com.google.common.collect.Maps.transformValues
 import com.openlattice.data.DataEdge
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
-import com.openlattice.edm.type.PropertyType
+import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import org.apache.commons.lang.math.RandomUtils
 import org.apache.commons.lang3.RandomStringUtils
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import org.apache.olingo.commons.api.edm.geo.Geospatial
-import org.apache.olingo.commons.api.edm.geo.Point
-import org.joda.time.DateTime
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.io.IOException
-import java.math.BigDecimal
+import org.slf4j.LoggerFactory
+import java.lang.Math.abs
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.*
-import com.google.common.collect.Maps.transformValues   //added import statement
-import com.openlattice.data.UpdateType
-import com.openlattice.edm.requests.MetadataUpdate
-import org.slf4j.LoggerFactory
-import java.lang.Math.abs                               //added to check DateTime diffs
 
 /**
  *
@@ -109,10 +99,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     fun testCreateAndLoadBinaryEntityData() {
         val pt = MultipleAuthenticatedUsersBase.getBinaryPropertyType()
         val et = MultipleAuthenticatedUsersBase.createEntityType(pt.id)
+        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
-        val testData = Maps.transformValues(randomBinaryData(et.key.iterator().next(),pt.id) ,Multimaps::asMap )
+        val testData = Maps.transformValues(TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(),pt.id) ,Multimaps::asMap )
         MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
+        waitForIt()
+
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
                 MultipleAuthenticatedUsersBase.dataApi
@@ -185,11 +178,17 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun createEdges() {
         val et = MultipleAuthenticatedUsersBase.createEntityType()
+        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
+        waitForIt()
         val src = MultipleAuthenticatedUsersBase.createEntityType()
+        waitForIt()
         val esSrc = MultipleAuthenticatedUsersBase.createEntitySet(src)
+        waitForIt()
         val dst = MultipleAuthenticatedUsersBase.createEntityType()
+        waitForIt()
         val esDst = MultipleAuthenticatedUsersBase.createEntitySet(dst)
+        waitForIt()
         val at = MultipleAuthenticatedUsersBase.createAssociationType(et, setOf(src), setOf(dst))
 
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
@@ -197,9 +196,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
         val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
+        waitForIt()
 
         val entriesDst = ImmutableList.copyOf(testDataDst.values)
         val idsDst = dataApi.createEntities(esDst.id, entriesDst)
+        waitForIt()
 
         val indexExpectedSrc = entriesSrc.mapIndexed { index, data -> idsSrc[index] to keyByFqn(data) }.toMap()
         val indexExpectedDst = entriesSrc.mapIndexed { index, data -> idsDst[index] to keyByFqn(data) }.toMap()
@@ -210,6 +211,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         edgesToBeCreated.putAll(edgeData.first, edgeData.second)
 
         val createdEdges = dataApi.createAssociations(edgesToBeCreated)
+        waitForIt()
 
         Assert.assertNotNull(createdEdges)
         Assert.assertEquals(edgeData.second.size, createdEdges.values().size)
@@ -220,9 +222,29 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         )
 
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
-
-        Assert.assertEquals(edgeData.second.map { it.data }, actualEdgeData)
+        waitForIt()
+        Multimaps.asMap(edgesToBeCreated).entries.first().value.
+                mapIndexed { index, de ->
+                   val edgeDataLookup = lookupEdgeDataByFqn(actualEdgeData[index].asMap())
+                    de.data.asMap().
+                        forEach { uuid, data -> Assert.assertEquals(data, edgeDataLookup[uuid]) }
+                }
     }
+
+    private fun lookupEdgeDataByFqn(edgeData: MutableMap<FullQualifiedName, MutableCollection<Any>>):
+            Map<UUID, MutableCollection<Any>> {
+        return edgeData.mapKeys { entry -> edmApi.getPropertyTypeId(entry.key.namespace, entry.key.name) }
+    }
+
+    private fun waitForIt() {
+        try {
+            Thread.sleep(1000)
+        } catch (e: InterruptedException) {
+            throw IllegalStateException("Failed to wait for it.")
+        }
+
+    }
+
 
     private fun createDataEdges(
             entitySetId: UUID,
@@ -372,6 +394,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
                 Optional.empty(), Optional.empty())
         edmApi.updatePropertyTypeMetadata(pt.id, update)
+        waitForIt()
 
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
