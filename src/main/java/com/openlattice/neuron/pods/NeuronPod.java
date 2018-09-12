@@ -41,7 +41,7 @@ import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.PostgresEntitySetManager;
+import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -59,10 +59,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 @Configuration
-@Import({
+@Import( {
         AuditEntitySetPod.class,
         CassandraPod.class
-})
+} )
 public class NeuronPod {
 
     @Inject
@@ -85,7 +85,7 @@ public class NeuronPod {
 
     @Bean
     public Neuron neuron() {
-        return new Neuron(dataGraphService(), idService(), hikariDataSource);
+        return new Neuron( dataGraphService(), idService(), hikariDataSource );
     }
 
     /*
@@ -96,22 +96,22 @@ public class NeuronPod {
 
     @Bean
     public AuthorizationQueryService authorizationQueryService() {
-        return new AuthorizationQueryService(hikariDataSource, hazelcastInstance);
+        return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService(hazelcastInstance, authorizationQueryService(), eventBus);
+        return new HazelcastAuthorizationService( hazelcastInstance, authorizationQueryService(), eventBus );
     }
 
     @Bean
     public PostgresDataManager postgresDataManager() {
-        return new PostgresDataManager(hikariDataSource);
+        return new PostgresDataManager( hikariDataSource );
     }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService(hikariDataSource);
+        return new PostgresEntityDataQueryService( hikariDataSource );
     }
 
     @Bean
@@ -127,13 +127,13 @@ public class NeuronPod {
     }
 
     @Bean
-    public PostgresEntitySetManager entitySetManager() {
-        return new PostgresEntitySetManager(hikariDataSource);
+    public PostgresEdmManager edmManager() {
+        return new PostgresEdmManager( hikariDataSource );
     }
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager(hikariDataSource);
+        return new PostgresTypeManager( hikariDataSource );
     }
 
     @Bean
@@ -156,36 +156,36 @@ public class NeuronPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                entitySetManager(),
+                edmManager(),
                 entityTypeManager(),
                 schemaManager());
     }
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService(hazelcastInstance, hikariDataSource, idGenerationService());
+        return new PostgresEntityKeyIdService( hazelcastInstance, hikariDataSource, idGenerationService() );
     }
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService(hazelcastInstance);
+        return new HazelcastIdGenerationService( hazelcastInstance );
     }
 
     @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
-        return new HazelcastAclKeyReservationService(hazelcastInstance);
+        return new HazelcastAclKeyReservationService( hazelcastInstance );
     }
 
     @Bean
     public HazelcastSchemaManager schemaManager() {
         return new HazelcastSchemaManager(
                 hazelcastInstance,
-                schemaQueryService());
+                schemaQueryService() );
     }
 
     @Bean
     public GraphService graphApi() {
-        return new Graph(hikariDataSource, dataModelService());
+        return new Graph( hikariDataSource, dataModelService() );
     }
 
     @Bean
@@ -195,6 +195,6 @@ public class NeuronPod {
 
     @Bean
     public SchemaQueryService schemaQueryService() {
-        return new PostgresSchemaQueryService(hikariDataSource);
+        return new PostgresSchemaQueryService( hikariDataSource );
     }
 }

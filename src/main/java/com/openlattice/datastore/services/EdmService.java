@@ -51,21 +51,8 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.edm.EntityDataModel;
-import com.openlattice.edm.EntityDataModelDiff;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.Schema;
-import com.openlattice.edm.events.AssociationTypeCreatedEvent;
-import com.openlattice.edm.events.AssociationTypeDeletedEvent;
-import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
-import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
-import com.openlattice.edm.events.EntityTypeCreatedEvent;
-import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
+import com.openlattice.edm.*;
+import com.openlattice.edm.events.*;
 import com.openlattice.edm.exceptions.TypeExistsException;
 import com.openlattice.edm.exceptions.TypeNotFoundException;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -97,6 +84,7 @@ import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
+import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -139,7 +127,7 @@ public class EdmService implements EdmManager {
 
     private final HazelcastAclKeyReservationService aclKeyReservations;
     private final AuthorizationManager              authorizations;
-    private final PostgresEntitySetManager          entitySetManager;
+    private final PostgresEdmManager                edmManager;
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
 
@@ -149,17 +137,20 @@ public class EdmService implements EdmManager {
     @Inject
     private EventBus eventBus;
 
+    @Inject
+    private EsEdmService esEdmService;
+
     public EdmService(
             HikariDataSource hds,
             HazelcastInstance hazelcastInstance,
             HazelcastAclKeyReservationService aclKeyReservations,
             AuthorizationManager authorizations,
-            PostgresEntitySetManager entitySetManager,
+            PostgresEdmManager edmManager,
             PostgresTypeManager entityTypeManager,
             HazelcastSchemaManager schemaManager ) {
 
         this.authorizations = authorizations;
-        this.entitySetManager = entitySetManager;
+        this.edmManager = edmManager;
         this.entityTypeManager = entityTypeManager;
         this.schemaManager = schemaManager;
         this.hazelcastInstance = hazelcastInstance;
@@ -240,6 +231,10 @@ public class EdmService implements EdmManager {
 
         if ( dbRecord == null ) {
             propertyType.getSchemas().forEach( schemaManager.propertyTypesSchemaAdder( propertyType.getId() ) );
+
+            edmManager.createPropertyTypeIfNotExist( propertyType );
+            esEdmService.createPropertyType( propertyType );
+
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         } else {
             logger.error(
@@ -252,7 +247,7 @@ public class EdmService implements EdmManager {
         /*
          * Entity types should only be deleted if there are no entity sets of that type in the system.
          */
-        if ( Iterables.isEmpty( entitySetManager.getAllEntitySetsForType( entityTypeId ) ) ) {
+        if ( Iterables.isEmpty( edmManager.getAllEntitySetsForType( entityTypeId ) ) ) {
             entityTypeManager.getAssociationIdsForEntityType( entityTypeId ).forEach( associationTypeId -> {
                 AssociationType association = getAssociationType( associationTypeId );
                 if ( association.getSrc().contains( entityTypeId ) ) {
@@ -278,7 +273,7 @@ public class EdmService implements EdmManager {
                 .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
                         .of( propertyTypeId ) );
         if ( entityTypes
-                .allMatch( et -> Iterables.isEmpty( entitySetManager.getAllEntitySetsForType( et.getId() ) ) ) ) {
+                .allMatch( et -> Iterables.isEmpty( edmManager.getAllEntitySetsForType( et.getId() ) ) ) ) {
             forceDeletePropertyType( propertyTypeId );
         } else {
             throw new IllegalArgumentException(
@@ -349,7 +344,7 @@ public class EdmService implements EdmManager {
              * Only allow updates if entity type is not already in use.
              */
             if ( Iterables.isEmpty(
-                    entitySetManager.getAllEntitySetsForType( entityType.getId() ) ) ) {
+                    edmManager.getAllEntitySetsForType( entityType.getId() ) ) ) {
                 // Retrieve properties known to user
                 Set<UUID> currentPropertyTypes = existing.getProperties();
                 // Remove the removable property types in database properly; this step takes care of removal of
@@ -456,7 +451,7 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public void createEntitySet( Principal principal, EntitySet entitySet, Set<UUID> ownablePropertyTypes ) {
+    public void createEntitySet( Principal principal, EntitySet entitySet, Set<UUID> ownablePropertyTypeIDs ) {
         Principals.ensureUser( principal );
         createEntitySet( entitySet );
 
@@ -469,18 +464,20 @@ public class EdmService implements EdmManager {
                     principal,
                     EnumSet.allOf( Permission.class ) );
 
-            ownablePropertyTypes.stream()
+            ownablePropertyTypeIDs.stream()
                     .map( propertyTypeId -> new AclKey( entitySet.getId(), propertyTypeId ) )
                     .peek( aclKey -> {
                         authorizations.setSecurableObjectType( aclKey,
                                 SecurableObjectType.PropertyTypeInEntitySet );
-                    } ).forEach( aclKey -> authorizations.addPermission(
-                    aclKey,
-                    principal,
-                    EnumSet.allOf( Permission.class ) ) );
+                    } )
+                    .forEach( aclKey -> authorizations.addPermission( aclKey, principal, EnumSet.allOf( Permission.class ) ) );
 
-            eventBus.post( new EntitySetCreatedEvent( entitySet,
-                    Lists.newArrayList( propertyTypes.getAll( ownablePropertyTypes ).values() ) ) );
+            List<PropertyType> ownablePropertyTypes = Lists.newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
+            edmManager.createEntitySet( entitySet, ownablePropertyTypes );
+            esEdmService.createEntitySet(entitySet, ownablePropertyTypes );
+
+            // No subscribers currently
+            eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
 
         } catch ( Exception e ) {
             logger.error( "Unable to create entity set {} for principal {}", entitySet, principal, e );
@@ -674,13 +671,13 @@ public class EdmService implements EdmManager {
 
     @Override
     public Iterable<EntitySet> getEntitySets() {
-        return entitySetManager.getAllEntitySets();
+        return edmManager.getAllEntitySets();
     }
 
     @Override
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
         String propertyTableName = DataTables.quote(DataTables.propertyTableName( propertyTypeId ));
-        return entitySetManager.getPropertyUsageSummary( propertyTableName );
+        return edmManager.getPropertyUsageSummary( propertyTableName );
     }
 
     @Override
@@ -738,7 +735,7 @@ public class EdmService implements EdmManager {
         childrenIdsToLocks.keySet().forEach( id -> {
             entityTypes.executeOnKey( id, new AddPropertyTypesToEntityTypeProcessor( propertyTypeIds ) );
 
-            for ( EntitySet entitySet : entitySetManager.getAllEntitySetsForType( id ) ) {
+            for ( EntitySet entitySet : edmManager.getAllEntitySetsForType( id ) ) {
                 UUID esId = entitySet.getId();
                 Map<UUID, PropertyType> propertyTypes = propertyTypeIds.stream().collect( Collectors.toMap(
                         propertyTypeId -> propertyTypeId, propertyTypeId -> getPropertyType( propertyTypeId ) ) );
@@ -786,7 +783,7 @@ public class EdmService implements EdmManager {
         childrenIds.forEach( id -> {
             Preconditions.checkArgument( Sets.intersection( getEntityType( id ).getKey(), propertyTypeIds ).isEmpty(),
                     "Key property types cannot be removed." );
-            Preconditions.checkArgument( !entitySetManager.getAllEntitySetsForType( id ).iterator().hasNext(),
+            Preconditions.checkArgument( !edmManager.getAllEntitySetsForType( id ).iterator().hasNext(),
                     "Property types cannot be removed from entity types that have already been associated with an entity set." );
         } );
 
@@ -915,9 +912,12 @@ public class EdmService implements EdmManager {
 
     @Override
     public void updatePropertyTypeMetadata( UUID propertyTypeId, MetadataUpdate update ) {
+        PropertyType propertyType = getPropertyType( propertyTypeId );
+
         if ( update.getType().isPresent() ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
-
+            edmManager.updatePropertyTypeFqn(propertyType, update.getType().get());
+            esEdmService.createPropertyType(propertyType);
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
         // get all entity sets containing the property type, and re-index them.
@@ -926,11 +926,13 @@ public class EdmService implements EdmManager {
                 .forEach( et -> {
                     List<PropertyType> properties = Lists
                             .newArrayList( propertyTypes.getAll( et.getProperties() ).values() );
-                    entitySetManager.getAllEntitySetsForType( et.getId() )
+                    edmManager.getAllEntitySetsForType( et.getId() )
                             .forEach( es -> eventBus
                                     .post( new PropertyTypesInEntitySetUpdatedEvent( es.getId(), properties ) ) );
                 } );
-        eventBus.post( new PropertyTypeCreatedEvent( getPropertyType( propertyTypeId ) ) );
+
+
+        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) );
     }
 
     @Override
