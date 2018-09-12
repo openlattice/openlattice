@@ -164,6 +164,9 @@ public final class PostgresColumn {
     public static final String                   EVENT_TYPE_FIELD            = "event_type";
     public static final PostgresColumnDefinition EVENT_TYPE                  =
             new PostgresColumnDefinition( EVENT_TYPE_FIELD, TEXT );
+    public static final String                   EXPIRATION_DATE_FIELD       = "expiration_date";
+    public static final PostgresColumnDefinition EXPIRATION_DATE             =
+            new PostgresColumnDefinition( EXPIRATION_DATE_FIELD, TEXT );
     public static final String                   FLAGS_FIELD                 = "flags";
     public static final PostgresColumnDefinition FLAGS                       =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
@@ -185,7 +188,7 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition KEY                         =
             new PostgresColumnDefinition( KEY_FIELD, UUID_ARRAY ).notNull();
     public static final String                   LAST_INDEX_FIELD            = "last_index";
-    public static final String                   LAST_LINK_FIELD            = "last_link";
+    public static final String                   LAST_LINK_FIELD             = "last_link";
     public static final String                   LAST_WRITE_FIELD            = "last_write";
     public static final String                   LSB_FIELD                   = "lsb";
     public static final PostgresColumnDefinition LSB                         =
