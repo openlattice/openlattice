@@ -46,6 +46,7 @@ import com.openlattice.requests.Status;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -259,11 +260,6 @@ public final class TestDataFactory {
                 .collect( Collectors.toCollection( () -> EnumSet.noneOf( Permission.class ) ) );
     }
 
-    public static Date date() {
-        LocalDate localDate = LocalDate.now();
-        return Date.from( localDate.atStartOfDay( ZoneId.systemDefault() ).toInstant() );
-    }
-
     public static EnumSet<Permission> nonEmptyPermissions() {
         EnumSet<Permission> ps = permissions();
         while ( ps.isEmpty() ) {
@@ -280,7 +276,7 @@ public final class TestDataFactory {
         return new AceValue(
                 permissions(),
                 securableObjectType(),
-                Optional.of( date() )
+                OffsetDateTime.now()
         );
     }
 
