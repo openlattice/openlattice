@@ -40,6 +40,7 @@ import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.PostgresTablesPod;
+import com.openlattice.search.pods.ElasticSearchPod;
 import com.zaxxer.hikari.HikariDataSource;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -74,7 +75,8 @@ public class HzAuthzTest {
                 PostgresPod.class,
                 SharedStreamSerializersPod.class,
                 PostgresTablesPod.class,
-                NeuronPod.class
+                NeuronPod.class,
+                ElasticSearchPod.class
         );
 
         testServer.sprout( ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE );
@@ -89,9 +91,7 @@ public class HzAuthzTest {
                 aqs,
                 testServer.getContext().getBean( EventBus.class )
         );
-
-        PostgresTableManager ptm = testServer.getContext().getBean( PostgresTableManager.class );
-        testServer.getContext().getBean( EventBus.class ).register( new PostgresEdmManager( ptm, hds ) );
+        testServer.getContext().getBean( EventBus.class ).register( new PostgresEdmManager( hds ) );
     }
 
     @Test

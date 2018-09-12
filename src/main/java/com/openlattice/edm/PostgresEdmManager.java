@@ -26,25 +26,22 @@ import static com.openlattice.postgres.DataTables.quote;
 import com.codahale.metrics.annotation.ExceptionMetered;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.eventbus.Subscribe;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeFqnChangedEvent;
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.postgres.DataTables;
-import com.openlattice.postgres.PostgresTableDefinition;
-import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.postgres.*;
+import com.openlattice.postgres.streams.PostgresIterable;
+import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.List;
+
+import java.sql.*;
+import java.util.*;
+
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,20 +54,42 @@ public class PostgresEdmManager implements DbEdmManager {
     private final PostgresTableManager ptm;
     private final HikariDataSource     hds;
 
-    public PostgresEdmManager( PostgresTableManager ptm, HikariDataSource hds ) {
-        this.ptm = ptm;
+    private final String ENTITY_SETS;
+    private final String PROPERTY_TYPES;
+    private final String ENTITY_TYPE_ID_FIELD;
+    private final String ENTITY_SET_ID_FIELD;
+
+    public PostgresEdmManager( HikariDataSource hds ) {
+        this.ptm = new PostgresTableManager( hds );
         this.hds = hds;
+
+        // Tables
+        this.ENTITY_SETS = PostgresTable.ENTITY_SETS.getName(); // "entity_sets"
+        this.PROPERTY_TYPES = PostgresTable.PROPERTY_TYPES.getName(); // "property_types"
+
+        // Properties
+        this.ENTITY_TYPE_ID_FIELD = PostgresColumn.ENTITY_TYPE_ID_FIELD;
+        this.ENTITY_SET_ID_FIELD = PostgresColumn.ENTITY_SET_ID_FIELD;
     }
 
     @Override
-    public void createEntitySet(
-            EntitySet entitySet,
-            Collection<PropertyType> propertyTypes ) throws SQLException {
-        createEntitySetTable( entitySet );
-        for ( PropertyType pt : propertyTypes ) {
-            createPropertyTypeTableIfNotExist( entitySet, pt );
+    @ExceptionMetered
+    @Timed
+    public void createEntitySet( EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
+        try {
+            createEntitySetTable(entitySet);
+            for (PropertyType pt : propertyTypes) {
+                createPropertyTypeTableIfNotExist( pt );
+            }
+        } catch( SQLException e) {
+            logger.error("Unable to create entity set {}", entitySet );
         }
         //Method is idempotent and should be re-executable in case of a failure.
+    }
+
+    private void createEntitySetTable( EntitySet entitySet ) throws SQLException {
+        PostgresTableDefinition ptd = DataTables.buildEntitySetTableDefinition( entitySet );
+        ptm.registerTables( ptd );
     }
 
     @Override public void deleteEntitySet(
@@ -78,7 +97,14 @@ public class PostgresEdmManager implements DbEdmManager {
         PostgresTableDefinition ptd = DataTables.buildEntitySetTableDefinition( entitySet );
         dropTable( ptd.getName() );
         removePropertiesFromEntitySet( entitySet, propertyTypes );
+    }
 
+    private void dropTable( String table ) {
+        try ( Connection conn = hds.getConnection(); Statement s = conn.createStatement() ) {
+            s.execute( "DROP TABLE " + quote( table ) );
+        } catch ( SQLException e ) {
+            logger.error( "Encountered exception while dropping table: {}", table, e );
+        }
     }
 
     @Override public void removePropertiesFromEntitySet( EntitySet entitySet, PropertyType... propertyTypes ) {
@@ -91,14 +117,6 @@ public class PostgresEdmManager implements DbEdmManager {
         //            PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( entitySet, propertyType );
         //            dropTable( ptd.getName() );
         //        }
-    }
-
-    public void dropTable( String table ) {
-        try ( Connection conn = hds.getConnection(); Statement s = conn.createStatement() ) {
-            s.execute( "DROP TABLE " + table );
-        } catch ( SQLException e ) {
-            logger.error( "Encountered exception while dropping table: {}", table, e );
-        }
     }
 
     @Override
@@ -125,7 +143,8 @@ public class PostgresEdmManager implements DbEdmManager {
         for ( String table : tables ) {
             for ( Permission p : permissions ) {
                 String postgresPrivilege = DataTables.mapPermissionToPostgresPrivilege( p );
-                String grantQuery = grantOnTable( table, principalId, postgresPrivilege );
+                String grantQuery = String.format( "GRANT %1$s ON TABLE %2$s TO %3$s",
+                        postgresPrivilege, quote( table ), principalId );
                 try ( Connection conn = hds.getConnection(); Statement s = conn.createStatement() ) {
                     s.execute( grantQuery );
                 } catch ( SQLException e ) {
@@ -143,17 +162,91 @@ public class PostgresEdmManager implements DbEdmManager {
 
     }
 
-    private String grantOnTable( String table, String principalId, String permission ) {
-        return String.format( "GRANT %s ON TABLE %s TO %s", permission, table, principalId );
+    public Iterable<EntitySet> getAllEntitySets() {
+        String getAllEntitySets = String.format("SELECT * FROM %1$s", ENTITY_SETS);
+        try ( Connection connection = hds.getConnection();
+              PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
+              ResultSet rs = ps.executeQuery() ) {
+            List<EntitySet> result = Lists.newArrayList();
+            while ( rs.next() ) {
+                result.add( ResultSetAdapters.entitySet( rs ) );
+            }
+
+            return result;
+        } catch ( SQLException e ) {
+            logger.error( "Unable to load all entity sets", e );
+            return ImmutableList.of();
+        }
     }
 
-    private String renameColumn( String table, String current, String update ) {
-        return String.format( "ALTER TABLE %s RENAME COLUMN %s TO %s", table, current, update );
+    public Iterable<EntitySet> getAllEntitySetsForType( UUID entityTypeId ) {
+        String getEntitySetsByType = String.format("SELECT * FROM %1$s WHERE %2$s = ?", ENTITY_SETS,
+                ENTITY_TYPE_ID_FIELD);
+        try ( Connection connection = hds.getConnection();
+              PreparedStatement ps = connection.prepareStatement( getEntitySetsByType ) ) {
+            List<EntitySet> result = Lists.newArrayList();
+            ps.setObject( 1, entityTypeId );
+            ResultSet rs = ps.executeQuery();
+            while ( rs.next() ) {
+                result.add( ResultSetAdapters.entitySet( rs ) );
+            }
+
+            return result;
+        } catch ( SQLException e ) {
+            logger.debug( "Unable to load entity sets for entity type id {}", entityTypeId.toString(), e );
+            return ImmutableList.of();
+        }
     }
 
-    private void createEntitySetTable( EntitySet entitySet ) throws SQLException {
-        PostgresTableDefinition ptd = DataTables.buildEntitySetTableDefinition( entitySet );
-        ptm.registerTables( ptd );
+    public Set<UUID> getAllPropertyTypeIds() {
+        String getAllPropertyTypeIds = String.format("SELECT id from %1$s", PROPERTY_TYPES);
+        try ( Connection connection = hds.getConnection();
+              PreparedStatement ps = connection.prepareStatement( getAllPropertyTypeIds ) ) {
+            Set<UUID> result = Sets.newHashSet();
+            ResultSet rs = ps.executeQuery();
+            while ( rs.next() ) {
+                result.add( ResultSetAdapters.id( rs ) );
+            }
+
+            return result;
+        } catch ( SQLException e ) {
+            logger.error( "Unable to load property type ids", e );
+            throw new IllegalStateException( "Unable to load property type ids.", e );
+        }
+    }
+
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary(String propertyTableName ) {
+        String getPropertyTypeSummary =
+                String.format("SELECT %1$s , %2$s , COUNT(*) FROM %3$s LEFT JOIN %4$s ON %2$s = %4$s.id GROUP BY ( %1$s , %2$s )",
+                ENTITY_TYPE_ID_FIELD, ENTITY_SET_ID_FIELD, propertyTableName, ENTITY_SETS);
+        return new PostgresIterable<>( () -> {
+            try {
+                Connection connection = hds.getConnection();
+                PreparedStatement ps = connection.prepareStatement( getPropertyTypeSummary );
+                ResultSet rs = ps.executeQuery();
+                return new StatementHolder( connection, ps, rs );
+            } catch ( SQLException e ) {
+                logger.error( "Unable to create statement holder!", e );
+                throw new IllegalStateException( "Unable to create statement holder.", e );
+            }
+        }, rs -> {
+            try {
+                return ResultSetAdapters.propertyUsageSummary( rs );
+            } catch ( SQLException e ) {
+                logger.error( "Unable to load property summary information.", e );
+                throw new IllegalStateException( "Unable to load property summary information.", e );
+            }
+        } );
+    }
+
+    @ExceptionMetered
+    @Timed
+    public void createPropertyTypeIfNotExist( PropertyType propertyType ) {
+        try {
+            createPropertyTypeTableIfNotExist( propertyType );
+        } catch ( SQLException e ) {
+            logger.error( "Unable to process property type creation.", e );
+        }
     }
 
     /*
@@ -162,48 +255,23 @@ public class PostgresEdmManager implements DbEdmManager {
      * appropriately.
      */
     @VisibleForTesting
-    public void createPropertyTypeTableIfNotExist( EntitySet entitySet, PropertyType propertyType )
-            throws SQLException {
-        PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( entitySet, propertyType );
+    public void createPropertyTypeTableIfNotExist( PropertyType propertyType ) throws SQLException {
+        PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( propertyType );
         ptm.registerTables( ptd );
     }
 
-    @Subscribe
-    @ExceptionMetered
-    @Timed
-    public void handleEntitySetCreated( EntitySetCreatedEvent entitySetCreatedEvent ) {
-        try {
-            createEntitySet( entitySetCreatedEvent.getEntitySet(), entitySetCreatedEvent.getPropertyTypes() );
-        } catch ( SQLException e ) {
-            logger.error( "Unable to create entity set {}", entitySetCreatedEvent.getEntitySet() );
-        }
-    }
+    public void updatePropertyTypeFqn(PropertyType propertyType, FullQualifiedName newFqn) {
+        String propertyTableName = DataTables.quote(DataTables.propertyTableName(propertyType.getId()));
+        String oldType = DataTables.quote(propertyType.getType().getFullQualifiedNameAsString());
+        String newType = DataTables.quote(newFqn.getFullQualifiedNameAsString());
+        String updatePropertyTypeFqn = String.format("ALTER TABLE %1$s RENAME COLUMN %2$s TO %3$s",
+                propertyTableName, oldType, newType);
 
-    @Subscribe
-    @ExceptionMetered
-    @Timed
-    public void handlePropertyTypeFqnChanged( PropertyTypeFqnChangedEvent fqnChangedEvent ) {
-        try ( final Connection conn = hds.getConnection(); final Statement s = conn.createStatement() ) {
-            s.execute( renameColumn(
-                    quote( propertyTableName( fqnChangedEvent.getPropertyTypeId() ) ),
-                    quote( fqnChangedEvent.getCurrent().getFullQualifiedNameAsString() ),
-                    quote( fqnChangedEvent.getUpdate().getFullQualifiedNameAsString() ) ) );
-        } catch ( SQLException e ) {
-            logger.error( "Unable to process property type update.", e );
-
-        }
-    }
-
-    @Subscribe
-    @ExceptionMetered
-    @Timed
-    public void handlePropertyTypeCreated( PropertyTypeCreatedEvent propertyTypeCreatedEvent ) {
-        try ( final Connection conn = hds.getConnection(); final Statement s = conn.createStatement() ) {
-            PostgresTableDefinition ptd = DataTables
-                    .buildPropertyTableDefinition( propertyTypeCreatedEvent.getPropertyType() );
-            ptm.registerTables( ptd );
-        } catch ( SQLException e ) {
-            logger.error( "Unable to process property type creation.", e );
+        try(Connection connection = hds.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(updatePropertyTypeFqn)) {
+            preparedStatement.executeUpdate();
+        } catch(SQLException e) {
+            logger.error("Unable to update column full qualified name in propertytype", e);
         }
     }
 
