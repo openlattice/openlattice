@@ -53,6 +53,7 @@ import kotlin.streams.toList
  */
 
 private val logger = LoggerFactory.getLogger(Graph::class.java)
+
 class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
 
     override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
@@ -154,6 +155,22 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
+    override fun getEdgeKeysContainingEntity(entitySetId: UUID, entityKeyId: UUID): Iterable<EdgeKey> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.prepareStatement(NEIGHBORHOOD_SQL)
+                    stmt.setObject(1, entitySetId)
+                    stmt.setObject(2, entityKeyId)
+                    stmt.setObject(3, entitySetId)
+                    stmt.setObject(4, entityKeyId)
+                    val rs = stmt.executeQuery()
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+        )
+    }
+
     override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, vertexId: UUID): Stream<Edge> {
 
         return PostgresIterable(
@@ -208,12 +225,12 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Stream<Pair<EntityDataKey, Long>> {
         val countColumn = "total_count"
-        val query = getTopUtilizersSql(entitySetId,srcFilters,dstFilters, limit)
+        val query = getTopUtilizersSql(entitySetId, srcFilters, dstFilters, limit)
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
                     val stmt = connection.createStatement()
-                    logger.info("Executing top utilizer query: {}", query )
+                    logger.info("Executing top utilizer query: {}", query)
                     val rs = stmt.executeQuery(query)
                     StatementHolder(connection, stmt, rs)
                 },
@@ -280,7 +297,7 @@ private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, 
 private fun associationClauses(
         entitySetColumn: String, entitySetId: UUID, neighborColumn: String, associationFilters: SetMultimap<UUID, UUID>
 ): String {
-    if( associationFilters.isEmpty ) {
+    if (associationFilters.isEmpty) {
         return " false "
     }
     return Multimaps
