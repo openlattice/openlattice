@@ -65,7 +65,7 @@ public class AceValue implements Set<Permission> {
         this.securableObjectType = securableObjectType;
     }
 
-    public void setOptionalExpirationDate( OffsetDateTime expirationDate ) {
+    public void setExpirationDate( OffsetDateTime expirationDate ) {
         this.expirationDate = expirationDate;
     }
 
