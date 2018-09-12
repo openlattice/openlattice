@@ -52,17 +52,7 @@ import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.*;
-import com.openlattice.edm.events.AssociationTypeCreatedEvent;
-import com.openlattice.edm.events.AssociationTypeDeletedEvent;
-import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
-import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
-import com.openlattice.edm.events.EntityTypeCreatedEvent;
-import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
+import com.openlattice.edm.events.*;
 import com.openlattice.edm.exceptions.TypeExistsException;
 import com.openlattice.edm.exceptions.TypeNotFoundException;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -922,9 +912,12 @@ public class EdmService implements EdmManager {
 
     @Override
     public void updatePropertyTypeMetadata( UUID propertyTypeId, MetadataUpdate update ) {
+        PropertyType propertyType = getPropertyType( propertyTypeId );
+
         if ( update.getType().isPresent() ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
-
+            edmManager.updatePropertyTypeFqn(propertyType, update.getType().get());
+            esEdmService.createPropertyType(propertyType);
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
         // get all entity sets containing the property type, and re-index them.
@@ -938,11 +931,8 @@ public class EdmService implements EdmManager {
                                     .post( new PropertyTypesInEntitySetUpdatedEvent( es.getId(), properties ) ) );
                 } );
 
-        PropertyType propertyType = getPropertyType( propertyTypeId );
-        edmManager.createPropertyTypeIfNotExist( propertyType );
-        esEdmService.createPropertyType( propertyType );
 
-        eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
+        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) );
     }
 
     @Override

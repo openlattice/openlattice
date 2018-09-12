@@ -41,6 +41,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.*;
 import java.util.*;
 
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -257,6 +258,21 @@ public class PostgresEdmManager implements DbEdmManager {
     public void createPropertyTypeTableIfNotExist( PropertyType propertyType ) throws SQLException {
         PostgresTableDefinition ptd = DataTables.buildPropertyTableDefinition( propertyType );
         ptm.registerTables( ptd );
+    }
+
+    public void updatePropertyTypeFqn(PropertyType propertyType, FullQualifiedName newFqn) {
+        String propertyTableName = DataTables.quote(DataTables.propertyTableName(propertyType.getId()));
+        String oldType = DataTables.quote(propertyType.getType().getFullQualifiedNameAsString());
+        String newType = DataTables.quote(newFqn.getFullQualifiedNameAsString());
+        String updatePropertyTypeFqn = String.format("ALTER TABLE %1$s RENAME COLUMN %2$s TO %3$s",
+                propertyTableName, oldType, newType);
+
+        try(Connection connection = hds.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(updatePropertyTypeFqn)) {
+            preparedStatement.executeUpdate();
+        } catch(SQLException e) {
+            logger.error("Unable to update column full qualified name in propertytype", e);
+        }
     }
 
 }
