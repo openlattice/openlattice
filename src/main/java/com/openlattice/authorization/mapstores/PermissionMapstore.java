@@ -42,23 +42,27 @@ import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.UUID;
+
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, AceValue> {
-    public static final String PRINCIPAL_INDEX             = "__key#principal";
-    public static final String SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
-    public static final String PERMISSIONS_INDEX           = "permissions[any]";
-    public static final String ACL_KEY_INDEX               = "__key#aclKey.index";
-    private final SecurableObjectTypeMapstore objectTypes;
+    public static final String                      PRINCIPAL_INDEX             = "__key#principal";
+    public static final String                      SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
+    public static final String                      PERMISSIONS_INDEX           = "permissions[any]";
+    public static final String                      ACL_KEY_INDEX               = "__key#aclKey.index";
+    public static final String                      EXPIRATION_DATE_INDEX       = "expirationDate";
+    private final       SecurableObjectTypeMapstore objectTypes;
 
     public PermissionMapstore( HikariDataSource hds ) {
         super( HazelcastMap.PERMISSIONS.name(), PostgresTable.PERMISSIONS, hds );
@@ -71,8 +75,11 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         Array permissions = createTextArray(
                 ps.getConnection(),
                 value.getPermissions().stream().map( Permission::name ) );
+        OffsetDateTime expirationDate = value.getExpirationDate();
         ps.setArray( 4, permissions );
-        ps.setArray( 5, permissions );
+        ps.setObject( 5, expirationDate );
+        ps.setArray( 6, permissions );
+        ps.setObject( 7, expirationDate );
     }
 
     @Override
@@ -118,7 +125,8 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
                 .addMapIndexConfig( new MapIndexConfig( ACL_KEY_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( SECURABLE_OBJECT_TYPE_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( PERMISSIONS_INDEX, false ) );
+                .addMapIndexConfig( new MapIndexConfig( PERMISSIONS_INDEX, false ) )
+                .addMapIndexConfig( new MapIndexConfig( EXPIRATION_DATE_INDEX, true ) );
     }
 
     @Override
