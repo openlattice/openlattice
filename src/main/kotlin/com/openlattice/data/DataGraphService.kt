@@ -146,6 +146,13 @@ open class DataGraphService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
+        val edgeKeys = entityKeyIds
+                .flatMap { graphService.getEdgeKeysContainingEntity(entitySetId, it) }
+                .toSet()
+        graphService.clearEdges(edgeKeys)
+        edgeKeys.forEach {
+            eds.clearEntities(it.edge.entitySetId, setOf(it.edge.entityKeyId), authorizedPropertyTypes)
+        }
         return eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
