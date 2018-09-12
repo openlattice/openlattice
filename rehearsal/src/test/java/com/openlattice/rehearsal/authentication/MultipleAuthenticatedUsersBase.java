@@ -27,6 +27,8 @@ import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.data.DataApi;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
@@ -146,6 +148,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             expected.addPropertyTypes( ImmutableSet.of( k.getId(), p1.getId(), p2.getId() ) );
         } else {
             expected.addPropertyTypes( ImmutableSet.copyOf( propertyTypes ) );
+            expected.addPropertyTypes(ImmutableSet.of(k.getId()));
         }
 
         UUID entityTypeId = edmApi.createEntityType( expected );
