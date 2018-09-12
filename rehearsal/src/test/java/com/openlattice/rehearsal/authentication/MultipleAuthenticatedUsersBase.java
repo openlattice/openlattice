@@ -20,13 +20,18 @@
 
 package com.openlattice.rehearsal.authentication;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.data.DataApi;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
@@ -46,6 +51,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.junit.Assert;
 import retrofit2.Retrofit;
 
@@ -86,6 +92,28 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
     }
 
+    public static Map<UUID, SetMultimap<UUID, Object>> randomBinaryData( UUID keyType, UUID binaryType ) {
+        return new ImmutableMap.Builder<UUID, SetMultimap<UUID, Object>>()
+                .put( UUID.randomUUID(), randomElement( keyType, binaryType ) )
+                .put( UUID.randomUUID(), randomElement( keyType, binaryType ) )
+                .build();
+    }
+    public static SetMultimap<UUID, Object> randomElement( UUID keyType, UUID binaryType ) {
+        SetMultimap<UUID, Object> element = HashMultimap.create();
+        element.put( keyType, RandomStringUtils.random( 5 ) );
+        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
+        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
+        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
+        return element;
+    }
+
+    public static PropertyType getBinaryPropertyType() {
+        PropertyType pt = TestDataFactory.binaryPropertyType();
+        UUID propertyTypeId = edmApi.createPropertyType( pt );
+        Assert.assertNotNull( "Property type creation returned null value.", propertyTypeId );
+        return pt;
+    }
+
     /**
      * Helper methods for AuthorizationsApi
      */
@@ -99,6 +127,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static void checkUserPermissions( AclKey aclKey, EnumSet<Permission> expected ) {
+
         authorizationsApi
                 .checkAuthorizations( ImmutableSet.of( new AccessCheck( aclKey, EnumSet.allOf( Permission.class ) ) ) )
                 .forEach( auth -> checkPermissionsMap( auth.getPermissions(), expected ) );
@@ -146,6 +175,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             expected.addPropertyTypes( ImmutableSet.of( k.getId(), p1.getId(), p2.getId() ) );
         } else {
             expected.addPropertyTypes( ImmutableSet.copyOf( propertyTypes ) );
+            expected.addPropertyTypes(ImmutableSet.of(k.getId()));
         }
 
         UUID entityTypeId = edmApi.createEntityType( expected );

@@ -21,6 +21,8 @@
 
 package com.openlattice.rehearsal.data
 
+import com.dataloom.mappers.ObjectMappers
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
@@ -51,6 +53,9 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.*
 import com.google.common.collect.Maps.transformValues   //added import statement
+import com.openlattice.data.UpdateType
+import com.openlattice.edm.requests.MetadataUpdate
+import org.slf4j.LoggerFactory
 import java.lang.Math.abs                               //added to check DateTime diffs
 
 /**
@@ -63,6 +68,8 @@ private val random = Random()
 
 class DataControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
+        val logger = LoggerFactory.getLogger(DataControllerTest.javaClass)
+
         val fqnCache: LoadingCache<UUID, FullQualifiedName> = CacheBuilder.newBuilder()
                 .build(
                         object : CacheLoader<UUID, FullQualifiedName>() {
@@ -83,13 +90,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testCreateAndLoadEntityData() {
         val et = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
-        waitForIt()
 
         //added transformValues()
         val testData = transformValues(TestDataFactory.randomStringEntityData(numberOfEntries, et.properties), Multimaps::asMap)
-        MultipleAuthenticatedUsersBase.dataApi.replaceEntities(es.id, testData, false)
+        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
                 MultipleAuthenticatedUsersBase.dataApi
@@ -104,12 +109,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     fun testCreateAndLoadBinaryEntityData() {
         val pt = MultipleAuthenticatedUsersBase.getBinaryPropertyType()
         val et = MultipleAuthenticatedUsersBase.createEntityType(pt.id)
-        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
-        waitForIt()
 
-        val testData = randomBinaryData(et.key.iterator().next(),pt.id)
-        MultipleAuthenticatedUsersBase.dataApi.replaceEntities(es.id, testData, false)
+        val testData = Maps.transformValues(randomBinaryData(et.key.iterator().next(),pt.id) ,Multimaps::asMap )
+        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
                 MultipleAuthenticatedUsersBase.dataApi
@@ -122,9 +125,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testCreateLoadReplaceLoadData() {
         val et = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
-        waitForIt()
 
         val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
 
@@ -158,7 +159,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         //added transformValues()
         val replacementMap = transformValues(mapOf(ids[0]!! to replacement), Multimaps::asMap)
 
-        Assert.assertEquals(1, dataApi.replaceEntities(es.id, replacementMap, true))
+        Assert.assertEquals(1, dataApi.updateEntitiesInEntitySet(es.id, replacementMap, UpdateType.PartialReplace))
 
         val ess2 = EntitySetSelection(
                 Optional.of(et.properties),
@@ -184,19 +185,12 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun createEdges() {
         val et = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
-        waitForIt()
         val src = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val esSrc = MultipleAuthenticatedUsersBase.createEntitySet(src)
-        waitForIt()
         val dst = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val esDst = MultipleAuthenticatedUsersBase.createEntitySet(dst)
-        waitForIt()
         val at = MultipleAuthenticatedUsersBase.createAssociationType(et, setOf(src), setOf(dst))
-        waitForIt()
 
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
@@ -262,15 +256,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }.toMap()
     }
 
-    private fun waitForIt() {
-        try {
-            Thread.sleep(1000)
-        } catch (e: InterruptedException) {
-            throw IllegalStateException("Failed to wait for it.")
-        }
-
-    }
-
     @Test
     fun testDateTypes() {
         val p1 = MultipleAuthenticatedUsersBase.createDateTimePropertyType()
@@ -285,9 +270,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val entityTypeId = MultipleAuthenticatedUsersBase.edmApi.createEntityType(et)
         Assert.assertNotNull("Entity type creation shouldn't return null UUID.", entityTypeId)
 
-        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
-        waitForIt()
 
         val testData = HashMap<UUID, SetMultimap<UUID, Any>>()
         val d = LocalDate.now()
@@ -299,7 +282,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         )
 
         //added transformValues()
-        MultipleAuthenticatedUsersBase.dataApi.replaceEntities(es.id, transformValues(testData, Multimaps::asMap), false)
+        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, transformValues(testData, Multimaps::asMap), UpdateType.Replace)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
                 MultipleAuthenticatedUsersBase.dataApi
@@ -321,16 +304,14 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testLoadSelectedEntityData() {
         val et = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
-        waitForIt()
 
         //added transformValues()
         val entities = TestDataFactory.randomStringEntityData(
                 numberOfEntries,
                 et.properties
         )
-        MultipleAuthenticatedUsersBase.dataApi.replaceEntities(es.id, transformValues(entities, Multimaps::asMap), false)
+        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, transformValues(entities, Multimaps::asMap), UpdateType.Replace)
 
         // load selected data
         val selectedProperties = et.properties.asSequence()
@@ -372,6 +353,35 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         Assert.assertEquals(expectedValues, resultValues)
     }
-}
 
+    @Test
+    fun testUpdatePropertyTypeMetadata() {
+        val pt = createPropertyType()
+        val et = createEntityType(pt.id)
+        val es = createEntitySet(et)
+
+        // add test data
+        val testData = transformValues(TestDataFactory.randomStringEntityData(1, et.properties), Multimaps::asMap)
+        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
+
+        val oldNameSpace = pt.type.namespace
+        val newNameSpace = oldNameSpace + "extrachars"
+
+        // Update propertytype type
+        val update = MetadataUpdate(Optional.of(pt.title), Optional.empty(), Optional.of(es.name),
+                Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
+                Optional.empty(), Optional.empty())
+        edmApi.updatePropertyTypeMetadata(pt.id, update)
+
+        val ess = EntitySetSelection(Optional.of(et.properties))
+        val results = Sets.newHashSet(
+                MultipleAuthenticatedUsersBase.dataApi
+                        .loadEntitySetData(es.id, ess, FileType.json)
+        )
+
+        val fqns = results.iterator().next().keys()
+        Assert.assertEquals(1, fqns.asSequence().filter { it.namespace.equals(newNameSpace) }.count())
+        Assert.assertEquals(0, fqns.asSequence().filter { it.namespace.equals(oldNameSpace) }.count())
+    }
+}
 
