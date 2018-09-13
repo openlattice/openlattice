@@ -100,6 +100,7 @@ public final class SerializationConstants {
     public static final String EXTERNAL                         = "external";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
+    public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
     public static final String HITS                             = "hits";
     public static final String HTTP_STATUS_CODE                 = "code";
@@ -115,6 +116,8 @@ public final class SerializationConstants {
     public static final String LINKING                          = "linking";
     public static final String LINKING_ENTITY_SET_FIELD         = "linkingEntitySet";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
+    public static final String LOWERBOUND                       = "lowerbound";
+    public static final String LTE                              = "lte";
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";
@@ -172,6 +175,7 @@ public final class SerializationConstants {
     public static final String TITLE_FIELD                      = "title";                   // for EntitySet
     public static final String TRUSTED_ORGANIZATIONS_FIELD      = "trustedOrganizations";
     public static final String TYPE_FIELD                       = "type";
+    public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
     public static final String UTILIZER_IS_SRC                  = "utilizerIsSrc";
