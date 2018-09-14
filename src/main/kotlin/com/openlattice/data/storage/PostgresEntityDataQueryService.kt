@@ -615,12 +615,6 @@ fun selectEntitySetWithPropertyTypes(
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, binaryPropertyTypes[it.key]!! )} USING (${ID.name} )" }
                     .joinToString("\n" )
-//    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
-//            "FROM $esTableName " +
-//            authorizedPropertyTypes
-//                    .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value )} USING (${ID.name} )" }
-//                    .joinToString("\n" ) +
-//            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} " } else  { " " }
     //@formatter:on
 }
 
@@ -636,7 +630,7 @@ fun selectEntitySetWithPropertyTypesAndVersion(
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
     val columns = setOf(
-            "${ID_VALUE.name}",
+            ID_VALUE.name,
             if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) { LAST_WRITE.name } else { "" },
             if(metadataOptions.contains(MetadataOption.LAST_INDEX) )  {LAST_INDEX.name } else { "" },
             if(metadataOptions.contains(MetadataOption.LAST_LINK) )  {LAST_LINK.name } else { "" })
@@ -649,13 +643,6 @@ fun selectEntitySetWithPropertyTypesAndVersion(
             authorizedPropertyTypes
                     .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version, binaryPropertyTypes[it.key]!! )} USING (${ID.name} )" }
                     .joinToString("\n" )
-//
-//    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} \n" +
-//            "FROM $esTableName \n" +
-//            authorizedPropertyTypes
-//                    .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version )} USING (${ID.name} )" }
-//                    .joinToString("\n" ) +
-//            if( entityKeyIdsClause.isPresent ) { " WHERE ${entityKeyIdsClause.get()} " } else  { " " }
     //@formatter:on
 }
 
@@ -729,3 +716,4 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     //cause a type exception
     return "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
 }
+

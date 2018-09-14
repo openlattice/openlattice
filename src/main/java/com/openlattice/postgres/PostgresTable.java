@@ -32,7 +32,7 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.BLOCK_ID;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLAUSES;
-import static com.openlattice.postgres.PostgresColumn.CLUSTER_ID;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -64,7 +64,6 @@ import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.KEY;
 import static com.openlattice.postgres.PostgresColumn.LSB;
-import static com.openlattice.postgres.PostgresColumn.MATCH_ID;
 import static com.openlattice.postgres.PostgresColumn.MEMBERS;
 import static com.openlattice.postgres.PostgresColumn.MSB;
 import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
@@ -175,6 +174,10 @@ public final class PostgresTable {
             new PostgresTableDefinition( "edm_versions" )
                     .addColumns( EDM_VERSION_NAME, EDM_VERSION )
                     .primaryKey( EDM_VERSION_NAME, EDM_VERSION );
+    public static final PostgresTableDefinition        ENTITIES                     =
+            new PostgresTableDefinition( "linked_entities" )
+                    .addColumns( ENTITY_SET_ID, ID_VALUE, LINKING_ID )
+                    .primaryKey( ENTITY_SET_ID, ID_VALUE );
     public static final PostgresTableDefinition        ENTITY_QUERIES               =
             new PostgresTableDefinition( "entity_graph_queries" )
                     .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
@@ -235,15 +238,11 @@ public final class PostgresTable {
             );
     public static final PostgresTableDefinition        IDS                          =
             new PostgresTableDefinition( "entity_key_ids" )
-                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID );
+                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID, LINKING_ID );
     public static final PostgresTableDefinition        ID_GENERATION                =
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
                     .addColumns( PARTITION_INDEX, MSB, LSB );
-    public static final PostgresTableDefinition        LINKED_ENTITIES              =
-            new PostgresTableDefinition( "linked_entities" )
-                    .addColumns( CLUSTER_ID, ENTITY_SET_ID, ID_VALUE )
-                    .primaryKey( CLUSTER_ID, ENTITY_SET_ID, ID_VALUE );
     public static final PostgresTableDefinition        LINKED_ENTITY_SETS           =
             new PostgresTableDefinition( "linked_entity_sets" )
                     .addColumns( ID, ENTITY_SET_IDS );
@@ -260,13 +259,13 @@ public final class PostgresTable {
                     .primaryKey( GRAPH_ID, VERTEX_ID );
     public static final PostgresTableDefinition        MATCHED_ENTITIES             =
             new PostgresTableDefinition( "matched_entities" )
-                    .addColumns( CLUSTER_ID,
+                    .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
                             SRC_LINKING_VERTEX_ID,
                             DST_ENTITY_SET_ID,
                             DST_LINKING_VERTEX_ID,
                             SCORE )
-                    .primaryKey( CLUSTER_ID,
+                    .primaryKey( LINKING_ID,
                             SRC_ENTITY_SET_ID,
                             SRC_LINKING_VERTEX_ID,
                             DST_ENTITY_SET_ID,
@@ -356,6 +355,9 @@ public final class PostgresTable {
                         .name( "edges_edge_entity_key_id_idx" )
                         .ifNotExists() );
         IDS.addIndexes(
+                new PostgresColumnsIndexDefinition( IDS, LINKING_ID )
+                        .name( "entity_key_ids_linking_id_idx" )
+                        .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID )
                         .name( "entity_key_ids_entity_set_id_idx" )
                         .ifNotExists(),

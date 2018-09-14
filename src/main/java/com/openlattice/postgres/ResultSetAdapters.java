@@ -77,7 +77,7 @@ public final class ResultSetAdapters {
     private static final Decoder DECODER = Base64.getMimeDecoder();
 
     public static UUID clusterId(ResultSet rs) throws SQLException {
-        return (UUID) rs.getObject(CLUSTER_ID_FIELD);
+        return (UUID) rs.getObject( LINKING_ID_FIELD );
     }
 
     public static GraphQueryState graphQueryState(ResultSet rs) throws SQLException {
