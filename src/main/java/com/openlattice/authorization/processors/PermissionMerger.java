@@ -29,22 +29,33 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractMerger;
 import com.openlattice.authorization.AceValue;
+
+import java.time.OffsetDateTime;
 import java.util.EnumSet;
+import java.util.Map;
 
 public class PermissionMerger extends AbstractMerger<AceKey, AceValue, Permission> {
     private static final long serialVersionUID = -3504613417625318717L;
     private final SecurableObjectType securableObjectType;
+    private final OffsetDateTime expirationDate;
 
     public  PermissionMerger(
             Iterable<Permission> objects,
-            SecurableObjectType securableObjectType ) {
+            SecurableObjectType securableObjectType,
+            OffsetDateTime expirationDate ) {
         super( objects );
         this.securableObjectType = checkNotNull( securableObjectType );
+        this.expirationDate = expirationDate;
+    }
+
+    @Override protected void postProcess( AceValue value ) {
+        value.setSecurableObjectType( securableObjectType );
+        value.setExpirationDate( expirationDate );
     }
 
     @Override
     protected AceValue newEmptyCollection() {
-        return new AceValue( EnumSet.noneOf( Permission.class ), securableObjectType );
+        return new AceValue( EnumSet.noneOf( Permission.class ), securableObjectType, expirationDate );
     }
 
     public SecurableObjectType getSecurableObjectType() {
