@@ -37,31 +37,31 @@ import com.hazelcast.core.ICompletableFuture;
 public class AceFuture implements ListenableFuture<Ace> {
     private static final Logger                              logger = LoggerFactory.getLogger( AceFuture.class );
     private final Principal                                      principal;
-    private final ICompletableFuture<DelegatedPermissionEnumSet> futurePermissions;
+    private final ICompletableFuture<AceValue> futureAceValue;
 
-    public AceFuture( Principal principal, ICompletableFuture<DelegatedPermissionEnumSet> futurePermissions ) {
+    public AceFuture( Principal principal, ICompletableFuture<AceValue> futureAceValue ) {
         this.principal = principal;
-        this.futurePermissions = futurePermissions;
+        this.futureAceValue = futureAceValue;
     }
 
     @Override
     public boolean cancel( boolean mayInterruptIfRunning ) {
-        return futurePermissions.cancel( mayInterruptIfRunning );
+        return futureAceValue.cancel( mayInterruptIfRunning );
     }
 
     @Override
     public boolean isCancelled() {
-        return futurePermissions.isCancelled();
+        return futureAceValue.isCancelled();
     }
 
     @Override
     public boolean isDone() {
-        return futurePermissions.isDone();
+        return futureAceValue.isDone();
     }
 
     @Override
     public Ace get() throws InterruptedException, ExecutionException {
-        return new Ace( principal, futurePermissions.get() );
+        return new Ace( principal, futureAceValue.get().getPermissions(), futureAceValue.get().getExpirationDate() );
     }
 
     public Ace getUninterruptibly() {
@@ -75,15 +75,15 @@ public class AceFuture implements ListenableFuture<Ace> {
 
     @Override
     public Ace get( long timeout, TimeUnit unit ) throws InterruptedException, ExecutionException, TimeoutException {
-        return new Ace( principal, futurePermissions.get( timeout, unit ) );
+        return new Ace( principal, futureAceValue.get( timeout, unit ).getPermissions(), futureAceValue.get(timeout, unit).getExpirationDate() );
     }
 
     @Override
     public void addListener( Runnable listener, Executor executor ) {
-        futurePermissions.andThen( new ExecutionCallback<DelegatedPermissionEnumSet>() {
+        futureAceValue.andThen( new ExecutionCallback<AceValue>() {
 
             @Override
-            public void onResponse( DelegatedPermissionEnumSet response ) {
+            public void onResponse( AceValue response ) {
                 listener.run();
             }
 
