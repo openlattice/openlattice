@@ -43,17 +43,13 @@ import com.openlattice.authorization.processors.PermissionRemover;
 import com.openlattice.authorization.processors.SecurableObjectTypeUpdater;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
-import java.util.Collection;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
+
+import java.time.OffsetDateTime;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,13 +81,15 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     public void addPermission(
             AclKey key,
             Principal principal,
-            EnumSet<Permission> permissions ) {
+            EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate ) {
         //TODO: We should do something better than reading the securable object type.
         SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
         if ( securableObjectType == SecurableObjectType.Unknown ) {
             logger.warn( "Unrecognized object type for acl key {} key ", key );
         }
-        aces.executeOnKey( new AceKey( key, principal ), new PermissionMerger( permissions, securableObjectType ) );
+        aces.executeOnKey( new AceKey( key, principal ),
+                new PermissionMerger( permissions, securableObjectType, expirationDate ) );
     }
 
     @Override
@@ -106,10 +104,11 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     public void setPermission(
             AclKey key,
             Principal principal,
-            EnumSet<Permission> permissions ) {
+            EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate ) {
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
         SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
-        aces.set( new AceKey( key, principal ), new AceValue( permissions, securableObjectType ) );
+        aces.set( new AceKey( key, principal ), new AceValue( permissions, securableObjectType, expirationDate ) );
     }
 
     @Override
@@ -177,7 +176,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             Set<Principal> principals ) {
         AuthorizationAggregator agg = aces
                 .aggregate( new AuthorizationAggregator(
-                        transformValues( requests, HazelcastAuthorizationService::noAccess ) ),
+                                transformValues( requests, HazelcastAuthorizationService::noAccess ) ),
                         matches( requests.keySet(), principals ) );
 
         return agg.getPermissions();
