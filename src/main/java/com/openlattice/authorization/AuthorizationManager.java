@@ -25,11 +25,9 @@ package com.openlattice.authorization;
 import com.codahale.metrics.annotation.Timed;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
+
+import java.time.OffsetDateTime;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -57,7 +55,8 @@ public interface AuthorizationManager {
     void addPermission(
             AclKey aclKeys,
             Principal principal,
-            EnumSet<Permission> permissions );
+            EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate);
 
     void removePermission(
             AclKey aclKeys,
@@ -67,7 +66,8 @@ public interface AuthorizationManager {
     void setPermission(
             AclKey aclKeys,
             Principal principal,
-            EnumSet<Permission> permissions );
+            EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate );
 
     void deletePermissions( AclKey aclKey );
 
