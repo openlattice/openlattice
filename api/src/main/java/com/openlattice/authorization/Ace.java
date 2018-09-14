@@ -21,21 +21,27 @@ package com.openlattice.authorization;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.time.OffsetDateTime;
 import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Set;
 
 public class Ace {
-    private final Principal           principal;
-    private final EnumSet<Permission> permissions;
-    private transient int h = 0;
+    private final     Principal           principal;
+    private final     EnumSet<Permission> permissions;
+    private final     OffsetDateTime      expirationDate;
+    private transient int                 h = 0;
 
     @JsonCreator
     public Ace(
             @JsonProperty( SerializationConstants.PRINCIPAL ) Principal principal,
-            @JsonProperty( SerializationConstants.PERMISSIONS ) Set<Permission> permissions ) {
+            @JsonProperty( SerializationConstants.PERMISSIONS ) Set<Permission> permissions,
+            @JsonProperty( SerializationConstants.EXPIRATION ) OffsetDateTime expirationDate ) {
         this.principal = principal;
         this.permissions = EnumSet.noneOf( Permission.class );
         this.permissions.addAll( permissions );
+        this.expirationDate = expirationDate;
     }
 
     @JsonProperty( SerializationConstants.PRINCIPAL )
@@ -48,50 +54,31 @@ public class Ace {
         return permissions;
     }
 
-    @Override
-    public int hashCode() {
-        if ( h == 0 ) {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ( ( permissions == null ) ? 0 : permissions.hashCode() );
-            result = prime * result + ( ( principal == null ) ? 0 : principal.hashCode() );
-            h = result;
-        }
-        return h;
+    @JsonProperty( SerializationConstants.EXPIRATION )
+    public OffsetDateTime getExpirationDate() {
+        return expirationDate;
     }
 
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) {
+    @Override public boolean equals( Object o ) {
+        if ( this == o )
             return true;
-        }
-        if ( obj == null ) {
+        if ( o == null || getClass() != o.getClass() )
             return false;
-        }
-        if ( !( obj instanceof Ace ) ) {
-            return false;
-        }
-        Ace other = (Ace) obj;
-        if ( permissions == null ) {
-            if ( other.permissions != null ) {
-                return false;
-            }
-        } else if ( !permissions.equals( other.permissions ) ) {
-            return false;
-        }
-        if ( principal == null ) {
-            if ( other.principal != null ) {
-                return false;
-            }
-        } else if ( !principal.equals( other.principal ) ) {
-            return false;
-        }
-        return true;
+        Ace ace = (Ace) o;
+        return h == ace.h &&
+                Objects.equals( principal, ace.principal ) &&
+                Objects.equals( permissions, ace.permissions ) &&
+                Objects.equals( expirationDate, ace.expirationDate );
+    }
+
+    @Override public int hashCode() {
+        return Objects.hash( principal, permissions, expirationDate, h );
     }
 
     @Override
     public String toString() {
-        return "Ace [principal=" + principal + ", permissions=" + permissions + "]";
+        return "Ace [principal=" + principal + ", permissions=" + permissions + ", expiration date=" + expirationDate
+                + "]";
     }
 
 }
