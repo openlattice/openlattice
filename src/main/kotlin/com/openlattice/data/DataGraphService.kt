@@ -151,18 +151,8 @@ open class DataGraphService(
                 .flatMap { graphService.getEdgeKeysContainingEntity(entitySetId, it) }
                 .toSet()
         graphService.clearEdges(edgeKeys)
-        edgeKeys
-                .groupBy {
-                    it.edge.entitySetId
-                }
-                .mapValues {
-                    it.value.map {
-                        it.edge.entityKeyId
-                    }.toSet()
-                }
-                .forEach {
-                    eds.clearEntities(it.key, it.value, authorizedPropertyTypes)
-                }
+        edgeKeys.groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
+                .forEach { eds.clearEntities(it.key, it.value.toSet(), authorizedPropertyTypes) }
         return eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
