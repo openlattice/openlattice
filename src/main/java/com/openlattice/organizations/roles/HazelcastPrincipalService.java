@@ -51,16 +51,12 @@ import com.openlattice.organizations.processors.NestedPrincipalMerger;
 import com.openlattice.organizations.processors.NestedPrincipalRemover;
 import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdater;
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+
+import java.time.OffsetDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +68,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private final AuthorizationManager                  authorizations;
     private final HazelcastAclKeyReservationService     reservations;
     private final IMap<AclKey, SecurablePrincipal>      principals;
-    private final IMap<AclKey, AclKeySet>                principalTrees; // RoleName -> Member RoleNames
+    private final IMap<AclKey, AclKeySet>               principalTrees; // RoleName -> Member RoleNames
     private final IMap<String, Auth0UserBasic>          users;
     private final IMap<List<UUID>, SecurableObjectType> securableObjectTypes;
 
@@ -108,7 +104,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
         try {
             authorizations.setSecurableObjectType( aclKey, principal.getCategory() );
-            authorizations.addPermission( aclKey, owner, EnumSet.allOf( Permission.class ) );
+            authorizations.addPermission( aclKey, owner, EnumSet.allOf( Permission.class ), OffsetDateTime.MAX );
         } catch ( Exception e ) {
             logger.error( "Unable to create principal {}", principal, e );
             Util.deleteSafely( principals, aclKey );
@@ -214,7 +210,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     public Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey ) {
         //We start from the bottom layer and use predicates to sweep up the tree and enumerate all roles with this role.
         final Set<AclKey> principalsWithPrincipal = new HashSet<>();
-        Set<AclKey> parentLayer = principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
+        Set<AclKey> parentLayer = principalTrees
+                .keySet( hasSecurablePrincipal( aclKey ) );
         principalsWithPrincipal.addAll( parentLayer );
         while ( !parentLayer.isEmpty() ) {
             parentLayer = parentLayer
@@ -224,6 +221,35 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
             principalsWithPrincipal.addAll( parentLayer );
         }
         return principals.getAll( principalsWithPrincipal ).values();
+    }
+
+    @Override
+    public Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey ) {
+        Set<AclKey> parentLayer = principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
+        return principals.getAll( parentLayer ).values();
+        //return principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
+    }
+
+    @Override
+    public List<List<Principal>> recursivelyGetPrincipalsPath(
+            Principal principal,
+            Map<Principal, List<List<Principal>>> principalToPrincipalPaths ) {
+        List<List<Principal>> paths = new ArrayList<>();
+        principalToPrincipalPaths.put( principal, paths );
+        Collection<SecurablePrincipal> parentLayer = getParentPrincipalsOfPrincipal( lookup( principal ) );
+        if ( parentLayer.isEmpty() ) { //base case: we've reached the head of the tree
+            List<Principal> path = Arrays.asList( principal );
+            paths.add( path );
+            principalToPrincipalPaths.put( principal, paths );
+        } else {    //recursive case: parents still exist
+            for (SecurablePrincipal parent : parentLayer) {
+                paths = recursivelyGetPrincipalsPath(parent.getPrincipal(), principalToPrincipalPaths);
+                paths.forEach( path -> path.add(0, principal) );
+                principalToPrincipalPaths.put(principal, paths);
+            }
+        }
+        return paths;
+
     }
 
     @Override
