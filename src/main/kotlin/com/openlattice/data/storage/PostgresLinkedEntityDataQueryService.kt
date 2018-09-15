@@ -35,10 +35,53 @@ import java.util.*
  */
 private val logger = LoggerFactory.getLogger(PostgresLinkedEntityDataQueryService::class.java)
 const val ENTITIES_TABLE_ALIAS = "entity_key_ids"
-
+const val LEFT_JOIN = "LEFT JOIN"
+const val INNER_JOIN = "INNER JOIN"
 private val entityKeyIdColumns = listOf(ENTITY_SET_ID.name, ID_VALUE.name).joinToString(",")
 
 open class PostgresLinkedEntityDataQueryService(private val hds: HikariDataSource) {
+
+}
+
+/**
+ *
+ */
+fun selectEntitySetWithCurrentVersionOfPropertyTypes(
+        entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+        authorizedPropertyTypes: Map<UUID, String>,
+        propertyTypeFilters: Map<UUID, Set<RangeFilter<Comparable<Any>>>>,
+        metadataOptions: Set<MetadataOption>,
+        version: Long,
+        linked: Boolean,
+        binaryPropertyTypes: Map<UUID, Boolean>
+): String {
+    val entitiesClause = buildEntitiesClause(entityKeyIds)
+    val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions)
+
+
+    val dataColumns =
+            if (linked) {
+                setOf(LINKING_ID.name)
+            } else {
+                setOf(ENTITY_SET_ID.name, ID_VALUE.name)
+            }
+            .union(metadataOptions.map(MetadataOption::name))
+            .union( authorizedPropertyTypes.values.map(::quote ) )
+            .joinToString (",")
+
+    val propertyTableJoins =
+            authorizedPropertyTypes
+                    .map {
+                        val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
+                        val subQuerySql = selectCurrentVersionOfPropertyTypeSql(entitiesClause, it.key,propertyTypeFilters[it.key]!!,it.value, binaryPropertyTypes[it.key]!! )
+                        "$joinType $subQuerySql USING ($entityKeyIdColumns)"
+                    }
+                    .joinToString("\n" )
+    return "SELECT $dataColumns FROM ( " +
+            "FROM (SELECT * FROM $entitiesSubquerySql \n" +
+            "       WHERE version > 0 $entitiesClause" +
+            ") as $esTableName" +
+
 
 }
 
@@ -50,6 +93,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
         authorizedPropertyTypes: Map<UUID, String>,
         propertyTypeFilters: Map<UUID, Set<RangeFilter<Comparable<Any>>>>,
+        metadataOptions: Set<MetadataOption>,
         version: Long,
         linked: Boolean,
         binaryPropertyTypes: Map<UUID, Boolean>
@@ -62,6 +106,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
             } else {
                 setOf(ENTITY_SET_ID.name, ID_VALUE.name)
             }
+                    .union(metadataOptions.map(MetadataOption::name))
                     .union(authorizedPropertyTypes.values.map(::quote))
                     .filter(String::isNotBlank)
                     .joinToString(",")
@@ -70,7 +115,8 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
 
     val propertyTypeJoins = authorizedPropertyTypes
             .map {
-                val subQuerySql = buildSelectVersionOfPropertyTypeInEntitySetSql(
+                val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
+                val subQuerySql = selectVersionOfPropertyTypeInEntitySetSql(
                         entitiesClause,
                         it.key,
                         it.value,
@@ -79,7 +125,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
                         linked,
                         binaryPropertyTypes[it.key]!!
                 )
-                "LEFT JOIN $subQuerySql USING (${ID.name}) "
+                "$joinType $subQuerySql USING ($entityKeyIdColumns) "
             }
             .joinToString("\n")
 
@@ -99,7 +145,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
  *
  * @return A SQL subquery statement that will return all
  */
-internal fun buildSelectVersionOfPropertyTypeInEntitySetSql(
+internal fun selectVersionOfPropertyTypeInEntitySetSql(
         entitiesClause: String,
         propertyTypeId: UUID,
         fqn: String,
@@ -123,17 +169,21 @@ internal fun buildSelectVersionOfPropertyTypeInEntitySetSql(
             version
     )
 
+    /*
+     * The reason that the linking id is joined in at this level is so that filtering works properly when tables are
+     * joined together.
+     */
     val linkingIdSubquerySql =
             if (linked) {
-                "LEFT JOIN (SELECT $entityKeyIdColumns,${LINKING_ID.name} FROM ${IDS.name}) as linking_ids USING($entityKeyIdColumns)"
+                "INNER JOIN (SELECT $entityKeyIdColumns,${LINKING_ID.name} FROM ${IDS.name}) as linking_ids USING($entityKeyIdColumns)"
             } else {
                 ""
             }
-
+    //We do an inner join here since we are effectively doing a self-join.
     return "(SELECT $selectColumns, $arrayAgg " +
             "FROM $selectPropertyTypeIdsFilteredByVersion " +
             linkingIdSubquerySql +
-            "LEFT JOIN $propertyTable USING($entityKeyIdColumns) " +
+            "INNER JOIN $propertyTable USING($entityKeyIdColumns) " +
             "GROUP BY($selectColumns)) as $propertyTable "
 }
 
@@ -154,9 +204,14 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
     val arrayAgg = arrayAggSql(fqn, binary)
 
     val filtersClause = buildFilterClause(fqn, filters)
+
+    /*
+     * TODO: If we ever support linking together additional property types and change semantics for assignment of
+     * linking ids we should make sure that the query below only return rows where the linking_id is not null
+     */
     val linkingIdSubquerySql =
             if (linked) {
-                "LEFT JOIN (SELECT $entityKeyIdColumns,${LINKING_ID.name} FROM ${IDS.name}) as linking_ids USING($entityKeyIdColumns)"
+                "INNER JOIN (SELECT $entityKeyIdColumns,${LINKING_ID.name} FROM ${IDS.name}) as linking_ids USING($entityKeyIdColumns)"
             } else {
                 ""
             }
@@ -164,7 +219,7 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
     return "(SELECT $selectColumns, $arrayAgg " +
             "FROM $propertyTable " +
             linkingIdSubquerySql +
-            "WHERE ${VERSION.name} >= 0 $entitiesClause $filtersClause " +
+            "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause " +
             "GROUP BY ($selectColumns)) as $propertyTable "
 }
 
@@ -213,6 +268,9 @@ internal fun selectPropertyTypeDataKeysFilteredByVersionSubquerySql(
  *    value are not identical, which will only happen when the
  *    greatest present version has been tombstoned for that property.
  *
+ *  If metadata options are reuquested it does an additional level of nesting to get metadata from entity key ids
+ *  table.
+ *
  * @param entitiesClause The clause that controls which entities will be evaluated by this query.
  * @param version The version of the properties being read.
  *
@@ -221,19 +279,53 @@ internal fun selectPropertyTypeDataKeysFilteredByVersionSubquerySql(
  */
 internal fun buildSelectEntityKeyIdsFilteredByVersionSubquerySql(
         entitiesClause: String,
-        version: Long
+        version: Long,
+        metadataOptions: Set<MetadataOption>
 ): String {
-    return "(SELECT $entityKeyIdColumns " +
-            "FROM ( SELECT $entityKeyIdColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
-            "       FROM (  SELECT $entityKeyIdColumns, unnest(versions) as versions " +
-            "           FROM ${ID.name} " +
-            "           WHERE $entitiesClause ) as $EXPANDED_VERSIONS " +
-            "       WHERE abs(versions) <= $version " +
-            "       GROUP BY($entityKeyIdColumns)) as unfiltered_data_keys " +
-            "WHERE max_abs=abs_max ) as data_keys "
+    return if (metadataOptions.isEmpty()) {
+        "(SELECT $entityKeyIdColumns " +
+                "FROM ( SELECT $entityKeyIdColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
+                "       FROM (  SELECT $entityKeyIdColumns, unnest(versions) as versions " +
+                "           FROM ${IDS.name} " +
+                "           WHERE $entitiesClause ) as $EXPANDED_VERSIONS " +
+                "       WHERE abs(versions) <= $version " +
+                "       GROUP BY($entityKeyIdColumns)) as unfiltered_data_keys " +
+                "WHERE max_abs=abs_max ) as data_keys "
+    } else {
+        val metadataColumns = metadataOptions.joinToString(",") { it.name }
+        return "(SELECT $entityKeyIdColumns,$metadataColumns FROM ${IDS.name} INNER JOIN (SELECT $entityKeyIdColumns " +
+                "FROM ( SELECT $entityKeyIdColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
+                "       FROM (  SELECT $entityKeyIdColumns, unnest(versions) as versions " +
+                "           FROM ${IDS.name} " +
+                "           WHERE $entitiesClause ) as $EXPANDED_VERSIONS " +
+                "       WHERE abs(versions) <= $version " +
+                "       GROUP BY($entityKeyIdColumns)) as unfiltered_data_keys " +
+                "WHERE max_abs=abs_max ) as data_keys ) as decorated_keys USING ($entityKeyIdColumns)"
+    }
 
 }
 
+/**
+ * This routine generates SQL that selects all entity key ids that are not tombstoned for the given entities clause. If
+ * metadata is requested on a linked read, behavior is undefined as it will end up
+ *
+ * @param entitiesClause The clause that controls which entities will be evaluated by this query.
+ * @param metadataOptions The metadata to return for the entity.
+ *
+ * @return A named SQL subquery fragment consisting of all entity key satisfying the provided clauses from the
+ * ids table.
+ */
+internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
+        entitiesClause: String,
+        metadataOptions: Set<MetadataOption>
+): String {
+    val metadataColumns = metadataOptions.joinToString(",") { it.name }
+    return if (metadataOptions.isEmpty()) {
+        "(SELECT $entityKeyIdColumns,$metadataColumns from ${IDS.name} WHERE $entitiesClause AND ${VERSION.name} >= 0) as $ENTITIES_TABLE_ALIAS"
+    } else {
+        "(SELECT $entityKeyIdColumns,$metadataColumns from ${IDS.name} WHERE $entitiesClause AND ${VERSION.name} >= 0) as $ENTITIES_TABLE_ALIAS"
+    }
+}
 
 internal fun arrayAggSql(fqn: String, binary: Boolean): String {
     return if (binary) " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)} "

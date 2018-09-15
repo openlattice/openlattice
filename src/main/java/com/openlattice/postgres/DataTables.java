@@ -20,6 +20,7 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.HASH;
@@ -68,6 +69,11 @@ public class DataTables {
             LAST_WRITE_FIELD,
             TIMESTAMPTZ )
             .notNull();
+    public static final  PostgresColumnDefinition           LAST_PROPAGATE     = new PostgresColumnDefinition(
+            LAST_PROPAGATE_FIELD,
+            TIMESTAMPTZ )
+            .notNull();
+
     public static final  FullQualifiedName                  LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
             "@lastWrite" );
     public static final  PostgresColumnDefinition           OWNERS         = new PostgresColumnDefinition(
