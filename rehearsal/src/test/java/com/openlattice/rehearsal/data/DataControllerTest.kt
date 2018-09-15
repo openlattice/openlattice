@@ -99,12 +99,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     fun testCreateAndLoadBinaryEntityData() {
         val pt = MultipleAuthenticatedUsersBase.getBinaryPropertyType()
         val et = MultipleAuthenticatedUsersBase.createEntityType(pt.id)
-        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
         val testData = Maps.transformValues(TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(),pt.id) ,Multimaps::asMap )
         MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
-        waitForIt()
 
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
@@ -178,17 +176,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun createEdges() {
         val et = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
-        waitForIt()
         val src = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val esSrc = MultipleAuthenticatedUsersBase.createEntitySet(src)
-        waitForIt()
         val dst = MultipleAuthenticatedUsersBase.createEntityType()
-        waitForIt()
         val esDst = MultipleAuthenticatedUsersBase.createEntitySet(dst)
-        waitForIt()
         val at = MultipleAuthenticatedUsersBase.createAssociationType(et, setOf(src), setOf(dst))
 
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
@@ -196,11 +188,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
         val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
-        waitForIt()
 
         val entriesDst = ImmutableList.copyOf(testDataDst.values)
         val idsDst = dataApi.createEntities(esDst.id, entriesDst)
-        waitForIt()
 
         val indexExpectedSrc = entriesSrc.mapIndexed { index, data -> idsSrc[index] to keyByFqn(data) }.toMap()
         val indexExpectedDst = entriesSrc.mapIndexed { index, data -> idsDst[index] to keyByFqn(data) }.toMap()
@@ -211,7 +201,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         edgesToBeCreated.putAll(edgeData.first, edgeData.second)
 
         val createdEdges = dataApi.createAssociations(edgesToBeCreated)
-        waitForIt()
 
         Assert.assertNotNull(createdEdges)
         Assert.assertEquals(edgeData.second.size, createdEdges.values().size)
@@ -222,7 +211,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         )
 
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
-        waitForIt()
         Multimaps.asMap(edgesToBeCreated).entries.first().value.
                 mapIndexed { index, de ->
                    val edgeDataLookup = lookupEdgeDataByFqn(actualEdgeData[index].asMap())
@@ -234,15 +222,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     private fun lookupEdgeDataByFqn(edgeData: MutableMap<FullQualifiedName, MutableCollection<Any>>):
             Map<UUID, MutableCollection<Any>> {
         return edgeData.mapKeys { entry -> edmApi.getPropertyTypeId(entry.key.namespace, entry.key.name) }
-    }
-
-    private fun waitForIt() {
-        try {
-            Thread.sleep(1000)
-        } catch (e: InterruptedException) {
-            throw IllegalStateException("Failed to wait for it.")
-        }
-
     }
 
 
@@ -294,17 +273,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
-        val testData = HashMap<UUID, SetMultimap<UUID, Any>>()
         val d = LocalDate.now()
         val odt = OffsetDateTime.ofInstant(Instant.now(), ZoneId.of("UTC"))
-        testData.put(
-                UUID.randomUUID(),
-                ImmutableSetMultimap
-                        .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))
-        )
+        val testData = Arrays.asList(HashMultimap.create(ImmutableSetMultimap
+                        .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))) as SetMultimap<UUID, Any>)
 
         //added transformValues()
-        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, transformValues(testData, Multimaps::asMap), UpdateType.Replace)
+        val ids = MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
                 MultipleAuthenticatedUsersBase.dataApi
@@ -394,7 +369,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
                 Optional.empty(), Optional.empty())
         edmApi.updatePropertyTypeMetadata(pt.id, update)
-        waitForIt()
 
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
