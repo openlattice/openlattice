@@ -21,16 +21,17 @@
 
 package com.openlattice.analysis;
 
+import java.time.temporal.Temporal;
 import java.util.Objects;
 
 /**
  * A range filter for query property types.
  */
 public abstract class AbstractRangeFilter<T extends Comparable<T>> implements RangeFilter<T> {
-    private final T  lowerbound;
-    private final T  upperbound;
-    private final boolean lowerboundEqual;
-    private final boolean upperboundEqual;
+    protected final T  lowerbound;
+    protected final T  upperbound;
+    protected final boolean lowerboundEqual;
+    protected final boolean upperboundEqual;
 
 
     protected AbstractRangeFilter(
@@ -82,6 +83,15 @@ public abstract class AbstractRangeFilter<T extends Comparable<T>> implements Ra
                 upperboundEqual == that.upperboundEqual &&
                 Objects.equals( lowerbound, that.lowerbound ) &&
                 Objects.equals( upperbound, that.upperbound );
+    }
+
+    @Override public String toString() {
+        return "AbstractRangeFilter{" +
+                "lowerbound=" + lowerbound +
+                ", upperbound=" + upperbound +
+                ", lowerboundEqual=" + lowerboundEqual +
+                ", upperboundEqual=" + upperboundEqual +
+                '}';
     }
 
     @Override public int hashCode() {
