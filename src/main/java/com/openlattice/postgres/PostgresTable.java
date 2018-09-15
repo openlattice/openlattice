@@ -242,7 +242,16 @@ public final class PostgresTable {
             );
     public static final PostgresTableDefinition        IDS                          =
             new PostgresTableDefinition( "entity_key_ids" )
-                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID, LINKING_ID );
+                    .addColumns( ENTITY_SET_ID,
+                            ID,
+                            ENTITY_ID,
+                            LINKING_ID,
+                            VERSION,
+                            VERSIONS,
+                            LAST_WRITE,
+                            LAST_INDEX,
+                            LAST_LINK,
+                            LAST_PROPAGATE );
     public static final PostgresTableDefinition        ID_GENERATION                =
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
