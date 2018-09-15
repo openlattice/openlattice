@@ -36,7 +36,7 @@ import com.openlattice.data.integration.Association;
 import com.openlattice.data.integration.BulkDataCreation;
 import com.openlattice.data.integration.Entity;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.SearchService;
+import com.openlattice.search.SearchService;
 import com.openlattice.edm.type.PropertyType;
 
 import java.util.EnumSet;
