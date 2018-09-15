@@ -51,38 +51,40 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         authorizedPropertyTypes: Map<UUID, String>,
         propertyTypeFilters: Map<UUID, Set<RangeFilter<Comparable<Any>>>>,
         metadataOptions: Set<MetadataOption>,
-        version: Long,
         linked: Boolean,
         binaryPropertyTypes: Map<UUID, Boolean>
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions)
 
-
-    val dataColumns =
+    val joinColumns =
             if (linked) {
-                setOf(LINKING_ID.name)
+                listOf(LINKING_ID.name)
             } else {
-                setOf(ENTITY_SET_ID.name, ID_VALUE.name)
+                listOf(ENTITY_SET_ID.name, ID_VALUE.name)
             }
+
+    val dataColumns = joinColumns
             .union(metadataOptions.map(MetadataOption::name))
-            .union( authorizedPropertyTypes.values.map(::quote ) )
-            .joinToString (",")
+            .union(authorizedPropertyTypes.values.map(::quote))
+            .joinToString(",")
 
     val propertyTableJoins =
             authorizedPropertyTypes
                     .map {
                         val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
-                        val subQuerySql = selectCurrentVersionOfPropertyTypeSql(entitiesClause, it.key,propertyTypeFilters[it.key]!!,it.value, binaryPropertyTypes[it.key]!! )
-                        "$joinType $subQuerySql USING ($entityKeyIdColumns)"
+                        val subQuerySql = selectCurrentVersionOfPropertyTypeSql(
+                                entitiesClause,
+                                it.key,
+                                propertyTypeFilters[it.key] ?: setOf(),
+                                it.value,
+                                linked,
+                                binaryPropertyTypes[it.key]!!
+                        )
+                        "$joinType $subQuerySql USING (${joinColumns.joinToString(",")})"
                     }
-                    .joinToString("\n" )
-    return "SELECT $dataColumns FROM ( " +
-            "FROM (SELECT * FROM $entitiesSubquerySql \n" +
-            "       WHERE version > 0 $entitiesClause" +
-            ") as $esTableName" +
-
-
+                    .joinToString("\n")
+    return "SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
 }
 
 
@@ -99,21 +101,22 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
         binaryPropertyTypes: Map<UUID, Boolean>
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds)
+    val entitiesSubquerySql = selectEntityKeyIdsFilteredByVersionSubquerySql(entitiesClause, version, metadataOptions)
 
-    val dataColumns =
+    val joinColumns =
             if (linked) {
-                setOf(LINKING_ID.name)
+                listOf(LINKING_ID.name)
             } else {
-                setOf(ENTITY_SET_ID.name, ID_VALUE.name)
+                listOf(ENTITY_SET_ID.name, ID_VALUE.name)
             }
-                    .union(metadataOptions.map(MetadataOption::name))
-                    .union(authorizedPropertyTypes.values.map(::quote))
-                    .filter(String::isNotBlank)
-                    .joinToString(",")
 
-    val entitiesSubquerySql = buildSelectEntityKeyIdsFilteredByVersionSubquerySql(entitiesClause, version)
+    val dataColumns = joinColumns
+            .union(metadataOptions.map(MetadataOption::name))
+            .union(authorizedPropertyTypes.values.map(::quote))
+            .filter(String::isNotBlank)
+            .joinToString(",")
 
-    val propertyTypeJoins = authorizedPropertyTypes
+    val propertyTableJoins = authorizedPropertyTypes
             .map {
                 val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
                 val subQuerySql = selectVersionOfPropertyTypeInEntitySetSql(
@@ -125,11 +128,11 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
                         linked,
                         binaryPropertyTypes[it.key]!!
                 )
-                "$joinType $subQuerySql USING ($entityKeyIdColumns) "
+                "$joinType $subQuerySql USING (${joinColumns.joinToString(",")}) "
             }
             .joinToString("\n")
 
-    return "SELECT $dataColumns FROM ( $entitiesSubquerySql ) as $ENTITIES_TABLE_ALIAS $propertyTypeJoins"
+    return "SELECT $dataColumns FROM $entitiesSubquerySql as $ENTITIES_TABLE_ALIAS $propertyTableJoins"
 
 }
 
@@ -277,7 +280,7 @@ internal fun selectPropertyTypeDataKeysFilteredByVersionSubquerySql(
  * @return A named SQL subquery fragment consisting of all entity key satisfying the provided clauses from the
  * ids table.
  */
-internal fun buildSelectEntityKeyIdsFilteredByVersionSubquerySql(
+internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
         entitiesClause: String,
         version: Long,
         metadataOptions: Set<MetadataOption>
@@ -321,9 +324,9 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 ): String {
     val metadataColumns = metadataOptions.joinToString(",") { it.name }
     return if (metadataOptions.isEmpty()) {
-        "(SELECT $entityKeyIdColumns,$metadataColumns from ${IDS.name} WHERE $entitiesClause AND ${VERSION.name} >= 0) as $ENTITIES_TABLE_ALIAS"
+        "(SELECT $entityKeyIdColumns,$metadataColumns from ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
     } else {
-        "(SELECT $entityKeyIdColumns,$metadataColumns from ${IDS.name} WHERE $entitiesClause AND ${VERSION.name} >= 0) as $ENTITIES_TABLE_ALIAS"
+        "(SELECT $entityKeyIdColumns,$metadataColumns from ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
     }
 }
 
@@ -334,8 +337,8 @@ internal fun arrayAggSql(fqn: String, binary: Boolean): String {
 
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
     return entityKeyIds.entries.joinToString(",") {
-        val idsClause = it.value.map { " AND IN (" + it.joinToString(",") { it.toString() } + ")" }.orElse("")
-        "(${ENTITY_SET_ID.name} = $it.key $idsClause)"
+        val idsClause = it.value.map { " AND IN ('" + it.joinToString("','") { it.toString() } + "')" }.orElse("")
+        "OR (${ENTITY_SET_ID.name} = '${it.key.toString()}' $idsClause)"
     }
 }
 

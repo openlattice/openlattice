@@ -30,6 +30,7 @@ import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.JsonDeserializer
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -55,7 +56,6 @@ const val BATCH_SIZE = 10000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
-
     fun getEntitiesById(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
@@ -178,20 +178,22 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                     val statement = connection.createStatement()
                     val rs = statement.executeQuery(
                             if (version.isPresent) {
-                                selectEntitySetWithPropertyTypesAndVersion(
-                                        entitySetId,
-                                        entityKeyIds,
+                                selectEntitySetWithPropertyTypesAndVersionSql(
+                                        mapOf(entitySetId to entityKeyIds),
                                         authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
+                                        mapOf(),
                                         metadataOptions,
                                         version.get(),
+                                        false,
                                         authorizedPropertyTypes.map { it.key to (it.value.datatype == EdmPrimitiveTypeKind.Binary) }.toMap()
                                 )
                             } else {
-                                selectEntitySetWithPropertyTypes(
-                                        entitySetId,
-                                        entityKeyIds,
+                                selectEntitySetWithCurrentVersionOfPropertyTypes(
+                                        mapOf(entitySetId to entityKeyIds),
                                         authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
+                                        mapOf(),
                                         metadataOptions,
+                                        false,
                                         authorizedPropertyTypes.map { it.key to (it.value.datatype == EdmPrimitiveTypeKind.Binary) }.toMap()
                                 )
                             }
@@ -553,6 +555,7 @@ fun deleteEntitySet(entitySetId: UUID): String {
 fun upsertEntity(entitySetId: UUID, version: Long): String {
     val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
     val columns = setOf(
+            ENTITY_SET_ID,
             ID_VALUE.name,
             VERSION.name,
             VERSIONS.name,
@@ -560,8 +563,8 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             LAST_INDEX.name,
             LAST_LINK.name
     )
-    return "INSERT INTO $esTableName (${columns.joinToString(",")}) " +
-            "VALUES( ?,$version,ARRAY[$version],now(),'-infinity','-infinity') " +
+    return "INSERT INTO ${IDS.name} (${columns.joinToString(",")}) " +
+            "VALUES( $entitySetId, ?,$version,ARRAY[$version],now(),'-infinity','-infinity') " +
             "ON CONFLICT (${ID_VALUE.name}) " +
             "DO UPDATE SET versions = $esTableName.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name}, " +

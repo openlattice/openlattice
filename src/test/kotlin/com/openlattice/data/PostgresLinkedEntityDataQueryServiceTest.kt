@@ -126,6 +126,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         mapOf( entitySetId to Optional.of(entityKeyIds)),
                         propertyTypeMap,
                         mapOf(),
+                        setOf(),
                         version,
                         false,
                         propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
@@ -179,11 +180,12 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 .toSet()
         logger.info(
                 "Entity set query: {}",
-                selectEntitySetWithPropertyTypes(
-                        entitySetId,
-                        Optional.empty(),
+                selectEntitySetWithCurrentVersionOfPropertyTypes(
+                        mapOf(entitySetId to Optional.empty()),
                         propertyTypeMap,
+                        mapOf(),
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
+                        false,
                         propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
                 )
         )
