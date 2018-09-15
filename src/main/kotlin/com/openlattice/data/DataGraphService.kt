@@ -83,6 +83,7 @@ open class DataGraphService(
             }
         }
     }
+
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
 
     private val typeIds: LoadingCache<UUID, UUID> = CacheBuilder.newBuilder()
@@ -150,9 +151,8 @@ open class DataGraphService(
                 .flatMap { graphService.getEdgeKeysContainingEntity(entitySetId, it) }
                 .toSet()
         graphService.clearEdges(edgeKeys)
-        edgeKeys.forEach {
-            eds.clearEntities(it.edge.entitySetId, setOf(it.edge.entityKeyId), authorizedPropertyTypes)
-        }
+        edgeKeys.groupBy({ it.edge.entitySetId }, { it.edge.entityKeyId })
+                .forEach { eds.clearEntities(it.key, it.value.toSet(), authorizedPropertyTypes) }
         return eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
@@ -222,7 +222,7 @@ open class DataGraphService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        return eds.createOrUpdateEntities(entitySetId,entities,authorizedPropertyTypes)
+        return eds.createOrUpdateEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
     override fun replaceEntities(
