@@ -505,13 +505,27 @@ fun updateLastLinkSql(entitySetId: UUID): String {
     return "UPDATE $entitiesTable SET ${LAST_LINK.name} = ? WHERE ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
+/**
+ * This function prepares a SQL query that will update all the versions in an entity set.
+ *
+ * TODO: Update this to be a prepared statement where version and entity_set_id are passed in.
+ * @param entitySetId Id of entity set for which to perform version updates.
+ * @param version The version to set
+ */
 fun updateAllEntityVersions(entitySetId: UUID, version: Long): String {
-    val entitiesTable = quote(entityTableName(entitySetId))
-    return "UPDATE $entitiesTable SET versions = versions || $version, version = $version "
+    return "UPDATE ${IDS.name} SET versions = versions || $version, version = $version " +
+            "WHERE ${ENTITY_SET_ID.name} = $entitySetId "
 }
 
+/**
+ * This function prepares a SQL query that will update all the version of a specific entity in an entity set.
+ *
+ * TODO: Update this to be a prepared statement where version and entity_set_id are passed in.
+ * @param entitySetId Id of entity set for which to perform version updates.
+ * @param version The version to set
+ */
 fun updateEntityVersion(entitySetId: UUID, version: Long): String {
-    return updateAllEntityVersions(entitySetId, version) + " WHERE ${ID_VALUE.name} = ? "
+    return updateAllEntityVersions(entitySetId, version) + " AND ${ID_VALUE.name} = ? "
 }
 
 fun updatePropertyVersionForDataKey(entitySetId: UUID, propertyTypeId: UUID, version: Long): String {
@@ -543,13 +557,11 @@ fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID, entityKe
 }
 
 fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
-    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
-    return "DELETE FROM $esTableName WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    return deleteEntitySet(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
 }
 
 fun deleteEntitySet(entitySetId: UUID): String {
-    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
-    return "DROP TABLE $esTableName"
+    return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = $entitySetId "
 }
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
