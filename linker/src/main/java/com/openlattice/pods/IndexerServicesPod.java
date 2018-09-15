@@ -20,6 +20,9 @@
 
 package com.openlattice.pods;
 
+import static com.google.common.base.Preconditions.checkState;
+import static com.openlattice.datastore.util.Util.returnAndLog;
+
 import com.amazonaws.services.s3.AmazonS3;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,14 +32,31 @@ import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.openlattice.ResourceConfigurationLoader;
+import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
+import com.openlattice.bootstrap.AuthorizationBootstrap;
+import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
-import com.openlattice.linking.LinkingQueryService;
-import com.openlattice.linking.graph.PostgresLinkingQueryService;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.edm.PostgresEdmManager;
+import com.openlattice.edm.properties.PostgresTypeManager;
+import com.openlattice.edm.schemas.SchemaQueryService;
+import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
+import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
+import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.mail.config.MailServiceRequirements;
+import com.openlattice.search.EsEdmService;
+import com.openlattice.directory.UserDirectoryService;
+import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.zaxxer.hikari.HikariDataSource;
+
+import java.io.IOException;
+import javax.inject.Inject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,16 +64,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-import javax.inject.Inject;
-import java.io.IOException;
-
-/**
- * This class is the main configuration pod for indexer. At the moment we still boot strap off of the conductor
- * configuration, but we should switch to a separate indexer configuration.
- */
 @Configuration
 public class IndexerServicesPod {
-    private static Logger logger = LoggerFactory.getLogger(IndexerServicesPod.class);
+    private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
     @Inject
     private HazelcastInstance hazelcastInstance;
@@ -73,10 +86,10 @@ public class IndexerServicesPod {
     @Inject
     private EventBus eventBus;
 
-    @Autowired(required = false)
+    @Autowired( required = false )
     private AmazonS3 s3;
 
-    @Autowired(required = false)
+    @Autowired( required = false )
     private AmazonLaunchConfiguration awsLaunchConfig;
 
     @Bean
@@ -84,57 +97,127 @@ public class IndexerServicesPod {
         return ObjectMappers.getJsonMapper();
     }
 
-    @Bean(name = "conductorConfiguration")
-    @Profile(Profiles.LOCAL_CONFIGURATION_PROFILE)
+    @Bean( name = "conductorConfiguration" )
+    @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
     public ConductorConfiguration getLocalConductorConfiguration() throws IOException {
-        ConductorConfiguration config = configurationService.getConfiguration(ConductorConfiguration.class);
-        logger.info("Using local conductor configuration: {}", config);
+        ConductorConfiguration config = configurationService.getConfiguration( ConductorConfiguration.class );
+        logger.info( "Using local conductor configuration: {}", config );
         return config;
     }
 
-    @Bean(name = "conductorConfiguration")
-    @Profile({Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE})
+    @Bean( name = "conductorConfiguration" )
+    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
     public ConductorConfiguration getAwsConductorConfiguration() throws IOException {
-        ConductorConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
+        ConductorConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
                 awsLaunchConfig.getBucket(),
                 awsLaunchConfig.getFolder(),
-                ConductorConfiguration.class);
+                ConductorConfiguration.class );
 
-        logger.info("Using aws conductor configuration: {}", config);
+        logger.info( "Using aws conductor configuration: {}", config );
         return config;
     }
 
     @Bean
     public DbCredentialService dbcs() {
-        return new DbCredentialService(hazelcastInstance, pgUserApi);
+        return new DbCredentialService( hazelcastInstance, pgUserApi );
     }
 
     @Bean
     public AuthorizationQueryService authorizationQueryService() {
-        return new AuthorizationQueryService(hikariDataSource, hazelcastInstance);
+        return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
     public HazelcastAclKeyReservationService aclKeyReservationService() {
-        return new HazelcastAclKeyReservationService(hazelcastInstance);
+        return new HazelcastAclKeyReservationService( hazelcastInstance );
     }
 
     @Bean
     public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService(hazelcastInstance,
+        return new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
-                authorizationManager());
+                authorizationManager() );
     }
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService(hazelcastInstance, authorizationQueryService(), eventBus);
+        return new HazelcastAuthorizationService( hazelcastInstance, authorizationQueryService(), eventBus );
+    }
+
+    @Bean
+    public UserDirectoryService userDirectoryService() {
+        return new UserDirectoryService( auth0TokenProvider(), hazelcastInstance );
+    }
+
+    @Bean
+    public HazelcastOrganizationService organizationsManager() {
+        return new HazelcastOrganizationService(
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                userDirectoryService(),
+                principalService() );
+    }
+
+    @Bean
+    public AuthorizationBootstrap authzBoot() {
+        return returnAndLog( new AuthorizationBootstrap( hazelcastInstance, principalService() ),
+                "Checkpoint AuthZ Boostrap" );
+    }
+
+    @Bean
+    public OrganizationBootstrap orgBoot() {
+        checkState( authzBoot().isInitialized(), "Roles must be initialized." );
+        return returnAndLog( new OrganizationBootstrap( organizationsManager() ),
+                "Checkpoint organization bootstrap." );
+    }
+
+    @Bean
+    public Auth0TokenProvider auth0TokenProvider() {
+        return new Auth0TokenProvider( auth0Configuration );
+    }
+
+    @Bean
+    public AbstractSecurableObjectResolveTypeService securableObjectTypes() {
+        return new HazelcastAbstractSecurableObjectResolveTypeService( hazelcastInstance );
+    }
+
+    @Bean
+    public SchemaQueryService schemaQueryService() {
+        return new PostgresSchemaQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public PostgresEdmManager edmManager() {
+        return new PostgresEdmManager( hikariDataSource );
+    }
+
+    @Bean
+    public HazelcastSchemaManager schemaManager() {
+        return new HazelcastSchemaManager( hazelcastInstance, schemaQueryService() );
+    }
+
+    @Bean
+    public PostgresTypeManager entityTypeManager() {
+        return new PostgresTypeManager( hikariDataSource );
     }
 
 
     @Bean
-    public LinkingQueryService linkingQueryService() {
-        return new PostgresLinkingQueryService(hikariDataSource);
+    public MailServiceRequirements mailServiceRequirements() {
+        return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
+    }
+
+    @Bean
+    public EdmManager dataModelService() {
+        return new EdmService(
+                hikariDataSource,
+                hazelcastInstance,
+                aclKeyReservationService(),
+                authorizationManager(),
+                edmManager(),
+                entityTypeManager(),
+                schemaManager() );
     }
 
 }
