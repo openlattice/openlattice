@@ -496,13 +496,13 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 }
 
 fun updateLastIndexSql(entitySetId: UUID): String {
-    val entitiesTable = quote(entityTableName(entitySetId))
-    return "UPDATE $entitiesTable SET ${LAST_INDEX.name} = ? WHERE ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+    return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
+            "WHERE ${ENTITY_SET_ID.name} = $entitySetId AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
 fun updateLastLinkSql(entitySetId: UUID): String {
-    val entitiesTable = quote(entityTableName(entitySetId))
-    return "UPDATE $entitiesTable SET ${LAST_LINK.name} = ? WHERE ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+    return "UPDATE ${IDS.name} SET ${LAST_LINK.name} = ? " +
+            "WHERE ${ENTITY_SET_ID.name} = $entitySetId AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
 /**
@@ -565,7 +565,6 @@ fun deleteEntitySet(entitySetId: UUID): String {
 }
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
-    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
     val columns = setOf(
             ENTITY_SET_ID,
             ID_VALUE.name,
@@ -575,13 +574,14 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             LAST_INDEX.name,
             LAST_LINK.name
     )
+    //Last writer wins for entities
     return "INSERT INTO ${IDS.name} (${columns.joinToString(",")}) " +
             "VALUES( $entitySetId, ?,$version,ARRAY[$version],now(),'-infinity','-infinity') " +
             "ON CONFLICT (${ID_VALUE.name}) " +
-            "DO UPDATE SET versions = $esTableName.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "DO UPDATE SET versions = ${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
             "${LAST_WRITE.name} = now() " +
-            "WHERE EXCLUDED.${VERSION.name} > abs($esTableName.version) "
+            "WHERE EXCLUDED.${VERSION.name} > abs(${IDS.name}.version) "
 }
 
 fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: String, version: Long): String {
