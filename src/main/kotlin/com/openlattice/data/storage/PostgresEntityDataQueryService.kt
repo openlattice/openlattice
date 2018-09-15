@@ -572,11 +572,12 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             VERSIONS.name,
             LAST_WRITE.name,
             LAST_INDEX.name,
-            LAST_LINK.name
+            LAST_LINK.name,
+            LAST_PROPAGATE.name
     )
     //Last writer wins for entities
     return "INSERT INTO ${IDS.name} (${columns.joinToString(",")}) " +
-            "VALUES( $entitySetId, ?,$version,ARRAY[$version],now(),'-infinity','-infinity') " +
+            "VALUES( $entitySetId, ?,$version,ARRAY[$version],now(),'-infinity','-infinity','-infinity') " +
             "ON CONFLICT (${ID_VALUE.name}) " +
             "DO UPDATE SET versions = ${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
