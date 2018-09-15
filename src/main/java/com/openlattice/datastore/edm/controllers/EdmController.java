@@ -42,7 +42,7 @@ import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.exceptions.BadRequestException;
 import com.openlattice.datastore.exceptions.BatchException;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.datastore.services.PostgresEntitySetManager;
+import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntityDataModel;
@@ -101,7 +101,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     private AuthorizationManager authorizations;
 
     @Inject
-    private PostgresEntitySetManager entitySetManager;
+    private PostgresEdmManager edmManager;
 
     @Inject
     private AbstractSecurableObjectResolveTypeService securableObjectTypes;
