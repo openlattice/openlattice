@@ -127,7 +127,7 @@ class BackgroundIndexingService(
 
     private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
         return "SELECT * FROM ${IDS.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' ${LAST_INDEX.name} < ${LAST_WRITE.name} LIMIT $FETCH_SIZE"
+                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${LAST_INDEX.name} < ${LAST_WRITE.name} LIMIT $FETCH_SIZE"
     }
 
     private fun getDirtyEntityKeyIds(entitySetId: UUID): PostgresIterable<UUID> {
