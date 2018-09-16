@@ -561,7 +561,7 @@ fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
 }
 
 fun deleteEntitySet(entitySetId: UUID): String {
-    return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = $entitySetId "
+    return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
