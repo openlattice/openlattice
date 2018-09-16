@@ -29,6 +29,9 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+const val DL4J = "dl4j"
+const val KERAS = "keras"
+
 interface Matcher {
     fun initialize(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
