@@ -23,11 +23,11 @@ package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.LinkingQueryService
+import com.openlattice.postgres.DataTables.LAST_LINK
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresTable.LINKED_ENTITIES
-import com.openlattice.postgres.PostgresTable.MATCHED_ENTITIES
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -207,7 +207,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
 
 
 private val COLUMNS = listOf(
-        CLUSTER_ID,
+        LINKING_ID,
         SRC_ENTITY_SET_ID,
         SRC_ENTITY_KEY_ID,
         DST_ENTITY_SET_ID,
@@ -241,9 +241,9 @@ private val BLOCKS_BY_SIZE_SQL = "SELECT ${SRC_ENTITY_SET_ID.name} as entity_set
         "GROUP BY (${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) " +
         "ORDER BY $BLOCK_SIZE_FIELD DESC"
 
-private val CLUSTERS_CONTAINING_SQL = "SELECT DISTINCT ${CLUSTER_ID.name} FROM ${MATCHED_ENTITIES.name} " +
+private val CLUSTERS_CONTAINING_SQL = "SELECT DISTINCT ${LINKING_ID.name} FROM ${MATCHED_ENTITIES.name} " +
         "WHERE ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ? " +
         "OR ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ?"
 
-private val UPDATE_LINKED_ENTITIES_SQL = "INSERT INTO ${LINKED_ENTITIES.name} (${CLUSTER_ID.name}, ${ENTITY_SET_ID.name}, ${ID_VALUE.name}) " +
-        "VALUES (?,?,?)"
+private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
+        "SET ${LINKING_ID.name} = ?, ${ENTITY_SET_ID.name} =?, ${ID_VALUE.name}=?, ${LAST_LINK.name}=now()"
