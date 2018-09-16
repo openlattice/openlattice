@@ -36,6 +36,8 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.neuron.audit.AuditEntitySetUtils
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -108,7 +110,7 @@ class BackgroundIndexingService(
                         .mapToInt(this::indexEntitySet)
                         .sum()
 
-                lockedEntitySets.forEach( indexingLocks::delete )
+                lockedEntitySets.forEach(indexingLocks::delete)
 
                 logger.info(
                         "Completed indexing {} elements in {} ms",
@@ -124,8 +126,8 @@ class BackgroundIndexingService(
     }
 
     private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
-        return "SELECT * FROM ${quote(DataTables.entityTableName(entitySetId))} " +
-                "WHERE ${LAST_INDEX.name} < ${LAST_WRITE.name} LIMIT $FETCH_SIZE"
+        return "SELECT * FROM ${IDS.name} " +
+                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' ${LAST_INDEX.name} < ${LAST_WRITE.name} LIMIT $FETCH_SIZE"
     }
 
     private fun getDirtyEntityKeyIds(entitySetId: UUID): PostgresIterable<UUID> {
