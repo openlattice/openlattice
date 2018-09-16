@@ -324,9 +324,9 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 ): String {
     val metadataColumns = metadataOptions.joinToString(",") { it.name }
     return if (metadataOptions.isEmpty()) {
-        "(SELECT $entityKeyIdColumns,$metadataColumns from ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
+        "(SELECT $entityKeyIdColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
     } else {
-        "(SELECT $entityKeyIdColumns,$metadataColumns from ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
+        "(SELECT $entityKeyIdColumns,$metadataColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
     }
 }
 
