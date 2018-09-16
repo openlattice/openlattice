@@ -497,12 +497,12 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
 fun updateLastIndexSql(entitySetId: UUID): String {
     return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = $entitySetId AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
 fun updateLastLinkSql(entitySetId: UUID): String {
     return "UPDATE ${IDS.name} SET ${LAST_LINK.name} = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = $entitySetId AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
 /**
@@ -514,7 +514,7 @@ fun updateLastLinkSql(entitySetId: UUID): String {
  */
 fun updateAllEntityVersions(entitySetId: UUID, version: Long): String {
     return "UPDATE ${IDS.name} SET versions = versions || $version, version = $version " +
-            "WHERE ${ENTITY_SET_ID.name} = $entitySetId "
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
 /**
