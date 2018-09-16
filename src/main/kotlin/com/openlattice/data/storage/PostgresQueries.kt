@@ -336,12 +336,11 @@ internal fun arrayAggSql(fqn: String, binary: Boolean): String {
 }
 
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
-    return entityKeyIds.entries.joinToString(",") {
+    return "AND (" + entityKeyIds.entries.joinToString(" OR ") {
         val idsClause = it.value.map { " AND ${ID_VALUE.name} IN ('" + it.joinToString("','") { it.toString() } + "')" }.orElse("")
-        "OR (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
-    }
+        " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
+    } + ")"
 }
-
 
 internal fun buildFilterClause(fqn: String, filter: Set<RangeFilter<Comparable<Any>>>): String {
     return filter.joinToString(" AND ") { it.asSql(quote(fqn)) }
