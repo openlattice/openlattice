@@ -319,10 +319,13 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( URL_FIELD, TEXT );
     public static final String                   VERSIONS_FIELD              = "versions";
     public static final PostgresColumnDefinition VERSIONS                    =
-            new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY ).notNull();
+            new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY )
+                    .withDefault( "ARRAY[-1]" ).notNull();
     public static final String                   VERSION_FIELD               = "version";
     public static final PostgresColumnDefinition VERSION                     =
-            new PostgresColumnDefinition( VERSION_FIELD, BIGINT ).notNull();
+            new PostgresColumnDefinition( VERSION_FIELD, BIGINT )
+                    .withDefault( -1 )
+                    .notNull();
     public static final String                   VERTEX_ID_FIELD             = "vertex_id";
     public static final PostgresColumnDefinition VERTEX_ID                   =
             new PostgresColumnDefinition( VERTEX_ID_FIELD, UUID );

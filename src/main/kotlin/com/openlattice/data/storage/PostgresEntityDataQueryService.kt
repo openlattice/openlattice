@@ -566,7 +566,7 @@ fun deleteEntitySet(entitySetId: UUID): String {
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
     val columns = setOf(
-            ENTITY_SET_ID,
+            ENTITY_SET_ID.name,
             ID_VALUE.name,
             VERSION.name,
             VERSIONS.name,
@@ -577,7 +577,7 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
     )
     //Last writer wins for entities
     return "INSERT INTO ${IDS.name} (${columns.joinToString(",")}) " +
-            "VALUES( $entitySetId, ?,$version,ARRAY[$version],now(),'-infinity','-infinity','-infinity') " +
+            "VALUES( '$entitySetId', ?,$version,ARRAY[$version],now(),'-infinity','-infinity','-infinity') " +
             "ON CONFLICT (${ID_VALUE.name}) " +
             "DO UPDATE SET versions = ${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
