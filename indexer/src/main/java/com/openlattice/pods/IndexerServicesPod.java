@@ -22,6 +22,8 @@ package com.openlattice.pods;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.datastore.util.Util.returnAndLog;
+import static com.openlattice.linking.MatcherKt.DL4J;
+import static com.openlattice.linking.MatcherKt.KERAS;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.dataloom.mappers.ObjectMappers;
@@ -38,6 +40,8 @@ import com.openlattice.authorization.*;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
+import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.PostgresEdmManager;
@@ -46,6 +50,13 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.linking.Blocker;
+import com.openlattice.linking.Matcher;
+import com.openlattice.linking.RealtimeLinkingService;
+import com.openlattice.linking.blocking.ElasticsearchBlocker;
+import com.openlattice.linking.matching.SocratesMatcher;
+import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.search.EsEdmService;
 import com.openlattice.directory.UserDirectoryService;
@@ -57,6 +68,12 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import javax.inject.Inject;
 
+import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
+import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
+import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.deeplearning4j.util.ModelSerializer;
+import org.nd4j.linalg.io.ClassPathResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -202,7 +219,6 @@ public class IndexerServicesPod {
         return new PostgresTypeManager( hikariDataSource );
     }
 
-
     @Bean
     public MailServiceRequirements mailServiceRequirements() {
         return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
@@ -220,4 +236,21 @@ public class IndexerServicesPod {
                 schemaManager() );
     }
 
+    @Bean
+    @Profile( DL4J )
+    public Matcher dl4jMatcher() throws IOException {
+        final var modelStream = Thread.currentThread().getContextClassLoader().getResourceAsStream( "model.bin" );
+        final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
+        return new SocratesMatcher( ModelSerializer.restoreMultiLayerNetwork( modelStream ), fqnToIdMap );
+    }
+
+    @Profile( KERAS )
+    @Bean
+    public Matcher kerasMatcher() throws IOException, InvalidKerasConfigurationException,
+            UnsupportedKerasConfigurationException {
+        final String simpleMlp = new ClassPathResource( "model.h5" ).getFile().getPath();
+        final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
+        final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
+        return new SocratesMatcher( model, fqnToIdMap );
+    }
 }
