@@ -81,15 +81,14 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     public void addPermission(
             AclKey key,
             Principal principal,
-            EnumSet<Permission> permissions,
-            OffsetDateTime expirationDate ) {
+            EnumSet<Permission> permissions) {
         //TODO: We should do something better than reading the securable object type.
         SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
         if ( securableObjectType == SecurableObjectType.Unknown ) {
             logger.warn( "Unrecognized object type for acl key {} key ", key );
         }
         aces.executeOnKey( new AceKey( key, principal ),
-                new PermissionMerger( permissions, securableObjectType, expirationDate ) );
+                new PermissionMerger( permissions, securableObjectType) );
     }
 
     @Override
