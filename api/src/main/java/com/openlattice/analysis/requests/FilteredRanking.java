@@ -31,11 +31,12 @@ import java.util.Set;
 import java.util.UUID;
 
 public class FilteredRanking {
-    private final UUID                        associationTypeId;
-    private final UUID                        neighborTypeId;
+    private final UUID                           associationTypeId;
+    private final UUID                           neighborTypeId;
     private final Map<UUID, Set<RangeFilter<?>>> associationFilters;
     private final Map<UUID, Set<RangeFilter<?>>> neighborFilters;
-    private final boolean                     utilizerIsSrc;
+    private final Map<UUID, AggregationType>     aggregations;
+    private final boolean                        utilizerIsSrc;
 
     @JsonCreator
     public FilteredRanking(
@@ -45,7 +46,9 @@ public class FilteredRanking {
                     Optional<Map<UUID, Set<RangeFilter<?>>>> associationFilters,
             @JsonProperty( SerializationConstants.NEIGHBOR_FILTERS )
                     Optional<Map<UUID, Set<RangeFilter<?>>>> neighborFilters,
+            @JsonProperty( SerializationConstants.AGGREGATIONS ) Map<UUID, AggregationType> aggregations,
             @JsonProperty( SerializationConstants.UTILIZER_IS_SRC ) boolean utilizerIsSrc ) {
+        this.aggregations = aggregations;
         Preconditions.checkNotNull( associationTypeId, "Association type id cannot be null." );
         Preconditions.checkNotNull( neighborTypeId, "Neighbor type ids cannot be null." );
         this.associationTypeId = associationTypeId;
@@ -80,6 +83,11 @@ public class FilteredRanking {
         return neighborFilters;
     }
 
+    @JsonProperty( SerializationConstants.AGGREGATIONS )
+    public Map<UUID, AggregationType> getAggregations() {
+        return aggregations;
+    }
+
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof FilteredRanking ) ) { return false; }
@@ -93,5 +101,16 @@ public class FilteredRanking {
 
     @Override public int hashCode() {
         return Objects.hash( associationTypeId, neighborTypeId, associationFilters, neighborFilters, utilizerIsSrc );
+    }
+
+    @Override public String toString() {
+        return "FilteredRanking{" +
+                "associationTypeId=" + associationTypeId +
+                ", neighborTypeId=" + neighborTypeId +
+                ", associationFilters=" + associationFilters +
+                ", neighborFilters=" + neighborFilters +
+                ", aggregations=" + aggregations +
+                ", utilizerIsSrc=" + utilizerIsSrc +
+                '}';
     }
 }
