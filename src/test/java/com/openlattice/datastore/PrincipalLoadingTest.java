@@ -18,7 +18,7 @@
  *
  */
 
-package com.dataloom;
+package com.openlattice.datastore;
 
 import com.openlattice.client.RetrofitFactory;
 import com.openlattice.directory.pojo.Auth0UserBasic;
