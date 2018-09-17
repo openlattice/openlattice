@@ -25,13 +25,18 @@ import com.openlattice.analysis.requests.DateRangeFilter;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Optional;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DateRangeFilterSerializerTest extends AbstractJacksonSerializationTest<DateRangeFilter> {
     @Override protected DateRangeFilter getSampleData() throws IOException {
-        return new DateRangeFilter( LocalDate.MIN, true, LocalDate.MAX, false );
+        return new DateRangeFilter(
+                Optional.of( LocalDate.MIN ),
+                Optional.of( true ),
+                Optional.of( LocalDate.MAX ),
+                Optional.of( false ) );
     }
 
     @Override protected void logResult( SerializationResult<DateRangeFilter> result ) {

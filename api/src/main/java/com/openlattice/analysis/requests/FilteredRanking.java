@@ -31,12 +31,13 @@ import java.util.Set;
 import java.util.UUID;
 
 public class FilteredRanking {
-    private final UUID                           associationTypeId;
-    private final UUID                           neighborTypeId;
-    private final Map<UUID, Set<RangeFilter<?>>> associationFilters;
-    private final Map<UUID, Set<RangeFilter<?>>> neighborFilters;
-    private final Map<UUID, AggregationType>     aggregations;
-    private final boolean                        utilizerIsSrc;
+    private final UUID                                  associationTypeId;
+    private final UUID                                  neighborTypeId;
+    private final Map<UUID, Set<RangeFilter<?>>>        associationFilters;
+    private final Map<UUID, Set<RangeFilter<?>>>        neighborFilters;
+    private final Map<UUID, WeightedRankingAggregation> associationAggregations;
+    private final Map<UUID, WeightedRankingAggregation> entitySetAggregations;
+    private final boolean                               utilizerIsSrc;
 
     @JsonCreator
     public FilteredRanking(
@@ -46,9 +47,13 @@ public class FilteredRanking {
                     Optional<Map<UUID, Set<RangeFilter<?>>>> associationFilters,
             @JsonProperty( SerializationConstants.NEIGHBOR_FILTERS )
                     Optional<Map<UUID, Set<RangeFilter<?>>>> neighborFilters,
-            @JsonProperty( SerializationConstants.AGGREGATIONS ) Map<UUID, AggregationType> aggregations,
+            @JsonProperty( SerializationConstants.ASSOCIATION_AGGREGATIONS )
+                    Map<UUID, WeightedRankingAggregation> associationAggregations,
+            @JsonProperty( SerializationConstants.ENTITY_SET_AGGREGATIONS )
+                    Map<UUID, WeightedRankingAggregation> entitySetAggregations,
             @JsonProperty( SerializationConstants.UTILIZER_IS_SRC ) boolean utilizerIsSrc ) {
-        this.aggregations = aggregations;
+        this.associationAggregations = associationAggregations;
+        this.entitySetAggregations = entitySetAggregations;
         Preconditions.checkNotNull( associationTypeId, "Association type id cannot be null." );
         Preconditions.checkNotNull( neighborTypeId, "Neighbor type ids cannot be null." );
         this.associationTypeId = associationTypeId;
@@ -83,9 +88,14 @@ public class FilteredRanking {
         return neighborFilters;
     }
 
-    @JsonProperty( SerializationConstants.AGGREGATIONS )
-    public Map<UUID, AggregationType> getAggregations() {
-        return aggregations;
+    @JsonProperty( SerializationConstants.ASSOCIATION_AGGREGATIONS )
+    public Map<UUID, WeightedRankingAggregation> getAssociationAggregations() {
+        return associationAggregations;
+    }
+
+    @JsonProperty( SerializationConstants.ENTITY_SET_AGGREGATIONS )
+    public Map<UUID, WeightedRankingAggregation> getEntitySetAggregations() {
+        return entitySetAggregations;
     }
 
     @Override public boolean equals( Object o ) {
@@ -96,11 +106,19 @@ public class FilteredRanking {
                 Objects.equals( associationTypeId, that.associationTypeId ) &&
                 Objects.equals( neighborTypeId, that.neighborTypeId ) &&
                 Objects.equals( associationFilters, that.associationFilters ) &&
-                Objects.equals( neighborFilters, that.neighborFilters );
+                Objects.equals( neighborFilters, that.neighborFilters ) &&
+                Objects.equals( associationAggregations, that.associationAggregations ) &&
+                Objects.equals( entitySetAggregations, that.entitySetAggregations );
     }
 
     @Override public int hashCode() {
-        return Objects.hash( associationTypeId, neighborTypeId, associationFilters, neighborFilters, utilizerIsSrc );
+        return Objects.hash( associationTypeId,
+                neighborTypeId,
+                associationFilters,
+                neighborFilters,
+                associationAggregations,
+                entitySetAggregations,
+                utilizerIsSrc );
     }
 
     @Override public String toString() {
@@ -109,7 +127,8 @@ public class FilteredRanking {
                 ", neighborTypeId=" + neighborTypeId +
                 ", associationFilters=" + associationFilters +
                 ", neighborFilters=" + neighborFilters +
-                ", aggregations=" + aggregations +
+                ", associationAggregations=" + associationAggregations +
+                ", entitySetAggregations=" + entitySetAggregations +
                 ", utilizerIsSrc=" + utilizerIsSrc +
                 '}';
     }

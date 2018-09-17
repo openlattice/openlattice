@@ -24,6 +24,7 @@ package com.openlattice.analysis;
 import com.openlattice.analysis.requests.LongRangeFilter;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
+import java.util.Optional;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,7 +35,10 @@ public class LongRangeFilterSerializerTest extends AbstractJacksonSerializationT
     private static final String testValue = "{\"@class\":\"com.openlattice.analysis.LongRangeFilter\",\"lowerbound\":\"-9223372036854775808\",\"upperbound\":\"9223372036854775807\",\"lowerboundEqual\":true,\"upperboundEqual\":false}";
 
     @Override protected LongRangeFilter getSampleData() {
-        return new LongRangeFilter( Long.MIN_VALUE, true, Long.MAX_VALUE, false );
+        return new LongRangeFilter( Optional.of( Long.MIN_VALUE ),
+                Optional.of( true ),
+                Optional.of( Long.MAX_VALUE ),
+                Optional.of( false ) );
     }
 
     /**

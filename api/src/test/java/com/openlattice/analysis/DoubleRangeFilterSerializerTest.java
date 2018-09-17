@@ -24,13 +24,18 @@ package com.openlattice.analysis;
 import com.openlattice.analysis.requests.DoubleRangeFilter;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DoubleRangeFilterSerializerTest extends AbstractJacksonSerializationTest<DoubleRangeFilter> {
     @Override protected DoubleRangeFilter getSampleData() throws IOException {
-        return new DoubleRangeFilter( Double.MIN_VALUE, true, Double.MAX_VALUE, false );
+        return new DoubleRangeFilter(
+                Optional.of( Double.MIN_VALUE ),
+                Optional.of( true ),
+                Optional.of( Double.MAX_VALUE ),
+                Optional.of( false ) );
     }
 
     @Override protected void logResult( SerializationResult<DoubleRangeFilter> result ) {

@@ -25,41 +25,42 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Model for requesting a weighted ranking aggregation.
+ * Model for specifying weight ranking aggregation.
  */
 public class WeightedRankingAggregation {
-    private final List<FilteredRanking> rankings;
-    private final List<Double>          weights;
+    private final AggregationType type;
+    private final double weight;
 
-    public WeightedRankingAggregation( List<FilteredRanking> rankings, List<Double> weights ) {
-        this.rankings = rankings;
-        this.weights = weights;
+    public WeightedRankingAggregation( AggregationType type, double weight ) {
+        this.type = type;
+        this.weight = weight;
     }
 
-    public List<FilteredRanking> getRankings() {
-        return rankings;
+    public AggregationType getType() {
+        return type;
     }
 
-    public List<Double> getWeights() {
-        return weights;
+    public double getWeight() {
+        return weight;
     }
 
     @Override public boolean equals( Object o ) {
+
         if ( this == o ) { return true; }
         if ( !( o instanceof WeightedRankingAggregation ) ) { return false; }
         WeightedRankingAggregation that = (WeightedRankingAggregation) o;
-        return Objects.equals( rankings, that.rankings ) &&
-                Objects.equals( weights, that.weights );
+        return Double.compare( that.weight, weight ) == 0 &&
+                type == that.type;
     }
 
     @Override public int hashCode() {
-        return Objects.hash( rankings, weights );
+        return Objects.hash( type, weight );
     }
 
     @Override public String toString() {
         return "WeightedRankingAggregation{" +
-                "rankings=" + rankings +
-                ", weights=" + weights +
+                "type=" + type +
+                ", weight=" + weight +
                 '}';
     }
 }

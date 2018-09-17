@@ -26,6 +26,7 @@ import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -33,10 +34,11 @@ import java.time.temporal.ChronoUnit;
 public class DateTimeRangeFilterSerializerTest extends AbstractJacksonSerializationTest<DateTimeRangeFilter> {
     @Override protected DateTimeRangeFilter getSampleData() throws IOException {
         //
-        return new DateTimeRangeFilter( OffsetDateTime.MIN.plus( 1, ChronoUnit.DAYS ),
-                true,
-                OffsetDateTime.MAX.minus( 1, ChronoUnit.DAYS ),
-                false );
+        return new DateTimeRangeFilter(
+                Optional.of( OffsetDateTime.MIN.plus( 1, ChronoUnit.DAYS ) ),
+                Optional.of( true ),
+                Optional.of( OffsetDateTime.MAX.minus( 1, ChronoUnit.DAYS ) ),
+                Optional.of( false ) );
     }
 
     @Override protected void logResult( SerializationResult<DateTimeRangeFilter> result ) {
