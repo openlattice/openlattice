@@ -61,7 +61,7 @@ import java.io.IOException;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-public class ConductorSparkPod {
+public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private HazelcastInstance hazelcastInstance;
