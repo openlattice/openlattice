@@ -21,9 +21,9 @@
 
 package com.openlattice.analysis;
 
+import com.openlattice.analysis.requests.DoubleRangeFilter;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
-import org.apache.commons.lang3.RandomUtils;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

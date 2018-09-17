@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.analysis;
+package com.openlattice.analysis.requests;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

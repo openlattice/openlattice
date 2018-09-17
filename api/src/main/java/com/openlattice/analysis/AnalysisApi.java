@@ -19,7 +19,7 @@
 package com.openlattice.analysis;
 
 import com.openlattice.analysis.requests.NeighborType;
-import com.openlattice.analysis.requests.TopUtilizerDetails;
+import com.openlattice.analysis.requests.FilteredRanking;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,7 +60,7 @@ public interface AnalysisApi {
     Iterable<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( NUM_RESULTS ) int numResults,
-            @Body List<TopUtilizerDetails> topUtilizerDetails,
+            @Body List<FilteredRanking> topUtilizerDetails,
             @Query( FILE_TYPE ) FileType fileType );
 
     @GET( BASE + ENTITY_SET_ID_PATH + TYPES_PATH )

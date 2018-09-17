@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.analysis;
+package com.openlattice.analysis.requests;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;

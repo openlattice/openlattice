@@ -21,6 +21,7 @@
 
 package com.openlattice.analysis;
 
+import com.openlattice.analysis.requests.DateTimeRangeFilter;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
 import java.time.OffsetDateTime;

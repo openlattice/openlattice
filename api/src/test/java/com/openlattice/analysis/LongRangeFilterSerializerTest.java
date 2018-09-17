@@ -21,6 +21,7 @@
 
 package com.openlattice.analysis;
 
+import com.openlattice.analysis.requests.LongRangeFilter;
 import com.openlattice.serializer.AbstractJacksonSerializationTest;
 import java.io.IOException;
 import org.junit.Assert;
