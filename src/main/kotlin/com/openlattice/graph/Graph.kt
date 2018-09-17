@@ -36,6 +36,7 @@ import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
+import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.EDGES
@@ -230,11 +231,33 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
          *
          * Join all association queries using full outer joins
          * Join all entity set queries using full outer joins
+         *
+         * The plan is to do all the aggregations in subqueries and then do outer joins on (entity_set_id, entity_key_id)
+         * or linking_id while computing the score as the weighted sum of aggregates.
+         *
+         * For each association type we will query all entity sets of that type at once resulting in a table:
+         *
+         * | person_ek | edge_ek | 1_assoc_ptId | 2_assoc_pt_id | ...
+         *
+         * For each neighbor entity type we will query all entity sets of that type at once resulting in the table:
+         *
+         * | person_ek | other_ek | 1_assoc_ptId | 2_assoc_pt_id |
+         *
+         * The final table will be produced by doing a group by on the entity key or linking id resulting in a table:
+         *
+         * | person_ek | 1_assoc_ptId_agg | 2_assoc_pt_id_agg | 1_entity_ptId_agg | 2_entity_ptId_agg | score
          */
 
+
+//        filteredRankings.map { buildAssociation }
+        /*
+         * The edges clause trims down the portion of the edges table that will be joined to
+         */
         val edgesClause = filteredRankings.joinToString(" OR ", transform = ::buildEdgeFilteringClause)
 
-
+        /*
+         * Build the SQL for the association joins.
+         */
         val associationJoins = "(" + filteredRankings.joinToString(" ) UNION ") {
             val associationEntityKeyIds = it.associationSets.keys
                     .map { it to Optional.empty<Set<UUID>>() }
@@ -251,6 +274,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     it.associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
             )
         }
+
 
         val groupedRankings = filteredRankings.groupBy { it.filteredRanking.utilizerIsSrc }
         val srcEntitySetRankings = groupedRankings[false]!!
@@ -322,6 +346,78 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     it.associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
             )
         }
+        return arrayOf()
+    }
+
+    internal fun buildAssociationTable(
+            index: Int,
+            authorizedFilteredRanking: AuthorizedFilteredRanking,
+            linked: Boolean
+    ): String {
+        val esEntityKeyIds = edm
+                .getEntitySetsOfType(authorizedFilteredRanking.filteredRanking.associationTypeId)
+                .map { it.id to Optional.empty<Set<UUID>>() }
+                .toMap()
+        val associationPropertyTypes = authorizedFilteredRanking.associationPropertyTypes
+        //This will read all the entity sets of the same type all at once applying filters.
+        val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
+                esEntityKeyIds,
+                associationPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
+                authorizedFilteredRanking.filteredRanking.associationAggregations.keys,
+                authorizedFilteredRanking.associationSets,
+                authorizedFilteredRanking.filteredRanking.associationFilters,
+                setOf(),
+                linked,
+                associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+        )
+
+        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.utilizerIsSrc) {
+            "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
+        } else {
+            "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
+        }
+
+        val edgeClause = buildEdgeFilteringClause(authorizedFilteredRanking)
+
+        val spineSql = "SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause"
+
+        val aggregationColumns =
+                authorizedFilteredRanking.filteredRanking.associationAggregations.keys
+                        .map { authorizedFilteredRanking.associationPropertyTypes[it]!!.type.fullQualifiedNameAsString }
+                        .map {  }
+
+
+        return "SELECT $aggregationColumns FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($entityKeyIdColumns)"
+    }
+
+    /**
+     * Generates all the aliases for each aggregation column.
+     *
+     * @return A list of association aggregation colulmns in the same order as the authorized filter rankings.
+     */
+    internal fun buildAssociationAggregationColumns(
+            authorizedFilteredRankings: List<AuthorizedFilteredRanking>
+    ): List<Map<UUID, String>> {
+        return authorizedFilteredRankings.mapIndexed { index, authorizedFilteredRanking ->
+            authorizedFilteredRanking.filteredRanking.associationAggregations.mapValues {
+                "${it.value.type.name}(${authorizedFilteredRanking.associationPropertyTypes[it.key]!!}) as ${index}_${it.key}"
+            }
+        }
+    }
+
+    /**
+     * Generates all the aliases for each aggregation column.
+     *
+     * @return A list of association aggregation colulmns in the same order as the authorized filter rankings.
+     */
+    internal fun buildEntitySetAggregationColumns(
+            authorizedFilteredRankings: List<AuthorizedFilteredRanking>
+    ): List<Map<UUID, String>> {
+        return authorizedFilteredRankings.mapIndexed { index, authorizedFilteredRanking ->
+            authorizedFilteredRanking.filteredRanking.entitySetAggregations.mapValues {
+                "${it.value.type.name}(${authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!}) as ${index}_${it.key}"
+            }
+        }
     }
 
     internal fun buildUnionQueries(authorizedFilterRankings: List<AuthorizedFilteredRanking>) {
@@ -331,9 +427,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         //We figure out the list of all properties to be read by neighbor type
         //We will read them so they can be safely unioned and make them null by providing a
         //nullifying fqn string if aggregation wasn't requested for that particular selection.
-        val readPropertyTypesByNeighborTypeId =
-                rankingsByNeighborTypeId.mapValues { it.value.flatMap { it.filteredRanking.aggregations.keys }.toSet() }
-
+//        val readPropertyTypesByNeighborTypeId =
+//                rankingsByNeighborTypeId.mapValues { it.value.flatMap { it.filteredRanking.aggregations.keys }.toSet() }
 
     }
 

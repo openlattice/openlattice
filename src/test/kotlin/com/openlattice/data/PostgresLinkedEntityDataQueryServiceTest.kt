@@ -64,7 +64,8 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 Pair(UUID.fromString("f950d05a-f4f2-451b-8c6d-56e78bba8b42"), "nc.PersonRace"),
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), "housing.updatedat"),
                 Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity")
-        );
+        )
+
         val entityKeyIds = sequenceOf(
                 "73170000-0000-0000-8000-0000000004a9",
                 "4d9b0000-0000-0000-8000-00000000005d"
@@ -125,6 +126,8 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 selectEntitySetWithPropertyTypesAndVersionSql(
                         mapOf( entitySetId to Optional.of(entityKeyIds)),
                         propertyTypeMap,
+                        propertyTypeMap.keys,
+                        mapOf( entitySetId to propertyTypeMap.keys ),
                         mapOf(),
                         setOf(),
                         version,
@@ -183,6 +186,8 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
                         mapOf(entitySetId to Optional.empty()),
                         propertyTypeMap,
+                        propertyTypeMap.keys,
+                        mapOf( entitySetId to propertyTypeMap.keys ),
                         mapOf(),
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
                         false,
