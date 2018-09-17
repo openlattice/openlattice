@@ -104,7 +104,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
         try {
             authorizations.setSecurableObjectType( aclKey, principal.getCategory() );
-            authorizations.addPermission( aclKey, owner, EnumSet.allOf( Permission.class ), OffsetDateTime.MAX );
+            authorizations.addPermission( aclKey, owner, EnumSet.allOf( Permission.class ) );
         } catch ( Exception e ) {
             logger.error( "Unable to create principal {}", principal, e );
             Util.deleteSafely( principals, aclKey );
