@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 
 /**
  * The authorization manager manages permissions for all securable objects in the system.
- *
+ * <p>
  * Authorization behavior is summarized below:
  * <ul>
  * <li>No inheritance and that all permissions are explicitly set.</li>
@@ -47,7 +47,7 @@ public interface AuthorizationManager {
     /**
      * Creates an empty acl.
      *
-     * @param aclKey The key for the object whose acl is being created.
+     * @param aclKey     The key for the object whose acl is being created.
      * @param objectType The type of the object for lookup purposes.
      */
     void setSecurableObjectType( AclKey aclKey, SecurableObjectType objectType );
@@ -55,8 +55,7 @@ public interface AuthorizationManager {
     void addPermission(
             AclKey aclKeys,
             Principal principal,
-            EnumSet<Permission> permissions,
-            OffsetDateTime expirationDate);
+            EnumSet<Permission> permissions );
 
     void removePermission(
             AclKey aclKeys,
@@ -82,7 +81,7 @@ public interface AuthorizationManager {
             Set<Principal> principals );
 
     @Timed
-    Stream<Authorization>       accessChecksForPrincipals(
+    Stream<Authorization> accessChecksForPrincipals(
             Set<AccessCheck> accessChecks,
             Set<Principal> principals );
 
