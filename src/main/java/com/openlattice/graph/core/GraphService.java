@@ -21,8 +21,10 @@
 package com.openlattice.graph.core;
 
 import com.google.common.collect.SetMultimap;
-import com.openlattice.data.EntityDataKey;
+import com.openlattice.analysis.AuthorizedFilteredRanking;
+import com.openlattice.analysis.requests.FilteredRanking;
 import com.openlattice.data.analytics.IncrementableWeightId;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 
@@ -69,9 +71,16 @@ public interface GraphService {
             SetMultimap<UUID, UUID> srcFilters,
             SetMultimap<UUID, UUID> dstFilters );
 
+    IncrementableWeightId[] computeTopEntities(
+            int limit,
+            Set<UUID> entitySetIds,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            List<AuthorizedFilteredRanking> details,
+            boolean linked );
+
     /**
-     * @param srcFilters Association type ids to neighbor type ids
-     * @param dstFilters Association type ids to neighbor type ids
+     * @param srcFilters Association type ids to neighbor entity set ids
+     * @param dstFilters Association type ids to neighbor entity set ids
      */
     IncrementableWeightId[] computeGraphAggregation(
             int limit,

@@ -21,7 +21,7 @@
 
 package com.openlattice.data.storage
 
-import com.openlattice.analysis.RangeFilter
+import com.openlattice.analysis.requests.RangeFilter
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
@@ -37,7 +37,7 @@ private val logger = LoggerFactory.getLogger(PostgresLinkedEntityDataQueryServic
 const val ENTITIES_TABLE_ALIAS = "entity_key_ids"
 const val LEFT_JOIN = "LEFT JOIN"
 const val INNER_JOIN = "INNER JOIN"
-private val entityKeyIdColumns = listOf(ENTITY_SET_ID.name, ID_VALUE.name).joinToString(",")
+val entityKeyIdColumns = listOf(ENTITY_SET_ID.name, ID_VALUE.name).joinToString(",")
 
 open class PostgresLinkedEntityDataQueryService(private val hds: HikariDataSource) {
 
@@ -48,8 +48,10 @@ open class PostgresLinkedEntityDataQueryService(private val hds: HikariDataSourc
  */
 fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
-        authorizedPropertyTypes: Map<UUID, String>,
-        propertyTypeFilters: Map<UUID, Set<RangeFilter<Comparable<Any>>>>,
+        propertyTypes: Map<UUID, String>,
+        returnedPropertyTypes: Collection<UUID>,
+        authorizedPropertyTypes: Map<UUID, Set<UUID>>,
+        propertyTypeFilters: Map<UUID, Set<RangeFilter<*>>>,
         metadataOptions: Set<MetadataOption>,
         linked: Boolean,
         binaryPropertyTypes: Map<UUID, Boolean>
@@ -66,15 +68,20 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
 
     val dataColumns = joinColumns
             .union(metadataOptions.map(MetadataOption::name))
-            .union(authorizedPropertyTypes.values.map(::quote))
+            .union(returnedPropertyTypes.map { propertyTypes[ it ]!! })
             .joinToString(",")
 
     val propertyTableJoins =
-            authorizedPropertyTypes
+            propertyTypes
                     .map {
                         val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
+                        val propertyTypeEntitiesClause = buildPropertyTypeEntitiesClause(
+                                entityKeyIds,
+                                it.key,
+                                authorizedPropertyTypes
+                        )
                         val subQuerySql = selectCurrentVersionOfPropertyTypeSql(
-                                entitiesClause,
+                                propertyTypeEntitiesClause,
                                 it.key,
                                 propertyTypeFilters[it.key] ?: setOf(),
                                 it.value,
@@ -84,6 +91,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                         "$joinType $subQuerySql USING (${joinColumns.joinToString(",")})"
                     }
                     .joinToString("\n")
+
     return "SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
 }
 
@@ -93,8 +101,10 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
  */
 fun selectEntitySetWithPropertyTypesAndVersionSql(
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
-        authorizedPropertyTypes: Map<UUID, String>,
-        propertyTypeFilters: Map<UUID, Set<RangeFilter<Comparable<Any>>>>,
+        propertyTypes: Map<UUID, String>,
+        returnedPropertyTypes: Collection<UUID>,
+        authorizedPropertyTypes: Map<UUID, Set<UUID>>,
+        propertyTypeFilters: Map<UUID, Set<RangeFilter<*>>>,
         metadataOptions: Set<MetadataOption>,
         version: Long,
         linked: Boolean,
@@ -112,25 +122,31 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
 
     val dataColumns = joinColumns
             .union(metadataOptions.map(MetadataOption::name))
-            .union(authorizedPropertyTypes.values.map(::quote))
+            .union(returnedPropertyTypes.map { propertyTypes[ it ]!! })
             .filter(String::isNotBlank)
             .joinToString(",")
 
-    val propertyTableJoins = authorizedPropertyTypes
-            .map {
-                val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
-                val subQuerySql = selectVersionOfPropertyTypeInEntitySetSql(
-                        entitiesClause,
-                        it.key,
-                        it.value,
-                        version,
-                        propertyTypeFilters[it.key] ?: setOf(),
-                        linked,
-                        binaryPropertyTypes[it.key]!!
-                )
-                "$joinType $subQuerySql USING (${joinColumns.joinToString(",")}) "
-            }
-            .joinToString("\n")
+    val propertyTableJoins =
+            propertyTypes
+                    .map {
+                        val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
+                        val propertyTypeEntitiesClause = buildPropertyTypeEntitiesClause(
+                                entityKeyIds,
+                                it.key,
+                                authorizedPropertyTypes
+                        )
+                        val subQuerySql = selectVersionOfPropertyTypeInEntitySetSql(
+                                propertyTypeEntitiesClause,
+                                it.key,
+                                it.value,
+                                version,
+                                propertyTypeFilters[it.key] ?: setOf(),
+                                linked,
+                                binaryPropertyTypes[it.key]!!
+                        )
+                        "$joinType $subQuerySql USING (${joinColumns.joinToString(",")}) "
+                    }
+                    .joinToString("\n")
 
     return "SELECT $dataColumns FROM $entitiesSubquerySql as $ENTITIES_TABLE_ALIAS $propertyTableJoins"
 
@@ -153,7 +169,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
         propertyTypeId: UUID,
         fqn: String,
         version: Long,
-        filters: Set<RangeFilter<Comparable<Any>>>,
+        filters: Set<RangeFilter<*>>,
         linked: Boolean,
         binary: Boolean
 ): String {
@@ -193,7 +209,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
 internal fun selectCurrentVersionOfPropertyTypeSql(
         entitiesClause: String,
         propertyTypeId: UUID,
-        filters: Set<RangeFilter<Comparable<Any>>>,
+        filters: Set<RangeFilter<*>>,
         fqn: String,
         linked: Boolean,
         binary: Boolean
@@ -337,11 +353,33 @@ internal fun arrayAggSql(fqn: String, binary: Boolean): String {
 
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
     return "AND (" + entityKeyIds.entries.joinToString(" OR ") {
-        val idsClause = it.value.map { " AND ${ID_VALUE.name} IN ('" + it.joinToString("','") { it.toString() } + "')" }.orElse("")
+        val idsClause = it.value.map {
+            " AND ${ID_VALUE.name} IN ('" + it.joinToString(
+                    "','"
+            ) { it.toString() } + "')"
+        }.orElse("")
         " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
     } + ")"
 }
 
-internal fun buildFilterClause(fqn: String, filter: Set<RangeFilter<Comparable<Any>>>): String {
+internal fun buildPropertyTypeEntitiesClause(
+        entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+        propertyTypeId: UUID,
+        authorizedPropertyTypes: Map<UUID, Set<UUID>>
+): String {
+    val authorizedEntityKeyIds = entityKeyIds.filter {
+        authorizedPropertyTypes[it.key]?.contains(propertyTypeId) ?: false
+    }
+    return "AND (" + authorizedEntityKeyIds.entries.joinToString(" OR ") {
+        val idsClause = it.value.map {
+            " AND ${ID_VALUE.name} IN ('" + it.joinToString(
+                    "','"
+            ) { it.toString() } + "')"
+        }.orElse("")
+        " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
+    } + ")"
+}
+
+internal fun buildFilterClause(fqn: String, filter: Set<RangeFilter<*>>): String {
     return filter.joinToString(" AND ") { it.asSql(quote(fqn)) }
 }

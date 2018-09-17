@@ -30,7 +30,9 @@ import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListenableFuture
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
-import com.openlattice.analysis.requests.TopUtilizerDetails
+import com.openlattice.analysis.AuthorizedFilteredRanking
+import com.openlattice.analysis.requests.RangeFilter
+import com.openlattice.analysis.requests.FilteredRanking
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
@@ -344,38 +346,86 @@ open class DataGraphService(
         return null
     }
 
+    override fun getFilteredRankings(
+            entitySetIds: Set<UUID>,
+            numResults: Int,
+            filteredRankings: List<AuthorizedFilteredRanking>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            linked: Boolean
+    ): Iterable<SetMultimap<FullQualifiedName, Any>> {
+        val maybeUtilizers = queryCache
+                .getIfPresent(MultiKey(entitySetIds, filteredRankings))
+        val utilizers: Array<IncrementableWeightId>
+
+
+        if (maybeUtilizers == null) {
+
+            utilizers = graphService.computeTopEntities(
+                    numResults,
+                    entitySetIds,
+                    authorizedPropertyTypes,
+                    filteredRankings,
+                    linked
+            )
+
+            queryCache.put(MultiKey(entitySetIds, filteredRankings), utilizers)
+        } else {
+            utilizers = maybeUtilizers
+        }
+
+        val entities = eds
+                .getEntities(entitySetId, utilizers.map { it.id }.toSet(), authorizedPropertyTypes)
+                .map { it[ID_FQN].first() as UUID to it }
+                .toList()
+                .toMap()
+
+        return utilizers.map {
+            val entity = entities[it.id]!!
+            entity.put(COUNT_FQN, it.weight)
+            entity
+        }.stream()
+
+
+    }
+
     override fun getTopUtilizers(
             entitySetId: UUID,
-            topUtilizerDetailsList: List<TopUtilizerDetails>,
+            filteredRankingList: List<FilteredRanking>,
             numResults: Int,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>> {
-        /*
-         * ByteBuffer queryId; try { queryId = ByteBuffer.wrap( ObjectMappers.getSmileMapper().writeValueAsBytes(
-         * topUtilizerDetailsList ) ); } catch ( JsonProcessingException e1 ) { logger.debug(
-         * "Unable to generate query id." ); return null; }
-         */
         val maybeUtilizers = queryCache
-                .getIfPresent(MultiKey(entitySetId, topUtilizerDetailsList))
+                .getIfPresent(MultiKey(entitySetId, filteredRankingList))
         val utilizers: Array<IncrementableWeightId>
-        // if ( !eds.queryAlreadyExecuted( queryId ) ) {
+
+
         if (maybeUtilizers == null) {
+            utilizers = graphService.computeTopEntities(
+                    numResults, entitySetId, authorizedPropertyTypes, filteredRankingList
+            )
             //            utilizers = new TopUtilizers( numResults );
             val srcFilters = HashMultimap.create<UUID, UUID>()
             val dstFilters = HashMultimap.create<UUID, UUID>()
 
-            topUtilizerDetailsList.forEach { details ->
+            val associationPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
+            val srcPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
+            val dstPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
+            filteredRankingList.forEach { details ->
                 val associationSets = edm.getEntitySetsOfType(details.associationTypeId).map { it.id }
-                val neighborSets = details.neighborTypeIds.flatMap {
-                    edm.getEntitySetsOfType(it).map { it.id }
-                }.toList()
+                val neighborSets = edm.getEntitySetsOfType(details.neighborTypeId).map { it.id }
+
                 associationSets.forEach {
                     (if (details.utilizerIsSrc) srcFilters else dstFilters).putAll(it, neighborSets)
+                    (if (details.utilizerIsSrc) srcPropertyTypeFilters else dstPropertyTypeFilters).putAll(
+                            it, details.neighborFilters
+                    )
                 }
+
             }
+
             utilizers = graphService.computeGraphAggregation(numResults, entitySetId, srcFilters, dstFilters)
 
-            queryCache.put(MultiKey(entitySetId, topUtilizerDetailsList), utilizers)
+            queryCache.put(MultiKey(entitySetId, filteredRankingList), utilizers)
         } else {
             utilizers = maybeUtilizers
         }

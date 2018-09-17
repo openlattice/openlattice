@@ -178,23 +178,28 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                     val statement = connection.createStatement()
                     val rs = statement.executeQuery(
                             if (version.isPresent) {
+
                                 selectEntitySetWithPropertyTypesAndVersionSql(
                                         mapOf(entitySetId to entityKeyIds),
                                         authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
+                                        authorizedPropertyTypes.keys,
+                                        mapOf(entitySetId to authorizedPropertyTypes.keys),
                                         mapOf(),
                                         metadataOptions,
                                         version.get(),
                                         false,
-                                        authorizedPropertyTypes.map { it.key to (it.value.datatype == EdmPrimitiveTypeKind.Binary) }.toMap()
+                                        authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
                                 )
                             } else {
                                 selectEntitySetWithCurrentVersionOfPropertyTypes(
                                         mapOf(entitySetId to entityKeyIds),
                                         authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
+                                        authorizedPropertyTypes.keys,
+                                        mapOf(entitySetId to authorizedPropertyTypes.keys),
                                         mapOf(),
                                         metadataOptions,
                                         false,
-                                        authorizedPropertyTypes.map { it.key to (it.value.datatype == EdmPrimitiveTypeKind.Binary) }.toMap()
+                                        authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
                                 )
                             }
                     )

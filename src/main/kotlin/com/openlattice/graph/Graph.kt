@@ -24,15 +24,18 @@ package com.openlattice.graph
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
+import com.openlattice.analysis.AuthorizedFilteredRanking
+import com.openlattice.analysis.requests.RangeFilter
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.analytics.IncrementableWeightId
+import com.openlattice.data.storage.entityKeyIdColumns
+import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
-import com.openlattice.postgres.DataTables.COUNT_FQN
-import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.EDGES
@@ -40,6 +43,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.sql.ResultSet
 import java.util.*
@@ -205,6 +209,134 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
+
+    /**
+     * 1. Compute the table of all neighbors of all relevant neighbors to person entity sets.
+     * 2. Apply relevant filters for person entity sets with an inner join
+     * 3. Apply relevant filters for associations with an innner join.
+     *
+     */
+    override fun computeTopEntities(
+            limit: Int,
+            entitySetIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            filteredRankings: List<AuthorizedFilteredRanking>,
+            linked: Boolean
+    ): Array<IncrementableWeightId> {
+        /*
+         * The plan is that there are set of association entity sets and either source or destination entity sets.
+         *
+         * The plan is to do inner joins (ANDS) of property tables that are ORs of the filters and join them in to
+         *
+         * Join all association queries using full outer joins
+         * Join all entity set queries using full outer joins
+         */
+
+        val edgesClause = filteredRankings.joinToString(" OR ", transform = ::buildEdgeFilteringClause)
+
+
+        val associationJoins = "(" + filteredRankings.joinToString(" ) UNION ") {
+            val associationEntityKeyIds = it.associationSets.keys
+                    .map { it to Optional.empty<Set<UUID>>() }
+                    .toMap()
+
+            selectEntitySetWithCurrentVersionOfPropertyTypes(
+                    associationEntityKeyIds,
+                    it.associationPropertyTypes.mapValues { it.value.type.fullQualifiedNameAsString },
+                    setOf(),
+                    it.associationSets,
+                    it.filteredRanking.associationFilters,
+                    setOf(),
+                    linked,
+                    it.associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+            )
+        }
+
+        val groupedRankings = filteredRankings.groupBy { it.filteredRanking.utilizerIsSrc }
+        val srcEntitySetRankings = groupedRankings[false]!!
+        val dstEntitySetRankings = groupedRankings[true]!!
+
+        val srcEntitySetJoins = "(" +
+                srcEntitySetRankings.joinToString(" UNION ") {
+                    val esEntityKeyIds = edm
+                            .getEntitySetsOfType(it.filteredRanking.neighborTypeId)
+                            .map { it.id to Optional.empty<Set<UUID>>() }
+                            .toMap()
+
+                    selectEntitySetWithCurrentVersionOfPropertyTypes(
+                            esEntityKeyIds,
+                            it.entitySetPropertyTypes.mapValues { it.value.type.fullQualifiedNameAsString },
+                            setOf(),
+                            it.entitySets,
+                            it.filteredRanking.neighborFilters,
+                            setOf(),
+                            linked,
+                            it.associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                    )
+                } + ")"
+
+        val dstEntitySetJoins = "(" +
+                dstEntitySetRankings.joinToString(" UNION ") {
+                    val esEntityKeyIds = edm
+                            .getEntitySetsOfType(it.filteredRanking.neighborTypeId)
+                            .map { it.id to Optional.empty<Set<UUID>>() }
+                            .toMap()
+
+                    selectEntitySetWithCurrentVersionOfPropertyTypes(
+                            esEntityKeyIds,
+                            it.entitySetPropertyTypes.mapValues { it.value.type.fullQualifiedNameAsString },
+                            setOf(),
+                            it.entitySets,
+                            it.filteredRanking.neighborFilters,
+                            setOf(),
+                            linked,
+                            it.associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                    )
+                } + ")"
+        val aggregationSql = "SELECT * FROM (SELECT * from edges where $edgesClause) as edges " +
+                "INNER JOIN ($associationJoins USING($entityKeyIdColumns) " +
+                "LEFT JOIN $srcEntitySetJoins " +
+                "LEFT JOIN $dstEntitySetJoins "
+
+        val entitySetJoins = filteredRankings.map {
+
+            val selectColumns = if (it.filteredRanking.utilizerIsSrc) {
+                "$entityKeyIdColumns, ${ENTITY_SET_ID.name} as ${DST_ENTITY_SET_ID.name},  AND $DST_ENTITY_KEY_ID"
+            } else {
+                "ON ${SRC_ENTITY_SET_ID.name} = ${ENTITY_SET_ID.name} AND $SRC_ENTITY_KEY_ID"
+            }
+
+            val esEntityKeyIds = edm
+                    .getEntitySetsOfType(it.filteredRanking.neighborTypeId)
+                    .map { it.id to Optional.empty<Set<UUID>>() }
+                    .toMap()
+
+            selectEntitySetWithCurrentVersionOfPropertyTypes(
+                    esEntityKeyIds,
+                    it.entitySetPropertyTypes.mapValues { it.value.type.fullQualifiedNameAsString },
+                    setOf(),
+                    it.entitySets,
+                    it.filteredRanking.neighborFilters,
+                    setOf(),
+                    linked,
+                    it.associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+            )
+        }
+    }
+
+    internal fun buildUnionQueries(authorizedFilterRankings: List<AuthorizedFilteredRanking>) {
+        val rankingsByNeighborTypeId =
+                authorizedFilterRankings
+                        .groupBy { it.filteredRanking.neighborTypeId }
+        //We figure out the list of all properties to be read by neighbor type
+        //We will read them so they can be safely unioned and make them null by providing a
+        //nullifying fqn string if aggregation wasn't requested for that particular selection.
+        val readPropertyTypesByNeighborTypeId =
+                rankingsByNeighborTypeId.mapValues { it.value.flatMap { it.filteredRanking.aggregations.keys }.toSet() }
+
+
+    }
+
     override fun computeGraphAggregation(
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Array<IncrementableWeightId> {
@@ -267,48 +399,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 }
 
-private fun selectEdges(keys: Set<EdgeKey>): String {
-    return "$SELECT_SQL(" +
-            keys
-                    .asSequence()
-                    .map { "(${it.src.entitySetId},${it.src.entityKeyId},${it.dst.entitySetId},${it.dst.entityKeyId},${it.edge.entitySetId},${it.edge.entityKeyId})" }
-                    .joinToString(",") + ")"
-}
-
-private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
-    return associationClauses(
-            SRC_ENTITY_SET_ID.name, entitySetId, DST_ENTITY_SET_ID.name, associationFilters
-    )
-}
-
-private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
-    return associationClauses(
-            DST_ENTITY_SET_ID.name, entitySetId, SRC_ENTITY_SET_ID.name, associationFilters
-    )
-}
-
-/**
- * Generates an association clause for querying the edges table.
- * @param entitySetColumn The column to use for filtering allowed entity set ids.
- * @param entitySetId The entity set id for which the aggregation will be performed.
- * @param neighborColumn The column for the neighbors that will be counted.
- * @param associationFilters A multimap from association entity set ids to allowed neighbor entity set ids.
- */
-private fun associationClauses(
-        entitySetColumn: String, entitySetId: UUID, neighborColumn: String, associationFilters: SetMultimap<UUID, UUID>
-): String {
-    if (associationFilters.isEmpty) {
-        return " false "
-    }
-    return Multimaps
-            .asMap(associationFilters)
-            .asSequence()
-            .map {
-                "($entitySetColumn = '$entitySetId' AND ${EDGE_ENTITY_SET_ID.name} = '${it.key}' " +
-                        "AND $neighborColumn IN (${it.value.map { "'$it'" }.joinToString(",")}) ) "
-            }
-            .joinToString(" OR ")
-}
 
 //TODO: Extract string constants.
 private fun caseExpression(entitySetId: UUID): String {
@@ -395,3 +485,63 @@ private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
 
+
+private fun selectEdges(keys: Set<EdgeKey>): String {
+    return "$SELECT_SQL(" +
+            keys
+                    .asSequence()
+                    .map { "(${it.src.entitySetId},${it.src.entityKeyId},${it.dst.entitySetId},${it.dst.entityKeyId},${it.edge.entitySetId},${it.edge.entityKeyId})" }
+                    .joinToString(",") + ")"
+}
+
+private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
+    return associationClauses(
+            SRC_ENTITY_SET_ID.name, entitySetId, DST_ENTITY_SET_ID.name, associationFilters
+    )
+}
+
+private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
+    return associationClauses(
+            DST_ENTITY_SET_ID.name, entitySetId, SRC_ENTITY_SET_ID.name, associationFilters
+    )
+}
+
+private fun buildEdgeFilteringClause(authorizedFilteredRanking: AuthorizedFilteredRanking): String {
+    val authorizedAssociationEntitySets = authorizedFilteredRanking.associationSets.keys
+    val authorizedEntitySets = authorizedFilteredRanking.entitySets.keys
+
+    //TODO: Switch to prepared statement
+    val entitySetColumn = if (authorizedFilteredRanking.filteredRanking.utilizerIsSrc) {
+        DST_ENTITY_SET_ID.name
+    } else {
+        SRC_ENTITY_SET_ID.name
+    }
+    val associationsClause =
+            "${EDGE_ENTITY_SET_ID.name} IN ${authorizedAssociationEntitySets.joinToString(",") { "'$it'" }}"
+    val entitySetsClause = "$entitySetColumn IN (${authorizedEntitySets.joinToString(",") { "'$it'" }})"
+
+    return "($associationsClause AND $entitySetsClause)"
+}
+
+/**
+ * Generates an association clause for querying the edges table.
+ * @param entitySetColumn The column to use for filtering allowed entity set ids.
+ * @param entitySetId The entity set id for which the aggregation will be performed.
+ * @param neighborColumn The column for the neighbors that will be counted.
+ * @param associationFilters A multimap from association entity set ids to allowed neighbor entity set ids.
+ */
+private fun associationClauses(
+        entitySetColumn: String, entitySetId: UUID, neighborColumn: String, associationFilters: SetMultimap<UUID, UUID>
+): String {
+    if (associationFilters.isEmpty) {
+        return " false "
+    }
+    return Multimaps
+            .asMap(associationFilters)
+            .asSequence()
+            .map {
+                "($entitySetColumn = '$entitySetId' AND ${EDGE_ENTITY_SET_ID.name} = '${it.key}' " +
+                        "AND $neighborColumn IN (${it.value.joinToString(",") { "'$it'" }}) ) "
+            }
+            .joinToString(" OR ")
+}

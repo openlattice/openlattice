@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2018. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,23 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.linking;
+package com.openlattice.analysis
+
+import com.openlattice.analysis.requests.FilteredRanking
+import com.openlattice.edm.type.PropertyType
+import java.util.*
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Contains the results of authorizing a filtered ranking.
  */
-public class LinkingJobManager {
-}
+class AuthorizedFilteredRanking(
+        val filteredRanking: FilteredRanking,
+        val associationSets: Map<UUID, Set<UUID>>,
+        val associationPropertyTypes: Map<UUID, PropertyType>,
+        val entitySets: Map<UUID, Set<UUID>>,
+        val entitySetPropertyTypes: Map<UUID, PropertyType>
+)
+
