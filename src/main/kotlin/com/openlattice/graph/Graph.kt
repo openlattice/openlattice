@@ -669,8 +669,12 @@ internal fun buildAggregationColumnMap(
 ): Map<UUID, String> {
     return aggregations
             .mapValues {
-                val fqn = propertyTypes[it.key]!!.type.fullQualifiedNameAsString
-                quote("${index}_${type}_$it")
+
+                when(type) {
+                    ASSOC -> aggregationAssociationColumnName(index,it.key)
+                    ENTITY -> aggregationEntityColumnName(index,it.key)
+                    else -> throw IllegalStateException("Unsupported aggregation type: $type.")
+                }
             }
 }
 
