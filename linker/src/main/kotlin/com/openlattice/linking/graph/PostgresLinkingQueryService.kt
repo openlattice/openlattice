@@ -24,6 +24,7 @@ package com.openlattice.linking.graph
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.LAST_LINK
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
@@ -46,6 +47,25 @@ private const val AVG_SCORE_FIELD = "avg_score"
  * @param hds A hikari datasource that can be used for executing SQL.
  */
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
+    override fun getEntitySetsNeedingLinking(): PostgresIterable<UUID> {
+        return PostgresIterable(Supplier {
+            val connection = hds.connection
+            val stmt = connection.createStatement()
+            val rs = stmt.executeQuery(ENTITY_SETS_NEEDING_LINKING)
+            StatementHolder(connection, stmt, rs)
+        }, Function { ResultSetAdapters.entitySetId(it) })
+    }
+
+    override fun getEntitiesNeedingLinking(entitySetId: UUID): PostgresIterable<UUID> {
+        return PostgresIterable(Supplier {
+            val connection = hds.connection
+            val ps = connection.prepareStatement(ENTITY_KEY_IDS_NEEDING_LINKING)
+            ps.setObject(1, entitySetId)
+            val rs = ps.executeQuery()
+            StatementHolder(connection, ps, rs)
+        }, Function { ResultSetAdapters.id(it) })
+    }
+
     override fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int {
         hds.connection.use {
             it.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use {
@@ -247,3 +267,11 @@ private val CLUSTERS_CONTAINING_SQL = "SELECT DISTINCT ${LINKING_ID.name} FROM $
 
 private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
         "SET ${LINKING_ID.name} = ?, ${ENTITY_SET_ID.name} =?, ${ID_VALUE.name}=?, ${LAST_LINK.name}=now()"
+
+private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name}" +
+        "FROM ${IDS.name} " +
+        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name}"
+
+private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ID.name} " +
+        "FROM ${IDS.name} " +
+        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ${ENTITY_SET_ID.name} = ? "

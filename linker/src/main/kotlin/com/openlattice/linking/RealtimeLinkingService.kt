@@ -29,10 +29,12 @@ import com.openlattice.data.EntityKeyIdService
 import com.openlattice.linking.clustering.ClusterUpdate
 import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Scheduled
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
+import javax.annotation.PostConstruct
 
 
 /**
@@ -66,6 +68,7 @@ class RealtimeLinkingService
                 })
     }
 
+    private val running = ReentrantLock()
     /**
      * Linking:
      * 1) For each new person entity perform blocking
@@ -132,6 +135,14 @@ class RealtimeLinkingService
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, entitySetId)
     }
 
+    @Scheduled(fixedRate = 30000)
+    fun runLinking() {
+        if (running.tryLock()) {
+            gqs.getEntitySetsNeedingLinking().forEach { refreshLinks(it, gqs.getEntitiesNeedingLinking(it)) }
+        }
+    }
+
+
     fun refreshLinks(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
         clearNeighborhoods(entitySetId, entityKeyIds.stream())
         runIterativeLinking(entitySetId, entityKeyIds)
@@ -142,4 +153,5 @@ class RealtimeLinkingService
         clearNeighborhoods(entitySetId, entityKeyIds.stream())
         runIterativeLinking(entitySetId, entityKeyIds)
     }
+
 }
