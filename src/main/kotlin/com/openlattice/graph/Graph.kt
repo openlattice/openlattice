@@ -671,8 +671,8 @@ internal fun buildAggregationColumnMap(
             .mapValues {
 
                 when(type) {
-                    ASSOC -> aggregationAssociationColumnName(index,it.key)
-                    ENTITY -> aggregationEntityColumnName(index,it.key)
+                    ASSOC -> aggregationAssociationColumnName(index,it.key).replace("\"","")
+                    ENTITY -> aggregationEntityColumnName(index,it.key).replace("\"","")
                     else -> throw IllegalStateException("Unsupported aggregation type: $type.")
                 }
             }
