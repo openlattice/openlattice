@@ -445,7 +445,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
         val countAlias = associationCountColumnName(index)
-        val allColumns = listOf(joinColumns, aggregationColumns, "count(*) as $countAlias")
+        val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
                 .filter(String::isNotBlank)
                 .joinToString(",")
         return "SELECT $allColumns " +
@@ -503,7 +503,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
         val countAlias = entityCountColumnName(index)
-        val allColumns = listOf(joinColumns, aggregationColumns, "count(*) as $countAlias")
+        val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
                 .filter(String::isNotBlank)
                 .joinToString(",")
         return "SELECT $allColumns " +
