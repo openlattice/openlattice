@@ -275,7 +275,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
 
         val countColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
-            authorizedFilteredRanking.filteredRanking.countWeight.map { "$it*COALESCE(${associationCountColumnName(index)},0)" }
+            authorizedFilteredRanking.filteredRanking.countWeight.map {
+                "$it*COALESCE(${associationCountColumnName(
+                        index
+                )},0)"
+            }
                     .orElse("")
         }.filter(String::isNotBlank)
 
@@ -302,7 +306,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
          */
         val associationSql =
                 filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
-                    val tableSql = buildAssociationTable(index, authorizedFilteredRanking, linked)
+                    val tableSql = buildAssociationTable(index, entitySetIds, authorizedFilteredRanking, linked)
                     //We are guaranteed at least one association for a valid top utilizers request
                     if (index == 0) {
                         "SELECT *,$scoreColumn FROM ($tableSql) as assoc_table$index "
@@ -312,7 +316,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 }.joinToString("\n")
 
         val entitiesSql = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
-            val tableSql = buildEntityTable(index, authorizedFilteredRanking, linked)
+            val tableSql = buildEntityTable(index, entitySetIds, authorizedFilteredRanking, linked)
             "FULL OUTER JOIN ($tableSql) as entity_table$index USING($joinColumns) "
         }.joinToString("\n")
         val sql = "$associationSql \n$entitiesSql \nORDER BY score DESC \nLIMIT $limit"
@@ -398,6 +402,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     private fun buildAssociationTable(
             index: Int,
+            selfEntitySetIds: Set<UUID>,
             authorizedFilteredRanking: AuthorizedFilteredRanking,
             linked: Boolean
     ): String {
@@ -426,7 +431,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         }
 
-        val edgeClause = buildEdgeFilteringClause(authorizedFilteredRanking)
+        val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking)
         val joinColumns = if (linked) LINKING_ID.name else entityKeyIdColumns
         val groupingColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
         val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID FROM ${IDS.name}, ${LINKING_ID.name}"
@@ -456,6 +461,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     private fun buildEntityTable(
             index: Int,
+            selfEntitySetIds: Set<UUID>,
             authorizedFilteredRanking: AuthorizedFilteredRanking,
             linked: Boolean
     ): String {
@@ -484,7 +490,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         }
 
-        val edgeClause = buildEdgeFilteringClause(authorizedFilteredRanking)
+        val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking)
         val joinColumns = if (linked) LINKING_ID.name else entityKeyIdColumns
         val groupingColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
         val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID FROM ${IDS.name}, ${LINKING_ID.name}"
@@ -619,19 +625,31 @@ private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, 
     )
 }
 
-private fun buildEdgeFilteringClause(authorizedFilteredRanking: AuthorizedFilteredRanking): String {
+private fun buildEdgeFilteringClause(
+        selfEntitySetIds: Set<UUID>,
+        authorizedFilteredRanking: AuthorizedFilteredRanking
+): String {
     val authorizedAssociationEntitySets = authorizedFilteredRanking.associationSets.keys
     val authorizedEntitySets = authorizedFilteredRanking.entitySets.keys
 
-    //TODO: Switch to prepared statement
+    val associationsClause =
+            "${EDGE_ENTITY_SET_ID.name} IN (${authorizedAssociationEntitySets.joinToString(",") { "'$it'" }})"
+
     val entitySetColumn = if (authorizedFilteredRanking.filteredRanking.dst) {
         DST_ENTITY_SET_ID.name
     } else {
         SRC_ENTITY_SET_ID.name
     }
-    val associationsClause =
-            "${EDGE_ENTITY_SET_ID.name} IN (${authorizedAssociationEntitySets.joinToString(",") { "'$it'" }})"
-    val entitySetsClause = "$entitySetColumn IN (${authorizedEntitySets.joinToString(",") { "'$it'" }})"
+
+    val selfEntitySetColumn = if (authorizedFilteredRanking.filteredRanking.dst) {
+        SRC_ENTITY_SET_ID.name
+    } else {
+        DST_ENTITY_SET_ID.name
+    }
+
+    val entitySetsClause =
+        "$entitySetColumn IN (${authorizedEntitySets.joinToString(",") { "'$it'" }}) " +
+                "AND $selfEntitySetColumn IN (${selfEntitySetIds.joinToString(",") { "'$it'" }})"
 
     return "($associationsClause AND $entitySetsClause)"
 }
