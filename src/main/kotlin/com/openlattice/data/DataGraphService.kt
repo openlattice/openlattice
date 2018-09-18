@@ -31,9 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.analysis.AuthorizedFilteredRanking
-import com.openlattice.analysis.requests.RangeFilter
-import com.openlattice.analysis.requests.FilteredRanking
-import com.openlattice.data.analytics.IncrementableWeightId
+import com.openlattice.analysis.requests.FilteredRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.datastore.services.EdmManager
@@ -44,9 +42,6 @@ import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.postgres.DataTables.COUNT_FQN
-import com.openlattice.postgres.DataTables.ID_FQN
-import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.collections4.keyvalue.MultiKey
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -56,7 +51,6 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
-import kotlin.streams.toList
 
 /**
  *
@@ -391,7 +385,7 @@ open class DataGraphService(
 
     override fun getTopUtilizers(
             entitySetId: UUID,
-            filteredRankingList: List<FilteredRanking>,
+            filteredRankingList: List<FilteredRankingAggregation>,
             numResults: Int,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>> {

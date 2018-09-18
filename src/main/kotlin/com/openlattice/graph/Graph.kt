@@ -45,9 +45,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
-import javafx.geometry.Pos
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.sql.ResultSet
 import java.util.*
@@ -269,7 +267,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     buildAggregationColumnMap(
                             index,
                             authorizedFilteredRanking.entitySetPropertyTypes,
-                            authorizedFilteredRanking.filteredRanking.entitySetAggregations,
+                            authorizedFilteredRanking.filteredRanking.neighborTypeAggregations,
                             ENTITY
                     ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!.datatype }
         }.flatten().plus(idColumns).toMap()
@@ -282,15 +280,15 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val tableSql = buildAssociationTable(index, authorizedFilteredRanking, linked)
                     //We are guaranteed at least one association for a valid top utilizers request
                     if (index == 1) {
-                        "SELECT * FROM ($tableSql) as assoc_table$index"
+                        "SELECT * FROM ($tableSql) as assoc_table$index "
                     } else {
-                        "FULL OUTER JOIN ($tableSql) as assoc_table$index USING($joinColumns)"
+                        "FULL OUTER JOIN ($tableSql) as assoc_table$index USING($joinColumns) "
                     }
                 }.joinToString("\n")
 
         val entitiesSql = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
             val tableSql = buildEntityTable(index, authorizedFilteredRanking, linked)
-            "FULL OUTER JOIN ($tableSql) as entity_table$index USING($joinColumns)"
+            "FULL OUTER JOIN ($tableSql) as entity_table$index USING($joinColumns) "
         }.joinToString("\n")
         val sql = associationSql + entitiesSql
 
@@ -395,7 +393,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
         )
 
-        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.utilizerIsSrc) {
+        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.dst) {
             "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
             "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
@@ -418,8 +416,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             //TODO: Handle counting all rows
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
-        0
-        return "SELECT $joinColumns, $aggregationColumns " +
+        val countAlias = "${index}_${ASSOC}_count"
+        return "SELECT $joinColumns, $aggregationColumns, count(*) as $countAlias " +
                 "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
                 "GROUP BY ($joinColumns)"
     }
@@ -438,7 +436,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
                 esEntityKeyIds,
                 entitySetPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
-                authorizedFilteredRanking.filteredRanking.entitySetAggregations.keys,
+                authorizedFilteredRanking.filteredRanking.neighborTypeAggregations.keys,
                 authorizedFilteredRanking.associationSets,
                 authorizedFilteredRanking.filteredRanking.neighborFilters,
                 setOf(),
@@ -446,7 +444,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 entitySetPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
         )
 
-        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.utilizerIsSrc) {
+        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.dst) {
             "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
             "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
@@ -462,14 +460,14 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
 
         val aggregationColumns =
-                authorizedFilteredRanking.filteredRanking.entitySetAggregations
+                authorizedFilteredRanking.filteredRanking.neighborTypeAggregations
                         .mapValues {
                             val fqn = entitySetPropertyTypes[it.key]!!.type.fullQualifiedNameAsString
                             val alias = quote("${index}_${ENTITY}_$it")
                             //TODO: Handle count columns
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
-        0
+        val countAlias = "${index}_${ENTITY}_count"
         return "SELECT $joinColumns, $aggregationColumns " +
                 "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
                 "GROUP BY ($joinColumns)"
@@ -588,7 +586,7 @@ private fun buildEdgeFilteringClause(authorizedFilteredRanking: AuthorizedFilter
     val authorizedEntitySets = authorizedFilteredRanking.entitySets.keys
 
     //TODO: Switch to prepared statement
-    val entitySetColumn = if (authorizedFilteredRanking.filteredRanking.utilizerIsSrc) {
+    val entitySetColumn = if (authorizedFilteredRanking.filteredRanking.dst) {
         DST_ENTITY_SET_ID.name
     } else {
         SRC_ENTITY_SET_ID.name
