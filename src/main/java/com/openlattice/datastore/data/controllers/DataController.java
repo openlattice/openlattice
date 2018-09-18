@@ -56,7 +56,7 @@ import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.SearchService;
+import com.openlattice.search.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.type.PropertyType;
 import org.apache.commons.lang3.StringUtils;
@@ -307,7 +307,6 @@ public class DataController implements DataApi, AuthorizingComponent {
         return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
-    @Timed
     @Override
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH,
@@ -328,7 +327,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     @Timed
     @Override
     @RequestMapping(
-            path = { "/" + ASSOCIATION + "/" + SET_ID_PATH },
+            path = { "/" + ASSOCIATION },
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public ListMultimap<UUID, UUID> createAssociations( @RequestBody ListMultimap<UUID, DataEdge> associations ) {
@@ -627,23 +626,16 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     private static Set<UUID> requiredEntitySetPropertyTypes( Map<UUID, Map<UUID, Set<Object>>> entities ) {
-        return entities.values().stream()
-                .map( Map::keySet )
-                .flatMap( Set::stream )
+        return entities.values().stream().map( Map::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 
     private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
-        return entities.values().stream()
-                .map( SetMultimap::keySet )
-                .flatMap( Set::stream )
+        return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
 
     private static Set<UUID> requiredPropertyAuthorizations( Collection<SetMultimap<UUID, Object>> entities ) {
-        return entities.stream()
-                .map( SetMultimap::keySet )
-                .flatMap( Set::stream )
-                .collect( Collectors.toSet() );
+        return entities.stream().map( SetMultimap::keySet ).flatMap( Set::stream ).collect( Collectors.toSet() );
     }
 }

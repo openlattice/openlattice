@@ -32,7 +32,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.datastore.services.SearchService;
+import com.openlattice.search.SearchService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.search.SearchApi;
 import com.openlattice.search.requests.AdvancedSearch;
