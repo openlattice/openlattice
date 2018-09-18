@@ -292,7 +292,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             authorizedFilteredRanking.filteredRanking.neighborTypeAggregations,
                             ENTITY
                     ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!.datatype }
-        }.flatten().plus(idColumns).toMap()
+        }.flatten().plus(idColumns).plus(SCORE.name to EdmPrimitiveTypeKind.Double).toMap()
 
 
         val scoreColumn = (associationColumns + entityColumns + countColumns)
@@ -670,9 +670,9 @@ internal fun buildAggregationColumnMap(
     return aggregations
             .mapValues {
 
-                when(type) {
-                    ASSOC -> aggregationAssociationColumnName(index,it.key).replace("\"","")
-                    ENTITY -> aggregationEntityColumnName(index,it.key).replace("\"","")
+                when (type) {
+                    ASSOC -> aggregationAssociationColumnName(index, it.key).replace("\"", "")
+                    ENTITY -> aggregationEntityColumnName(index, it.key).replace("\"", "")
                     else -> throw IllegalStateException("Unsupported aggregation type: $type.")
                 }
             }
