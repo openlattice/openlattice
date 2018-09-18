@@ -347,8 +347,8 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 }
 
 internal fun arrayAggSql(fqn: String, binary: Boolean): String {
-    return if (binary) " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)} "
-    else " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
+    return if (binary) " array_agg(encode($fqn, 'base64')) as $fqn "
+    else " array_agg($fqn) as $fqn "
 }
 
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
