@@ -24,11 +24,10 @@ package com.openlattice.analysis
 import com.google.common.collect.SetMultimap
 import com.google.common.collect.Sets
 import com.openlattice.analysis.requests.NeighborType
-import com.openlattice.analysis.requests.FilteredRanking
+import com.openlattice.analysis.requests.FilteredRankingAggregation
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -59,7 +58,7 @@ class AnalysisService : AuthorizingComponent {
     fun getTopUtilizers(
             entitySetId: UUID,
             numResults: Int,
-            topUtilizerDetails: List<FilteredRanking>,
+            topUtilizerDetails: List<FilteredRankingAggregation>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>> {
         return dgm.getTopUtilizers(entitySetId, topUtilizerDetails, numResults, authorizedPropertyTypes)

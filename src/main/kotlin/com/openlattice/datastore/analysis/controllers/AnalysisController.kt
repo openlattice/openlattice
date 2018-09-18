@@ -28,12 +28,12 @@ import com.google.common.collect.ImmutableSetMultimap
 import com.openlattice.analysis.AnalysisApi
 import com.openlattice.analysis.AnalysisService
 import com.openlattice.analysis.AuthorizedFilteredRanking
-import com.openlattice.analysis.requests.FilteredRanking
+import com.openlattice.analysis.requests.FilteredRankingAggregation
 import com.openlattice.analysis.requests.NeighborType
+import com.openlattice.analysis.requests.NeighborsRankingAggregation
 import com.openlattice.analysis.requests.RangeFilter
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
-import com.openlattice.data.EntitySetData
 import com.openlattice.data.requests.FileType
 import com.openlattice.datastore.constants.CustomMediaType
 import com.openlattice.datastore.services.EdmService
@@ -84,12 +84,12 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     fun getTopUtilizers(
             @PathVariable(AnalysisApi.ENTITY_SET_ID) entitySetId: UUID,
             @PathVariable(AnalysisApi.NUM_RESULTS) numResults: Int,
-            @RequestBody filteredRankings: List<FilteredRanking>,
+            @RequestBody filteredRankings: NeighborsRankingAggregation,
             @RequestParam(value = AnalysisApi.FILE_TYPE, required = false)
             fileType: FileType?,
             response: HttpServletResponse
     ): Iterable<Map<String, Any>> {
-        if (filteredRankings.isEmpty()) {
+        if (filteredRankings.neighbors.isEmpty() && filteredRankings.self.isEmpty()) {
             return listOf()
         }
         ensureReadAccess(AclKey(entitySetId))
@@ -102,7 +102,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     override fun getTopUtilizers(
             entitySetId: UUID,
             numResults: Int,
-            filteredRankings: List<FilteredRanking>,
+            filteredRankings: NeighborsRankingAggregation,
             fileType: FileType?
     ): Iterable<Map<String, Any>> {
         val entitySet = edm.getEntitySet(entitySetId)
@@ -152,17 +152,16 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,
-            filteredRankings: List<FilteredRanking>,
+            filteredRankings: NeighborsRankingAggregation,
             columnTitles: LinkedHashSet<String>,
             linked: Boolean
-
     ): Iterable<Map<String, Any>> {
         val authorizedPropertyTypes =
                 entitySetIds.map { entitySetId ->
                     entitySetId to authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.READ))
                 }.toMap()
 
-        val authorizedFilteredRankings = filteredRankings.map { filteredRanking ->
+        val authorizedFilteredRankings = filteredRankings.neighbors.map { filteredRanking ->
             val authorizedAssociationPropertyTypes =
                     edm.getPropertyTypesAsMap(edm.getEntityType(filteredRanking.associationTypeId).properties)
             val authorizedEntitySetPropertyTypes =
