@@ -33,12 +33,10 @@ import java.util.UUID;
 public class NeighborEntityDetails {
     private final EntitySet                              associationEntitySet;
     private final SetMultimap<FullQualifiedName, Object> associationDetails;
-    private final Collection<PropertyType>               associationPropertyTypes;
 
     private final Optional<EntitySet>                              neighborEntitySet;
     private final Optional<UUID>                                   neighborId;
     private final Optional<SetMultimap<FullQualifiedName, Object>> neighborDetails;
-    private final Optional<Collection<PropertyType>>               neighborPropertyTypes;
 
     private final boolean entityIsSrc;
 
@@ -47,55 +45,42 @@ public class NeighborEntityDetails {
             @JsonProperty( SerializationConstants.ASSOCIATION_ENTITY_SET ) EntitySet associationEntitySet,
             @JsonProperty( SerializationConstants.ASSOCIATION_DETAILS )
                     SetMultimap<FullQualifiedName, Object> associationDetails,
-            @JsonProperty( SerializationConstants.ASSOCIATION_PROPERTY_TYPES )
-                    Collection<PropertyType> associationPropertyTypes,
             @JsonProperty( SerializationConstants.NEIGHBOR_ENTITY_SET ) Optional<EntitySet> neighborEntitySet,
             @JsonProperty( SerializationConstants.NEIGHBOR_ID ) Optional<UUID> neighborId,
             @JsonProperty( SerializationConstants.NEIGHBOR_DETAILS )
                     Optional<SetMultimap<FullQualifiedName, Object>> neighborDetails,
-            @JsonProperty( SerializationConstants.NEIGHBOR_PROPERTY_TYPES )
-                    Optional<Collection<PropertyType>> neighborPropertyTypes,
             @JsonProperty( SerializationConstants.SRC ) boolean entityIsSrc ) {
         this.associationEntitySet = associationEntitySet;
         this.associationDetails = associationDetails;
-        this.associationPropertyTypes = associationPropertyTypes;
         this.neighborEntitySet = neighborEntitySet;
         this.neighborId = neighborId;
         this.neighborDetails = neighborDetails;
-        this.neighborPropertyTypes = neighborPropertyTypes;
         this.entityIsSrc = entityIsSrc;
     }
 
     public NeighborEntityDetails(
             EntitySet associationEntitySet,
             SetMultimap<FullQualifiedName, Object> associationDetails,
-            Collection<PropertyType> associationPropertyTypes,
             EntitySet neighborEntitySet,
             UUID neighborId,
             SetMultimap<FullQualifiedName, Object> neighborDetails,
-            Collection<PropertyType> neighborPropertyTypes,
             boolean entityIsSrc ) {
         this(
                 associationEntitySet,
                 associationDetails,
-                associationPropertyTypes,
                 Optional.of( neighborEntitySet ),
                 Optional.of( neighborId ),
                 Optional.of( neighborDetails ),
-                Optional.of( neighborPropertyTypes ),
                 entityIsSrc );
     }
 
     public NeighborEntityDetails(
             EntitySet associationEntitySet,
             SetMultimap<FullQualifiedName, Object> associationDetails,
-            Collection<PropertyType> associationPropertyTypes,
             boolean entityIsSrc ) {
         this(
                 associationEntitySet,
                 associationDetails,
-                associationPropertyTypes,
-                Optional.absent(),
                 Optional.absent(),
                 Optional.absent(),
                 Optional.absent(),
@@ -112,11 +97,6 @@ public class NeighborEntityDetails {
         return associationDetails;
     }
 
-    @JsonProperty( SerializationConstants.ASSOCIATION_PROPERTY_TYPES )
-    public Collection<PropertyType> getAssociationPropertyTypes() {
-        return associationPropertyTypes;
-    }
-
     @JsonProperty( SerializationConstants.NEIGHBOR_ENTITY_SET )
     public Optional<EntitySet> getNeighborEntitySet() {
         return neighborEntitySet;
@@ -130,11 +110,6 @@ public class NeighborEntityDetails {
     @JsonProperty( SerializationConstants.NEIGHBOR_DETAILS )
     public Optional<SetMultimap<FullQualifiedName, Object>> getNeighborDetails() {
         return neighborDetails;
-    }
-
-    @JsonProperty( SerializationConstants.NEIGHBOR_PROPERTY_TYPES )
-    public Optional<Collection<PropertyType>> getNeighborPropertyTypes() {
-        return neighborPropertyTypes;
     }
 
     @JsonProperty( SerializationConstants.SRC )
