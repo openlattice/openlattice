@@ -58,6 +58,8 @@ import kotlin.streams.toList
  *
  */
 
+const val SELF_ENTITY_SET_ID = "self_entity_set_id"
+const val SELF_ENTITY_KEY_ID = "self_entity_key_id"
 private val logger = LoggerFactory.getLogger(Graph::class.java)
 
 class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
@@ -250,12 +252,12 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
          */
 
         val idColumns = if (linked) {
-            listOf(ENTITY_SET_ID.name to EdmPrimitiveTypeKind.Guid, ID.name to EdmPrimitiveTypeKind.Guid)
+            listOf(SELF_ENTITY_SET_ID to EdmPrimitiveTypeKind.Guid, SELF_ENTITY_KEY_ID to EdmPrimitiveTypeKind.Guid)
         } else {
             listOf(LINKING_ID.name to EdmPrimitiveTypeKind.Guid)
         }
 
-        val joinColumns = if (linked) LINKING_ID.name else entityKeyIdColumns
+        val joinColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
 
         val associationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
             authorizedFilteredRanking.filteredRanking.associationAggregations.map {
@@ -275,7 +277,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val countColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
             authorizedFilteredRanking.filteredRanking.countWeight.map { "$it*${associationCountColumnName(index)}" }
                     .orElse("")
-        }.filter( String::isNotBlank )
+        }.filter(String::isNotBlank)
 
         val aggregationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
             buildAggregationColumnMap(
@@ -293,7 +295,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }.flatten().plus(idColumns).toMap()
 
 
-        val scoreColumn = (associationColumns + entityColumns + countColumns).joinToString("+", postfix = " as score")
+        val scoreColumn = (associationColumns + entityColumns + countColumns)
+                .joinToString("+", prefix = "(", postfix = ") as score")
         /*
          * Build the SQL for the association joins.
          */
@@ -416,16 +419,20 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         )
 
         val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.dst) {
-            "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
+            "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
+                    "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
-            "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
+            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, +"
+            "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         }
 
         val edgeClause = buildEdgeFilteringClause(authorizedFilteredRanking)
         val joinColumns = if (linked) LINKING_ID.name else entityKeyIdColumns
+        val groupingColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
+        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID FROM ${IDS.name}, ${LINKING_ID.name}"
         val spineSql = if (linked) {
             "SELECT edges.*,${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
-                    "LEFT JOIN ${IDS.name} USING ($entityKeyIdColumns)"
+                    "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
         } else {
             "SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause"
         }
@@ -435,7 +442,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                         .mapValues {
                             val fqn = quote(associationPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
                             val alias = aggregationAssociationColumnName(index, it.key)
-                            //TODO: Handle counting all rows
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
         val countAlias = associationCountColumnName(index)
@@ -444,8 +450,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 .joinToString(",")
         return "SELECT $allColumns " +
                 "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
-                "GROUP BY ($joinColumns)"
+                "GROUP BY ($groupingColumns)"
     }
+
 
     private fun buildEntityTable(
             index: Int,
@@ -470,16 +477,20 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         )
 
         val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.dst) {
-            "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
+            "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
+                    "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
-            "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
+            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, +"
+            "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         }
 
         val edgeClause = buildEdgeFilteringClause(authorizedFilteredRanking)
         val joinColumns = if (linked) LINKING_ID.name else entityKeyIdColumns
+        val groupingColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
+        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID FROM ${IDS.name}, ${LINKING_ID.name}"
         val spineSql = if (linked) {
             "SELECT edges.*,${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
-                    "LEFT JOIN ${IDS.name} USING ($entityKeyIdColumns)"
+                    "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
         } else {
             "SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause"
         }
@@ -497,7 +508,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 .joinToString(",")
         return "SELECT $allColumns " +
                 "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
-                "GROUP BY ($joinColumns)"
+                "GROUP BY ($groupingColumns)"
     }
 }
 
