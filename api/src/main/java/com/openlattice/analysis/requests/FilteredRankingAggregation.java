@@ -18,6 +18,7 @@
 
 package com.openlattice.analysis.requests;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableMap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -30,17 +31,18 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public class FilteredRanking {
+public class FilteredRankingAggregation {
     private final UUID                                  associationTypeId;
     private final UUID                                  neighborTypeId;
     private final Map<UUID, Set<RangeFilter<?>>>        associationFilters;
     private final Map<UUID, Set<RangeFilter<?>>>        neighborFilters;
     private final Map<UUID, WeightedRankingAggregation> associationAggregations;
-    private final Map<UUID, WeightedRankingAggregation> entitySetAggregations;
-    private final boolean                               utilizerIsSrc;
+    private final Map<UUID, WeightedRankingAggregation> neighborTypeAggregations;
+    private final boolean                               isDst;
+    private final Optional<Double>                      countWeight;
 
     @JsonCreator
-    public FilteredRanking(
+    public FilteredRankingAggregation(
             @JsonProperty( SerializationConstants.ASSOCIATION_TYPE_ID ) UUID associationTypeId,
             @JsonProperty( SerializationConstants.NEIGHBOR_TYPE_ID ) UUID neighborTypeId,
             @JsonProperty( SerializationConstants.ASSOCIATION_FILTERS )
@@ -50,17 +52,19 @@ public class FilteredRanking {
             @JsonProperty( SerializationConstants.ASSOCIATION_AGGREGATIONS )
                     Map<UUID, WeightedRankingAggregation> associationAggregations,
             @JsonProperty( SerializationConstants.ENTITY_SET_AGGREGATIONS )
-                    Map<UUID, WeightedRankingAggregation> entitySetAggregations,
-            @JsonProperty( SerializationConstants.UTILIZER_IS_SRC ) boolean utilizerIsSrc ) {
+                    Map<UUID, WeightedRankingAggregation> neighborTypeAggregations,
+            @JsonProperty( SerializationConstants.IS_DST ) boolean isDst,
+            @JsonProperty( SerializationConstants.WEIGHT ) Optional<Double> countWeight ) {
         this.associationAggregations = associationAggregations;
-        this.entitySetAggregations = entitySetAggregations;
+        this.neighborTypeAggregations = neighborTypeAggregations;
+        this.countWeight = countWeight;
         Preconditions.checkNotNull( associationTypeId, "Association type id cannot be null." );
         Preconditions.checkNotNull( neighborTypeId, "Neighbor type ids cannot be null." );
         this.associationTypeId = associationTypeId;
         this.neighborTypeId = neighborTypeId;
         this.associationFilters = associationFilters.orElse( ImmutableMap.of() );
         this.neighborFilters = neighborFilters.orElse( ImmutableMap.of() );
-        this.utilizerIsSrc = utilizerIsSrc;
+        this.isDst = isDst;
     }
 
     @JsonProperty( SerializationConstants.ASSOCIATION_TYPE_ID )
@@ -73,9 +77,9 @@ public class FilteredRanking {
         return neighborTypeId;
     }
 
-    @JsonProperty( SerializationConstants.UTILIZER_IS_SRC )
-    public boolean getUtilizerIsSrc() {
-        return utilizerIsSrc;
+    @JsonProperty( SerializationConstants.IS_DST )
+    public boolean getDst() {
+        return isDst;
     }
 
     @JsonProperty( SerializationConstants.ASSOCIATION_FILTERS )
@@ -94,21 +98,32 @@ public class FilteredRanking {
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_AGGREGATIONS )
-    public Map<UUID, WeightedRankingAggregation> getEntitySetAggregations() {
-        return entitySetAggregations;
+    public Map<UUID, WeightedRankingAggregation> getNeighborTypeAggregations() {
+        return neighborTypeAggregations;
+    }
+
+    public Optional<Double> getCountWeight() {
+        return countWeight;
+    }
+
+    @JsonProperty( SerializationConstants.WEIGHT )
+
+    @JsonIgnore
+    public boolean isCount() {
+        return countWeight.isPresent();
     }
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
-        if ( !( o instanceof FilteredRanking ) ) { return false; }
-        FilteredRanking that = (FilteredRanking) o;
-        return utilizerIsSrc == that.utilizerIsSrc &&
+        if ( !( o instanceof FilteredRankingAggregation ) ) { return false; }
+        FilteredRankingAggregation that = (FilteredRankingAggregation) o;
+        return isDst == that.isDst &&
                 Objects.equals( associationTypeId, that.associationTypeId ) &&
                 Objects.equals( neighborTypeId, that.neighborTypeId ) &&
                 Objects.equals( associationFilters, that.associationFilters ) &&
                 Objects.equals( neighborFilters, that.neighborFilters ) &&
                 Objects.equals( associationAggregations, that.associationAggregations ) &&
-                Objects.equals( entitySetAggregations, that.entitySetAggregations );
+                Objects.equals( neighborTypeAggregations, that.neighborTypeAggregations );
     }
 
     @Override public int hashCode() {
@@ -117,19 +132,19 @@ public class FilteredRanking {
                 associationFilters,
                 neighborFilters,
                 associationAggregations,
-                entitySetAggregations,
-                utilizerIsSrc );
+                neighborTypeAggregations,
+                isDst );
     }
 
     @Override public String toString() {
-        return "FilteredRanking{" +
+        return "FilteredRankingAggregation{" +
                 "associationTypeId=" + associationTypeId +
                 ", neighborTypeId=" + neighborTypeId +
                 ", associationFilters=" + associationFilters +
                 ", neighborFilters=" + neighborFilters +
                 ", associationAggregations=" + associationAggregations +
-                ", entitySetAggregations=" + entitySetAggregations +
-                ", utilizerIsSrc=" + utilizerIsSrc +
+                ", neighborTypeAggregations=" + neighborTypeAggregations +
+                ", isDst=" + isDst +
                 '}';
     }
 }

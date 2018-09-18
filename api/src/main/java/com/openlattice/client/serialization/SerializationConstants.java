@@ -29,6 +29,7 @@ public final class SerializationConstants {
     public static final String ACL_OBJECT_PATH                  = "aclKey";                  // Correspond to single hierarchy of securable objects.
     public static final String ACL_OBJECT_ROOT                  = "aclRoot";
     public static final String ACTION                           = "action";
+    public static final String AGGREGATION_TYPE                 = "aggregationType";
     public static final String ANALYZER                         = "analyzer";
     public static final String APPS                             = "apps";
     public static final String APP_ID                           = "appId";
@@ -110,6 +111,7 @@ public final class SerializationConstants {
     public static final String IDS                              = "ids";
     public static final String ID_FIELD                         = "id";
     public static final String INCLUDE_FIELD                    = "include";
+    public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";
     public static final String KEY_FIELD                        = "key";
@@ -130,13 +132,14 @@ public final class SerializationConstants {
     public static final String NAMESPACE                        = "namespace";
     public static final String NAMESPACE_FIELD                  = "namespace";
     public static final String NAME_FIELD                       = "name";
+    public static final String NEIGHBOR_AGGREGATIONS            = "neighborAggregations";
     public static final String NEIGHBOR_DETAILS                 = "neighborDetails";
     public static final String NEIGHBOR_ENTITY_SET              = "neighborEntitySet";
     public static final String NEIGHBOR_ENTITY_TYPE             = "neighborEntityType";
     public static final String NEIGHBOR_FILTERS                 = "neighborFilters";
     public static final String NEIGHBOR_ID                      = "neighborId";
     public static final String NEIGHBOR_PROPERTY_TYPES          = "neighborPropertyTypes";
-    public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeIds";
+    public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeId";
     public static final String NUM_HITS                         = "numHits";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
@@ -167,6 +170,7 @@ public final class SerializationConstants {
     public static final String SCHEMAS                          = "schemas";
     public static final String SEARCH_FIELDS                    = "searchFields";
     public static final String SEARCH_TERM                      = "searchTerm";
+    public static final String SELF_AGGREGATIONS                = "selfAggregations";
     public static final String SRC                              = "src";
     public static final String START                            = "start";
     public static final String STATE                            = "state";
@@ -182,11 +186,11 @@ public final class SerializationConstants {
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
-    public static final String UTILIZER_IS_SRC                  = "utilizerIsSrc";
     public static final String VALUE_FIELD                      = "value";
     public static final String VALUE_MAPPER                     = "valueMapper";
     public static final String VERSION                          = "version";
     public static final String VERSIONS                         = "versions";
+    public static final String WEIGHT                           = "weight";
 
     private SerializationConstants() {
     }

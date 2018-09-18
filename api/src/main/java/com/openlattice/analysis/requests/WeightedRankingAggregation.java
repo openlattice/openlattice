@@ -21,25 +21,31 @@
 
 package com.openlattice.analysis.requests;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Model for specifying weight ranking aggregation.
  */
 public class WeightedRankingAggregation {
     private final AggregationType type;
-    private final double weight;
+    private final double          weight;
 
-    public WeightedRankingAggregation( AggregationType type, double weight ) {
+    public WeightedRankingAggregation(
+            @JsonProperty( SerializationConstants.AGGREGATION_TYPE ) AggregationType type,
+            @JsonProperty( SerializationConstants.WEIGHT ) double weight ) {
         this.type = type;
         this.weight = weight;
     }
 
+    @JsonProperty( SerializationConstants.AGGREGATION_TYPE )
     public AggregationType getType() {
         return type;
     }
 
+    @JsonProperty( SerializationConstants.WEIGHT )
     public double getWeight() {
         return weight;
     }
