@@ -23,7 +23,6 @@ package com.openlattice.datastore.analysis.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkArgument
-import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableSetMultimap
 import com.openlattice.analysis.AnalysisApi
@@ -39,7 +38,6 @@ import com.openlattice.data.requests.FileType
 import com.openlattice.datastore.constants.CustomMediaType
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables.COUNT_FQN
 import com.openlattice.postgres.DataTables.ID_FQN
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -90,10 +88,9 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             @RequestParam(value = AnalysisApi.FILE_TYPE, required = false)
             fileType: FileType?,
             response: HttpServletResponse
-    ): EntitySetData<FullQualifiedName> {
+    ): Iterable<Map<String, Any>> {
         if (filteredRankings.isEmpty()) {
-
-            return EntitySetData(linkedSetOf(COUNT_FQN.fullQualifiedNameAsString), listOf(mm))
+            return listOf()
         }
         ensureReadAccess(AclKey(entitySetId))
         val downloadType = fileType ?: FileType.json
@@ -107,7 +104,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             numResults: Int,
             filteredRankings: List<FilteredRanking>,
             fileType: FileType?
-    ): EntitySetData<FullQualifiedName> {
+    ): Iterable<Map<String, Any>> {
         val entitySet = edm.getEntitySet(entitySetId)
         val columnTitles = getEntitySetColumns(entitySetId)
 
@@ -159,7 +156,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             columnTitles: LinkedHashSet<String>,
             linked: Boolean
 
-    ): EntitySetData<FullQualifiedName> {
+    ): Iterable<Map<String, Any>> {
         val authorizedPropertyTypes =
                 entitySetIds.map { entitySetId ->
                     entitySetId to authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.READ))
@@ -190,15 +187,13 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             )
         }
 
-        val utilizers = dgm.getFilteredRankings(
+        return dgm.getFilteredRankings(
                 entitySetIds,
                 numResults,
                 authorizedFilteredRankings,
                 authorizedPropertyTypes,
                 linked
         )
-
-        return EntitySetData(columnTitles, utilizers)
     }
 
     @RequestMapping(
