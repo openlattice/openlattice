@@ -315,7 +315,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             val tableSql = buildEntityTable(index, authorizedFilteredRanking, linked)
             "FULL OUTER JOIN ($tableSql) as entity_table$index USING($joinColumns) "
         }.joinToString("\n")
-        val sql = "$associationSql \n$entitiesSql \nORDER BY score \nLIMIT $limit"
+        val sql = "$associationSql \n$entitiesSql \nORDER BY score DESC \nLIMIT $limit"
 
         return PostgresIterable(
                 Supplier {
