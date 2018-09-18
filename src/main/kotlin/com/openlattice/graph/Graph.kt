@@ -619,7 +619,7 @@ private fun buildEdgeFilteringClause(authorizedFilteredRanking: AuthorizedFilter
         SRC_ENTITY_SET_ID.name
     }
     val associationsClause =
-            "${EDGE_ENTITY_SET_ID.name} IN ${authorizedAssociationEntitySets.joinToString(",") { "'$it'" }}"
+            "${EDGE_ENTITY_SET_ID.name} IN (${authorizedAssociationEntitySets.joinToString(",") { "'$it'" }})"
     val entitySetsClause = "$entitySetColumn IN (${authorizedEntitySets.joinToString(",") { "'$it'" }})"
 
     return "($associationsClause AND $entitySetsClause)"
