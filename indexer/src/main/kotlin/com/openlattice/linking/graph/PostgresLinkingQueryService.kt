@@ -268,7 +268,7 @@ private val CLUSTERS_CONTAINING_SQL = "SELECT DISTINCT ${LINKING_ID.name} FROM $
 private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
         "SET ${LINKING_ID.name} = ?, ${ENTITY_SET_ID.name} =?, ${ID_VALUE.name}=?, ${LAST_LINK.name}=now()"
 
-private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name}" +
+private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
         "FROM ${IDS.name} " +
         "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name}"
 
