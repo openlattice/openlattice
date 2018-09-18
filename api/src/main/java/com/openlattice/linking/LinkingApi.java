@@ -52,14 +52,8 @@ public interface LinkingApi {
     String TYPE             = "type";
 
     /**
-     * Performs linking operation on entity sets.
-     *
-     * @param linkingRequest A request including a set of property type ids to populate in the linking result, and a
-     * linking entity set definition consisting of an entity set and associated properties to link on. Each
-     * map in linking properties must be the same length, with entity set ids as a keys and property type ids
-     * as values. If no maps are provided, an empty linking entity set is created that can be populated by
-     * calling {@link LinkingApi#linkEntities(UUID, UUID, Set)}.
-     * @return The id of the new entity set constructed from linking the desired entity sets.
+     * Create a new linking entity set.
+     * @param entitySets The entity sets to include in the linking entity set.
      */
     @POST( BASE + "/" + SET )
     UUID createLinkingEntitySet( @Body Set<UUID> entitySets );
