@@ -433,7 +433,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val aggregationColumns =
                 authorizedFilteredRanking.filteredRanking.associationAggregations
                         .mapValues {
-                            val fqn = associationPropertyTypes[it.key]!!.type.fullQualifiedNameAsString
+                            val fqn = quote(associationPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
                             val alias = aggregationAssociationColumnName(index, it.key)
                             //TODO: Handle counting all rows
                             "${it.value.type.name}($fqn[1]) as $alias"
@@ -487,7 +487,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val aggregationColumns =
                 authorizedFilteredRanking.filteredRanking.neighborTypeAggregations
                         .mapValues {
-                            val fqn = entitySetPropertyTypes[it.key]!!.type.fullQualifiedNameAsString
+                            val fqn = quote(entitySetPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
                             val alias = aggregationEntityColumnName(index, it.key)
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
