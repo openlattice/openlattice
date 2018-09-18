@@ -262,19 +262,20 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 val column = aggregationAssociationColumnName(index, it.key)
                 "${it.value.weight}*COALESCE($column,0)"
             }
-        }.flatten().joinToString ("+")
+        }.flatten()
 
         val entityColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
             authorizedFilteredRanking.filteredRanking.neighborTypeAggregations.map {
                 val column = aggregationEntityColumnName(index, it.key)
                 "${it.value.weight}*COALESCE($column,0)"
             }
-        }.flatten().joinToString ("+")
+        }.flatten()
 
 
         val countColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
             authorizedFilteredRanking.filteredRanking.countWeight.map { "$it*${associationCountColumnName(index)}" }
-        }.map{ it.orElse("") }.joinToString("+")
+                    .orElse("")
+        }.filter( String::isNotBlank )
 
         val aggregationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
             buildAggregationColumnMap(
@@ -292,8 +293,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }.flatten().plus(idColumns).toMap()
 
 
-
-        val scoreColumn = "($associationColumns + $entityColumns + $countColumns) as score"
+        val scoreColumn = (associationColumns + entityColumns + countColumns).joinToString("+", postfix = " as score")
         /*
          * Build the SQL for the association joins.
          */
@@ -439,8 +439,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
         val countAlias = associationCountColumnName(index)
-        val allColumns = listOf(joinColumns,aggregationColumns,"count(*) as $countAlias")
-                .filter (String::isNotBlank)
+        val allColumns = listOf(joinColumns, aggregationColumns, "count(*) as $countAlias")
+                .filter(String::isNotBlank)
                 .joinToString(",")
         return "SELECT $allColumns " +
                 "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
@@ -492,8 +492,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
         val countAlias = entityCountColumnName(index)
-        val allColumns = listOf(joinColumns,aggregationColumns,"count(*) as $countAlias")
-                .filter (String::isNotBlank)
+        val allColumns = listOf(joinColumns, aggregationColumns, "count(*) as $countAlias")
+                .filter(String::isNotBlank)
                 .joinToString(",")
         return "SELECT $allColumns " +
                 "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
@@ -663,18 +663,18 @@ internal fun buildAggregationColumnMap(
             }
 }
 
-internal fun aggregationAssociationColumnName(index: Int, propertyTypeId: UUID) :String {
+internal fun aggregationAssociationColumnName(index: Int, propertyTypeId: UUID): String {
     return quote("${ASSOC}_${index}_$propertyTypeId")
 }
 
-internal fun aggregationEntityColumnName(index: Int, propertyTypeId: UUID) :String {
+internal fun aggregationEntityColumnName(index: Int, propertyTypeId: UUID): String {
     return quote("${ENTITY}_${index}_$propertyTypeId")
 }
 
-internal fun entityCountColumnName( index:Int): String {
+internal fun entityCountColumnName(index: Int): String {
     return "${ENTITY}_${index}_count"
 }
 
-internal fun associationCountColumnName( index:Int): String {
+internal fun associationCountColumnName(index: Int): String {
     return "${ASSOC}_${index}_count"
 }
