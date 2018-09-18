@@ -23,6 +23,7 @@ package com.openlattice.datastore.permissions.controllers;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.EventBus;
 import com.openlattice.authorization.*;
@@ -33,6 +34,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import org.slf4j.Logger;
@@ -75,8 +77,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                             ace -> authorizations.addPermission(
                                     aclKeys,
                                     ace.getPrincipal(),
-                                    ace.getPermissions(),
-                                    ace.getExpirationDate() ) );
+                                    ace.getPermissions() ) );
                     break;
                 case REMOVE:
                     acl.getAces().forEach(
@@ -117,62 +118,6 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         }
     }
 
-    /*
-    @Override
-    @RequestMapping(
-            path = { EXPLAIN },
-            method = RequestMethod.POST,
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public AclExplanation getAclExplanation( @RequestBody AclKey aclKey ) {
-        //needs to return a map of principles to the path that grants permission with expiration
-        if ( isAuthorized( Permission.OWNER ).test( aclKey ) ) {
-            SetMultimap<Principal, Ace> resultMap = HashMultimap
-                    .create(); //will hold all aces that contain the key principal
-
-            Iterable<Ace> aces = authorizations.getAllSecurableObjectPermissions( aclKey )
-                    .getAces(); //gets aces from returned acl
-            Map<PrincipalType, List<Ace>> acesByType = StreamUtil.stream( aces )
-                    .collect( Collectors.groupingBy( ace -> ace.getPrincipal().getType() ) );
-            //for principals that aren't users, sPM.getallPrincipalsbyPrincipal
-            Map<Principal, Set<Principal>>
-            for ( Ace ace : aces ) {
-                //build all paths for how a person has access
-                Principal principal = ace.getPrincipal();
-                resultMap.put( principal, ace );
-                if ( principal.getType() == PrincipalType.ROLE ) {
-                    // add inherited permissions of users from the role
-                    Iterable<Principal> users = securePrincipalsManager
-                            .getAllUsersWithPrincipal( securePrincipalsManager.lookup( principal ) );
-
-                    for ( Principal user : users ) { //can add a new ace to a principal that is already in the multimap
-                        resultMap.put( user, ace );
-                    }
-                }
-            }
-
-            // compute total permission of each user
-            Iterable<AceExplanation> explanation = Iterables.transform( resultMap.asMap().entrySet(),
-                    this::computeAceExplanation ); // passes entry in as key to collection of all aces
-            return new AclExplanation( aclKey, explanation::iterator );
-        } else {
-            throw new ForbiddenException( "Only owner of a securable object can access other users' access rights." );
-        }
-    }
-
-
-    // Compute the total permission of a user has from his aces, thus computing the Ace explanation
-
-    private AceExplanation computeAceExplanation( Entry<Principal, Collection<Ace>> entry ) {
-        Set<Permission> totalPermissions = entry.getValue().stream().flatMap( ace -> ace.getPermissions().stream() )
-                .collect( Collectors.toCollection( () -> EnumSet.noneOf( Permission.class ) ) );
-        //OffsetDateTime expirationDate = entry.getValue().stream().flatMap(ace -> ace.getExpirationDate()).collect(  );
-        Set<Ace> aces = entry.getValue().stream().collect( Collectors.toSet() );
-        Ace totalAce = new Ace( entry.getKey(), totalPermissions );
-        return new AceExplanation( totalAce, aces ); //list of securablePrincipals with expiration date
-    }
-    */
-
     @Override
     @RequestMapping(
             path = { EXPLAIN },
@@ -182,36 +127,54 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     public Map<Principal, List<List<Principal>>> getAclExplanation( @RequestBody AclKey aclKey ) {
         //needs to return a map of principles to the path that grants permission with expiration
         ensureOwnerAccess( aclKey );
-        SetMultimap<Principal, Ace> resultMap = HashMultimap
-                .create(); //will hold all aces that contain the key principal
 
+        //maps aces to principal type
         Iterable<Ace> aces = authorizations.getAllSecurableObjectPermissions( aclKey )
                 .getAces(); //gets aces from returned acl
         Map<PrincipalType, List<Ace>> acesByType = StreamUtil.stream( aces )
                 .collect( Collectors.groupingBy( ace -> ace.getPrincipal().getType() ) );
-        //for principals that aren't users, sPM.getallPrincipalsbyPrincipal gets all of the parents of those principals
-        Map<Principal, List<List<Principal>>> principalToPrincipalPaths = new HashMap<>();
-        //for all principals with direct access
-        for ( Ace ace : aces ) {
-            //build all paths for how a person has access
-            Principal principal = ace.getPrincipal();
-            //OffsetDateTime expirationDate = ace.getExpirationDate();
-            List<List<Principal>> paths = new ArrayList<>();
 
-            principalToPrincipalPaths.put( principal, paths );
+        //maps non-user principals to a List<List<Principal>> containing one list of themselves
+        Stream<Ace> aceStream = acesByType.entrySet().stream()
+                .filter( e -> e.getKey() != PrincipalType.USER )
+                .flatMap( e -> e.getValue().stream() );
+        Map<Principal, List<List<Principal>>> principalToPrincipalPaths = aceStream.collect( Collectors
+                .toMap( ace -> ace.getPrincipal(), ace -> Lists.newArrayList( Lists.newArrayList() ) ) );
+        principalToPrincipalPaths.forEach( ( p, pl ) -> {
+            List<Principal> path = Arrays.asList( p );
+            pl.add( path );
+        } );
 
-            //get parent layer
-            Collection<SecurablePrincipal> parentLayer = securePrincipalsManager
-                    .getParentPrincipalsOfPrincipal( securePrincipalsManager.lookup( principal ) );
-            //if parent layer isn't empty, start recursively getting paths
-            if ( !parentLayer.isEmpty() ) {
+        //maps all principals to principals path
+        Map<Principal, List<List<Principal>>> currentMap = new HashMap<>( principalToPrincipalPaths ); //creates copy of leaf principals map
+        Set<Principal> currentLayer = currentMap.keySet();  //sets keys of current map (leaves of tree) as current layer
+        while ( !currentLayer.isEmpty() ) { //while we have nodes to get paths for
+            Map<Principal, List<List<Principal>>> parentMap = new HashMap<>(); //keys in this map will be all parents of nodes in current layer
+            for ( Entry<Principal, List<List<Principal>>> e : currentMap.entrySet() ) {
+                //get parent layer of this node in current layer
+                Collection<SecurablePrincipal> parentLayer = securePrincipalsManager
+                        .getParentPrincipalsOfPrincipal( securePrincipalsManager.lookup( e.getKey() ) );
                 for ( SecurablePrincipal parent : parentLayer ) {
-                    paths = securePrincipalsManager
-                            .recursivelyGetPrincipalsPath( parent.getPrincipal(), principalToPrincipalPaths );
-                    paths.forEach( path -> path.add(0, principal) );
-                    principalToPrincipalPaths.put(principal, paths);
+                    Principal parentAsPrincipal = parent.getPrincipal();
+                    //add parent principal to each list in child's path
+                    List<List<Principal>> paths = e.getValue().stream().map( pl -> {
+                        pl.add( parentAsPrincipal );
+                        return pl;
+                    } ).collect( Collectors.toList() );
+                    parentMap.merge( parentAsPrincipal, paths, ( p1, p2 ) -> {
+                        p1.addAll( p2 );
+                        return p1;
+                    } );
+                    //add paths to principalToPrincipalPaths map
+                    principalToPrincipalPaths.merge( parentAsPrincipal, paths, ( p1, p2 ) -> {
+                        p1.addAll( p2 );
+                        return p1;
+                    } );
                 }
             }
+            //parent layer becomes current layer
+            currentLayer = parentMap.keySet();
+            currentMap = parentMap;
         }
         return principalToPrincipalPaths;
 
