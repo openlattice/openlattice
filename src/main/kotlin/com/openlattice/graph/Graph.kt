@@ -442,7 +442,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                         .mapValues {
                             val fqn = quote(associationPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
                             val alias = aggregationAssociationColumnName(index, it.key)
-                            "${it.value.type.name}($fqn[1]) as $alias"
+                            "${it.value.type.name}(COALESCE($fqn[1],0)) as $alias"
                         }.values.joinToString(",")
         val countAlias = associationCountColumnName(index)
         val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
@@ -500,7 +500,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                         .mapValues {
                             val fqn = quote(entitySetPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
                             val alias = aggregationEntityColumnName(index, it.key)
-                            "${it.value.type.name}($fqn[1]) as $alias"
+                            "${it.value.type.name}(COALESCE($fqn[1],0)) as $alias"
                         }.values.joinToString(",")
         val countAlias = entityCountColumnName(index)
         val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
