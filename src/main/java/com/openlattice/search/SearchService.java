@@ -491,7 +491,6 @@ public class SearchService {
             }
             NeighborEntityDetails neighbor = getNeighborEntityDetails( edge,
                     authorizedEdgeESIdsToVertexESIds,
-                    entitySetsIdsToAuthorizedProps,
                     entitySetsById,
                     vertexIsSrc,
                     entities );
@@ -522,7 +521,6 @@ public class SearchService {
     private NeighborEntityDetails getNeighborEntityDetails(
             Edge edge,
             Map<UUID, Set<UUID>> authorizedEdgeESIdsToVertexESIds,
-            Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps,
             Map<UUID, EntitySet> entitySetsById,
             boolean vertexIsSrc,
             Map<UUID, SetMultimap<FullQualifiedName, Object>> entities ) {
@@ -546,11 +544,9 @@ public class SearchService {
                         return new NeighborEntityDetails(
                                 entitySetsById.get( edgeEntitySetId ),
                                 edgeDetails,
-                                entitySetsIdsToAuthorizedProps.get( edgeEntitySetId ).values(),
                                 entitySetsById.get( neighborEntitySetId ),
                                 neighborEntityKeyId,
                                 neighborDetails,
-                                entitySetsIdsToAuthorizedProps.get( neighborEntitySetId ).values(),
                                 vertexIsSrc );
                     }
 
@@ -558,7 +554,6 @@ public class SearchService {
                     return new NeighborEntityDetails(
                             entitySetsById.get( edgeEntitySetId ),
                             edgeDetails,
-                            entitySetsIdsToAuthorizedProps.get( edgeEntitySetId ).values(),
                             vertexIsSrc );
                 }
             }
