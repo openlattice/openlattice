@@ -439,12 +439,15 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
         val countAlias = associationCountColumnName(index)
-        return "SELECT $joinColumns, $aggregationColumns, count(*) as $countAlias " +
+        val allColumns = listOf(joinColumns,aggregationColumns,"count(*) as $countAlias")
+                .filter (String::isNotBlank)
+                .joinToString(",")
+        return "SELECT $allColumns " +
                 "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
                 "GROUP BY ($joinColumns)"
     }
 
-    internal fun buildEntityTable(
+    private fun buildEntityTable(
             index: Int,
             authorizedFilteredRanking: AuthorizedFilteredRanking,
             linked: Boolean
@@ -489,7 +492,10 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             "${it.value.type.name}($fqn[1]) as $alias"
                         }.values.joinToString(",")
         val countAlias = entityCountColumnName(index)
-        return "SELECT $joinColumns, $aggregationColumns, count(*) as $countAlias " +
+        val allColumns = listOf(joinColumns,aggregationColumns,"count(*) as $countAlias")
+                .filter (String::isNotBlank)
+                .joinToString(",")
+        return "SELECT $allColumns " +
                 "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
                 "GROUP BY ($joinColumns)"
     }
