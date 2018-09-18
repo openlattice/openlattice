@@ -227,7 +227,6 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     public Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey ) {
         Set<AclKey> parentLayer = principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
         return principals.getAll( parentLayer ).values();
-        //return principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
     }
 
     @Override
