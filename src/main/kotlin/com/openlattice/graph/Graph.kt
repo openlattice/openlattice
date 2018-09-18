@@ -252,9 +252,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
          */
 
         val idColumns = if (linked) {
-            listOf(SELF_ENTITY_SET_ID to EdmPrimitiveTypeKind.Guid, SELF_ENTITY_KEY_ID to EdmPrimitiveTypeKind.Guid)
-        } else {
             listOf(LINKING_ID.name to EdmPrimitiveTypeKind.Guid)
+        } else {
+            listOf(SELF_ENTITY_SET_ID to EdmPrimitiveTypeKind.Guid, SELF_ENTITY_KEY_ID to EdmPrimitiveTypeKind.Guid)
         }
 
         val joinColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
