@@ -35,8 +35,7 @@ public class NeighborsRankingAggregation {
 
     public NeighborsRankingAggregation(
             @JsonProperty( SerializationConstants.NEIGHBOR_AGGREGATIONS ) List<FilteredRankingAggregation> neighbors,
-            @JsonProperty( SerializationConstants.SELF_AGGREGATIONS ) Set<WeightedRankingAggregation> self,
-            @JsonProperty( SerializationConstants.COUNT ) boolean count ) {
+            @JsonProperty( SerializationConstants.SELF_AGGREGATIONS ) Set<WeightedRankingAggregation> self ) {
         this.neighbors = neighbors;
         this.self = self;
     }
