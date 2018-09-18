@@ -462,7 +462,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 esEntityKeyIds,
                 entitySetPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
                 authorizedFilteredRanking.filteredRanking.neighborTypeAggregations.keys,
-                authorizedFilteredRanking.associationSets,
+                authorizedFilteredRanking.entitySets,
                 authorizedFilteredRanking.filteredRanking.neighborFilters,
                 setOf(),
                 linked,
