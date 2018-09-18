@@ -302,7 +302,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val tableSql = buildAssociationTable(index, authorizedFilteredRanking, linked)
                     //We are guaranteed at least one association for a valid top utilizers request
                     if (index == 0) {
-                        "SELECT * FROM ($tableSql) as assoc_table$index "
+                        "SELECT *,$scoreColumn FROM ($tableSql) as assoc_table$index "
                     } else {
                         "FULL OUTER JOIN ($tableSql) as assoc_table$index USING($joinColumns) "
                     }
