@@ -156,7 +156,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public Set<UUID> getEntitySetWithIndices() {
         return Stream.of( client.admin().indices().prepareGetIndex().setFeatures().get().getIndices() )
                 .filter( s -> s.startsWith( SECURABLE_OBJECT_INDEX_PREFIX ) )
-                .map( s -> UUID.fromString( s.substring( SECURABLE_OBJECT_INDEX_PREFIX.length() + 1) ) )
+                .map( s -> UUID.fromString( s.substring( SECURABLE_OBJECT_INDEX_PREFIX.length() ) ) )
                 .collect( Collectors.toSet() );
     }
 
