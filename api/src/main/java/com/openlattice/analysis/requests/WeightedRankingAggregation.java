@@ -21,6 +21,7 @@
 
 package com.openlattice.analysis.requests;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Objects;
@@ -33,6 +34,7 @@ public class WeightedRankingAggregation {
     private final AggregationType type;
     private final double          weight;
 
+    @JsonCreator
     public WeightedRankingAggregation(
             @JsonProperty( SerializationConstants.AGGREGATION_TYPE ) AggregationType type,
             @JsonProperty( SerializationConstants.WEIGHT ) double weight ) {
