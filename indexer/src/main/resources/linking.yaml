@@ -1,0 +1,3 @@
+entity-types:
+  - "general.person"
+block-size: 1000

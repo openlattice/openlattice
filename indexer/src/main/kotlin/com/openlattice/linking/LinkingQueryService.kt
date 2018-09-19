@@ -38,7 +38,7 @@ interface LinkingQueryService {
      * @param scores The scores pairs of elements within a cluster.
      * @return The total number of stored elements.
      */
-    fun insertMatchScores(clusterId:UUID, scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
+    fun insertMatchScores(clusterId: UUID, scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
     fun insertMatchScore(clusterId: UUID, blockKey: EntityDataKey, blockElement: EntityDataKey, score: Double): Int
 
@@ -51,8 +51,8 @@ interface LinkingQueryService {
     fun getClustersContaining(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
     fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
 
-    fun getEntitySetsNeedingLinking(): PostgresIterable<UUID>
-    fun getEntitiesNeedingLinking( entitySetId: UUID ): PostgresIterable<UUID>
+    fun getEntitySetsNeedingLinking(entityTypesIds: Set<UUID>): PostgresIterable<UUID>
+    fun getEntitiesNeedingLinking(entitySetId: UUID): PostgresIterable<UUID>
 }
 
 

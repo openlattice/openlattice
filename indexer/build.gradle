@@ -36,8 +36,8 @@ plugins {
     id "idea"
     id "jacoco"
     id 'com.github.spotbugs' version '1.6.2'
-    id 'org.jetbrains.kotlin.jvm' version '1.2.51'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.51'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.70'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.70'
 }
 
 description = "Indexing Server"
@@ -83,7 +83,7 @@ if (GC == 'null' || GC == null || GC == "") {
 }
 
 
-mainClassName = "com.openlattice.Conductor"
+mainClassName = "com.openlattice.indexing.Indexer"
 applicationDefaultJvmArgs = [CONDUCTOR_XMS, CONDUCTOR_XMX, "-server", GC, PARALLEL]
 sourceCompatibility = JavaVersion.VERSION_1_10
 targetCompatibility = JavaVersion.VERSION_1_10
@@ -129,12 +129,14 @@ dependencies {
         compile project(":conductor-client")
         compile project(":scrunchie")
         compile project(":courier")
+        testCompile(project(path: ":rhizome-client", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
         compile "com.openlattice:rhizome:${rhizome_version}"
         compile "com.openlattice:conductor-client:${conductor_client_version}"
         compile "com.openlattice:scrunchie:${scrunchie_version}"
         compile "com.openlattice:courier:${courier_version}"
+        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
     /*
      * TESTING
