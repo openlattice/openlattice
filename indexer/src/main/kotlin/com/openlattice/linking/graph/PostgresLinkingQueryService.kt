@@ -85,13 +85,9 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         return PostgresIterable<Pair<UUID, Pair<EntityDataKey, Pair<EntityDataKey, Double>>>>(
                 Supplier {
                     val connection = hds.connection
-                    val keys = PostgresArrays.createUuidArrayOfArrays(
-                            connection,
-                            dataKeys.stream().map { arrayOf(it.entitySetId, it.entityKeyId) })
-                    val ps = connection.prepareStatement(CLUSTERS_CONTAINING_SQL)
-                    ps.setObject(1, keys)
-                    ps.setObject(2, keys)
-                    StatementHolder(connection, ps, ps.executeQuery())
+                    val stmt = connection.createStatement()
+                    val rs = stmt.executeQuery(buildClusterContainingSql(dataKeys))
+                    StatementHolder(connection, stmt, rs)
                 },
                 Function {
                     val clusterId = ResultSetAdapters.clusterId(it)
@@ -227,6 +223,12 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
     }
 }
 
+internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
+    val dataKeysSql = dataKeys.joinToString(",") { "('${it.entitySetId}','${it.entityKeyId}')" }
+    return "SELECT DISTINCT ${LINKING_ID.name} FROM ${MATCHED_ENTITIES.name} " +
+            "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) " +
+            "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql))"
+}
 
 private val COLUMNS = listOf(
         LINKING_ID,
@@ -263,9 +265,6 @@ private val BLOCKS_BY_SIZE_SQL = "SELECT ${SRC_ENTITY_SET_ID.name} as entity_set
         "GROUP BY (${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) " +
         "ORDER BY $BLOCK_SIZE_FIELD DESC"
 
-private val CLUSTERS_CONTAINING_SQL = "SELECT DISTINCT ${LINKING_ID.name} FROM ${MATCHED_ENTITIES.name} " +
-        "WHERE ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ? " +
-        "OR ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ?"
 
 private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
         "SET ${LINKING_ID.name} = ?, ${LAST_LINK.name}=now() WHERE ${ENTITY_SET_ID.name} =? AND ${ID_VALUE.name}=?"
