@@ -59,6 +59,14 @@ public class DoubleRangeFilter extends AbstractRangeFilter<Double> {
         return Double.MAX_VALUE;
     }
 
+    @Override protected String getLowerboundSql() {
+        return lowerbound.toString();
+    }
+
+    @Override protected String getUpperboundSql() {
+        return upperbound.toString();
+    }
+
     public static DoubleRangeFilter greaterThan( Double value ) {
         return new DoubleRangeFilter( value, false, Double.MAX_VALUE, false );
     }

@@ -61,6 +61,14 @@ public class DateRangeFilter extends AbstractRangeFilter<ChronoLocalDate> {
         return LocalDate.MAX;
     }
 
+    @Override protected String getLowerboundSql() {
+        return "'" + lowerbound.toString() + "'";
+    }
+
+    @Override protected String getUpperboundSql() {
+        return "'" + upperbound.toString() + "'";
+    }
+
     public static DateRangeFilter greaterThan( LocalDate value ) {
         return new DateRangeFilter( value, false, LocalDate.MIN, false );
     }

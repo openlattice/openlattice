@@ -59,6 +59,14 @@ public class LongRangeFilter extends AbstractRangeFilter<Long> {
         return Long.MAX_VALUE;
     }
 
+    @Override protected String getLowerboundSql() {
+        return lowerbound.toString();
+    }
+
+    @Override protected String getUpperboundSql() {
+        return upperbound.toString();
+    }
+
     public static LongRangeFilter greaterThan( Long value ) {
         return new LongRangeFilter( value, false, Long.MAX_VALUE, false );
     }
