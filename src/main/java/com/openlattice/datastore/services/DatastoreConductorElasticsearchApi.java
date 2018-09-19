@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.services;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.core.HazelcastInstance;
@@ -70,6 +71,17 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity set to elasticsearch" );
             return false;
+        }
+    }
+
+    @Override public Set<UUID> getEntitySetWithIndices() {
+        try {
+            return executor.submit( ConductorElasticsearchCall
+                    .wrap( ElasticsearchLambdas.getEntitySetsWithIndices() ) )
+                    .get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "Unable to retrieve list of indexes." );
+            return ImmutableSet.of();
         }
     }
 

@@ -18,7 +18,7 @@
  *
  */
 
-package com.dataloom.organizations;
+package com.openlattice.datastore.organizations;
 
 import java.util.Set;
 import java.util.UUID;

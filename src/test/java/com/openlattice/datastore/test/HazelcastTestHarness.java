@@ -18,7 +18,7 @@
  *
  */
 
-package com.dataloom.types.test;
+package com.openlattice.datastore.test;
 
 import java.util.Map.Entry;
 

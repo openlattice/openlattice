@@ -67,65 +67,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
 
 
     @Override
-    @PostMapping(
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public UUID linkEntitySets( @RequestBody LinkingRequest linkingRequest ) {
-        LinkingEntitySet linkingEntitySet = linkingRequest.getLinkingEntitySet();
-        Set<Map<UUID, UUID>> linkingProperties = linkingEntitySet.getLinkingProperties();
-        EntitySet entitySet = linkingEntitySet.getEntitySet();
-
-        // Validate, compute the ownable property types after merging.
-        Set<UUID> ownablePropertyTypes = validateAndGetOwnablePropertyTypes( entitySet, linkingProperties );
-
-        Set<UUID> propertyTypesToPopulate = Sets.intersection( ownablePropertyTypes,
-                linkingRequest.getResultPropertyTypeIds() );
-
-        edm.createEntitySet( Principals.getCurrentUser(), entitySet, ownablePropertyTypes );
-        UUID linkedEntitySetId = entitySet.getId();
-        return linkedEntitySetId;
-    }
-
-    @Override
-    public UUID linkEntities(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId,
-            @Body Set<EntityKey> entities ) {
-        return null;
-    }
-
-    @Override
-    public Void setLinkedEntities(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId,
-            @Body Set<EntityKey> entities ) {
-        return null;
-    }
-
-    @Override
-    public Void deleteLinkedEntities(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId ) {
-        return null;
-    }
-
-    @Override
-    public Void addLinkedEntities(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId,
-            @Path( LINKED_ENTITY_ID ) UUID linkedEntityId ) {
-        return null;
-    }
-
-    @Override
-    public Void removeLinkedEntity(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId,
-            @Path( LINKED_ENTITY_ID ) UUID linkedEntityId ) {
-        return null;
-    }
-
-    @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizationManager;
     }
@@ -195,4 +136,23 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
         return ownablePropertyTypes;
     }
 
+    @Override public UUID createLinkingEntitySet( Set<UUID> entitySets ) {
+        return null;
+    }
+
+    @Override public Integer addEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId ) {
+        return null;
+    }
+
+    @Override public Integer removeEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId ) {
+        return null;
+    }
+
+    @Override public Integer addEntitySetsToLinkingEntitySets( Set<UUID> entitySetId ) {
+        return null;
+    }
+
+    @Override public Integer removeEntitySetsToLinkingEntitySet( Set<UUID> entitySetId ) {
+        return null;
+    }
 }
