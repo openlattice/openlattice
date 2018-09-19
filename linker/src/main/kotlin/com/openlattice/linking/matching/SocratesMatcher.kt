@@ -104,5 +104,5 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
 }
 
 fun MultiLayerNetwork.getModelScore(features: Array<DoubleArray>): Double {
-    return output(Nd4j.create(features)).getDouble(1)
+    return 1.0 - output(Nd4j.create(features)).getDouble(1)
 }
