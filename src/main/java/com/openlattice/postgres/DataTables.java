@@ -20,6 +20,8 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.HASH;
 import static com.openlattice.postgres.PostgresColumn.ID;
@@ -56,17 +58,26 @@ public class DataTables {
     public static final  PostgresColumnDefinition           LAST_INDEX     = new PostgresColumnDefinition(
             LAST_INDEX_FIELD,
             TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
             .notNull();
     public static final  FullQualifiedName                  LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
             "@lastIndex" );
     public static final  PostgresColumnDefinition           LAST_LINK      = new PostgresColumnDefinition(
             LAST_LINK_FIELD,
             TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
             .notNull();
     public static final  PostgresColumnDefinition           LAST_WRITE     = new PostgresColumnDefinition(
             LAST_WRITE_FIELD,
             TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
             .notNull();
+    public static final  PostgresColumnDefinition           LAST_PROPAGATE     = new PostgresColumnDefinition(
+            LAST_PROPAGATE_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
+
     public static final  FullQualifiedName                  LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
             "@lastWrite" );
     public static final  PostgresColumnDefinition           OWNERS         = new PostgresColumnDefinition(
@@ -188,6 +199,7 @@ public class DataTables {
         PostgresTableDefinition ptd = new PostgresTableDefinition(
                 quote( idxPrefix ) )
                 .addColumns(
+                        LINKING_ID,
                         ENTITY_SET_ID,
                         ID_VALUE,
                         HASH,
@@ -199,6 +211,10 @@ public class DataTables {
                         WRITERS,
                         OWNERS )
                 .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH );
+
+        PostgresIndexDefinition clusterIndex = new PostgresColumnsIndexDefinition( ptd, LINKING_ID )
+                .name( quote( idxPrefix+"_cluster_idx"))
+                .ifNotExists();
 
         PostgresIndexDefinition idIndex = new PostgresColumnsIndexDefinition( ptd, ID_VALUE )
                 .name( quote( idxPrefix + "_id_idx" ) )
@@ -247,6 +263,7 @@ public class DataTables {
                 .ifNotExists();
 
         ptd.addIndexes(
+                clusterIndex,
                 idIndex,
                 entitySetIdIndex,
                 versionIndex,

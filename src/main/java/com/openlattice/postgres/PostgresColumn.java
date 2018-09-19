@@ -78,10 +78,6 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( CATEGORY_FIELD, TEXT ).notNull();
     public static final PostgresColumnDefinition CLAUSES                     = new PostgresColumnDefinition( "clauses",
             INTEGER_ARRAY );
-    public static final String                   CLUSTER_ID_FIELD            = "cluster_id";
-    public static final PostgresColumnDefinition CLUSTER_ID                  = new PostgresColumnDefinition(
-            CLUSTER_ID_FIELD,
-            UUID );
     public static final String                   CONFIG_TYPE_IDS_FIELD       = "config_type_ids";
     public static final PostgresColumnDefinition CONFIG_TYPE_IDS             =
             new PostgresColumnDefinition( CONFIG_TYPE_IDS_FIELD, UUID_ARRAY );
@@ -89,9 +85,9 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition CONFIG_TYPE_ID              =
             new PostgresColumnDefinition( CONFIG_TYPE_ID_FIELD, UUID );
     public static final String                   CONTACTS_FIELD              = "contacts";
-    public static final String                   COUNT                       = "count";
     public static final PostgresColumnDefinition CONTACTS                    =
             new PostgresColumnDefinition( CONTACTS_FIELD, TEXT_ARRAY );
+    public static final String                   COUNT                       = "count";
     public static final String                   CREDENTIAL_FIELD            = "cred";
     public static final PostgresColumnDefinition CREDENTIAL                  =
             new PostgresColumnDefinition( CREDENTIAL_FIELD, TEXT ).notNull();
@@ -185,8 +181,13 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition KEY                         =
             new PostgresColumnDefinition( KEY_FIELD, UUID_ARRAY ).notNull();
     public static final String                   LAST_INDEX_FIELD            = "last_index";
-    public static final String                   LAST_LINK_FIELD            = "last_link";
+    public static final String                   LAST_LINK_FIELD             = "last_link";
+    public static final String                   LAST_PROPAGATE_FIELD        = "last_propagate";
     public static final String                   LAST_WRITE_FIELD            = "last_write";
+    public static final String                   LINKING_ID_FIELD            = "linking_id";
+    public static final PostgresColumnDefinition LINKING_ID                  = new PostgresColumnDefinition(
+            LINKING_ID_FIELD,
+            UUID );
     public static final String                   LSB_FIELD                   = "lsb";
     public static final PostgresColumnDefinition LSB                         =
             new PostgresColumnDefinition( LSB_FIELD, BIGINT ).notNull();
@@ -318,10 +319,13 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( URL_FIELD, TEXT );
     public static final String                   VERSIONS_FIELD              = "versions";
     public static final PostgresColumnDefinition VERSIONS                    =
-            new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY ).notNull();
+            new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY )
+                    .withDefault( "ARRAY[-1]" ).notNull();
     public static final String                   VERSION_FIELD               = "version";
     public static final PostgresColumnDefinition VERSION                     =
-            new PostgresColumnDefinition( VERSION_FIELD, BIGINT ).notNull();
+            new PostgresColumnDefinition( VERSION_FIELD, BIGINT )
+                    .withDefault( -1 )
+                    .notNull();
     public static final String                   VERTEX_ID_FIELD             = "vertex_id";
     public static final PostgresColumnDefinition VERTEX_ID                   =
             new PostgresColumnDefinition( VERTEX_ID_FIELD, UUID );

@@ -142,6 +142,8 @@ public interface ConductorElasticsearchApi {
 
     boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes );
 
+    Set<UUID> getEntitySetWithIndices();
+
     boolean createSecurableObjectIndex( UUID entitySetId, List<PropertyType> propertyTypes );
 
     boolean deleteEntitySet( UUID entitySetId );
