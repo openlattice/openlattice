@@ -18,12 +18,13 @@
  *
  */
 
-package com.openlattice;
+package com.openlattice.indexing;
 
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.kryptnostic.rhizome.pods.CassandraPod;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
+import com.openlattice.indexing.pods.PlasmaCoupling;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.datastore.cassandra.CassandraTablesPod;
@@ -32,8 +33,8 @@ import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
-import com.openlattice.pods.IndexerPostConfigurationServicesPod;
-import com.openlattice.pods.IndexerServicesPod;
+import com.openlattice.indexing.pods.IndexerPostConfigurationServicesPod;
+import com.openlattice.indexing.pods.IndexerServicesPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 

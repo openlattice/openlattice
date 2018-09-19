@@ -84,7 +84,9 @@ class ElasticsearchBlocker(
         if (blockedEntitySetSearchResults[entityDataKey.entitySetId]?.contains(entityDataKey.entityKeyId) == false) {
             logger.error("Entity {} did not block to itself.", entityDataKey)
         }
+
         return entityDataKey to blockedEntitySetSearchResults
+                .filter { it.value.isNotEmpty() }
                 .entries
                 .parallelStream()
                 .flatMap { entry ->

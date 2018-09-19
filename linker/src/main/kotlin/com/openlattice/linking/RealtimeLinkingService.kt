@@ -56,7 +56,9 @@ class RealtimeLinkingService
         private val ids: EntityKeyIdService,
         private val loader: DataLoader,
         private val gqs: LinkingQueryService,
-        private val executor: ListeningExecutorService
+        private val executor: ListeningExecutorService,
+        private val linkableTypes: Set<UUID>,
+        private val blockSize: Int
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
@@ -135,10 +137,14 @@ class RealtimeLinkingService
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, entitySetId)
     }
 
-    @Scheduled(fixedRate = 30000)
+    //@Scheduled(fixedRate = 30000)
     fun runLinking() {
         if (running.tryLock()) {
-            gqs.getEntitySetsNeedingLinking().forEach { refreshLinks(it, gqs.getEntitiesNeedingLinking(it)) }
+            try {
+                gqs.getEntitySetsNeedingLinking(linkableTypes).forEach { refreshLinks(it, gqs.getEntitiesNeedingLinking(it)) }
+            } finally{
+                running.unlock()
+            }
         }
     }
 

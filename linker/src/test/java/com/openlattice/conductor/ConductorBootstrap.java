@@ -22,7 +22,7 @@
 package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
-import com.openlattice.Indexer;
+import com.openlattice.indexing.Indexer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
