@@ -1,6 +1,7 @@
 package com.openlattice.users
 
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.scheduledexecutor.IScheduledFuture
 import com.openlattice.auth0.Auth0TokenProvider
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.organizations.HazelcastOrganizationService
@@ -9,6 +10,10 @@ import java.util.concurrent.locks.ReentrantLock
 
 class Auth0SyncHelpers {
     companion object {
+        @Transient
+        @JvmStatic
+        lateinit var syncFuture : IScheduledFuture<*>
+
         @Transient
         @JvmStatic
         var initialized = false
