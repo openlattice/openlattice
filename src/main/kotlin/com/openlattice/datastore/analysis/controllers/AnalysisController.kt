@@ -106,7 +106,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             fileType: FileType?
     ): Iterable<Map<String, Any>> {
         val entitySet = edm.getEntitySet(entitySetId)
-        val columnTitles = getEntitySetColumns(entitySetId)
+        val columnTitles = getEntitySetColumns(edm.getEntityTypeByEntitySetId(entitySetId).id)
 
         //TODO: Make this more concise
         return if (entitySet.isLinking) {
