@@ -21,6 +21,7 @@
 
 package com.openlattice.analysis.requests;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.util.List;
@@ -33,6 +34,7 @@ public class NeighborsRankingAggregation {
     private final List<FilteredRankingAggregation> neighbors;
     private final Set<WeightedRankingAggregation>  self;
 
+    @JsonCreator
     public NeighborsRankingAggregation(
             @JsonProperty( SerializationConstants.NEIGHBOR_AGGREGATIONS ) List<FilteredRankingAggregation> neighbors,
             @JsonProperty( SerializationConstants.SELF_AGGREGATIONS ) Set<WeightedRankingAggregation> self ) {
