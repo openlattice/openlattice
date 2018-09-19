@@ -18,7 +18,7 @@
  *
  */
 
-package com.dataloom.requests;
+package com.openlattice.datastore.requests;
 
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.Authorization;

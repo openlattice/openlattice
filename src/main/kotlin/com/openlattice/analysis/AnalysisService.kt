@@ -19,14 +19,15 @@
  *
  */
 
-package com.openlattice.datastore.services
+package com.openlattice.analysis
 
 import com.google.common.collect.SetMultimap
 import com.google.common.collect.Sets
 import com.openlattice.analysis.requests.NeighborType
-import com.openlattice.analysis.requests.TopUtilizerDetails
+import com.openlattice.analysis.requests.FilteredRankingAggregation
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
+import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.PropertyType
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -39,8 +40,7 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class AnalysisService {
-
+class AnalysisService : AuthorizingComponent {
     private val logger = LoggerFactory.getLogger(AnalysisService::class.java)
 
     @Inject
@@ -52,10 +52,13 @@ class AnalysisService {
     @Inject
     private lateinit var edmManager: EdmManager
 
+    @Inject
+    private lateinit var authorizationHelper: EdmAuthorizationHelper
+
     fun getTopUtilizers(
             entitySetId: UUID,
             numResults: Int,
-            topUtilizerDetails: List<TopUtilizerDetails>,
+            topUtilizerDetails: List<FilteredRankingAggregation>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>> {
         return dgm.getTopUtilizers(entitySetId, topUtilizerDetails, numResults, authorizedPropertyTypes)
@@ -86,7 +89,7 @@ class AnalysisService {
             val associationEntitySetId = it.edgeEntitySetId
             val neighborEntitySetId = if (src) it.dstEntitySetId else it.srcEntitySetId
             if (authorizedEntitySetIds.contains(associationEntitySetId) && authorizedEntitySetIds
-                    .contains(neighborEntitySetId)) {
+                            .contains(neighborEntitySetId)) {
                 neighborTypes.add(
                         NeighborType(
                                 entityTypes[entitySets[associationEntitySetId]?.entityTypeId],
@@ -98,6 +101,9 @@ class AnalysisService {
         }
 
         return neighborTypes
+    }
 
+    override fun getAuthorizationManager(): AuthorizationManager {
+        return authorizationManager
     }
 }
