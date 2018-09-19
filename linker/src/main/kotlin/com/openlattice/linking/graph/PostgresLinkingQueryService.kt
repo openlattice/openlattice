@@ -250,7 +250,8 @@ private val DELETE_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} " +
         "WHERE (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) "
 
-private val INSERT_SQL = "INSERT INTO ${MATCHED_ENTITIES.name} ($COLUMNS) VALUES (?,?,?,?,?,?)"
+private val INSERT_SQL = "INSERT INTO ${MATCHED_ENTITIES.name} ($COLUMNS) VALUES (?,?,?,?,?,?) " +
+        "ON CONFLICT DO UPDATE SET ${SCORE.name} = EXCLUDED.${SCORE.name}"
 
 private val BLOCKS_BY_AVG_SCORE_SQL =
         "SELECT  ${SRC_ENTITY_SET_ID.name} as entity_set_id, " +
