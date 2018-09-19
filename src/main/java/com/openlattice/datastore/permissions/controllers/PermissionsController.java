@@ -21,10 +21,7 @@
 package com.openlattice.datastore.permissions.controllers;
 
 import com.dataloom.streams.StreamUtil;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.SetMultimap;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.openlattice.authorization.*;
 import com.openlattice.datastore.exceptions.BadRequestException;
@@ -179,6 +176,10 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             //parent layer becomes current layer
             currentLayer = parentMap.keySet();
             currentMap = parentMap;
+        }
+        //removes duplicate entries from map
+        for ( Entry<Principal, List<List<Principal>>> e : principalToPrincipalPaths.entrySet() ) {
+            e.getValue().stream().map( pl -> Lists.newArrayList( Sets.newHashSet( pl ) ) );
         }
         return principalToPrincipalPaths;
 
