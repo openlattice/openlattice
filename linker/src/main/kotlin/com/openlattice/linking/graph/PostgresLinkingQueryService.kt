@@ -225,7 +225,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
 
 internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
     val dataKeysSql = dataKeys.joinToString(",") { "('${it.entitySetId}','${it.entityKeyId}')" }
-    return "SELECT DISTINCT ${LINKING_ID.name} FROM ${MATCHED_ENTITIES.name} " +
+    return "SELECT * FROM ${MATCHED_ENTITIES.name} " +
             "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) " +
             "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql))"
 }
