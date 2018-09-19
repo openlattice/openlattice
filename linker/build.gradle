@@ -129,12 +129,14 @@ dependencies {
         compile project(":conductor-client")
         compile project(":scrunchie")
         compile project(":courier")
+        testCompile(project(path: ":rhizome-client", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
         compile "com.openlattice:rhizome:${rhizome_version}"
         compile "com.openlattice:conductor-client:${conductor_client_version}"
         compile "com.openlattice:scrunchie:${scrunchie_version}"
         compile "com.openlattice:courier:${courier_version}"
+        testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
     /*
      * TESTING

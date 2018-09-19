@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice;
+package com.openlattice.indexing.pods;
 
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.hazelcast.serializers.ConductorElasticsearchCallStreamSerializer;

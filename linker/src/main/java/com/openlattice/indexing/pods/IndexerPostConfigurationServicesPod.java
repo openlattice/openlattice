@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.pods;
+package com.openlattice.indexing.pods;
 
 import static com.openlattice.linking.MatcherKt.DL4J;
 import static com.openlattice.linking.MatcherKt.KERAS;
@@ -26,6 +26,8 @@ import static com.openlattice.linking.MatcherKt.KERAS;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.kryptnostic.rhizome.configuration.service.ConfigurationService.StaticLoader;
+import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityKeyIdService;
@@ -34,6 +36,7 @@ import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundIndexingService;
+import com.openlattice.indexing.configuration.LinkingConfiguration;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Blocker;
 import com.openlattice.linking.DataLoader;
@@ -52,6 +55,7 @@ import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurat
 import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.util.ModelSerializer;
+import org.eclipse.jetty.plus.jndi.Link;
 import org.nd4j.linalg.io.ClassPathResource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -129,12 +133,20 @@ public class IndexerPostConfigurationServicesPod {
     }
 
     @Bean
+    public LinkingConfiguration linkingConfiguration() {
+        return ResourceConfigurationLoader.loadConfiguration( LinkingConfiguration.class );
+    }
+
+    @Bean
     public RealtimeLinkingService linkingService() throws IOException {
+        var lc = linkingConfiguration();
         return new RealtimeLinkingService( blocker(),
                 matcher,
                 idService(),
                 dataLoader(),
                 lqs(),
-                executor );
+                executor,
+                edm.getEntityTypeUuids( lc.getEntityTypes() ),
+                lc.getBlockSize());
     }
 }

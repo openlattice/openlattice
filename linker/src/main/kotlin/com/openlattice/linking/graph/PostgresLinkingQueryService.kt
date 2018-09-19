@@ -47,12 +47,14 @@ private const val AVG_SCORE_FIELD = "avg_score"
  * @param hds A hikari datasource that can be used for executing SQL.
  */
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
-    override fun getEntitySetsNeedingLinking(): PostgresIterable<UUID> {
+    override fun getEntitySetsNeedingLinking(entityTypeIds: Set<UUID>): PostgresIterable<UUID> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
-            val stmt = connection.createStatement()
-            val rs = stmt.executeQuery(ENTITY_SETS_NEEDING_LINKING)
-            StatementHolder(connection, stmt, rs)
+            val ps = connection.prepareStatement(ENTITY_SETS_NEEDING_LINKING)
+            val entityTypeIdsArray = PostgresArrays.createUuidArray(connection, entityTypeIds)
+            ps.setArray(1, entityTypeIdsArray)
+            val rs = ps.executeQuery()
+            StatementHolder(connection, ps, rs)
         }, Function { ResultSetAdapters.entitySetId(it) })
     }
 
@@ -270,7 +272,8 @@ private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
 
 private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name}"
+        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ${ENTITY_SET_ID.name} IN " +
+        "   (SELECT * FROM entity_sets where entity_type_id in (SELECT UNNEST( (?)::uuid[] )))"
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ID.name} " +
         "FROM ${IDS.name} " +
