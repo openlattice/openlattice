@@ -46,7 +46,7 @@ import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-const val REFRESH_INTERVAL_MILLIS = 120000L
+const val REFRESH_INTERVAL_MILLIS = 30000L
 private const val DEFAULT_PAGE_SIZE = 100
 private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 
