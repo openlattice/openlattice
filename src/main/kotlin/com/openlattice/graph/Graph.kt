@@ -60,6 +60,8 @@ import kotlin.streams.toList
 
 const val SELF_ENTITY_SET_ID = "self_entity_set_id"
 const val SELF_ENTITY_KEY_ID = "self_entity_key_id"
+private val BATCH_SIZE = 10000
+
 private val logger = LoggerFactory.getLogger(Graph::class.java)
 
 class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
@@ -161,6 +163,30 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 },
                 Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
         ).stream()
+    }
+
+    override fun getEntitiesForDestination(srcEntitySetIds: List<UUID>, edgeEntitySetIds: List<UUID>, dstEntityKeyIds: Set<UUID>): PostgresIterable<EdgeKey> {
+        val query = "SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name}, ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name}, ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} " +
+                "FROM ${EDGES.name} WHERE " +
+                "${SRC_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) AND " +
+                "${EDGE_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) AND " +
+                "${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) " +
+                "ORDER BY ${DST_ENTITY_KEY_ID.name} "
+
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.prepareStatement(query)
+                    stmt.fetchSize = BATCH_SIZE
+                    stmt.setArray(1, PostgresArrays.createUuidArray(connection, srcEntitySetIds.stream()))
+                    stmt.setArray(2, PostgresArrays.createUuidArray(connection, edgeEntitySetIds.stream()))
+                    stmt.setArray(3, PostgresArrays.createUuidArray(connection, dstEntityKeyIds.stream()))
+                    val rs = stmt.executeQuery()
+                    logger.info(stmt.toString())
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+        )
     }
 
     override fun getEdgeKeysContainingEntity(entitySetId: UUID, entityKeyId: UUID): Iterable<EdgeKey> {

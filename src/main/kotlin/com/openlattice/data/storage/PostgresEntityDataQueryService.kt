@@ -24,14 +24,12 @@ package com.openlattice.data.storage
 import com.google.common.collect.Multimaps
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
+import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
-import com.openlattice.postgres.JsonDeserializer
-import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -56,6 +54,20 @@ const val BATCH_SIZE = 10000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
+    fun getActiveEntitiesCount(): Long {
+        val query = activeEntitiesCount()
+        val statement = hds.connection.prepareStatement(query)
+        val rs = statement.executeQuery()
+        rs.next()
+        return ResultSetAdapters.count(rs)
+    }
+
+    fun getActiveEntitiesById(
+            entitySetIds: Collection<UUID>
+    ): PostgresIterable<EntityDataKey> {
+        return streamableEntityDataKey(entitySetIds)
+    }
+
     fun getEntitiesById(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
@@ -176,6 +188,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                 Supplier<StatementHolder> {
                     val connection = hds.connection
                     val statement = connection.createStatement()
+                    statement.fetchSize = 100000
                     val rs = statement.executeQuery(
                             if (version.isPresent) {
 
@@ -206,6 +219,22 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                     StatementHolder(connection, statement, rs)
                 },
                 adapter
+        )
+    }
+
+    private fun streamableEntityDataKey(entitySetIds: Collection<UUID>):PostgresIterable<EntityDataKey> {
+        return PostgresIterable(
+                Supplier<StatementHolder> {
+                    val connection = hds.connection
+                    val query = activeEntitiesById()
+                    val statement = connection.prepareStatement(query)
+                    statement.setArray(1, PostgresArrays.createUuidArray(connection, entitySetIds.stream()))
+                    statement.fetchSize = BATCH_SIZE
+                    val rs = statement.executeQuery()
+
+                    StatementHolder(connection, statement, rs)
+                },
+                Function<ResultSet, EntityDataKey> { ResultSetAdapters.entityDataKey(it) }
         )
     }
 
@@ -498,6 +527,18 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
         }
     }
+
+    fun markAsProcessed(entitySetId: UUID, processedEntities: Set<UUID>, processedTime: OffsetDateTime): Int {
+        hds.connection.use {
+            it.prepareStatement(updateLastPropagateSql(entitySetId)).use {
+                val arr = PostgresArrays.createUuidArray(it.connection, processedEntities)
+                it.setObject(1, processedTime)
+                it.setArray(2, arr)
+                return it.executeUpdate()
+            }
+
+        }
+    }
 }
 
 fun updateLastIndexSql(entitySetId: UUID): String {
@@ -507,6 +548,11 @@ fun updateLastIndexSql(entitySetId: UUID): String {
 
 fun updateLastLinkSql(entitySetId: UUID): String {
     return "UPDATE ${IDS.name} SET ${LAST_LINK.name} = ? " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+}
+
+fun updateLastPropagateSql(entitySetId: UUID): String {
+    return "UPDATE ${IDS.name} SET ${LAST_PROPAGATE.name} = ? " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
@@ -737,4 +783,20 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     //cause a type exception
     return "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
 }
+
+
+
+internal fun activeEntitiesById():String {
+    return  "SELECT  ${ENTITY_SET_ID.name}, ${ID_VALUE.name} " +
+            "FROM ${IDS.name} " +
+            "WHERE ${LAST_PROPAGATE.name} < ${LAST_WRITE.name} AND " +
+                "${ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) "
+}
+
+internal fun activeEntitiesCount():String {
+    return  "SELECT  COUNT(*) " +
+            "FROM ${IDS.name} " +
+            "WHERE ${LAST_PROPAGATE.name} < ${LAST_WRITE.name} "
+}
+
 

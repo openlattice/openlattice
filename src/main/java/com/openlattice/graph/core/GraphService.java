@@ -26,6 +26,8 @@ import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
+import com.openlattice.postgres.streams.PostgresIterable;
+import kotlin.Pair;
 
 import com.openlattice.postgres.streams.PostgresIterable;
 import java.util.List;
@@ -89,4 +91,6 @@ public interface GraphService {
             SetMultimap<UUID, UUID> dstFilters );
 
     List<NeighborSets> getNeighborEntitySets( UUID entitySetId );
+
+    PostgresIterable<EdgeKey> getEntitiesForDestination(List<UUID> srcEntitySetIds, List<UUID> edgeEntitySetIds, Set<UUID> dstEntityKeyIds);
 }
