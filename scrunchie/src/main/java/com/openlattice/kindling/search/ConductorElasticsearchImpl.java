@@ -152,6 +152,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         initializeAppTypeIndex();
     }
 
+    @Override
+    public Set<UUID> getEntitySetWithIndices() {
+        return Stream.of( client.admin().indices().prepareGetIndex().setFeatures().get().getIndices() )
+                .filter( s -> s.startsWith( SECURABLE_OBJECT_INDEX_PREFIX ) )
+                .map( s -> UUID.fromString( s.substring( SECURABLE_OBJECT_INDEX_PREFIX.length() + 1) ) )
+                .collect( Collectors.toSet() );
+    }
+
     // @formatter:off
     private XContentBuilder getMetaphoneSettings() throws IOException {
     	XContentBuilder settings = XContentFactory.jsonBuilder()
