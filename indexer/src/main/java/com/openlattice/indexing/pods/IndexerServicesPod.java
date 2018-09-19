@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.pods;
+package com.openlattice.indexing.pods;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.openlattice.datastore.util.Util.returnAndLog;
@@ -40,8 +40,6 @@ import com.openlattice.authorization.*;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
-import com.openlattice.data.EntityKeyIdService;
-import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.PostgresEdmManager;
@@ -50,15 +48,10 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
-import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.Blocker;
 import com.openlattice.linking.Matcher;
-import com.openlattice.linking.RealtimeLinkingService;
-import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
-import com.openlattice.search.EsEdmService;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;

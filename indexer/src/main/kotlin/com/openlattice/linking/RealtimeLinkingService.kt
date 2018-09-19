@@ -56,7 +56,9 @@ class RealtimeLinkingService
         private val ids: EntityKeyIdService,
         private val loader: DataLoader,
         private val gqs: LinkingQueryService,
-        private val executor: ListeningExecutorService
+        private val executor: ListeningExecutorService,
+        private val linkableTypes: Set<UUID>,
+        private val blockSize: Int
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
@@ -139,7 +141,7 @@ class RealtimeLinkingService
     fun runLinking() {
         if (running.tryLock()) {
             try {
-                gqs.getEntitySetsNeedingLinking().forEach { refreshLinks(it, gqs.getEntitiesNeedingLinking(it)) }
+                gqs.getEntitySetsNeedingLinking(linkableTypes).forEach { refreshLinks(it, gqs.getEntitiesNeedingLinking(it)) }
             } finally{
                 running.unlock()
             }
