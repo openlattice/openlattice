@@ -141,9 +141,10 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         Map<Principal, List<List<Principal>>> principalToPrincipalPaths = aceStream.collect( Collectors
                 .toMap( ace -> ace.getPrincipal(), ace -> Lists.newArrayList( Lists.newArrayList() ) ) );
         principalToPrincipalPaths.forEach( ( p, pl ) -> {
-            List<Principal> path = new ArrayList(Arrays.asList( p ));
+            List<Principal> path = new ArrayList( Arrays.asList( p ) );
             pl.add( path );
         } );
+
         //maps all principals to principals path
         Map<Principal, List<List<Principal>>> currentMap = new HashMap<>( principalToPrincipalPaths ); //creates copy of leaf principals map
         Set<Principal> currentLayer = currentMap.keySet();  //sets keys of current map (leaves of tree) as current layer
@@ -156,7 +157,11 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                 for ( SecurablePrincipal parent : parentLayer ) {
                     Principal parentAsPrincipal = parent.getPrincipal();
                     //add parent principal to each list in child's path
-                    List<List<Principal>> paths = e.getValue().stream().map( pl -> {
+                    List<List<Principal>> paths = new ArrayList( Arrays.asList() );
+                    for ( List<Principal> pl : e.getValue() ) {
+                        paths.add( new ArrayList<>( pl ) );
+                    }
+                    paths.stream().map( pl -> {
                         pl.add( parentAsPrincipal );
                         return pl;
                     } ).collect( Collectors.toList() );
