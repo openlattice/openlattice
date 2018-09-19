@@ -138,7 +138,11 @@ class RealtimeLinkingService
     @Scheduled(fixedRate = 30000)
     fun runLinking() {
         if (running.tryLock()) {
-            gqs.getEntitySetsNeedingLinking().forEach { refreshLinks(it, gqs.getEntitiesNeedingLinking(it)) }
+            try {
+                gqs.getEntitySetsNeedingLinking().forEach { refreshLinks(it, gqs.getEntitiesNeedingLinking(it)) }
+            } finally{
+                running.unlock()
+            }
         }
     }
 

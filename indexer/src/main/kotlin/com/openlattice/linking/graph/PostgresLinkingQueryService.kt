@@ -266,7 +266,7 @@ private val CLUSTERS_CONTAINING_SQL = "SELECT DISTINCT ${LINKING_ID.name} FROM $
         "OR ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ?"
 
 private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
-        "SET ${LINKING_ID.name} = ?, ${ENTITY_SET_ID.name} =?, ${ID_VALUE.name}=?, ${LAST_LINK.name}=now()"
+        "SET ${LINKING_ID.name} = ?, ${LAST_LINK.name}=now() WHERE ${ENTITY_SET_ID.name} =? AND ${ID_VALUE.name}=?"
 
 private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
         "FROM ${IDS.name} " +
