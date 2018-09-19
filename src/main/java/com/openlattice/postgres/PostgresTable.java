@@ -391,15 +391,15 @@ public final class PostgresTable {
                         .name( "entity_key_ids_last_propagate_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
-                        "(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        ENTITY_SET_ID.getName() + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
                         .name( "entity_key_ids_needs_linking_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
-                        "(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        ENTITY_SET_ID.getName() + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")" )
                         .name( "entity_key_ids_needs_linking_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
-                        "(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        ENTITY_SET_ID.getName() + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")" )
                         .name( "entity_key_ids_needs_propagation_idx" )
                         .ifNotExists()
         );

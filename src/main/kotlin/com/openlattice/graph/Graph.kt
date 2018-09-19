@@ -321,7 +321,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                             authorizedFilteredRanking.entitySetPropertyTypes,
                             authorizedFilteredRanking.filteredRanking.neighborTypeAggregations,
                             ENTITY
-                    ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!.datatype }
+                    ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!.datatype } +
+                    (associationCountColumnName(index) to EdmPrimitiveTypeKind.Int64 )+
+                    (entityCountColumnName(index) to EdmPrimitiveTypeKind.Int64)
         }.flatten().plus(idColumns).plus(SCORE.name to EdmPrimitiveTypeKind.Double).toMap()
 
 
@@ -453,7 +455,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
                     "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
-            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, +"
+            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
             "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         }
 
@@ -512,7 +514,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
                     "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
-            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, +"
+            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
             "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         }
 
