@@ -5,9 +5,13 @@ import com.openlattice.auth0.Auth0TokenProvider
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import java.util.concurrent.locks.ReentrantLock
 
 class Auth0SyncHelpers {
     companion object {
+        @Transient
+        @JvmStatic
+        var initialized = false
 
         @Transient
         @JvmStatic
