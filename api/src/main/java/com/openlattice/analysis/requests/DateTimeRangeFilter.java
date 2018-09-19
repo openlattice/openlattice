@@ -60,6 +60,14 @@ public class DateTimeRangeFilter extends AbstractRangeFilter<OffsetDateTime> {
         return OffsetDateTime.MAX;
     }
 
+    @Override protected String getLowerboundSql() {
+        return "'" + lowerbound.toString() + "'";
+    }
+
+    @Override protected String getUpperboundSql() {
+        return "'" + upperbound.toString() + "'";
+    }
+
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof AbstractRangeFilter ) ) { return false; }
