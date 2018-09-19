@@ -32,7 +32,7 @@ import org.junit.Test;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class LongRangeFilterSerializerTest extends AbstractJacksonSerializationTest<LongRangeFilter> {
-    private static final String testValue = "{\"@class\":\"com.openlattice.analysis.LongRangeFilter\",\"lowerbound\":\"-9223372036854775808\",\"upperbound\":\"9223372036854775807\",\"lowerboundEqual\":true,\"upperboundEqual\":false}";
+    private static final String testValue = "{\"@class\":\"com.openlattice.analysis.requests.LongRangeFilter\",\"lowerbound\":\"-9223372036854775808\",\"upperbound\":\"9223372036854775807\",\"lowerboundEqual\":true,\"upperboundEqual\":false}";
 
     @Override protected LongRangeFilter getSampleData() {
         return new LongRangeFilter( Optional.of( Long.MIN_VALUE ),
