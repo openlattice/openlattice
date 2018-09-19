@@ -181,7 +181,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
                                 selectEntitySetWithPropertyTypesAndVersionSql(
                                         mapOf(entitySetId to entityKeyIds),
-                                        authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
+                                        authorizedPropertyTypes.map { it.key to quote(it.value.type.fullQualifiedNameAsString) }.toMap(),
                                         authorizedPropertyTypes.keys,
                                         mapOf(entitySetId to authorizedPropertyTypes.keys),
                                         mapOf(),
@@ -193,7 +193,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                             } else {
                                 selectEntitySetWithCurrentVersionOfPropertyTypes(
                                         mapOf(entitySetId to entityKeyIds),
-                                        authorizedPropertyTypes.map { it.key to it.value.type.fullQualifiedNameAsString }.toMap(),
+                                        authorizedPropertyTypes.map { it.key to quote(it.value.type.fullQualifiedNameAsString) }.toMap(),
                                         authorizedPropertyTypes.keys,
                                         mapOf(entitySetId to authorizedPropertyTypes.keys),
                                         mapOf(),

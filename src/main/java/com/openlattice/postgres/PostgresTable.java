@@ -270,15 +270,15 @@ public final class PostgresTable {
             new PostgresTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
-                            SRC_LINKING_VERTEX_ID,
+                            SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
-                            DST_LINKING_VERTEX_ID,
+                            DST_ENTITY_KEY_ID,
                             SCORE )
                     .primaryKey( LINKING_ID,
                             SRC_ENTITY_SET_ID,
-                            SRC_LINKING_VERTEX_ID,
+                            SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
-                            DST_LINKING_VERTEX_ID );
+                            DST_ENTITY_KEY_ID );
     public static final PostgresTableDefinition        NAMES                        =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )

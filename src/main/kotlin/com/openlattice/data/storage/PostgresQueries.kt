@@ -68,11 +68,13 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
 
     val dataColumns = joinColumns
             .union(metadataOptions.map(MetadataOption::name))
-            .union(returnedPropertyTypes.map { propertyTypes[ it ]!! })
+            .union(returnedPropertyTypes.map { propertyTypes[it]!! })
             .joinToString(",")
 
     val propertyTableJoins =
             propertyTypes
+                    //Exclude any property from the join where no property is authorized.
+                    .filter { pt -> authorizedPropertyTypes.any { it.value.contains(pt.key) } }
                     .map {
                         val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
                         val propertyTypeEntitiesClause = buildPropertyTypeEntitiesClause(
@@ -122,12 +124,14 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
 
     val dataColumns = joinColumns
             .union(metadataOptions.map(MetadataOption::name))
-            .union(returnedPropertyTypes.map { propertyTypes[ it ]!! })
+            .union(returnedPropertyTypes.map { propertyTypes[it]!! })
             .filter(String::isNotBlank)
             .joinToString(",")
 
     val propertyTableJoins =
             propertyTypes
+                    //Exclude any property from the join where no property is authorized.
+                    .filter { pt -> authorizedPropertyTypes.any { it.value.contains(pt.key) } }
                     .map {
                         val joinType = if (propertyTypeFilters.containsKey(it.key)) INNER_JOIN else LEFT_JOIN
                         val propertyTypeEntitiesClause = buildPropertyTypeEntitiesClause(
@@ -347,11 +351,12 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 }
 
 internal fun arrayAggSql(fqn: String, binary: Boolean): String {
-    return if (binary) " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)} "
-    else " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
+    return if (binary) " array_agg(encode($fqn, 'base64')) as $fqn "
+    else " array_agg($fqn) as $fqn "
 }
 
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
+    if (entityKeyIds.isEmpty()) return ""
     return "AND (" + entityKeyIds.entries.joinToString(" OR ") {
         val idsClause = it.value.map {
             " AND ${ID_VALUE.name} IN ('" + it.joinToString(
@@ -367,15 +372,20 @@ internal fun buildPropertyTypeEntitiesClause(
         propertyTypeId: UUID,
         authorizedPropertyTypes: Map<UUID, Set<UUID>>
 ): String {
+    /*
+     * Filter out any entity sets for which you aren't authorized to read this property.
+     * There should always be at least one entity set as this isn't invoked for any properties
+     * with not readable entity sets.
+     */
     val authorizedEntityKeyIds = entityKeyIds.filter {
         authorizedPropertyTypes[it.key]?.contains(propertyTypeId) ?: false
     }
+
     return "AND (" + authorizedEntityKeyIds.entries.joinToString(" OR ") {
-        val idsClause = it.value.map {
-            " AND ${ID_VALUE.name} IN ('" + it.joinToString(
-                    "','"
-            ) { it.toString() } + "')"
-        }.orElse("")
+        val idsClause =
+                it.value.map {
+                    " AND ${ID_VALUE.name} IN (" + it.joinToString(",") { "'$it'" } + ")"
+                }.orElse("")
         " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
     } + ")"
 }

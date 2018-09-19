@@ -22,12 +22,12 @@ package com.openlattice.graph.core;
 
 import com.google.common.collect.SetMultimap;
 import com.openlattice.analysis.AuthorizedFilteredRanking;
-import com.openlattice.analysis.requests.FilteredRanking;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 
+import com.openlattice.postgres.streams.PostgresIterable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,7 +71,7 @@ public interface GraphService {
             SetMultimap<UUID, UUID> srcFilters,
             SetMultimap<UUID, UUID> dstFilters );
 
-    IncrementableWeightId[] computeTopEntities(
+    PostgresIterable<Map<String,Object>> computeTopEntities(
             int limit,
             Set<UUID> entitySetIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
