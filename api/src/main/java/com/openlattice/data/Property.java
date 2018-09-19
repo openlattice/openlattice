@@ -28,6 +28,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -35,13 +36,12 @@ import java.util.UUID;
  */
 @SuppressFBWarnings( value = "", justification = "POJO for Rest APIs" )
 public class Property {
-    private final UUID           entitySetId;
-    private final byte[]         hash;
-    private final Object         value;
-    private final long           version;
-    private final long[]         versions;
-    private final OffsetDateTime lastWrite;
-    private final OffsetDateTime lastIndex;
+    private final UUID                     entitySetId;
+    private final Object                   value;
+    private final byte[]                   hash;
+    private final long                     version;
+    private final Optional<long[]>         versions;
+    private final Optional<OffsetDateTime> lastWrite;
 
     @JsonCreator
     public Property(
@@ -49,16 +49,14 @@ public class Property {
             @JsonProperty( SerializationConstants.HASH ) byte[] hash,
             @JsonProperty( SerializationConstants.VALUE_FIELD ) Object value,
             @JsonProperty( SerializationConstants.VERSION ) long version,
-            @JsonProperty( SerializationConstants.VERSIONS ) long[] versions,
-            @JsonProperty( SerializationConstants.LAST_WRITE ) OffsetDateTime lastWrite,
-            @JsonProperty( SerializationConstants.LAST_INDEX ) OffsetDateTime lastIndex ) {
+            @JsonProperty( SerializationConstants.VERSIONS ) Optional<long[]> versions,
+            @JsonProperty( SerializationConstants.LAST_WRITE ) Optional<OffsetDateTime> lastWrite ) {
         this.entitySetId = entitySetId;
         this.value = value;
         this.hash = hash;
         this.version = version;
         this.versions = versions;
         this.lastWrite = lastWrite;
-        this.lastIndex = lastIndex;
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_ID )
@@ -82,12 +80,12 @@ public class Property {
     }
 
     @JsonProperty( SerializationConstants.VERSIONS )
-    public long[] getVersions() {
+    public Optional<long[]> getVersions() {
         return versions;
     }
 
     @JsonProperty( SerializationConstants.VERSIONS )
-    public OffsetDateTime getLastWrite() {
+    public Optional<OffsetDateTime> getLastWrite() {
         return lastWrite;
     }
 
@@ -96,35 +94,27 @@ public class Property {
         if ( !( o instanceof Property ) ) { return false; }
         Property property = (Property) o;
         return version == property.version &&
-                Arrays.equals( hash, property.hash ) &&
+                Objects.equals( entitySetId, property.entitySetId ) &&
                 Objects.equals( value, property.value ) &&
-                Arrays.equals( versions, property.versions ) &&
-                Objects.equals( lastWrite, property.lastWrite ) &&
-                Objects.equals( lastIndex, property.lastIndex );
+                Arrays.equals( hash, property.hash ) &&
+                Objects.equals( versions, property.versions ) &&
+                Objects.equals( lastWrite, property.lastWrite );
     }
 
     @Override public int hashCode() {
-
-        int result = Objects.hash( value, version, lastWrite, lastIndex );
+        int result = Objects.hash( entitySetId, value, version, versions, lastWrite );
         result = 31 * result + Arrays.hashCode( hash );
-        result = 31 * result + Arrays.hashCode( versions );
         return result;
     }
 
     @Override public String toString() {
         return "Property{" +
-                "hash=" + Arrays.toString( hash ) +
+                "entitySetId=" + entitySetId +
                 ", value=" + value +
+                ", hash=" + Arrays.toString( hash ) +
                 ", version=" + version +
-                ", versions=" + Arrays.toString( versions ) +
+                ", versions=" + versions +
                 ", lastWrite=" + lastWrite +
-                ", lastIndex=" + lastIndex +
                 '}';
     }
-
-    @JsonProperty( SerializationConstants.VERSIONS )
-    public OffsetDateTime getLastIndex() {
-        return lastIndex;
-    }
-
 }

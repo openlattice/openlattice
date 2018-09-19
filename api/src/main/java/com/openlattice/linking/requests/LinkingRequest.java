@@ -18,6 +18,7 @@
 
 package com.openlattice.linking.requests;
 
+import com.openlattice.edm.EntitySet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,19 +28,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class LinkingRequest {
-    private final LinkingEntitySet linkingEntitySet;
-    private final Set<UUID>        resultPropertyTypeIds;
+    private final EntitySet linkingEntitySet;
+    private final Set<UUID> resultPropertyTypeIds;
 
     @JsonCreator
     public LinkingRequest(
-            @JsonProperty( SerializationConstants.LINKING_ENTITY_SET_FIELD ) LinkingEntitySet linkingEntitySet,
+            @JsonProperty( SerializationConstants.LINKING_ENTITY_SET_FIELD ) EntitySet linkingEntitySet,
             @JsonProperty( SerializationConstants.PROPERTY_TYPE_IDS ) Set<UUID> resultPropertyTypeIds ) {
         this.linkingEntitySet = linkingEntitySet;
         this.resultPropertyTypeIds = resultPropertyTypeIds;
     }
 
     @JsonProperty( SerializationConstants.LINKING_ENTITY_SET_FIELD )
-    public LinkingEntitySet getLinkingEntitySet() {
+    public EntitySet getLinkingEntitySet() {
         return linkingEntitySet;
     }
 

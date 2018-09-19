@@ -18,6 +18,7 @@
 
 package com.openlattice.linking;
 
+import com.google.common.collect.SetMultimap;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.EntityKey;
 import com.openlattice.edm.type.LinkingEntityType;
@@ -35,67 +36,38 @@ import retrofit2.http.Path;
  * entity sets created by this invoking this API are not actually instantiated until they are accessed via the
  * {@link DataApi}, which dynamically weaves them together based on the matching information.
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public interface LinkingApi {
-    String CONTROLLER = "/linking";
+    String CONTROLLER       = "/linking";
     String ENTITY_ID        = "entityId";
     String LINKED_ENTITY_ID = "linkedEntityId";
     /*
      * These determine the service routing for the LB
      */
-    String SERVICE    = "/datastore";
-    String BASE       = SERVICE + CONTROLLER;
+    String SERVICE          = "/datastore";
+    String BASE             = SERVICE + CONTROLLER;
     String SET              = "set";
     String SET_ID           = "setId";
     String SYNC_ID          = "syncId";
     String TYPE             = "type";
 
     /**
-     * Performs linking operation on entity sets.
-     *
-     * @param linkingRequest A request including a set of property type ids to populate in the linking result, and a
-     * linking entity set definition consisting of an entity set and associated properties to link on. Each
-     * map in linking properties must be the same length, with entity set ids as a keys and property type ids
-     * as values. If no maps are provided, an empty linking entity set is created that can be populated by
-     * calling {@link LinkingApi#linkEntities(UUID, UUID, Set)}.
-     * @return The id of the new entity set constructed from linking the desired entity sets.
+     * Create a new linking entity set.
+     * @param entitySets The entity sets to include in the linking entity set.
      */
-    @POST( BASE )
-    UUID linkEntitySets( @Body LinkingRequest linkingRequest );
+    @POST( BASE + "/" + SET )
+    UUID createLinkingEntitySet( @Body Set<UUID> entitySets );
 
-    /**
-     * Links a set of entities into a new linked entity.
-     *
-     * @return The entity id of the new linked entity id
-     */
-    @POST( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
-    UUID linkEntities(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId,
-            @Body Set<EntityKey> entities );
+    @POST( BASE + "/" + SET )
+    Integer addEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId );
 
-    @PUT( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
-    Void setLinkedEntities(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId,
-            @Body Set<EntityKey> entities );
+    @DELETE( BASE + "/" + SET )
+    Integer removeEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId );
 
-    @DELETE( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}" )
-    Void deleteLinkedEntities(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId );
+    @PUT( BASE + "/" + SET + "/{" + SET_ID + "}" )
+    Integer addEntitySetsToLinkingEntitySets( Set<UUID> entitySetId );
 
-    @PUT( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}/{" + LINKED_ENTITY_ID + "}" )
-    Void addLinkedEntities(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId,
-            @Path( LINKED_ENTITY_ID ) UUID linkedEntityId );
-
-    @DELETE( BASE + "/" + SET + "/{" + SET_ID + "}/{" + ENTITY_ID + "}/{" + LINKED_ENTITY_ID + "}" )
-    Void removeLinkedEntity(
-            @Path( SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId,
-            @Path( LINKED_ENTITY_ID ) UUID linkedEntityId );
+    @DELETE( BASE + "/" + SET + "/{" + SET_ID + "}" )
+    Integer removeEntitySetsToLinkingEntitySet( Set<UUID> entitySetId );
 
 }

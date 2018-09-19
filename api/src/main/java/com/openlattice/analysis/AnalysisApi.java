@@ -19,14 +19,14 @@
 package com.openlattice.analysis;
 
 import com.openlattice.analysis.requests.NeighborType;
-import com.openlattice.analysis.requests.TopUtilizerDetails;
+import com.openlattice.analysis.requests.FilteredRankingAggregation;
+import com.openlattice.analysis.requests.NeighborsRankingAggregation;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.openlattice.data.requests.FileType;
-import com.google.common.collect.SetMultimap;
 
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.*;
 
 public interface AnalysisApi {
@@ -50,17 +50,14 @@ public interface AnalysisApi {
      * 
      * @param entitySetId The id of the entity set to sort and return results for
      * @param numResults The number of results to return
-     * @param topUtilizerDetails A list of objects each specifying an association type and at least one neighbor types
-     *            to include in a top utilizers search, as well as an indication of the directionality. The results will
-     *            be ordered by the total number of values across all property types provided (i.e. the sum of all the
-     *            property types' value array size).
+     * @param neighborsRankingAggregation
      * @return
      */
     @POST( BASE + ENTITY_SET_ID_PATH + NUM_RESULTS_PATH )
-    Iterable<SetMultimap<FullQualifiedName, Object>> getTopUtilizers(
+    Iterable<Map<String, Object>> getTopUtilizers(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( NUM_RESULTS ) int numResults,
-            @Body List<TopUtilizerDetails> topUtilizerDetails,
+            @Body NeighborsRankingAggregation neighborsRankingAggregation,
             @Query( FILE_TYPE ) FileType fileType );
 
     @GET( BASE + ENTITY_SET_ID_PATH + TYPES_PATH )
