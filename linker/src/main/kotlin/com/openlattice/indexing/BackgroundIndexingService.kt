@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
 import java.util.function.Supplier
+import kotlin.system.exitProcess
 
 /**
  *
@@ -97,6 +98,7 @@ class BackgroundIndexingService(
         logger.info("Starting background indexing task.")
         //Keep number of indexing jobs under control
         if (taskLock.tryLock()) {
+            ensureAllEntitySetIndexesExist()
             try {
                 val w = Stopwatch.createStarted()
                 //We shuffle entity sets to make sure we have a chance to work share and index everything
@@ -122,6 +124,20 @@ class BackgroundIndexingService(
             }
         } else {
             logger.info("Skipping indexing as thread limit hit.")
+        }
+    }
+
+    private fun ensureAllEntitySetIndexesExist() {
+        val existingIndices = elasticsearchApi.entitySetWithIndices
+        val missingIndices = entitySets.keys - existingIndices
+        if (missingIndices.isNotEmpty()) {
+            val missingEntitySets = entitySets.getAll(missingIndices)
+            logger.info("The following entity sets where missing indices: {}", missingEntitySets)
+            missingEntitySets.values.forEach { es ->
+                val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes.get(es.entityTypeId)!!.properties)
+                elasticsearchApi.saveEntitySetToElasticsearch(es, missingEntitySetPropertyTypes.values.toList())
+                logger.info("Created missing index for entity set ${es.name} with id ${es.entityTypeId}")
+            }
         }
     }
 
