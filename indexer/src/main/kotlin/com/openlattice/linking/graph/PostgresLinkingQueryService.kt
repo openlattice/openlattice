@@ -246,7 +246,7 @@ private val DELETE_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} " +
         "WHERE (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) "
 
-private val INSERT_SQL = "INSERT INTO ${MATCHED_ENTITIES.name} ($COLUMNS) VALUES (?,?,?,?,?)"
+private val INSERT_SQL = "INSERT INTO ${MATCHED_ENTITIES.name} ($COLUMNS) VALUES (?,?,?,?,?, ?)"
 
 private val BLOCKS_BY_AVG_SCORE_SQL =
         "SELECT  ${SRC_ENTITY_SET_ID.name} as entity_set_id, " +
@@ -262,13 +262,13 @@ private val BLOCKS_BY_SIZE_SQL = "SELECT ${SRC_ENTITY_SET_ID.name} as entity_set
         "ORDER BY $BLOCK_SIZE_FIELD DESC"
 
 private val CLUSTERS_CONTAINING_SQL = "SELECT DISTINCT ${LINKING_ID.name} FROM ${MATCHED_ENTITIES.name} " +
-        "WHERE ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ? " +
-        "OR ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN ?"
+        "WHERE ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN (?) " +
+        "OR ARRAY[${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}] IN (?)"
 
 private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
-        "SET ${LINKING_ID.name} = ?, ${ENTITY_SET_ID.name} =?, ${ID_VALUE.name}=?, ${LAST_LINK.name}=now()"
+        "SET ${LINKING_ID.name} = ?, ${LAST_LINK.name}=now() WHERE ${ENTITY_SET_ID.name} =? AND ${ID_VALUE.name}=?"
 
-private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name}" +
+private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
         "FROM ${IDS.name} " +
         "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name}"
 
