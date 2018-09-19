@@ -84,7 +84,9 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         val matchedEntities = extractedEntities.mapValues {
             val entity = it.value
             extractedEntities
-                    .mapValues { model.getModelScore(arrayOf(PersonMetric.pDistance(entity, it.value, fqnToIdMap))) }
+                    .mapValues {
+                        model.getModelScore(arrayOf(PersonMetric.pDistance(entity, it.value, fqnToIdMap).map { it * 100.0 }.toDoubleArray()))
+                    }
                     .toMutableMap()
         }.toMutableMap()
 
@@ -104,5 +106,5 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
 }
 
 fun MultiLayerNetwork.getModelScore(features: Array<DoubleArray>): Double {
-    return output(Nd4j.create(features)).getDouble(1)
+    return output(Nd4j.create(features)).getDouble(0)
 }
