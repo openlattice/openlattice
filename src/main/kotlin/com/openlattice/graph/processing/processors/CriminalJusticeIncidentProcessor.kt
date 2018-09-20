@@ -3,9 +3,6 @@ package com.openlattice.graph.processing.processors
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.graph.core.GraphService
-import com.openlattice.graph.processing.util.DurationTransformation
-import com.openlattice.graph.processing.util.MINUTES_TO_HOURS
-import com.openlattice.graph.processing.util.TransformationFactory
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -14,7 +11,7 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 @Component
-class CriminalJusticeIncidentProcessor(private val graphService: GraphService, edmManager: EdmManager, entityDataService: PostgresEntityDataQueryService):
+class CriminalJusticeIncidentProcessor(edmManager: EdmManager, entityDataService: PostgresEntityDataQueryService):
         BaseDurationProcessor(edmManager, entityDataService) {
 
     private val handledEntityType = "criminaljustice.incident"
@@ -29,7 +26,11 @@ class CriminalJusticeIncidentProcessor(private val graphService: GraphService, e
         private val logger = LoggerFactory.getLogger(SupportiveHousingStayProcessor.javaClass)
     }
 
-    override fun processAssociations(newEntities: Map<UUID, Any?>) {
+    override fun isEndDateBased():Boolean {
+        return false
+    }
+
+    /*fun processAssociations(newEntities: Map<UUID, Any?>) {
         updateSimpleAssociation(newEntities, appearsInAssociation, appearsInProperty)
         updateSimpleAssociation(newEntities, arrestedInAssociation, arrestedInProperty)
     }
@@ -63,7 +64,7 @@ class CriminalJusticeIncidentProcessor(private val graphService: GraphService, e
             }
 
         }
-    }
+    }*/
 
     override fun getLogger(): Logger {
         return logger
@@ -81,12 +82,12 @@ class CriminalJusticeIncidentProcessor(private val graphService: GraphService, e
         return "ol.durationhours"
     }
 
-    override fun getTimeUnit(): ChronoUnit {
+    override fun getCalculationTimeUnit(): ChronoUnit {
         return ChronoUnit.MINUTES
     }
 
-    override fun getTransformationType(): String {
-        return MINUTES_TO_HOURS
+    override fun getDisplayTimeUnit(): ChronoUnit {
+        return ChronoUnit.HOURS
     }
 
     override fun handledEntityTypes(): Set<UUID> {

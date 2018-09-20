@@ -2,7 +2,6 @@ package com.openlattice.graph.processing.processors
 
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.graph.processing.util.NONE
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -19,12 +18,12 @@ class DispatchProcessor(edmManager: EdmManager, entityDataService: PostgresEntit
         private val logger = LoggerFactory.getLogger(DispatchProcessor.javaClass)
     }
 
-    override fun processAssociations(newEntities: Map<UUID, Any?>) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     override fun getLogger(): Logger {
         return logger
+    }
+
+    override fun isEndDateBased():Boolean {
+        return false
     }
 
     override fun getPropertyTypeForStart(): String {
@@ -39,13 +38,14 @@ class DispatchProcessor(edmManager: EdmManager, entityDataService: PostgresEntit
         return "ol.durationinterval"
     }
 
-    override fun getTimeUnit(): ChronoUnit {
+    override fun getCalculationTimeUnit(): ChronoUnit {
         return ChronoUnit.MINUTES
     }
 
-    override fun getTransformationType(): String {
-        return NONE
+    override fun getDisplayTimeUnit(): ChronoUnit {
+        return ChronoUnit.MINUTES
     }
+
 
     override fun handledEntityTypes(): Set<UUID> {
         return setOf(getEntityTypeId(handledEntityType))

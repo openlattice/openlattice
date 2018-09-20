@@ -2,7 +2,6 @@ package com.openlattice.graph.processing.processors
 
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.graph.processing.util.NONE
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -17,9 +16,6 @@ class JusticeBookingProcessor(edmManager: EdmManager, entityDataService:Postgres
 
     companion object {
         private val logger = LoggerFactory.getLogger(JusticeBookingProcessor.javaClass)
-    }
-
-    override fun processAssociations(newEntities: Map<UUID, Any?>) {
     }
 
     override fun getLogger(): Logger {
@@ -38,12 +34,12 @@ class JusticeBookingProcessor(edmManager: EdmManager, entityDataService:Postgres
         return "criminaljustice.timeserveddays"
     }
 
-    override fun getTimeUnit(): ChronoUnit {
+    override fun getCalculationTimeUnit(): ChronoUnit {
         return ChronoUnit.DAYS
     }
 
-    override fun getTransformationType(): String {
-        return NONE
+    override fun getDisplayTimeUnit(): ChronoUnit {
+        return ChronoUnit.DAYS
     }
 
     override fun handledEntityTypes(): Set<UUID> {

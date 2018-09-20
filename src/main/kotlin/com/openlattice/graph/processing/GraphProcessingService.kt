@@ -105,14 +105,12 @@ class GraphProcessingService(
                         }.map { it.id }
                         val activeEntities = getActiveEntities(lockedEntitySets)
 
-                        //  entityset id / entity id / property id
-                        val groupedEntities = activeEntities.groupBy({ it.entitySetId })
-
-                        //TODO: get in right format
-                        val entities = groupedEntities
+                        //  entityset id / entity id / property id / value(s)
+                        val entities = activeEntities.groupBy { it.entitySetId }
                                 .mapValues {
-                                    dqs.getEntitiesById(it.key, edm.getPropertyTypesForEntitySet(it.key))
-                                            .mapValues { Multimaps.asMap(it.value).mapValues { setOf(it.value) } }
+                                    // entity key id / property id / value(s)
+                                    val entityValues = dqs.getEntitiesById(it.key, edm.getPropertyTypesForEntitySet(it.key))
+                                    entityValues.mapValues { Multimaps.asMap(it.value) }
                                 }
 
                         processors[it]?.process(entities, lastPropagateTime)
