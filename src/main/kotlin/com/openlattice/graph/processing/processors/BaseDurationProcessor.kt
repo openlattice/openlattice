@@ -36,7 +36,7 @@ abstract class BaseDurationProcessor (
         entities.forEach {
             val entitySetId = it.key
 
-13            it.value.forEach {
+            it.value.forEach {
                 var propagationUpdateTime = propagationStarted
 
                 val entityKeyId = it.key
