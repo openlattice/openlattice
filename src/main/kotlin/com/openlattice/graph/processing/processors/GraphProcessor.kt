@@ -16,7 +16,7 @@ interface GraphProcessor {
     /**
      *
      */
-    fun getOutputs() : Pair<FullQualifiedName,FullQualifiedName>
+    fun getOutputs() : Pair<FullQualifiedName,FullQualifiedName> //entity type - property
 
     /**
      * This is intended to be combined with the data table of active properties and will be used to insert

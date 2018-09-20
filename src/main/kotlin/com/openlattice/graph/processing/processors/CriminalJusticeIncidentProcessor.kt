@@ -10,9 +10,20 @@ import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-@Component
+//@Component
 class CriminalJusticeIncidentProcessor(edmManager: EdmManager, entityDataService: PostgresEntityDataQueryService):
         BaseDurationProcessor(edmManager, entityDataService) {
+    override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun getSql(): String {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
     private val handledEntityType = "criminaljustice.incident"
 

@@ -438,8 +438,10 @@ public final class PostgresTable {
 //                        .ifNotExists() );
         PROPAGATION_GRAPH.addIndexes(
                 new PostgresColumnsIndexDefinition( PROPAGATION_GRAPH, SRC_ENTITY_SET_ID )
+                        .name( "src_entity_set_id_propagation_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( PROPAGATION_GRAPH, DST_ENTITY_SET_ID )
+                        .name("dst_entity_set_id_propagation_idx")
                         .ifNotExists() );
 
     }
