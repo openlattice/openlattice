@@ -270,4 +270,7 @@ public class ElasticsearchLambdas implements Serializable {
                 .triggerAppTypeIndex( appTypes );
     }
 
+    public static <T> Function<ConductorElasticsearchApi, Set<UUID>> getEntitySetsWithIndices() {
+        return (Function<ConductorElasticsearchApi, Set<UUID>> & Serializable) ConductorElasticsearchApi::getEntitySetWithIndices;
+    }
 }

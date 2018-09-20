@@ -60,20 +60,20 @@ class Auth0SyncTask(
 
 ) : Runnable {
 
-
-    private val users: IMap<String, Auth0UserBasic> = Auth0SyncHelpers.hazelcastInstance.getMap(HazelcastMap.USERS.name)
-    private val retrofit: Retrofit = RetrofitFactory.newClient(
-            Auth0SyncHelpers.auth0TokenProvider.managementApiUrl
-    ) { Auth0SyncHelpers.auth0TokenProvider.token }
-    private val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
-    private val userRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
-    private val adminRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
-
-    private val globalOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(OrganizationBootstrap.GLOBAL_ORG_PRINCIPAL)
-    private val openlatticeOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(OrganizationBootstrap.OPENLATTICE_ORG_PRINCIPAL)
-
-
     override fun run() {
+        if( !Auth0SyncHelpers.initialized ) return
+        val users: IMap<String, Auth0UserBasic> = Auth0SyncHelpers.hazelcastInstance.getMap(HazelcastMap.USERS.name)
+        val retrofit: Retrofit = RetrofitFactory.newClient(
+                Auth0SyncHelpers.auth0TokenProvider.managementApiUrl
+        ) { Auth0SyncHelpers.auth0TokenProvider.token }
+        val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
+        val userRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
+        val adminRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
+
+        val globalOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(OrganizationBootstrap.GLOBAL_ORG_PRINCIPAL)
+        val openlatticeOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(
+                OrganizationBootstrap.OPENLATTICE_ORG_PRINCIPAL
+        )
         //Only one instance can populate and refresh the map. Unforunately, ILock is refusing to unlock causing issues
         //So we implement a different gating mechanism. This may occasionally be wrong when cluster size changes.
         logger.info("Refreshing user list from Auth0.")
@@ -88,7 +88,10 @@ class Auth0SyncTask(
                             val userId = user.userId
                             users.set(userId, user)
                             if (Auth0SyncHelpers.dbCredentialService.createUserIfNotExists(userId) != null) {
-                                createPrincipal(user, userId)
+                                createPrincipal(
+                                        user, userId, globalOrganizationAclKey, userRoleAclKey,
+                                        openlatticeOrganizationAclKey,adminRoleAclKey
+                                )
                             }
                         }
                 pageOfUsers = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
@@ -108,7 +111,10 @@ class Auth0SyncTask(
         }
     }
 
-    private fun createPrincipal(user: Auth0UserBasic, userId: String) {
+    private fun createPrincipal(
+            user: Auth0UserBasic, userId: String, globalOrganizationAclKey: AclKey, userRoleAclKey: AclKey,
+            openlatticeOrganizationAclKey: AclKey, adminRoleAclKey: AclKey
+    ) {
         val principal = Principal(PrincipalType.USER, userId)
         val title = if (user.nickname != null && user.nickname.length > 0)
             user.nickname

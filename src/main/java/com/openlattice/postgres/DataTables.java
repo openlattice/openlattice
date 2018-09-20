@@ -20,6 +20,8 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.HASH;
 import static com.openlattice.postgres.PostgresColumn.ID;
@@ -56,17 +58,26 @@ public class DataTables {
     public static final  PostgresColumnDefinition           LAST_INDEX     = new PostgresColumnDefinition(
             LAST_INDEX_FIELD,
             TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
             .notNull();
     public static final  FullQualifiedName                  LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
             "@lastIndex" );
     public static final  PostgresColumnDefinition           LAST_LINK      = new PostgresColumnDefinition(
             LAST_LINK_FIELD,
             TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
             .notNull();
     public static final  PostgresColumnDefinition           LAST_WRITE     = new PostgresColumnDefinition(
             LAST_WRITE_FIELD,
             TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
             .notNull();
+    public static final  PostgresColumnDefinition           LAST_PROPAGATE     = new PostgresColumnDefinition(
+            LAST_PROPAGATE_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
+
     public static final  FullQualifiedName                  LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
             "@lastWrite" );
     public static final  PostgresColumnDefinition           OWNERS         = new PostgresColumnDefinition(

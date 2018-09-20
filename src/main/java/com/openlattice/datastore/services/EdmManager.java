@@ -169,6 +169,8 @@ public interface EdmManager {
 
     FullQualifiedName getEntityTypeFqn( UUID entityTypeId );
 
+    Map<FullQualifiedName, UUID> getFqnToIdMap( Set<FullQualifiedName> propertyTypeFqns );
+
     Map<UUID, PropertyType> getPropertyTypesAsMap( Set<UUID> propertyTypeIds );
 
     Map<UUID, EntityType> getEntityTypesAsMap( Set<UUID> entityTypeIds );

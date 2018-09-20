@@ -88,12 +88,14 @@ import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -470,11 +472,13 @@ public class EdmService implements EdmManager {
                         authorizations.setSecurableObjectType( aclKey,
                                 SecurableObjectType.PropertyTypeInEntitySet );
                     } )
-                    .forEach( aclKey -> authorizations.addPermission( aclKey, principal, EnumSet.allOf( Permission.class ) ) );
+                    .forEach( aclKey -> authorizations
+                            .addPermission( aclKey, principal, EnumSet.allOf( Permission.class ) ) );
 
-            List<PropertyType> ownablePropertyTypes = Lists.newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
+            List<PropertyType> ownablePropertyTypes = Lists
+                    .newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
             edmManager.createEntitySet( entitySet, ownablePropertyTypes );
-            esEdmService.createEntitySet(entitySet, ownablePropertyTypes );
+            esEdmService.createEntitySet( entitySet, ownablePropertyTypes );
 
             // No subscribers currently
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
@@ -676,7 +680,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( UUID propertyTypeId ) {
-        String propertyTableName = DataTables.quote(DataTables.propertyTableName( propertyTypeId ));
+        String propertyTableName = DataTables.quote( DataTables.propertyTableName( propertyTypeId ) );
         return edmManager.getPropertyUsageSummary( propertyTableName );
     }
 
@@ -916,8 +920,8 @@ public class EdmService implements EdmManager {
 
         if ( update.getType().isPresent() ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
-            edmManager.updatePropertyTypeFqn(propertyType, update.getType().get());
-            esEdmService.createPropertyType(propertyType);
+            edmManager.updatePropertyTypeFqn( propertyType, update.getType().get() );
+            esEdmService.createPropertyType( propertyType );
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
         // get all entity sets containing the property type, and re-index them.
@@ -930,7 +934,6 @@ public class EdmService implements EdmManager {
                             .forEach( es -> eventBus
                                     .post( new PropertyTypesInEntitySetUpdatedEvent( es.getId(), properties ) ) );
                 } );
-
 
         eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) );
     }
@@ -1023,6 +1026,12 @@ public class EdmService implements EdmManager {
         } else {
             return getEntitySet( id );
         }
+    }
+
+    @Override
+    public Map<FullQualifiedName, UUID> getFqnToIdMap( Set<FullQualifiedName> propertyTypeFqns ) {
+        return aclKeys.getAll( Util.fqnToString( propertyTypeFqns ) ).entrySet().stream()
+                .collect( Collectors.toMap( e -> new FullQualifiedName( e.getKey() ), Entry::getValue ) );
     }
 
     @Override

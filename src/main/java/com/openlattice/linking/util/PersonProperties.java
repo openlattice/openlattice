@@ -20,10 +20,12 @@
 
 package com.openlattice.linking.util;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import java.text.DecimalFormat;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -32,21 +34,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
-public class PersonProperties {
-    private static final Logger        logger = LoggerFactory.getLogger( PersonProperties.class );
-    private static       DecimalFormat dd     = new DecimalFormat( "00" );
 
-    private static FullQualifiedName FIRST_NAME_FQN     = new FullQualifiedName( "nc.PersonGivenName" );
-    private static FullQualifiedName MIDDLE_NAME_FQN    = new FullQualifiedName( "nc.PersonMiddleName" );
-    private static FullQualifiedName LAST_NAME_FQN      = new FullQualifiedName( "nc.PersonSurName" );
-    private static FullQualifiedName SEX_FQN            = new FullQualifiedName( "nc.PersonSex" );
-    private static FullQualifiedName RACE_FQN           = new FullQualifiedName( "nc.PersonRace" );
-    private static FullQualifiedName ETHNICITY_FQN      = new FullQualifiedName( "nc.PersonEthnicity" );
-    private static FullQualifiedName DOB_FQN            = new FullQualifiedName( "nc.PersonBirthDate" );
-    private static FullQualifiedName IDENTIFICATION_FQN = new FullQualifiedName( "nc.SubjectIdentification" );
-    private static FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.ssn" );
-    private static FullQualifiedName AGE_FQN            = new FullQualifiedName( "person.age" );
-    private static FullQualifiedName XREF_FQN           = new FullQualifiedName( "justice.xref" );
+public class PersonProperties {
+    private static final Logger            logger             = LoggerFactory.getLogger( PersonProperties.class );
+    private static final FullQualifiedName FIRST_NAME_FQN     = new FullQualifiedName( "nc.PersonGivenName" );
+    private static final FullQualifiedName MIDDLE_NAME_FQN    = new FullQualifiedName( "nc.PersonMiddleName" );
+    private static final FullQualifiedName LAST_NAME_FQN      = new FullQualifiedName( "nc.PersonSurName" );
+    private static final FullQualifiedName SEX_FQN            = new FullQualifiedName( "nc.PersonSex" );
+    private static final FullQualifiedName RACE_FQN           = new FullQualifiedName( "nc.PersonRace" );
+    private static final FullQualifiedName ETHNICITY_FQN      = new FullQualifiedName( "nc.PersonEthnicity" );
+    private static final FullQualifiedName DOB_FQN            = new FullQualifiedName( "nc.PersonBirthDate" );
+    private static final FullQualifiedName IDENTIFICATION_FQN = new FullQualifiedName( "nc.SubjectIdentification" );
+    private static final FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.ssn" );
+    private static final FullQualifiedName AGE_FQN            = new FullQualifiedName( "person.age" );
+    private static final FullQualifiedName XREF_FQN           = new FullQualifiedName( "justice.xref" );
+    public static final Set<FullQualifiedName> FQNS = ImmutableSet.of( FIRST_NAME_FQN,
+            MIDDLE_NAME_FQN,
+            LAST_NAME_FQN,
+            SEX_FQN,
+            RACE_FQN,
+            ETHNICITY_FQN,
+            DOB_FQN,
+            IDENTIFICATION_FQN,
+            SSN_FQN,
+            AGE_FQN,
+            XREF_FQN );
+    private static final DecimalFormat dd = new DecimalFormat( "00" );
 
     public static DelegatedStringSet getValuesAsSet( Map<UUID, DelegatedStringSet> entity, UUID id ) {
         return DelegatedStringSet.wrap( entity.containsKey( id )
@@ -56,8 +69,7 @@ public class PersonProperties {
 
     public static int valueIsPresent( Map<UUID, DelegatedStringSet> entity, UUID propertyTypeId ) {
         if ( !entity.containsKey( propertyTypeId )
-                || entity.get( propertyTypeId ).stream().filter( StringUtils::isNotBlank ).count() == 0 )
-            return 0;
+                || entity.get( propertyTypeId ).stream().filter( StringUtils::isNotBlank ).count() == 0 ) { return 0; }
         return 1;
     }
 

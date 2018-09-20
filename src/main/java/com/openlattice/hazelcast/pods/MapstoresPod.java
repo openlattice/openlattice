@@ -75,7 +75,6 @@ import com.openlattice.postgres.mapstores.EntitySetPropertyMetadataMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.openlattice.postgres.mapstores.EnumTypesMapstore;
 import com.openlattice.postgres.mapstores.LinkedEntityTypesMapstore;
-import com.openlattice.postgres.mapstores.LinkingEdgesMapstore;
 import com.openlattice.postgres.mapstores.LinkingVerticesMapstore;
 import com.openlattice.postgres.mapstores.NamesMapstore;
 import com.openlattice.postgres.mapstores.OrganizationAppsMapstore;
@@ -270,11 +269,6 @@ public class MapstoresPod {
         com.openlattice.postgres.mapstores.LinkedEntitySetsMapstore plesm =
                 new com.openlattice.postgres.mapstores.LinkedEntitySetsMapstore( hikariDataSource );
         return plesm;
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<LinkingVertexKey, WeightedLinkingVertexKeySet> linkingEdgesMapstore() {
-        return new LinkingEdgesMapstore( hikariDataSource );
     }
 
     @Bean

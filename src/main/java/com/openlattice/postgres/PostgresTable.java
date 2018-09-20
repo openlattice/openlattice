@@ -20,6 +20,10 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.DataTables.LAST_INDEX;
+import static com.openlattice.postgres.DataTables.LAST_LINK;
+import static com.openlattice.postgres.DataTables.LAST_PROPAGATE;
+import static com.openlattice.postgres.DataTables.LAST_WRITE;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_SET;
 import static com.openlattice.postgres.PostgresColumn.ALLOWED_EMAIL_DOMAINS;
@@ -32,7 +36,7 @@ import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
 import static com.openlattice.postgres.PostgresColumn.BLOCK_ID;
 import static com.openlattice.postgres.PostgresColumn.CATEGORY;
 import static com.openlattice.postgres.PostgresColumn.CLAUSES;
-import static com.openlattice.postgres.PostgresColumn.CLUSTER_ID;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
 import static com.openlattice.postgres.PostgresColumn.CONTACTS;
@@ -64,7 +68,6 @@ import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
 import static com.openlattice.postgres.PostgresColumn.KEY;
 import static com.openlattice.postgres.PostgresColumn.LSB;
-import static com.openlattice.postgres.PostgresColumn.MATCH_ID;
 import static com.openlattice.postgres.PostgresColumn.MEMBERS;
 import static com.openlattice.postgres.PostgresColumn.MSB;
 import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
@@ -176,6 +179,10 @@ public final class PostgresTable {
             new PostgresTableDefinition( "edm_versions" )
                     .addColumns( EDM_VERSION_NAME, EDM_VERSION )
                     .primaryKey( EDM_VERSION_NAME, EDM_VERSION );
+    public static final PostgresTableDefinition        ENTITIES                     =
+            new PostgresTableDefinition( "linked_entities" )
+                    .addColumns( ENTITY_SET_ID, ID_VALUE, LINKING_ID )
+                    .primaryKey( ENTITY_SET_ID, ID_VALUE );
     public static final PostgresTableDefinition        ENTITY_QUERIES               =
             new PostgresTableDefinition( "entity_graph_queries" )
                     .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
@@ -236,42 +243,43 @@ public final class PostgresTable {
             );
     public static final PostgresTableDefinition        IDS                          =
             new PostgresTableDefinition( "entity_key_ids" )
-                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID );
+                    .addColumns( ENTITY_SET_ID,
+                            ID,
+                            ENTITY_ID,
+                            LINKING_ID,
+                            VERSION,
+                            VERSIONS,
+                            LAST_WRITE,
+                            LAST_INDEX,
+                            LAST_LINK,
+                            LAST_PROPAGATE );
     public static final PostgresTableDefinition        ID_GENERATION                =
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
                     .addColumns( PARTITION_INDEX, MSB, LSB );
-    public static final PostgresTableDefinition        LINKED_ENTITIES              =
-            new PostgresTableDefinition( "linked_entities" )
-                    .addColumns( CLUSTER_ID, ENTITY_SET_ID, ID_VALUE )
-                    .primaryKey( CLUSTER_ID, ENTITY_SET_ID, ID_VALUE );
     public static final PostgresTableDefinition        LINKED_ENTITY_SETS           =
             new PostgresTableDefinition( "linked_entity_sets" )
                     .addColumns( ID, ENTITY_SET_IDS );
     public static final PostgresTableDefinition        LINKED_ENTITY_TYPES          =
             new PostgresTableDefinition( "linked_entity_types" )
                     .addColumns( ID, ENTITY_TYPE_IDS );
-    public static final PostgresTableDefinition        LINKING_EDGES                =
-            new PostgresTableDefinition( "linking_edges" )
-                    .addColumns( GRAPH_ID, SRC_LINKING_VERTEX_ID, EDGE_VALUE, DST_LINKING_VERTEX_ID )
-                    .primaryKey( GRAPH_ID, SRC_LINKING_VERTEX_ID, EDGE_VALUE, DST_LINKING_VERTEX_ID );
     public static final PostgresTableDefinition        LINKING_VERTICES             =
             new PostgresTableDefinition( "linking_vertices" )
                     .addColumns( GRAPH_ID, VERTEX_ID, GRAPH_DIAMETER, ENTITY_KEY_IDS )
                     .primaryKey( GRAPH_ID, VERTEX_ID );
     public static final PostgresTableDefinition        MATCHED_ENTITIES             =
             new PostgresTableDefinition( "matched_entities" )
-                    .addColumns( CLUSTER_ID,
+                    .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
-                            SRC_LINKING_VERTEX_ID,
+                            SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
-                            DST_LINKING_VERTEX_ID,
+                            DST_ENTITY_KEY_ID,
                             SCORE )
-                    .primaryKey( CLUSTER_ID,
+                    .primaryKey( LINKING_ID,
                             SRC_ENTITY_SET_ID,
-                            SRC_LINKING_VERTEX_ID,
+                            SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
-                            DST_LINKING_VERTEX_ID );
+                            DST_ENTITY_KEY_ID );
     public static final PostgresTableDefinition        NAMES                        =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )
@@ -367,6 +375,37 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
                         .unique()
                         .name( "entity_key_ids_entity_key_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( IDS, VERSION )
+                        .name( "entity_key_ids_version_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( IDS, VERSIONS )
+                        .name( "entity_key_ids_versions_idx" )
+                        .method( IndexMethod.GIN )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( IDS, LINKING_ID )
+                        .name( "entity_key_ids_linking_id_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( IDS, LAST_WRITE )
+                        .name( "entity_key_ids_last_write_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( IDS, LAST_INDEX )
+                        .name( "entity_key_ids_last_index_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( IDS, LAST_PROPAGATE )
+                        .name( "entity_key_ids_last_propagate_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( IDS,
+                        ENTITY_SET_ID.getName() + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        .name( "entity_key_ids_needs_linking_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( IDS,
+                        ENTITY_SET_ID.getName() + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        .name( "entity_key_ids_needs_linking_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( IDS,
+                        ENTITY_SET_ID.getName() + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        .name( "entity_key_ids_needs_propagation_idx" )
                         .ifNotExists()
         );
         APPS.addIndexes(
@@ -380,7 +419,8 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( ENTITY_QUERIES, CLAUSES )
                         .name( "" ) );
         GRAPH_QUERIES.addIndexes(
-                new PostgresColumnsIndexDefinition( GRAPH_QUERIES, START_TIME ).name( "graph_queries_expiry_idx" )
+                new PostgresColumnsIndexDefinition( GRAPH_QUERIES, START_TIME )
+                        .name( "graph_queries_expiry_idx" )
                         .ifNotExists() );
     }
 
