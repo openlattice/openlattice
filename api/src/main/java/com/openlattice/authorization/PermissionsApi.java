@@ -22,6 +22,9 @@ import retrofit2.http.Body;
 import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * @author Ho Chung Siu
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -62,6 +65,6 @@ public interface PermissionsApi {
      * @return The aces for the requested acl key, together with the explanation.
      */
     @POST( BASE + EXPLAIN )
-    AclExplanation getAclExplanation( @Body AclKey aclKey );
+    Map<Principal, List<List<Principal>>> getAclExplanation( @Body AclKey aclKey );
 
 }
