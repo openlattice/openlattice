@@ -54,7 +54,8 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         propertyTypeFilters: Map<UUID, Set<RangeFilter<*>>>,
         metadataOptions: Set<MetadataOption>,
         linked: Boolean,
-        binaryPropertyTypes: Map<UUID, Boolean>
+        binaryPropertyTypes: Map<UUID, Boolean>,
+        metadataFilters: String = ""
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions)
@@ -88,7 +89,8 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                                 propertyTypeFilters[it.key] ?: setOf(),
                                 it.value,
                                 linked,
-                                binaryPropertyTypes[it.key]!!
+                                binaryPropertyTypes[it.key]!!,
+                                metadataFilters
                         )
                         "$joinType $subQuerySql USING (${joinColumns.joinToString(",")})"
                     }
@@ -216,7 +218,8 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
         filters: Set<RangeFilter<*>>,
         fqn: String,
         linked: Boolean,
-        binary: Boolean
+        binary: Boolean,
+        metadataFilters: String = ""
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
 
@@ -242,7 +245,7 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
     return "(SELECT $selectColumns, $arrayAgg " +
             "FROM $propertyTable " +
             linkingIdSubquerySql +
-            "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause " +
+            "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause $metadataFilters" +
             "GROUP BY ($selectColumns)) as $propertyTable "
 }
 

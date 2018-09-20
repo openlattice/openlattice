@@ -28,6 +28,7 @@ import static com.openlattice.postgres.PostgresDatatype.DECIMAL;
 import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.TEXT;
 import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
 import static com.openlattice.postgres.PostgresDatatype.UUID;
 import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY_ARRAY;
@@ -183,6 +184,17 @@ public final class PostgresColumn {
     public static final String                   LAST_INDEX_FIELD            = "last_index";
     public static final String                   LAST_LINK_FIELD             = "last_link";
     public static final String                   LAST_PROPAGATE_FIELD        = "last_propagate";
+    public static final PostgresColumnDefinition LAST_PROPAGATE              = new PostgresColumnDefinition(
+            LAST_PROPAGATE_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
+    public static final String                   LAST_RECEIVED_FIELD         = "LAST_RECEIVED";
+    public static final PostgresColumnDefinition LAST_RECEIVED               = new PostgresColumnDefinition(
+            LAST_RECEIVED_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
     public static final String                   LAST_WRITE_FIELD            = "last_write";
     public static final String                   LINKING_ID_FIELD            = "linking_id";
     public static final PostgresColumnDefinition LINKING_ID                  = new PostgresColumnDefinition(
@@ -191,10 +203,6 @@ public final class PostgresColumn {
     public static final String                   LSB_FIELD                   = "lsb";
     public static final PostgresColumnDefinition LSB                         =
             new PostgresColumnDefinition( LSB_FIELD, BIGINT ).notNull();
-    public static final String                   MATCH_ID_FIELD              = "match_id";
-    public static final PostgresColumnDefinition MATCH_ID                    = new PostgresColumnDefinition(
-            MATCH_ID_FIELD,
-            UUID );
     public static final String                   MEMBERS_FIELD               = "members";
     public static final PostgresColumnDefinition MEMBERS                     =
             new PostgresColumnDefinition( MEMBERS_FIELD, TEXT_ARRAY );
@@ -254,6 +262,8 @@ public final class PostgresColumn {
     public static final String                   PROPERTY_TYPE_ID_FIELD      = "property_type_id";
     public static final PostgresColumnDefinition PROPERTY_TYPE_ID            =
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
+    public static final PostgresColumnDefinition DST_PROPERTY_TYPE_ID        =
+            new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
     public static final PostgresColumnDefinition QUERY                       =
             new PostgresColumnDefinition( "query", TEXT ).notNull();
     public static final PostgresColumnDefinition QUERY_ID                    =
@@ -291,6 +301,8 @@ public final class PostgresColumn {
     public static final String                   SRC_LINKING_VERTEX_ID_FIELD = "src_linking_vertex_id";
     public static final PostgresColumnDefinition SRC_LINKING_VERTEX_ID       =
             new PostgresColumnDefinition( SRC_LINKING_VERTEX_ID_FIELD, UUID );
+    public static final PostgresColumnDefinition SRC_PROPERTY_TYPE_ID        =
+            new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
     public static final String                   SRC_SYNC_ID_FIELD           = "src_sync_id";
     public static final PostgresColumnDefinition SRC_SYNC_ID                 =
             new PostgresColumnDefinition( SRC_SYNC_ID_FIELD, UUID );

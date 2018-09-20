@@ -72,11 +72,6 @@ public class DataTables {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final  PostgresColumnDefinition           LAST_PROPAGATE     = new PostgresColumnDefinition(
-            LAST_PROPAGATE_FIELD,
-            TIMESTAMPTZ )
-            .withDefault( "'-infinity'" )
-            .notNull();
 
     public static final  FullQualifiedName                  LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
             "@lastWrite" );
