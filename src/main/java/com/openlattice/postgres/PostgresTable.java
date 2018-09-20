@@ -308,10 +308,10 @@ public final class PostgresTable {
             "propagation_graph" )
             .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
             .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
-    public static final PostgresTableDefinition        PROPAGATION_STATE            = new PostgresTableDefinition(
-            "propgation_state" )
-            .addColumns( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID, LAST_PROPAGATE, LAST_RECEIVED )
-            .primaryKey( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID );
+//    public static final PostgresTableDefinition        PROPAGATION_STATE            = new PostgresTableDefinition(
+//            "propgation_state" )
+//            .addColumns( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID, LAST_PROPAGATE, LAST_RECEIVED )
+//            .primaryKey( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID );
     public static final PostgresTableDefinition        PROPERTY_TYPES               =
             new PostgresTableDefinition( "property_types" )
                     .addColumns( ID,
@@ -426,23 +426,22 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( GRAPH_QUERIES, START_TIME )
                         .name( "graph_queries_expiry_idx" )
                         .ifNotExists() );
-        PROPAGATION_STATE.addIndexes(
-                new PostgresExpressionIndexDefinition( PROPAGATION_STATE,
-                        "(" + LAST_PROPAGATE.getName() + " < " + LAST_RECEIVED.getName() + ")" )
-                        .name( "entity_key_ids_needs_propagation_idx" )
-                        .ifNotExists(),
-                new PostgresExpressionIndexDefinition( PROPAGATION_STATE,
-                        ENTITY_SET_ID.getName() + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_RECEIVED.getName()
-                                + ")" )
-                        .name( "entity_key_ids_needs_propagation_idx" )
-                        .ifNotExists() );
+//        PROPAGATION_STATE.addIndexes(
+//                new PostgresExpressionIndexDefinition( PROPAGATION_STATE,
+//                        "(" + LAST_PROPAGATE.getName() + " < " + LAST_RECEIVED.getName() + ")" )
+//                        .name( "entity_key_ids_needs_propagation_idx" )
+//                        .ifNotExists(),
+//                new PostgresExpressionIndexDefinition( PROPAGATION_STATE,
+//                        ENTITY_SET_ID.getName() + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_RECEIVED.getName()
+//                                + ")" )
+//                        .name( "entity_key_ids_needs_propagation_idx" )
+//                        .ifNotExists() );
         PROPAGATION_GRAPH.addIndexes(
                 new PostgresColumnsIndexDefinition( PROPAGATION_GRAPH, SRC_ENTITY_SET_ID )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( PROPAGATION_GRAPH, DST_ENTITY_SET_ID )
                         .ifNotExists() );
 
-        )
     }
 
     private PostgresTable() {
