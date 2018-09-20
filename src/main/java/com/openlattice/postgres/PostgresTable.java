@@ -441,8 +441,6 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( PROPAGATION_GRAPH, DST_ENTITY_SET_ID )
                         .ifNotExists() );
-
-        )
     }
 
     private PostgresTable() {

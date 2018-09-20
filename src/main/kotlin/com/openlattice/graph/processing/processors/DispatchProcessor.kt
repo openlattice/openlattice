@@ -46,9 +46,4 @@ class DispatchProcessor(edmManager: EdmManager, entityDataService: PostgresEntit
         return ChronoUnit.MINUTES
     }
 
-
-    override fun handledEntityTypes(): Set<UUID> {
-        return setOf(getEntityTypeId(handledEntityType))
-    }
-
 }

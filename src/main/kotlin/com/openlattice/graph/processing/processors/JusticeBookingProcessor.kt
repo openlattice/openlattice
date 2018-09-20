@@ -42,8 +42,4 @@ class JusticeBookingProcessor(edmManager: EdmManager, entityDataService:Postgres
         return ChronoUnit.DAYS
     }
 
-    override fun handledEntityTypes(): Set<UUID> {
-        return setOf(getEntityTypeId(handledEntityType))
-    }
-
 }

@@ -8,6 +8,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.Logger
 import java.lang.IllegalStateException
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.time.temporal.Temporal
@@ -121,6 +122,8 @@ abstract class BaseDurationProcessor (
         override fun compare(x: Temporal, y: Temporal): Int {
             return if(x is LocalDate) {
                 x.compareTo(y as LocalDate)
+            } else if(x is LocalTime) {
+                x.compareTo(y as LocalTime)
             } else {
                 (x as OffsetDateTime).compareTo(y as OffsetDateTime)
             }

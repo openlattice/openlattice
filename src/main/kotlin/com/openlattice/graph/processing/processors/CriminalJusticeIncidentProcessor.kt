@@ -89,8 +89,4 @@ class CriminalJusticeIncidentProcessor(edmManager: EdmManager, entityDataService
     override fun getDisplayTimeUnit(): ChronoUnit {
         return ChronoUnit.HOURS
     }
-
-    override fun handledEntityTypes(): Set<UUID> {
-        return setOf(getEntityTypeId(handledEntityType))
-    }
 }

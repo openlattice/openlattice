@@ -39,8 +39,4 @@ class JusticeJailBookingProcessor(edmManager: EdmManager, entityDataService: Pos
     override fun getDisplayTimeUnit(): ChronoUnit {
         return ChronoUnit.DAYS
     }
-
-    override fun handledEntityTypes(): Set<UUID> {
-        return setOf(getEntityTypeId(handledEntityType))
-    }
 }

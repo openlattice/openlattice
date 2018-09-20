@@ -4,41 +4,42 @@ import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.datastore.services.EdmManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
-import java.util.*
 
-@Component
-class SupportiveHousingStayProcessor(edmManager: EdmManager, entityDataService: PostgresEntityDataQueryService):
-        BaseDurationProcessor(edmManager, entityDataService) {
+class InvolvedInDispatchProcessor(edmManager: EdmManager, entityDataService: PostgresEntityDataQueryService):
+        BaseDurationProcessor(edmManager, entityDataService)  {
 
-    private val handledEntityType = "housing.stay"
+    private val handledEntityType = "ol.involvedin"
 
     companion object {
-        private val logger = LoggerFactory.getLogger(SupportiveHousingStayProcessor.javaClass)
+        private val logger = LoggerFactory.getLogger(InvolvedInDispatchProcessor.javaClass)
     }
 
     override fun getLogger(): Logger {
         return logger
     }
 
+    override fun isEndDateBased():Boolean {
+        return false
+    }
+
     override fun getPropertyTypeForStart(): String {
-        return "date.admission"
+        return "ol.datetimestart"
     }
 
     override fun getPropertyTypeForEnd(): String {
-        return "ol.datetime_release"
+        return "ol.datetimeend"
     }
 
     override fun getPropertyTypeForDuration(): String {
-        return "housing.lengthofstay"
+        return "ol.organizationtime"
     }
 
     override fun getCalculationTimeUnit(): ChronoUnit {
-        return ChronoUnit.DAYS
+        return ChronoUnit.MINUTES
     }
 
     override fun getDisplayTimeUnit(): ChronoUnit {
-        return ChronoUnit.DAYS
+        return ChronoUnit.MINUTES
     }
 }
