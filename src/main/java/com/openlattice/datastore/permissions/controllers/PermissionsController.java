@@ -179,7 +179,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         }
         //removes duplicates from entry values
         for ( Entry<Principal, List<List<Principal>>> e : principalToPrincipalPaths.entrySet() ) {
-            e.getValue().stream().map( pl -> Lists.newArrayList( Sets.newHashSet( pl ) ) );
+            e.getValue().stream().distinct().collect(Collectors.toList() );
         }
         return principalToPrincipalPaths;
 
