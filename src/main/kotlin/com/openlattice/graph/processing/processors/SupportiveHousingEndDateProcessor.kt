@@ -1,33 +1,34 @@
 package com.openlattice.graph.processing.processors
 
-import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
-//@Component
-class JusticeJailBookingProcessor: DurationProcessor() {
+@Component
+class SupportiveHousingEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val firstStart = "\"${getPropertyTypeForStart()}\"[1]"
+        return "($firstStart + \"${getPropertyTypeForDuration()}\"[1] * interval '1 hour')::date"
     }
 
     override fun getHandledEntityType(): String {
-        return "justice.JailBooking"
+        return "housing.stay"
     }
 
     override fun getPropertyTypeForStart(): String {
-        return "publicsafety.datebooked"
+        return "date.admission"
     }
 
     override fun getPropertyTypeForEnd(): String {
-        return "ol.datetime_released"
+        return "ol.datetime_release"
     }
 
     override fun getPropertyTypeForDuration(): String {
-        return "ol.durationdays"
+        return "housing.lengthofstay"
     }
 
     override fun getCalculationTimeUnit(): ChronoUnit {
-        return ChronoUnit.HOURS
+        return ChronoUnit.DAYS
     }
 
     override fun getDisplayTimeUnit(): ChronoUnit {

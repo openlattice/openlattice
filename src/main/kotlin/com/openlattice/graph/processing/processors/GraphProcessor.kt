@@ -7,14 +7,12 @@ import java.util.*
 
 interface GraphProcessor {
     /**
-     * TODO: Remove
+     * @return Map of FullQualifiedNames of entity types and property types which are needed as input for the processor
      */
-    fun process( entities: Map<UUID, Map<UUID, Map<UUID, Set<Any>>>>, propagationStarted: OffsetDateTime)
-    // entity set id -> entity key id ->
-
     fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>>  //entity type to properties
+
     /**
-     *
+     * @return Pair of FullQualifiedNames of entity type and property type of result of this processor
      */
     fun getOutputs() : Pair<FullQualifiedName,FullQualifiedName> //entity type - property
 

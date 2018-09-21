@@ -262,14 +262,19 @@ internal fun buildComputeQueries(
     val version = System.currentTimeMillis()
 
     val propertyTableName = quote(DataTables.propertyTableName(neighborPropertyTypeId))
+    val propertyTableEntityKeyIdColumns = listOf(ENTITY_SET_ID.name, ID_VALUE.name).joinToString(prefix = "$propertyTableName.", separator = ", $propertyTableName.")
+
+    // TODO: instead of digest, feed in : PostgresDataHasher.hashObject(it, datatypes[propertyTypeId])
     return propagations
             .map {
                 "INSERT INTO $propertyTableName ($entityKeyIdColumns,hash,$fqn,version,versions,last_propagate, last_write)" +
-                        "(SELECT $entityKeyIdColumns,digest(($computeExpression)::text,sha1),$computeExpression,$version,ARRAY[version],now(),now() " +
+                        "(SELECT $propertyTableEntityKeyIdColumns,digest(($computeExpression)::text,'sha1'),$computeExpression,$version,ARRAY[$version],now(),now() " +
                         "FROM ($it) as propagations " +
-                        "WHERE $propertyTableName.${ENTITY_SET_ID.name} = propagations.$TARGET_ENTITY_SET_ID " +
-                        " AND  $propertyTableName.${ID_VALUE.name} = propagations.$TARGET_ENTITY_KEY_ID) " +
-                        " ON CONFLICT DO UPDATE SET version = excluded.version, versions = versions || excluded.versions, " +
+                        "GROUP BY ($entityKeyIdColumns) " +
+                        "INNER JOIN $propertyTableName ON ($propertyTableName.${ENTITY_SET_ID.name} = propagations.$TARGET_ENTITY_SET_ID " +
+                        " AND  $propertyTableName.${ID_VALUE.name} = propagations.$TARGET_ENTITY_KEY_ID)) " +
+                        " ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE" +
+                        " SET ${VERSION.name} =  EXCLUDED.${VERSIONS.name}, ${VERSIONS.name} = $propertyTableName.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
                         "last_propagate=excluded.last_propagate, last_write=excluded.last_write"
             }
 }
@@ -368,7 +373,7 @@ internal fun buildFilteredEdgesSqlForEntities(entitySetIds: Collection<UUID>): L
 
     val dstEdgesSql = "SELECT ${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${SRC_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} WHERE ${SRC_ENTITY_SET_ID.name} IN ($entitySetsClause)"
+            "FROM ${EDGES.name} WHERE ${DST_ENTITY_SET_ID.name} IN ($entitySetsClause)"
 
     return listOf(srcEdgesSql, dstEdgesSql)
 
@@ -383,7 +388,7 @@ internal fun buildFilteredEdgesSqlForAssociations(entitySetIds: Collection<UUID>
 
     val edgeDstEdgesSql = "SELECT ${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${DST_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID" +
-            "FROM ${EDGES.name} WHERE ${DST_ENTITY_SET_ID.name} IN ($entitySetsClause)"
+            "FROM ${EDGES.name} WHERE ${SRC_ENTITY_SET_ID.name} IN ($entitySetsClause)"
 
     return listOf(edgeSrcEdgesSql, edgeDstEdgesSql)
 }
