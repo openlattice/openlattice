@@ -162,10 +162,15 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                         return pl;
                     } ).collect( Collectors.toList() );
                     //adds updated paths to parentMap
-                    parentMap.merge( parentAsPrincipal, paths, ( p1, p2 ) -> {
+                    List<List<Principal>> temp_paths = new ArrayList<List<Principal>>( Arrays.asList() );
+                    for ( List<Principal> pl : paths ) {
+                        temp_paths.add( new ArrayList<>( pl ) );
+                    }
+                    parentMap.merge( parentAsPrincipal, temp_paths, ( p1, p2 ) -> {
                         p1.addAll( p2 );
                         return p1;
                     } );
+
                     //adds updated paths to principalToPrincipalPaths map
                     principalToPrincipalPaths.merge( parentAsPrincipal, paths, ( p1, p2 ) -> {
                         p1.addAll( p2 );
@@ -176,10 +181,6 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             //parents become current nodes
             currentLayer = parentMap.keySet();
             currentMap = parentMap;
-        }
-        //removes duplicates from entry values
-        for ( Entry<Principal, List<List<Principal>>> e : principalToPrincipalPaths.entrySet() ) {
-            e.getValue().stream().distinct().collect(Collectors.toList() );
         }
         return principalToPrincipalPaths;
 
