@@ -521,9 +521,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( optionalSearchTerm.isPresent() ) {
             String searchTerm = optionalSearchTerm.get();
             Map<String, Float> fieldsMap = Maps.newHashMap();
-            fieldsMap.put( ENTITY_SET + "." + NAME, Float.valueOf( "1" ) );
-            fieldsMap.put( ENTITY_SET + "." + TITLE, Float.valueOf( "1" ) );
-            fieldsMap.put( ENTITY_SET + "." + DESCRIPTION, Float.valueOf( "1" ) );
+            fieldsMap.put( ENTITY_SET + "." + ID, 1F );
+            fieldsMap.put( ENTITY_SET + "." + NAME, 1F );
+            fieldsMap.put( ENTITY_SET + "." + TITLE, 1F );
+            fieldsMap.put( ENTITY_SET + "." + DESCRIPTION, 1F );
 
             query.must( QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) ).fields( fieldsMap )
                     .lenient( true ).fuzziness( Fuzziness.AUTO ) );
@@ -818,7 +819,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         String[] authorizedPropertyTypeFields = authorizedPropertyTypes
                 .stream()
                 .map( uuid -> {
-                    fieldsMap.put( uuid.toString(), Float.valueOf( "1" ) );
+                    fieldsMap.put( uuid.toString(), 1F );
                     return uuid.toString();
                 } )
                 .collect( Collectors.toList() )
@@ -936,7 +937,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         String[] authorizedPropertyTypeFields = authorizedPropertyTypes
                 .stream()
                 .map( uuid -> {
-                    fieldsMap.put( uuid.toString(), Float.valueOf( "1" ) );
+                    fieldsMap.put( uuid.toString(), 1F );
                     return uuid.toString();
                 } )
                 .collect( Collectors.toList() )
@@ -946,7 +947,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         searches.forEach( search -> {
             QueryStringQueryBuilder queryString = QueryBuilders
                     .queryStringQuery( search.getSearchTerm() )
-                    .field( search.getPropertyType().toString(), Float.valueOf( "1" ) ).lenient( true );
+                    .field( search.getPropertyType().toString(), 1F ).lenient( true );
             if ( search.getExactMatch() ) {
                 query.must( queryString );
                 query.minimumShouldMatch( 0 );
@@ -1226,7 +1227,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private Map<String, Float> getFieldsMap( SecurableObjectType objectType ) {
-        float f = Float.valueOf( "1" );
+        float f = 1F;
         Map<String, Float> fieldsMap = Maps.newHashMap();
 
         List<String> fields = Lists.newArrayList( TITLE, DESCRIPTION );
