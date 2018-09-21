@@ -85,10 +85,6 @@ public interface SecurePrincipalsManager {
 
     Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey );
 
-    List<List<Principal>> recursivelyGetPrincipalsPath(
-            Principal principal,
-            Map<Principal, List<List<Principal>>> principalToPrincipalPaths );
-
     // Methods about users
     Collection<Principal> getAllUsersWithPrincipal( AclKey principal );
 

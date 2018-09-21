@@ -230,28 +230,6 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public List<List<Principal>> recursivelyGetPrincipalsPath(
-            Principal principal,
-            Map<Principal, List<List<Principal>>> principalToPrincipalPaths ) {
-        List<List<Principal>> paths = new ArrayList<>();
-        principalToPrincipalPaths.put( principal, paths );
-        Collection<SecurablePrincipal> parentLayer = getParentPrincipalsOfPrincipal( lookup( principal ) );
-        if ( parentLayer.isEmpty() ) { //base case: we've reached the head of the tree
-            List<Principal> path = Arrays.asList( principal );
-            paths.add( path );
-            principalToPrincipalPaths.put( principal, paths );
-        } else {    //recursive case: parents still exist
-            for (SecurablePrincipal parent : parentLayer) {
-                paths = recursivelyGetPrincipalsPath(parent.getPrincipal(), principalToPrincipalPaths);
-                paths.forEach( path -> path.add(0, principal) );
-                principalToPrincipalPaths.put(principal, paths);
-            }
-        }
-        return paths;
-
-    }
-
-    @Override
     public Collection<Principal> getAllUsersWithPrincipal( AclKey aclKey ) {
         return getAllPrincipalsWithPrincipal( aclKey )
                 .stream()
