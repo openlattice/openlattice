@@ -27,7 +27,7 @@ class SupportiveHousingStayProcessor(edmManager: EdmManager, entityDataService: 
     }
 
     override fun getSql(): String {
-        return " "
+        return "asd "
     }
 
     private val handledEntityType = "housing.stay"
@@ -71,15 +71,15 @@ class SupportiveHousingEndDateProcessor(edmManager: EdmManager, entityDataServic
 
     override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(FullQualifiedName(handledEntityType) to
-                setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForEnd())))
+                setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForDuration())))
     }
 
     override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
-        return Pair(FullQualifiedName(handledEntityType), FullQualifiedName(getPropertyTypeForDuration()))
+        return Pair(FullQualifiedName(handledEntityType), FullQualifiedName(getPropertyTypeForEnd()))
     }
 
     override fun getSql(): String {
-        return " "
+        return " ad"
     }
 
     private val handledEntityType = "housing.stay"

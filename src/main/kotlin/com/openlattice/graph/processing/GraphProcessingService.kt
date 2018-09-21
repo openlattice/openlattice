@@ -124,26 +124,27 @@ class GraphProcessingService(
             val outputEntitySetIds = getEntitySets(mapOf(processor.getOutputs()).mapValues { setOf(it.value) })
             val outputPropertyType = getPropertyTypes(mapOf(processor.getOutputs()).mapValues { setOf(it.value) })
             val associationType = edm.getAssociationTypeSafe(edm.getEntityType(processor.getOutputs().first).id) != null
+
+            val computeQueries = buildComputeQueries(
+                    processor.getSql(),
+                    outputEntitySetIds,
+                    outputPropertyType.keys.first(),
+                    quote(outputPropertyType.values.first().type.fullQualifiedNameAsString),
+                    entitySetIds,
+                    propertyTypes,
+                    associationType)
+
             hds.connection.use { conn ->
                 conn.use {
-                    conn.createStatement().use { stmt ->
-                        stmt.use {
-                            buildComputeQueries(
-                                    processor.getSql(),
-                                    outputEntitySetIds,
-                                    outputPropertyType.keys.first(),
-                                    quote(outputPropertyType.values.first().type.fullQualifiedNameAsString),
-                                    entitySetIds,
-                                    propertyTypes,
-                                    associationType
-                            ).map { stmt.executeUpdate(it) }
-                                    .sum()
-
+                    try {
+                        conn.createStatement().use { stmt ->
+                           computeQueries.map(stmt::executeUpdate).sum()
                         }
+                    } catch (e:SQLException) {
+                        logger.error("Unable to compute aggregated values with queries: {} ${System.lineSeparator()}$e",  computeQueries)
+                         return 0
                     }
-
                 }
-
             }
         }.sum()
     }
@@ -178,6 +179,7 @@ class GraphProcessingService(
     }
 
     private fun register(processor: GraphProcessor) {
+        processors.add(processor)
         processor.getInputs()
                 .map { input -> // Pair<EntityType Fqn, Set<PropertyType Fqn>>
                     input.value
@@ -255,7 +257,7 @@ internal fun buildComputeQueries(
     val propagations = edgesSql.map {
         "SELECT * " +
                 "FROM ($propertyTable) as blocked_property " +
-                "INNER JOIN  $it USING($entityKeyIdColumns) "
+                "INNER JOIN  ($it) as filtered_edges USING($entityKeyIdColumns) "
     }
     val version = System.currentTimeMillis()
 
@@ -265,7 +267,7 @@ internal fun buildComputeQueries(
                 "INSERT INTO $propertyTableName ($entityKeyIdColumns,hash,$fqn,version,versions,last_propagate, last_write)" +
                         "(SELECT $entityKeyIdColumns,digest(($computeExpression)::text,sha1),$computeExpression,$version,ARRAY[version],now(),now() " +
                         "FROM ($it) as propagations " +
-                        "INNER JOIN ON $propertyTableName.${ENTITY_SET_ID.name} = propagations.$TARGET_ENTITY_SET_ID " +
+                        "WHERE $propertyTableName.${ENTITY_SET_ID.name} = propagations.$TARGET_ENTITY_SET_ID " +
                         " AND  $propertyTableName.${ID_VALUE.name} = propagations.$TARGET_ENTITY_KEY_ID) " +
                         " ON CONFLICT DO UPDATE SET version = excluded.version, versions = versions || excluded.versions, " +
                         "last_propagate=excluded.last_propagate, last_write=excluded.last_write"
@@ -355,12 +357,6 @@ internal fun buildGetBlockedPropertiesSql(
     )
 }
 
-
-internal fun buildActiveTable(propertiesSql: String, edgesSql: String): String {
-    return "SELECT * " +
-            "FROM $propertiesSql " +
-            "INNER JOIN ($edgesSql USING($entityKeyIdColumns) "
-}
 
 internal fun buildFilteredEdgesSqlForEntities(entitySetIds: Collection<UUID>): List<String> {
     checkState(entitySetIds.isNotEmpty())

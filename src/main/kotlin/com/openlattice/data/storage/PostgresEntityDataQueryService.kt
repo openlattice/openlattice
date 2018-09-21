@@ -645,13 +645,14 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
             quote(propertyType),
             VERSION.name,
             VERSIONS.name,
-            LAST_WRITE.name
+            LAST_WRITE.name,
+            LAST_PROPAGATE.name
     )
 
     //Insert new row or update version. We only perform update if we're the winning timestamp.
     return "INSERT INTO $propertyTable (${columns.joinToString(
             ","
-    )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now()) " +
+    )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now(), now()) " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) " +
             "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name} " +
