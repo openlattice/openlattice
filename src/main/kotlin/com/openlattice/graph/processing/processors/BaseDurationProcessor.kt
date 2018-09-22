@@ -4,8 +4,23 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.time.temporal.ChronoUnit
 
 
-abstract class BaseDurationProcessor: GraphProcessor {
+fun sortedFirst(arrayColumn: String):String {
+    return "(SELECT unnest($arrayColumn) ORDER BY 1 LIMIT 1)"
+}
 
+fun sortedLast(arrayColumn: String):String {
+    return "(SELECT unnest($arrayColumn) ORDER BY 1 DESC LIMIT 1)"
+}
+
+fun numberOfDays(start: String, end:String):String {
+    return "(EXTRACT(epoch FROM ($start - $end))/3600/24)::integer"
+}
+
+fun numberOfMinutes(start: String, end:String):String {
+    return "(EXTRACT(epoch FROM ($start - $end))/60)::integer"
+}
+
+abstract class BaseDurationProcessor {
     protected abstract fun getHandledEntityType(): String
     protected abstract fun getPropertyTypeForStart(): String
     protected abstract fun getPropertyTypeForEnd(): String
@@ -16,7 +31,7 @@ abstract class BaseDurationProcessor: GraphProcessor {
 }
 
 
-abstract class DurationProcessor:BaseDurationProcessor() {
+abstract class DurationProcessor:BaseDurationProcessor(), GraphProcessor {
     override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(FullQualifiedName(getHandledEntityType()) to
                 setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForEnd())))
@@ -27,7 +42,7 @@ abstract class DurationProcessor:BaseDurationProcessor() {
     }
 }
 
-abstract class EndDateProcessor:BaseDurationProcessor() {
+abstract class EndDateProcessor:BaseDurationProcessor(), GraphProcessor {
     override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(FullQualifiedName(getHandledEntityType()) to
                 setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForDuration())))

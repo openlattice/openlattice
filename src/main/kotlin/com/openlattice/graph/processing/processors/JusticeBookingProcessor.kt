@@ -1,29 +1,70 @@
 package com.openlattice.graph.processing.processors
 
-import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
-//@Component
-class JusticeBookingProcessor: DurationProcessor() {
+private const val entity_type = "justice.booking"
+private const val start = "date.booking"
+private const val end = "publicsafety.ReleaseDate"
+private const val duration = "criminaljustice.timeserveddays"
+
+@Component
+class JusticeBookingDurationProcessor: DurationProcessor() {
 
     override fun getSql(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val firstStart = sortedFirst(getPropertyTypeForStart())
+        val lastEnd = sortedLast(getPropertyTypeForEnd())
+        return numberOfDays(firstStart, lastEnd)
     }
 
     override fun getHandledEntityType(): String {
-        return "justice.booking"
+        return entity_type
     }
 
     override fun getPropertyTypeForStart(): String {
-        return "date.booking"
+        return start
     }
 
     override fun getPropertyTypeForEnd(): String {
-        return "publicsafety.ReleaseDate"
+        return end
     }
 
     override fun getPropertyTypeForDuration(): String {
-        return "criminaljustice.timeserveddays"
+        return duration
+    }
+
+    override fun getCalculationTimeUnit(): ChronoUnit {
+        return ChronoUnit.DAYS
+    }
+
+    override fun getDisplayTimeUnit(): ChronoUnit {
+        return ChronoUnit.DAYS
+    }
+
+}
+
+@Component
+class JusticeBookingEndDateProcessor: EndDateProcessor() {
+
+    override fun getSql(): String {
+        val firstStart = sortedFirst(getPropertyTypeForStart())
+        return "$firstStart + ${getPropertyTypeForDuration()} * interval '1 day'"
+    }
+
+    override fun getHandledEntityType(): String {
+        return entity_type
+    }
+
+    override fun getPropertyTypeForStart(): String {
+        return start
+    }
+
+    override fun getPropertyTypeForEnd(): String {
+        return end
+    }
+
+    override fun getPropertyTypeForDuration(): String {
+        return duration
     }
 
     override fun getCalculationTimeUnit(): ChronoUnit {

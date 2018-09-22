@@ -1,71 +1,77 @@
 package com.openlattice.graph.processing.processors
 
-import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
-//@Component
-class CriminalJusticeIncidentProcessor:DurationProcessor() {
+//TODO: create processor for edges too
+private val appearsInAssociation = "general.appearsin"
+private val appearsInProperty = "ol.personpoliceminutes"
+
+private val arrestedInAssociation = "criminaljustice.arrestedin"
+private val arrestedInProperty = "ol.personpoliceminutes"
+
+
+private const val entity_type = "criminaljustice.incident"
+private const val start = "incident.startdatetime"
+private const val end = "incident.enddatetime"
+private const val duration = "ol.durationhours"
+
+@Component
+class CriminalJusticeIncidentDurationProcessor:DurationProcessor() {
 
     override fun getSql(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val firstStart = sortedFirst(getPropertyTypeForStart())
+        val lastEnd = sortedLast(getPropertyTypeForEnd())
+        return "EXTRACT(epoch FROM ($lastEnd - $firstStart))/3600"
     }
 
     override fun getHandledEntityType(): String {
-        return "criminaljustice.incident"
+        return entity_type
     }
-
-    private val appearsInAssociation = "general.appearsin"
-    private val appearsInProperty = "ol.personpoliceminutes"
-
-    private val arrestedInAssociation = "criminaljustice.arrestedin"
-    private val arrestedInProperty = "ol.personpoliceminutes"
-
-    /*fun processAssociations(newEntities: Map<UUID, Any?>) {
-        updateSimpleAssociation(newEntities, appearsInAssociation, appearsInProperty)
-        updateSimpleAssociation(newEntities, arrestedInAssociation, arrestedInProperty)
-    }
-
-    private fun updateSimpleAssociation(newEntities: Map<UUID, Any?>, edgeTypeName:String, propertyTypeName: String) {
-        val personEntitySetIds = edmManager.getEntitySetsOfType(edmManager.getEntityType(
-                FullQualifiedName(personEntityType)).id).map { it.id }
-
-        val edgeEntitySets = edmManager.getEntitySetsOfType(edmManager.getEntityType(
-                FullQualifiedName(edgeTypeName)).id).map { it.id }
-
-        // UUID of events (destination) with count of people
-        val transformation = DurationTransformation(60)
-        val perEventAssociations = graphService.getEntitiesForDestination(personEntitySetIds, edgeEntitySets, newEntities.keys)
-                .groupBy {it.dst.entityKeyId}
-
-        perEventAssociations.forEach {
-            val sumVal = newEntities[it.key]
-            when(sumVal) {
-                is Double -> {
-                    val minuteSumValue = transformation.convertFrom(sumVal)
-                    val perPersonValue = minuteSumValue.toDouble()/it.value.size
-
-                    it.value.forEach {
-                        updateEntity(perPersonValue, it.edge.entitySetId, it.edge.entityKeyId, edmManager.getPropertyType(FullQualifiedName(propertyTypeName)))
-                    }
-                }
-                else -> {
-                    logger.error("Can't propagate values to association $edgeTypeName: duration value, $sumVal is not valid.")
-                }
-            }
-
-        }
-    }*/
 
     override fun getPropertyTypeForStart(): String {
-        return "incident.startdatetime"
+        return start
     }
 
     override fun getPropertyTypeForEnd(): String {
-        return "incident.enddatetime"
+        return end
     }
 
     override fun getPropertyTypeForDuration(): String {
-        return "ol.durationhours"
+        return duration
+    }
+
+    override fun getCalculationTimeUnit(): ChronoUnit {
+        return ChronoUnit.MINUTES
+    }
+
+    override fun getDisplayTimeUnit(): ChronoUnit {
+        return ChronoUnit.HOURS
+    }
+}
+
+@Component
+class CriminalJusticeIncidentEndDateProcessor:EndDateProcessor() {
+
+    override fun getSql(): String {
+        val firstStart = sortedFirst(getPropertyTypeForStart())
+        return "$firstStart + ${getPropertyTypeForDuration()} * 60 * interval '1 minutes'"
+    }
+
+    override fun getHandledEntityType(): String {
+        return entity_type
+    }
+
+    override fun getPropertyTypeForStart(): String {
+        return start
+    }
+
+    override fun getPropertyTypeForEnd(): String {
+        return end
+    }
+
+    override fun getPropertyTypeForDuration(): String {
+        return duration
     }
 
     override fun getCalculationTimeUnit(): ChronoUnit {

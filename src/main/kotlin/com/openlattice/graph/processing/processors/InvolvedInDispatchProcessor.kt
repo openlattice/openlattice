@@ -1,29 +1,36 @@
 package com.openlattice.graph.processing.processors
 
-import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
-//@Component
-class InvolvedInDispatchProcessor: DurationProcessor()  {
+private const val entity_type = "ol.involvedin"
+private const val start = "ol.datetimestart"
+private const val end = "ol.datetimeend"
+private const val duration = "ol.organizationtime"
+
+@Component
+class InvolvedInDispatchDurationProcessor: DurationProcessor()  {
 
     override fun getSql(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val firstStart = sortedFirst(getPropertyTypeForStart())
+        val lastEnd = sortedLast(getPropertyTypeForEnd())
+        return numberOfMinutes(firstStart, lastEnd)
     }
 
     override fun getHandledEntityType(): String {
-        return "ol.involvedin"
+        return entity_type
     }
 
     override fun getPropertyTypeForStart(): String {
-        return "ol.datetimestart"
+        return start
     }
 
     override fun getPropertyTypeForEnd(): String {
-        return "ol.datetimeend"
+        return end
     }
 
     override fun getPropertyTypeForDuration(): String {
-        return "ol.organizationtime"
+        return duration
     }
 
     override fun getCalculationTimeUnit(): ChronoUnit {
