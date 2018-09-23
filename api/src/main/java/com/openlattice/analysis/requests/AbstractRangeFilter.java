@@ -54,8 +54,8 @@ public abstract class AbstractRangeFilter<T extends Comparable<T>> implements Ra
     }
 
     public String asSql( String field ) {
-        var lowerboundExpr = lowerboundEqual ? field + ">= " + lowerbound : field + ">" + lowerbound;
-        var upperboundExpr = upperboundEqual ? field + "<= " + upperbound : field + "<" + upperbound;
+        var lowerboundExpr = lowerboundEqual ? field + ">= " + getLowerboundSql() : field + ">" + getLowerboundSql();
+        var upperboundExpr = upperboundEqual ? field + "<= " + getUpperboundSql() : field + "<" + getUpperboundSql();
 
         return lowerboundExpr + " AND " + upperboundExpr;
     }
@@ -73,6 +73,10 @@ public abstract class AbstractRangeFilter<T extends Comparable<T>> implements Ra
     protected abstract T getMinValue();
 
     protected abstract T getMaxValue();
+
+    protected abstract String getLowerboundSql();
+
+    protected abstract String getUpperboundSql();
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }

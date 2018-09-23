@@ -20,6 +20,10 @@
 
 package com.openlattice.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.client.serialization.SerializationConstants;
+
 import java.util.UUID;
 
 /**
@@ -29,15 +33,20 @@ public class EntityDataKey {
     private final UUID entitySetId;
     private final UUID entityKeyId;
 
-    public EntityDataKey( UUID entitySetId, UUID entityKeyId ) {
+    @JsonCreator
+    public EntityDataKey(
+            @JsonProperty(SerializationConstants.ENTITY_SET_ID) UUID entitySetId,
+            @JsonProperty(SerializationConstants.ENTITY_KEY_ID) UUID entityKeyId ) {
         this.entitySetId = entitySetId;
         this.entityKeyId = entityKeyId;
     }
 
+    @JsonProperty(SerializationConstants.ENTITY_SET_ID)
     public UUID getEntitySetId() {
         return entitySetId;
     }
 
+    @JsonProperty(SerializationConstants.ENTITY_KEY_ID)
     public UUID getEntityKeyId() {
         return entityKeyId;
     }

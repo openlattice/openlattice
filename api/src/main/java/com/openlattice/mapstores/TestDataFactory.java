@@ -18,11 +18,7 @@
 
 package com.openlattice.mapstores;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.authorization.Ace;
 import com.openlattice.authorization.Acl;
 import com.openlattice.authorization.AclData;
@@ -63,6 +59,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -430,5 +427,23 @@ public final class TestDataFactory {
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
                 Optional.empty(),
                 Optional.empty() );
+    }
+
+    public static Map<UUID, SetMultimap<UUID, Object>> randomBinaryData( int numberOfEntries, UUID keyType, UUID binaryType ) {
+        Map<UUID, SetMultimap<UUID, Object>> data = new HashMap<>();
+        for(int i = 0; i < numberOfEntries; i++) {
+            data.put( UUID.randomUUID(), randomElement( keyType, binaryType ) );
+        }
+
+        return data;
+    }
+
+    public static SetMultimap<UUID, Object> randomElement( UUID keyType, UUID binaryType ) {
+        SetMultimap<UUID, Object> element = HashMultimap.create();
+        element.put( keyType, RandomStringUtils.random( 5 ) );
+        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
+        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
+        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
+        return element;
     }
 }

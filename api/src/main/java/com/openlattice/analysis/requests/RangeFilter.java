@@ -28,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-@JsonTypeInfo( use = Id.CLASS, include = As.PROPERTY, property = "" )
+@JsonTypeInfo( use = Id.CLASS, include = As.PROPERTY )
 public interface RangeFilter<T extends Comparable<T>> {
 
     boolean isLowerboundEqual();
