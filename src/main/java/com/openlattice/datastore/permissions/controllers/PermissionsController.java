@@ -123,7 +123,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<Principal, List<List<Principal>>> getAclExplanation( @RequestBody AclKey aclKey ) {
         ensureOwnerAccess( aclKey );
-
+        
         //maps aces to principal type
         Iterable<Ace> aces = authorizations.getAllSecurableObjectPermissions( aclKey )
                 .getAces(); //gets aces from returned acl
@@ -147,24 +147,26 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             Set<Principal> parentLayer = new HashSet<>();
             for ( Principal p : currentLayer ) {
                 List<List<Principal>> child_paths = principalToPrincipalPaths.get( p );
-                Collection<SecurablePrincipal> currentParents = securePrincipalsManager
-                        .getParentPrincipalsOfPrincipal( securePrincipalsManager.lookup( p ) );
-                for ( SecurablePrincipal parent : currentParents ) {
-                    Principal parentAsPrincipal = parent.getPrincipal();
+                Set<Principal> currentParents = securePrincipalsManager
+                        .getParentPrincipalsOfPrincipal( securePrincipalsManager.lookup( p ) ).stream()
+                        .map( SecurablePrincipal::getPrincipal )
+                        .collect( Collectors.toSet() );
+                if ( currentParents.contains( p ) ) { currentParents.remove( p ); } //removes self-loops
+                for ( Principal parent : currentParents ) {
                     List<List<Principal>> paths = principalToPrincipalPaths
-                            .getOrDefault( parentAsPrincipal, new ArrayList<>() );
+                            .getOrDefault( parent, new ArrayList<>() );
                     //if map doesn't contain entry for parent, add it to map with current empty paths object
                     if ( paths.isEmpty() ) {
-                        principalToPrincipalPaths.put( parentAsPrincipal, paths );
+                        principalToPrincipalPaths.put( parent, paths );
                     }
+                    //build paths
                     for ( List<Principal> path : child_paths ) {
                         var new_path = new ArrayList( path );
-                        new_path.add( parentAsPrincipal );
+                        new_path.add( parent );
                         if ( !paths.contains( new_path ) ) { paths.add( new_path ); }
                     }
-                    parentLayer.addAll( currentParents.stream().map( SecurablePrincipal::getPrincipal )
-                            .collect( Collectors.toSet() ) );
                 }
+                parentLayer.addAll( currentParents );
             }
             currentLayer = parentLayer;
         }
