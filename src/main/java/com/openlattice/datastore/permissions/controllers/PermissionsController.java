@@ -141,49 +141,34 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             pl.add( path );
         } );
 
-        //maps all principals to principals path
-        Map<Principal, List<List<Principal>>> currentMap = new HashMap<>( principalToPrincipalPaths );
-        Set<Principal> currentLayer = currentMap.keySet();
+        //maps all principals to principals path that grant permission on the acl key
+        Set<Principal> currentLayer = new HashSet<>( principalToPrincipalPaths.keySet() );
         while ( !currentLayer.isEmpty() ) { //while we have nodes to get paths for
-            Map<Principal, List<List<Principal>>> parentMap = new HashMap<>(); //keys in this map will be all parents of nodes in current layer
-            for ( Entry<Principal, List<List<Principal>>> e : currentMap.entrySet() ) {
-                Collection<SecurablePrincipal> parentLayer = securePrincipalsManager
-                        .getParentPrincipalsOfPrincipal( securePrincipalsManager.lookup( e.getKey() ) );
-                for ( SecurablePrincipal parent : parentLayer ) {
+            Set<Principal> parentLayer = new HashSet<>();
+            for ( Principal p : currentLayer ) {
+                List<List<Principal>> child_paths = principalToPrincipalPaths.get( p );
+                Collection<SecurablePrincipal> currentParents = securePrincipalsManager
+                        .getParentPrincipalsOfPrincipal( securePrincipalsManager.lookup( p ) );
+                for ( SecurablePrincipal parent : currentParents ) {
                     Principal parentAsPrincipal = parent.getPrincipal();
-                    //copies child's paths to new object
-                    List<List<Principal>> paths = new ArrayList<List<Principal>>( Arrays.asList() );
-                    for ( List<Principal> pl : e.getValue() ) {
-                        paths.add( new ArrayList<>( pl ) );
+                    List<List<Principal>> paths = principalToPrincipalPaths
+                            .getOrDefault( parentAsPrincipal, new ArrayList<>() );
+                    //if map doesn't contain entry for parent, add it to map with current empty paths object
+                    if ( paths.isEmpty() ) {
+                        principalToPrincipalPaths.put( parentAsPrincipal, paths );
                     }
-                    //adds parent to each child path
-                    paths.stream().map( pl -> {
-                        pl.add( parentAsPrincipal );
-                        return pl;
-                    } ).collect( Collectors.toList() );
-                    //adds updated paths to parentMap
-                    List<List<Principal>> temp_paths = new ArrayList<List<Principal>>( Arrays.asList() );
-                    for ( List<Principal> pl : paths ) {
-                        temp_paths.add( new ArrayList<>( pl ) );
+                    for ( List<Principal> path : child_paths ) {
+                        var new_path = new ArrayList( path );
+                        new_path.add( parentAsPrincipal );
+                        if ( !paths.contains( new_path ) ) { paths.add( new_path ); }
                     }
-                    parentMap.merge( parentAsPrincipal, temp_paths, ( p1, p2 ) -> {
-                        p1.addAll( p2 );
-                        return p1;
-                    } );
-
-                    //adds updated paths to principalToPrincipalPaths map
-                    principalToPrincipalPaths.merge( parentAsPrincipal, paths, ( p1, p2 ) -> {
-                        p1.addAll( p2 );
-                        return p1;
-                    } );
+                    parentLayer.addAll( currentParents.stream().map( SecurablePrincipal::getPrincipal )
+                            .collect( Collectors.toSet() ) );
                 }
             }
-            //parents become current nodes
-            currentLayer = parentMap.keySet();
-            currentMap = parentMap;
+            currentLayer = parentLayer;
         }
         return principalToPrincipalPaths;
-
     }
 
     @Override
