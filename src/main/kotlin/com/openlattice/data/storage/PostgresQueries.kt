@@ -22,8 +22,6 @@
 package com.openlattice.data.storage
 
 import com.openlattice.analysis.requests.Filter
-import com.openlattice.analysis.requests.RangeFilter
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -109,7 +107,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
         propertyTypes: Map<UUID, String>,
         returnedPropertyTypes: Collection<UUID>,
         authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-        propertyTypeFilters: Map<UUID, Set<RangeFilter<*>>>,
+        propertyTypeFilters: Map<UUID, Set<Filter<*>>>,
         metadataOptions: Set<MetadataOption>,
         version: Long,
         linked: Boolean,
@@ -176,7 +174,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
         propertyTypeId: UUID,
         fqn: String,
         version: Long,
-        filters: Set<RangeFilter<*>>,
+        filters: Set<Filter<*>>,
         linked: Boolean,
         binary: Boolean
 ): String {
