@@ -1,5 +1,6 @@
 package com.openlattice.graph.processing.processors
 
+import com.openlattice.analysis.requests.ValueFilter
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.transaction.annotation.Propagation
 import java.time.OffsetDateTime
@@ -24,4 +25,10 @@ interface GraphProcessor {
      *
      */
     fun getSql() : String
+
+    /**
+     * @return Should return a map of filter expression for each property type
+     */
+    fun getFilters() : Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>>
+
 }

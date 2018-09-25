@@ -5,7 +5,7 @@ import java.time.temporal.ChronoUnit
 
 private const val entity_type = "justice.JailBooking"
 private const val start = "publicsafety.datebooked"
-private const val end = "ol.datetime_released"
+private const val end = "ol.datetime_release"
 private const val duration = "ol.durationdays"
 
 @Component

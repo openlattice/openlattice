@@ -1,5 +1,6 @@
 package com.openlattice.graph.processing.processors
 
+import com.openlattice.analysis.requests.ValueFilter
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.time.temporal.ChronoUnit
 
@@ -20,7 +21,7 @@ fun numberOfMinutes(start: String, end:String):String {
     return "(EXTRACT(epoch FROM ($start - $end))/60)::integer"
 }
 
-abstract class BaseDurationProcessor {
+abstract class BaseDurationProcessor: GraphProcessor {
     protected abstract fun getHandledEntityType(): String
     protected abstract fun getPropertyTypeForStart(): String
     protected abstract fun getPropertyTypeForEnd(): String
@@ -28,10 +29,14 @@ abstract class BaseDurationProcessor {
 
     protected abstract fun getDisplayTimeUnit(): ChronoUnit
     protected abstract fun getCalculationTimeUnit(): ChronoUnit
+
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+        return mapOf()
+    }
 }
 
 
-abstract class DurationProcessor:BaseDurationProcessor(), GraphProcessor {
+abstract class DurationProcessor:BaseDurationProcessor()  {
     override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(FullQualifiedName(getHandledEntityType()) to
                 setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForEnd())))

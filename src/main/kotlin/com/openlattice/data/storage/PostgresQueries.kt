@@ -21,6 +21,7 @@
 
 package com.openlattice.data.storage
 
+import com.openlattice.analysis.requests.Filter
 import com.openlattice.analysis.requests.RangeFilter
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
@@ -51,7 +52,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         propertyTypes: Map<UUID, String>,
         returnedPropertyTypes: Collection<UUID>,
         authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-        propertyTypeFilters: Map<UUID, Set<RangeFilter<*>>>,
+        propertyTypeFilters: Map<UUID, Set<Filter<*>>>,
         metadataOptions: Set<MetadataOption>,
         linked: Boolean,
         binaryPropertyTypes: Map<UUID, Boolean>,
@@ -215,7 +216,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
 internal fun selectCurrentVersionOfPropertyTypeSql(
         entitiesClause: String,
         propertyTypeId: UUID,
-        filters: Set<RangeFilter<*>>,
+        filters: Set<Filter<*>>,
         fqn: String,
         linked: Boolean,
         binary: Boolean,
@@ -393,7 +394,7 @@ internal fun buildPropertyTypeEntitiesClause(
     } + ")"
 }
 
-internal fun buildFilterClause(fqn: String, filter: Set<RangeFilter<*>>): String {
+internal fun buildFilterClause(fqn: String, filter: Set<Filter<*>>): String {
     if (filter.isEmpty()) return ""
     return filter.joinToString(" AND ", prefix = " AND ") { it.asSql(fqn) }
 }

@@ -4,9 +4,6 @@ import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
 //TODO: create processor for edges too
-private val appearsInAssociation = "general.appearsin"
-private val appearsInProperty = "ol.personpoliceminutes"
-
 private val arrestedInAssociation = "criminaljustice.arrestedin"
 private val arrestedInProperty = "ol.personpoliceminutes"
 
