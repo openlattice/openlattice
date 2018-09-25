@@ -88,7 +88,7 @@ class GraphProcessingService(
     }
 
     private fun markIfPropagated(input: Propagation, outputs: Set<Propagation>): Int {
-        val entitySetIds = edm.getEntitySetsOfType(input.entityTypeId).map { it.id };
+        val entitySetIds = edm.getEntitySetsOfType(input.entityTypeId).map { it.id }
         val propertyTypes = this.propertyTypes.getAll(setOf(input.propertyTypeId))
         val outputEntitySetIds = outputs.flatMap { edm.getEntitySetsOfType(it.entityTypeId) }.map { it.id }
         val outputPropertyType = outputs.map { it.propertyTypeId }.toSet()
@@ -119,8 +119,7 @@ class GraphProcessingService(
                 }
             }
         } catch(e:IllegalStateException) {
-
-            logger.error("Couldn't propagate input entity type ${edm.getEntityTypeFqn(input.entityTypeId)}")
+            logger.error("Couldn't propagate input entity type ${edm.getEntityTypeFqn(input.entityTypeId)}: $e")
         }
         return 0
     }
@@ -159,7 +158,7 @@ class GraphProcessingService(
                     }
                 }
             } catch(e:IllegalStateException) {
-                logger.error("Couldn't compute property type ${processor.getOutputs().second} of entity type ${processor.getOutputs().first}${System.lineSeparator()}$e")
+                logger.error("Couldn't compute property type ${processor.getOutputs().second} of entity type ${processor.getOutputs().first}: $e")
                 return 0
             }
         }.sum()
@@ -257,7 +256,7 @@ internal fun buildTombstoneSql(
 
 internal fun buildComputeQueries(
         computeExpression: String,
-        filterExpressions: Map<UUID, Set<ValueFilter<Any>>>,
+        filterExpressions: Map<UUID, Set<ValueFilter<*>>>,
         neighborEntitySetIds: Collection<UUID>,
         neighborPropertyTypeId: UUID,
         fqn: String,
@@ -290,7 +289,7 @@ internal fun buildComputeQueries(
                         "FROM ($it) as propagations " +
                         "INNER JOIN $propertyTableName ON ($propertyTableName.${ENTITY_SET_ID.name} = propagations.$TARGET_ENTITY_SET_ID " +
                         " AND  $propertyTableName.${ID_VALUE.name} = propagations.$TARGET_ENTITY_KEY_ID) " +
-                        "GROUP BY ($propertyTableName.${ENTITY_SET_ID.name}) ) " +
+                        "GROUP BY ( $propertyTableEntityKeyIdColumns ) ) " +
                         " ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE" +
                         " SET ${VERSION.name} =  EXCLUDED.${VERSIONS.name}, ${VERSIONS.name} = $propertyTableName.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
                         "last_propagate=excluded.last_propagate, last_write=excluded.last_write"

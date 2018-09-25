@@ -13,7 +13,7 @@ private val appearsin_property_type = "ol.personpoliceminutes"
 
 //@Component
 class CriminalJusticeIncidentAppearsInProcessor:GraphProcessor {
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 

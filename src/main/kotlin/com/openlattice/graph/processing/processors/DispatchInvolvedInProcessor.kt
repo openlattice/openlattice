@@ -60,6 +60,10 @@ private fun getAssociationDurationCalc(edgeDurationFqn:String, eventDurationFqn:
 
 
 // TODO handle cases also, when multiple associations are for same dispath-officer/unit duo (array_agg should do it)
+//  TODO -> change COUNT queries with adding distinct
+//  TODO -> change COUNT NO DURATION queries with adding filter expression and then change it to COUNT(DISTINCT id/name)
+//  TODO -> change duration calculations, HOW???
+
 
 /* ************** Base duration calculation : on association ************* */
 //@Component
@@ -67,7 +71,6 @@ class DispatchInvolvedInProcessor: GraphProcessor  {
     override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(FullQualifiedName(involed_in) to setOf(FullQualifiedName(start), FullQualifiedName(end)),
                 FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key)))
-        // add ol.dispatch also into query, so that we only get rows "involedin  dispatch"
     }
 
     override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -80,7 +83,7 @@ class DispatchInvolvedInProcessor: GraphProcessor  {
         return numberOfMinutes(firstStart, lastEnd)
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }
@@ -108,7 +111,7 @@ class DispatchInvolvedInPersonPoliceMinutesProcessor: GraphProcessor {
         return "($police_minutes + $police_unit_minutes) / $num_of_people"
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         //TODO: need valuefilter
         //return mapOf(FullQualifiedName(involed_in) to mapOf(FullQualifiedName(involed_in_type) to setOf(??????))
         return TODO("filter on involvedin type")
@@ -133,7 +136,7 @@ class DispatchInvolvedInPersonFireMinutesProcessor: GraphProcessor {
         return "$fire_minutes / $num_of_people"
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }
@@ -156,7 +159,7 @@ class DispatchInvolvedInPersonEMSMinutesProcessor: GraphProcessor {
         return "$ems_minutes / $num_of_people"
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }
@@ -182,7 +185,7 @@ class DispatchInvolvedInNumberOfPoliceProcessor: GraphProcessor {
         return "COUNT($general_person_key)"
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         //TODO: need valuefilter
         //return mapOf(FullQualifiedName(involed_in) to mapOf(FullQualifiedName(involed_in_type) to setOf(??????))
         return TODO()
@@ -206,7 +209,7 @@ class DispatchInvolvedInNumberOfPoliceNoDurationProcessor: GraphProcessor {
         return "COUNT(CASE WHEN (ARRAY_LENGTH($duration) IS null) THEN 1 END)" // array_length should return null if empty
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         //TODO: need valuefilter
         //return mapOf(FullQualifiedName(involed_in) to mapOf(FullQualifiedName(involed_in_type) to setOf(??????))
         return TODO()
@@ -231,7 +234,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsProcessor: GraphProcessor {
         return "COUNT($police_unit_name)"
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }
@@ -253,7 +256,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: GraphProcessor {
         return "COUNT(CASE WHEN (ARRAY_LENGTH($duration) IS null) THEN 1 END)" // array_length should return null if empty
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf() //TODO: duration in (null) ???
     }
 }
@@ -276,7 +279,7 @@ class DispatchInvolvedInNumberOfFireUnitsProcessor: GraphProcessor {
         return "COUNT($fire_unit_name)"
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }
@@ -298,7 +301,7 @@ class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: GraphProcessor {
         return "COUNT(CASE WHEN (ARRAY_LENGTH($duration) IS null) THEN 1 END)" // array_length should return null if empty
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf() //TODO: duration in (null) ???
     }
 }
@@ -321,7 +324,7 @@ class DispatchInvolvedInNumberOfEMSUnitsProcessor: GraphProcessor {
         return "COUNT($ems_unit_name)"
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }
@@ -343,7 +346,7 @@ class DispatchInvolvedInNumberOfEMSUnitsNoDurationProcessor: GraphProcessor {
         return "COUNT(CASE WHEN (ARRAY_LENGTH($duration) IS null) THEN 1 END)" // array_length should return null if empty
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf() //TODO: duration in (null) ???
     }
 }
@@ -366,7 +369,7 @@ class DispatchInvolvedInNumberOfPeopleProcessor: GraphProcessor {
         return "COUNT($general_person_key)"
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return TODO("filter on involvedin") //involed_in_type
     }
 }
@@ -392,7 +395,7 @@ class DispatchInvolvedInPoliceMinutesProcessor: GraphProcessor {
         return getAssociationDurationCalc(duration, dispatch_duration)
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return TODO("need to filter on officers")
     }
 }
@@ -414,7 +417,7 @@ class DispatchInvolvedInPoliceUnitMinutesProcessor: GraphProcessor {
         return getAssociationDurationCalc(duration, dispatch_duration)
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }
@@ -436,7 +439,7 @@ class DispatchInvolvedInFireMinutesProcessor: GraphProcessor {
         return getAssociationDurationCalc(duration, dispatch_duration)
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }
@@ -458,7 +461,7 @@ class DispatchInvolvedInEMSMinutesProcessor: GraphProcessor {
         return getAssociationDurationCalc(duration, dispatch_duration)
     }
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }

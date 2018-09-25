@@ -30,7 +30,7 @@ abstract class BaseDurationProcessor: GraphProcessor {
     protected abstract fun getDisplayTimeUnit(): ChronoUnit
     protected abstract fun getCalculationTimeUnit(): ChronoUnit
 
-    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>> {
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
 }

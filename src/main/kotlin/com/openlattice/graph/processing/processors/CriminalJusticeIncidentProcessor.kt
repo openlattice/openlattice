@@ -3,11 +3,6 @@ package com.openlattice.graph.processing.processors
 import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
-//TODO: create processor for edges too
-private val arrestedInAssociation = "criminaljustice.arrestedin"
-private val arrestedInProperty = "ol.personpoliceminutes"
-
-
 private const val entity_type = "criminaljustice.incident"
 private const val start = "incident.startdatetime"
 private const val end = "incident.enddatetime"

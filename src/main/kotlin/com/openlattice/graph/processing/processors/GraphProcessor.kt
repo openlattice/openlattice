@@ -29,6 +29,6 @@ interface GraphProcessor {
     /**
      * @return Should return a map of filter expression for each property type
      */
-    fun getFilters() : Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<Any>>>
+    fun getFilters() : Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>>
 
 }
