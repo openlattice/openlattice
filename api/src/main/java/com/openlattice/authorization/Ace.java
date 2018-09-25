@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 public class Ace {
@@ -37,11 +38,17 @@ public class Ace {
     public Ace(
             @JsonProperty( SerializationConstants.PRINCIPAL ) Principal principal,
             @JsonProperty( SerializationConstants.PERMISSIONS ) Set<Permission> permissions,
-            @JsonProperty( SerializationConstants.EXPIRATION ) OffsetDateTime expirationDate ) {
+            @JsonProperty( SerializationConstants.EXPIRATION ) Optional<OffsetDateTime> expirationDate ) {
         this.principal = principal;
         this.permissions = EnumSet.noneOf( Permission.class );
         this.permissions.addAll( permissions );
-        this.expirationDate = expirationDate;
+        this.expirationDate = expirationDate.orElse( OffsetDateTime.MAX );
+    }
+
+    public Ace(
+            Principal principal,
+            EnumSet<Permission> permissions ) {
+        this( principal, permissions, Optional.empty() );
     }
 
     @JsonProperty( SerializationConstants.PRINCIPAL )

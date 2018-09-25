@@ -265,7 +265,7 @@ public final class TestDataFactory {
     }
 
     public static Ace ace() {
-        return new Ace( userPrincipal(), permissions(), OffsetDateTime.now() );
+        return new Ace( userPrincipal(), permissions() );
     }
 
     public static AceValue aceValue() {
