@@ -51,6 +51,13 @@ public class Ace {
         this( principal, permissions, Optional.empty() );
     }
 
+    public Ace(
+            Principal principal,
+            EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate ) {
+        this( principal, permissions, Optional.of( expirationDate ) );
+    }
+
     @JsonProperty( SerializationConstants.PRINCIPAL )
     public Principal getPrincipal() {
         return principal;
