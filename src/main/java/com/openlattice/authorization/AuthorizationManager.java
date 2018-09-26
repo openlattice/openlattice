@@ -57,7 +57,18 @@ public interface AuthorizationManager {
             Principal principal,
             EnumSet<Permission> permissions );
 
+    void addPermission(
+            AclKey aclKeys,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate );
+
     void removePermission(
+            AclKey aclKeys,
+            Principal principal,
+            EnumSet<Permission> permissions );
+
+    void setPermission(
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions );
