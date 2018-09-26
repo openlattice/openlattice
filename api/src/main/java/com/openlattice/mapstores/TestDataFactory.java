@@ -115,8 +115,8 @@ public final class TestDataFactory {
                 : Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) );
         var propertyTags = LinkedHashMultimap.<UUID, String>create();
 
-        for ( UUID uuid : k ) {
-            propertyTags.put( k, "PRIMARY KEY TAG" );
+        for ( UUID id : k ) {
+            propertyTags.put( id, "PRIMARY KEY TAG" );
         }
 
         return new EntityType(
