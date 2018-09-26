@@ -616,6 +616,9 @@ public interface EdmApi {
     @GET( ASSOCIATION_TYPE_BASE_PATH + ID_PATH + AVAILABLE_PATH )
     Iterable<EntityType> getAvailableAssociationTypesForEntityType( @Path( ID ) UUID entityTypeId );
 
+    @POST( ENTITY_SETS_BASE_PATH + PROPERTY_TYPE_PATH )
+    Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getPropertyMetadataForEntitySets( @Body Set<UUID> entitySetIds );
+
     @GET( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH )
     Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( @Path( ID ) UUID entitySetId );
 
