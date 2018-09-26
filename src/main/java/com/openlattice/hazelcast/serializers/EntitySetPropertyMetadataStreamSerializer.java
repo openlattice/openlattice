@@ -44,7 +44,7 @@ public class EntitySetPropertyMetadataStreamSerializer
         String title = in.readUTF();
         String description = in.readUTF();
         boolean defaultShow = in.readBoolean();
-        return new EntitySetPropertyMetadata( title, description, defaultShow );
+        return new EntitySetPropertyMetadata( title, description, tags, defaultShow );
     }
 
     @Override

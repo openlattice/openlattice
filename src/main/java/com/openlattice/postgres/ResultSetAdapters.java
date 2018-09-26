@@ -49,7 +49,6 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
-import java.time.temporal.ChronoUnit;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -510,7 +509,7 @@ public final class ResultSetAdapters {
         String title = title(rs);
         String description = description(rs);
         boolean show = show(rs);
-        return new EntitySetPropertyMetadata(title, description, show);
+        return new EntitySetPropertyMetadata(title, description, tags, show);
     }
 
     public static EntitySetPropertyKey entitySetPropertyKey(ResultSet rs) throws SQLException {

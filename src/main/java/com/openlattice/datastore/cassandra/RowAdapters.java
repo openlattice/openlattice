@@ -40,7 +40,6 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.objects.VertexKey;
 import com.openlattice.requests.RequestStatus;
@@ -450,7 +449,7 @@ public final class RowAdapters {
         String title = row.getString( CommonColumns.TITLE.cql() );
         String description = row.getString( CommonColumns.DESCRIPTION.cql() );
         boolean defaultShow = row.getBool( CommonColumns.SHOW.cql() );
-        return new EntitySetPropertyMetadata( title, description, defaultShow );
+        return new EntitySetPropertyMetadata( title, description, tags, defaultShow );
     }
 
 }

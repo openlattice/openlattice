@@ -53,6 +53,6 @@ public class EntitySetPropertyMetadataMapstore
     }
 
     @Override public EntitySetPropertyMetadata generateTestValue() {
-        return new EntitySetPropertyMetadata( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ), true );
+        return new EntitySetPropertyMetadata( RandomStringUtils.random( 10 ), RandomStringUtils.random( 10 ), tags, true );
     }
 }

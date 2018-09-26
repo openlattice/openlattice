@@ -25,7 +25,6 @@ import java.util.UUID;
 
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -80,7 +79,7 @@ public class EntitySetPropertyMetadataMapstore
 
     @Override
     public EntitySetPropertyMetadata generateTestValue() {
-        return new EntitySetPropertyMetadata( "title", "description", true );
+        return new EntitySetPropertyMetadata( "title", "description", tags, true );
     }
 
 }

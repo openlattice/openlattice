@@ -20,7 +20,6 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.EntitySetPropertyMetadataStreamSerializer;
 import java.io.Serializable;
 
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -38,7 +37,7 @@ public class EntitySetPropertyMetadataStreamSerializerTest
 
     @Override
     protected EntitySetPropertyMetadata createInput() {
-        return new EntitySetPropertyMetadata( "title", "description", true );
+        return new EntitySetPropertyMetadata( "title", "description", tags, true );
     }
 
 }
