@@ -21,6 +21,7 @@
 package com.openlattice.datastore;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -156,6 +157,7 @@ public class TestEdmConfigurer {
                         EMPLOYEE_NAME_PROP_ID,
                         EMPLOYEE_DEPT_PROP_ID,
                         EMPLOYEE_SALARY_PROP_ID ) ),
+                LinkedHashMultimap.create(),
                 Optional.empty(),
                 Optional.of( SecurableObjectType.EntityType ) );
     }

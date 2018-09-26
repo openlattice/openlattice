@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.edm;
 
+import com.openlattice.graph.query.GraphQueryState.Option;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -53,7 +54,7 @@ import com.google.common.collect.Sets;
 
 public class EdmControllerTests extends IntegrationTestsBootstrap {
     private final static Logger logger = LoggerFactory.getLogger( AuthenticatedRestCallsTest.class );
-    private final EdmApi        edm    = getApiAdmin( EdmApi.class );
+    private final        EdmApi edm    = getApiAdmin( EdmApi.class );
 
     public PropertyType createPropertyType() {
         PropertyType expected = TestDataFactory.propertyType();
@@ -149,7 +150,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                 entityTypeId,
                 TestDataFactory.name(),
                 "foobar",
-                Optional.<String> of( "barred" ),
+                Optional.<String>of( "barred" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ) );
 
         Set<EntitySet> ees = ImmutableSet.copyOf( edm.getEntitySets() );
@@ -232,6 +233,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty() ) );
 
         PropertyType updatedPt = edm.getPropertyType( pt.getId() );
@@ -254,7 +256,8 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.of( newPtFqn ),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.empty()) );
+                        Optional.empty(),
+                        Optional.empty() ) );
 
         PropertyType updatedPt = edm.getPropertyType( pt.getId() );
         Assert.assertEquals( newPtFqn, updatedPt.getType() );
@@ -276,7 +279,8 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.empty()) );
+                        Optional.empty(),
+                        Optional.empty() ) );
 
         EntityType updatedEt = edm.getEntityType( et.getId() );
         Assert.assertEquals( newTitle, updatedEt.getTitle() );
@@ -296,6 +300,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of( newEtFqn ),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty() ) );
@@ -322,6 +327,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty() ) );
 
         EntitySet updatedEs = edm.getEntitySet( es.getId() );
@@ -341,6 +347,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of( newEsName ),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),

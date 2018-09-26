@@ -195,7 +195,7 @@ public class AppController implements AppApi, AuthorizingComponent {
         appService.installApp( appId, organizationId, prefix, Principals.getCurrentUser() );
     }
 
-    private Iterable<Organization> getAvailableOrgs() {
+    private Iterable<Organization>  getAvailableOrgs() {
         return getAccessibleObjects( SecurableObjectType.Organization,
                 EnumSet.of( Permission.READ ) )
                 .filter( Predicates.notNull()::apply ).map( AuthorizationUtils::getLastAclKeySafely )
