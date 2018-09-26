@@ -24,6 +24,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.edm.EdmApi;
@@ -46,22 +47,20 @@ import org.junit.Assert;
  */
 
 public class TestEdmConfigurer {
-    public static final String SCHEMA_NAME         = "testcsv.csv";
-    public static final String SALARY              = "testcsv.salary";
-    public static final String NAME                = "testcsv.name";
-    public static final String TITLE               = "testcsv.title";
     public static final String DEPT                = "testcsv.dept";
-    public static final String ID                  = "testcsv.id";
-    public static final String ROLE_NAME           = "testcsv.role";
-    public static final String ENTITY_TYPE_NAME    = "testcsv.person";
-    public static final String EMPLOYED_IN_NAME    = "testcsv.employed_in";
-    public static final String ENTITY_SET_NAME     = "employees";
     public static final String EMPLOYED_IN_ES_NAME = "employedin";
-
-    public static final FullQualifiedName PERSON_FQN      = new FullQualifiedName( ENTITY_TYPE_NAME );
+    public static final String EMPLOYED_IN_NAME    = "testcsv.employed_in";
     public static final FullQualifiedName EMPLOYED_IN_FQN = new FullQualifiedName( EMPLOYED_IN_NAME );
+    public static final String ENTITY_SET_NAME     = "employees";
+    public static final String ENTITY_TYPE_NAME    = "testcsv.person";
+    public static final String ID                  = "testcsv.id";
+    public static final String NAME                = "testcsv.name";
+    public static final FullQualifiedName PERSON_FQN      = new FullQualifiedName( ENTITY_TYPE_NAME );
+    public static final String ROLE_NAME           = "testcsv.role";
     public static final FullQualifiedName ROLE_FQN        = new FullQualifiedName( ROLE_NAME );
-
+    public static final String SALARY              = "testcsv.salary";
+    public static final String SCHEMA_NAME         = "testcsv.csv";
+    public static final String TITLE               = "testcsv.title";
     protected static final PropertyType EMPLOYEE_TITLE_PROP_TYPE = new PropertyType(
             new FullQualifiedName( TITLE ),
             "Title",
@@ -133,6 +132,7 @@ public class TestEdmConfigurer {
                                 Sets.newLinkedHashSet( Arrays.asList( ID_PROP_ID,
                                         START_DATETIME_PROP_TYPE.getId(),
                                         END_DATETIME_PROP_TYPE.getId() ) ),
+                                LinkedHashMultimap.create(),
                                 Optional.empty(),
                                 Optional.of( SecurableObjectType.AssociationType ) )
                 ),
@@ -174,6 +174,7 @@ public class TestEdmConfigurer {
                         EMPLOYEE_TITLE_PROP_ID,
                         EMPLOYEE_DEPT_PROP_ID,
                         EMPLOYEE_SALARY_PROP_ID ) ),
+                LinkedHashMultimap.create(),
                 Optional.empty(),
                 Optional.of( SecurableObjectType.EntityType )
         );
@@ -189,6 +190,7 @@ public class TestEdmConfigurer {
                 Sets.newLinkedHashSet( Arrays.asList(
                         ID_PROP_ID,
                         EMPLOYEE_NAME_PROP_ID ) ),
+                LinkedHashMultimap.create(),
                 Optional.empty(),
                 Optional.of( SecurableObjectType.EntityType ) );
     }

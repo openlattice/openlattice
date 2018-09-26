@@ -21,42 +21,32 @@
 
 package com.openlattice.rehearsal.data
 
-import com.dataloom.mappers.ObjectMappers
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
+import com.google.common.collect.Maps.transformValues
 import com.openlattice.data.DataEdge
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
-import com.openlattice.edm.type.PropertyType
+import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import org.apache.commons.lang.math.RandomUtils
 import org.apache.commons.lang3.RandomStringUtils
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import org.apache.olingo.commons.api.edm.geo.Geospatial
-import org.apache.olingo.commons.api.edm.geo.Point
-import org.joda.time.DateTime
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.io.IOException
-import java.math.BigDecimal
+import org.slf4j.LoggerFactory
+import java.lang.Math.abs
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.*
-import com.google.common.collect.Maps.transformValues   //added import statement
-import com.openlattice.data.UpdateType
-import com.openlattice.edm.requests.MetadataUpdate
-import org.slf4j.LoggerFactory
-import java.lang.Math.abs                               //added to check DateTime diffs
 
 /**
  *
@@ -370,7 +360,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         // Update propertytype type
         val update = MetadataUpdate(Optional.of(pt.title), Optional.empty(), Optional.of(es.name),
                 Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
-                Optional.empty(), Optional.empty())
+                Optional.empty(), Optional.empty(),Optional.empty())
         edmApi.updatePropertyTypeMetadata(pt.id, update)
 
         val ess = EntitySetSelection(Optional.of(et.properties))
