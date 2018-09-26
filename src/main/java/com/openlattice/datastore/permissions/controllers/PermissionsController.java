@@ -71,10 +71,20 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             switch ( req.getAction() ) {
                 case ADD:
                     acl.getAces().forEach(
-                            ace -> authorizations.addPermission(
-                                    aclKeys,
-                                    ace.getPrincipal(),
-                                    ace.getPermissions() ) );
+                            ace -> {
+                                if ( ace.getExpirationDate().equals( OffsetDateTime.MAX ) ) {
+                                    authorizations.addPermission(
+                                            aclKeys,
+                                            ace.getPrincipal(),
+                                            ace.getPermissions() );
+                                } else {
+                                    authorizations.addPermission(
+                                            aclKeys,
+                                            ace.getPrincipal(),
+                                            ace.getPermissions(),
+                                            ace.getExpirationDate() );
+                                }
+                            } );
                     break;
                 case REMOVE:
                     acl.getAces().forEach(
@@ -85,11 +95,20 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                     break;
                 case SET:
                     acl.getAces().forEach(
-                            ace -> authorizations.setPermission(
-                                    aclKeys,
-                                    ace.getPrincipal(),
-                                    ace.getPermissions(),
-                                    ace.getExpirationDate() ) );
+                            ace -> {
+                                if ( ace.getExpirationDate().equals( OffsetDateTime.MAX ) ) {
+                                    authorizations.setPermission(
+                                            aclKeys,
+                                            ace.getPrincipal(),
+                                            ace.getPermissions() );
+                                } else {
+                                    authorizations.setPermission(
+                                            aclKeys,
+                                            ace.getPrincipal(),
+                                            ace.getPermissions(),
+                                            ace.getExpirationDate() );
+                                }
+                            } );
                     break;
                 default:
                     logger.error( "Invalid action {} specified for request.", req.getAction() );
@@ -123,7 +142,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<Principal, List<List<Principal>>> getAclExplanation( @RequestBody AclKey aclKey ) {
         ensureOwnerAccess( aclKey );
-        
+
         //maps aces to principal type
         Iterable<Ace> aces = authorizations.getAllSecurableObjectPermissions( aclKey )
                 .getAces(); //gets aces from returned acl
