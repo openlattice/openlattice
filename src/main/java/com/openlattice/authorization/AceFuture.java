@@ -22,6 +22,7 @@
 
 package com.openlattice.authorization;
 
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -75,7 +76,7 @@ public class AceFuture implements ListenableFuture<Ace> {
 
     @Override
     public Ace get( long timeout, TimeUnit unit ) throws InterruptedException, ExecutionException, TimeoutException {
-        return new Ace( principal, futureAceValue.get( timeout, unit ).getPermissions(), futureAceValue.get(timeout, unit).getExpirationDate() );
+        return new Ace( principal, futureAceValue.get( timeout, unit ).getPermissions(), futureAceValue.get( timeout, unit ).getExpirationDate() );
     }
 
     @Override
