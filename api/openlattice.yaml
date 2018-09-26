@@ -63,7 +63,7 @@ paths:
      #  *******
 
   /datastore/edm/entity/set/{entitySetId}:
-    get: # lattice-js l.564
+    get:
       summary: Get the EntitySet definition for the given EntitySet UUID.
       operationId: getEntitySet
       parameters:
@@ -73,17 +73,15 @@ paths:
           schema:
             $ref: "#/components/schemas/entitySetId"
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
         '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/entitySet'
-    delete: # lattice-js l.696
+          description: "An Entity Set definition"
+          schema:
+            $ref: '#/components/schemas/entitySet'
+    delete:
       summary: Deletes the EntitySet definition for the given EntitySet UUID.
       operationId: deleteEntitySet
       parameters:
@@ -93,13 +91,13 @@ paths:
           schema:
             $ref: "#/components/schemas/entitySetId"
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
         '200':
           description: Success
-    patch: # lattice-js l.728
+    patch:
       summary: Updates the EntityType definition for the given EntitySet UUID with the given metadata.
       operationId: updateEntitySetMetaData
       parameters:
@@ -115,14 +113,14 @@ paths:
             schema:
               $ref: '#/components/schemas/entitySet'
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
         '200':
           description: Success
   /datastore/edm/ids/entity/set/{entitySetName}:
-    get: # lattice-js l.596
+    get:
       summary: Gets the EntitySet UUID for the given EntitySet name.
       operationId: getEntitySetId
       parameters:
@@ -132,7 +130,7 @@ paths:
           schema:
             $ref: "#/components/schemas/entitySetName"
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
@@ -143,11 +141,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/entitySetId'
   /datastore/edm/entity/set:
-    get: # lattice-js l.628
+    get:
       summary: Get all EntitySet definitions.
       operationId: getAllEntitySets
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
@@ -157,7 +155,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/entitySets'
-    post: # lattice-js l.651
+    post:
       summary: Create new EntitySet definitions if they don't exist.
       operationId: createEntitySets
       requestBody:
@@ -167,14 +165,14 @@ paths:
             schema:
               $ref: '#/components/schemas/entitySets'
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
         '200':
           description: Success
   /datastore/edm/entity/set/{entitySetId}/property/type:
-    get: # lattice-js l.2344
+    get:
       summary: Get all property type metadata for an entity set.
       operationId: getAllEntitySetPropertyMetadata
       parameters:
@@ -184,7 +182,7 @@ paths:
           schema:
             $ref: "#/components/schemas/entitySetId"
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
@@ -195,7 +193,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/propertyTypes'
   /datastore/edm/entity/set/{entitySetId}/property/type/{propertyTypeId}/:
-    get: # lattice-js l.2376
+    get:
       summary: Get specified property type metadata for an entity set.
       operationId: getEntitySetPropertyMetadata
       parameters:
@@ -210,7 +208,7 @@ paths:
           schema:
             $ref: "#/components/schemas/propertyTypeId"
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
@@ -220,11 +218,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/propertyType'
-    post: #lattice-js l.2418
+    post:
       summary: Updates the property type metadata for the given entity set.
       operationId: updateEntitySetPropertyMetadata
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       parameters:
@@ -245,10 +243,7 @@ paths:
             schema:
               $ref: '#/components/schemas/metaDataUpdate'
       responses:
-        '200':
-          description: Success
-      responses:
-        '200':
+        200:
           description: Success
 
   #######################
@@ -318,19 +313,12 @@ paths:
             $ref: "#/components/schemas/entityTypeId"
       requestBody:
         required: true
-        description: 'eg: `[{
-        "type": {namespace: LATTICE, name: UpdatedEntitySet},
-        "name": "MyEntity",
-        "title": "Title of the entity.",
-        "description": "Entity set description",
-        "contacts": ["<joke@openlattice.com>"]
-      }]`'
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/entityType'
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
@@ -519,7 +507,7 @@ paths:
           schema:
             $ref: "#/components/schemas/entityTypeId"
       tags:
-        - entityset
+        - edm-entityset
       security:
         - openlattice_auth: []
       responses:
@@ -906,6 +894,25 @@ paths:
   #
   ##############################################################
 
+  /datastore/principals/users/search/email/"{emailAddress}":
+    get:
+      summary: Get the user id for the given email address.
+      operationId: searchAllUsersByEmail
+      tags:
+        - permissions
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: emailAddress
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/emailAddress"
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: '#/components/schemas/aclKey'
   /datastore/permissions:
     post: #lattice-js l.29
       summary: Get the ACL for the given ACL Key, only if the user is the owner of the ACL Key.
@@ -939,6 +946,68 @@ paths:
       responses:
         '200':
           description: Success
+
+  #       ....           ....           ....           ....
+  #      ||             ||             ||             ||
+  #  /"""l|\        /"""l|\        /"""l|\        /"""l|\
+  # /_______\      /_______\      /_______\      /_______\
+  # |  .-.  |------|  .-.  |------|  .-.  |------|  .-.  |------
+  #  __|L|__| .--. |__|L|__| .--. |__|L|__| .--. |__|L|__| .--.
+  # _\  \\p__`o-o'__\  \\p__`o-o'__\  \\p__`o-o'__\  \\p__`o-o'_
+  # ------------------------------------------------------------
+  # ------------------------------------------------------------
+  #
+  #               DATA API
+  #
+  ##############################################################
+
+  ######################
+  ## Entity Set API's ##
+  ######################
+
+     #             .,,.
+     #           *******,
+     #         **********
+     #       ************
+     #     ************.
+     #   *********(((/**
+     # ,********(((/*****
+     # *******(((/*******
+     # .****(((/********
+     #   .///******(((*
+     #  ********/(((*****
+     # ********(((*******
+     # *****/(((/*******,
+     #  .*/(((*********
+     #  .************
+     # ************
+     # **********
+     #  *******
+
+  /datastore/data/set/{entitySetId}:
+    get: # lattice-js l.564
+      summary: Get the EntitySet data for the given EntitySet UUID.
+      operationId: getEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/entitySetId"
+      tags:
+        - data-entityset
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/entitySet'
+
+
+
 
   #       ....           ....           ....           ....
   #      ||             ||             ||             ||
@@ -987,14 +1056,13 @@ components:
         type: apiKey
         in: header
         name: Authorization
-        # scheme: "bearer"
-        # bearerFormat: "JWT"
-    # apiKey:
-    #     type: apiKey
-    #     in: header
-    #     name: Authorization
 
   schemas:
+
+    #######################
+    ## entitydata-schema's #
+    #######################
+
 
     #######################
     ## entityset-schema's #
@@ -1220,6 +1288,9 @@ components:
     aclKey:
       type: string
       format: uuid
+    emailAddress:
+      type: string
+      example: info@openlattice.com
     FullQualifiedName:
       title: "Fullqualified name (eg. entity type / association type)"
       type: "string"
@@ -1240,8 +1311,13 @@ components:
     #       type: "string"
 
 tags:
-- name: entityset
-  description: Entity Set API's
+- name: data-entityset
+  description: Entity Set Data API's
+  externalDocs:
+    description: OpenLattice help pages
+    url: https://help.openlattice.com/
+- name: edm-entityset
+  description: Entity Set EDM API's
   externalDocs:
     description: OpenLattice help pages
     url: https://help.openlattice.com/
