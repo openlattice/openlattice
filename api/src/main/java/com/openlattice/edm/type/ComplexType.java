@@ -44,8 +44,8 @@ public class ComplexType extends AbstractSchemaAssociatedSecurableType {
     private final Optional<UUID> baseType;
 
     private final     SecurableObjectType              category;
-    private           LinkedHashMultimap<UUID, String> propertyTags;
-    private           LinkedHashSet<UUID>              properties;
+    protected         LinkedHashMultimap<UUID, String> propertyTags;
+    protected           LinkedHashSet<UUID>              properties;
     private transient int                              h = 0;
 
     @JsonCreator
