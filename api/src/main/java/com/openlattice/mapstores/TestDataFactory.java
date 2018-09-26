@@ -113,6 +113,12 @@ public final class TestDataFactory {
                 ? Arrays.asList( keys ).stream().map( PropertyType::getId )
                 .collect( Collectors.toCollection( Sets::newLinkedHashSet ) )
                 : Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) );
+        var propertyTags = LinkedHashMultimap.<UUID, String>create();
+
+        for ( UUID uuid : k ) {
+            propertyTags.put( k, "PRIMARY KEY TAG" );
+        }
+
         return new EntityType(
                 UUID.randomUUID(),
                 fqn(),
@@ -122,6 +128,7 @@ public final class TestDataFactory {
                 k,
                 Sets.newLinkedHashSet( Sets
                         .union( k, propertyTypes ) ),
+                propertyTags,
                 Optional.ofNullable( parentId ),
                 Optional.of( SecurableObjectType.EntityType ) );
     }
@@ -364,13 +371,17 @@ public final class TestDataFactory {
     }
 
     public static ComplexType complexType() {
+        final var ptId = UUID.randomUUID();
+        final var propertyTags = LinkedHashMultimap.<UUID, String>create();
+        propertyTags.put( ptId, "SOME PROPERTY TAG" );
         return new ComplexType(
                 UUID.randomUUID(),
                 fqn(),
                 RandomStringUtils.randomAlphanumeric( 5 ),
                 Optional.of( "test complex type" ),
                 ImmutableSet.of( fqn(), fqn() ),
-                Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
+                Sets.newLinkedHashSet( Arrays.asList( ptId, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
+                propertyTags,
                 Optional.empty(),
                 SecurableObjectType.ComplexType );
     }
@@ -416,6 +427,8 @@ public final class TestDataFactory {
     }
 
     public static EntityType entityTypesFromKeyAndTypes( PropertyType key, PropertyType... propertyTypes ) {
+        final var propertyTags = LinkedHashMultimap.<UUID, String>create();
+        propertyTags.put( key.getId(), "PRIMARY KEY TAG" );
         return new EntityType( UUID.randomUUID(),
                 fqn(),
                 RandomStringUtils.randomAlphanumeric( 5 ),
@@ -425,13 +438,17 @@ public final class TestDataFactory {
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
                 Stream.concat( Stream.of( key ), Stream.of( propertyTypes ) ).map( PropertyType::getId )
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
+                propertyTags,
                 Optional.empty(),
                 Optional.empty() );
     }
 
-    public static Map<UUID, SetMultimap<UUID, Object>> randomBinaryData( int numberOfEntries, UUID keyType, UUID binaryType ) {
+    public static Map<UUID, SetMultimap<UUID, Object>> randomBinaryData(
+            int numberOfEntries,
+            UUID keyType,
+            UUID binaryType ) {
         Map<UUID, SetMultimap<UUID, Object>> data = new HashMap<>();
-        for(int i = 0; i < numberOfEntries; i++) {
+        for ( int i = 0; i < numberOfEntries; i++ ) {
             data.put( UUID.randomUUID(), randomElement( keyType, binaryType ) );
         }
 
