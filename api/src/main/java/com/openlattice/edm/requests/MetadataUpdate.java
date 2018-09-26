@@ -18,11 +18,16 @@
 
 package com.openlattice.edm.requests;
 
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -31,24 +36,23 @@ import java.util.Set;
 /**
  * Used for updating metadata of property type, entity type, or entity set. Non-existent fields for the specific object
  * would be ignored.
- *
- * @author Ho Chung Siu
  */
 public class MetadataUpdate {
 
     // Common across property type, entity type, entity set
-    private Optional<String>            title;
-    private Optional<String>            description;
+    private Optional<String>                    title;
+    private Optional<String>                    description;
     // Specific to entity set
-    private Optional<String>            name;
-    private Optional<Set<String>>       contacts;
+    private Optional<String>                           name;
+    private Optional<Set<String>>                      contacts;
     // Specific to property type/entity type
-    private Optional<FullQualifiedName> type;
+    private Optional<FullQualifiedName>                type;
     // Specific to property type
-    private Optional<Boolean>           pii;
+    private Optional<Boolean>                          pii;
     // Specific to entity set property type metadata
-    private Optional<Boolean>           defaultShow;
-    private Optional<String>            url;
+    private Optional<Boolean>                          defaultShow;
+    private Optional<String>                           url;
+    private Optional<LinkedHashMultimap<UUID, String>> propertyTags;
 
     @JsonCreator
     public MetadataUpdate(
@@ -59,7 +63,8 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.TYPE_FIELD ) Optional<FullQualifiedName> type,
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> pii,
             @JsonProperty( SerializationConstants.DEFAULT_SHOW ) Optional<Boolean> defaultShow,
-            @JsonProperty( SerializationConstants.URL ) Optional<String> url ) {
+            @JsonProperty( SerializationConstants.URL ) Optional<String> url,
+            @JsonProperty( SerializationConstants.PROPERTY_TAGS ) Optional<LinkedHashMultimap<UUID, String>> propertyTags ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
@@ -79,6 +84,7 @@ public class MetadataUpdate {
         this.pii = pii;
         this.defaultShow = defaultShow;
         this.url = url;
+        this.propertyTags = propertyTags;
     }
 
     @JsonProperty( SerializationConstants.TITLE_FIELD )
@@ -121,65 +127,42 @@ public class MetadataUpdate {
         return url;
     }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( contacts == null ) ? 0 : contacts.hashCode() );
-        result = prime * result + ( ( defaultShow == null ) ? 0 : defaultShow.hashCode() );
-        result = prime * result + ( ( description == null ) ? 0 : description.hashCode() );
-        result = prime * result + ( ( name == null ) ? 0 : name.hashCode() );
-        result = prime * result + ( ( pii == null ) ? 0 : pii.hashCode() );
-        result = prime * result + ( ( title == null ) ? 0 : title.hashCode() );
-        result = prime * result + ( ( type == null ) ? 0 : type.hashCode() );
-        return result;
+    @JsonProperty( SerializationConstants.PROPERTY_TAGS )
+    public Optional<LinkedHashMultimap<UUID, String>> getPropertyTags() {
+        return propertyTags;
     }
 
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj )
-            return true;
-        if ( obj == null )
-            return false;
-        if ( getClass() != obj.getClass() )
-            return false;
-        MetadataUpdate other = (MetadataUpdate) obj;
-        if ( contacts == null ) {
-            if ( other.contacts != null )
-                return false;
-        } else if ( !contacts.equals( other.contacts ) )
-            return false;
-        if ( defaultShow == null ) {
-            if ( other.defaultShow != null )
-                return false;
-        } else if ( !defaultShow.equals( other.defaultShow ) )
-            return false;
-        if ( description == null ) {
-            if ( other.description != null )
-                return false;
-        } else if ( !description.equals( other.description ) )
-            return false;
-        if ( name == null ) {
-            if ( other.name != null )
-                return false;
-        } else if ( !name.equals( other.name ) )
-            return false;
-        if ( pii == null ) {
-            if ( other.pii != null )
-                return false;
-        } else if ( !pii.equals( other.pii ) )
-            return false;
-        if ( title == null ) {
-            if ( other.title != null )
-                return false;
-        } else if ( !title.equals( other.title ) )
-            return false;
-        if ( type == null ) {
-            if ( other.type != null )
-                return false;
-        } else if ( !type.equals( other.type ) )
-            return false;
-        return true;
+    @Override public String toString() {
+        return "MetadataUpdate{" +
+                "title=" + title +
+                ", description=" + description +
+                ", name=" + name +
+                ", contacts=" + contacts +
+                ", type=" + type +
+                ", pii=" + pii +
+                ", defaultShow=" + defaultShow +
+                ", url=" + url +
+                ", propertyTags=" + propertyTags +
+                '}';
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof MetadataUpdate ) ) { return false; }
+        MetadataUpdate that = (MetadataUpdate) o;
+        return Objects.equals( title, that.title ) &&
+                Objects.equals( description, that.description ) &&
+                Objects.equals( name, that.name ) &&
+                Objects.equals( contacts, that.contacts ) &&
+                Objects.equals( type, that.type ) &&
+                Objects.equals( pii, that.pii ) &&
+                Objects.equals( defaultShow, that.defaultShow ) &&
+                Objects.equals( url, that.url ) &&
+                Objects.equals( propertyTags, that.propertyTags );
+    }
+
+    @Override public int hashCode() {
+        return Objects.hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags );
     }
 
     // Trimming happens before initializing update processors so that irrelevant fields won't get ser/deserialized when
@@ -193,6 +176,7 @@ public class MetadataUpdate {
                 update.getType(),
                 update.getPii(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -205,6 +189,7 @@ public class MetadataUpdate {
                 update.getType(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -214,6 +199,7 @@ public class MetadataUpdate {
                 update.getDescription(),
                 update.getName(),
                 update.getContacts(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -229,6 +215,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 update.getDefaultShow(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -241,7 +228,8 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                update.getUrl() );
+                update.getUrl(),
+                Optional.empty() );
     }
 
     public static MetadataUpdate trimToAppTypeUpdate( MetadataUpdate update ) {
@@ -251,6 +239,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 update.getType(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
