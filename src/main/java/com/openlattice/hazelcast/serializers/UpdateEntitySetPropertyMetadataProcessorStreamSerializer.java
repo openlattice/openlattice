@@ -43,6 +43,8 @@ public class UpdateEntitySetPropertyMetadataProcessorStreamSerializer
         OptionalStreamSerializers.serialize( out, update.getTitle(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getDescription(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getDefaultShow(), ObjectDataOutput::writeBoolean );
+        OptionalStreamSerializers
+                .serialize( out, update.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
     }
 
     @Override
