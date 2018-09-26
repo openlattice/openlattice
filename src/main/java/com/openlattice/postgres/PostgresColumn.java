@@ -189,12 +189,6 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final String                   LAST_RECEIVED_FIELD         = "LAST_RECEIVED";
-    public static final PostgresColumnDefinition LAST_RECEIVED               = new PostgresColumnDefinition(
-            LAST_RECEIVED_FIELD,
-            TIMESTAMPTZ )
-            .withDefault( "'-infinity'" )
-            .notNull();
     public static final String                   LAST_WRITE_FIELD            = "last_write";
     public static final String                   LINKING_ID_FIELD            = "linking_id";
     public static final PostgresColumnDefinition LINKING_ID                  = new PostgresColumnDefinition(

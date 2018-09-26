@@ -18,6 +18,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.processing.processors.GraphProcessor
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.EDGES
@@ -323,7 +324,7 @@ internal fun buildPropagationQueries(
         val propertyTableName = quote(DataTables.propertyTableName(neighborPropertyTypeId))
         propagations
                 .map {
-                    "UPDATE $propertyTableName SET ${LAST_RECEIVED.name} = now() " +
+                    "UPDATE $propertyTableName SET ${LAST_WRITE.name} = now() " +
                             "FROM ($it) as propagations " +
                             "WHERE $propertyTableName.${ENTITY_SET_ID.name} = propagations.$TARGET_ENTITY_SET_ID " +
                             " AND  $propertyTableName.${ID_VALUE.name} = propagations.$TARGET_ENTITY_KEY_ID "
