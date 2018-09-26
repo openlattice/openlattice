@@ -83,6 +83,7 @@ import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.QUERY;
 import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
@@ -205,6 +206,7 @@ public final class PostgresTable {
                             DESCRIPTION,
                             KEY,
                             PROPERTIES,
+                            PROPERTY_TAGS,
                             BASE_TYPE,
                             SCHEMAS,
                             CATEGORY );
