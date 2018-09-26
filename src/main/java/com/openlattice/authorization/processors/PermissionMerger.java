@@ -37,24 +37,40 @@ import java.util.Map;
 public class PermissionMerger extends AbstractMerger<AceKey, AceValue, Permission> {
     private static final long serialVersionUID = -3504613417625318717L;
     private final SecurableObjectType securableObjectType;
+    private final OffsetDateTime expirationDate;
 
     public  PermissionMerger(
             Iterable<Permission> objects,
             SecurableObjectType securableObjectType) {
         super( objects );
         this.securableObjectType = checkNotNull( securableObjectType );
+        this.expirationDate = OffsetDateTime.MAX;
+    }
+
+    public  PermissionMerger(
+            Iterable<Permission> objects,
+            SecurableObjectType securableObjectType,
+            OffsetDateTime expirationDate) {
+        super( objects );
+        this.securableObjectType = checkNotNull( securableObjectType );
+        this.expirationDate = expirationDate;
     }
 
     @Override protected void postProcess( AceValue value ) {
         value.setSecurableObjectType( securableObjectType );
+        value.setExpirationDate( expirationDate );
     }
 
     @Override
     protected AceValue newEmptyCollection() {
-        return new AceValue( EnumSet.noneOf( Permission.class ), securableObjectType );
+        return new AceValue( EnumSet.noneOf( Permission.class ), securableObjectType, expirationDate );
     }
 
     public SecurableObjectType getSecurableObjectType() {
         return securableObjectType;
+    }
+
+    public OffsetDateTime getExpirationDate() {
+        return expirationDate;
     }
 }
