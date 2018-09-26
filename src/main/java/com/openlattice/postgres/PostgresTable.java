@@ -100,6 +100,7 @@ import static com.openlattice.postgres.PostgresColumn.START_TIME;
 import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
 import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
+import static com.openlattice.postgres.PostgresColumn.TAGS;
 import static com.openlattice.postgres.PostgresColumn.TIME_UUID;
 import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
@@ -192,7 +193,7 @@ public final class PostgresTable {
     //.setUnique( NAME );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
-                    .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, SHOW )
+                    .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
                     .primaryKey( ENTITY_SET_ID, PROPERTY_TYPE_ID );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
     public static final PostgresTableDefinition        ENTITY_TYPES                 =

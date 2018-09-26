@@ -20,10 +20,15 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.LinkedHashMultimap;
 import java.io.Serializable;
 
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Random;
+import org.apache.commons.lang3.RandomStringUtils;
 
 public class EntitySetPropertyMetadataStreamSerializerTest
         extends AbstractStreamSerializerTest<EntitySetPropertyMetadataStreamSerializer, EntitySetPropertyMetadata>
@@ -37,7 +42,8 @@ public class EntitySetPropertyMetadataStreamSerializerTest
 
     @Override
     protected EntitySetPropertyMetadata createInput() {
-        return new EntitySetPropertyMetadata( "title", "description", tags, true );
+        return new EntitySetPropertyMetadata( "title", "description", new LinkedHashSet<>( Arrays.asList(
+                RandomStringUtils.random( 5 ), RandomStringUtils.random( ( 5 ) ) ) ), true );
     }
 
 }

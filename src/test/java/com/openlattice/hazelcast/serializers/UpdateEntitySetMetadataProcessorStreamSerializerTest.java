@@ -51,7 +51,8 @@ public class UpdateEntitySetMetadataProcessorStreamSerializerTest extends
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty(),
+                Optional.empty());
         return new UpdateEntitySetMetadataProcessor( update );
     }
 
