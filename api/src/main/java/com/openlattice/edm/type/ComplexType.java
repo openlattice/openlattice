@@ -23,11 +23,17 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -35,10 +41,12 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 public class ComplexType extends AbstractSchemaAssociatedSecurableType {
 
-    private final Optional<UUID>      baseType;
-    private final SecurableObjectType category;
-    private       LinkedHashSet<UUID> properties;
-    private transient int h = 0;
+    private final Optional<UUID> baseType;
+
+    private final     SecurableObjectType              category;
+    private           LinkedHashMultimap<UUID, String> propertyTags;
+    private           LinkedHashSet<UUID>              properties;
+    private transient int                              h = 0;
 
     @JsonCreator
     public ComplexType(
@@ -48,12 +56,15 @@ public class ComplexType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
             @JsonProperty( SerializationConstants.SCHEMAS ) Set<FullQualifiedName> schemas,
             @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) LinkedHashSet<UUID> properties,
+            @JsonProperty( SerializationConstants.PROPERTY_TAGS )
+                    Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             @JsonProperty( SerializationConstants.PARENT_TYPE_FIELD ) Optional<UUID> baseType,
             @JsonProperty( SerializationConstants.CATEGORY ) SecurableObjectType category ) {
         super( id, type, title, description, schemas );
         this.properties = checkNotNull( properties, "Entity set properties cannot be null" );
         this.baseType = baseType;
         this.category = category;
+        this.propertyTags = propertyTags.orElse( LinkedHashMultimap.create() );
     }
 
     public ComplexType(
@@ -63,9 +74,18 @@ public class ComplexType extends AbstractSchemaAssociatedSecurableType {
             Optional<String> description,
             Set<FullQualifiedName> schemas,
             LinkedHashSet<UUID> properties,
+            LinkedHashMultimap<UUID, String> propertyTags,
             Optional<UUID> baseType,
             SecurableObjectType category ) {
-        this( Optional.of( id ), type, title, description, schemas, properties, baseType, category );
+        this( Optional.of( id ),
+                type,
+                title,
+                description,
+                schemas,
+                properties,
+                Optional.of( propertyTags ),
+                baseType,
+                category );
     }
 
     public ComplexType(
@@ -74,9 +94,33 @@ public class ComplexType extends AbstractSchemaAssociatedSecurableType {
             String description,
             Set<FullQualifiedName> schemas,
             LinkedHashSet<UUID> properties,
+            LinkedHashMultimap<UUID, String> propertyTags,
             Optional<UUID> baseType,
-            SecurableObjectType category ) {
-        this( Optional.empty(), type, title, Optional.of( description ), schemas, properties, baseType, category );
+            SecurableObjectType category
+    ) {
+        this( Optional.empty(),
+                type,
+                title,
+                Optional.of( description ),
+                schemas,
+                properties,
+                Optional.of( propertyTags ),
+                baseType,
+                category );
+    }
+
+    @Override public String toString() {
+        return "ComplexType{" +
+                "baseType=" + baseType +
+                ", category=" + category +
+                ", propertyTags=" + propertyTags +
+                ", properties=" + properties +
+                ", schemas=" + schemas +
+                ", type=" + type +
+                ", id=" + id +
+                ", title='" + title + '\'' +
+                ", description='" + description + '\'' +
+                '}';
     }
 
     @JsonProperty( SerializationConstants.PARENT_TYPE_FIELD )
@@ -87,6 +131,11 @@ public class ComplexType extends AbstractSchemaAssociatedSecurableType {
     @JsonProperty( SerializationConstants.PROPERTIES_FIELD )
     public Set<UUID> getProperties() {
         return Collections.unmodifiableSet( properties );
+    }
+
+    @JsonProperty( SerializationConstants.PROPERTY_TAGS )
+    public LinkedHashMultimap<UUID, String> getPropertyTags() {
+        return propertyTags;
     }
 
     public void addPropertyTypes( Set<UUID> propertyTypeIds ) {
@@ -103,39 +152,31 @@ public class ComplexType extends AbstractSchemaAssociatedSecurableType {
         properties = propertyTypeIds;
     }
 
+    public void setPropertyTypeTags( LinkedHashMultimap<UUID, String> propertyTags ) {
+        this.propertyTags = propertyTags;
+    }
+
     @Override
     @JsonProperty( SerializationConstants.CATEGORY )
     public SecurableObjectType getCategory() {
         return category;
     }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
+    @Override public boolean equals( Object o ) {
+        if ( this == o ) { return true; }
+        if ( !( o instanceof ComplexType ) ) { return false; }
+        if ( !super.equals( o ) ) { return false; }
+        ComplexType that = (ComplexType) o;
+        return Objects.equals( baseType, that.baseType ) &&
+                category == that.category &&
+                Objects.equals( propertyTags, that.propertyTags ) &&
+                Objects.equals( properties, that.properties );
+    }
+
+    @Override public int hashCode() {
         if ( h == 0 ) {
-            int result = super.hashCode();
-            result = prime * result + ( ( baseType == null ) ? 0 : baseType.hashCode() );
-            result = prime * result + ( ( category == null ) ? 0 : category.hashCode() );
-            result = prime * result + ( ( properties == null ) ? 0 : properties.hashCode() );
-            h = result;
+            h = Objects.hash( super.hashCode(), baseType, category, propertyTags, properties );
         }
         return h;
     }
-
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) { return true; }
-        if ( !super.equals( obj ) ) { return false; }
-        if ( getClass() != obj.getClass() ) { return false; }
-        ComplexType other = (ComplexType) obj;
-        if ( baseType == null ) {
-            if ( other.baseType != null ) { return false; }
-        } else if ( !baseType.equals( other.baseType ) ) { return false; }
-        if ( category != other.category ) { return false; }
-        if ( properties == null ) {
-            if ( other.properties != null ) { return false; }
-        } else if ( !properties.equals( other.properties ) ) { return false; }
-        return true;
-    }
-
 }

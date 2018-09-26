@@ -23,22 +23,26 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.graph.query.GraphQueryState.Option;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * An entity type describes the set of property collections.
  */
 public class EntityType extends ComplexType {
-    private final LinkedHashSet<UUID> key;
-    private final Optional<UUID>      baseType;
-    private transient int h = 0;
+    private final     LinkedHashSet<UUID> key;
+    private final     Optional<UUID>      baseType;
+    private transient int                 h = 0;
 
     @JsonCreator
     public EntityType(
@@ -49,6 +53,8 @@ public class EntityType extends ComplexType {
             @JsonProperty( SerializationConstants.SCHEMAS ) Set<FullQualifiedName> schemas,
             @JsonProperty( SerializationConstants.KEY_FIELD ) LinkedHashSet<UUID> key,
             @JsonProperty( SerializationConstants.PROPERTIES_FIELD ) LinkedHashSet<UUID> properties,
+            @JsonProperty( SerializationConstants.PROPERTY_TAGS )
+                    Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             @JsonProperty( SerializationConstants.BASE_TYPE_FIELD ) Optional<UUID> baseType,
             @JsonProperty( SerializationConstants.CATEGORY ) Optional<SecurableObjectType> category ) {
         super(
@@ -58,6 +64,7 @@ public class EntityType extends ComplexType {
                 description,
                 schemas,
                 properties,
+                propertyTags,
                 baseType,
                 category.orElse( SecurableObjectType.EntityType ) );
         this.key = Preconditions.checkNotNull( key, "Entity set key properties cannot be null" );
@@ -77,9 +84,19 @@ public class EntityType extends ComplexType {
             Set<FullQualifiedName> schemas,
             LinkedHashSet<UUID> key,
             LinkedHashSet<UUID> properties,
+            LinkedHashMultimap<UUID, String> propertyTags,
             Optional<UUID> baseType,
             Optional<SecurableObjectType> category ) {
-        this( Optional.of( id ), type, title, description, schemas, key, properties, baseType, category );
+        this( Optional.of( id ),
+                type,
+                title,
+                description,
+                schemas,
+                key,
+                properties,
+                Optional.of( propertyTags ),
+                baseType,
+                category );
     }
 
     public EntityType(
@@ -89,6 +106,7 @@ public class EntityType extends ComplexType {
             Set<FullQualifiedName> schemas,
             LinkedHashSet<UUID> key,
             LinkedHashSet<UUID> properties,
+            LinkedHashMultimap<UUID, String> propertyTags,
             Optional<UUID> baseType,
             Optional<SecurableObjectType> category ) {
         this(
@@ -99,8 +117,21 @@ public class EntityType extends ComplexType {
                 schemas,
                 key,
                 properties,
+                Optional.empty(),
                 baseType,
                 category );
+    }
+
+    @Override public String toString() {
+        return "EntityType{" +
+                "key=" + key +
+                ", baseType=" + baseType +
+                ", schemas=" + schemas +
+                ", type=" + type +
+                ", id=" + id +
+                ", title='" + title + '\'' +
+                ", description='" + description + '\'' +
+                '}';
     }
 
     // TODO: It seems the objects do not allow property types from the different schemas.
@@ -145,10 +176,4 @@ public class EntityType extends ComplexType {
         return h;
     }
 
-    @Override
-    public String toString() {
-        return "EntityType [key=" + key + ", properties=" + getProperties() + ", baseType=" + baseType + ", schemas="
-                + schemas + ", type=" + type + ", id=" + id + ", title=" + title + ", description=" + description
-                + ", category=" + getCategory().toString() + "]";
-    }
 }
