@@ -101,8 +101,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val et = MultipleAuthenticatedUsersBase.createEntityType(pt.id)
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
-        val testData = Maps.transformValues(randomBinaryData(et.key.iterator().next(),pt.id) ,Multimaps::asMap )
+        val testData = Maps.transformValues(TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(),pt.id) ,Multimaps::asMap )
         MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
+
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
                 MultipleAuthenticatedUsersBase.dataApi
@@ -210,9 +211,19 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         )
 
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
-
-        Assert.assertEquals(edgeData.second.map { it.data }, actualEdgeData)
+        Multimaps.asMap(edgesToBeCreated).entries.first().value.
+                mapIndexed { index, de ->
+                   val edgeDataLookup = lookupEdgeDataByFqn(actualEdgeData[index].asMap())
+                    de.data.asMap().
+                        forEach { uuid, data -> Assert.assertEquals(data, edgeDataLookup[uuid]) }
+                }
     }
+
+    private fun lookupEdgeDataByFqn(edgeData: MutableMap<FullQualifiedName, MutableCollection<Any>>):
+            Map<UUID, MutableCollection<Any>> {
+        return edgeData.mapKeys { entry -> edmApi.getPropertyTypeId(entry.key.namespace, entry.key.name) }
+    }
+
 
     private fun createDataEdges(
             entitySetId: UUID,
@@ -262,17 +273,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
-        val testData = HashMap<UUID, SetMultimap<UUID, Any>>()
         val d = LocalDate.now()
         val odt = OffsetDateTime.ofInstant(Instant.now(), ZoneId.of("UTC"))
-        testData.put(
-                UUID.randomUUID(),
-                ImmutableSetMultimap
-                        .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))
-        )
+        val testData = Arrays.asList(HashMultimap.create(ImmutableSetMultimap
+                        .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))) as SetMultimap<UUID, Any>)
 
         //added transformValues()
-        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, transformValues(testData, Multimaps::asMap), UpdateType.Replace)
+        val ids = MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
                 MultipleAuthenticatedUsersBase.dataApi
