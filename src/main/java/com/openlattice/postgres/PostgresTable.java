@@ -270,15 +270,15 @@ public final class PostgresTable {
             new PostgresTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
-                            SRC_LINKING_VERTEX_ID,
+                            SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
-                            DST_LINKING_VERTEX_ID,
+                            DST_ENTITY_KEY_ID,
                             SCORE )
                     .primaryKey( LINKING_ID,
                             SRC_ENTITY_SET_ID,
-                            SRC_LINKING_VERTEX_ID,
+                            SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
-                            DST_LINKING_VERTEX_ID );
+                            DST_ENTITY_KEY_ID );
     public static final PostgresTableDefinition        NAMES                        =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )
@@ -391,15 +391,15 @@ public final class PostgresTable {
                         .name( "entity_key_ids_last_propagate_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
-                        "(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        ENTITY_SET_ID.getName() + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
                         .name( "entity_key_ids_needs_linking_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
-                        "(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        ENTITY_SET_ID.getName() + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")" )
                         .name( "entity_key_ids_needs_linking_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
-                        "(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        ENTITY_SET_ID.getName() + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")" )
                         .name( "entity_key_ids_needs_propagation_idx" )
                         .ifNotExists()
         );

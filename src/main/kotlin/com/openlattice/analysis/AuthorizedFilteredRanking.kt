@@ -21,7 +21,7 @@
 
 package com.openlattice.analysis
 
-import com.openlattice.analysis.requests.FilteredRanking
+import com.openlattice.analysis.requests.FilteredRankingAggregation
 import com.openlattice.edm.type.PropertyType
 import java.util.*
 
@@ -29,7 +29,7 @@ import java.util.*
  * Contains the results of authorizing a filtered ranking.
  */
 class AuthorizedFilteredRanking(
-        val filteredRanking: FilteredRanking,
+        val filteredRanking: FilteredRankingAggregation,
         val associationSets: Map<UUID, Set<UUID>>,
         val associationPropertyTypes: Map<UUID, PropertyType>,
         val entitySets: Map<UUID, Set<UUID>>,

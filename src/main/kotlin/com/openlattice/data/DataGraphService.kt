@@ -31,9 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.analysis.AuthorizedFilteredRanking
-import com.openlattice.analysis.requests.RangeFilter
-import com.openlattice.analysis.requests.FilteredRanking
-import com.openlattice.data.analytics.IncrementableWeightId
+import com.openlattice.analysis.requests.FilteredRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.datastore.services.EdmManager
@@ -44,8 +42,6 @@ import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.postgres.DataTables.COUNT_FQN
-import com.openlattice.postgres.DataTables.ID_FQN
 import org.apache.commons.collections4.keyvalue.MultiKey
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
@@ -55,7 +51,6 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
-import kotlin.streams.toList
 
 /**
  *
@@ -102,7 +97,7 @@ open class DataGraphService(
     private val queryCache = CacheBuilder.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(30, TimeUnit.SECONDS)
-            .build<MultiKey<*>, Array<IncrementableWeightId>>()
+            .build<MultiKey<*>, Map<String, Object>>()
 
     override fun getEntitySetData(
             entitySetId: UUID,
@@ -352,26 +347,26 @@ open class DataGraphService(
             filteredRankings: List<AuthorizedFilteredRanking>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linked: Boolean
-    ): Iterable<SetMultimap<FullQualifiedName, Any>> {
-        val maybeUtilizers = queryCache
-                .getIfPresent(MultiKey(entitySetIds, filteredRankings))
-        val utilizers: Array<IncrementableWeightId>
+    ): Iterable<Map<String, Any>> {
+//        val maybeUtilizers = queryCache
+//                .getIfPresent(MultiKey(entitySetIds, filteredRankings))
+//        val utilizers: PostgresIterable<Map<String, Object>>
+//
+//
+//        if (maybeUtilizers == null) {
 
+        return graphService.computeTopEntities(
+                numResults,
+                entitySetIds,
+                authorizedPropertyTypes,
+                filteredRankings,
+                linked
+        )
 
-        if (maybeUtilizers == null) {
-
-            utilizers = graphService.computeTopEntities(
-                    numResults,
-                    entitySetIds,
-                    authorizedPropertyTypes,
-                    filteredRankings,
-                    linked
-            )
-
-            queryCache.put(MultiKey(entitySetIds, filteredRankings), utilizers)
-        } else {
-            utilizers = maybeUtilizers
-        }
+//            queryCache.put(MultiKey(entitySetIds, filteredRankings), utilizers)
+//        } else {
+//            utilizers = maybeUtilizers
+//        }
 
 //        val entities = eds
 //                .getEntities(entitySetIds.first(), utilizers.map { it.id }.toSet(), authorizedPropertyTypes)
@@ -379,7 +374,6 @@ open class DataGraphService(
 //                .toList()
 //                .toMap()
 
-        return listOf()
 //        return utilizers.map {
 //            val entity = entities[it.id]!!
 //            entity.put(COUNT_FQN, it.weight)
@@ -391,7 +385,7 @@ open class DataGraphService(
 
     override fun getTopUtilizers(
             entitySetId: UUID,
-            filteredRankingList: List<FilteredRanking>,
+            filteredRankingList: List<FilteredRankingAggregation>,
             numResults: Int,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>> {
