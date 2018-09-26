@@ -71,7 +71,7 @@ if (CONDUCTOR_XMX == 'null' || CONDUCTOR_XMX == null || CONDUCTOR_XMX == "") {
 }
 
 if (C_ARGS == 'null' || C_ARGS == null || C_ARGS == "") {
-    C_ARGS = 'local postgres'
+    C_ARGS = 'local postgres dl4j'
 }
 
 if (PARALLEL == 'null' || PARALLEL == null || PARALLEL == "") {
