@@ -43,6 +43,7 @@ import com.openlattice.requests.Status;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -265,14 +266,14 @@ public final class TestDataFactory {
     }
 
     public static Ace ace() {
-        return new Ace( userPrincipal(), permissions() );
+        return new Ace( userPrincipal(), permissions(), OffsetDateTime.now( ZoneOffset.UTC ) );
     }
 
     public static AceValue aceValue() {
         return new AceValue(
                 permissions(),
                 securableObjectType(),
-                OffsetDateTime.now()
+                OffsetDateTime.MAX
         );
     }
 
