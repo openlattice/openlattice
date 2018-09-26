@@ -1,5 +1,6 @@
 package com.openlattice.graph.processing.processors
 
+import com.openlattice.postgres.DataTables
 import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
@@ -12,9 +13,7 @@ private const val duration = "ol.durationhours"
 class CriminalJusticeIncidentDurationProcessor:DurationProcessor() {
 
     override fun getSql(): String {
-        val firstStart = sortedFirst(getPropertyTypeForStart())
-        val lastEnd = sortedLast(getPropertyTypeForEnd())
-        return "EXTRACT(epoch FROM ($lastEnd - $firstStart))/3600"
+        return numberOfHours()
     }
 
     override fun getHandledEntityType(): String {
@@ -46,8 +45,8 @@ class CriminalJusticeIncidentDurationProcessor:DurationProcessor() {
 class CriminalJusticeIncidentEndDateProcessor:EndDateProcessor() {
 
     override fun getSql(): String {
-        val firstStart = sortedFirst(getPropertyTypeForStart())
-        return "$firstStart + ${getPropertyTypeForDuration()} * 60 * interval '1 minutes'"
+        val firstStart = firstStart()
+        return "$firstStart + ${DataTables.quote(getPropertyTypeForDuration())} * 60 * interval '1 minutes'"
     }
 
     override fun getHandledEntityType(): String {

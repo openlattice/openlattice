@@ -1,25 +1,12 @@
 package com.openlattice.graph.processing.processors
 
 import com.openlattice.analysis.requests.ValueFilter
+import com.openlattice.postgres.DataTables
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.time.temporal.ChronoUnit
 
 
-fun sortedFirst(arrayColumn: String):String {
-    return "(SELECT unnest($arrayColumn) ORDER BY 1 LIMIT 1)"
-}
 
-fun sortedLast(arrayColumn: String):String {
-    return "(SELECT unnest($arrayColumn) ORDER BY 1 DESC LIMIT 1)"
-}
-
-fun numberOfDays(start: String, end:String):String {
-    return "(EXTRACT(epoch FROM ($start - $end))/3600/24)::integer"
-}
-
-fun numberOfMinutes(start: String, end:String):String {
-    return "(EXTRACT(epoch FROM ($start - $end))/60)::integer"
-}
 
 abstract class BaseDurationProcessor: GraphProcessor {
     protected abstract fun getHandledEntityType(): String
@@ -32,6 +19,31 @@ abstract class BaseDurationProcessor: GraphProcessor {
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
+    }
+
+    protected fun firstStart():String {
+        return "(SELECT unnest(${DataTables.quote(getPropertyTypeForStart())}) ORDER BY 1 LIMIT 1)"
+    }
+
+    protected fun lastEnd(): String {
+        return "(SELECT unnest(${DataTables.quote(getPropertyTypeForEnd())}) ORDER BY 1 DESC LIMIT 1)"
+    }
+
+    protected fun numberOfDays():String {
+        return "EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600/24"
+    }
+
+    protected fun numberOfHours():String {
+        return "EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600"
+    }
+
+    protected fun numberOfMinutes():String {
+        return "EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/60"
+    }
+
+    protected fun addDurationToFirstStart(): String {
+        val firstStart = firstStart()
+        return "$firstStart + ${DataTables.quote(getPropertyTypeForDuration())} "
     }
 }
 
@@ -47,7 +59,7 @@ abstract class DurationProcessor:BaseDurationProcessor()  {
     }
 }
 
-abstract class EndDateProcessor:BaseDurationProcessor(), GraphProcessor {
+abstract class EndDateProcessor:BaseDurationProcessor() {
     override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(FullQualifiedName(getHandledEntityType()) to
                 setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForDuration())))

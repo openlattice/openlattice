@@ -1,6 +1,7 @@
 package com.openlattice.graph.processing.processors
 
 
+import com.openlattice.postgres.DataTables
 import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
@@ -15,8 +16,8 @@ private const val duration = "housing.lengthofstay"
 class SupportiveHousingDurationProcessor: DurationProcessor() {
 
     override fun getSql(): String {
-        val firstStart = sortedFirst(getPropertyTypeForStart())
-        val lastEnd = sortedLast(getPropertyTypeForEnd())
+        val firstStart = firstStart()
+        val lastEnd = lastEnd()
         return "$lastEnd - make_date(DATE_PART('year', $firstStart ), DATE_PART('month', $firstStart), DATE_PART('day', $firstStart))"
     }
 
@@ -49,8 +50,7 @@ class SupportiveHousingDurationProcessor: DurationProcessor() {
 class SupportiveHousingEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {
-        val firstStart = sortedFirst(getPropertyTypeForStart())
-        return "($firstStart + \"${getPropertyTypeForDuration()}\"[1] * interval '1 hour')::date"
+        return "(${firstStart()} + ${DataTables.quote(getPropertyTypeForDuration())}[1] * interval '1 hour')::date"
     }
 
     override fun getHandledEntityType(): String {

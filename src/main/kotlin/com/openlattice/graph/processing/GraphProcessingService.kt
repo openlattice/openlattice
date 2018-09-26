@@ -109,7 +109,7 @@ class GraphProcessingService(
                     conn.createStatement().use { stmt ->
                         val w = Stopwatch.createStarted()
                         val propagationSize = queries.map(stmt::executeUpdate).sum()
-                        logger.info("Propagated $propagationSize receives in ${w.elapsed(TimeUnit.MILLISECONDS)}ms")
+                        logger.info("Propagated $propagationSize in ${w.elapsed(TimeUnit.MILLISECONDS)}ms")
                         return propagationSize
                     }
                 } catch (e: SQLException) {
@@ -132,9 +132,7 @@ class GraphProcessingService(
             val outputEntitySetIds = getEntitySets(mapOf(processor.getOutputs()).mapValues { setOf(it.value) })
             val outputPropertyType = getPropertyTypes(mapOf(processor.getOutputs()).mapValues { setOf(it.value) })
             val associationType = edm.getAssociationTypeSafe(edm.getEntityType(processor.getOutputs().first).id) != null
-            val filters = processor.getFilters().values.flatMap {
-                it.map{
-                    edm.getPropertyTypeId(it.key) to setOf(it.value)} }.toMap()
+            val filters = processor.getFilters().values.flatMap { it.map{ edm.getPropertyTypeId(it.key) to setOf(it.value)} }.toMap()
             try{
                 val computeQueries = buildComputeQueries(
                         processor.getSql(),
@@ -154,16 +152,15 @@ class GraphProcessingService(
                             }
                         } catch (e: SQLException) {
                             logger.error("Unable to compute aggregated values with queries: {} ${System.lineSeparator()}$e", computeQueries)
-                            return 0
+                             0
                         }
                     }
                 }
             } catch(e:IllegalStateException) {
                 logger.error("Couldn't compute property type ${processor.getOutputs().second} of entity type ${processor.getOutputs().first}: $e")
-                return 0
+                 0
             }
         }.sum()
-
     }
 
     private fun getPropertyTypes(inputs: Map<FullQualifiedName, Set<FullQualifiedName>>): Map<UUID, PropertyType> {
@@ -401,11 +398,11 @@ internal fun buildFilteredEdgesSqlForAssociations(entitySetIds: Collection<UUID>
     checkState(entitySetIds.isNotEmpty(), "Entity set ids are empty (no output entity set present)")
     val entitySetsClause = entitySetIds.joinToString(",") { "'$it'" }
     val edgeSrcEdgesSql = "SELECT ${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
-            "${SRC_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID" +
+            "${SRC_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
             "FROM ${EDGES.name} WHERE ${SRC_ENTITY_SET_ID.name} IN ($entitySetsClause)"
 
     val edgeDstEdgesSql = "SELECT ${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
-            "${DST_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID" +
+            "${DST_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
             "FROM ${EDGES.name} WHERE ${SRC_ENTITY_SET_ID.name} IN ($entitySetsClause)"
 
     return listOf(edgeSrcEdgesSql, edgeDstEdgesSql)

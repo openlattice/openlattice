@@ -1,20 +1,19 @@
 package com.openlattice.graph.processing.processors
 
+import com.openlattice.postgres.DataTables
 import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
 private const val entity_type = "ol.dispatch"
-private const val start = "time.alerted"
-private const val end = "time.completed"
+private const val start = "datetime.alerted"
+private const val end = "date.completeddatetime"
 private const val duration = "ol.durationinterval"
 
 @Component
 class DispatchDurationProcessor: DurationProcessor() {
 
     override fun getSql(): String {
-        val firstStart = sortedFirst(getPropertyTypeForStart())
-        val lastEnd = sortedLast(getPropertyTypeForEnd())
-        return numberOfMinutes(firstStart, lastEnd)
+        return numberOfMinutes()
     }
 
     override fun getHandledEntityType(): String {
@@ -47,8 +46,7 @@ class DispatchDurationProcessor: DurationProcessor() {
 class DispatchEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {
-        val firstStart = sortedFirst(getPropertyTypeForStart())
-        return "$firstStart + ${getPropertyTypeForDuration()} * interval '1 minutes'"
+        return "${firstStart()} + ${DataTables.quote(getPropertyTypeForDuration())} * interval '1 minutes'"
     }
 
     override fun getHandledEntityType(): String {
