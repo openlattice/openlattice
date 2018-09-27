@@ -121,6 +121,16 @@ class GraphProcessingService(
         return 0
     }
 
+    // TODO: add inner join for target property where last_write > last_propagate
+    /*
+    INSERT INTO "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d" (entity_set_id, id, hash, "ol.durationinterval", VERSION, versions, last_propagate, last_write) (SELECT "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".entity_set_id, "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".id,digest((SUM(EXTRACT(epoch FROM (
+(SELECT unnest("date.completeddatetime") ORDER BY 1 DESC LIMIT 1) -
+(SELECT unnest("datetime.alerted") ORDER BY 1 LIMIT 1)))/60))::text,'sha1'),SUM(EXTRACT(epoch FROM ( (SELECT unnest("date.completeddatetime") ORDER BY 1 DESC LIMIT 1) - (SELECT unnest("datetime.alerted") ORDER BY 1 LIMIT 1)))/60),1538015182669,ARRAY[1538015182669], now(), now() FROM
+(SELECT * FROM (SELECT entity_set_id, id, "datetime.alerted", "date.completeddatetime" FROM (SELECT entity_set_id, id FROM entity_key_ids WHERE VERSION > 0 AND ((entity_set_id = '56c251b7-f73a-4f74-b5b4-2cb0a725d142'))) AS entity_key_ids INNER JOIN (SELECT entity_set_id, id, array_agg("datetime.alerted") AS "datetime.alerted" FROM "pt_736818e8-0ad9-4c83-8b53-3e00005fed2b" WHERE VERSION > 0 AND ((entity_set_id = '56c251b7-f73a-4f74-b5b4-2cb0a725d142')) AND last_propagate >= last_write GROUP BY (entity_set_id, id)) AS "pt_736818e8-0ad9-4c83-8b53-3e00005fed2b" USING (entity_set_id, id) INNER JOIN (SELECT entity_set_id, id, array_agg("date.completeddatetime") AS "date.completeddatetime" FROM "pt_6675a7e8-2159-41b1-9431-4053690fa3c9" WHERE VERSION > 0 AND ((entity_set_id = '56c251b7-f73a-4f74-b5b4-2cb0a725d142')) AND last_propagate >= last_write GROUP BY (entity_set_id, id)) AS "pt_6675a7e8-2159-41b1-9431-4053690fa3c9" USING (entity_set_id, id)) AS blocked_property INNER JOIN (SELECT DISTINCT entity_set_id, id FROM "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d" WHERE last_write > last_propagate) AS original using(entity_set_id, id)) AS "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d" GROUP BY ("pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".entity_set_id, "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".id)) ON CONFLICT (entity_set_id,id, hash) DO
+UPDATE
+SET VERSION = EXCLUDED.VERSION, versions = "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".versions || EXCLUDED.versions, last_propagate=excluded.last_propagate, last_write=excluded.last_write;
+     */
+
     private fun compute(): Int {
         val count = processors.map { processor ->
             val entitySetIds = getEntitySets(processor.getInputs())
@@ -229,7 +239,7 @@ internal fun buildTombstoneSql(
         propertyTypes: Map<UUID, PropertyType>, //src propagation set
         associationType: Boolean
 ): List<String> {
-    val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, mapOf())
+    val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, mapOf(), false)
     val edgesSql = if (associationType) {
         buildFilteredEdgesSqlForAssociations(neighborEntitySetIds)
     } else {
