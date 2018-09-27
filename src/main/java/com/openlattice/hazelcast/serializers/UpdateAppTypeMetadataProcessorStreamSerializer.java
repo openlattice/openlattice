@@ -20,6 +20,8 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.LinkedHashMultimap;
+import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -28,11 +30,13 @@ import com.openlattice.apps.processors.UpdateAppTypeMetadataProcessor;
 import com.openlattice.edm.requests.MetadataUpdate;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UpdateAppTypeMetadataProcessorStreamSerializer implements SelfRegisteringStreamSerializer<UpdateAppTypeMetadataProcessor> {
+public class UpdateAppTypeMetadataProcessorStreamSerializer
+        implements SelfRegisteringStreamSerializer<UpdateAppTypeMetadataProcessor> {
     @Override public Class<? extends UpdateAppTypeMetadataProcessor> getClazz() {
         return UpdateAppTypeMetadataProcessor.class;
     }
@@ -43,6 +47,8 @@ public class UpdateAppTypeMetadataProcessorStreamSerializer implements SelfRegis
         OptionalStreamSerializers.serialize( out, update.getTitle(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getDescription(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getType(), FullQualifiedNameStreamSerializer::serialize );
+        OptionalStreamSerializers
+                .serialize( out, update.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
     }
 
     @Override public UpdateAppTypeMetadataProcessor read( ObjectDataInput in ) throws IOException {
@@ -50,6 +56,8 @@ public class UpdateAppTypeMetadataProcessorStreamSerializer implements SelfRegis
         Optional<String> description = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<FullQualifiedName> type = OptionalStreamSerializers.deserialize( in,
                 FullQualifiedNameStreamSerializer::deserialize );
+        Optional<LinkedHashMultimap<UUID, String>> tags = OptionalStreamSerializers
+                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
 
         MetadataUpdate update = new MetadataUpdate(
                 title,
@@ -59,7 +67,8 @@ public class UpdateAppTypeMetadataProcessorStreamSerializer implements SelfRegis
                 type,
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty(),
+                tags );
         return new UpdateAppTypeMetadataProcessor( update );
     }
 

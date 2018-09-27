@@ -20,6 +20,8 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializer;
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -36,6 +38,7 @@ public class EntitySetPropertyMetadataStreamSerializer
     public void write( ObjectDataOutput out, EntitySetPropertyMetadata object ) throws IOException {
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
+        SetStreamSerializers.fastStringSetSerialize( out, object.getTags() );
         out.writeBoolean( object.getDefaultShow() );
     }
 
@@ -43,8 +46,9 @@ public class EntitySetPropertyMetadataStreamSerializer
     public EntitySetPropertyMetadata read( ObjectDataInput in ) throws IOException {
         String title = in.readUTF();
         String description = in.readUTF();
+        var tags = SetStreamSerializers.orderedFastStringSetDeserialize( in );
         boolean defaultShow = in.readBoolean();
-        return new EntitySetPropertyMetadata( title, description, defaultShow );
+        return new EntitySetPropertyMetadata( title, description, tags, defaultShow );
     }
 
     @Override

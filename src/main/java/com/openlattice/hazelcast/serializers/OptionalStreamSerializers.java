@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingConsumer;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -95,6 +96,16 @@ public final class OptionalStreamSerializers {
             throws IOException {
         if ( in.readBoolean() ) {
             Set<T> elements = SetStreamSerializers.deserialize( in, f );
+            return Optional.of( elements );
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    public static <T> Optional<LinkedHashSet<T>> deserializeLinkedHashSet( ObjectDataInput in, IoPerformingFunction<ObjectDataInput, T> f )
+            throws IOException {
+        if ( in.readBoolean() ) {
+            LinkedHashSet<T> elements = SetStreamSerializers.orderedDeserialize(  in, f );
             return Optional.of( elements );
         } else {
             return Optional.empty();
