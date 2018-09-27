@@ -65,10 +65,8 @@ class GraphProcessingService(
 
     fun step() {
         if (taskLock.tryLock()) {
-            while(compute() > 0) {
-            }
-            while (propagate() > 0) {
-            }
+            while(compute() > 0){}
+            propagate()
         }
     }
 
@@ -76,7 +74,6 @@ class GraphProcessingService(
         //Basically update all neighbors of where last_received > last_propagated. No filtering required because we
         //want to continuously be propagating the signal of this shouldn't be used for computation.
 
-//        val pTypes = propertyTypes.values.map{ it.id to it }.toMap()
         var count = Int.MAX_VALUE
         while (count > 0) {
             count = singleForwardPropagationGraph.map {
@@ -269,7 +266,7 @@ internal fun buildComputeQueries(
 ): List<String> {
     checkState(entitySetIds.isNotEmpty(), "Entity set ids are empty (no output entity set present)")
 
-    val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, filterExpressions)
+    val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, filterExpressions, isSelf)
     val propertyTableName = quote(DataTables.propertyTableName(neighborPropertyTypeId))
 
     val propagations = if(isSelf) {
@@ -356,7 +353,7 @@ const val TARGET_ENTITY_KEY_ID = "target_entity_key_Id"
 
 //A property is marked as propagted when it completes a compute step with no unpropagated neighbors/parents.
 internal fun buildGetActivePropertiesSql(
-        entitySetIds: Collection<UUID>, propertyTypeIds: Map<UUID, PropertyType>, propertyTypeFilters: Map<UUID, Set<ValueFilter<*>>>
+        entitySetIds: Collection<UUID>, propertyTypeIds: Map<UUID, PropertyType>, propertyTypeFilters: Map<UUID, Set<ValueFilter<*>>>, isSelf: Boolean
 ): String {
     //Want to get property types across several entity sets of the same type.
     //This table can be used by entity sets to figure out where to insert new properties.
@@ -364,7 +361,7 @@ internal fun buildGetActivePropertiesSql(
     //i.e if edge for entity exists and selected subset of properties can be propagate. Push them through to neighbors
     //The result of this query can be joined with edges and other
 
-    val propertyTypeFiltersWithNullCheck = propertyTypeIds.mapValues { propertyTypeFilters[it.key]?: setOf() }
+    val propertyTypeFiltersWithNullCheck = if(isSelf) propertyTypeIds.mapValues { propertyTypeFilters[it.key]?: setOf() } else propertyTypeFilters
 
     return selectEntitySetWithCurrentVersionOfPropertyTypes(
             entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
