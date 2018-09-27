@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
@@ -250,6 +251,7 @@ public class CustomCSVPopulation {
                     ImmutableSet.of(),
                     keyPropertyType,
                     propertyTypeIdsSet,
+                    LinkedHashMultimap.create(),
                     Optional.empty(),
                     Optional.of( SecurableObjectType.EntityType ) );
             // Add property types to entity type
