@@ -279,9 +279,13 @@ internal fun buildComputeQueries(
     val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, filterExpressions, isSelf)
     val propertyTableName = quote(DataTables.propertyTableName(neighborPropertyTypeId))
 
+    val targetPropertyDirty = " (SELECT $entityKeyIdColumns from $propertyTableName " +
+            "WHERE ${LAST_PROPAGATE.name} < ${LAST_WRITE.name}) "
+
     val propagations = if(isSelf) {
         listOf("(SELECT * " +
-                "FROM ($propertyTable) as blocked_property ) as $propertyTableName ")
+                "FROM ($propertyTable) as blocked_property " +
+                "INNER JOIN $targetPropertyDirty AS dirty USING($entityKeyIdColumns) ) as $propertyTableName ")
 
     } else {
         val edgesSql = if (associationType) {
@@ -289,11 +293,13 @@ internal fun buildComputeQueries(
         } else {
             buildFilteredEdgesSqlForEntities(neighborEntitySetIds)
         }
-
+        // TODO look into, when left and when inner join is necessary and on which edges to join on
+        // TODO: lots of null values introduced because of left joins
         edgesSql.map {
             "(SELECT * " +
                     "FROM ($propertyTable) as blocked_property " +
-                    "INNER JOIN  ($it) as filtered_edges USING($entityKeyIdColumns) ) as propagations " +
+                    "INNER JOIN  ($it) as filtered_edges USING($entityKeyIdColumns) " +
+                    "INNER JOIN $targetPropertyDirty as dirty USING($entityKeyIdColumns)) as propagations " +
                     "INNER JOIN $propertyTableName ON ($propertyTableName.${ENTITY_SET_ID.name} = propagations.$TARGET_ENTITY_SET_ID AND  $propertyTableName.${ID_VALUE.name} = propagations.$TARGET_ENTITY_KEY_ID) "
         }
     }
