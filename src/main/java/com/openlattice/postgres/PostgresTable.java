@@ -83,6 +83,7 @@ import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.QUERY;
 import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
@@ -100,6 +101,7 @@ import static com.openlattice.postgres.PostgresColumn.START_TIME;
 import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
 import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
+import static com.openlattice.postgres.PostgresColumn.TAGS;
 import static com.openlattice.postgres.PostgresColumn.TIME_UUID;
 import static com.openlattice.postgres.PostgresColumn.TITLE;
 import static com.openlattice.postgres.PostgresColumn.URL;
@@ -149,7 +151,16 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition COMPLEX_TYPES =
             new PostgresTableDefinition( "complex_types" )
-                    .addColumns( ID, NAMESPACE, NAME, TITLE, DESCRIPTION, PROPERTIES, BASE_TYPE, SCHEMAS, CATEGORY );
+                    .addColumns( ID,
+                            NAMESPACE,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            PROPERTIES,
+                            PROPERTY_TAGS,
+                            BASE_TYPE,
+                            SCHEMAS,
+                            CATEGORY );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
 
     public static final PostgresTableDefinition DB_CREDS = new PostgresTableDefinition( "db_creds" )
@@ -192,7 +203,7 @@ public final class PostgresTable {
     //.setUnique( NAME );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
-                    .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, SHOW )
+                    .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
                     .primaryKey( ENTITY_SET_ID, PROPERTY_TYPE_ID );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
     public static final PostgresTableDefinition        ENTITY_TYPES                 =
@@ -204,6 +215,7 @@ public final class PostgresTable {
                             DESCRIPTION,
                             KEY,
                             PROPERTIES,
+                            PROPERTY_TAGS,
                             BASE_TYPE,
                             SCHEMAS,
                             CATEGORY );

@@ -136,17 +136,7 @@ public class CassandraTypeManager {
                 row -> row.getUUID( CommonColumns.ID.cql() ) );
     }
 
-    public Iterable<EntityType> getEntityTypes() {
-        return Iterables.transform( session.execute( getEntityTypes ), RowAdapters::entityType );
-    }
 
-    public Iterable<EntityType> getEntityTypesStrict() {
-        return Iterables.transform( session.execute( getEntityTypesStrict ), RowAdapters::entityType );
-    }
-
-    public Iterable<EntityType> getAssociationEntityTypes() {
-        return Iterables.transform( session.execute( getAssociationEntityTypes ), RowAdapters::entityType );
-    }
 
     public Stream<UUID> getAssociationIdsForEntityType( UUID entityTypeId ) {
         Iterable<UUID> srcAssociationIds = Iterables.transform(
@@ -170,15 +160,7 @@ public class CassandraTypeManager {
         return StreamUtil.stream( session.execute( getEnumTypeIds.bind() ) ).map( RowAdapters::id );
     }
 
-    public Set<EntityType> getEntityTypesContainingPropertyTypes( Set<UUID> properties ) {
-        return getEntityTypesContainingPropertyTypesAsStream( properties )
-                .collect( Collectors.toSet() );
-    }
 
-    public Stream<EntityType> getEntityTypesContainingPropertyTypesAsStream( Set<UUID> properties ) {
-        Stream<ResultSetFuture> rsfs = properties.stream().map( this::getEntityTypesContainingPropertyType );
-        return StreamUtil.getRowsAndFlatten( rsfs ).map( RowAdapters::entityType );
-    }
 
     private ResultSetFuture getEntityTypesContainingPropertyType( UUID propertyId ) {
         return session.executeAsync(

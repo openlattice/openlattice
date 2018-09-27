@@ -20,14 +20,17 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.LinkedHashMultimap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -40,6 +43,8 @@ public class UpdateEntitySetPropertyMetadataProcessorStreamSerializer
         OptionalStreamSerializers.serialize( out, update.getTitle(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getDescription(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getDefaultShow(), ObjectDataOutput::writeBoolean );
+        OptionalStreamSerializers
+                .serialize( out, update.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
     }
 
     @Override
@@ -47,6 +52,8 @@ public class UpdateEntitySetPropertyMetadataProcessorStreamSerializer
         Optional<String> title = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<String> description = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<Boolean> defaultShow = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
+        Optional<LinkedHashMultimap<UUID, String>> tags = OptionalStreamSerializers
+                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
 
         MetadataUpdate update = new MetadataUpdate(
                 title,
@@ -56,7 +63,8 @@ public class UpdateEntitySetPropertyMetadataProcessorStreamSerializer
                 Optional.empty(),
                 Optional.empty(),
                 defaultShow,
-                Optional.empty() );
+                Optional.empty(),
+                tags );
         return new UpdateEntitySetPropertyMetadataProcessor( update );
     }
 

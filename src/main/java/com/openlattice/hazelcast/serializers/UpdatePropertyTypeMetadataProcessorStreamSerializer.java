@@ -20,6 +20,8 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.LinkedHashMultimap;
+import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -28,6 +30,7 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
 
@@ -42,6 +45,8 @@ public class UpdatePropertyTypeMetadataProcessorStreamSerializer
         OptionalStreamSerializers.serialize( out, update.getDescription(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getType(), FullQualifiedNameStreamSerializer::serialize );
         OptionalStreamSerializers.serialize( out, update.getPii(), ObjectDataOutput::writeBoolean );
+        OptionalStreamSerializers
+                .serialize( out, update.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
     }
 
     @Override
@@ -51,6 +56,8 @@ public class UpdatePropertyTypeMetadataProcessorStreamSerializer
         Optional<FullQualifiedName> type = OptionalStreamSerializers.deserialize( in,
                 FullQualifiedNameStreamSerializer::deserialize );
         Optional<Boolean> pii = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
+        Optional<LinkedHashMultimap<UUID, String>> tags = OptionalStreamSerializers
+                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
 
         MetadataUpdate update = new MetadataUpdate(
                 title,
@@ -60,7 +67,8 @@ public class UpdatePropertyTypeMetadataProcessorStreamSerializer
                 type,
                 pii,
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty(),
+                tags);
         return new UpdatePropertyTypeMetadataProcessor( update );
     }
 

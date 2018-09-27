@@ -20,6 +20,8 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.LinkedHashMultimap;
+import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -28,6 +30,7 @@ import com.openlattice.apps.processors.UpdateAppMetadataProcessor;
 import com.openlattice.edm.requests.MetadataUpdate;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -44,6 +47,8 @@ public class UpdateAppMetadataProcessorStreamSerializer implements
         OptionalStreamSerializers.serialize( out, update.getDescription(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getName(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getUrl(), ObjectDataOutput::writeUTF );
+        OptionalStreamSerializers
+                .serialize( out, update.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
     }
 
     @Override public UpdateAppMetadataProcessor read( ObjectDataInput in ) throws IOException {
@@ -51,6 +56,8 @@ public class UpdateAppMetadataProcessorStreamSerializer implements
         Optional<String> description = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<String> name = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<String> url = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
+        Optional<LinkedHashMultimap<UUID, String>> tags = OptionalStreamSerializers
+                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
 
         MetadataUpdate update = new MetadataUpdate(
                 title,
@@ -60,7 +67,8 @@ public class UpdateAppMetadataProcessorStreamSerializer implements
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                url );
+                url,
+                tags);
         return new UpdateAppMetadataProcessor( update );
     }
 
