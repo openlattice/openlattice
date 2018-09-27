@@ -126,6 +126,8 @@ public class EntityType extends ComplexType {
         return "EntityType{" +
                 "key=" + key +
                 ", baseType=" + baseType +
+                ", propertyTags=" + propertyTags +
+                ", properties=" + properties +
                 ", schemas=" + schemas +
                 ", type=" + type +
                 ", id=" + id +
