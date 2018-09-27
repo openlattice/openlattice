@@ -51,6 +51,10 @@ public class UpdateEntityTypeMetadataProcessor extends AbstractRhizomeEntryProce
             if( update.getType().isPresent() ){
                 et.setType( update.getType().get() );
             }
+            if( update.getPropertyTags().isPresent()) {
+                et.setPropertyTypeTags( update.getPropertyTags().get() );
+            }
+            
             entry.setValue( et );
         }
         return null;

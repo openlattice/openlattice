@@ -20,6 +20,8 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.google.common.collect.LinkedHashMultimap;
+import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -27,8 +29,11 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -42,6 +47,8 @@ public class UpdateEntitySetMetadataProcessorStreamSerializer
         OptionalStreamSerializers.serialize( out, update.getDescription(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, update.getName(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serializeSet( out, update.getContacts(), ObjectDataOutput::writeUTF );
+        OptionalStreamSerializers
+                .serialize( out, update.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
     }
 
     @Override
@@ -50,6 +57,8 @@ public class UpdateEntitySetMetadataProcessorStreamSerializer
         Optional<String> description = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<String> name = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<Set<String>> contacts = OptionalStreamSerializers.deserializeSet( in, ObjectDataInput::readUTF );
+        Optional<LinkedHashMultimap<UUID, String>> tags = OptionalStreamSerializers
+                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
 
         MetadataUpdate update = new MetadataUpdate(
                 title,
@@ -59,7 +68,8 @@ public class UpdateEntitySetMetadataProcessorStreamSerializer
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                Optional.empty() );
+                Optional.empty(),
+                tags );
         return new UpdateEntitySetMetadataProcessor( update );
     }
 
@@ -69,7 +79,8 @@ public class UpdateEntitySetMetadataProcessorStreamSerializer
     }
 
     @Override
-    public void destroy() {}
+    public void destroy() {
+    }
 
     @Override
     public Class<UpdateEntitySetMetadataProcessor> getClazz() {

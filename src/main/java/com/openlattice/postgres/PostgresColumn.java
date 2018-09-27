@@ -308,6 +308,9 @@ public final class PostgresColumn {
     public static final String                   SYNC_ID_FIELD               = "sync_id";
     public static final PostgresColumnDefinition SYNC_ID                     =
             new PostgresColumnDefinition( SYNC_ID_FIELD, UUID ).notNull();
+    public static final String                   TAGS_FIELD                  = "tags";
+    public static final PostgresColumnDefinition TAGS                        = new PostgresColumnDefinition( TAGS_FIELD,
+            TEXT_ARRAY );
     public static final String                   TIME_UUID_FIELD             = "time_uuid";
     public static final PostgresColumnDefinition TIME_UUID                   =
             new PostgresColumnDefinition( TIME_UUID_FIELD, UUID );

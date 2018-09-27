@@ -391,5 +391,6 @@ internal fun buildPropertyTypeEntitiesClause(
 }
 
 internal fun buildFilterClause(fqn: String, filter: Set<RangeFilter<*>>): String {
-    return filter.joinToString(" AND ") { it.asSql(quote(fqn)) }
+    if (filter.isEmpty()) return ""
+    return filter.joinToString(" AND ", prefix = " AND ") { it.asSql(fqn) }
 }

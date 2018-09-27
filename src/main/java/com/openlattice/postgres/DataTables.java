@@ -199,7 +199,6 @@ public class DataTables {
         PostgresTableDefinition ptd = new PostgresTableDefinition(
                 quote( idxPrefix ) )
                 .addColumns(
-                        LINKING_ID,
                         ENTITY_SET_ID,
                         ID_VALUE,
                         HASH,
@@ -211,10 +210,6 @@ public class DataTables {
                         WRITERS,
                         OWNERS )
                 .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH );
-
-        PostgresIndexDefinition clusterIndex = new PostgresColumnsIndexDefinition( ptd, LINKING_ID )
-                .name( quote( idxPrefix+"_cluster_idx"))
-                .ifNotExists();
 
         PostgresIndexDefinition idIndex = new PostgresColumnsIndexDefinition( ptd, ID_VALUE )
                 .name( quote( idxPrefix + "_id_idx" ) )
@@ -263,7 +258,6 @@ public class DataTables {
                 .ifNotExists();
 
         ptd.addIndexes(
-                clusterIndex,
                 idIndex,
                 entitySetIdIndex,
                 versionIndex,
