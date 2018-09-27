@@ -472,8 +472,7 @@ public final class ResultSetAdapters {
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> key = key( rs );
         LinkedHashSet<UUID> properties = properties( rs );
-        LinkedHashMultimap<UUID, String> propertyTags =
-                null;
+        LinkedHashMultimap<UUID, String> propertyTags;
         try {
             propertyTags = mapper.readValue( rs.getString( PROPERTY_TAGS_FIELD ),
                     new TypeReference<LinkedHashMultimap<UUID, String>>() {
@@ -517,6 +516,20 @@ public final class ResultSetAdapters {
         Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> properties = properties( rs );
+
+        LinkedHashMultimap<UUID, String> propertyTags;
+        try {
+            propertyTags = mapper.readValue( rs.getString( PROPERTY_TAGS_FIELD ),
+                    new TypeReference<LinkedHashMultimap<UUID, String>>() {
+                    } );
+        } catch ( IOException e ) {
+            String errMsg =
+                    "Unable to deserialize json from entity type " + fqn.getFullQualifiedNameAsString() + " with id "
+                            + id.toString();
+            logger.error( errMsg );
+            throw new SQLException( errMsg );
+        }
+
         Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         SecurableObjectType category = category( rs );
 
@@ -526,7 +539,7 @@ public final class ResultSetAdapters {
                 description,
                 schemas,
                 properties,
-                LinkedHashMultimap.create(),
+                propertyTags,
                 baseType,
                 category );
     }
