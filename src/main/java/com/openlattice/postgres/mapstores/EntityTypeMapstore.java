@@ -17,6 +17,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.postgresql.util.PGobject;
 
 public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, EntityType> {
 
@@ -34,9 +35,10 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
     @Override protected void bind( PreparedStatement ps, UUID key, EntityType value ) throws SQLException {
         //This is pretty rarely called so efficiency is not as important. Much better to use constants for hot binds
         var parameterIndex = bind( ps, key, 1 );
-        final String propertyTags;
+        final var propertyTags = new PGobject();
         try {
-            propertyTags = mapper.writeValueAsString( value.getPropertyTags() );
+            propertyTags.setType( "jsonb" );
+            propertyTags.setValue( mapper.writeValueAsString( value.getPropertyTags() ) );
         } catch ( JsonProcessingException e ) {
             throw new SQLException( "Unable to serialize property tags to JSON.", e );
         }
