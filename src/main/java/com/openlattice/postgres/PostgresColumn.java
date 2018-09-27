@@ -249,7 +249,7 @@ public final class PostgresColumn {
     public static final String                   PROPERTIES_FIELD            = "properties";
     public static final PostgresColumnDefinition PROPERTIES                  =
             new PostgresColumnDefinition( PROPERTIES_FIELD, UUID_ARRAY ).notNull();
-    public static final String                   PROPERTY_TAGS_FIELD         = "propertyTags";
+    public static final String                   PROPERTY_TAGS_FIELD         = "property_tags";
     public static final PostgresColumnDefinition PROPERTY_TAGS               =
             new PostgresColumnDefinition( PROPERTY_TAGS_FIELD, JSONB ).notNull();
     public static final String                   PROPERTY_TYPE_ID_FIELD      = "property_type_id";
