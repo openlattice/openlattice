@@ -32,7 +32,7 @@ public class Ace {
     private final     Principal           principal;
     private final     EnumSet<Permission> permissions;
     private final     OffsetDateTime      expirationDate;
-    private transient int                 h = 0;
+    private transient int                 hashValue = 0;
 
     @JsonCreator
     public Ace(
@@ -79,14 +79,14 @@ public class Ace {
         if ( o == null || getClass() != o.getClass() )
             return false;
         Ace ace = (Ace) o;
-        return h == ace.h &&
+        return hashValue == ace.hashValue &&
                 Objects.equals( principal, ace.principal ) &&
                 Objects.equals( permissions, ace.permissions ) &&
                 Objects.equals( expirationDate, ace.expirationDate );
     }
 
     @Override public int hashCode() {
-        return Objects.hash( principal, permissions, expirationDate, h );
+        return Objects.hash( principal, permissions, expirationDate, hashValue );
     }
 
     @Override
