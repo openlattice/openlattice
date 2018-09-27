@@ -151,7 +151,16 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition COMPLEX_TYPES =
             new PostgresTableDefinition( "complex_types" )
-                    .addColumns( ID, NAMESPACE, NAME, TITLE, DESCRIPTION, PROPERTIES, BASE_TYPE, SCHEMAS, CATEGORY );
+                    .addColumns( ID,
+                            NAMESPACE,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            PROPERTIES,
+                            PROPERTY_TAGS,
+                            BASE_TYPE,
+                            SCHEMAS,
+                            CATEGORY );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
 
     public static final PostgresTableDefinition DB_CREDS = new PostgresTableDefinition( "db_creds" )
