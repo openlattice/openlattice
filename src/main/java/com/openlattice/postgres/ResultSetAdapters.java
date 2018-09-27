@@ -53,6 +53,7 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import java.io.IOException;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -472,9 +473,18 @@ public final class ResultSetAdapters {
         LinkedHashSet<UUID> key = key( rs );
         LinkedHashSet<UUID> properties = properties( rs );
         LinkedHashMultimap<UUID, String> propertyTags =
-                mapper.readValue( rs.getString( PROPERTY_TAGS_FIELD ),
-                        new TypeReference<LinkedHashMultimap<UUID, String>>() {
-                        } );
+                null;
+        try {
+            propertyTags = mapper.readValue( rs.getString( PROPERTY_TAGS_FIELD ),
+                    new TypeReference<LinkedHashMultimap<UUID, String>>() {
+                    } );
+        } catch ( IOException e ) {
+            String errMsg =
+                    "Unable to deserialize json from entity type " + fqn.getFullQualifiedNameAsString() + " with id "
+                            + id.toString();
+            logger.error( errMsg );
+            throw new SQLException( errMsg );
+        }
         Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         Optional<SecurableObjectType> category = Optional.of( category( rs ) );
 
