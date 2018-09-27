@@ -20,6 +20,9 @@
 
 package com.openlattice.postgres;
 
+import com.dataloom.mappers.ObjectMappers;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedHashMultimap;
@@ -73,8 +76,9 @@ import static com.openlattice.postgres.PostgresColumn.*;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public final class ResultSetAdapters {
-    private static final Logger  logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
-    private static final Decoder DECODER = Base64.getMimeDecoder();
+    private static final Logger       logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
+    private static final Decoder      DECODER = Base64.getMimeDecoder();
+    private static final ObjectMapper mapper  = ObjectMappers.newJsonMapper();
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -467,11 +471,15 @@ public final class ResultSetAdapters {
         Set<FullQualifiedName> schemas = schemas( rs );
         LinkedHashSet<UUID> key = key( rs );
         LinkedHashSet<UUID> properties = properties( rs );
+        LinkedHashMultimap<UUID, String> propertyTags =
+                mapper.readValue( rs.getString( PROPERTY_TAGS_FIELD ),
+                        new TypeReference<LinkedHashMultimap<UUID, String>>() {
+                        } );
         Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         Optional<SecurableObjectType> category = Optional.of( category( rs ) );
 
         return new EntityType( id, fqn, title, description, schemas, key, properties,
-                LinkedHashMultimap.create(), baseType, category );
+                propertyTags, baseType, category );
     }
 
     public static EntitySet entitySet( ResultSet rs ) throws SQLException {
