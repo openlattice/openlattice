@@ -31,4 +31,9 @@ interface GraphProcessor {
      */
     fun getFilters() : Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>>
 
+    /**
+     * @return whether the calculation is in the same entity set/type as the values needed for it
+     */
+    fun isSelf(): Boolean
+
 }

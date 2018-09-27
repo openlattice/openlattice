@@ -21,6 +21,10 @@ abstract class BaseDurationProcessor: GraphProcessor {
         return mapOf()
     }
 
+    override fun isSelf(): Boolean {
+        return true
+    }
+
     protected fun firstStart():String {
         return "(SELECT unnest(${DataTables.quote(getPropertyTypeForStart())}) ORDER BY 1 LIMIT 1)"
     }
@@ -30,20 +34,20 @@ abstract class BaseDurationProcessor: GraphProcessor {
     }
 
     protected fun numberOfDays():String {
-        return "EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600/24"
+        return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600/24)"
     }
 
     protected fun numberOfHours():String {
-        return "EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600"
+        return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600)"
     }
 
     protected fun numberOfMinutes():String {
-        return "EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/60"
+        return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/60)"
     }
 
     protected fun addDurationToFirstStart(): String {
         val firstStart = firstStart()
-        return "$firstStart + ${DataTables.quote(getPropertyTypeForDuration())} "
+        return "$firstStart + ${DataTables.quote(getPropertyTypeForDuration())}[1] "
     }
 }
 

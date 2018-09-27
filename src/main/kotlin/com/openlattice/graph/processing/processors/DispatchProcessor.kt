@@ -1,6 +1,8 @@
 package com.openlattice.graph.processing.processors
 
+import com.openlattice.analysis.requests.ValueFilter
 import com.openlattice.postgres.DataTables
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
@@ -39,6 +41,10 @@ class DispatchDurationProcessor: DurationProcessor() {
     override fun getDisplayTimeUnit(): ChronoUnit {
         return ChronoUnit.MINUTES
     }
+
+    override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
+        return mapOf()
+    }
 }
 
 
@@ -46,7 +52,7 @@ class DispatchDurationProcessor: DurationProcessor() {
 class DispatchEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {
-        return "${firstStart()} + ${DataTables.quote(getPropertyTypeForDuration())} * interval '1 minutes'"
+        return "MAX(${addDurationToFirstStart()} * interval '1 minutes')"
     }
 
     override fun getHandledEntityType(): String {

@@ -28,7 +28,8 @@ import java.util.*
  */
 data class Propagation(
         val entityTypeId: UUID,
-        val propertyTypeId: UUID
+        val propertyTypeId: UUID,
+        val self: Boolean
 ) {
 
 }

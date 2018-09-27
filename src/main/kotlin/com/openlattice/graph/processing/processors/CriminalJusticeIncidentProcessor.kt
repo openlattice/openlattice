@@ -45,8 +45,7 @@ class CriminalJusticeIncidentDurationProcessor:DurationProcessor() {
 class CriminalJusticeIncidentEndDateProcessor:EndDateProcessor() {
 
     override fun getSql(): String {
-        val firstStart = firstStart()
-        return "$firstStart + ${DataTables.quote(getPropertyTypeForDuration())} * 60 * interval '1 minutes'"
+        return "MAX(${addDurationToFirstStart()} * 60 * interval '1 minutes')"
     }
 
     override fun getHandledEntityType(): String {

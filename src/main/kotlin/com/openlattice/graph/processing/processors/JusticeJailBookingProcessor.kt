@@ -45,7 +45,7 @@ class JusticeJailBookingDurationProcessor: DurationProcessor() {
 class JusticeJailBookingEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {
-        return "${firstStart()} + ${DataTables.quote(getPropertyTypeForDuration())} * 24 * interval '1 hour'"
+        return "MAX(${addDurationToFirstStart()} * 24 * interval '1 hour')"
     }
 
     override fun getHandledEntityType(): String {
