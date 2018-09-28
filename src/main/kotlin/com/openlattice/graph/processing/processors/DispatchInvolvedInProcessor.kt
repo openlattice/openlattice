@@ -78,7 +78,7 @@ class DispatchInvolvedInProcessor: GraphProcessor, AssociationProcessor()  {
                 FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(involed_in), FullQualifiedName(involvedin_duration))
     }
 
@@ -108,7 +108,7 @@ class DispatchInvolvedInPersonPoliceMinutesProcessor: GraphProcessor, Associatio
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(involed_in), FullQualifiedName(person_police_minutes))
     }
 
@@ -134,7 +134,7 @@ class DispatchInvolvedInPersonFireMinutesProcessor: GraphProcessor, AssociationP
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(involed_in), FullQualifiedName(person_fire_minutes))
     }
 
@@ -157,7 +157,7 @@ class DispatchInvolvedInPersonEMSMinutesProcessor: GraphProcessor, AssociationPr
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(involed_in), FullQualifiedName(person_ems_minutes))
     }
 
@@ -183,7 +183,7 @@ class DispatchInvolvedInNumberOfPoliceProcessor: GraphProcessor, AssociationProc
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_police_officers))
     }
 
@@ -207,7 +207,7 @@ class DispatchInvolvedInNumberOfPoliceNoDurationProcessor: GraphProcessor, Assoc
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key))) // not used for calculation, just for edges
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_police_officers_no_duration))
     }
 
@@ -232,7 +232,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsProcessor: GraphProcessor, Associatio
                 FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_name)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_police_units))
     }
 
@@ -254,7 +254,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: GraphProcessor, 
                 FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_name))) // not used for calculation, just for edges
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_police_units_no_duration))
     }
 
@@ -277,7 +277,7 @@ class DispatchInvolvedInNumberOfFireUnitsProcessor: GraphProcessor, AssociationP
                 FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_name)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_fire))
     }
 
@@ -299,7 +299,7 @@ class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: GraphProcessor, As
                 FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_name))) // not used for calculation, just for edges
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_fire_no_duration))
     }
 
@@ -322,7 +322,7 @@ class DispatchInvolvedInNumberOfEMSUnitsProcessor: GraphProcessor, AssociationPr
                 FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_name)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_ems))
     }
 
@@ -344,7 +344,7 @@ class DispatchInvolvedInNumberOfEMSUnitsNoDurationProcessor: GraphProcessor, Ass
                 FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_name))) // not used for calculation, just for edges
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_ems_no_duration))
     }
 
@@ -367,7 +367,7 @@ class DispatchInvolvedInNumberOfPeopleProcessor: GraphProcessor, AssociationProc
                 FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_people))
     }
 
@@ -393,7 +393,7 @@ class DispatchInvolvedInPoliceMinutesProcessor: GraphProcessor, AssociationProce
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(police_minutes))
     }
 
@@ -415,7 +415,7 @@ class DispatchInvolvedInPoliceUnitMinutesProcessor: GraphProcessor, AssociationP
                 FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(police_unit_minutes))
     }
 
@@ -437,7 +437,7 @@ class DispatchInvolvedInFireMinutesProcessor: GraphProcessor, AssociationProcess
                 FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(fire_minutes))
     }
 
@@ -459,7 +459,7 @@ class DispatchInvolvedInEMSMinutesProcessor: GraphProcessor, AssociationProcesso
                 FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_key)))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(ems_minutes))
     }
 

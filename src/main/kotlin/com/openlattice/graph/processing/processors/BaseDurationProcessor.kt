@@ -58,7 +58,7 @@ abstract class DurationProcessor:BaseDurationProcessor()  {
                 setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForEnd())))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(getHandledEntityType()), FullQualifiedName(getPropertyTypeForDuration()))
     }
 }
@@ -69,7 +69,7 @@ abstract class EndDateProcessor:BaseDurationProcessor() {
                 setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForDuration())))
     }
 
-    override fun getOutputs(): Pair<FullQualifiedName, FullQualifiedName> {
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(getHandledEntityType()), FullQualifiedName(getPropertyTypeForEnd()))
     }
 }

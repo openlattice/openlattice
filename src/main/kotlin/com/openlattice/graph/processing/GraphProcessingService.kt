@@ -5,7 +5,6 @@ import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.QueryConstants
-import com.openlattice.analysis.requests.Filter
 import com.openlattice.analysis.requests.ValueFilter
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.PostgresEntityDataQueryService
@@ -121,31 +120,21 @@ class GraphProcessingService(
         return 0
     }
 
-    // TODO: add inner join for target property where last_write > last_propagate
-    /*
-    INSERT INTO "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d" (entity_set_id, id, hash, "ol.durationinterval", VERSION, versions, last_propagate, last_write) (SELECT "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".entity_set_id, "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".id,digest((SUM(EXTRACT(epoch FROM (
-(SELECT unnest("date.completeddatetime") ORDER BY 1 DESC LIMIT 1) -
-(SELECT unnest("datetime.alerted") ORDER BY 1 LIMIT 1)))/60))::text,'sha1'),SUM(EXTRACT(epoch FROM ( (SELECT unnest("date.completeddatetime") ORDER BY 1 DESC LIMIT 1) - (SELECT unnest("datetime.alerted") ORDER BY 1 LIMIT 1)))/60),1538015182669,ARRAY[1538015182669], now(), now() FROM
-(SELECT * FROM (SELECT entity_set_id, id, "datetime.alerted", "date.completeddatetime" FROM (SELECT entity_set_id, id FROM entity_key_ids WHERE VERSION > 0 AND ((entity_set_id = '56c251b7-f73a-4f74-b5b4-2cb0a725d142'))) AS entity_key_ids INNER JOIN (SELECT entity_set_id, id, array_agg("datetime.alerted") AS "datetime.alerted" FROM "pt_736818e8-0ad9-4c83-8b53-3e00005fed2b" WHERE VERSION > 0 AND ((entity_set_id = '56c251b7-f73a-4f74-b5b4-2cb0a725d142')) AND last_propagate >= last_write GROUP BY (entity_set_id, id)) AS "pt_736818e8-0ad9-4c83-8b53-3e00005fed2b" USING (entity_set_id, id) INNER JOIN (SELECT entity_set_id, id, array_agg("date.completeddatetime") AS "date.completeddatetime" FROM "pt_6675a7e8-2159-41b1-9431-4053690fa3c9" WHERE VERSION > 0 AND ((entity_set_id = '56c251b7-f73a-4f74-b5b4-2cb0a725d142')) AND last_propagate >= last_write GROUP BY (entity_set_id, id)) AS "pt_6675a7e8-2159-41b1-9431-4053690fa3c9" USING (entity_set_id, id)) AS blocked_property INNER JOIN (SELECT DISTINCT entity_set_id, id FROM "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d" WHERE last_write > last_propagate) AS original using(entity_set_id, id)) AS "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d" GROUP BY ("pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".entity_set_id, "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".id)) ON CONFLICT (entity_set_id,id, hash) DO
-UPDATE
-SET VERSION = EXCLUDED.VERSION, versions = "pt_7674c064-c8fb-42b0-a1ca-c7cab0e0829d".versions || EXCLUDED.versions, last_propagate=excluded.last_propagate, last_write=excluded.last_write;
-     */
-
     private fun compute(): Int {
         val count = processors.map { processor ->
-            val entitySetIds = getEntitySets(processor.getInputs())
+            val entitySetIds = getEntitySetsPerType(processor.getInputs())
             val propertyTypes = getPropertyTypes(processor.getInputs())
-            val outputEntitySetIds = getEntitySets(mapOf(processor.getOutputs()).mapValues { setOf(it.value) })
-            val outputPropertyType = getPropertyTypes(mapOf(processor.getOutputs()).mapValues { setOf(it.value) })
-            val associationType = edm.getAssociationTypeSafe(edm.getEntityType(processor.getOutputs().first).id) != null
+            val outputEntitySetIds = getEntitySetsPerType(mapOf(processor.getOutput()).mapValues { setOf(it.value) }).entries.first().value
+            val outputPropertyType = getPropertyTypes(mapOf(processor.getOutput()).mapValues { setOf(it.value) })
+            val associationType = edm.getAssociationTypeSafe(edm.getEntityType(processor.getOutput().first).id) != null
             val filters = processor.getFilters().values.flatMap { it.map{ edm.getPropertyTypeId(it.key) to setOf(it.value)} }.toMap()
             try{
                 val computeQueries = buildComputeQueries(
                         processor.getSql(),
                         filters,
                         outputEntitySetIds,
-                        outputPropertyType.keys.first(),
-                        quote(outputPropertyType.values.first().type.fullQualifiedNameAsString),
+                        outputPropertyType.values.first().first().id,
+                        quote(outputPropertyType.values.first().first().type.fullQualifiedNameAsString),
                         entitySetIds,
                         propertyTypes,
                         associationType,
@@ -164,7 +153,7 @@ SET VERSION = EXCLUDED.VERSION, versions = "pt_7674c064-c8fb-42b0-a1ca-c7cab0e08
                     }
                 }
             } catch(e:IllegalStateException) {
-                logger.error("Couldn't compute property type ${processor.getOutputs().second} of entity type ${processor.getOutputs().first}: $e")
+                logger.error("Couldn't compute property type ${processor.getOutput().second} of entity type ${processor.getOutput().first}: $e")
                  0
             }
         }.sum()
@@ -172,19 +161,20 @@ SET VERSION = EXCLUDED.VERSION, versions = "pt_7674c064-c8fb-42b0-a1ca-c7cab0e08
         return count
     }
 
-    private fun getPropertyTypes(inputs: Map<FullQualifiedName, Set<FullQualifiedName>>): Map<UUID, PropertyType> {
-        return inputs.values
-                .flatMap { it.map(edm::getPropertyType).map { it.id to it } }
-                .toMap()
+    // entity type id -> setof (pt_id -> pt)
+    private fun getPropertyTypes(inputs: Map<FullQualifiedName, Set<FullQualifiedName>>): Map<UUID, Set<PropertyType>> {
+        return inputs.map {
+            edm.getEntityType(it.key).id to
+                    it.value.map{edm.getPropertyType(it)}.toSet()  // pt_id to pt
+        }.toMap()
     }
 
-    private fun getEntitySets(inputs: Map<FullQualifiedName, Set<FullQualifiedName>>): Set<UUID> {
+    private fun getEntitySetsPerType(inputs: Map<FullQualifiedName, Set<FullQualifiedName>>): Map<UUID, Set<UUID>> {
         return inputs.keys
                 .map(edm::getEntityType)
                 .map(EntityType::getId)
-                .flatMap(edm::getEntitySetsOfType)
-                .map(EntitySet::getId)
-                .toSet()
+                .map{it to edm.getEntitySetsOfType(it).map { it.id }.toSet()}
+                .toMap()
     }
 
     private fun getActiveEntities(entitySetIds: Collection<UUID>): PostgresIterable<EntityDataKey> {
@@ -213,8 +203,8 @@ SET VERSION = EXCLUDED.VERSION, versions = "pt_7674c064-c8fb-42b0-a1ca-c7cab0e08
                 } // List<Set<Propagation>>
                 .forEach {
                     val outputProp = Propagation(
-                            edm.getEntityType(processor.getOutputs().first).id,
-                            edm.getPropertyTypeId(processor.getOutputs().second),
+                            edm.getEntityType(processor.getOutput().first).id,
+                            edm.getPropertyTypeId(processor.getOutput().second),
                             processor.isSelf()
                     )
                     it.forEach { // Input propagations
@@ -235,13 +225,13 @@ SET VERSION = EXCLUDED.VERSION, versions = "pt_7674c064-c8fb-42b0-a1ca-c7cab0e08
 internal fun buildTombstoneSql(
         neighborEntitySetIds: Collection<UUID>, //dst propagation set
         neighborPropertyTypeId: UUID, //dst propagation set
-        entitySetIds: Collection<UUID>, //src propagation set
-        propertyTypes: Map<UUID, PropertyType>, //src propagation set
+        entitySetIds: Map<UUID, Collection<UUID>>, //src propagation set // per entity type id
+        propertyTypes: Map<UUID, Set<PropertyType>>, //src propagation set // per entity type id
         associationType: Boolean
 ): List<String> {
-    val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, mapOf(), false)
+    val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, mapOf())
     val edgesSql = if (associationType) {
-        buildFilteredEdgesSqlForAssociations(neighborEntitySetIds)
+        buildFilteredEdgesSqlForAssociations(neighborEntitySetIds) // TODO add input is necessary
     } else {
         buildFilteredEdgesSqlForEntities(neighborEntitySetIds)
     }
@@ -266,58 +256,56 @@ internal fun buildTombstoneSql(
 internal fun buildComputeQueries(
         computeExpression: String,
         filterExpressions: Map<UUID, Set<ValueFilter<*>>>,
-        neighborEntitySetIds: Collection<UUID>,
-        neighborPropertyTypeId: UUID,
+        outputEntitySetIds: Collection<UUID>,
+        outputProperty: UUID,
         fqn: String,
-        entitySetIds: Collection<UUID>, //Propagation
-        propertyTypes: Map<UUID, PropertyType>, //Propagation
+        entitySetIdsPerType: Map<UUID, Collection<UUID>>, //Propagation
+        propertyTypes: Map<UUID, Set<PropertyType>>, //Propagation
         associationType: Boolean,
         isSelf: Boolean
 ): List<String> {
-    checkState(entitySetIds.isNotEmpty(), "Entity set ids are empty (no output entity set present)")
+    checkState(entitySetIdsPerType.isNotEmpty(), "Entity set ids are empty (no input entity set present)")
 
-    val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, filterExpressions, isSelf)
-    val propertyTableName = quote(DataTables.propertyTableName(neighborPropertyTypeId))
+    val propertyTable = buildGetActivePropertiesSql(entitySetIdsPerType, propertyTypes, filterExpressions)
+    val propertyTableName = quote(DataTables.propertyTableName(outputProperty))
 
-    val targetPropertyDirty = " (SELECT $entityKeyIdColumns from $propertyTableName " +
-            "WHERE ${LAST_PROPAGATE.name} < ${LAST_WRITE.name}) "
 
-    val propagations = if(isSelf) {
-        listOf("(SELECT * " +
-                "FROM ($propertyTable) as blocked_property " +
-                "INNER JOIN $targetPropertyDirty AS dirty USING($entityKeyIdColumns) ) as $propertyTableName ")
+    val outputPropertyKeys = " (SELECT " +
+            "${ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${ENTITY_ID.name} as $TARGET_ENTITY_KEY_ID, " +
+            "${LAST_WRITE.name}, ${LAST_PROPAGATE.name} " +
+            "FROM $propertyTableName) "
+    val targetEntityKeyIdColumns = "$TARGET_ENTITY_SET_ID, $TARGET_ENTITY_KEY_ID"
+    val outputPropertyFqns = propertyTypes.values.flatten().map { quote(it.type.fullQualifiedNameAsString) }.joinToString(separator = ", ")
+
+
+    val propagation = if(isSelf) {
+        "(SELECT * " +
+                "FROM (SELECT ${ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${ENTITY_ID.name} as $TARGET_ENTITY_KEY_ID, $outputPropertyFqns  " +
+                "FROM ($propertyTable)) as blocked_property "
+                "LEFT JOIN $outputPropertyKeys AS dirty USING($targetEntityKeyIdColumns) ) as $propertyTableName " //TODO add where 
 
     } else {
-        val edgesSql = if (associationType) {
-            buildFilteredEdgesSqlForAssociations(neighborEntitySetIds)
-        } else {
-            buildFilteredEdgesSqlForEntities(neighborEntitySetIds)
-        }
-        // TODO look into, when left and when inner join is necessary and on which edges to join on
-        // TODO: lots of null values introduced because of left joins
-        edgesSql.map {
-            "(SELECT * " +
-                    "FROM ($propertyTable) as blocked_property " +
-                    "INNER JOIN  ($it) as filtered_edges USING($entityKeyIdColumns) " +
-                    "INNER JOIN $targetPropertyDirty as dirty USING($entityKeyIdColumns)) as propagations " +
-                    "INNER JOIN $propertyTableName ON ($propertyTableName.${ENTITY_SET_ID.name} = propagations.$TARGET_ENTITY_SET_ID AND  $propertyTableName.${ID_VALUE.name} = propagations.$TARGET_ENTITY_KEY_ID) "
-        }
+        val queries = buildFilteredEdgesSqlForAssociations(outputEntitySetIds) + buildFilteredEdgesSqlForEntities(outputEntitySetIds) // TODO add input entity sets
+        val edgeQuery = queries.joinToString( " \nUNION\n ").map{ "$it"}
+
+        "(SELECT * " +
+                "FROM $edgeQuery " +
+                "LEFT JOIN ($propertyTable) as blocked_property USING($entityKeyIdColumns)" + //TODO using????
+                "LEFT JOIN $outputPropertyKeys as dirty USING($targetEntityKeyIdColumns) ) as propagations " //TODO add where last prop...
+
     }
 
     val version = System.currentTimeMillis()
-    val propertyTableEntityKeyIdColumns = listOf(ENTITY_SET_ID.name, ID_VALUE.name).joinToString(prefix = "$propertyTableName.", separator = ", $propertyTableName.")
 
-    return propagations
-            .map {
-                "INSERT INTO $propertyTableName ($entityKeyIdColumns,hash,$fqn,version,versions,last_propagate, last_write) " +
-                        "(SELECT $propertyTableEntityKeyIdColumns,digest(($computeExpression)::text,'sha1'),$computeExpression,$version,ARRAY[$version],now(),now() " +
-                        "FROM $it " +
-                        "GROUP BY ( $propertyTableEntityKeyIdColumns ) ) " +
-                        "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE SET " +
-                        "${VERSION.name} =  EXCLUDED.${VERSION.name}, " +
-                        "${VERSIONS.name} = $propertyTableName.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-                        "last_propagate=excluded.last_propagate, last_write=excluded.last_write"
-            }
+    return listOf("INSERT INTO $propertyTableName ($entityKeyIdColumns,hash,$fqn,version,versions,last_propagate, last_write) " +
+            "(SELECT $targetEntityKeyIdColumns,digest(($computeExpression)::text,'sha1'),$computeExpression,$version,ARRAY[$version],now(),now() " +
+            "FROM $propagation " +
+            "GROUP BY ( $targetEntityKeyIdColumns ) ) " +
+            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE SET " +
+            "${VERSION.name} =  EXCLUDED.${VERSION.name}, " +
+            "${VERSIONS.name} = $propertyTableName.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "last_propagate=excluded.last_propagate, last_write=excluded.last_write")
+
 }
 
 /**
@@ -331,7 +319,7 @@ internal fun buildPropagationQueries(
         associationType: Boolean,
         isSelf: Boolean
 ): List<String> {
-    checkState(entitySetIds.isNotEmpty(), "Entity set ids are empty (no output entity set present)")
+    checkState(entitySetIds.isNotEmpty(), "Entity set ids are empty (no input entity set present)")
 
     val propertyTable = buildGetBlockedPropertiesSql(entitySetIds, propertyTypes)
 
@@ -340,9 +328,9 @@ internal fun buildPropagationQueries(
                 "FROM ($propertyTable) as blocked_property ")
     } else {
         val edgesSql = if (associationType) {
-            buildFilteredEdgesSqlForAssociations(neighborEntitySetIds)
+            buildFilteredEdgesSqlForAssociations(neighborEntitySetIds) // TODO add input entity sets
         } else {
-            buildFilteredEdgesSqlForEntities(neighborEntitySetIds)
+            buildFilteredEdgesSqlForEntities(neighborEntitySetIds) // TODO add input entity sets if necessary
         }
 
         edgesSql.map {
@@ -369,7 +357,9 @@ const val TARGET_ENTITY_KEY_ID = "target_entity_key_Id"
 
 //A property is marked as propagted when it completes a compute step with no unpropagated neighbors/parents.
 internal fun buildGetActivePropertiesSql(
-        entitySetIds: Collection<UUID>, propertyTypeIds: Map<UUID, PropertyType>, propertyTypeFilters: Map<UUID, Set<ValueFilter<*>>>, isSelf: Boolean
+        entitySetIdsPerType: Map<UUID, Collection<UUID>>,
+        propertyTypeIdsPerEntitySetType: Map<UUID, Set<PropertyType>>,
+        propertyTypeFilters: Map<UUID, Set<ValueFilter<*>>>
 ): String {
     //Want to get property types across several entity sets of the same type.
     //This table can be used by entity sets to figure out where to insert new properties.
@@ -377,19 +367,23 @@ internal fun buildGetActivePropertiesSql(
     //i.e if edge for entity exists and selected subset of properties can be propagate. Push them through to neighbors
     //The result of this query can be joined with edges and other
 
-    val propertyTypeFiltersWithNullCheck = if(isSelf) propertyTypeIds.mapValues { propertyTypeFilters[it.key]?: setOf() } else propertyTypeFilters
+    val propertyTypeFiltersWithNullCheck = propertyTypeIdsPerEntitySetType.mapValues { propertyTypeFilters[it.key]?: setOf() }
+    // TODO: for each property, where entity type is the same -> inner join, between them full outer join
 
-    return selectEntitySetWithCurrentVersionOfPropertyTypes(
-            entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
-            propertyTypeIds.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
-            propertyTypeIds.keys,
-            entitySetIds.map { it to propertyTypeIds.keys }.toMap(),
-            propertyTypeFiltersWithNullCheck,
-            setOf(),
-            false,
-            propertyTypeIds.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
-            " AND last_propagate >= last_write "
-    )
+    val selectPropertyTypesOfSameEntityType = entitySetIdsPerType.map {
+        selectEntitySetWithCurrentVersionOfPropertyTypes(
+                it.value.map { it to Optional.empty<Set<UUID>>() }.toMap(),
+                propertyTypeIdsPerEntitySetType[it.key]!!.map { it.id to quote(it.type.fullQualifiedNameAsString) }.toMap(),
+                propertyTypeIdsPerEntitySetType[it.key]!!.map{ it.id },
+                it.value.map { it to propertyTypeIdsPerEntitySetType.keys }.toMap(),
+                propertyTypeFiltersWithNullCheck,
+                setOf(),
+                false,
+                propertyTypeIdsPerEntitySetType[it.key]!!.map{ it.id to (it.datatype == EdmPrimitiveTypeKind.Binary) }.toMap(),
+                " AND last_propagate >= last_write ")
+    }
+
+    return selectPropertyTypesOfSameEntityType.joinToString(prefix = "(", postfix = ")", separator = ") FULL OUTER JOIN using($entityKeyIdColumns) (") // TODO check
 }
 
 internal fun buildGetBlockedPropertiesSql(
@@ -415,30 +409,36 @@ internal fun buildGetBlockedPropertiesSql(
 }
 
 
-internal fun buildFilteredEdgesSqlForEntities(entitySetIds: Collection<UUID>): List<String> {
-    val entitySetsClause = entitySetIds.joinToString(",") { "'$it'" }
+internal fun buildFilteredEdgesSqlForEntities(inputEntitySetIds:Collection<UUID>,outputEntitySetIds: Collection<UUID>): List<String> {
+    val inputEntitySetsClause = inputEntitySetIds.joinToString(",") { "'$it'" }
+    val outputEntitySetsClause = outputEntitySetIds.joinToString(",") { "'$it'" }
     //Only select entity sets participating in prop
     val srcEdgesSql = "SELECT ${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${DST_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} WHERE ${DST_ENTITY_SET_ID.name} IN ($entitySetsClause)"
+            "FROM ${EDGES.name} " +
+            "WHERE ${DST_ENTITY_SET_ID.name} IN ($outputEntitySetsClause) AND ${SRC_ENTITY_SET_ID.name} IN ($inputEntitySetsClause)"
 
     val dstEdgesSql = "SELECT ${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${SRC_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} WHERE ${DST_ENTITY_SET_ID.name} IN ($entitySetsClause)"
+            "FROM ${EDGES.name} " +
+            "WHERE ${SRC_ENTITY_SET_ID.name} IN ($outputEntitySetsClause) AND ${DST_ENTITY_SET_ID.name} IN ($inputEntitySetsClause) "
 
     return listOf(srcEdgesSql, dstEdgesSql)
 
 }
 
-internal fun buildFilteredEdgesSqlForAssociations(entitySetIds: Collection<UUID>): List<String> {
-    val entitySetsClause = entitySetIds.joinToString(",") { "'$it'" }
+internal fun buildFilteredEdgesSqlForAssociations(inputEntitySetIds: Collection<UUID>,outputEntitySetIds: Collection<UUID>): List<String> {
+    val inputEntitySetsClause = inputEntitySetIds.joinToString(",") { "'$it'" }
+    val outputEntitySetsClause = outputEntitySetIds.joinToString(",") { "'$it'" }
     val edgeSrcEdgesSql = "SELECT ${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${SRC_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} WHERE ${SRC_ENTITY_SET_ID.name} IN ($entitySetsClause)"
+            "FROM ${EDGES.name} " +
+            "WHERE ${EDGE_ENTITY_SET_ID.name} IN ($inputEntitySetsClause) AND ${SRC_ENTITY_SET_ID.name} IN ($outputEntitySetsClause)"
 
     val edgeDstEdgesSql = "SELECT ${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, " +
             "${DST_ENTITY_SET_ID.name} as $TARGET_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $TARGET_ENTITY_KEY_ID " +
-            "FROM ${EDGES.name} WHERE ${SRC_ENTITY_SET_ID.name} IN ($entitySetsClause)"
+            "FROM ${EDGES.name} " +
+            "WHERE ${EDGE_ENTITY_SET_ID.name} IN ($inputEntitySetsClause) AND ${DST_ENTITY_SET_ID.name} IN ($outputEntitySetsClause)"
 
     return listOf(edgeSrcEdgesSql, edgeDstEdgesSql)
 }
