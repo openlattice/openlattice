@@ -18,7 +18,6 @@
 
 package com.openlattice.mapstores;
 
-
 import com.openlattice.authorization.*;
 import com.google.common.collect.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
@@ -42,6 +41,8 @@ import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -273,14 +274,13 @@ public final class TestDataFactory {
     }
 
     public static Ace ace() {
-        return new Ace( userPrincipal(), permissions(), OffsetDateTime.now( ZoneOffset.UTC ) );
+        return new Ace( userPrincipal(), permissions() );
     }
 
     public static AceValue aceValue() {
         return new AceValue(
                 permissions(),
-                securableObjectType(),
-                OffsetDateTime.MAX
+                securableObjectType()
         );
     }
 
