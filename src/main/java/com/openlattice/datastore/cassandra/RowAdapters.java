@@ -40,7 +40,6 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.objects.VertexKey;
 import com.openlattice.requests.RequestStatus;
@@ -266,37 +265,6 @@ public final class RowAdapters {
         return new PropertyType( id, type, title, description, schemas, dataType, piiField, maybeAnalyzer );
     }
 
-    public static EntityType entityType( Row row ) {
-        UUID id = id( row );
-        FullQualifiedName type = new FullQualifiedName( namespace( row ), name( row ) );
-        String title = title( row );
-        Optional<String> description = description( row );
-        Set<FullQualifiedName> schemas = row.getSet( CommonColumns.SCHEMAS.cql(), FullQualifiedName.class );
-        LinkedHashSet<UUID> key = (LinkedHashSet<UUID>) row.getSet( CommonColumns.KEY.cql(), UUID.class );
-        LinkedHashSet<UUID> properties = (LinkedHashSet<UUID>) row.getSet( CommonColumns.PROPERTIES.cql(), UUID.class );
-        Optional<UUID> baseType = Optional.ofNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
-        final Optional<SecurableObjectType> category;
-        String objectType = row.getString( CommonColumns.CATEGORY.cql() );
-        if ( StringUtils.isBlank( objectType ) ) {
-            category = Optional.of( SecurableObjectType.EntityType );
-        } else {
-            category = Optional.of( SecurableObjectType.valueOf( objectType ) );
-        }
-        return new EntityType( id, type, title, description, schemas, key, properties, baseType, category );
-    }
-
-    public static ComplexType complexType( Row row ) {
-        UUID id = id( row );
-        FullQualifiedName type = new FullQualifiedName( namespace( row ), name( row ) );
-        String title = title( row );
-        Optional<String> description = description( row );
-        Set<FullQualifiedName> schemas = row.getSet( CommonColumns.SCHEMAS.cql(), FullQualifiedName.class );
-        LinkedHashSet<UUID> properties = (LinkedHashSet<UUID>) row.getSet( CommonColumns.PROPERTIES.cql(), UUID.class );
-        Optional<UUID> baseType = Optional.ofNullable( row.getUUID( CommonColumns.BASE_TYPE.cql() ) );
-        SecurableObjectType category = SecurableObjectType.valueOf( row.getString( CommonColumns.CATEGORY.cql() ) );
-        return new ComplexType( id, type, title, description, schemas, properties, baseType, category );
-    }
-
     public static AssociationType associationType( Row row ) {
         LinkedHashSet<UUID> src = (LinkedHashSet<UUID>) row.getSet( CommonColumns.SRC.cql(), UUID.class );
         LinkedHashSet<UUID> dest = (LinkedHashSet<UUID>) row.getSet( CommonColumns.DST.cql(), UUID.class );
@@ -444,13 +412,6 @@ public final class RowAdapters {
         UUID entitySetId = row.getUUID( CommonColumns.ENTITY_SET_ID.cql() );
         UUID propertyTypeId = row.getUUID( CommonColumns.PROPERTY_TYPE_ID.cql() );
         return new EntitySetPropertyKey( entitySetId, propertyTypeId );
-    }
-
-    public static EntitySetPropertyMetadata entitySetPropertyMetadata( Row row ) {
-        String title = row.getString( CommonColumns.TITLE.cql() );
-        String description = row.getString( CommonColumns.DESCRIPTION.cql() );
-        boolean defaultShow = row.getBool( CommonColumns.SHOW.cql() );
-        return new EntitySetPropertyMetadata( title, description, defaultShow );
     }
 
 }

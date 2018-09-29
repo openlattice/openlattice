@@ -26,9 +26,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import java.util.function.Function;
+
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import com.google.common.io.Resources;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -39,6 +42,8 @@ public enum PersonMetric {
     FIRST_NAME_METAPHONE_ALT( metaphoneAlternate( ( e, map ) -> PersonProperties.getFirstName( e, map ) ) ),
     FIRST_NAME_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasFirstName( e, map ) ) ),
     FIRST_NAME_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasFirstName( e, map ) ) ),
+    FIRST_NAME_LHS_PROBA( lhsdouble( ( e, map) -> PersonProperties.getFirstProba (e, map ) ) ),
+    FIRST_NAME_RHS_PROBA( rhsdouble( ( e, map) -> PersonProperties.getFirstProba (e, map ) ) ),
 
     MIDDLE_NAME_STRING( jaroWinkler( ( e, map ) -> DelegatedStringSet.wrap( Sets.newHashSet() ) ) ),
     MIDDLE_NAME_METAPHONE( metaphone( ( e, map ) -> DelegatedStringSet.wrap( Sets.newHashSet() ) ) ),
@@ -51,10 +56,8 @@ public enum PersonMetric {
     LAST_NAME_METAPHONE_ALT( metaphoneAlternate( ( e, map ) -> PersonProperties.getLastName( e, map ) ) ),
     LAST_NAME_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasLastName( e, map ) ) ),
     LAST_NAME_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasLastName( e, map ) ) ),
-
-//    SSN_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getSsn( e, map ) ) ),
-//    SSN_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasSsn( e, map ) ) ),
-//    SSN_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasSsn( e, map ) ) ),
+    LAST_NAME_LHS_PROBA( lhsdouble( ( e, map) -> PersonProperties.getLastProba (e, map ) ) ),
+    LAST_NAME_RHS_PROBA( rhsdouble( ( e, map) -> PersonProperties.getLastProba (e, map ) ) ),
 
     SEX_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getSex( e, map ) ) ),
     SEX_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasSex( e, map ) ) ),
@@ -71,7 +74,12 @@ public enum PersonMetric {
 
     ETHNICITY_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getEthnicity( e, map ) ) ),
     ETHNICITY_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasEthnicity( e, map ) ) ),
-    ETHNICITY_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasEthnicity( e, map ) ) );
+    ETHNICITY_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasEthnicity( e, map ) ) ),
+
+    SSN_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getSsn( e, map ) ) ),
+    SSN_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasSsn( e, map ) ) ),
+    SSN_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasSsn( e, map ) ) );
+
 
     private static final PersonMetric[]    metrics         = PersonMetric.values();
     private static final Set<PersonMetric> metricsList     = Sets.newHashSet( PersonMetric.values() );
@@ -119,6 +127,15 @@ public enum PersonMetric {
     public static MetricExtractor rhs( BiFunction<Map<UUID, DelegatedStringSet>, Map<FullQualifiedName, UUID>, Integer> extractor ) {
         return ( lhs, rhs, fqnToIdMap ) -> extractor.apply( rhs, fqnToIdMap );
     }
+
+    public static MetricExtractor lhsdouble( BiFunction<Map<UUID, DelegatedStringSet>, Map<FullQualifiedName, UUID>, Double> extractor ) {
+        return ( lhs, rhs, fqnToIdMap ) -> extractor.apply( lhs, fqnToIdMap );
+    }
+
+    public static MetricExtractor rhsdouble( BiFunction<Map<UUID, DelegatedStringSet>, Map<FullQualifiedName, UUID>, Double> extractor ) {
+        return ( lhs, rhs, fqnToIdMap ) -> extractor.apply( rhs, fqnToIdMap );
+    }
+
 
     public static MetricExtractor jaroWinkler(
             BiFunction<Map<UUID, DelegatedStringSet>, Map<FullQualifiedName, UUID>, DelegatedStringSet> extractor ) {

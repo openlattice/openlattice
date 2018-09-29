@@ -20,7 +20,9 @@
 
 package com.openlattice.edm.types.processors;
 
+import java.util.LinkedHashSet;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.set.EntitySetPropertyKey;
@@ -30,10 +32,10 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class UpdateEntitySetPropertyMetadataProcessor
         extends AbstractRhizomeEntryProcessor<EntitySetPropertyKey, EntitySetPropertyMetadata, Object> {
-    private static final long    serialVersionUID = 8300328089856740121L;
-    @SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented")
+    private static final long           serialVersionUID = 8300328089856740121L;
+    @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
 
-    private final MetadataUpdate update;
+    private final        MetadataUpdate update;
 
     public UpdateEntitySetPropertyMetadataProcessor( MetadataUpdate update ) {
         this.update = update;
@@ -52,15 +54,20 @@ public class UpdateEntitySetPropertyMetadataProcessor
             if ( update.getDefaultShow().isPresent() ) {
                 metadata.setDefaultShow( update.getDefaultShow().get() );
             }
+            if ( update.getPropertyTags().isPresent() && update.getPropertyTags().get()
+                    .containsKey( entry.getKey().getPropertyTypeId() ) ) {
+                metadata.setTags( update.getPropertyTags().get().get( entry.getKey().getPropertyTypeId() ).stream()
+                        .collect( Collectors.toCollection( LinkedHashSet::new ) ) );
+            }
             entry.setValue( metadata );
         }
         return null;
     }
-    
+
     public MetadataUpdate getUpdate() {
         return update;
     }
-    
+
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -71,13 +78,18 @@ public class UpdateEntitySetPropertyMetadataProcessor
 
     @Override
     public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
+        if ( this == obj )
+            return true;
+        if ( obj == null )
+            return false;
+        if ( getClass() != obj.getClass() )
+            return false;
         UpdateEntitySetPropertyMetadataProcessor other = (UpdateEntitySetPropertyMetadataProcessor) obj;
         if ( update == null ) {
-            if ( other.update != null ) return false;
-        } else if ( !update.equals( other.update ) ) return false;
+            if ( other.update != null )
+                return false;
+        } else if ( !update.equals( other.update ) )
+            return false;
         return true;
     }
 
