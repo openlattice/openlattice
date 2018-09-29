@@ -8,6 +8,9 @@ import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 private lateinit var entitySetAclKey: AclKey
@@ -34,9 +37,9 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
 
             organizationsApi.createRole(role1)
             organizationsApi.createRole(role2)
-
-            rolePrincipal1 = Principal(PrincipalType.ROLE, role1.id.toString())
-            rolePrincipal2 = Principal(PrincipalType.ROLE, role2.id.toString())
+            
+            rolePrincipal1 = Principal(PrincipalType.ROLE, role1.principal.id.toString())
+            rolePrincipal2 = Principal(PrincipalType.ROLE, role2.principal.id.toString())
 
             organizationsApi.addRoleToUser(organizationID, role1.id, user1.id)
             organizationsApi.addRoleToUser(organizationID, role2.id, user1.id)
@@ -51,7 +54,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
         //add Permissions
         loginAs("admin")
         val newPermissions = EnumSet.of(Permission.DISCOVER, Permission.READ)
-        val acl = Acl(entitySetAclKey, setOf(Ace(user1, newPermissions)))
+        val acl = Acl(entitySetAclKey, setOf(Ace(user1, newPermissions, OffsetDateTime.MAX)))
 
         permissionsApi.updateAcl(AclData(acl, Action.ADD))
 
@@ -64,7 +67,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
     fun testSetPermission() {
         loginAs("admin")
         val oldPermissions = EnumSet.of(Permission.DISCOVER, Permission.READ)
-        val oldAcl = Acl(entitySetAclKey, setOf(Ace(user2, oldPermissions)))
+        val oldAcl = Acl(entitySetAclKey, setOf(Ace(user2, oldPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(oldAcl, Action.ADD))
 
         loginAs("user2")
@@ -73,7 +76,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
         //set Permissions
         loginAs("admin")
         val newPermissions = EnumSet.of(Permission.DISCOVER, Permission.WRITE)
-        val newAcl = Acl(entitySetAclKey, setOf(Ace(user2, newPermissions)))
+        val newAcl = Acl(entitySetAclKey, setOf(Ace(user2, newPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(newAcl, Action.SET))
 
         //check user2 now has new permissions of the entity set
@@ -85,7 +88,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
     fun testRemovePermission() {
         loginAs("admin")
         val oldPermissions = EnumSet.of(Permission.DISCOVER, Permission.READ)
-        val oldAcl = Acl(entitySetAclKey, setOf(Ace(user3, oldPermissions)))
+        val oldAcl = Acl(entitySetAclKey, setOf(Ace(user3, oldPermissions, OffsetDateTime.now(ZoneOffset.UTC))))
         permissionsApi.updateAcl(AclData(oldAcl, Action.ADD))
 
         loginAs("user3")
@@ -94,7 +97,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
         loginAs("admin")
         val remove = EnumSet.of(Permission.READ)
         val newPermissions = EnumSet.of(Permission.DISCOVER)
-        val newAcl = Acl(entitySetAclKey, setOf(Ace(user3, remove)))
+        val newAcl = Acl(entitySetAclKey, setOf(Ace(user3, remove, OffsetDateTime.now(ZoneOffset.UTC))))
         permissionsApi.updateAcl(AclData(newAcl, Action.REMOVE))
 
         loginAs("user3")
@@ -109,16 +112,18 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
         val aclKey = AclKey( es2.id)
 
         //add Permissions
-        val user1Acl = Acl(aclKey, setOf(Ace(user1, EnumSet.of(Permission.DISCOVER))))
+        val user1Acl = Acl(aclKey, setOf(Ace(user1, EnumSet.of(Permission.DISCOVER), OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(user1Acl, Action.ADD))
 
-        val role1Acl = Acl(aclKey, setOf(Ace(rolePrincipal1, EnumSet.of(Permission.READ))))
+        val role1Acl = Acl(aclKey, setOf(Ace(rolePrincipal1, EnumSet.of(Permission.READ), OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(role1Acl, Action.ADD))
 
-        val role2Acl = Acl(aclKey, setOf(Ace(rolePrincipal2, EnumSet.of(Permission.WRITE))))
+        val role2Acl = Acl(aclKey, setOf(Ace(rolePrincipal2, EnumSet.of(Permission.WRITE), OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(role2Acl, Action.ADD))
 
         Assert.assertEquals(4, Iterables.size(permissionsApi.getAcl(aclKey).aces))
+        //need to put them in the principals map first? Need to be securable principals
+        //somehow use createSecurablePrincipal
 
         val aclExplanation = permissionsApi.getAclExplanation(aclKey)
         println(aclExplanation)
