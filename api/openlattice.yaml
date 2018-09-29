@@ -834,6 +834,50 @@ paths:
         '200':
           description: Success
 
+  ###################
+  ## Summary API's ##
+  ###################
+
+  /datastore/edm/summary:
+    get:
+      summary: Get Property Usage Summary for all properties.
+      operationId: getAllPropertyUsageSummaries
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertyUsageSummary'
+  /datastore/edm/summary/{propertyTypeId}:
+    get:
+      summary: Get Property Usage Summary for property with given ID.
+      operationId: getPropertyUsageSummary
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/propertyTypeId"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyUsageSummary'
+
+
   #       ....           ....           ....           ....
   #      ||             ||             ||             ||
   #  /"""l|\        /"""l|\        /"""l|\        /"""l|\
@@ -1234,7 +1278,7 @@ tags:
   externalDocs:
     description: OpenLattice help pages
     url: https://help.openlattice.com/
-- name: edm-entityset
+- name: edm
   description: Entity Set EDM API's
   externalDocs:
     description: OpenLattice help pages
