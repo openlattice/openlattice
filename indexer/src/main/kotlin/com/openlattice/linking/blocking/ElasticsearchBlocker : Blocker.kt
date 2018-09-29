@@ -75,7 +75,7 @@ class ElasticsearchBlocker(
         val authorizedPropertyTypes = propertyTypes.getAll(personEntityType.properties)
 
         val blockedEntitySetSearchResults = elasticsearch.searchEntitySets(
-                entitySets.values.filter { it.entityTypeId == personEntityType.id }.map(EntitySet::getId),
+                entitySets.values.filter { it.entityTypeId.equals(personEntityType.id) }.map(EntitySet::getId),
                 getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
                 top,
                 false
