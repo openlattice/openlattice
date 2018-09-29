@@ -20,13 +20,26 @@
 
 package com.openlattice.linking.util;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.io.Resources;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.fasterxml.jackson.databind.MappingIterator;
+
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -59,7 +72,36 @@ public class PersonProperties {
             SSN_FQN,
             AGE_FQN,
             XREF_FQN );
+    private static Map<String, Double> firstNameCounts;
+    private static Map<String, Double> lastNameCounts;
     private static final DecimalFormat dd = new DecimalFormat( "00" );
+
+    static {
+        try {
+            firstNameCounts = loadFile("firstnames.csv");
+            lastNameCounts = loadFile("lastnames.csv");
+        } catch (Exception e) {
+            logger.info("Unable to load file!", e);
+            firstNameCounts = null;
+            lastNameCounts = null;
+            throw new IllegalStateException(e);
+        }
+    }
+
+
+    public static Map<String, Double> loadFile(String namefile) throws IOException {
+        Map<String, Double> m = new ConcurrentHashMap<>();
+        CsvMapper mapper = new CsvMapper();
+        mapper.registerModule(new GuavaModule());
+        mapper.registerModule(new AfterburnerModule());
+        CsvSchema schema = mapper.schemaFor(Name.class).withHeader();
+        MappingIterator<Name> iter = mapper.readerFor(Name.class).with(schema).readValues(Resources.getResource(namefile));
+        iter.forEachRemaining(n -> {
+            m.put(n.getName(), n.getProb());
+        });
+        return m;
+    }
+
 
     public static DelegatedStringSet getValuesAsSet( Map<UUID, DelegatedStringSet> entity, UUID id ) {
         return DelegatedStringSet.wrap( entity.containsKey( id )
@@ -187,6 +229,19 @@ public class PersonProperties {
         return valueIsPresent( entity, fqnToIdMap.get( XREF_FQN ) );
     }
 
+    public static double getFirstProba(
+            Map<UUID, DelegatedStringSet> entity,
+            Map<FullQualifiedName, UUID> fqnToIdMap ) {
+        return getProba(entity, fqnToIdMap, true);
+    }
+
+    public static double getLastProba(
+            Map<UUID, DelegatedStringSet> entity,
+            Map<FullQualifiedName, UUID> fqnToIdMap ) {
+        return getProba(entity, fqnToIdMap,false);
+    }
+
+
     public static DelegatedStringSet getDobStrs(
             Map<UUID, DelegatedStringSet> entity,
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
@@ -209,5 +264,46 @@ public class PersonProperties {
         }
         return values;
     }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Name {
+        private final String name;
+        private final double prob;
+
+        @JsonCreator
+        public Name(
+                @JsonProperty("name") String name, @JsonProperty("prob") double prob) {
+            this.name = name;
+            this.prob = prob;
+        }
+
+        @JsonProperty("name")
+        public String getName() {
+            return name;
+        }
+
+        @JsonProperty("prob")
+        public double getProb() {
+            return prob;
+        }
+
+    }
+
+    public static double getProba(
+            Map<UUID, DelegatedStringSet> entity,
+            Map<FullQualifiedName, UUID> fqnToIdMap ,
+            boolean first) {
+        final DelegatedStringSet name = first ? getFirstName(entity, fqnToIdMap) : getLastName(entity, fqnToIdMap);
+        final Map<String, Double> NameCounts = first? firstNameCounts : lastNameCounts ;
+
+        if (NameCounts.containsKey(name)) {
+            return NameCounts.get(name);
+        } else {
+            return 0;
+        }
+
+    }
+//        logger.info(proba);
+
 
 }

@@ -31,8 +31,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
@@ -88,10 +90,10 @@ import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -316,6 +318,7 @@ public class EdmService implements EdmManager {
                 entityType.getSchemas(),
                 key,
                 properties,
+                Optional.of( entityType.getPropertyTags() ),
                 entityType.getBaseType(),
                 Optional.ofNullable( entityType.getCategory() ) );
 
@@ -492,12 +495,15 @@ public class EdmService implements EdmManager {
     }
 
     private void setupDefaultEntitySetPropertyMetadata( UUID entitySetId, UUID entityTypeId ) {
-        getEntityType( entityTypeId ).getProperties().forEach( propertyTypeId -> {
+        final var et = getEntityType( entityTypeId );
+        final var propertyTags = et.getPropertyTags();
+        et.getProperties().forEach( propertyTypeId -> {
             EntitySetPropertyKey key = new EntitySetPropertyKey( entitySetId, propertyTypeId );
             PropertyType property = getPropertyType( propertyTypeId );
             EntitySetPropertyMetadata metadata = new EntitySetPropertyMetadata(
                     property.getTitle(),
                     property.getDescription(),
+                    new LinkedHashSet<>( propertyTags.get( propertyTypeId ) ),
                     true );
             entitySetPropertyMetadata.put( key, metadata );
         } );
@@ -736,6 +742,7 @@ public class EdmService implements EdmManager {
                         "Unable to modify the entity data model right now--please try again." );
             }
         } );
+        final var propertyTags = entityTypes.get( entityTypeId ).getPropertyTags();
         childrenIdsToLocks.keySet().forEach( id -> {
             entityTypes.executeOnKey( id, new AddPropertyTypesToEntityTypeProcessor( propertyTypeIds ) );
 
@@ -760,7 +767,9 @@ public class EdmService implements EdmManager {
                                 EntitySetPropertyMetadata defaultMetadata = new EntitySetPropertyMetadata(
                                         pt.getTitle(),
                                         pt.getDescription(),
+                                        new LinkedHashSet<>( propertyTags.get( pt.getId() ) ),
                                         true );
+
                                 entitySetPropertyMetadata.put(
                                         new EntitySetPropertyKey( aclKey.get( 0 ), aclKey.get( 1 ) ), defaultMetadata );
                             } );
@@ -1161,6 +1170,7 @@ public class EdmService implements EdmManager {
                     optionalFqnUpdate,
                     optionalPiiUpdate,
                     Optional.empty(),
+                    Optional.empty(),
                     Optional.empty() ) );
         }
     }
@@ -1178,6 +1188,9 @@ public class EdmService implements EdmManager {
                     ? Optional.empty() : Optional.of( et.getDescription() );
             Optional<FullQualifiedName> optionalFqnUpdate = ( fqn.equals( existing.getType() ) )
                     ? Optional.empty() : Optional.of( fqn );
+            Optional<LinkedHashMultimap<UUID, String>> optionalPropertyTagsUpdate = ( existing.getPropertyTags()
+                    .equals( existing.getPropertyTags() ) )
+                    ? Optional.empty() : Optional.of( existing.getPropertyTags() );
             updateEntityTypeMetadata( existing.getId(), new MetadataUpdate(
                     optionalTitleUpdate,
                     optionalDescriptionUpdate,
@@ -1186,7 +1199,8 @@ public class EdmService implements EdmManager {
                     optionalFqnUpdate,
                     Optional.empty(),
                     Optional.empty(),
-                    Optional.empty() ) );
+                    Optional.empty(),
+                    optionalPropertyTagsUpdate ) );
             if ( !et.getProperties().equals( existing.getProperties() ) ) {
                 addPropertyTypesToEntityType( existing.getId(), et.getProperties() );
             }

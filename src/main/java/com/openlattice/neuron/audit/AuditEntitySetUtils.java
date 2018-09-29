@@ -22,6 +22,7 @@ package com.openlattice.neuron.audit;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.Principal;
@@ -149,6 +150,7 @@ public class AuditEntitySetUtils {
                     Sets.newLinkedHashSet(
                             Sets.newHashSet( TYPE_PROPERTY_TYPE.getId(), DETAILS_PROPERTY_TYPE.getId() )
                     ),
+                    LinkedHashMultimap.create(),
                     Optional.empty(),
                     Optional.empty()
             );

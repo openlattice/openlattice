@@ -20,6 +20,7 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -50,6 +51,7 @@ public class ComplexTypeStreamSerializer implements SelfRegisteringStreamSeriali
         SetStreamSerializers.serialize( out,
                 object.getProperties(),
                 UUIDStreamSerializer::serialize );
+        GuavaStreamSerializersKt.serializeSetMultimap( out, object.getPropertyTags() );
         OptionalStreamSerializers.serialize( out, object.getBaseType(), UUIDStreamSerializer::serialize );
         out.writeUTF( object.getCategory().toString() );
     }
@@ -63,9 +65,10 @@ public class ComplexTypeStreamSerializer implements SelfRegisteringStreamSeriali
         Set<FullQualifiedName> schemas = SetStreamSerializers.deserialize( in, FullQualifiedNameStreamSerializer::deserialize );
         LinkedHashSet<UUID> properties = SetStreamSerializers.orderedDeserialize( in,
                 UUIDStreamSerializer::deserialize );
+        final var propertyTags = GuavaStreamSerializersKt.deserializeLinkedHashMultimap( in );
         Optional<UUID> baseType = OptionalStreamSerializers.deserialize( in, UUIDStreamSerializer::deserialize );
         SecurableObjectType category = SecurableObjectType.valueOf( in.readUTF() );
-        return new ComplexType( id, type, title, description, schemas, properties, baseType, category );
+        return new ComplexType( id, type, title, description, schemas, properties, propertyTags, baseType, category );
     }
 
     @Override
