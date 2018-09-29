@@ -8,11 +8,6 @@ import java.util.*
 
 interface GraphProcessor {
     /**
-     * @return Map of FullQualifiedNames of entity types and property types which are needed as input for the processor
-     */
-    fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>>  //entity type to properties
-
-    /**
      * @return Pair of FullQualifiedNames of entity type and property type of result of this processor
      */
     fun getOutput() : Pair<FullQualifiedName,FullQualifiedName> //entity type - property
@@ -30,10 +25,5 @@ interface GraphProcessor {
      * @return Should return a map of filter expression for each property type
      */
     fun getFilters() : Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>>
-
-    /**
-     * @return whether the calculation is in the same entity set/type as the values needed for it
-     */
-    fun isSelf(): Boolean
 
 }

@@ -72,10 +72,17 @@ private fun emptyInvolvedInDurationCount(): String {
 
 /* ************** Base duration calculation : on association ************* */
 @Component
-class DispatchInvolvedInProcessor: GraphProcessor, AssociationProcessor()  {
-    override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
-        return mapOf(FullQualifiedName(involed_in) to setOf(FullQualifiedName(involvedin_start), FullQualifiedName(involvedin_end)),
-                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key)))
+class DispatchInvolvedInProcessor: GraphProcessor, AssociationProcessor  {
+    override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
+        return mapOf()
+    }
+
+    override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
+        return mapOf(FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key)))
+    }
+
+    override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
+        return mapOf(FullQualifiedName(involed_in) to setOf(FullQualifiedName(involvedin_start), FullQualifiedName(involvedin_end)))
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -94,8 +101,8 @@ class DispatchInvolvedInProcessor: GraphProcessor, AssociationProcessor()  {
 }
 
 
-
-/* ************** Per person, per unit duration calculation : on association ************* */
+/*
+*//* ************** Per person, per unit duration calculation : on association ************* *//*
 
 class DispatchInvolvedInPersonPoliceMinutesProcessor: GraphProcessor, AssociationProcessor() {
     override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
@@ -172,7 +179,7 @@ class DispatchInvolvedInPersonEMSMinutesProcessor: GraphProcessor, AssociationPr
 
 
 
-/* ************** Count of people/officers/units : on event ************* */
+*//* ************** Count of people/officers/units : on event ************* *//*
 
 //@Component
 class DispatchInvolvedInNumberOfPoliceProcessor: GraphProcessor, AssociationProcessor() {
@@ -382,7 +389,7 @@ class DispatchInvolvedInNumberOfPeopleProcessor: GraphProcessor, AssociationProc
 
 
 
-/* ************** Duration per department calculation: on association ************* */
+*//* ************** Duration per department calculation: on association ************* *//*
 
 //@Component
 class DispatchInvolvedInPoliceMinutesProcessor: GraphProcessor, AssociationProcessor() {
@@ -470,5 +477,5 @@ class DispatchInvolvedInEMSMinutesProcessor: GraphProcessor, AssociationProcesso
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
-}
+}*/
 

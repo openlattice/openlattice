@@ -8,7 +8,7 @@ import java.time.temporal.ChronoUnit
 
 
 
-abstract class BaseDurationProcessor: GraphProcessor {
+abstract class BaseDurationProcessor: SelfProcessor {
     protected abstract fun getHandledEntityType(): String
     protected abstract fun getPropertyTypeForStart(): String
     protected abstract fun getPropertyTypeForEnd(): String
@@ -19,10 +19,6 @@ abstract class BaseDurationProcessor: GraphProcessor {
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
-    }
-
-    override fun isSelf(): Boolean {
-        return true
     }
 
     protected fun firstStart():String {
