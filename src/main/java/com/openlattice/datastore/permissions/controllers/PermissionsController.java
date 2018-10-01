@@ -189,7 +189,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             }
             currentLayer = parentLayer;
         }
-        
+
         //collect map entries as aclExplanations
         Collection<AclExplanation> aclExplanations = principalToPrincipalPaths.entrySet().stream().map( entry -> {
             AclExplanation aclExp = new AclExplanation( entry.getKey(), entry.getValue() );
