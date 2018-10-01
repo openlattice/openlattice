@@ -37,7 +37,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
 
             organizationsApi.createRole(role1)
             organizationsApi.createRole(role2)
-            
+
             rolePrincipal1 = Principal(PrincipalType.ROLE, role1.principal.id.toString())
             rolePrincipal2 = Principal(PrincipalType.ROLE, role2.principal.id.toString())
 
@@ -122,10 +122,19 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(role2Acl, Action.ADD))
 
         Assert.assertEquals(4, Iterables.size(permissionsApi.getAcl(aclKey).aces))
-        //need to put them in the principals map first? Need to be securable principals
-        //somehow use createSecurablePrincipal
 
         val aclExplanation = permissionsApi.getAclExplanation(aclKey)
-        println(aclExplanation)
+        for (aclExp in aclExplanation) {
+            when (aclExp.principal.type) {
+                PrincipalType.ROLE -> {
+                    Assert.assertEquals(aclExp.principal, aclExp.paths[0][0])
+                    Assert.assertEquals(1, aclExp.paths.size)
+                }
+                else -> {
+                    Assert.assertEquals(2, aclExp.paths.size)
+                    Assert.assertEquals(2, aclExp.paths[0].size)
+                }
+            }
+        }
     }
 }
