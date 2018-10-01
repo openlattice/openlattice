@@ -57,12 +57,13 @@ import org.apache.commons.lang3.RandomStringUtils;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, AceValue> {
-    public static final String                      PRINCIPAL_INDEX             = "__key#principal";
-    public static final String                      SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
-    public static final String                      PERMISSIONS_INDEX           = "permissions[any]";
-    public static final String                      ACL_KEY_INDEX               = "__key#aclKey.index";
-    public static final String                      EXPIRATION_DATE_INDEX       = "expirationDate";
-    private final       SecurableObjectTypeMapstore objectTypes;
+    public static final String PRINCIPAL_INDEX             = "__key#principal";
+    public static final String SECURABLE_OBJECT_TYPE_INDEX = "securableObjectType";
+    public static final String PERMISSIONS_INDEX           = "permissions[any]";
+    public static final String ACL_KEY_INDEX               = "__key#aclKey.index";
+    public static final String EXPIRATION_DATE_INDEX       = "expirationDate";
+
+    private final SecurableObjectTypeMapstore objectTypes;
 
     public PermissionMapstore( HikariDataSource hds ) {
         super( HazelcastMap.PERMISSIONS.name(), PostgresTable.PERMISSIONS, hds );
