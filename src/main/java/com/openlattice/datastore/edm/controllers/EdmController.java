@@ -25,14 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.ForbiddenException;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.EntityDatastore;
@@ -70,6 +63,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -418,11 +412,12 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries() {
         Set<UUID> propertyTypeIds = modelService.getAllPropertyTypeIds();
         //removes AUDIT types, which don't get populated locally
-        propertyTypeIds.remove(UUID.fromString( "f1a0bda3-406a-42d4-a24b-79e1042a1535" ));
-        propertyTypeIds.remove(UUID.fromString( "19e02f52-a2c5-4f77-81fb-1ebf2638ba01" ));
-        Map<UUID, Iterable<PropertyUsageSummary>> allPropertySummaries= Maps.newHashMapWithExpectedSize( propertyTypeIds.size() );
+        propertyTypeIds.remove( UUID.fromString( "f1a0bda3-406a-42d4-a24b-79e1042a1535" ) );
+        propertyTypeIds.remove( UUID.fromString( "19e02f52-a2c5-4f77-81fb-1ebf2638ba01" ) );
+        Map<UUID, Iterable<PropertyUsageSummary>> allPropertySummaries = Maps
+                .newHashMapWithExpectedSize( propertyTypeIds.size() );
         for ( UUID propertyTypeId : propertyTypeIds ) {
-            allPropertySummaries.put(propertyTypeId, modelService.getPropertyUsageSummary( propertyTypeId ));
+            allPropertySummaries.put( propertyTypeId, modelService.getPropertyUsageSummary( propertyTypeId ) );
         }
         return allPropertySummaries;
     }
@@ -431,9 +426,9 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @RequestMapping(
             path = SUMMARY_PATH + ID_PATH,
             method = RequestMethod.GET )
-    public Iterable<PropertyUsageSummary> getPropertyUsageSummary(@PathVariable ( ID ) UUID propertyTypeId) {
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
-        return modelService.getPropertyUsageSummary(propertyTypeId);
+        return modelService.getPropertyUsageSummary( propertyTypeId );
     }
 
     @Override
@@ -969,6 +964,28 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Iterable<EntityType> getAvailableAssociationTypesForEntityType( @PathVariable( ID ) UUID entityTypeId ) {
         return modelService.getAvailableAssociationTypesForEntityType( entityTypeId );
+    }
+
+    @Override
+    @RequestMapping(
+            path = ENTITY_SETS_PATH + PROPERTY_TYPE_PATH,
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getPropertyMetadataForEntitySets( @RequestBody Set<UUID> entitySetIds ) {
+        Set<AccessCheck> accessChecks = entitySetIds.stream()
+                .map( id -> new AccessCheck( new AclKey( id ), EnumSet.of( Permission.READ ) ) )
+                .collect( Collectors.toSet() );
+        authorizations.accessChecksForPrincipals( accessChecks, Principals.getCurrentPrincipals() )
+                .forEach( authorization -> {
+                    if ( !authorization.getPermissions().get( Permission.READ ) ) {
+                        throw new ForbiddenException(
+                                "AclKey " + authorization.getAclKey().toString() + " is not authorized." );
+                    }
+                } );
+        return entitySetIds.stream()
+                .map( id -> Pair.of( id, modelService.getEntityTypeByEntitySetId( id ).getProperties() ) )
+                .collect( Collectors.toMap( pair -> pair.getLeft(),
+                        pair -> modelService.getAllEntitySetPropertyMetadata( pair.getLeft(), pair.getRight() ) ) );
     }
 
     @Override
