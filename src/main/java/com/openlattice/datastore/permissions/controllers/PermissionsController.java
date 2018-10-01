@@ -140,7 +140,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public Map<String, List<List<Principal>>> getAclExplanation( @RequestBody AclKey aclKey ) {
+    public Collection<AclExplanation> getAclExplanation( @RequestBody AclKey aclKey ) {
         ensureOwnerAccess( aclKey );
 
         //maps aces to principal type
@@ -189,11 +189,13 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             }
             currentLayer = parentLayer;
         }
-        Map<String, List<List<Principal>>> principalStringtoPaths = new HashMap<>();
-        for ( Entry<Principal, List<List<Principal>>> e : principalToPrincipalPaths.entrySet()) {
-            principalStringtoPaths.put(e.getKey().toString(), e.getValue());
-        }
-        return principalStringtoPaths;//starthere
+        
+        //collect map entries as aclExplanations
+        Collection<AclExplanation> aclExplanations = principalToPrincipalPaths.entrySet().stream().map( entry -> {
+            AclExplanation aclExp = new AclExplanation( entry.getKey(), entry.getValue() );
+            return aclExp;
+        } ).collect( Collectors.toSet() );
+        return aclExplanations;
     }
 
     @Override
