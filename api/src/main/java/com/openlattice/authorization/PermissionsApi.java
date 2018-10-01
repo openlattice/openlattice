@@ -66,6 +66,6 @@ public interface PermissionsApi {
      * @return The aces for the requested acl key, together with the explanation.
      */
     @POST( BASE + EXPLAIN )
-    Collection<Map.Entry<Principal, List<List<Principal>>>> getAclExplanation( @Body AclKey aclKey );
+    Collection<AclExplanation> getAclExplanation( @Body AclKey aclKey );
 
 }
