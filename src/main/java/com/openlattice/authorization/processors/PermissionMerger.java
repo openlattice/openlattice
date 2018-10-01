@@ -56,7 +56,7 @@ public class PermissionMerger extends AbstractMerger<AceKey, AceValue, Permissio
         this.expirationDate = expirationDate;
     }
 
-    @Override protected void postProcess( AceValue value ) {
+    @Override protected void processBeforeWriteBack( AceValue value ) {
         value.setSecurableObjectType( securableObjectType );
         value.setExpirationDate( expirationDate );
     }
