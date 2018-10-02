@@ -54,27 +54,6 @@ const val BATCH_SIZE = 10000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
-    fun getActiveEntitiesCount(): Long {
-        val query = activeEntitiesCount()
-        val statement = hds.connection.prepareStatement(query)
-        val rs = statement.executeQuery()
-        rs.next()
-        return ResultSetAdapters.count(rs)
-    }
-
-    fun getActiveEntitiesById(
-            entitySetIds: Collection<UUID>
-    ): PostgresIterable<EntityDataKey> {
-        return streamableEntityDataKey(entitySetIds)
-    }
-
-    fun getEntitiesById(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, SetMultimap<UUID, Any>> {
-        return getEntitiesById(entitySetId, authorizedPropertyTypes, Optional.empty())
-    }
-
     fun getEntitiesById(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
@@ -219,22 +198,6 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                     StatementHolder(connection, statement, rs)
                 },
                 adapter
-        )
-    }
-
-    private fun streamableEntityDataKey(entitySetIds: Collection<UUID>):PostgresIterable<EntityDataKey> {
-        return PostgresIterable(
-                Supplier<StatementHolder> {
-                    val connection = hds.connection
-                    val query = activeEntitiesById()
-                    val statement = connection.prepareStatement(query)
-                    statement.setArray(1, PostgresArrays.createUuidArray(connection, entitySetIds.stream()))
-                    statement.fetchSize = BATCH_SIZE
-                    val rs = statement.executeQuery()
-
-                    StatementHolder(connection, statement, rs)
-                },
-                Function<ResultSet, EntityDataKey> { ResultSetAdapters.entityDataKey(it) }
         )
     }
 
@@ -785,19 +748,5 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     return "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
 }
 
-
-
-internal fun activeEntitiesById():String {
-    return  "SELECT  ${ENTITY_SET_ID.name}, ${ID_VALUE.name} " +
-            "FROM ${IDS.name} " +
-            "WHERE ${LAST_PROPAGATE.name} < ${LAST_WRITE.name} AND " +
-                "${ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) "
-}
-
-internal fun activeEntitiesCount():String {
-    return  "SELECT  COUNT(*) " +
-            "FROM ${IDS.name} " +
-            "WHERE ${LAST_PROPAGATE.name} < ${LAST_WRITE.name} "
-}
 
 
