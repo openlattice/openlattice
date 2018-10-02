@@ -26,15 +26,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 
 /**
- *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public interface RangeFilter<T extends Comparable<T>> extends Filter<T> {
+@JsonTypeInfo( use = Id.CLASS, include = As.PROPERTY )
+public interface Filter<T extends Comparable<T>> {
 
-    boolean isLowerboundEqual();
-
-    boolean isUpperboundEqual();
-
-    T getLowerbound();
-
-    T getUpperbound();
+    /**
+     * @param field Used for constructing the sql expression.
+     * @return The sql expression for this filter applied to the specified field.
+     */
+    String asSql( String field );
 }
