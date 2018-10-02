@@ -11,6 +11,7 @@ class PropagationGraphProcessor(private val edm: EdmManager) {
     val singleForwardPropagationGraph: MutableMap<Propagation, MutableSet<Propagation>> = mutableMapOf()
     val selfPropagationGraph: MutableMap<Propagation, MutableSet<Propagation>> = mutableMapOf()
     val rootInputPropagations: MutableSet<Propagation> = mutableSetOf()
+    private val outputPropagations: MutableSet<Propagation> = mutableSetOf()
     private val graphHandler = BaseGraphHandler<Propagation>()
 
     fun register(processor: GraphProcessor) {
@@ -45,9 +46,11 @@ class PropagationGraphProcessor(private val edm: EdmManager) {
             it.forEach { // Input propagations
                 inputProp ->
                 // Add to root propagations, if its not contained in any propagation graph yet
-                if(!(singleForwardPropagationGraph.containsKey(inputProp) || selfPropagationGraph.containsKey(inputProp))) {
+                if(!(outputPropagations.contains(inputProp))) {
                     rootInputPropagations.add(inputProp)
                 }
+                outputPropagations.add(outputProp)
+
                 // Remove from root propagations if propagation is an output too
                 rootInputPropagations.remove(outputProp)
 
@@ -67,7 +70,4 @@ class PropagationGraphProcessor(private val edm: EdmManager) {
 
         return graphHandler.hasCycle(remain, roots)
     }
-
-
-
 }
