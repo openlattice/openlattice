@@ -56,7 +56,7 @@ private const val ems_unit_name = "ol.name" // to avoid duplicate column names w
 
 
 private fun getAssociationDurationCalc(edgeDurationFqn:String, eventDurationFqn:String):String {
-    return "SUM(CASE WHEN (ARRAY_LENGTH(${DataTables.quote(edgeDurationFqn)}) IS null) " +
+    return "SUM(CASE WHEN (ARRAY_LENGTH(${DataTables.quote(edgeDurationFqn)}, 1) IS null) " +
             "THEN ${DataTables.quote(eventDurationFqn)}[1] " +
             "ELSE ${DataTables.quote(edgeDurationFqn)}[1] END)"
 }
@@ -66,7 +66,7 @@ private fun countOf(columnName: String): String {
 }
 
 private fun emptyInvolvedInDurationCount(): String {
-    return "COUNT(CASE WHEN (ARRAY_LENGTH($involvedin_duration) IS null) THEN 1 END)" // array_length should return null if empty
+    return "COUNT(CASE WHEN (ARRAY_LENGTH($involvedin_duration, 1) IS null) THEN 1 END)" // array_length should return null if empty
 }
 
 
@@ -463,12 +463,12 @@ class DispatchInvolvedInEMSMinutesProcessor: GraphProcessor, AssociationProcesso
         return mapOf(FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_key)))
     }
 
-    override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
-        return mapOf(FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration)))
-    }
-
     override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(FullQualifiedName(involed_in) to setOf(FullQualifiedName(involvedin_duration)))
+    }
+
+    override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
+        return mapOf(FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration)))
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
