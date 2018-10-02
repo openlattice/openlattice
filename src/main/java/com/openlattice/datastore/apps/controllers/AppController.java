@@ -218,7 +218,7 @@ public class AppController implements AppApi, AuthorizingComponent {
     @Override
     @RequestMapping(
             path = UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH,
-            method = RequestMethod.GET )
+            method = RequestMethod.POST )
     public void addAppTypeToApp( @PathVariable( ID ) UUID appId, @PathVariable( APP_TYPE_ID ) UUID appTypeId ) {
         ensureAdminAccess();
         appService.addAppTypesToApp( appId, ImmutableSet.of( appTypeId ) );
