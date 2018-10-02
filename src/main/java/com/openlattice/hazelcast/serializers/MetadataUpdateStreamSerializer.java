@@ -11,9 +11,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -57,7 +55,7 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         Optional<Boolean> pii = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
         Optional<Boolean> defaultShow = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
         Optional<String> url = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<LinkedHashMultimap<UUID, String>> propertyTags = OptionalStreamSerializers.deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap )
+        Optional<LinkedHashMultimap<UUID, String>> propertyTags = OptionalStreamSerializers.deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
         return new MetadataUpdate( title, description, name, contacts, type, pii, defaultShow, url, propertyTags );
     }
 
