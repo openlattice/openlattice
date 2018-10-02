@@ -46,36 +46,3 @@ class DispatchDurationProcessor: DurationProcessor() {
         return mapOf()
     }
 }
-
-
-//@Component
-class DispatchEndDateProcessor: EndDateProcessor() {
-
-    override fun getSql(): String {
-        return "MAX(${addDurationToFirstStart()} * interval '1 minutes')"
-    }
-
-    override fun getHandledEntityType(): String {
-        return entity_type
-    }
-
-    override fun getPropertyTypeForStart(): String {
-        return start
-    }
-
-    override fun getPropertyTypeForEnd(): String {
-        return end
-    }
-
-    override fun getPropertyTypeForDuration(): String {
-        return duration
-    }
-
-    override fun getCalculationTimeUnit(): ChronoUnit {
-        return ChronoUnit.MINUTES
-    }
-
-    override fun getDisplayTimeUnit(): ChronoUnit {
-        return ChronoUnit.MINUTES
-    }
-}

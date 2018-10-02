@@ -136,7 +136,7 @@ class MockDurationProcessor: DurationProcessor() {
     }
 }
 
-class MockEndDateProcessor: EndDateProcessor() {
+class MockEndDateProcessor: BaseDurationProcessor() {
 
     override fun getSql(): String {
         return ""
@@ -164,6 +164,15 @@ class MockEndDateProcessor: EndDateProcessor() {
 
     override fun getDisplayTimeUnit(): ChronoUnit {
         return ChronoUnit.HOURS
+    }
+
+    override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
+        return mapOf(FullQualifiedName(getHandledEntityType()) to
+                setOf(FullQualifiedName(getPropertyTypeForStart()), FullQualifiedName(getPropertyTypeForDuration())))
+    }
+
+    override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
+        return Pair(FullQualifiedName(getHandledEntityType()), FullQualifiedName(getPropertyTypeForEnd()))
     }
 }
 
