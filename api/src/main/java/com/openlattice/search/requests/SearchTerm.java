@@ -22,33 +22,47 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.search.SearchApi;
 
+import java.util.Optional;
+
 public class SearchTerm {
-    
-    private final String searchTerm;
-    private final int start;
-    private final int maxHits;
-    
+
+    private final String  searchTerm;
+    private final int     start;
+    private final int     maxHits;
+    private final boolean fuzzy;
+
     public SearchTerm(
             @JsonProperty( SerializationConstants.SEARCH_TERM ) String searchTerm,
             @JsonProperty( SerializationConstants.START ) int start,
-            @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits ) {
+            @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits,
+            @JsonProperty( SerializationConstants.FUZZY ) Optional<Boolean> fuzzy ) {
         this.searchTerm = searchTerm.trim();
         this.start = start;
         this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
+        this.fuzzy = fuzzy.orElse( true );
     }
-    
+
+    public SearchTerm( String searchTerm, int start, int maxHits ) {
+        this( searchTerm, start, maxHits, Optional.empty() );
+    }
+
     @JsonProperty( SerializationConstants.SEARCH_TERM )
     public String getSearchTerm() {
         return searchTerm;
     }
-    
+
     @JsonProperty( SerializationConstants.START )
     public int getStart() {
         return start;
     }
-    
+
     @JsonProperty( SerializationConstants.MAX_HITS )
     public int getMaxHits() {
         return maxHits;
+    }
+
+    @JsonProperty( SerializationConstants.FUZZY )
+    public boolean getFuzzy() {
+        return fuzzy;
     }
 }
