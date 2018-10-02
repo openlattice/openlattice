@@ -459,6 +459,8 @@ public final class TestDataFactory {
     }
 
     public static MetadataUpdate metadataUpdate() {
+        final var propertyTags = LinkedHashMultimap.<UUID, String>create();
+        propertyTags.put( UUID.randomUUID(), "SOME PROPERTY TAG" );
         return new MetadataUpdate( Optional.of(RandomStringUtils.randomAlphanumeric( 5 )),
                 Optional.of(RandomStringUtils.randomAlphanumeric( 5 )),
                 Optional.empty(),
@@ -467,6 +469,6 @@ public final class TestDataFactory {
                 Optional.of(r.nextBoolean()),
                 Optional.empty(),
                 Optional.of(RandomStringUtils.randomAlphanumeric( 4 )),
-                Optional.empty());
+                Optional.of(propertyTags));
     }
 }
