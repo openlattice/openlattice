@@ -43,7 +43,8 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out, object.getPii(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getDefaultShow(), ObjectDataOutput::writeBoolean );
         OptionalStreamSerializers.serialize( out, object.getUrl(), ObjectDataOutput::writeUTF );
-        OptionalStreamSerializers.serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
+        OptionalStreamSerializers
+                .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
     }
 
     public static MetadataUpdate deserialize( ObjectDataInput in ) throws IOException {
@@ -51,11 +52,13 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         Optional<String> description = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<String> name = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<Set<String>> contacts = OptionalStreamSerializers.deserializeSet( in, DataInput::readUTF );
-        Optional<FullQualifiedName> type = OptionalStreamSerializers.deserialize( in,  FullQualifiedNameStreamSerializer::deserialize );
+        Optional<FullQualifiedName> type = OptionalStreamSerializers
+                .deserialize( in, FullQualifiedNameStreamSerializer::deserialize );
         Optional<Boolean> pii = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
         Optional<Boolean> defaultShow = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
         Optional<String> url = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<LinkedHashMultimap<UUID, String>> propertyTags = OptionalStreamSerializers.deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
+        Optional<LinkedHashMultimap<UUID, String>> propertyTags = OptionalStreamSerializers
+                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
         return new MetadataUpdate( title, description, name, contacts, type, pii, defaultShow, url, propertyTags );
     }
 
