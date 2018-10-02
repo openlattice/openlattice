@@ -8,16 +8,13 @@ interface AssociationProcessor: GraphProcessor {
      */
     fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>>  //entity type to properties
 
-
-    /**
-     * @return Map of FullQualifiedNames of entity types and property types of destination inputs
-     */
-    fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>>  //entity type to properties
-
-
     /**
      * @return Map of FullQualifiedNames of entity types and property types of edge inputs
      */
     fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>>  //entity type to properties
 
+    /**
+     * @return Map of FullQualifiedNames of entity types and property types of destination inputs
+     */
+    fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>>  //entity type to properties
 }

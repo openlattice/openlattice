@@ -1,6 +1,6 @@
 package com.openlattice.graph.processing.processors
 
-import com.openlattice.postgres.DataTables
+
 import org.springframework.stereotype.Component
 import java.time.temporal.ChronoUnit
 
@@ -9,7 +9,7 @@ private const val start = "publicsafety.datebooked"
 private const val end = "ol.datetime_release"
 private const val duration = "ol.durationdays"
 
-@Component
+//@Component
 class JusticeJailBookingDurationProcessor: DurationProcessor() {
 
     override fun getSql(): String {
@@ -41,7 +41,7 @@ class JusticeJailBookingDurationProcessor: DurationProcessor() {
     }
 }
 
-@Component
+//@Component
 class JusticeJailBookingEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {

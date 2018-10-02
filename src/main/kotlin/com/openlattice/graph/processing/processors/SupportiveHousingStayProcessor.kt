@@ -12,7 +12,7 @@ private const val end = "ol.datetime_release"
 private const val duration = "housing.lengthofstay"
 
 
-@Component
+//@Component
 class SupportiveHousingDurationProcessor: DurationProcessor() {
 
     override fun getSql(): String {
@@ -47,7 +47,7 @@ class SupportiveHousingDurationProcessor: DurationProcessor() {
     }
 }
 
-@Component
+//@Component
 class SupportiveHousingEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {

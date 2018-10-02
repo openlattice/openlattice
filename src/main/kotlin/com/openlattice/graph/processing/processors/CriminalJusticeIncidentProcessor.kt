@@ -41,7 +41,7 @@ class CriminalJusticeIncidentDurationProcessor:DurationProcessor() {
     }
 }
 
-@Component
+//@Component
 class CriminalJusticeIncidentEndDateProcessor:EndDateProcessor() {
 
     override fun getSql(): String {

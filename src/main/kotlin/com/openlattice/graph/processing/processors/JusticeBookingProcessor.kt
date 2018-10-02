@@ -42,7 +42,7 @@ class JusticeBookingDurationProcessor: DurationProcessor() {
 
 }
 
-@Component
+//@Component
 class JusticeBookingEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {

@@ -48,7 +48,7 @@ class DispatchDurationProcessor: DurationProcessor() {
 }
 
 
-@Component
+//@Component
 class DispatchEndDateProcessor: EndDateProcessor() {
 
     override fun getSql(): String {
