@@ -812,6 +812,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String searchTerm,
             int start,
             int maxHits,
+            boolean fuzzy,
             Set<UUID> authorizedPropertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return new EntityKeyIdSearchResult( 0, Lists.newArrayList() ); }
 
@@ -825,7 +826,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .collect( Collectors.toList() )
                 .toArray( new String[ authorizedPropertyTypes.size() ] );
 
-        QueryStringQueryBuilder query = QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) )
+        String formattedSearchTerm = fuzzy ? getFormattedFuzzyString( searchTerm ) : searchTerm;
+
+        QueryStringQueryBuilder query = QueryBuilders.queryStringQuery( formattedSearchTerm )
                 .fields( fieldsMap )
                 .lenient( true );
         SearchResponse response = client.prepareSearch( getIndexName( entitySetId ) )
