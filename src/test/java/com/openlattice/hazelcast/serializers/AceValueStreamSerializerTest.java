@@ -34,6 +34,6 @@ public class AceValueStreamSerializerTest extends AbstractStreamSerializerTest<A
     }
 
     @Override protected AceValue createInput() {
-        return new AceValue( TestDataFactory.permissions(), TestDataFactory.securableObjectType() );
+        return TestDataFactory.aceValue();
     }
 }
