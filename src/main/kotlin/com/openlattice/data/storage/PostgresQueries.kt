@@ -50,7 +50,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         propertyTypes: Map<UUID, String>,
         returnedPropertyTypes: Collection<UUID>,
         authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-        propertyTypeFilters: Map<UUID, Set<Filter<*>>>,
+        propertyTypeFilters: Map<UUID, Set<Filter>>,
         metadataOptions: Set<MetadataOption>,
         linked: Boolean,
         binaryPropertyTypes: Map<UUID, Boolean>,
@@ -107,7 +107,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
         propertyTypes: Map<UUID, String>,
         returnedPropertyTypes: Collection<UUID>,
         authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-        propertyTypeFilters: Map<UUID, Set<Filter<*>>>,
+        propertyTypeFilters: Map<UUID, Set<Filter>>,
         metadataOptions: Set<MetadataOption>,
         version: Long,
         linked: Boolean,
@@ -174,7 +174,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
         propertyTypeId: UUID,
         fqn: String,
         version: Long,
-        filters: Set<Filter<*>>,
+        filters: Set<Filter>,
         linked: Boolean,
         binary: Boolean
 ): String {
@@ -214,7 +214,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
 internal fun selectCurrentVersionOfPropertyTypeSql(
         entitiesClause: String,
         propertyTypeId: UUID,
-        filters: Set<Filter<*>>,
+        filters: Set<Filter>,
         fqn: String,
         linked: Boolean,
         binary: Boolean,
@@ -392,7 +392,7 @@ internal fun buildPropertyTypeEntitiesClause(
     } + ")"
 }
 
-internal fun buildFilterClause(fqn: String, filter: Set<Filter<*>>): String {
+internal fun buildFilterClause(fqn: String, filter: Set<Filter>): String {
     if (filter.isEmpty()) return ""
     return filter.joinToString(" AND ", prefix = " AND ") { it.asSql(fqn) }
 }
