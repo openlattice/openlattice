@@ -84,7 +84,7 @@ class RealtimeLinkingService
     ) {
         entityKeyIds
                 .asSequence()
-                .map { blocker.block(entitySetId, it) }
+                .map {blocker.block(entitySetId, it)}
                 .map {
                     //block contains element being blocked
                     val blockKey = it.first
@@ -137,7 +137,7 @@ class RealtimeLinkingService
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, entitySetId)
     }
 
-    @Scheduled(fixedRate = 30000)
+//    @Scheduled(fixedRate = 30000)
     fun runLinking() {
         if (running.tryLock()) {
             try {
