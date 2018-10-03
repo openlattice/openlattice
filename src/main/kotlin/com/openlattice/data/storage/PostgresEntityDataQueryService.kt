@@ -59,7 +59,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     fun getEntitiesById(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, SetMultimap<UUID, Any>> {
+    ): Map<UUID, Map<UUID, Set<Any>>> {
         return getEntitiesById(entitySetId, authorizedPropertyTypes, Optional.empty())
     }
 
@@ -67,7 +67,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             entityKeyIds: Set<UUID>
-    ): Map<UUID, SetMultimap<UUID, Any>> {
+    ): Map<UUID, Map<UUID, Set<Any>>> {
         return getEntitiesById(entitySetId, authorizedPropertyTypes, Optional.of(entityKeyIds))
     }
 
@@ -75,8 +75,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             entityKeyIds: Optional<Set<UUID>>
-    ): Map<UUID, SetMultimap<UUID, Any>> {
-        val adapter = Function<ResultSet, Pair<UUID, SetMultimap<UUID, Any>>> {
+    ): Map<UUID, Map<UUID, Set<Any>>> {
+        val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
         }
         return streamableEntitySet(
@@ -115,9 +115,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
-            ResultSetAdapters.id(it) to Multimaps.asMap(
+            ResultSetAdapters.id(it) to
                     ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
-            ).toMap()
         }
         return streamableEntitySet(
                 entitySetId,
@@ -135,8 +134,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             metadataOptions: Set<MetadataOption>,
             version: Optional<Long> = Optional.empty()
-    ): PostgresIterable<SetMultimap<UUID, Any>> {
-        val adapter = Function<ResultSet, SetMultimap<UUID, Any>> {
+    ): PostgresIterable<Map<UUID, Set<Any>>> {
+        val adapter = Function<ResultSet, Map<UUID, Set<Any>>> {
             ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
         }
         return streamableEntitySet(
