@@ -55,18 +55,20 @@ private const val ems_unit_key = "ol.id"
 private const val ems_unit_name = "ol.name" // to avoid duplicate column names with ol.id
 
 
-private fun getAssociationDurationCalc(edgeDurationFqn:String, eventDurationFqn:String):String {
-    return "SUM(CASE WHEN (ARRAY_LENGTH(${DataTables.quote(edgeDurationFqn)}, 1) IS null) " +
-            "THEN ${DataTables.quote(eventDurationFqn)}[1] " +
-            "ELSE ${DataTables.quote(edgeDurationFqn)}[1] END)"
+private fun getUnitMinutesOnEventCalc(edgeDuration:String, eventDuration:String, numOfUnitNoDuration: String):String {
+    return "( SUM(${DataTables.quote(edgeDuration)}[1]) + ( $numOfUnitNoDuration[1] * ${averageOf(eventDuration)} ) )"
 }
 
 private fun countOf(columnName: String): String {
     return "COUNT(${DataTables.quote(columnName)})"
 }
 
-private fun emptyInvolvedInDurationCount(): String {
-    return "COUNT(CASE WHEN (ARRAY_LENGTH(${DataTables.quote(involvedin_duration)}, 1) IS null) THEN 1 END)" // array_length should return null if empty
+private fun averageOf(columnName: String): String {
+    return "AVG(${DataTables.quote(columnName)}[1])"
+}
+
+private fun noDurationCount(sumNumberColumn: String): String {
+    return "( ${averageOf(sumNumberColumn)} - ${countOf(involvedin_duration)} )"
 }
 
 private fun proportionOf(numerators: List<String>, denominator: String): String {
@@ -80,7 +82,7 @@ private fun officerFilters(): ValueFilter<String> {
 
 /* ************** Base duration calculation : on association ************* */
 @Component
-class DispatchInvolvedInProcessor: GraphProcessor, AssociationProcessor  {
+class DispatchInvolvedInProcessor: AssociationProcessor  {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf()
     }
@@ -114,7 +116,7 @@ class DispatchInvolvedInProcessor: GraphProcessor, AssociationProcessor  {
 
 /*
 @Component
-class DispatchInvolvedInPersonPoliceMinutesProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInPersonPoliceMinutesProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
@@ -147,8 +149,8 @@ class DispatchInvolvedInPersonPoliceMinutesProcessor: GraphProcessor, Associatio
     }
 }*/ //TODO: filter only people(civils)
 
-@Component
-class DispatchInvolvedInPersonFireMinutesProcessor: GraphProcessor, AssociationProcessor {
+/*@Component
+class DispatchInvolvedInPersonFireMinutesProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
@@ -175,10 +177,10 @@ class DispatchInvolvedInPersonFireMinutesProcessor: GraphProcessor, AssociationP
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
-}
+}*/ // TODO filter only civils
 
-@Component
-class DispatchInvolvedInPersonEMSMinutesProcessor: GraphProcessor, AssociationProcessor {
+/*@Component
+class DispatchInvolvedInPersonEMSMinutesProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
@@ -205,14 +207,14 @@ class DispatchInvolvedInPersonEMSMinutesProcessor: GraphProcessor, AssociationPr
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf()
     }
-}
+}*/ // TODO filter only civils
 
 
 
 /* ************** Count of people/officers/units : on event ************* */
 
 @Component
-class DispatchInvolvedInNumberOfPoliceProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfPoliceProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
@@ -243,7 +245,7 @@ class DispatchInvolvedInNumberOfPoliceProcessor: GraphProcessor, AssociationProc
 }
 
 @Component
-class DispatchInvolvedInNumberOfPoliceNoDurationProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfPoliceNoDurationProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key))) // not used for calculation, just for edges
@@ -256,7 +258,7 @@ class DispatchInvolvedInNumberOfPoliceNoDurationProcessor: GraphProcessor, Assoc
 
     override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key)))
+                FullQualifiedName(dispatch) to setOf(FullQualifiedName(num_of_police_officers)))
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -264,18 +266,18 @@ class DispatchInvolvedInNumberOfPoliceNoDurationProcessor: GraphProcessor, Assoc
     }
 
     override fun getSql(): String {
-        return emptyInvolvedInDurationCount()
+        return noDurationCount(num_of_police_officers)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
         return mapOf(FullQualifiedName(involved_in) to
-                mapOf(FullQualifiedName(involved_in_role) to ValueFilter<String>(setOf("Officer"))))
+                mapOf(FullQualifiedName(involved_in_role) to officerFilters()))
     }
 }
 
 
 @Component
-class DispatchInvolvedInNumberOfPoliceUnitsProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfPoliceUnitsProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_name)))
@@ -305,7 +307,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsProcessor: GraphProcessor, Associatio
 }
 
 @Component
-class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_name))) // not used for calculation, just for edges
@@ -318,7 +320,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: GraphProcessor, 
 
     override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key))) // not used for calculation, just for edges
+                FullQualifiedName(dispatch) to setOf(FullQualifiedName(num_of_police_units))) // not used for calculation, just for edges
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -326,7 +328,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: GraphProcessor, 
     }
 
     override fun getSql(): String {
-        return emptyInvolvedInDurationCount()
+        return noDurationCount(num_of_police_units)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -336,7 +338,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: GraphProcessor, 
 
 
 @Component
-class DispatchInvolvedInNumberOfFireUnitsProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfFireUnitsProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_name)))
@@ -366,7 +368,7 @@ class DispatchInvolvedInNumberOfFireUnitsProcessor: GraphProcessor, AssociationP
 }
 
 @Component
-class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_name)))
@@ -379,7 +381,7 @@ class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: GraphProcessor, As
 
     override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key))) // not used for calculation, just for edges
+                FullQualifiedName(dispatch) to setOf(FullQualifiedName(num_of_fire)))
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -387,7 +389,7 @@ class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: GraphProcessor, As
     }
 
     override fun getSql(): String {
-        return emptyInvolvedInDurationCount()
+        return noDurationCount(num_of_fire)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -397,7 +399,7 @@ class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: GraphProcessor, As
 
 
 @Component
-class DispatchInvolvedInNumberOfEMSUnitsProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfEMSUnitsProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_name)))
@@ -427,7 +429,7 @@ class DispatchInvolvedInNumberOfEMSUnitsProcessor: GraphProcessor, AssociationPr
 }
 
 @Component
-class DispatchInvolvedInNumberOfEMSUnitsNoDurationProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfEMSUnitsNoDurationProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_name)))
@@ -440,7 +442,7 @@ class DispatchInvolvedInNumberOfEMSUnitsNoDurationProcessor: GraphProcessor, Ass
 
     override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key))) // not used for calculation, just for edges
+                FullQualifiedName(dispatch) to setOf(FullQualifiedName(num_of_ems))) // not used for calculation, just for edges
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -448,7 +450,7 @@ class DispatchInvolvedInNumberOfEMSUnitsNoDurationProcessor: GraphProcessor, Ass
     }
 
     override fun getSql(): String {
-        return emptyInvolvedInDurationCount()
+        return noDurationCount(num_of_ems)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -458,7 +460,7 @@ class DispatchInvolvedInNumberOfEMSUnitsNoDurationProcessor: GraphProcessor, Ass
 
 
 /*@Component
-class DispatchInvolvedInNumberOfPeopleProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInNumberOfPeopleProcessor: AssociationProcessor {
     override fun getInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)),
@@ -484,10 +486,10 @@ class DispatchInvolvedInNumberOfPeopleProcessor: GraphProcessor, AssociationProc
 /* ************** Duration per department calculation: on association ************* */
 
 @Component
-class DispatchInvolvedInPoliceMinutesProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInPoliceMinutesProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key)))
+                FullQualifiedName(general_person) to setOf(FullQualifiedName(general_person_key))) // not used for calculation, just for edges
     }
 
     override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
@@ -497,7 +499,7 @@ class DispatchInvolvedInPoliceMinutesProcessor: GraphProcessor, AssociationProce
 
     override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration)))
+                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration), FullQualifiedName(num_of_police_officers_no_duration)))
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -505,7 +507,7 @@ class DispatchInvolvedInPoliceMinutesProcessor: GraphProcessor, AssociationProce
     }
 
     override fun getSql(): String {
-        return getAssociationDurationCalc(involvedin_duration, dispatch_duration)
+        return getUnitMinutesOnEventCalc(involvedin_duration, dispatch_duration, num_of_police_officers_no_duration)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -514,7 +516,7 @@ class DispatchInvolvedInPoliceMinutesProcessor: GraphProcessor, AssociationProce
 }
 
 @Component
-class DispatchInvolvedInPoliceUnitMinutesProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInPoliceUnitMinutesProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_key))) // not used for calculation, just for edges
@@ -527,7 +529,7 @@ class DispatchInvolvedInPoliceUnitMinutesProcessor: GraphProcessor, AssociationP
 
     override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration)))
+                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration), FullQualifiedName(num_of_police_units_no_duration)))
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -535,7 +537,7 @@ class DispatchInvolvedInPoliceUnitMinutesProcessor: GraphProcessor, AssociationP
     }
 
     override fun getSql(): String {
-        return getAssociationDurationCalc(involvedin_duration, dispatch_duration)
+        return getUnitMinutesOnEventCalc(involvedin_duration, dispatch_duration, num_of_police_units_no_duration)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -544,7 +546,7 @@ class DispatchInvolvedInPoliceUnitMinutesProcessor: GraphProcessor, AssociationP
 }
 
 @Component
-class DispatchInvolvedInFireMinutesProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInFireMinutesProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
                 FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_key))) // not used for calculation, just for edges
@@ -557,7 +559,7 @@ class DispatchInvolvedInFireMinutesProcessor: GraphProcessor, AssociationProcess
 
     override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration)))
+                FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration), FullQualifiedName(num_of_fire_no_duration)))
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -565,7 +567,7 @@ class DispatchInvolvedInFireMinutesProcessor: GraphProcessor, AssociationProcess
     }
 
     override fun getSql(): String {
-        return getAssociationDurationCalc(involvedin_duration, dispatch_duration)
+        return getUnitMinutesOnEventCalc(involvedin_duration, dispatch_duration, num_of_fire_no_duration)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -574,7 +576,7 @@ class DispatchInvolvedInFireMinutesProcessor: GraphProcessor, AssociationProcess
 }
 
 @Component
-class DispatchInvolvedInEMSMinutesProcessor: GraphProcessor, AssociationProcessor {
+class DispatchInvolvedInEMSMinutesProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_key))) // not used for calculation, just for edges
     }
@@ -584,7 +586,7 @@ class DispatchInvolvedInEMSMinutesProcessor: GraphProcessor, AssociationProcesso
     }
 
     override fun getDstInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
-        return mapOf(FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration)))
+        return mapOf(FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_duration), FullQualifiedName(num_of_ems_no_duration)))
     }
 
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
@@ -592,7 +594,7 @@ class DispatchInvolvedInEMSMinutesProcessor: GraphProcessor, AssociationProcesso
     }
 
     override fun getSql(): String {
-        return getAssociationDurationCalc(involvedin_duration, dispatch_duration)
+        return getUnitMinutesOnEventCalc(involvedin_duration, dispatch_duration, num_of_ems_no_duration)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
