@@ -22,7 +22,6 @@ package com.openlattice.datastore.data.controllers;
 
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
-import com.datastax.driver.core.querybuilder.Update;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ArrayListMultimap;
@@ -50,15 +49,14 @@ import com.openlattice.data.DataGraphIds;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntitySetData;
-import com.openlattice.data.Property;
 import com.openlattice.data.UpdateType;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.search.SearchService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.search.SearchService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -249,9 +247,9 @@ public class DataController implements DataApi, AuthorizingComponent {
 
         switch ( updateType ) {
             case Replace:
-                return dgm.replaceEntities( entitySetId,entities,authorizedPropertyTypes );
+                return dgm.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
             case PartialReplace:
-                return dgm.partialReplaceEntities( entitySetId, entities,authorizedPropertyTypes );
+                return dgm.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
             case Merge:
                 return dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
             default:
@@ -439,7 +437,10 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
-    public Integer clearEntitySet( UUID entitySetId ) {
+    @RequestMapping(
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
+            method = RequestMethod.DELETE )
+    public Integer clearEntitySet( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
         ensureOwnerAccess( new AclKey( entitySetId ) );
         return dgm
                 .clearEntitySet( entitySetId, authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
