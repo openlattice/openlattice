@@ -19,6 +19,7 @@
 package com.openlattice.authorization;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import com.openlattice.client.serialization.SerializationConstants;
@@ -26,58 +27,49 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AclExplanation {
-    protected final List<UUID>             aclKey;
-    protected final Iterable<AceExplanation> aces;
-    private transient int                  h = 0;
+    protected final   Principal             principal;
+    protected final   List<List<Principal>> paths;
+    private transient int                   h = 0;
 
     @JsonCreator
     public AclExplanation(
-            @JsonProperty( SerializationConstants.ACL_OBJECT_PATH ) List<UUID> aclKey,
-            @JsonProperty( SerializationConstants.ACES ) Iterable<AceExplanation> aces ) {
-        this.aclKey = aclKey;
-        this.aces = aces;
+            @JsonProperty( SerializationConstants.PRINCIPAL ) Principal principal,
+            @JsonProperty( SerializationConstants.PRINCIPAL_PATHS ) List<List<Principal>> paths ) {
+        this.principal = principal;
+        this.paths = paths;
     }
 
-    @JsonProperty( SerializationConstants.ACL_OBJECT_PATH )
-    public List<UUID> getAclKey() {
-        return aclKey;
+    @JsonProperty( SerializationConstants.PRINCIPAL )
+    public Principal getPrincipal() {
+        return principal;
     }
 
-    @JsonProperty( SerializationConstants.ACES )
-    public Iterable<AceExplanation> getAces() {
-        return aces;
+    @JsonProperty( SerializationConstants.PRINCIPAL_PATHS )
+    public List<List<Principal>> getPaths() {
+        return paths;
     }
 
-    @Override
-    public int hashCode() {
-        if ( h == 0 ) {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ( ( aces == null ) ? 0 : aces.hashCode() );
-            result = prime * result + ( ( aclKey == null ) ? 0 : aclKey.hashCode() );
-            h = result;
-        }
-        return h;
+    @Override public String toString() {
+        return "AclExplanation{" +
+                "principal=" + principal +
+                ", paths=" + paths +
+                ", h=" + h +
+                '}';
     }
 
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        AclExplanation other = (AclExplanation) obj;
-        if ( aces == null ) {
-            if ( other.aces != null ) return false;
-        } else if ( !aces.equals( other.aces ) ) return false;
-        if ( aclKey == null ) {
-            if ( other.aclKey != null ) return false;
-        } else if ( !aclKey.equals( other.aclKey ) ) return false;
-        return true;
+    @Override public boolean equals( Object o ) {
+        if ( this == o )
+            return true;
+        if ( o == null || getClass() != o.getClass() )
+            return false;
+        AclExplanation that = (AclExplanation) o;
+        return h == that.h &&
+                Objects.equals( principal, that.principal ) &&
+                Objects.equals( paths, that.paths );
     }
 
-    @Override
-    public String toString() {
-        return "AclExplained [aclKey=" + aclKey + ", aces=" + aces + "]";
+    @Override public int hashCode() {
+        return Objects.hash( principal, paths, h );
     }
 
 }
