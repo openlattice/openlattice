@@ -26,6 +26,7 @@ import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
 import static com.openlattice.postgres.PostgresDatatype.BYTEA;
 import static com.openlattice.postgres.PostgresDatatype.DECIMAL;
 import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
+import static com.openlattice.postgres.PostgresDatatype.JSONB;
 import static com.openlattice.postgres.PostgresDatatype.TEXT;
 import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.UUID;
@@ -248,9 +249,9 @@ public final class PostgresColumn {
     public static final String                   PROPERTIES_FIELD            = "properties";
     public static final PostgresColumnDefinition PROPERTIES                  =
             new PostgresColumnDefinition( PROPERTIES_FIELD, UUID_ARRAY ).notNull();
-    public static final String                   PROPERTY_ID_FIELD           = "propertyId";
-    public static final PostgresColumnDefinition PROPERTY_ID                 =
-            new PostgresColumnDefinition( PROPERTY_ID_FIELD, UUID ).notNull();
+    public static final String                   PROPERTY_TAGS_FIELD         = "property_tags";
+    public static final PostgresColumnDefinition PROPERTY_TAGS               =
+            new PostgresColumnDefinition( PROPERTY_TAGS_FIELD, JSONB ).notNull();
     public static final String                   PROPERTY_TYPE_ID_FIELD      = "property_type_id";
     public static final PostgresColumnDefinition PROPERTY_TYPE_ID            =
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();

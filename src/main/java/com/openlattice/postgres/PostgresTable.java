@@ -83,6 +83,7 @@ import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE;
 import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS;
 import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.QUERY;
 import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
@@ -150,7 +151,16 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition COMPLEX_TYPES =
             new PostgresTableDefinition( "complex_types" )
-                    .addColumns( ID, NAMESPACE, NAME, TITLE, DESCRIPTION, PROPERTIES, BASE_TYPE, SCHEMAS, CATEGORY );
+                    .addColumns( ID,
+                            NAMESPACE,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            PROPERTIES,
+                            PROPERTY_TAGS,
+                            BASE_TYPE,
+                            SCHEMAS,
+                            CATEGORY );
     //.setUnique( NAMESPACE, NAME ); //Not allowed by postgres xl
 
     public static final PostgresTableDefinition DB_CREDS = new PostgresTableDefinition( "db_creds" )
@@ -205,6 +215,7 @@ public final class PostgresTable {
                             DESCRIPTION,
                             KEY,
                             PROPERTIES,
+                            PROPERTY_TAGS,
                             BASE_TYPE,
                             SCHEMAS,
                             CATEGORY );
