@@ -411,9 +411,6 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             method = RequestMethod.GET )
     public Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries() {
         Set<UUID> propertyTypeIds = modelService.getAllPropertyTypeIds();
-        //removes AUDIT types, which don't get populated locally
-        propertyTypeIds.remove( UUID.fromString( "f1a0bda3-406a-42d4-a24b-79e1042a1535" ) );
-        propertyTypeIds.remove( UUID.fromString( "19e02f52-a2c5-4f77-81fb-1ebf2638ba01" ) );
         Map<UUID, Iterable<PropertyUsageSummary>> allPropertySummaries = Maps
                 .newHashMapWithExpectedSize( propertyTypeIds.size() );
         for ( UUID propertyTypeId : propertyTypeIds ) {
