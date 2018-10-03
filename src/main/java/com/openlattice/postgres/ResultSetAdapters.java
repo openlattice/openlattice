@@ -742,16 +742,16 @@ public final class ResultSetAdapters {
         return objects;
     }
 
-    public static SetMultimap<UUID, Object> implicitEntityValuesById(
+    public static Map<UUID, Set<Object>> implicitEntityValuesById(
             ResultSet rs,
             Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
-        final SetMultimap<UUID, Object> data = HashMultimap.create();
+        final Map<UUID, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.putAll( propertyType.getId(), objects );
+                data.put( propertyType.getId(), new HashSet<>( objects ) );
             }
         }
 
