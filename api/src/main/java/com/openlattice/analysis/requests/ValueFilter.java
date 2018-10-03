@@ -3,8 +3,8 @@ package com.openlattice.analysis.requests;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ValueFilter<T extends Comparable<T>> implements Filter<T> {
-    private Set<T> values;
+public class ValueFilter<T extends Comparable<T>> implements Filter {
+    private final Set<T> values;
 
     public ValueFilter( Set<T> values ) {
         this.values = values;
