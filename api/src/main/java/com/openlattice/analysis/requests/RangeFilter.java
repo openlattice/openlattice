@@ -22,9 +22,10 @@
 package com.openlattice.analysis.requests;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ *
  */
-public interface RangeFilter<T extends Comparable<T>> extends Filter<T>{
+public interface RangeFilter<T extends Comparable<T>> extends Filter {
+
     boolean isLowerboundEqual();
 
     boolean isUpperboundEqual();
