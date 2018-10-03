@@ -32,10 +32,12 @@ import java.util.Set;
 import java.util.UUID;
 
 public class FilteredRankingAggregation {
-    private final UUID                                  associationTypeId;
-    private final UUID                                  neighborTypeId;
-    private final Map<UUID, Set<Filter<?>>>             associationFilters;
-    private final Map<UUID, Set<Filter<?>>>             neighborFilters;
+    private final UUID associationTypeId;
+    private final UUID neighborTypeId;
+
+    private final Map<UUID, Set<Filter>> associationFilters;
+    private final Map<UUID, Set<Filter>> neighborFilters;
+
     private final Map<UUID, WeightedRankingAggregation> associationAggregations;
     private final Map<UUID, WeightedRankingAggregation> neighborTypeAggregations;
     private final boolean                               isDst;
@@ -46,9 +48,9 @@ public class FilteredRankingAggregation {
             @JsonProperty( SerializationConstants.ASSOCIATION_TYPE_ID ) UUID associationTypeId,
             @JsonProperty( SerializationConstants.NEIGHBOR_TYPE_ID ) UUID neighborTypeId,
             @JsonProperty( SerializationConstants.ASSOCIATION_FILTERS )
-                    Optional<Map<UUID, Set<Filter<?>>>> associationFilters,
+                    Optional<Map<UUID, Set<Filter>>> associationFilters,
             @JsonProperty( SerializationConstants.NEIGHBOR_FILTERS )
-                    Optional<Map<UUID, Set<Filter<?>>>> neighborFilters,
+                    Optional<Map<UUID, Set<Filter>>> neighborFilters,
             @JsonProperty( SerializationConstants.ASSOCIATION_AGGREGATIONS )
                     Map<UUID, WeightedRankingAggregation> associationAggregations,
             @JsonProperty( SerializationConstants.ENTITY_SET_AGGREGATIONS )
@@ -83,12 +85,12 @@ public class FilteredRankingAggregation {
     }
 
     @JsonProperty( SerializationConstants.ASSOCIATION_FILTERS )
-    public Map<UUID, Set<Filter<?>>> getAssociationFilters() {
+    public Map<UUID, Set<Filter>> getAssociationFilters() {
         return associationFilters;
     }
 
     @JsonProperty( SerializationConstants.NEIGHBOR_FILTERS )
-    public Map<UUID, Set<Filter<?>>> getNeighborFilters() {
+    public Map<UUID, Set<Filter>> getNeighborFilters() {
         return neighborFilters;
     }
 

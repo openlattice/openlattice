@@ -21,14 +21,10 @@
 
 package com.openlattice.analysis.requests;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-
 /**
  *
  */
-public interface RangeFilter<T extends Comparable<T>> extends Filter<T> {
+public interface RangeFilter<T extends Comparable<T>> extends Filter {
 
     boolean isLowerboundEqual();
 

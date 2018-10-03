@@ -19,17 +19,17 @@
  *
  */
 
-package com.openlattice.analysis.requests;
 
+package com.openlattice.analysis.requests;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ *
  */
 @JsonTypeInfo( use = Id.CLASS, include = As.PROPERTY )
-public interface Filter<T extends Comparable<T>> {
+public interface Filter {
 
     /**
      * @param field Used for constructing the sql expression.
