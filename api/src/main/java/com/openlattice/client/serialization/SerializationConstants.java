@@ -151,6 +151,7 @@ public final class SerializationConstants {
     public static final String PII_FIELD                        = "piiField";
     public static final String PRESENT                          = "present";
     public static final String PRINCIPAL                        = "principal";
+    public static final String PRINCIPAL_PATHS                  = "principalPaths";
     public static final String PROFILE_FIELD                    = "profile";
     public static final String PROPERTIES_FIELD                 = "properties";
     public static final String PROPERTY_DEFINITIONS             = "propertyDefinitions";
