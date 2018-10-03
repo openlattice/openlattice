@@ -42,7 +42,7 @@ public class GraphProcessorPod {
 
     @Bean
     public GraphProcessingService graphProcessingService() {
-        return new GraphProcessingService(edmManager, dataQueryService, hikariDataSource, hazelcastInstance, graphProcessors);
+        return new GraphProcessingService(edmManager, hikariDataSource, hazelcastInstance, graphProcessors);
     }
 
     @Bean
