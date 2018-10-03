@@ -114,6 +114,7 @@ class GraphProcessingService(
 
         var count = Int.MAX_VALUE
         while (count > 0) {
+            val w = Stopwatch.createStarted()
             count =
                     propagationGraphProcessor.singleForwardPropagationGraph.map {
                         markIfNeedsPropagation(it.key, it.value, false)
@@ -121,6 +122,7 @@ class GraphProcessingService(
                     propagationGraphProcessor.selfPropagationGraph.map {
                         markIfNeedsPropagation(it.key, it.value, true)
                     }.sum()
+            logger.info("Propagated $count in ${w.elapsed(TimeUnit.MILLISECONDS)}ms")
         }
         return count
     }
@@ -146,10 +148,7 @@ class GraphProcessingService(
                 conn.autoCommit = false
                 try {
                     conn.createStatement().use { stmt ->
-                        val w = Stopwatch.createStarted()
-                        val propagationSize = queries.map(stmt::executeUpdate).sum()
-                        logger.info("Propagated $propagationSize in ${w.elapsed(TimeUnit.MILLISECONDS)}ms")
-                        return propagationSize
+                        return queries.map(stmt::executeUpdate).sum()
                     }
                 } catch (e: SQLException) {
                     logger.error("Unable to propagate information with sql queries: {} ${System.lineSeparator()}$e", queries)
@@ -166,10 +165,10 @@ class GraphProcessingService(
 
     private fun compute(): Int {
         val count = processors.map { processor ->
-            val outputPropertyType = getPropertyTypes(mapOf(processor.getOutput()).mapValues { setOf(it.value) })
+            val outputPropertyType = getPropertyTypes(mapOf(processor.getOutput()).mapValues { setOf(it.value) }).values.first()
             val filters = processor.getFilters().values.flatMap { it.map{ edm.getPropertyTypeId(it.key) to setOf(it.value)} }.toMap()
 
-            logger.info("Starting computing aggregated values for property type ${outputPropertyType.first().type.fullQualifiedNameAsString}")
+            logger.info("Starting computing aggregated values for property type ${outputPropertyType.type.fullQualifiedNameAsString}")
 
             try{
                 val computeQuery = when(processor) {
@@ -190,8 +189,8 @@ class GraphProcessingService(
                         buildComputeQueriesForAssociation(
                                 processor.getSql(),
                                 filters,
-                                outputPropertyType.first().id,
-                                quote(outputPropertyType.first().type.fullQualifiedNameAsString),
+                                outputPropertyType.id,
+                                quote(outputPropertyType.type.fullQualifiedNameAsString),
                                 srcEntitySetId,
                                 srcPropertyTypes,
                                 edgeEntitySetId,
@@ -207,8 +206,8 @@ class GraphProcessingService(
                          buildComputeQueriesForSelf(
                                 processor.getSql(),
                                 filters,
-                                outputPropertyType.first().id,
-                                quote(outputPropertyType.first().type.fullQualifiedNameAsString),
+                                outputPropertyType.id,
+                                quote(outputPropertyType.type.fullQualifiedNameAsString),
                                 entitySetIds,
                                 propertyTypes)
                     }
@@ -221,7 +220,7 @@ class GraphProcessingService(
                         try {
                             conn.createStatement().use { stmt ->
                                 val insertCount = stmt.executeUpdate(computeQuery)
-                                logger.info("Finished computing $insertCount entities for property type ${outputPropertyType.first().type.fullQualifiedNameAsString}")
+                                logger.info("Finished computing $insertCount entities for property type ${outputPropertyType.type.fullQualifiedNameAsString}")
 
                                 insertCount
                             }
@@ -241,10 +240,11 @@ class GraphProcessingService(
     }
 
 
-    private fun getPropertyTypes(inputs: Map<FullQualifiedName, Set<FullQualifiedName>>): Set<PropertyType> {
-        return inputs.values.flatMap {
-            it.map { edm.getPropertyType(it) }
-        }.toSet()
+    private fun getPropertyTypes(inputs: Map<FullQualifiedName, Set<FullQualifiedName>>): Map<UUID, PropertyType> {
+        return inputs.values.flatten().map {
+            val pt = edm.getPropertyType(it)
+            pt.id to pt
+        }.toMap()
     }
 
     private fun getEntitySets(inputs: Map<FullQualifiedName, Set<FullQualifiedName>>): Set<UUID> {
@@ -269,7 +269,7 @@ internal fun buildTombstoneSql(
         neighborEntitySetIds: Collection<UUID>, //dst propagation set
         neighborPropertyTypeId: UUID, //dst propagation set
         entitySetIdsPerType:Collection<UUID>, //src propagation set // per entity type id
-        propertyTypes: Set<PropertyType>, //src propagation set // per entity type id
+        propertyTypes: Map<UUID, PropertyType>, //src propagation set // per entity type id
         associationType: Boolean
 ): List<String> {
     val propertyTable = buildGetActivePropertiesSql(entitySetIdsPerType, propertyTypes, mapOf())
@@ -302,11 +302,11 @@ internal fun buildComputeQueriesForAssociation(
         outputProperty: UUID,
         fqn: String,
         srcEntitySetId: Collection<UUID>, //Propagation
-        srcPropertyTypes: Set<PropertyType>, //Propagation
+        srcPropertyTypes: Map<UUID, PropertyType>, //Propagation
         edgeEntitySetId: Collection<UUID>, //Propagation
-        edgePropertyTypes: Set<PropertyType>, //Propagation
+        edgePropertyTypes: Map<UUID, PropertyType>, //Propagation
         dstEntitySetId: Collection<UUID>, //Propagation
-        dstPropertyTypes: Set<PropertyType>, //Propagation
+        dstPropertyTypes: Map<UUID, PropertyType>, //Propagation
         targetEntityKeyIdColumns: Pair<String, String>
 ): String {
     checkState(!(srcEntitySetId.isEmpty() && dstEntitySetId.isEmpty() && edgeEntitySetId.isEmpty()), "Entity set ids are empty (no input entity set present)")
@@ -347,14 +347,14 @@ internal fun buildComputeQueriesForSelf(
         outputProperty: UUID,
         fqn: String,
         entitySetIds: Collection<UUID>, //Propagation
-        propertyTypes: Set<PropertyType> //Propagation
+        propertyTypes: Map<UUID, PropertyType> //Propagation
 ): String {
     checkState(entitySetIds.isNotEmpty(), "Entity set ids are empty (no input entity set present)")
 
     val propertyTable = buildGetActivePropertiesSql(entitySetIds, propertyTypes, filterExpressions)
     val propertyTableName = quote(DataTables.propertyTableName(outputProperty))
 
-    val outputPropertyFqns = propertyTypes.map { quote(it.type.fullQualifiedNameAsString) }.joinToString(separator = ", ")
+    val outputPropertyFqns = propertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) }.joinToString(separator = ", ")
 
     val updatableJoin = buildQueryForTargetPropertyDirtyCheck(propertyTableName, Pair(ENTITY_SET_ID.name, ID_VALUE.name))
 
@@ -458,20 +458,20 @@ const val TARGET_ENTITY_KEY_ID = "target_entity_key_Id"
 
 internal fun buildGetActivePropertiesSql(
         entitySetIds: Collection<UUID>,
-        propertyTypes: Set<PropertyType>,
+        propertyTypes: Map<UUID, PropertyType>,
         propertyTypeFilters: Map<UUID, Set<ValueFilter<*>>>): String {
 
-    val propertyTypeFiltersWithNullCheck = propertyTypes.map {it.id to it }.toMap().mapValues { propertyTypeFilters[it.key]?: setOf() }
+    val propertyTypeFiltersWithNullCheck = propertyTypes.mapValues { propertyTypeFilters[it.key]?: setOf() }
 
     return selectEntitySetWithCurrentVersionOfPropertyTypes(
             entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
-            propertyTypes.map { it.id to quote(it.type.fullQualifiedNameAsString) }.toMap(),
-            propertyTypes.map{ it.id },
-            entitySetIds.map { it to propertyTypes.map { it.id }.toSet() }.toMap(),
+            propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }.toMap(),
+            propertyTypes.keys,
+            entitySetIds.map { it to propertyTypes.keys }.toMap(),
             propertyTypeFiltersWithNullCheck,
             setOf(),
             false,
-            propertyTypes.map{ it.id to (it.datatype == EdmPrimitiveTypeKind.Binary) }.toMap(),
+            propertyTypes.mapValues{ it.value.datatype == EdmPrimitiveTypeKind.Binary }.toMap(),
             " AND last_propagate >= last_write ")
 }
 
