@@ -20,25 +20,19 @@
 
 package com.openlattice.organizations.roles;
 
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.*;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicate;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.SecurablePrincipal;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 
 public interface SecurePrincipalsManager {
 
     /**
-     * @param owner The owner of a role. Usually the organization.
+     * @param owner     The owner of a role. Usually the organization.
      * @param principal The principal which to create.
      * @return True if the securable principal was created false otherwise.
      */
@@ -62,7 +56,7 @@ public interface SecurePrincipalsManager {
 
     Collection<SecurablePrincipal> getAllRolesInOrganization( UUID organizationId );
 
-    SetMultimap<SecurablePrincipal,SecurablePrincipal> getRolesForUsersInOrganization( UUID organizationId );
+    SetMultimap<SecurablePrincipal, SecurablePrincipal> getRolesForUsersInOrganization( UUID organizationId );
 
     Collection<SecurablePrincipal> getSecurablePrincipals( Predicate p );
 
@@ -88,6 +82,8 @@ public interface SecurePrincipalsManager {
     void removePrincipalFromPrincipals( AclKey source, Predicate targetFilter );
 
     Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey );
+
+    Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey );
 
     // Methods about users
     Collection<Principal> getAllUsersWithPrincipal( AclKey principal );

@@ -162,6 +162,9 @@ public final class PostgresColumn {
     public static final String                   EVENT_TYPE_FIELD            = "event_type";
     public static final PostgresColumnDefinition EVENT_TYPE                  =
             new PostgresColumnDefinition( EVENT_TYPE_FIELD, TEXT );
+    public static final String                   EXPIRATION_DATE_FIELD       = "expiration_date";
+    public static final PostgresColumnDefinition EXPIRATION_DATE             =
+            new PostgresColumnDefinition( EXPIRATION_DATE_FIELD, TEXT );
     public static final String                   FLAGS_FIELD                 = "flags";
     public static final PostgresColumnDefinition FLAGS                       =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
