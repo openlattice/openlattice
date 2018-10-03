@@ -22,7 +22,8 @@ package com.openlattice.postgres;
 
 import static com.openlattice.postgres.DataTables.LAST_INDEX;
 import static com.openlattice.postgres.DataTables.LAST_LINK;
-import static com.openlattice.postgres.DataTables.LAST_PROPAGATE;
+import static com.openlattice.postgres.PostgresColumn.DST_PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE;
 import static com.openlattice.postgres.DataTables.LAST_WRITE;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY;
 import static com.openlattice.postgres.PostgresColumn.ACL_KEY_SET;
@@ -48,10 +49,8 @@ import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
 import static com.openlattice.postgres.PostgresColumn.DST;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID;
-import static com.openlattice.postgres.PostgresColumn.DST_LINKING_VERTEX_ID;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.EDGE_ENTITY_SET_ID;
-import static com.openlattice.postgres.PostgresColumn.EDGE_VALUE;
 import static com.openlattice.postgres.PostgresColumn.EDM_VERSION;
 import static com.openlattice.postgres.PostgresColumn.EDM_VERSION_NAME;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_ID;
@@ -97,6 +96,7 @@ import static com.openlattice.postgres.PostgresColumn.SRC;
 import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID;
 import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.SRC_LINKING_VERTEX_ID;
+import static com.openlattice.postgres.PostgresColumn.SRC_PROPERTY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.START_TIME;
 import static com.openlattice.postgres.PostgresColumn.STATE;
 import static com.openlattice.postgres.PostgresColumn.STATUS;
@@ -320,6 +320,14 @@ public final class PostgresTable {
             "principal_trees" )
             .addColumns( ACL_KEY, PRINCIPAL_OF_ACL_KEY )
             .primaryKey( ACL_KEY, PRINCIPAL_OF_ACL_KEY );
+    public static final PostgresTableDefinition        PROPAGATION_GRAPH            = new PostgresTableDefinition(
+            "propagation_graph" )
+            .addColumns( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID )
+            .primaryKey( SRC_ENTITY_SET_ID, SRC_PROPERTY_TYPE_ID, DST_ENTITY_SET_ID, DST_PROPERTY_TYPE_ID );
+//    public static final PostgresTableDefinition        PROPAGATION_STATE            = new PostgresTableDefinition(
+//            "propgation_state" )
+//            .addColumns( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID, LAST_PROPAGATE, LAST_RECEIVED )
+//            .primaryKey( ENTITY_SET_ID, ID_VALUE, PROPERTY_TYPE_ID );
     public static final PostgresTableDefinition        PROPERTY_TYPES               =
             new PostgresTableDefinition( "property_types" )
                     .addColumns( ID,
@@ -434,6 +442,24 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( GRAPH_QUERIES, START_TIME )
                         .name( "graph_queries_expiry_idx" )
                         .ifNotExists() );
+//        PROPAGATION_STATE.addIndexes(
+//                new PostgresExpressionIndexDefinition( PROPAGATION_STATE,
+//                        "(" + LAST_PROPAGATE.getName() + " < " + LAST_RECEIVED.getName() + ")" )
+//                        .name( "entity_key_ids_needs_propagation_idx" )
+//                        .ifNotExists(),
+//                new PostgresExpressionIndexDefinition( PROPAGATION_STATE,
+//                        ENTITY_SET_ID.getName() + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_RECEIVED.getName()
+//                                + ")" )
+//                        .name( "entity_key_ids_needs_propagation_idx" )
+//                        .ifNotExists() );
+        PROPAGATION_GRAPH.addIndexes(
+                new PostgresColumnsIndexDefinition( PROPAGATION_GRAPH, SRC_ENTITY_SET_ID )
+                        .name( "src_entity_set_id_propagation_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( PROPAGATION_GRAPH, DST_ENTITY_SET_ID )
+                        .name("dst_entity_set_id_propagation_idx")
+                        .ifNotExists() );
+
     }
 
     private PostgresTable() {
