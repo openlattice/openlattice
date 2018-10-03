@@ -27,6 +27,7 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.ComplexType;
@@ -460,5 +461,19 @@ public final class TestDataFactory {
         element.put( binaryType, RandomUtils.nextBytes( 128 ) );
         element.put( binaryType, RandomUtils.nextBytes( 128 ) );
         return element;
+    }
+
+    public static MetadataUpdate metadataUpdate() {
+        final var propertyTags = LinkedHashMultimap.<UUID, String>create();
+        propertyTags.put( UUID.randomUUID(), "SOME PROPERTY TAG" );
+        return new MetadataUpdate( Optional.of(RandomStringUtils.randomAlphanumeric( 5 )),
+                Optional.of(RandomStringUtils.randomAlphanumeric( 5 )),
+                Optional.empty(),
+                Optional.of(new HashSet<String>(Arrays.asList(RandomStringUtils.randomAlphanumeric( 3 ), RandomStringUtils.randomAlphanumeric( 5 )))),
+                Optional.of(fqn()),
+                Optional.of(r.nextBoolean()),
+                Optional.empty(),
+                Optional.of(RandomStringUtils.randomAlphanumeric( 4 )),
+                Optional.of(propertyTags));
     }
 }
