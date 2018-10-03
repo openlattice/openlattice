@@ -18,15 +18,8 @@
 
 package com.openlattice.mapstores;
 
+import com.openlattice.authorization.*;
 import com.google.common.collect.*;
-import com.openlattice.authorization.Ace;
-import com.openlattice.authorization.Acl;
-import com.openlattice.authorization.AclData;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Action;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -49,9 +42,14 @@ import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -278,6 +276,13 @@ public final class TestDataFactory {
 
     public static Ace ace() {
         return new Ace( userPrincipal(), permissions() );
+    }
+
+    public static AceValue aceValue() {
+        return new AceValue(
+                permissions(),
+                securableObjectType()
+        );
     }
 
     public static Acl acl() {

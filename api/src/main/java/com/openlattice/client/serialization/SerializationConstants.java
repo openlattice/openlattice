@@ -104,6 +104,7 @@ public final class SerializationConstants {
     public static final String EXTERNAL                         = "external";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
+    public static final String FUZZY                            = "fuzzy";
     public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
     public static final String HITS                             = "hits";
@@ -150,6 +151,7 @@ public final class SerializationConstants {
     public static final String PII_FIELD                        = "piiField";
     public static final String PRESENT                          = "present";
     public static final String PRINCIPAL                        = "principal";
+    public static final String PRINCIPAL_PATHS                  = "principalPaths";
     public static final String PROFILE_FIELD                    = "profile";
     public static final String PROPERTIES_FIELD                 = "properties";
     public static final String PROPERTY_DEFINITIONS             = "propertyDefinitions";
