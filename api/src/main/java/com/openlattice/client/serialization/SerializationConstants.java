@@ -104,6 +104,7 @@ public final class SerializationConstants {
     public static final String EXTERNAL                         = "external";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
+    public static final String FUZZY                            = "fuzzy";
     public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
     public static final String HITS                             = "hits";
