@@ -138,7 +138,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     }
 
     private fun accessCheckAndReturnAuthorizedPropetyTypes(
-            filters: Map<UUID, Set<Filter<*>>>,
+            filters: Map<UUID, Set<Filter>>,
             entitySetId: UUID
     ): Pair<UUID, Set<UUID>> {
         val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.READ))
