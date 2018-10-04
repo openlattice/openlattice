@@ -56,7 +56,7 @@ private const val ems_unit_name = "ol.name" // to avoid duplicate column names w
 
 
 private fun getUnitMinutesOnEventCalc(edgeDuration:String, eventDuration:String, numOfUnitNoDuration: String):String {
-    return "( SUM(${DataTables.quote(edgeDuration)}[1]) + ( $numOfUnitNoDuration[1] * ${averageOf(eventDuration)} ) )"
+    return "( SUM(${DataTables.quote(edgeDuration)}[1]) + ( ${averageOf(numOfUnitNoDuration)} * ${averageOf(eventDuration)} ) )"
 }
 
 private fun countOf(columnName: String): String {
@@ -280,7 +280,7 @@ class DispatchInvolvedInNumberOfPoliceNoDurationProcessor: AssociationProcessor 
 class DispatchInvolvedInNumberOfPoliceUnitsProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_name)))
+                FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_key)))
     }
 
     override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
@@ -293,12 +293,16 @@ class DispatchInvolvedInNumberOfPoliceUnitsProcessor: AssociationProcessor {
                 FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key))) // not used for calculation, just for edges
     }
 
+    override fun getDstInputAliases(): Map<FullQualifiedName, String> {
+        return mapOf(FullQualifiedName(dispatch_key) to "dispatch.ol.id")
+    }
+
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_police_units))
     }
 
     override fun getSql(): String {
-        return countOf(police_unit_name)
+        return countOf(police_unit_key)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -310,7 +314,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsProcessor: AssociationProcessor {
 class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_name))) // not used for calculation, just for edges
+                FullQualifiedName(police_unit) to setOf(FullQualifiedName(police_unit_key)))
     }
 
     override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
@@ -341,7 +345,7 @@ class DispatchInvolvedInNumberOfPoliceUnitsNoDurationProcessor: AssociationProce
 class DispatchInvolvedInNumberOfFireUnitsProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_name)))
+                FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_key)))
     }
 
     override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
@@ -354,12 +358,16 @@ class DispatchInvolvedInNumberOfFireUnitsProcessor: AssociationProcessor {
                 FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key))) // not used for calculation, just for edges
     }
 
+    override fun getDstInputAliases(): Map<FullQualifiedName, String> {
+        return mapOf(FullQualifiedName(dispatch_key) to "dispatch.ol.id")
+    }
+
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_fire))
     }
 
     override fun getSql(): String {
-        return countOf(fire_unit_name)
+        return countOf(fire_unit_key)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -371,7 +379,7 @@ class DispatchInvolvedInNumberOfFireUnitsProcessor: AssociationProcessor {
 class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_name)))
+                FullQualifiedName(fire_unit) to setOf(FullQualifiedName(fire_unit_key)))
     }
 
     override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
@@ -402,7 +410,7 @@ class DispatchInvolvedInNumberOfFireUnitsNoDurationProcessor: AssociationProcess
 class DispatchInvolvedInNumberOfEMSUnitsProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_name)))
+                FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_key)))
     }
 
     override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
@@ -415,12 +423,16 @@ class DispatchInvolvedInNumberOfEMSUnitsProcessor: AssociationProcessor {
                 FullQualifiedName(dispatch) to setOf(FullQualifiedName(dispatch_key))) // not used for calculation, just for edges
     }
 
+    override fun getDstInputAliases(): Map<FullQualifiedName, String> {
+        return mapOf(FullQualifiedName(dispatch_key) to "dispatch.ol.id")
+    }
+
     override fun getOutput(): Pair<FullQualifiedName, FullQualifiedName> {
         return Pair(FullQualifiedName(dispatch), FullQualifiedName(num_of_ems))
     }
 
     override fun getSql(): String {
-        return countOf(ems_unit_name)
+        return countOf(ems_unit_key)
     }
 
     override fun getFilters(): Map<FullQualifiedName, Map<FullQualifiedName, ValueFilter<*>>> {
@@ -432,7 +444,7 @@ class DispatchInvolvedInNumberOfEMSUnitsProcessor: AssociationProcessor {
 class DispatchInvolvedInNumberOfEMSUnitsNoDurationProcessor: AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf(
-                FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_name)))
+                FullQualifiedName(ems_unit) to setOf(FullQualifiedName(ems_unit_key)))
     }
 
     override fun getEdgeInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
