@@ -21,8 +21,7 @@
 
 package com.openlattice.data.storage
 
-import com.openlattice.analysis.requests.RangeFilter
-import com.openlattice.postgres.DataTables
+import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
@@ -51,10 +50,11 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         propertyTypes: Map<UUID, String>,
         returnedPropertyTypes: Collection<UUID>,
         authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-        propertyTypeFilters: Map<UUID, Set<RangeFilter<*>>>,
+        propertyTypeFilters: Map<UUID, Set<Filter>>,
         metadataOptions: Set<MetadataOption>,
         linked: Boolean,
-        binaryPropertyTypes: Map<UUID, Boolean>
+        binaryPropertyTypes: Map<UUID, Boolean>,
+        metadataFilters: String = ""
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions)
@@ -85,10 +85,11 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                         val subQuerySql = selectCurrentVersionOfPropertyTypeSql(
                                 propertyTypeEntitiesClause,
                                 it.key,
-                                propertyTypeFilters[it.key] ?: setOf(),
+                                propertyTypeFilters[it.key] ?: setOf<Filter>(),
                                 it.value,
                                 linked,
-                                binaryPropertyTypes[it.key]!!
+                                binaryPropertyTypes[it.key]!!,
+                                metadataFilters
                         )
                         "$joinType $subQuerySql USING (${joinColumns.joinToString(",")})"
                     }
@@ -106,7 +107,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
         propertyTypes: Map<UUID, String>,
         returnedPropertyTypes: Collection<UUID>,
         authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-        propertyTypeFilters: Map<UUID, Set<RangeFilter<*>>>,
+        propertyTypeFilters: Map<UUID, Set<Filter>>,
         metadataOptions: Set<MetadataOption>,
         version: Long,
         linked: Boolean,
@@ -144,7 +145,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
                                 it.key,
                                 it.value,
                                 version,
-                                propertyTypeFilters[it.key] ?: setOf(),
+                                propertyTypeFilters[it.key] ?: setOf<Filter>(),
                                 linked,
                                 binaryPropertyTypes[it.key]!!
                         )
@@ -173,7 +174,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
         propertyTypeId: UUID,
         fqn: String,
         version: Long,
-        filters: Set<RangeFilter<*>>,
+        filters: Set<Filter>,
         linked: Boolean,
         binary: Boolean
 ): String {
@@ -213,10 +214,11 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
 internal fun selectCurrentVersionOfPropertyTypeSql(
         entitiesClause: String,
         propertyTypeId: UUID,
-        filters: Set<RangeFilter<*>>,
+        filters: Set<Filter>,
         fqn: String,
         linked: Boolean,
-        binary: Boolean
+        binary: Boolean,
+        metadataFilters: String = ""
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
 
@@ -242,7 +244,7 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
     return "(SELECT $selectColumns, $arrayAgg " +
             "FROM $propertyTable " +
             linkingIdSubquerySql +
-            "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause " +
+            "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause $metadataFilters" +
             "GROUP BY ($selectColumns)) as $propertyTable "
 }
 
@@ -390,7 +392,7 @@ internal fun buildPropertyTypeEntitiesClause(
     } + ")"
 }
 
-internal fun buildFilterClause(fqn: String, filter: Set<RangeFilter<*>>): String {
+internal fun buildFilterClause(fqn: String, filter: Set<Filter>): String {
     if (filter.isEmpty()) return ""
     return filter.joinToString(" AND ", prefix = " AND ") { it.asSql(fqn) }
 }
