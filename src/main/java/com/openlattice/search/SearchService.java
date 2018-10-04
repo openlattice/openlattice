@@ -218,7 +218,7 @@ public class SearchService {
     @Subscribe
     public void createEntityData( EntityDataCreatedEvent event ) {
         EntityDataKey edk = event.getEntityDataKey();
-        SetMultimap<UUID, Object> entity = event.getPropertyValues();
+        Map<UUID, Set<Object>> entity = event.getPropertyValues();
         if ( event.getShouldUpdate() ) {
             elasticsearchApi.updateEntityData( edk, entity );
         } else {
@@ -614,7 +614,7 @@ public class SearchService {
                 .parallel()
                 .forEach( entity -> {
                     EntityDataKey edk = new EntityDataKey( entitySetId, entity.getEntityKeyId() );
-                    SetMultimap<UUID, Object> values = entity.getProperties();
+                    Map<UUID, Set<Object>> values = entity.getProperties();
                     elasticsearchApi.createEntityData( edk, values );
                 } );
     }
