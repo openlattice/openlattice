@@ -146,6 +146,11 @@ class PostgresLinkedEntityDataQueryServiceTest {
 //        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
     }
 
+    @Test
+    fun testEmptySelectEntitySets() {
+        logger.info(selectEntitySetWithCurrentVersionOfPropertyTypes(mapOf(), mapOf(), listOf(), mapOf(), mapOf(), setOf(), false, mapOf()))
+    }
+
 
     @Test
     fun testEntitySetQueryUnbound() {
