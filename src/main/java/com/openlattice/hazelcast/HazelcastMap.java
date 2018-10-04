@@ -39,6 +39,7 @@ public enum HazelcastMap {
     IDS( Table.IDS ),
     ID_GENERATION( null ),
     INDEXING_LOCKS( null ),
+    INDEXING_GRAPH_PROCESSING( null ),
     KEYS( Table.KEYS ),
     LINKED_ENTITY_TYPES( Table.LINKED_ENTITY_TYPES ),
     LINKED_ENTITY_SETS( Table.LINKED_ENTITY_SETS ),

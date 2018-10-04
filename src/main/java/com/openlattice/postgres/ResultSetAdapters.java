@@ -53,6 +53,9 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import java.time.temporal.ChronoUnit;
+
+import kotlin.Pair;
 import java.io.IOException;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -815,6 +818,10 @@ public final class ResultSetAdapters {
         UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
         long count = rs.getLong( COUNT );
         return new PropertyUsageSummary( entityTypeID, entitySetId, count );
+    }
+
+    public static Long count( ResultSet rs ) throws SQLException {
+        return rs.getObject( "count", Long.class );
     }
 
 }

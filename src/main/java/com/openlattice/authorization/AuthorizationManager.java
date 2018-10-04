@@ -25,16 +25,14 @@ package com.openlattice.authorization;
 import com.codahale.metrics.annotation.Timed;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
+
+import java.time.OffsetDateTime;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
  * The authorization manager manages permissions for all securable objects in the system.
- *
+ * <p>
  * Authorization behavior is summarized below:
  * <ul>
  * <li>No inheritance and that all permissions are explicitly set.</li>
@@ -49,7 +47,7 @@ public interface AuthorizationManager {
     /**
      * Creates an empty acl.
      *
-     * @param aclKey The key for the object whose acl is being created.
+     * @param aclKey     The key for the object whose acl is being created.
      * @param objectType The type of the object for lookup purposes.
      */
     void setSecurableObjectType( AclKey aclKey, SecurableObjectType objectType );
@@ -58,6 +56,12 @@ public interface AuthorizationManager {
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions );
+
+    void addPermission(
+            AclKey aclKeys,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate );
 
     void removePermission(
             AclKey aclKeys,
@@ -68,6 +72,12 @@ public interface AuthorizationManager {
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions );
+
+    void setPermission(
+            AclKey aclKeys,
+            Principal principal,
+            EnumSet<Permission> permissions,
+            OffsetDateTime expirationDate );
 
     void deletePermissions( AclKey aclKey );
 
@@ -82,7 +92,7 @@ public interface AuthorizationManager {
             Set<Principal> principals );
 
     @Timed
-    Stream<Authorization>       accessChecksForPrincipals(
+    Stream<Authorization> accessChecksForPrincipals(
             Set<AccessCheck> accessChecks,
             Set<Principal> principals );
 
