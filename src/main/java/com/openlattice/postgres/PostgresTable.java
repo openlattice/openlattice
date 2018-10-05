@@ -280,7 +280,7 @@ public final class PostgresTable {
             new PostgresTableDefinition( "linking_vertices" )
                     .addColumns( GRAPH_ID, VERTEX_ID, GRAPH_DIAMETER, ENTITY_KEY_IDS )
                     .primaryKey( GRAPH_ID, VERTEX_ID );
-    public static final TableDefinition        MATCHED_ENTITIES             =
+    public static final PostgresTableDefinition        MATCHED_ENTITIES             =
             new CitusDistributedTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
