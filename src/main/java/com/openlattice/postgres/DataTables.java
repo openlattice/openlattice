@@ -20,17 +20,7 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE_FIELD;
-import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
-import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
-import static com.openlattice.postgres.PostgresColumn.HASH;
-import static com.openlattice.postgres.PostgresColumn.ID;
-import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
-import static com.openlattice.postgres.PostgresColumn.LAST_INDEX_FIELD;
-import static com.openlattice.postgres.PostgresColumn.LAST_LINK_FIELD;
-import static com.openlattice.postgres.PostgresColumn.LAST_WRITE_FIELD;
-import static com.openlattice.postgres.PostgresColumn.VERSION;
-import static com.openlattice.postgres.PostgresColumn.VERSIONS;
+import static com.openlattice.postgres.PostgresColumn.*;
 import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
 
 import com.google.common.collect.Maps;
@@ -201,6 +191,7 @@ public class DataTables {
                         VERSION,
                         VERSIONS,
                         LAST_WRITE,
+                        LAST_PROPAGATE,
                         READERS,
                         WRITERS,
                         OWNERS )
