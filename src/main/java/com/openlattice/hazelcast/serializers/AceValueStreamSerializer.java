@@ -28,7 +28,11 @@ import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.Date;
 import java.util.EnumSet;
+import java.util.Optional;
+
 import org.springframework.stereotype.Component;
 
 /**
@@ -42,13 +46,15 @@ public class AceValueStreamSerializer implements SelfRegisteringStreamSerializer
     public void write( ObjectDataOutput out, AceValue object ) throws IOException {
         DelegatedPermissionEnumSetStreamSerializer.serialize( out, object.getPermissions() );
         serialize( out, object.getSecurableObjectType() );
+        OffsetDateTimeStreamSerializer.serialize(out, object.getExpirationDate());
     }
 
     @Override
     public AceValue read( ObjectDataInput in ) throws IOException {
         EnumSet<Permission> permissions = DelegatedPermissionEnumSetStreamSerializer.deserialize( in );
         SecurableObjectType objectType = deserialize( in );
-        return new AceValue( permissions, objectType );
+        OffsetDateTime expirationDate = OffsetDateTimeStreamSerializer.deserialize( in );
+        return new AceValue( permissions, objectType, expirationDate );
     }
 
     @Override public int getTypeId() {

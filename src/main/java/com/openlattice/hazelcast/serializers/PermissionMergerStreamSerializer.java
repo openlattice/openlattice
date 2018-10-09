@@ -30,6 +30,7 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.processors.PermissionMerger;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.BitSet;
 import java.util.EnumSet;
 import org.springframework.stereotype.Component;
@@ -49,12 +50,14 @@ public class PermissionMergerStreamSerializer implements SelfRegisteringStreamSe
             ObjectDataOutput out, PermissionMerger object ) throws IOException {
         serialize( out, object.getBackingCollection() );
         AceValueStreamSerializer.serialize( out, object.getSecurableObjectType() );
+        OffsetDateTimeStreamSerializer.serialize(out, object.getExpirationDate());
     }
 
     @Override public PermissionMerger read( ObjectDataInput in ) throws IOException {
         EnumSet<Permission> ps = deserialize( in );
         SecurableObjectType securableObjectType = AceValueStreamSerializer.deserialize( in );
-        return new PermissionMerger( ps, securableObjectType );
+        OffsetDateTime expirationDate = OffsetDateTimeStreamSerializer.deserialize( in );
+        return new PermissionMerger( ps, securableObjectType, expirationDate );
     }
 
     @Override public int getTypeId() {
