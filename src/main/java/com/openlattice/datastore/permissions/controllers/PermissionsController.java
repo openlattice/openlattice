@@ -20,31 +20,20 @@
 
 package com.openlattice.datastore.permissions.controllers;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.SetMultimap;
+import com.dataloom.streams.StreamUtil;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
-import com.openlattice.authorization.Ace;
-import com.openlattice.authorization.AceExplanation;
-import com.openlattice.authorization.Acl;
-import com.openlattice.authorization.AclData;
-import com.openlattice.authorization.AclExplanation;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.ForbiddenException;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.PermissionsApi;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.*;
 import com.openlattice.datastore.exceptions.BadRequestException;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Collection;
-import java.util.EnumSet;
+
+import java.time.OffsetDateTime;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -82,10 +71,20 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             switch ( req.getAction() ) {
                 case ADD:
                     acl.getAces().forEach(
-                            ace -> authorizations.addPermission(
-                                    aclKeys,
-                                    ace.getPrincipal(),
-                                    ace.getPermissions() ) );
+                            ace -> {
+                                if ( ace.getExpirationDate().equals( OffsetDateTime.MAX ) ) {
+                                    authorizations.addPermission(
+                                            aclKeys,
+                                            ace.getPrincipal(),
+                                            ace.getPermissions() );
+                                } else {
+                                    authorizations.addPermission(
+                                            aclKeys,
+                                            ace.getPrincipal(),
+                                            ace.getPermissions(),
+                                            ace.getExpirationDate() );
+                                }
+                            } );
                     break;
                 case REMOVE:
                     acl.getAces().forEach(
@@ -96,10 +95,20 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                     break;
                 case SET:
                     acl.getAces().forEach(
-                            ace -> authorizations.setPermission(
-                                    aclKeys,
-                                    ace.getPrincipal(),
-                                    ace.getPermissions() ) );
+                            ace -> {
+                                if ( ace.getExpirationDate().equals( OffsetDateTime.MAX ) ) {
+                                    authorizations.setPermission(
+                                            aclKeys,
+                                            ace.getPrincipal(),
+                                            ace.getPermissions() );
+                                } else {
+                                    authorizations.setPermission(
+                                            aclKeys,
+                                            ace.getPrincipal(),
+                                            ace.getPermissions(),
+                                            ace.getExpirationDate() );
+                                }
+                            } );
                     break;
                 default:
                     logger.error( "Invalid action {} specified for request.", req.getAction() );
@@ -131,43 +140,62 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public AclExplanation getAclExplanation( @RequestBody AclKey aclKey ) {
-        if ( isAuthorized( Permission.OWNER ).test( aclKey ) ) {
-            SetMultimap<Principal, Ace> resultMap = HashMultimap.create();
+    public Collection<AclExplanation> getAclExplanation( @RequestBody AclKey aclKey ) {
+        ensureOwnerAccess( aclKey );
 
-            Iterable<Ace> aces = authorizations.getAllSecurableObjectPermissions( aclKey ).getAces();
-            for ( Ace ace : aces ) {
-                Principal principal = ace.getPrincipal();
-                resultMap.put( principal, ace );
-                if ( principal.getType() == PrincipalType.ROLE ) {
-                    // add inherited permissions of users from the role
-                    Iterable<Principal> users = securePrincipalsManager
-                            .getAllUsersWithPrincipal( securePrincipalsManager.lookup( principal ) );
+        //maps aces to principal type
+        Iterable<Ace> aces = authorizations.getAllSecurableObjectPermissions( aclKey )
+                .getAces(); //gets aces from returned acl
+        Map<PrincipalType, List<Ace>> acesByType = StreamUtil.stream( aces )
+                .collect( Collectors.groupingBy( ace -> ace.getPrincipal().getType() ) );
 
-                    for ( Principal user : users ) {
-                        resultMap.put( user, ace );
+        //maps non-user principals to a List<List<Principal>> containing one list of themselves
+        Stream<Ace> aceStream = acesByType.entrySet().stream()
+                .filter( e -> e.getKey() != PrincipalType.USER )
+                .flatMap( e -> e.getValue().stream() );
+        Map<Principal, List<List<Principal>>> principalToPrincipalPaths = aceStream.collect( Collectors
+                .toMap( Ace::getPrincipal, ace -> Lists.newArrayList( Lists.newArrayList() ) ) );
+        principalToPrincipalPaths.forEach( ( p, pl ) -> {
+            List<Principal> path = new ArrayList<Principal>( Arrays.asList( p ) );
+            pl.add( path );
+        } );
+
+        //maps all principals to principals path that grant permission on the acl key
+        Set<Principal> currentLayer = new HashSet<>( principalToPrincipalPaths.keySet() );
+        while ( !currentLayer.isEmpty() ) { //while we have nodes to get paths for
+            Set<Principal> parentLayer = new HashSet<>();
+            for ( Principal p : currentLayer ) {
+                List<List<Principal>> child_paths = principalToPrincipalPaths.get( p );
+                Set<Principal> currentParents = securePrincipalsManager
+                        .getParentPrincipalsOfPrincipal( securePrincipalsManager.lookup( p ) ).stream()
+                        .map( SecurablePrincipal::getPrincipal )
+                        .collect( Collectors.toSet() );
+                if ( currentParents.contains( p ) ) { currentParents.remove( p ); } //removes self-loops
+                for ( Principal parent : currentParents ) {
+                    List<List<Principal>> paths = principalToPrincipalPaths
+                            .getOrDefault( parent, new ArrayList<>() );
+                    //if map doesn't contain entry for parent, add it to map with current empty paths object
+                    if ( paths.isEmpty() ) {
+                        principalToPrincipalPaths.put( parent, paths );
+                    }
+                    //build paths
+                    for ( List<Principal> path : child_paths ) {
+                        var new_path = new ArrayList( path );
+                        new_path.add( parent );
+                        if ( !paths.contains( new_path ) ) { paths.add( new_path ); }
                     }
                 }
+                parentLayer.addAll( currentParents );
             }
-
-            // compute total permission of each user
-            Iterable<AceExplanation> explanation = Iterables.transform( resultMap.asMap().entrySet(),
-                    this::computeAceExplanation );
-            return new AclExplanation( aclKey, explanation::iterator );
-        } else {
-            throw new ForbiddenException( "Only owner of a securable object can access other users' access rights." );
+            currentLayer = parentLayer;
         }
-    }
 
-    /**
-     * Compute the total permission of a user has from his aces, thus computing the Ace explanation
-     */
-    private AceExplanation computeAceExplanation( Entry<Principal, Collection<Ace>> entry ) {
-        Set<Permission> totalPermissions = entry.getValue().stream().flatMap( ace -> ace.getPermissions().stream() )
-                .collect( Collectors.toCollection( () -> EnumSet.noneOf( Permission.class ) ) );
-        Set<Ace> aces = entry.getValue().stream().collect( Collectors.toSet() );
-        Ace totalAce = new Ace( entry.getKey(), totalPermissions );
-        return new AceExplanation( totalAce, aces );
+        //collect map entries as aclExplanations
+        Collection<AclExplanation> aclExplanations = principalToPrincipalPaths.entrySet().stream().map( entry -> {
+            AclExplanation aclExp = new AclExplanation( entry.getKey(), entry.getValue() );
+            return aclExp;
+        } ).collect( Collectors.toSet() );
+        return aclExplanations;
     }
 
     @Override
