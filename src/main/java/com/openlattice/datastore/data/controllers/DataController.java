@@ -401,7 +401,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                                 .getDstEntityKeyId()
                                 .orElseGet( () ->
                                         entityKeyIds.get( srcEntitySetId )
-                                                .get( association.getSrcEntityIndex().get() ) );
+                                                .get( association.getDstEntityIndex().get() ) );
 
                         toBeCreated.put(
                                 entitySetId,
