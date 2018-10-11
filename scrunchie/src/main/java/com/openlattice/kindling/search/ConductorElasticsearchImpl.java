@@ -50,6 +50,7 @@ import com.openlattice.search.requests.SearchResult;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -669,7 +670,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean createEntityData( EntityDataKey edk, SetMultimap<UUID, Object> propertyValues ) {
+    public boolean createEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         UUID entitySetId = edk.getEntitySetId();
@@ -718,7 +719,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean updateEntityData( EntityDataKey edk, SetMultimap<UUID, Object> propertyValues ) {
+    public boolean updateEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
 
         if ( !verifyElasticsearchConnection() ) { return false; }
 
@@ -729,7 +730,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .prepareGet( getIndexName( entitySetId ), getTypeName( entitySetId ), entityKeyId.toString() ).get();
         if ( result.isExists() ) {
             result.getSourceAsMap().entrySet().forEach( entry ->
-                    propertyValues.putAll( UUID.fromString( entry.getKey() ), (Collection<Object>) entry.getValue() )
+                    {
+                        UUID propertyTypeId = UUID.fromString( entry.getKey() );
+                        propertyValues.merge( propertyTypeId,
+                                new HashSet<>( (Collection<Object>) entry.getValue() ),
+                                ( first, second ) -> {
+                                    first.addAll( second );
+                                    return first;
+                                } );
+                    }
             );
         }
 
