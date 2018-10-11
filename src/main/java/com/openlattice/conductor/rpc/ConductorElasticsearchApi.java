@@ -176,7 +176,7 @@ public interface ConductorElasticsearchApi {
             EntityDataKey edk,
             Map<UUID, Set<Object>> propertyValues );
 
-    boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById );
+    boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById );
 
     boolean updateEntityData(
             EntityDataKey edk,
