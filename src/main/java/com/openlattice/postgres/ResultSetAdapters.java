@@ -815,9 +815,10 @@ public final class ResultSetAdapters {
 
     public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
         UUID entityTypeID = (UUID) rs.getObject( ENTITY_TYPE_ID_FIELD );
+        String entitySetName = rs.getString( ENTITY_SET_NAME_FIELD );
         UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
         long count = rs.getLong( COUNT );
-        return new PropertyUsageSummary( entityTypeID, entitySetId, count );
+        return new PropertyUsageSummary( entityTypeID, entitySetName, entitySetId, count );
     }
 
     public static Long count( ResultSet rs ) throws SQLException {
