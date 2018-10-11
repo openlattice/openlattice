@@ -22,20 +22,21 @@
 
 package com.openlattice.data.events;
 
-import com.google.common.collect.SetMultimap;
 import com.openlattice.data.EntityDataKey;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class EntityDataCreatedEvent {
 
-    private EntityDataKey             edk;
-    private SetMultimap<UUID, Object> propertyValues;
-    private boolean                   shouldUpdate;
+    private EntityDataKey          edk;
+    private Map<UUID, Set<Object>> propertyValues;
+    private boolean                shouldUpdate;
 
     public EntityDataCreatedEvent(
             EntityDataKey edk,
-            SetMultimap<UUID, Object> propertyValues,
+            Map<UUID, Set<Object>> propertyValues,
             boolean shouldUpdate ) {
         this.edk = edk;
         this.propertyValues = propertyValues;
@@ -46,7 +47,7 @@ public class EntityDataCreatedEvent {
         return edk;
     }
 
-    public SetMultimap<UUID, Object> getPropertyValues() {
+    public Map<UUID, Set<Object>> getPropertyValues() {
         return propertyValues;
     }
 

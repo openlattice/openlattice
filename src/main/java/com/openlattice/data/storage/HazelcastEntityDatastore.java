@@ -158,7 +158,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
-        signalCreatedEntitiesCompat( entitySetId, entities );
+        signalCreatedEntities( entitySetId, entities );
         return count;
     }
 
@@ -196,27 +196,19 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return count;
     }
 
-    //TODO: Fix LATTICE-1185
-    @Deprecated
-    private void signalCreatedEntitiesCompat( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
-        signalCreatedEntities( entitySetId,
-                ImmutableMap.copyOf( Maps.transformValues( entities, HazelcastEntityDatastore::setMultimapFromMap ) ) );
-
-    }
-
     private static SetMultimap<UUID, Object> setMultimapFromMap( Map<UUID, Set<Object>> m ) {
         final SetMultimap<UUID, Object> entity = HashMultimap.create();
         m.forEach( entity::putAll );
         return entity;
     }
 
-    private void signalCreatedEntities( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entities ) {
+    private void signalCreatedEntities( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
         if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, false ) );
         }
     }
 
-    private void signalUpdatedEntities( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entities ) {
+    private void signalUpdatedEntities( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
         if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities, true ) );
         }
@@ -446,7 +438,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         dataQueryService.upsertEntities( entitySetId,
                 ImmutableMap.of( id, Multimaps.asMap( normalizedPropertyValues ) ),
                 authorizedPropertyTypes );
-        eventBus.post( new EntityDataCreatedEvent( edk, normalizedPropertyValues, true ) );
+        eventBus.post( new EntityDataCreatedEvent( edk, Multimaps.asMap(normalizedPropertyValues), true ) );
         return id;
     }
 
@@ -505,7 +497,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Entity edv,
             Map<UUID, PropertyType> propertyTypes ) {
         SetMultimap<FullQualifiedName, Object> entityData = HashMultimap.create();
-        SetMultimap<UUID, Object> entityDataByUUID = edv.getProperties();
+        final var entityDataByUUID = edv.getProperties();
 
         for ( Entry<UUID, PropertyType> propertyTypeEntry : propertyTypes.entrySet() ) {
             UUID propertyTypeId = propertyTypeEntry.getKey();
