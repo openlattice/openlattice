@@ -691,7 +691,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById ) {
+    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         try {
@@ -699,7 +699,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String indexType = getTypeName( entitySetId );
 
             BulkRequestBuilder requestBuilder = client.prepareBulk();
-            for ( Map.Entry<UUID, SetMultimap<UUID, Object>> entry : entitiesById.entrySet() ) {
+            for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entry : entitiesById.entrySet() ) {
                 final UUID entityKeyId = entry.getKey();
                 final byte[] s = mapper.writeValueAsBytes( entry.getValue() );
                 requestBuilder.add(
