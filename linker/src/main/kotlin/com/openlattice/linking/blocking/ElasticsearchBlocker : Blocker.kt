@@ -104,13 +104,11 @@ class ElasticsearchBlocker(
     private fun getEntity(
             entityDataKey: EntityDataKey, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Map<UUID, Set<Any>> {
-        return Multimaps.asMap(
-                dataQueryService.getEntitiesById(
-                        entityDataKey.entitySetId,
-                        authorizedPropertyTypes,
-                        setOf(entityDataKey.entityKeyId)
-                )[entityDataKey.entityKeyId]!!
-        )
+        return dataQueryService.getEntitiesById(
+                entityDataKey.entitySetId,
+                authorizedPropertyTypes,
+                setOf(entityDataKey.entityKeyId)
+        )[entityDataKey.entityKeyId]!!
     }
 
     /**
