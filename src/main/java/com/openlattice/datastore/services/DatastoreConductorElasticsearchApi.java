@@ -217,7 +217,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     @Override
     public boolean createEntityData(
             EntityDataKey edk,
-            SetMultimap<UUID, Object> propertyValues ) {
+            Map<UUID, Set<Object>> propertyValues ) {
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
                     new EntityDataLambdas( edk, propertyValues, false ) ) ).get();
@@ -228,7 +228,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById ) {
+    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
                     new BulkEntityDataLambdas( entitySetId, entitiesById ) ) ).get();
@@ -241,7 +241,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     @Override
     public boolean updateEntityData(
             EntityDataKey edk,
-            SetMultimap<UUID, Object> propertyValues ) {
+            Map<UUID, Set<Object>> propertyValues ) {
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
                     new EntityDataLambdas( edk, propertyValues, true ) ) ).get();

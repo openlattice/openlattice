@@ -28,10 +28,7 @@ import com.google.common.collect.ImmutableSetMultimap
 import com.openlattice.analysis.AnalysisApi
 import com.openlattice.analysis.AnalysisService
 import com.openlattice.analysis.AuthorizedFilteredRanking
-import com.openlattice.analysis.requests.FilteredRankingAggregation
-import com.openlattice.analysis.requests.NeighborType
-import com.openlattice.analysis.requests.NeighborsRankingAggregation
-import com.openlattice.analysis.requests.RangeFilter
+import com.openlattice.analysis.requests.*
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.requests.FileType
@@ -141,11 +138,11 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     }
 
     private fun accessCheckAndReturnAuthorizedPropetyTypes(
-            rangeFilters: Map<UUID, Set<RangeFilter<*>>>,
+            filters: Map<UUID, Set<Filter>>,
             entitySetId: UUID
     ): Pair<UUID, Set<UUID>> {
         val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.READ))
-        authzHelper.accessCheck(authorizedPropertyTypes, rangeFilters.keys)
+        authzHelper.accessCheck(authorizedPropertyTypes, filters.keys)
         return entitySetId to authorizedPropertyTypes.keys
     }
 
