@@ -410,6 +410,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             path = SUMMARY_PATH,
             method = RequestMethod.GET )
     public Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries() {
+        ensureAdminAccess();
         Set<UUID> propertyTypeIds = modelService.getAllPropertyTypeIds();
         Map<UUID, Iterable<PropertyUsageSummary>> allPropertySummaries = Maps
                 .newHashMapWithExpectedSize( propertyTypeIds.size() );
