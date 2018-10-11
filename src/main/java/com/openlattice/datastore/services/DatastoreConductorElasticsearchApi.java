@@ -268,6 +268,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             String searchTerm,
             int start,
             int maxHits,
+            boolean fuzzy,
             Set<UUID> authorizedPropertyTypes ) {
         try {
             EntityKeyIdSearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
@@ -276,6 +277,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
                             searchTerm,
                             start,
                             maxHits,
+                            fuzzy,
                             authorizedPropertyTypes ) ) )
                     .get();
             return queryResults;
