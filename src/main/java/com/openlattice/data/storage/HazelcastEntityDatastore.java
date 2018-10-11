@@ -438,7 +438,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         dataQueryService.upsertEntities( entitySetId,
                 ImmutableMap.of( id, Multimaps.asMap( normalizedPropertyValues ) ),
                 authorizedPropertyTypes );
-        eventBus.post( new EntityDataCreatedEvent( edk, normalizedPropertyValues, true ) );
+        eventBus.post( new EntityDataCreatedEvent( edk, Multimaps.asMap(normalizedPropertyValues), true ) );
         return id;
     }
 
@@ -497,7 +497,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Entity edv,
             Map<UUID, PropertyType> propertyTypes ) {
         SetMultimap<FullQualifiedName, Object> entityData = HashMultimap.create();
-        SetMultimap<UUID, Object> entityDataByUUID = edv.getProperties();
+        final var entityDataByUUID = edv.getProperties();
 
         for ( Entry<UUID, PropertyType> propertyTypeEntry : propertyTypes.entrySet() ) {
             UUID propertyTypeId = propertyTypeEntry.getKey();

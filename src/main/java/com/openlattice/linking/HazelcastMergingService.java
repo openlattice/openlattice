@@ -24,6 +24,7 @@ import com.dataloom.hazelcast.ListenableHazelcastFuture;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -62,17 +63,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 
 public class HazelcastMergingService {
-    private static final Logger logger = LoggerFactory.getLogger( HazelcastMergingService.class );
-    private final EntityKeyIdService                   ekIds;
+    private static final Logger                               logger = LoggerFactory
+            .getLogger( HazelcastMergingService.class );
+    private final        EntityKeyIdService                   ekIds;
     @Inject
-    private       ConductorElasticsearchApi            elasticsearchApi;
-    private       IMap<GraphEntityPair, LinkingEntity> linkingEntities;
-    private       IMap<EntityDataKey, EntityDataValue> entities;
-    private       IMap<LinkingVertexKey, UUID>         newIds;
-    private       IMap<EntityKey, UUID>                ids;
-    private       Graph                                graph;
-    private       HazelcastInstance                    hazelcastInstance;
-    private       ObjectMapper                         mapper;
+    private              ConductorElasticsearchApi            elasticsearchApi;
+    private              IMap<GraphEntityPair, LinkingEntity> linkingEntities;
+    private              IMap<EntityDataKey, EntityDataValue> entities;
+    private              IMap<LinkingVertexKey, UUID>         newIds;
+    private              IMap<EntityKey, UUID>                ids;
+    private              Graph                                graph;
+    private              HazelcastInstance                    hazelcastInstance;
+    private              ObjectMapper                         mapper;
 
     public HazelcastMergingService( HazelcastInstance hazelcastInstance, HikariDataSource hds, EdmManager edm ) {
         this.entities = hazelcastInstance.getMap( HazelcastMap.DATA.name() );
@@ -191,7 +193,7 @@ public class HazelcastMergingService {
         } );
 
         elasticsearchApi.updateEntityData( new EntityDataKey( graphId, id ),
-                entityDetails );
+                Multimaps.asMap( entityDetails ) );
 
         return futures;
     }
