@@ -601,7 +601,7 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             "ON CONFLICT (${ID_VALUE.name}) " +
             "DO UPDATE SET versions = ${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
-            "${LAST_WRITE.name} = now() " +
+            "${LAST_WRITE.name} = EXCLUDED.${LAST_WRITE.name} " +
             "WHERE EXCLUDED.${VERSION.name} > abs(${IDS.name}.version) "
 }
 

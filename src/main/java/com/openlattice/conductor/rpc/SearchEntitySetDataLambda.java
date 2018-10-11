@@ -37,6 +37,7 @@ public class SearchEntitySetDataLambda
     private String    searchTerm;
     private int       start;
     private int       maxHits;
+    private boolean   fuzzy;
     private Set<UUID> authorizedProperties;
 
     public SearchEntitySetDataLambda(
@@ -44,17 +45,19 @@ public class SearchEntitySetDataLambda
             String searchTerm,
             int start,
             int maxHits,
+            boolean fuzzy,
             Set<UUID> authorizedProperties ) {
         this.entitySetId = entitySetId;
         this.searchTerm = searchTerm;
         this.start = start;
         this.maxHits = maxHits;
+        this.fuzzy = fuzzy;
         this.authorizedProperties = authorizedProperties;
     }
 
     @Override
     public EntityKeyIdSearchResult apply( ConductorElasticsearchApi api ) {
-        return api.executeEntitySetDataSearch( entitySetId, searchTerm, start, maxHits, authorizedProperties );
+        return api.executeEntitySetDataSearch( entitySetId, searchTerm, start, maxHits, fuzzy, authorizedProperties );
     }
 
 }
