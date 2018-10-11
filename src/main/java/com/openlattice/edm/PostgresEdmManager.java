@@ -61,8 +61,8 @@ public class PostgresEdmManager implements DbEdmManager {
     private final String ENTITY_SET_NAME_FIELD;
     private final String NAME_FIELD;
 
-    public PostgresEdmManager( HikariDataSource hds ) {
-        this.ptm = new PostgresTableManager( hds );
+    public PostgresEdmManager( HikariDataSource hds, PostgresTableManager ptm ) {
+        this.ptm = ptm;//new PostgresTableManager( hds );
         this.hds = hds;
 
         // Tables

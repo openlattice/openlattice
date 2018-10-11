@@ -189,6 +189,7 @@ public interface ConductorElasticsearchApi {
             String searchTerm,
             int start,
             int maxHits,
+            boolean fuzzy,
             Set<UUID> authorizedPropertyTypes );
 
     /**
