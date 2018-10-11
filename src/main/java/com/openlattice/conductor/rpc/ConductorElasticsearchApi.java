@@ -174,13 +174,13 @@ public interface ConductorElasticsearchApi {
 
     boolean createEntityData(
             EntityDataKey edk,
-            SetMultimap<UUID, Object> propertyValues );
+            Map<UUID, Set<Object>> propertyValues );
 
     boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById );
 
     boolean updateEntityData(
             EntityDataKey edk,
-            SetMultimap<UUID, Object> propertyValues );
+            Map<UUID, Set<Object>> propertyValues );
 
     boolean deleteEntityData( EntityDataKey edk );
 

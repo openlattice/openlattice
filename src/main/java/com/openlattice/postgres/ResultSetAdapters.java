@@ -20,6 +20,83 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.postgres.DataTables.LAST_INDEX;
+import static com.openlattice.postgres.DataTables.LAST_INDEX_FQN;
+import static com.openlattice.postgres.DataTables.LAST_WRITE;
+import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
+import static com.openlattice.postgres.PostgresArrays.getTextArray;
+import static com.openlattice.postgres.PostgresColumn.ACL_KEY_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ANALYZER;
+import static com.openlattice.postgres.PostgresColumn.APP_ID;
+import static com.openlattice.postgres.PostgresColumn.BASE_TYPE;
+import static com.openlattice.postgres.PostgresColumn.BIDIRECTIONAL;
+import static com.openlattice.postgres.PostgresColumn.CATEGORY;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.CONFIG_TYPE_IDS;
+import static com.openlattice.postgres.PostgresColumn.CONTACTS;
+import static com.openlattice.postgres.PostgresColumn.COUNT;
+import static com.openlattice.postgres.PostgresColumn.CURRENT_SYNC_ID;
+import static com.openlattice.postgres.PostgresColumn.DATATYPE;
+import static com.openlattice.postgres.PostgresColumn.DESCRIPTION;
+import static com.openlattice.postgres.PostgresColumn.DST;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_KEY_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.DST_ENTITY_SET_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.EDM_VERSION;
+import static com.openlattice.postgres.PostgresColumn.EDM_VERSION_NAME;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_NAME_FIELD;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.FLAGS;
+import static com.openlattice.postgres.PostgresColumn.GRAPH_DIAMETER;
+import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
+import static com.openlattice.postgres.PostgresColumn.ID;
+import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
+import static com.openlattice.postgres.PostgresColumn.KEY;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.LSB_FIELD;
+import static com.openlattice.postgres.PostgresColumn.MEMBERS;
+import static com.openlattice.postgres.PostgresColumn.MSB_FIELD;
+import static com.openlattice.postgres.PostgresColumn.MULTI_VALUED;
+import static com.openlattice.postgres.PostgresColumn.NAME;
+import static com.openlattice.postgres.PostgresColumn.NAMESPACE;
+import static com.openlattice.postgres.PostgresColumn.NULLABLE_TITLE;
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
+import static com.openlattice.postgres.PostgresColumn.PARTITION_INDEX_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PERMISSIONS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PII;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_IDS;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_OF_ACL_KEY;
+import static com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PROPERTIES;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TAGS_FIELD;
+import static com.openlattice.postgres.PostgresColumn.PROPERTY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.QUERY_ID;
+import static com.openlattice.postgres.PostgresColumn.REASON;
+import static com.openlattice.postgres.PostgresColumn.ROLE_ID;
+import static com.openlattice.postgres.PostgresColumn.SCHEMAS;
+import static com.openlattice.postgres.PostgresColumn.SCORE_FIELD;
+import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECTID;
+import static com.openlattice.postgres.PostgresColumn.SECURABLE_OBJECT_TYPE;
+import static com.openlattice.postgres.PostgresColumn.SHOW;
+import static com.openlattice.postgres.PostgresColumn.SRC;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_KEY_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.SRC_ENTITY_SET_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.START_TIME;
+import static com.openlattice.postgres.PostgresColumn.STATE;
+import static com.openlattice.postgres.PostgresColumn.STATUS;
+import static com.openlattice.postgres.PostgresColumn.SYNC_ID;
+import static com.openlattice.postgres.PostgresColumn.TITLE;
+import static com.openlattice.postgres.PostgresColumn.URL;
+import static com.openlattice.postgres.PostgresColumn.VERSION;
+import static com.openlattice.postgres.PostgresColumn.VERSIONS;
+import static com.openlattice.postgres.PostgresColumn.VERTEX_ID;
+
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,15 +109,32 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AceKey;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AclKeySet;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.*;
+import com.openlattice.data.Entity;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataMetadata;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.PropertyMetadata;
+import com.openlattice.data.PropertyUsageSummary;
+import com.openlattice.data.PropertyValueKey;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.Analyzer;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.ComplexType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EnumType;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.graph.query.GraphQueryState;
@@ -53,28 +147,34 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
-import java.time.temporal.ChronoUnit;
-
-import kotlin.Pair;
 import java.io.IOException;
+import java.sql.Array;
+import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Base64.Decoder;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.sql.*;
-import java.sql.Date;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.Base64.Decoder;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.openlattice.postgres.DataTables.*;
-import static com.openlattice.postgres.PostgresArrays.getTextArray;
-import static com.openlattice.postgres.PostgresColumn.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -745,16 +845,16 @@ public final class ResultSetAdapters {
         return objects;
     }
 
-    public static SetMultimap<UUID, Object> implicitEntityValuesById(
+    public static Map<UUID, Set<Object>> implicitEntityValuesById(
             ResultSet rs,
             Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
-        final SetMultimap<UUID, Object> data = HashMultimap.create();
+        final Map<UUID, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.putAll( propertyType.getId(), objects );
+                data.put( propertyType.getId(), new HashSet<>( objects ) );
             }
         }
 
@@ -803,11 +903,11 @@ public final class ResultSetAdapters {
 
     public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
         UUID entityKeyId = id( rs );
-        SetMultimap<UUID, Object> data = HashMultimap.create();
+        Map<UUID, Set<Object>> data = new HashMap<>(  );
         for ( UUID ptId : authorizedPropertyTypeIds ) {
             Array valuesArr = rs.getArray( DataTables.propertyTableName( ptId ) );
             if ( valuesArr != null ) {
-                data.putAll( ptId, Arrays.asList( valuesArr.getArray() ) );
+                data.put( ptId, Sets.newHashSet( valuesArr.getArray() ) );
             }
         }
         return new Entity( entityKeyId, data );

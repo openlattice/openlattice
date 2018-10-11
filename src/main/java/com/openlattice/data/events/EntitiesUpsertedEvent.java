@@ -24,17 +24,18 @@ package com.openlattice.data.events;
 
 import com.google.common.collect.SetMultimap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class EntitiesUpsertedEvent {
 
-    private UUID                                 entitySetId;
-    private Map<UUID, SetMultimap<UUID, Object>> entities;
-    private boolean                              update;
+    private UUID                              entitySetId;
+    private Map<UUID, Map<UUID, Set<Object>>> entities;
+    private boolean                           update;
 
     public EntitiesUpsertedEvent(
             UUID entitySetId,
-            Map<UUID, SetMultimap<UUID, Object>> entities,
+            Map<UUID, Map<UUID, Set<Object>>> entities,
             boolean update ) {
         this.entitySetId = entitySetId;
         this.entities = entities;
@@ -45,7 +46,7 @@ public class EntitiesUpsertedEvent {
         return entitySetId;
     }
 
-    public Map<UUID, SetMultimap<UUID, Object>> getEntities() {
+    public Map<UUID, Map<UUID, Set<Object>>> getEntities() {
         return entities;
     }
 
