@@ -24,25 +24,24 @@ import static com.openlattice.postgres.PostgresArrays.createTextArray;
 import static com.openlattice.postgres.PostgresArrays.createUuidArray;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
+import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
-
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -50,8 +49,6 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.UUID;
-
-import jnr.ffi.Struct.Offset;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
