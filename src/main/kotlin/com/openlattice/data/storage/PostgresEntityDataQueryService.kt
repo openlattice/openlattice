@@ -24,14 +24,12 @@ package com.openlattice.data.storage
 import com.google.common.collect.Multimaps
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
+import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
-import com.openlattice.postgres.JsonDeserializer
-import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -56,13 +54,6 @@ const val BATCH_SIZE = 10000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
-    fun getEntitiesById(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, SetMultimap<UUID, Any>> {
-        return getEntitiesById(entitySetId, authorizedPropertyTypes, Optional.empty())
-    }
-
     fun getEntitiesById(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
@@ -176,6 +167,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                 Supplier<StatementHolder> {
                     val connection = hds.connection
                     val statement = connection.createStatement()
+                    statement.fetchSize = 100000
                     val rs = statement.executeQuery(
                             if (version.isPresent) {
 
@@ -498,6 +490,18 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
         }
     }
+
+    fun markAsProcessed(entitySetId: UUID, processedEntities: Set<UUID>, processedTime: OffsetDateTime): Int {
+        hds.connection.use {
+            it.prepareStatement(updateLastPropagateSql(entitySetId)).use {
+                val arr = PostgresArrays.createUuidArray(it.connection, processedEntities)
+                it.setObject(1, processedTime)
+                it.setArray(2, arr)
+                return it.executeUpdate()
+            }
+
+        }
+    }
 }
 
 fun updateLastIndexSql(entitySetId: UUID): String {
@@ -507,6 +511,11 @@ fun updateLastIndexSql(entitySetId: UUID): String {
 
 fun updateLastLinkSql(entitySetId: UUID): String {
     return "UPDATE ${IDS.name} SET ${LAST_LINK.name} = ? " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+}
+
+fun updateLastPropagateSql(entitySetId: UUID): String {
+    return "UPDATE ${IDS.name} SET ${LAST_PROPAGATE.name} = ? " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
@@ -586,7 +595,7 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             "ON CONFLICT (${ID_VALUE.name}) " +
             "DO UPDATE SET versions = ${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
-            "${LAST_WRITE.name} = now() " +
+            "${LAST_WRITE.name} = EXCLUDED.${LAST_WRITE.name} " +
             "WHERE EXCLUDED.${VERSION.name} > abs(${IDS.name}.version) "
 }
 
@@ -599,13 +608,14 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
             quote(propertyType),
             VERSION.name,
             VERSIONS.name,
-            LAST_WRITE.name
+            LAST_WRITE.name,
+            LAST_PROPAGATE.name
     )
 
     //Insert new row or update version. We only perform update if we're the winning timestamp.
     return "INSERT INTO $propertyTable (${columns.joinToString(
             ","
-    )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now()) " +
+    )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now(), now()) " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) " +
             "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name} " +
@@ -737,4 +747,6 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     //cause a type exception
     return "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
 }
+
+
 

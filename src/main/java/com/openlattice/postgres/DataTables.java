@@ -20,8 +20,7 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE_FIELD;
-import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
+import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
 import static com.openlattice.postgres.PostgresColumn.HASH;
 import static com.openlattice.postgres.PostgresColumn.ID;
@@ -51,29 +50,24 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataTables {
-    public static final  FullQualifiedName                  COUNT_FQN      = new FullQualifiedName( "openlattice",
+    public static final FullQualifiedName        COUNT_FQN      = new FullQualifiedName( "openlattice",
             "@count" );
-    public static final  FullQualifiedName                  ID_FQN         = new FullQualifiedName( "openlattice",
+    public static final FullQualifiedName        ID_FQN         = new FullQualifiedName( "openlattice",
             "@id" );
-    public static final  PostgresColumnDefinition           LAST_INDEX     = new PostgresColumnDefinition(
+    public static final PostgresColumnDefinition LAST_INDEX     = new PostgresColumnDefinition(
             LAST_INDEX_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final  FullQualifiedName                  LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
+    public static final FullQualifiedName        LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
             "@lastIndex" );
-    public static final  PostgresColumnDefinition           LAST_LINK      = new PostgresColumnDefinition(
+    public static final PostgresColumnDefinition LAST_LINK      = new PostgresColumnDefinition(
             LAST_LINK_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final  PostgresColumnDefinition           LAST_WRITE     = new PostgresColumnDefinition(
+    public static final PostgresColumnDefinition LAST_WRITE     = new PostgresColumnDefinition(
             LAST_WRITE_FIELD,
-            TIMESTAMPTZ )
-            .withDefault( "'-infinity'" )
-            .notNull();
-    public static final  PostgresColumnDefinition           LAST_PROPAGATE     = new PostgresColumnDefinition(
-            LAST_PROPAGATE_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
@@ -196,7 +190,7 @@ public class DataTables {
         final String idxPrefix = propertyTableName( propertyType.getId() );
 
         PostgresColumnDefinition valueColumn = value( propertyType );
-        PostgresTableDefinition ptd = new PostgresTableDefinition(
+        PostgresTableDefinition ptd = new CitusDistributedTableDefinition(
                 quote( idxPrefix ) )
                 .addColumns(
                         ENTITY_SET_ID,
@@ -206,10 +200,13 @@ public class DataTables {
                         VERSION,
                         VERSIONS,
                         LAST_WRITE,
+                        LAST_PROPAGATE,
                         READERS,
                         WRITERS,
                         OWNERS )
-                .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH );
+                .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH )
+                .distributionColumn( ID )
+                .colocationColumn( PostgresTable.IDS );
 
         PostgresIndexDefinition idIndex = new PostgresColumnsIndexDefinition( ptd, ID_VALUE )
                 .name( quote( idxPrefix + "_id_idx" ) )

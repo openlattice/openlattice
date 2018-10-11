@@ -241,6 +241,7 @@ public class SearchService {
                 searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
                 searchTerm.getMaxHits(),
+                searchTerm.getFuzzy(),
                 authorizedProperties );
         Map<UUID, PropertyType> authorizedPropertyTypes = dataModelService
                 .getPropertyTypesAsMap( authorizedProperties );
@@ -256,7 +257,7 @@ public class SearchService {
     public long getEntitySetSize( UUID entitySetId ) {
         Set<UUID> properties = Sets
                 .newHashSet( dataModelService.getEntityTypeByEntitySetId( entitySetId ).getProperties() );
-        return elasticsearchApi.executeEntitySetDataSearch( entitySetId, "*", 0, 0, properties ).getNumHits();
+        return elasticsearchApi.executeEntitySetDataSearch( entitySetId, "*", 0, 0, false, properties ).getNumHits();
     }
 
     @Subscribe

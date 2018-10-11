@@ -58,9 +58,11 @@ public class PostgresEdmManager implements DbEdmManager {
     private final String PROPERTY_TYPES;
     private final String ENTITY_TYPE_ID_FIELD;
     private final String ENTITY_SET_ID_FIELD;
+    private final String ENTITY_SET_NAME_FIELD;
+    private final String NAME_FIELD;
 
-    public PostgresEdmManager( HikariDataSource hds ) {
-        this.ptm = new PostgresTableManager( hds );
+    public PostgresEdmManager( HikariDataSource hds, PostgresTableManager ptm ) {
+        this.ptm = ptm;//new PostgresTableManager( hds );
         this.hds = hds;
 
         // Tables
@@ -70,6 +72,8 @@ public class PostgresEdmManager implements DbEdmManager {
         // Properties
         this.ENTITY_TYPE_ID_FIELD = PostgresColumn.ENTITY_TYPE_ID_FIELD;
         this.ENTITY_SET_ID_FIELD = PostgresColumn.ENTITY_SET_ID_FIELD;
+        this.ENTITY_SET_NAME_FIELD = PostgresColumn.ENTITY_SET_NAME_FIELD;
+        this.NAME_FIELD = PostgresColumn.NAME_FIELD;
     }
 
     @Override
@@ -217,8 +221,8 @@ public class PostgresEdmManager implements DbEdmManager {
 
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary(String propertyTableName ) {
         String getPropertyTypeSummary =
-                String.format("SELECT %1$s , %2$s , COUNT(*) FROM %3$s LEFT JOIN %4$s ON %2$s = %4$s.id GROUP BY ( %1$s , %2$s )",
-                ENTITY_TYPE_ID_FIELD, ENTITY_SET_ID_FIELD, propertyTableName, ENTITY_SETS);
+                String.format("SELECT %1$s , %6$s AS %2$s , %3$s, COUNT(*) FROM %4$s LEFT JOIN %5$s ON %3$s = %5$s.id AND %4$s.version > 0 GROUP BY ( %1$s , %2$s, %3$s )",
+                ENTITY_TYPE_ID_FIELD, ENTITY_SET_NAME_FIELD, ENTITY_SET_ID_FIELD, propertyTableName, ENTITY_SETS, NAME_FIELD);
         return new PostgresIterable<>( () -> {
             try {
                 Connection connection = hds.getConnection();

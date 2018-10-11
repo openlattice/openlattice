@@ -51,16 +51,11 @@ import com.openlattice.organizations.processors.NestedPrincipalMerger;
 import com.openlattice.organizations.processors.NestedPrincipalRemover;
 import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdater;
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +67,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private final AuthorizationManager                  authorizations;
     private final HazelcastAclKeyReservationService     reservations;
     private final IMap<AclKey, SecurablePrincipal>      principals;
-    private final IMap<AclKey, AclKeySet>                principalTrees; // RoleName -> Member RoleNames
+    private final IMap<AclKey, AclKeySet>               principalTrees; // RoleName -> Member RoleNames
     private final IMap<String, Auth0UserBasic>          users;
     private final IMap<List<UUID>, SecurableObjectType> securableObjectTypes;
 
@@ -214,7 +209,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     public Collection<SecurablePrincipal> getAllPrincipalsWithPrincipal( AclKey aclKey ) {
         //We start from the bottom layer and use predicates to sweep up the tree and enumerate all roles with this role.
         final Set<AclKey> principalsWithPrincipal = new HashSet<>();
-        Set<AclKey> parentLayer = principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
+        Set<AclKey> parentLayer = principalTrees
+                .keySet( hasSecurablePrincipal( aclKey ) );
         principalsWithPrincipal.addAll( parentLayer );
         while ( !parentLayer.isEmpty() ) {
             parentLayer = parentLayer
@@ -224,6 +220,12 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
             principalsWithPrincipal.addAll( parentLayer );
         }
         return principals.getAll( principalsWithPrincipal ).values();
+    }
+
+    @Override
+    public Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey ) {
+        Set<AclKey> parentLayer = principalTrees.keySet( hasSecurablePrincipal( aclKey ) );
+        return principals.getAll( parentLayer ).values();
     }
 
     @Override

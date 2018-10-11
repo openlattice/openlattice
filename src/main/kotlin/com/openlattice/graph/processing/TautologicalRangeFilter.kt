@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2018. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,24 +16,35 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.hazelcast.serializers;
+package com.openlattice.graph.processing
 
-import com.openlattice.hazelcast.serializers.AceValueStreamSerializer;
-import com.openlattice.mapstores.TestDataFactory;
-import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-import com.openlattice.authorization.AceValue;
+import com.openlattice.analysis.requests.RangeFilter
 
 /**
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class AceValueStreamSerializerTest extends AbstractStreamSerializerTest<AceValueStreamSerializer, AceValue> {
-    @Override protected AceValueStreamSerializer createSerializer() {
-        return new AceValueStreamSerializer();
+class TautologicalRangeFilter : RangeFilter<Int> {
+    override fun isLowerboundEqual(): Boolean {
+        return false
     }
 
-    @Override protected AceValue createInput() {
-        return TestDataFactory.aceValue();
+    override fun isUpperboundEqual(): Boolean {
+        return false
+    }
+
+    override fun getLowerbound(): Int {
+        return Int.MIN_VALUE
+    }
+
+    override fun getUpperbound(): Int {
+        return Int.MAX_VALUE
+    }
+
+    override fun asSql(field: String): String {
+        return " true "
     }
 }

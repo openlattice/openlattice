@@ -57,7 +57,7 @@ public class AuthorizationQueryService {
     private static final Logger logger = LoggerFactory
             .getLogger( AuthorizationQueryService.class );
     private final HikariDataSource                         hds;
-    private final IMap<AceKey, DelegatedPermissionEnumSet> aces;
+    private final IMap<AceKey, AceValue> aces;
 
     private final String aclsForSecurableObjectSql;
     private final String ownersForSecurableObjectSql;
