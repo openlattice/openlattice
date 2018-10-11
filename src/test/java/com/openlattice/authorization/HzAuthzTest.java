@@ -65,7 +65,7 @@ public class HzAuthzTest {
     protected static final HazelcastAuthorizationService hzAuthz;
     protected static final Neuron                        neuron;
     protected static final HikariDataSource              hds;
-    private static final Logger logger = LoggerFactory.getLogger( HzAuthzTest.class );
+    private static final   Logger                        logger = LoggerFactory.getLogger( HzAuthzTest.class );
 
     static {
         testServer = new RhizomeApplicationServer(
@@ -91,7 +91,8 @@ public class HzAuthzTest {
                 aqs,
                 testServer.getContext().getBean( EventBus.class )
         );
-        testServer.getContext().getBean( EventBus.class ).register( new PostgresEdmManager( hds ) );
+        final var tableManager = testServer.getContext().getBean( PostgresTableManager.class );
+        testServer.getContext().getBean( EventBus.class ).register( new PostgresEdmManager( hds, tableManager ) );
     }
 
     @Test
