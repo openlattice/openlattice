@@ -21,7 +21,11 @@
 
 package com.openlattice.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ListMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+
 import java.util.Objects;
 import java.util.UUID;
 
@@ -32,9 +36,10 @@ public class DataGraphIds {
     private final ListMultimap<UUID, UUID> entityKeyIds;
     private final ListMultimap<UUID, UUID> associationEntityKeyIds;
 
+    @JsonCreator
     public DataGraphIds(
-            ListMultimap<UUID, UUID> entityKeyIds,
-            ListMultimap<UUID, UUID> associationEntityKeyIds ) {
+            @JsonProperty( SerializationConstants.ENTITY_KEY_IDS ) ListMultimap<UUID, UUID> entityKeyIds,
+            @JsonProperty( SerializationConstants.ENTITY_SET_IDS ) ListMultimap<UUID, UUID> associationEntityKeyIds ) {
         this.entityKeyIds = entityKeyIds;
         this.associationEntityKeyIds = associationEntityKeyIds;
     }
@@ -59,10 +64,12 @@ public class DataGraphIds {
                 '}';
     }
 
+    @JsonProperty( SerializationConstants.ENTITY_KEY_IDS )
     public ListMultimap<UUID, UUID> getEntityKeyIds() {
         return entityKeyIds;
     }
 
+    @JsonProperty( SerializationConstants.ENTITY_SET_IDS )
     public ListMultimap<UUID, UUID> getAssociationEntityKeyIds() {
         return associationEntityKeyIds;
     }
