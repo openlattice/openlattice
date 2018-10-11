@@ -9,9 +9,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.serializers.EntityDataLambdasStreamSerializer;
 import com.openlattice.conductor.rpc.BulkEntityDataLambdas;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -51,7 +54,7 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
 
         try {
             output.writeInt( object.getEntitiesById().size() );
-            for ( Map.Entry<UUID, SetMultimap<UUID, Object>> entry : object.getEntitiesById().entrySet() ) {
+            for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entry : object.getEntitiesById().entrySet() ) {
                 writeUUID( output, entry.getKey() );
                 byte[] bytes = mapper.writeValueAsBytes( entry.getValue() );
                 output.writeInt( bytes.length );
@@ -80,6 +83,6 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
                 logger.debug( "Unable to deserialize entities for entity set: {}", entitySetId );
             }
         }
-        return new BulkEntityDataLambdas( entitySetId, entitiesById );
+        return new BulkEntityDataLambdas( entitySetId, Maps.transformValues( entitiesById, Multimaps::asMap ) );
     }
 }
