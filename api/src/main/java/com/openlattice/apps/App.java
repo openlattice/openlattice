@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 
-public class App extends AbstractSecurableObject {
+public class  App extends AbstractSecurableObject {
 
     private final LinkedHashSet<UUID> appTypeIds;
     private       String              name;

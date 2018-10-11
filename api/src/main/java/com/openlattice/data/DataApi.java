@@ -39,8 +39,14 @@ import java.util.Set;
 import java.util.UUID;
 
 public interface DataApi {
-    String ASSOCIATION           = "association";
+    // @formatter:off
+    String SERVICE               = "/datastore";
     String CONTROLLER            = "/data";
+    String BASE                  = SERVICE + CONTROLLER;
+    // @formatter:on
+
+    String ASSOCIATION           = "association";
+
     String COUNT                 = "count";
     String ENTITY_KEY_ID         = "entityKeyId";
     String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
@@ -58,8 +64,6 @@ public interface DataApi {
     /*
      * These determine the service routing for the LB
      */
-    String SERVICE               = "/datastore";
-    String BASE                  = SERVICE + CONTROLLER;
     String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
     String TOKEN                 = "token";
     String TYPE                  = "type";

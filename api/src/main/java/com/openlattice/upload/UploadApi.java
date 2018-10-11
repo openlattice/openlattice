@@ -19,21 +19,21 @@
  *
  */
 
+package com.openlattice.upload;
 
-package com.openlattice.analysis.requests;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import java.util.List;
 
 /**
- *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-@JsonTypeInfo( use = Id.CLASS )
-public interface Filter {
+public interface UploadApi {
+    // @formatter:off
+    String SERVICE               = "/datastore";
+    String CONTROLLER            = "/upload";
+    String BASE                  = SERVICE + CONTROLLER;
+    // @formatter:on
 
-    /**
-     * @param field Used for constructing the sql expression.
-     * @return The sql expression for this filter applied to the specified field.
-     */
-    String asSql( String field );
+
+    List<String> getExistingFiles();
+    Integer uploadFiles();
 }
