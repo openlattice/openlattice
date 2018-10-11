@@ -50,6 +50,7 @@ import com.openlattice.search.requests.SearchResult;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -669,7 +670,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean createEntityData( EntityDataKey edk, SetMultimap<UUID, Object> propertyValues ) {
+    public boolean createEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         UUID entitySetId = edk.getEntitySetId();
@@ -690,7 +691,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById ) {
+    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         try {
@@ -698,7 +699,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String indexType = getTypeName( entitySetId );
 
             BulkRequestBuilder requestBuilder = client.prepareBulk();
-            for ( Map.Entry<UUID, SetMultimap<UUID, Object>> entry : entitiesById.entrySet() ) {
+            for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entry : entitiesById.entrySet() ) {
                 final UUID entityKeyId = entry.getKey();
                 final byte[] s = mapper.writeValueAsBytes( entry.getValue() );
                 requestBuilder.add(
@@ -718,7 +719,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean updateEntityData( EntityDataKey edk, SetMultimap<UUID, Object> propertyValues ) {
+    public boolean updateEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
 
         if ( !verifyElasticsearchConnection() ) { return false; }
 
@@ -729,7 +730,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .prepareGet( getIndexName( entitySetId ), getTypeName( entitySetId ), entityKeyId.toString() ).get();
         if ( result.isExists() ) {
             result.getSourceAsMap().entrySet().forEach( entry ->
-                    propertyValues.putAll( UUID.fromString( entry.getKey() ), (Collection<Object>) entry.getValue() )
+                    {
+                        UUID propertyTypeId = UUID.fromString( entry.getKey() );
+                        propertyValues.merge( propertyTypeId,
+                                new HashSet<>( (Collection<Object>) entry.getValue() ),
+                                ( first, second ) -> {
+                                    first.addAll( second );
+                                    return first;
+                                } );
+                    }
             );
         }
 
@@ -812,6 +821,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String searchTerm,
             int start,
             int maxHits,
+            boolean fuzzy,
             Set<UUID> authorizedPropertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return new EntityKeyIdSearchResult( 0, Lists.newArrayList() ); }
 
@@ -825,7 +835,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .collect( Collectors.toList() )
                 .toArray( new String[ authorizedPropertyTypes.size() ] );
 
-        QueryStringQueryBuilder query = QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) )
+        String formattedSearchTerm = fuzzy ? getFormattedFuzzyString( searchTerm ) : searchTerm;
+
+        QueryStringQueryBuilder query = QueryBuilders.queryStringQuery( formattedSearchTerm )
                 .fields( fieldsMap )
                 .lenient( true );
         SearchResponse response = client.prepareSearch( getIndexName( entitySetId ) )

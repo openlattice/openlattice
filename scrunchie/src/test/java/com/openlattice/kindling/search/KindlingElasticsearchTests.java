@@ -23,6 +23,7 @@ package com.openlattice.kindling.search;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.AclKey;
@@ -71,6 +72,7 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
                 "police",
                 0,
                 50,
+                false,
                 authorizedPropertyTypes );
     }
 
@@ -123,17 +125,18 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
         propertyValues3.put( salaryPropertyId, Sets.newHashSet( "93240" ) );
         propertyValues3.put( employeeIdPropertyId, Sets.newHashSet( "12347" ) );
         elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
-                propertyValues1 );
+                Multimaps.asMap( propertyValues1 ) );
         elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
-                propertyValues2 );
+                Multimaps.asMap( propertyValues2 ) );
         elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
-                propertyValues3 );
+                Multimaps.asMap( propertyValues3 ) );
 
         SetMultimap<UUID, Object> entitySet2PropertyValues = HashMultimap.create();
         entitySet2PropertyValues.put( employeeDeptPropertyId, Sets.newHashSet( "POLICE" ) );
         entitySet2PropertyValues.put( employeeIdPropertyId, Sets.newHashSet( "12347" ) );
         elasticsearchApi
-                .createEntityData( new EntityDataKey( entitySet2Id, UUID.randomUUID() ), entitySet2PropertyValues );
+                .createEntityData( new EntityDataKey( entitySet2Id, UUID.randomUUID() ),
+                        Multimaps.asMap( entitySet2PropertyValues ) );
     }
 
     @AfterClass
