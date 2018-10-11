@@ -51,6 +51,7 @@ import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import jnr.ffi.Struct.Offset;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
@@ -97,6 +98,7 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
     protected AceValue mapToValue( ResultSet rs ) throws SQLException {
         EnumSet<Permission> permissions = ResultSetAdapters.permissions( rs );
         AclKey aclKey = ResultSetAdapters.aclKey( rs );
+        OffsetDateTime expirationDate = ResultSetAdapters.expirationDate(rs );
         /*
          * There is small risk of deadlock here if all readers get stuck waiting for connection from the connection pool
          * we should keep an eye out to make sure there aren't an unusual number of TimeoutExceptions being thrown.
@@ -106,7 +108,7 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         if ( objectType == null ) {
             logger.warn( "SecurableObjectType was null for key {}", aclKey );
         }
-        return new AceValue( permissions, objectType );
+        return new AceValue( permissions, objectType,expirationDate );
     }
 
     @Override protected AceKey mapToKey( ResultSet rs ) throws SQLException {

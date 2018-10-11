@@ -51,6 +51,7 @@ import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_NAME_FIELD;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
 import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID_FIELD;
+import static com.openlattice.postgres.PostgresColumn.EXPIRATION_DATE_FIELD;
 import static com.openlattice.postgres.PostgresColumn.FLAGS;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_DIAMETER;
 import static com.openlattice.postgres.PostgresColumn.GRAPH_ID;
@@ -903,7 +904,7 @@ public final class ResultSetAdapters {
 
     public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
         UUID entityKeyId = id( rs );
-        Map<UUID, Set<Object>> data = new HashMap<>(  );
+        Map<UUID, Set<Object>> data = new HashMap<>();
         for ( UUID ptId : authorizedPropertyTypeIds ) {
             Array valuesArr = rs.getArray( DataTables.propertyTableName( ptId ) );
             if ( valuesArr != null ) {
@@ -925,4 +926,7 @@ public final class ResultSetAdapters {
         return rs.getObject( "count", Long.class );
     }
 
+    public static OffsetDateTime expirationDate( ResultSet rs ) throws SQLException {
+        return rs.getObject( EXPIRATION_DATE_FIELD, OffsetDateTime.class );
+    }
 }
