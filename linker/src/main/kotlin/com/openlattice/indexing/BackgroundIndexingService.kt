@@ -215,7 +215,8 @@ class BackgroundIndexingService(
         val entitiesById = dataQueryService.getEntitiesById(
                 entitySetId,
                 propertyTypeMap,
-                batchToIndex
+                batchToIndex,
+                false
         )
 
         if (elasticsearchApi.createBulkEntityData(entitySetId, entitiesById)) {
