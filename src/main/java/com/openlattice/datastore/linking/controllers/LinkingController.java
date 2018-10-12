@@ -65,7 +65,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
     @Inject
     private HazelcastListingService listings;
 
-
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizationManager;
@@ -136,15 +135,11 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
         return ownablePropertyTypes;
     }
 
-    @Override public UUID createLinkingEntitySet( Set<UUID> entitySets ) {
-        return null;
-    }
-
     @Override public Integer addEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId ) {
         return null;
     }
 
-    @Override public Integer removeEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId ) {
+    @Override public Integer removeEntitySetsFromLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId ) {
         return null;
     }
 

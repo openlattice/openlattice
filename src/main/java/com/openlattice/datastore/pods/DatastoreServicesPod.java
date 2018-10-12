@@ -79,46 +79,46 @@ import javax.inject.Inject;
 import static com.openlattice.datastore.util.Util.returnAndLog;
 
 @Configuration
-@Import({
+@Import( {
         Auth0Pod.class,
         CassandraPod.class,
         NeuronPod.class
-})
+} )
 public class DatastoreServicesPod {
 
     @Inject
-    private Jdbi jdbi;
+    private Jdbi                     jdbi;
     @Inject
-    private PostgresTableManager tableManager;
+    private PostgresTableManager     tableManager;
     @Inject
-    private HazelcastInstance hazelcastInstance;
+    private HazelcastInstance        hazelcastInstance;
     @Inject
-    private HikariDataSource hikariDataSource;
+    private HikariDataSource         hikariDataSource;
     @Inject
-    private Auth0Configuration auth0Configuration;
+    private Auth0Configuration       auth0Configuration;
     @Inject
     private ListeningExecutorService executor;
     @Inject
-    private EventBus eventBus;
+    private EventBus                 eventBus;
     @Inject
-    private Neuron neuron;
+    private Neuron                   neuron;
 
     @Bean
     public PostgresUserApi pgUserApi() {
-        return jdbi.onDemand(PostgresUserApi.class);
+        return jdbi.onDemand( PostgresUserApi.class );
     }
 
     @Bean
     public ObjectMapper defaultObjectMapper() {
         ObjectMapper mapper = ObjectMappers.getJsonMapper();
-        FullQualifiedNameJacksonSerializer.registerWithMapper(mapper);
+        FullQualifiedNameJacksonSerializer.registerWithMapper( mapper );
 
         return mapper;
     }
 
     @Bean
     public AuthorizationQueryService authorizationQueryService() {
-        return new AuthorizationQueryService(hikariDataSource, hazelcastInstance);
+        return new AuthorizationQueryService( hikariDataSource, hazelcastInstance );
     }
 
     @Bean
@@ -133,34 +133,34 @@ public class DatastoreServicesPod {
 
     @Bean
     public AuthorizationManager authorizationManager() {
-        return new HazelcastAuthorizationService(hazelcastInstance, authorizationQueryService(), eventBus);
+        return new HazelcastAuthorizationService( hazelcastInstance, authorizationQueryService(), eventBus );
     }
 
     @Bean
     public AbstractSecurableObjectResolveTypeService securableObjectTypes() {
-        return new HazelcastAbstractSecurableObjectResolveTypeService(hazelcastInstance);
+        return new HazelcastAbstractSecurableObjectResolveTypeService( hazelcastInstance );
     }
 
     @Bean
     public SchemaQueryService schemaQueryService() {
-        return new PostgresSchemaQueryService(hikariDataSource);
+        return new PostgresSchemaQueryService( hikariDataSource );
     }
 
     @Bean
     public HazelcastSchemaManager schemaManager() {
         return new HazelcastSchemaManager(
                 hazelcastInstance,
-                schemaQueryService());
+                schemaQueryService() );
     }
 
     @Bean
     public PostgresTypeManager entityTypeManager() {
-        return new PostgresTypeManager(hikariDataSource);
+        return new PostgresTypeManager( hikariDataSource );
     }
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService(hikariDataSource);
+        return new PostgresEntityDataQueryService( hikariDataSource );
     }
 
     @Bean
@@ -172,7 +172,7 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 pgEdmManager(),
                 entityTypeManager(),
-                schemaManager());
+                schemaManager() );
     }
 
     @Bean
@@ -189,12 +189,12 @@ public class DatastoreServicesPod {
     public ODataStorageService odataStorageService() {
         return new ODataStorageService(
                 hazelcastInstance,
-                dataModelService());
+                dataModelService() );
     }
 
     @Bean
     public PostgresDataManager postgresDataManager() {
-        return new PostgresDataManager(hikariDataSource);
+        return new PostgresDataManager( hikariDataSource );
     }
 
     @Bean
@@ -204,14 +204,14 @@ public class DatastoreServicesPod {
                 executor,
                 defaultObjectMapper(),
                 idService(),
-                postgresDataManager(), dataQueryService());
+                postgresDataManager(), dataQueryService() );
     }
 
     @Bean
     public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService(hazelcastInstance,
+        return new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
-                authorizationManager());
+                authorizationManager() );
     }
 
     @Bean
@@ -221,32 +221,32 @@ public class DatastoreServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 userDirectoryService(),
-                principalService());
+                principalService() );
     }
 
     @Bean
     public UserDirectoryService userDirectoryService() {
-        return new UserDirectoryService(auth0TokenProvider(), hazelcastInstance);
+        return new UserDirectoryService( auth0TokenProvider(), hazelcastInstance );
     }
 
     @Bean
     public EdmAuthorizationHelper edmAuthorizationHelper() {
-        return new EdmAuthorizationHelper(dataModelService(), authorizationManager());
+        return new EdmAuthorizationHelper( dataModelService(), authorizationManager() );
     }
 
     @Bean
     public SyncTicketService sts() {
-        return new SyncTicketService(hazelcastInstance);
+        return new SyncTicketService( hazelcastInstance );
     }
 
     @Bean
     public RequestQueryService rqs() {
-        return new RequestQueryService(hikariDataSource);
+        return new RequestQueryService( hikariDataSource );
     }
 
     @Bean
     public HazelcastRequestsManager hazelcastRequestsManager() {
-        return new HazelcastRequestsManager(hazelcastInstance, rqs(), neuron);
+        return new HazelcastRequestsManager( hazelcastInstance, rqs(), neuron );
     }
 
     @Bean
@@ -256,17 +256,17 @@ public class DatastoreServicesPod {
 
     @Bean
     public GraphService graphApi() {
-        return new Graph(hikariDataSource, dataModelService());
+        return new Graph( hikariDataSource, dataModelService() );
     }
 
     @Bean
     public HazelcastIdGenerationService idGenerationService() {
-        return new HazelcastIdGenerationService(hazelcastInstance);
+        return new HazelcastIdGenerationService( hazelcastInstance );
     }
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService(hazelcastInstance, hikariDataSource, idGenerationService());
+        return new PostgresEntityKeyIdService( hazelcastInstance, hikariDataSource, idGenerationService() );
     }
 
     @Bean
@@ -277,28 +277,28 @@ public class DatastoreServicesPod {
                 graphApi(),
                 idService(),
                 entityDatastore(),
-                dataModelService());
+                dataModelService() );
     }
 
     @Bean
     public DbCredentialService dcs() {
-        return new DbCredentialService(hazelcastInstance, pgUserApi());
+        return new DbCredentialService( hazelcastInstance, pgUserApi() );
     }
 
     @Bean
     public HazelcastVertexMergingService vms() {
-        return new HazelcastVertexMergingService(hazelcastInstance);
+        return new HazelcastVertexMergingService( hazelcastInstance );
     }
 
     @Bean
     public AppService appService() {
-        return returnAndLog(new AppService(hazelcastInstance,
+        return returnAndLog( new AppService( hazelcastInstance,
                 dataModelService(),
                 organizationsManager(),
                 authorizationQueryService(),
                 authorizationManager(),
                 principalService(),
-                aclKeyReservationService()), "Checkpoint app service");
+                aclKeyReservationService() ), "Checkpoint app service" );
     }
 
     @Bean
@@ -310,25 +310,29 @@ public class DatastoreServicesPod {
 
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
-        return new Auth0TokenProvider(auth0Configuration);
+        return new Auth0TokenProvider( auth0Configuration );
     }
 
     @Bean
     public ConductorElasticsearchApi conductorElasticsearchApi() {
-        return new DatastoreConductorElasticsearchApi(hazelcastInstance);
+        return new DatastoreConductorElasticsearchApi( hazelcastInstance );
     }
 
     @Bean
-    public EsEdmService esEdmService() { return new EsEdmService(conductorElasticsearchApi()); }
+    public EsEdmService esEdmService() {
+        return new EsEdmService( conductorElasticsearchApi() );
+    }
 
     @Bean
-    public SearchService searchService() { return new SearchService(eventBus); }
+    public SearchService searchService() {
+        return new SearchService( eventBus );
+    }
 
     @Bean
     public LinkingQueryService linkingQueryService() { return new LinkingQueryService( dataQueryService() ); }
 
     @PostConstruct
     void initPrincipals() {
-        Principals.init(principalService());
+        Principals.init( principalService() );
     }
 }
