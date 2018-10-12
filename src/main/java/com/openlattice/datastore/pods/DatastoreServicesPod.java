@@ -303,7 +303,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEdmManager pgEdmManager() {
-        PostgresEdmManager pgEdmManager = new PostgresEdmManager( hikariDataSource );
+        PostgresEdmManager pgEdmManager = new PostgresEdmManager( hikariDataSource, tableManager );
         eventBus.register( pgEdmManager );
         return pgEdmManager;
     }
