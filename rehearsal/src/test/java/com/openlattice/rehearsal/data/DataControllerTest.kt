@@ -129,8 +129,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 Optional.of(et.properties),
                 Optional.of(HashSet(ids))
         )
-        val data = ImmutableList
-                .copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val data = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
         val indexActual = index(data)
 
         //Remove the extra properties for easier equals.
@@ -213,7 +212,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
         Multimaps.asMap(edgesToBeCreated).entries.first().value.
                 mapIndexed { index, de ->
-                   val edgeDataLookup = lookupEdgeDataByFqn(actualEdgeData[index].asMap())
+                   val edgeDataLookup = lookupEdgeDataByFqn(actualEdgeData[numberOfEntries - index - 1].asMap())
                     de.data.asMap().
                         forEach { uuid, data -> Assert.assertEquals(data, edgeDataLookup[uuid]) }
                 }
@@ -379,6 +378,48 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val fqns = results.iterator().next().keys()
         Assert.assertEquals(1, fqns.asSequence().filter { it.namespace.equals(newNameSpace) }.count())
         Assert.assertEquals(0, fqns.asSequence().filter { it.namespace.equals(oldNameSpace) }.count())
+    }
+
+    @Test
+    fun testGetLinkedEntitySets() {
+        val pt = createPropertyType()
+        val et = MultipleAuthenticatedUsersBase.createEntityType(pt.id)
+        val es1 = MultipleAuthenticatedUsersBase.createEntitySet(et)
+        val es2 = MultipleAuthenticatedUsersBase.createEntitySet(et)
+        val esLinked = MultipleAuthenticatedUsersBase.createEntitySet(et, true, setOf(es1.id, es2.id))
+
+        val testData1 = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
+        val testData2 = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
+
+        val entries1 = ImmutableList.copyOf(testData1.values)
+        val entries2 = ImmutableList.copyOf(testData2.values)
+        val entries = entries1 + entries2
+
+        val ids1 = dataApi.createEntities(es1.id, entries1)
+        val ids2 = dataApi.createEntities(es2.id, entries2)
+        val ids = ids1 + ids2
+
+        val indexExpected = entries.mapIndexed { index, data -> ids[index] to keyByFqn(data) }.toMap()
+
+        val ess = EntitySetSelection(Optional.of(et.properties), Optional.empty())
+
+        val data = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinked.id, ess, FileType.json))
+        val indexActual = index(data)
+
+        //Remove the extra properties for easier equals.
+        indexActual.forEach {
+            it.value.removeAll(DataTables.ID_FQN)
+            it.value.removeAll(DataTables.LAST_INDEX_FQN)
+            it.value.removeAll(DataTables.LAST_WRITE_FQN)
+        }
+
+        Assert.assertEquals(indexExpected, indexActual)
+    }
+
+    @Test
+    fun testGetLinkedEntitySetsWithLinkingIds() {
+        // TODO test with linking ids provided in selection:
+        // currently, when upserting entities, linking id is not there, also no linking id is created when creating linking entity set
     }
 }
 

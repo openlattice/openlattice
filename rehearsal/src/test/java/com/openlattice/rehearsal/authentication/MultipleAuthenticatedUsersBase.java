@@ -39,6 +39,7 @@ import com.openlattice.requests.RequestsApi;
 import com.openlattice.search.SearchApi;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -185,14 +186,17 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return createEntitySet( entityType );
     }
 
-    public static EntitySet createEntitySet( EntityType entityType ) {
+    public static EntitySet createEntitySet( EntityType entityType, boolean linking,  Set<UUID> linkedEntitySetIds ) {
         EntitySet newES = new EntitySet(
-                UUID.randomUUID(),
+                Optional.of( UUID.randomUUID() ),
                 entityType.getId(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
                 "foobar",
-                Optional.<String>of( "barred" ),
-                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ) );
+                Optional.of( "barred" ),
+                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
+                Optional.of( linking ),
+                Optional.of( linkedEntitySetIds ),
+                Optional.of( true ) );
 
         Map<String, UUID> entitySetIds = edmApi.createEntitySets( ImmutableSet.of( newES ) );
 
@@ -200,5 +204,9 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 entitySetIds.values().contains( newES.getId() ) );
 
         return newES;
+    }
+
+    public static EntitySet createEntitySet( EntityType entityType ) {
+        return createEntitySet( entityType, false, new HashSet<>() );
     }
 }
