@@ -24,15 +24,7 @@ import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticati
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
+import com.google.common.collect.*;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -55,7 +47,10 @@ import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.search.SearchService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -99,6 +94,8 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSI
 import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
+// TODO: check for linked entity sets in CUD operations??
+
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent {
@@ -125,7 +122,10 @@ public class DataController implements DataApi, AuthorizingComponent {
     @Inject
     private SearchService searchService;
 
-    private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
+    @Inject
+    private LinkingQueryService linkingQueryService;
+
+    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @RequestMapping(
@@ -189,9 +189,52 @@ public class DataController implements DataApi, AuthorizingComponent {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            return loadNormalEntitySetData( entitySetId, selection );
+            EntitySet es = edmService.getEntitySet( entitySetId );
+            if(es.isLinking()) {
+                return loadLinkedEntitySetData( entitySetId, selection, es );
+            } else {
+                return loadNormalEntitySetData( entitySetId, selection );
+            }
         } else {
             throw new ForbiddenException( "Insufficient permissions to read the entity set or it doesn't exists." );
+        }
+    }
+
+    private EntitySetData<FullQualifiedName> loadLinkedEntitySetData(
+            UUID linkingEntitySetId,
+            EntitySetSelection selection,
+            EntitySet es) {
+        Set<UUID> allEntitySetIds = Sets.newHashSet( es.getLinkedEntitySets());
+        checkState( !allEntitySetIds.isEmpty(),
+                "Linked entity sets are empty for linking entity set %s", linkingEntitySetId );
+
+        EntityType linkedEntityType = edmService.getEntityTypeByEntitySetId( allEntitySetIds.iterator().next() );
+        checkState( allEntitySetIds.stream().skip( 1 )
+                        .map( esId -> edmService.getEntityTypeByEntitySetId( esId ) )
+                        .allMatch( linkedEntityType::equals ),
+                "Linked entity sets are of differing entity types {}", allEntitySetIds );
+
+        // In linked entity set calls, the selected entity key ids represent linking ids
+        Optional<Set<UUID>> linkingIds = selection.getEntityKeyIds();
+
+        return loadEntitySetData( getLinkedEntityKeyIds(allEntitySetIds, linkingIds), selection.getProperties());
+    }
+
+    private Map<UUID, Optional<Set<UUID>>> getLinkedEntityKeyIds(
+            Set<UUID> allEntitySetIds,
+            Optional<Set<UUID>> linkingIds) {
+
+        if(linkingIds.isPresent()) {
+            // if linkingIds is there: get all entityKey ids per entity set where linking_id =
+            Map<UUID, Set<UUID>> entityKeyIdsOfLinkingIds = linkingQueryService.getEntitiesWithLinkingIds(
+                    linkingIds.get());
+
+            return allEntitySetIds.stream().collect(Collectors.toMap(
+                    esId -> esId,
+                    esId -> Optional.of( entityKeyIdsOfLinkingIds.get( esId ) )
+            ));
+        } else {
+           return allEntitySetIds.stream().collect(Collectors.toMap( esId -> esId, esId ->  Optional.empty() ));
         }
     }
 
@@ -204,27 +247,43 @@ public class DataController implements DataApi, AuthorizingComponent {
         checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
                 "Selected properties are not property types of entity set %s", entitySetId );
 
-        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId,
-                        EnumSet.of( Permission.READ ),
-                        edmService.getPropertyTypesAsMap( selectedProperties ) );
+        return loadEntitySetData(
+                Map.of(entitySetId, selection.getEntityKeyIds()),
+                selection.getProperties());
+    }
 
-        final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( authorizedPropertyTypes.size() );
+    private EntitySetData<FullQualifiedName> loadEntitySetData(
+            Map<UUID, Optional<Set<UUID>>> entityKeyIds,
+            Optional<Set<UUID>> selectionProperties) {
+        final Set<UUID> allProperties = authzHelper.getAllPropertiesOnEntitySet( entityKeyIds.keySet().iterator().next() );
+        final Set<UUID> selectedProperties = selectionProperties.orElse( allProperties );
+
+        checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
+                "Selected properties are not property types of entity set %s", entityKeyIds.keySet().iterator().next() );
+
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = entityKeyIds.keySet().stream()
+                .collect( Collectors.toMap(
+                        it -> it,
+                        it -> authzHelper.getAuthorizedPropertyTypes(
+                                it,
+                                EnumSet.of( Permission.READ ),
+                                edmService.getPropertyTypesAsMap( selectedProperties ) ) ) );
+
+        final Map<UUID, PropertyType> allAuthorizedPropertyTypes =
+                authorizedPropertyTypes.values().stream().distinct()
+                        .flatMap( it -> it.entrySet().stream() )
+                        .collect( Collectors.toMap( it -> it.getKey(), it -> it.getValue() ) );
+
+        final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( allAuthorizedPropertyTypes.size() );
 
         allProperties.stream()
-                .filter( authorizedPropertyTypes::containsKey )
-                .map( authorizedPropertyTypes::get )
+                .filter( allAuthorizedPropertyTypes::containsKey )
+                .map( allAuthorizedPropertyTypes::get )
                 .map( pt -> pt.getType().getFullQualifiedNameAsString() )
                 .forEach( orderedPropertyNames::add );
 
-        if ( selection.getEntityKeyIds().isPresent() ) {
-            return dgm.getEntitySetData(
-                    entitySetId,
-                    selection.getEntityKeyIds().get(),
-                    orderedPropertyNames,
-                    authorizedPropertyTypes );
-        }
-        return dgm.getEntitySetData( entitySetId, orderedPropertyNames, authorizedPropertyTypes );
+        return dgm.getEntitySetData( entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, false );
+
     }
 
     @Override
@@ -569,6 +628,8 @@ public class DataController implements DataApi, AuthorizingComponent {
     public SetMultimap<FullQualifiedName, Object> getEntity(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
+        // TODO: linked: what is entityKeyId here???
+
         ensureReadAccess( new AclKey( entitySetId ) );
         Map<UUID, PropertyType> authorizedPropertyTypes = edmService
                 .getPropertyTypesAsMap( authzHelper
@@ -581,6 +642,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             path = "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Set<Object> getEntity( UUID entitySetId, UUID entityKeyId, UUID propertyTypeId ) {
+        // TODO: linked: what is entityKeyId here???
         ensureReadAccess( new AclKey( entitySetId ) );
         ensureReadAccess( new AclKey( entitySetId, propertyTypeId ) );
         Map<UUID, PropertyType> authorizedPropertyTypes = edmService
