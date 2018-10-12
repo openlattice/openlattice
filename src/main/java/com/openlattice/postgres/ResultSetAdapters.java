@@ -495,13 +495,16 @@ public final class ResultSetAdapters {
     }
 
     public static EntitySet entitySet( ResultSet rs ) throws SQLException {
-        UUID id = id( rs );
+        Optional<UUID> id = Optional.of( id( rs ) );
         String name = name( rs );
         UUID entityTypeId = entityTypeId( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( rs ) );
         Set<String> contacts = contacts( rs );
-        return new EntitySet( id, entityTypeId, name, title, description, contacts );
+        Optional<Boolean> linking = Optional.ofNullable( linking( rs ) );
+        Optional<Set<UUID>> linkedEntitySets = Optional.of( linkedEntitySets( rs ) );
+        Optional<Boolean> external = Optional.ofNullable( external( rs ) );
+        return new EntitySet( id, entityTypeId, name, title, description, contacts, linking, linkedEntitySets, external );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {
@@ -763,7 +766,7 @@ public final class ResultSetAdapters {
 
     public static SetMultimap<FullQualifiedName, Object> implicitEntity(
             ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Set<MetadataOption> metadataOptions ) throws SQLException {
         final UUID entityKeyId = entityKeyId( rs );
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
@@ -778,7 +781,10 @@ public final class ResultSetAdapters {
 
         data.put( ID_FQN, entityKeyId );
 
-        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
+        final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
+                .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
+                .collect( Collectors.toSet() );
+        for ( PropertyType propertyType : allPropertyTypes ) {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
@@ -799,6 +805,18 @@ public final class ResultSetAdapters {
 
     public static UUID entityKeyId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( ID_VALUE.getName() );
+    }
+
+    public static Boolean linking( ResultSet rs ) throws SQLException {
+        return (Boolean) rs.getObject( LINKING.getName() );
+    }
+
+    public static LinkedHashSet<UUID> linkedEntitySets( ResultSet rs ) throws SQLException {
+        return linkedHashSetUUID( rs, LINKED_ENTITY_SETS.getName() );
+    }
+
+    public static Boolean external( ResultSet rs ) throws SQLException {
+        return (Boolean) rs.getObject( EXTERNAL.getName() );
     }
 
     public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
