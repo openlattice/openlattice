@@ -20,6 +20,14 @@
 
 package com.openlattice.postgres;
 
+import static com.openlattice.postgres.DataTables.ID_FQN;
+import static com.openlattice.postgres.DataTables.LAST_INDEX;
+import static com.openlattice.postgres.DataTables.LAST_INDEX_FQN;
+import static com.openlattice.postgres.DataTables.LAST_WRITE;
+import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
+import static com.openlattice.postgres.PostgresArrays.getTextArray;
+import static com.openlattice.postgres.PostgresColumn.*;
+
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,15 +40,32 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AceKey;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AclKeySet;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.*;
+import com.openlattice.data.Entity;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntityDataMetadata;
+import com.openlattice.data.EntityKey;
+import com.openlattice.data.PropertyMetadata;
+import com.openlattice.data.PropertyUsageSummary;
+import com.openlattice.data.PropertyValueKey;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.*;
+import com.openlattice.edm.type.Analyzer;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.ComplexType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.EnumType;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.graph.query.GraphQueryState;
@@ -53,28 +78,34 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
-import java.time.temporal.ChronoUnit;
-
-import kotlin.Pair;
 import java.io.IOException;
+import java.sql.Array;
+import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Base64.Decoder;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.sql.*;
-import java.sql.Date;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.Base64.Decoder;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.openlattice.postgres.DataTables.*;
-import static com.openlattice.postgres.PostgresArrays.getTextArray;
-import static com.openlattice.postgres.PostgresColumn.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -748,16 +779,16 @@ public final class ResultSetAdapters {
         return objects;
     }
 
-    public static SetMultimap<UUID, Object> implicitEntityValuesById(
+    public static Map<UUID, Set<Object>> implicitEntityValuesById(
             ResultSet rs,
             Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
-        final SetMultimap<UUID, Object> data = HashMultimap.create();
+        final Map<UUID, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.putAll( propertyType.getId(), objects );
+                data.put( propertyType.getId(), new HashSet<>( objects ) );
             }
         }
 
@@ -821,11 +852,11 @@ public final class ResultSetAdapters {
 
     public static Entity entity( ResultSet rs, Set<UUID> authorizedPropertyTypeIds ) throws SQLException {
         UUID entityKeyId = id( rs );
-        SetMultimap<UUID, Object> data = HashMultimap.create();
+        Map<UUID, Set<Object>> data = new HashMap<>();
         for ( UUID ptId : authorizedPropertyTypeIds ) {
             Array valuesArr = rs.getArray( DataTables.propertyTableName( ptId ) );
             if ( valuesArr != null ) {
-                data.putAll( ptId, Arrays.asList( valuesArr.getArray() ) );
+                data.put( ptId, Sets.newHashSet( valuesArr.getArray() ) );
             }
         }
         return new Entity( entityKeyId, data );
@@ -833,13 +864,17 @@ public final class ResultSetAdapters {
 
     public static PropertyUsageSummary propertyUsageSummary( ResultSet rs ) throws SQLException {
         UUID entityTypeID = (UUID) rs.getObject( ENTITY_TYPE_ID_FIELD );
+        String entitySetName = rs.getString( ENTITY_SET_NAME_FIELD );
         UUID entitySetId = (UUID) rs.getObject( ENTITY_SET_ID_FIELD );
         long count = rs.getLong( COUNT );
-        return new PropertyUsageSummary( entityTypeID, entitySetId, count );
+        return new PropertyUsageSummary( entityTypeID, entitySetName, entitySetId, count );
     }
 
     public static Long count( ResultSet rs ) throws SQLException {
         return rs.getObject( "count", Long.class );
     }
 
+    public static OffsetDateTime expirationDate( ResultSet rs ) throws SQLException {
+        return rs.getObject( EXPIRATION_DATE_FIELD, OffsetDateTime.class );
+    }
 }

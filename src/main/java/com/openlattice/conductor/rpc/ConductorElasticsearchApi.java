@@ -174,13 +174,13 @@ public interface ConductorElasticsearchApi {
 
     boolean createEntityData(
             EntityDataKey edk,
-            SetMultimap<UUID, Object> propertyValues );
+            Map<UUID, Set<Object>> propertyValues );
 
-    boolean createBulkEntityData( UUID entitySetId, Map<UUID, SetMultimap<UUID, Object>> entitiesById );
+    boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById );
 
     boolean updateEntityData(
             EntityDataKey edk,
-            SetMultimap<UUID, Object> propertyValues );
+            Map<UUID, Set<Object>> propertyValues );
 
     boolean deleteEntityData( EntityDataKey edk );
 
@@ -189,6 +189,7 @@ public interface ConductorElasticsearchApi {
             String searchTerm,
             int start,
             int maxHits,
+            boolean fuzzy,
             Set<UUID> authorizedPropertyTypes );
 
     /**

@@ -153,6 +153,9 @@ public final class PostgresColumn {
     public static final String                   ENTITY_SET_ID_FIELD         = "entity_set_id";
     public static final PostgresColumnDefinition ENTITY_SET_ID               =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
+    public static final String                   ENTITY_SET_NAME_FIELD         = "entity_set_name";
+    public static final PostgresColumnDefinition ENTITY_SET_Name               =
+            new PostgresColumnDefinition( ENTITY_SET_NAME_FIELD, UUID ).notNull();
     public static final String                   ENTITY_TYPE_IDS_FIELD       = "entity_type_ids";
     public static final PostgresColumnDefinition ENTITY_TYPE_IDS             =
             new PostgresColumnDefinition( ENTITY_TYPE_IDS_FIELD, UUID_ARRAY ).notNull();
@@ -164,7 +167,7 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( EVENT_TYPE_FIELD, TEXT );
     public static final String                   EXPIRATION_DATE_FIELD       = "expiration_date";
     public static final PostgresColumnDefinition EXPIRATION_DATE             =
-            new PostgresColumnDefinition( EXPIRATION_DATE_FIELD, TEXT );
+            new PostgresColumnDefinition( EXPIRATION_DATE_FIELD, TIMESTAMPTZ );
     public static final String                   FLAGS_FIELD                 = "flags";
     public static final PostgresColumnDefinition FLAGS                       =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();

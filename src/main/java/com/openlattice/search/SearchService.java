@@ -218,7 +218,7 @@ public class SearchService {
     @Subscribe
     public void createEntityData( EntityDataCreatedEvent event ) {
         EntityDataKey edk = event.getEntityDataKey();
-        SetMultimap<UUID, Object> entity = event.getPropertyValues();
+        Map<UUID, Set<Object>> entity = event.getPropertyValues();
         if ( event.getShouldUpdate() ) {
             elasticsearchApi.updateEntityData( edk, entity );
         } else {
@@ -242,6 +242,7 @@ public class SearchService {
                 searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
                 searchTerm.getMaxHits(),
+                searchTerm.getFuzzy(),
                 authorizedProperties );
         Map<UUID, PropertyType> authorizedPropertyTypes = dataModelService
                 .getPropertyTypesAsMap( authorizedProperties );
@@ -258,7 +259,7 @@ public class SearchService {
         Set<UUID> properties = Sets
                 .newHashSet( dataModelService.getEntityTypeByEntitySetId( entitySetId ).getProperties() );
         // TODO: linked
-        return elasticsearchApi.executeEntitySetDataSearch( entitySetId, "*", 0, 0, properties ).getNumHits();
+        return elasticsearchApi.executeEntitySetDataSearch( entitySetId, "*", 0, 0, false, properties ).getNumHits();
     }
 
     @Subscribe
@@ -472,7 +473,6 @@ public class SearchService {
 
         } );
 
-        // TODO:  need also linked results here
         ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets( entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps );
 
@@ -622,7 +622,7 @@ public class SearchService {
                 .parallel()
                 .forEach( entity -> {
                     EntityDataKey edk = new EntityDataKey( entitySetId, entity.getEntityKeyId() );
-                    SetMultimap<UUID, Object> values = entity.getProperties();
+                    Map<UUID, Set<Object>> values = entity.getProperties();
                     elasticsearchApi.createEntityData( edk, values );
                 } );
     }

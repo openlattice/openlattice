@@ -24,25 +24,24 @@ import static com.openlattice.postgres.PostgresArrays.createTextArray;
 import static com.openlattice.postgres.PostgresArrays.createUuidArray;
 
 import com.codahale.metrics.annotation.Timed;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
+import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
-
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -50,7 +49,6 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.UUID;
-
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
@@ -97,6 +95,7 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
     protected AceValue mapToValue( ResultSet rs ) throws SQLException {
         EnumSet<Permission> permissions = ResultSetAdapters.permissions( rs );
         AclKey aclKey = ResultSetAdapters.aclKey( rs );
+        OffsetDateTime expirationDate = ResultSetAdapters.expirationDate(rs );
         /*
          * There is small risk of deadlock here if all readers get stuck waiting for connection from the connection pool
          * we should keep an eye out to make sure there aren't an unusual number of TimeoutExceptions being thrown.
@@ -106,7 +105,7 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         if ( objectType == null ) {
             logger.warn( "SecurableObjectType was null for key {}", aclKey );
         }
-        return new AceValue( permissions, objectType );
+        return new AceValue( permissions, objectType,expirationDate );
     }
 
     @Override protected AceKey mapToKey( ResultSet rs ) throws SQLException {

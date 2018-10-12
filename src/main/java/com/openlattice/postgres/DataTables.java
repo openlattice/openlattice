@@ -41,23 +41,23 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataTables {
-    public static final  FullQualifiedName                  COUNT_FQN      = new FullQualifiedName( "openlattice",
+    public static final FullQualifiedName        COUNT_FQN      = new FullQualifiedName( "openlattice",
             "@count" );
-    public static final  FullQualifiedName                  ID_FQN         = new FullQualifiedName( "openlattice",
+    public static final FullQualifiedName        ID_FQN         = new FullQualifiedName( "openlattice",
             "@id" );
-    public static final  PostgresColumnDefinition           LAST_INDEX     = new PostgresColumnDefinition(
+    public static final PostgresColumnDefinition LAST_INDEX     = new PostgresColumnDefinition(
             LAST_INDEX_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final  FullQualifiedName                  LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
+    public static final FullQualifiedName        LAST_INDEX_FQN = new FullQualifiedName( "openlattice",
             "@lastIndex" );
-    public static final  PostgresColumnDefinition           LAST_LINK      = new PostgresColumnDefinition(
+    public static final PostgresColumnDefinition LAST_LINK      = new PostgresColumnDefinition(
             LAST_LINK_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final  PostgresColumnDefinition           LAST_WRITE     = new PostgresColumnDefinition(
+    public static final PostgresColumnDefinition LAST_WRITE     = new PostgresColumnDefinition(
             LAST_WRITE_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
@@ -115,7 +115,7 @@ public class DataTables {
         final String idxPrefix = propertyTableName( propertyType.getId() );
 
         PostgresColumnDefinition valueColumn = value( propertyType );
-        PostgresTableDefinition ptd = new PostgresTableDefinition(
+        PostgresTableDefinition ptd = new CitusDistributedTableDefinition(
                 quote( idxPrefix ) )
                 .addColumns(
                         ENTITY_SET_ID,
@@ -129,7 +129,9 @@ public class DataTables {
                         READERS,
                         WRITERS,
                         OWNERS )
-                .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH );
+                .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH )
+                .distributionColumn( ID )
+                .colocationColumn( PostgresTable.IDS );
 
         PostgresIndexDefinition idIndex = new PostgresColumnsIndexDefinition( ptd, ID_VALUE )
                 .name( quote( idxPrefix + "_id_idx" ) )

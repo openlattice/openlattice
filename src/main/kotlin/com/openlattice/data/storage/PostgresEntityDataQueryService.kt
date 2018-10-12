@@ -21,12 +21,9 @@
 
 package com.openlattice.data.storage
 
-import com.google.common.collect.Multimaps
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.EntityKey
-import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -56,13 +53,22 @@ const val FETCH_SIZE = 100000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
+
+    fun getEntitiesById(
+            entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            entityKeyIds: Set<UUID>
+    ): Map<UUID, Map<UUID, Set<Any>>> {
+        return getEntitiesById(entitySetId, authorizedPropertyTypes, entityKeyIds, false)
+    }
+
     fun getEntitiesById(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             entityKeyIds: Set<UUID>,
             isLinking: Boolean
-    ): Map<UUID, SetMultimap<UUID, Any>> {
-        val adapter = Function<ResultSet, Pair<UUID, SetMultimap<UUID, Any>>> {
+    ): Map<UUID, Map<UUID, Set<Any>>> {
+        val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
         }
         return streamableEntitySet(
@@ -95,7 +101,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         return streamableEntitySet(
-                entitySetId, Optional.of(entityKeyIds), authorizedPropertyTypes, metadataOptions, isLinking, version
+                mapOf(entitySetId to Optional.of(entityKeyIds)) , authorizedPropertyTypes, metadataOptions, isLinking, version
         )
     }
 
@@ -108,29 +114,12 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             isLinking: Boolean = false
     ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
-            ResultSetAdapters.id(it) to Multimaps.asMap(
+            ResultSetAdapters.id(it) to
                     ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
-            ).toMap()
         }
         return streamableEntitySet(
                 mapOf(entitySetId to entityKeyIds), mapOf(entitySetId to authorizedPropertyTypes), metadataOptions, isLinking,
                 version, adapter
-        )
-    }
-
-    private fun streamableEntitySet(
-            entitySetId: UUID,
-            entityKeyIds: Optional<Set<UUID>>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: Set<MetadataOption>,
-            isLinking: Boolean,
-            version: Optional<Long> = Optional.empty()
-    ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
-        val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
-            ResultSetAdapters.implicitEntity(it, authorizedPropertyTypes, metadataOptions)
-        }
-        return streamableEntitySet(
-                mapOf(entitySetId to entityKeyIds), authorizedPropertyTypes, metadataOptions, isLinking, version, adapter
         )
     }
 
@@ -607,7 +596,7 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             "ON CONFLICT (${ID_VALUE.name}) " +
             "DO UPDATE SET versions = ${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
-            "${LAST_WRITE.name} = now() " +
+            "${LAST_WRITE.name} = EXCLUDED.${LAST_WRITE.name} " +
             "WHERE EXCLUDED.${VERSION.name} > abs(${IDS.name}.version) "
 }
 

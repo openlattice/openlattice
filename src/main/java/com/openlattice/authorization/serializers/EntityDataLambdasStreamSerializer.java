@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.conductor.rpc.EntityDataLambdas;
 import com.openlattice.data.EntityDataKey;
@@ -72,6 +73,6 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
             logger.debug( "Unable to deserialize entity with id: {}", entityKeyId );
         }
 
-        return new EntityDataLambdas( edk, propertyValues, shouldUpdate );
+        return new EntityDataLambdas( edk, Multimaps.asMap(propertyValues), shouldUpdate );
     }
 }

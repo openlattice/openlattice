@@ -50,6 +50,7 @@ import com.openlattice.graph.Graph;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.neuron.Neuron;
+import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
 
 import javax.inject.Inject;
@@ -73,6 +74,9 @@ public class NeuronPod {
 
     @Inject
     private ListeningExecutorService executor;
+
+    @Inject
+    private PostgresTableManager tableManager;
 
     @Inject
     private HikariDataSource hikariDataSource;
@@ -128,7 +132,7 @@ public class NeuronPod {
 
     @Bean
     public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource );
+        return new PostgresEdmManager( hikariDataSource, tableManager );
     }
 
     @Bean
@@ -148,7 +152,6 @@ public class NeuronPod {
         );
     }
 
-
     @Bean
     public EdmManager dataModelService() {
         return new EdmService(
@@ -158,7 +161,7 @@ public class NeuronPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager());
+                schemaManager() );
     }
 
     @Bean
