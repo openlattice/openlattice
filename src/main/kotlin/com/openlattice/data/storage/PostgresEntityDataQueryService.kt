@@ -25,6 +25,8 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.EntityKey
+import com.openlattice.edm.set.EntitySetPropertyKey
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -50,51 +52,50 @@ import java.util.function.Supplier
  */
 const val MAX_PREV_VERSION = "max_prev_version"
 const val EXPANDED_VERSIONS = "expanded_versions"
-const val BATCH_SIZE = 10000
+const val FETCH_SIZE = 100000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     fun getEntitiesById(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
-            entityKeyIds: Set<UUID>
-    ): Map<UUID, SetMultimap<UUID, Any>> {
-        return getEntitiesById(entitySetId, authorizedPropertyTypes, Optional.of(entityKeyIds))
-    }
-
-    private fun getEntitiesById(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
-            entityKeyIds: Optional<Set<UUID>>
+            entityKeyIds: Set<UUID>,
+            isLinking: Boolean
     ): Map<UUID, SetMultimap<UUID, Any>> {
         val adapter = Function<ResultSet, Pair<UUID, SetMultimap<UUID, Any>>> {
             ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
         }
         return streamableEntitySet(
-                entitySetId, entityKeyIds, authorizedPropertyTypes, EnumSet.noneOf(MetadataOption::class.java),
-                Optional.empty(), adapter
+                mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
+                EnumSet.noneOf(MetadataOption::class.java), isLinking, Optional.empty(), adapter
         ).toMap()
     }
 
-
     fun streamableEntitySet(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            entitySetIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
+            isLinking: Boolean,
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
-        return streamableEntitySet(entitySetId, Optional.empty(), authorizedPropertyTypes, metadataOptions, version)
+        return streamableEntitySet(
+                entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
+                authorizedPropertyTypes,
+                metadataOptions,
+                isLinking,
+                version)
     }
 
     fun streamableEntitySet(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
+            isLinking: Boolean,
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         return streamableEntitySet(
-                entitySetId, Optional.of(entityKeyIds), authorizedPropertyTypes, metadataOptions, version
+                entitySetId, Optional.of(entityKeyIds), authorizedPropertyTypes, metadataOptions, isLinking, version
         )
     }
 
@@ -103,7 +104,8 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entityKeyIds: Optional<Set<UUID>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             metadataOptions: Set<MetadataOption>,
-            version: Optional<Long> = Optional.empty()
+            version: Optional<Long> = Optional.empty(),
+            isLinking: Boolean = false
     ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to Multimaps.asMap(
@@ -111,55 +113,45 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             ).toMap()
         }
         return streamableEntitySet(
-                entitySetId,
-                entityKeyIds,
-                authorizedPropertyTypes,
-                metadataOptions,
-                version,
-                adapter
-        )
-    }
-
-    fun streamableEntitySetUsingPropertyTypeIds(
-            entitySetId: UUID,
-            entityKeyIds: Optional<Set<UUID>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
-            metadataOptions: Set<MetadataOption>,
-            version: Optional<Long> = Optional.empty()
-    ): PostgresIterable<SetMultimap<UUID, Any>> {
-        val adapter = Function<ResultSet, SetMultimap<UUID, Any>> {
-            ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
-        }
-        return streamableEntitySet(
-                entitySetId,
-                entityKeyIds,
-                authorizedPropertyTypes,
-                metadataOptions,
-                version,
-                adapter
+                mapOf(entitySetId to entityKeyIds), mapOf(entitySetId to authorizedPropertyTypes), metadataOptions, isLinking,
+                version, adapter
         )
     }
 
     private fun streamableEntitySet(
             entitySetId: UUID,
             entityKeyIds: Optional<Set<UUID>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
+            isLinking: Boolean,
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
             ResultSetAdapters.implicitEntity(it, authorizedPropertyTypes, metadataOptions)
         }
         return streamableEntitySet(
-                entitySetId, entityKeyIds, authorizedPropertyTypes, metadataOptions, version, adapter
+                mapOf(entitySetId to entityKeyIds), authorizedPropertyTypes, metadataOptions, isLinking, version, adapter
         )
     }
 
-    private fun <T> streamableEntitySet(
-            entitySetId: UUID,
-            entityKeyIds: Optional<Set<UUID>>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
+    fun streamableEntitySet(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
+            isLinking: Boolean,
+            version: Optional<Long> = Optional.empty()
+    ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
+        val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
+            ResultSetAdapters.implicitEntity(it, authorizedPropertyTypes, metadataOptions)
+        }
+        return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, isLinking, version, adapter)
+    }
+
+    private fun <T> streamableEntitySet(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            metadataOptions: Set<MetadataOption>,
+            isLinking: Boolean,
             version: Optional<Long>,
             adapter: Function<ResultSet, T>
     ): PostgresIterable<T> {
@@ -167,31 +159,37 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                 Supplier<StatementHolder> {
                     val connection = hds.connection
                     val statement = connection.createStatement()
-                    statement.fetchSize = 100000
+                    statement.fetchSize = FETCH_SIZE
+
+                    val allPropertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.toSet()
+                    val binaryPropertyTypes = allPropertyTypes
+                            .associate { it.id to (it.datatype == EdmPrimitiveTypeKind.Binary) }
+                    val propertyFqns = allPropertyTypes.map { it.id to quote(it.type.fullQualifiedNameAsString) }.toMap()
+
                     val rs = statement.executeQuery(
                             if (version.isPresent) {
 
                                 selectEntitySetWithPropertyTypesAndVersionSql(
-                                        mapOf(entitySetId to entityKeyIds),
-                                        authorizedPropertyTypes.map { it.key to quote(it.value.type.fullQualifiedNameAsString) }.toMap(),
-                                        authorizedPropertyTypes.keys,
-                                        mapOf(entitySetId to authorizedPropertyTypes.keys),
+                                        entityKeyIds,
+                                        propertyFqns,
+                                        allPropertyTypes.map { it.id },
+                                        authorizedPropertyTypes.mapValues { it.value.map { it.key }.toSet() },
                                         mapOf(),
                                         metadataOptions,
                                         version.get(),
-                                        false,
-                                        authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                                        isLinking,
+                                        binaryPropertyTypes
                                 )
                             } else {
                                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-                                        mapOf(entitySetId to entityKeyIds),
-                                        authorizedPropertyTypes.map { it.key to quote(it.value.type.fullQualifiedNameAsString) }.toMap(),
-                                        authorizedPropertyTypes.keys,
-                                        mapOf(entitySetId to authorizedPropertyTypes.keys),
+                                        entityKeyIds,
+                                        propertyFqns,
+                                        allPropertyTypes.map { it.id },
+                                        authorizedPropertyTypes.mapValues { it.value.map { it.key }.toSet() },
                                         mapOf(),
                                         metadataOptions,
-                                        false,
-                                        authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                                        isLinking,
+                                        binaryPropertyTypes
                                 )
                             }
                     )
@@ -199,6 +197,20 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                 },
                 adapter
         )
+    }
+
+    fun getEntityKeysOfLinkingIds( linkingIds:Set<UUID> ) : PostgresIterable<EntityDataKey> {
+        val adapter = Function<ResultSet, EntityDataKey> {
+            ResultSetAdapters.entityDataKey(it)
+        }
+        return PostgresIterable( Supplier<StatementHolder> {
+            val connection = hds.connection
+            val statement = connection.createStatement()
+            statement.fetchSize = FETCH_SIZE
+
+            val rs = statement.executeQuery(selectEntityKeysOfLinkingIds(linkingIds))
+            StatementHolder(connection, statement, rs)
+        }, adapter)
     }
 
     fun upsertEntities(
@@ -635,17 +647,29 @@ fun selectEntitySetWithPropertyTypes(
     //@formatter:off
     val columns = setOf(
             ID_VALUE.name,
-            if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) { LAST_WRITE.name } else { "" },
-            if(metadataOptions.contains(MetadataOption.LAST_INDEX) ) { LAST_INDEX.name } else { "" },
-            if(metadataOptions.contains(MetadataOption.LAST_LINK) ) { LAST_LINK.name } else { "" })
-            .union( authorizedPropertyTypes.values.map(::quote ) )
-    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} FROM (SELECT * \n" +
+            if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+                LAST_WRITE.name
+            } else {
+                ""
+            },
+            if (metadataOptions.contains(MetadataOption.LAST_INDEX)) {
+                LAST_INDEX.name
+            } else {
+                ""
+            },
+            if (metadataOptions.contains(MetadataOption.LAST_LINK)) {
+                LAST_LINK.name
+            } else {
+                ""
+            })
+            .union(authorizedPropertyTypes.values.map(::quote))
+    return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM (SELECT * \n" +
             "FROM $esTableName " +
             "WHERE version > 0 $entityKeyIdsClause" +
             ") as $esTableName" +
             authorizedPropertyTypes
-                    .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, binaryPropertyTypes[it.key]!! )} USING (${ID.name} )" }
-                    .joinToString("\n" )
+                    .map { "LEFT JOIN ${subSelectLatestVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, binaryPropertyTypes[it.key]!!)} USING (${ID.name} )" }
+                    .joinToString("\n")
     //@formatter:on
 }
 
@@ -662,18 +686,30 @@ fun selectEntitySetWithPropertyTypesAndVersion(
     //@formatter:off
     val columns = setOf(
             ID_VALUE.name,
-            if(metadataOptions.contains(MetadataOption.LAST_WRITE) ) { LAST_WRITE.name } else { "" },
-            if(metadataOptions.contains(MetadataOption.LAST_INDEX) )  {LAST_INDEX.name } else { "" },
-            if(metadataOptions.contains(MetadataOption.LAST_LINK) )  {LAST_LINK.name } else { "" })
-            .union( authorizedPropertyTypes.values.map(::quote ) )
+            if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+                LAST_WRITE.name
+            } else {
+                ""
+            },
+            if (metadataOptions.contains(MetadataOption.LAST_INDEX)) {
+                LAST_INDEX.name
+            } else {
+                ""
+            },
+            if (metadataOptions.contains(MetadataOption.LAST_LINK)) {
+                LAST_LINK.name
+            } else {
+                ""
+            })
+            .union(authorizedPropertyTypes.values.map(::quote))
 
-    return "SELECT ${columns.filter(String::isNotBlank).joinToString (",")} FROM ( SELECT * " +
+    return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM ( SELECT * " +
             "FROM $esTableName " +
             "WHERE version > 0 $entityKeyIdsClause" +
             ") as $esTableName" +
             authorizedPropertyTypes
-                    .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version, binaryPropertyTypes[it.key]!! )} USING (${ID.name} )" }
-                    .joinToString("\n" )
+                    .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version, binaryPropertyTypes[it.key]!!)} USING (${ID.name} )" }
+                    .joinToString("\n")
     //@formatter:on
 }
 

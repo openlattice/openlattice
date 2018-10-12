@@ -46,16 +46,17 @@ interface DataGraphManager {
      * Entity set methods
      */
     fun getEntitySetData(
-            entitySetId: UUID,
+            entitySetIds: Set<UUID>,
             orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            isLinking: Boolean
     ): EntitySetData<FullQualifiedName>
 
     fun getEntitySetData(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            isLinking: Boolean
     ): EntitySetData<FullQualifiedName>
 
     /*

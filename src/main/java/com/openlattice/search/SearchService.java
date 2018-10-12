@@ -93,7 +93,7 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+// TODO changed to search in linked data too
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
 
@@ -237,6 +237,7 @@ public class SearchService {
             UUID entitySetId,
             SearchTerm searchTerm,
             Set<UUID> authorizedProperties ) {
+        // TODO linked
         EntityKeyIdSearchResult result = elasticsearchApi.executeEntitySetDataSearch( entitySetId,
                 searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
@@ -256,6 +257,7 @@ public class SearchService {
     public long getEntitySetSize( UUID entitySetId ) {
         Set<UUID> properties = Sets
                 .newHashSet( dataModelService.getEntityTypeByEntitySetId( entitySetId ).getProperties() );
+        // TODO: linked
         return elasticsearchApi.executeEntitySetDataSearch( entitySetId, "*", 0, 0, properties ).getNumHits();
     }
 
@@ -276,6 +278,7 @@ public class SearchService {
             Map<UUID, DelegatedStringSet> fieldSearches,
             int size,
             boolean explain ) {
+        // TODO linked
         return elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetIds,
                 fieldSearches,
                 size,
@@ -293,7 +296,7 @@ public class SearchService {
                 authorizedSearches.add( searchDetails );
             }
         } );
-
+        // TODO linked
         if ( !authorizedSearches.isEmpty() ) {
             EntityKeyIdSearchResult result = elasticsearchApi.executeAdvancedEntitySetDataSearch( entitySetId,
                     authorizedSearches,
@@ -469,6 +472,7 @@ public class SearchService {
 
         } );
 
+        // TODO:  need also linked results here
         ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets( entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps );
 
@@ -567,8 +571,12 @@ public class SearchService {
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         //TODO: Create a set from the beginning to avoid copy
         if ( result.getEntityKeyIds().size() == 0 ) { return ImmutableList.of(); }
+        // TODO:  need also linked results here
         return dataManager
-                .getEntities( entitySetId, ImmutableSet.copyOf( result.getEntityKeyIds() ), authorizedPropertyTypes )
+                .getEntities( entitySetId,
+                        ImmutableSet.copyOf( result.getEntityKeyIds() ),
+                        Map.of(entitySetId, authorizedPropertyTypes),
+                        false )
                 .collect( Collectors.toList() );
     }
 

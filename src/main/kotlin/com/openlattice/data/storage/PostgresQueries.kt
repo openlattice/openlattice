@@ -52,15 +52,15 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         authorizedPropertyTypes: Map<UUID, Set<UUID>>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
         metadataOptions: Set<MetadataOption>,
-        linked: Boolean,
+        isLinking: Boolean,
         binaryPropertyTypes: Map<UUID, Boolean>,
         metadataFilters: String = ""
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds)
-    val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions)
+    val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions, isLinking)
 
     val joinColumns =
-            if (linked) {
+            if (isLinking) {
                 listOf(LINKING_ID.name)
             } else {
                 listOf(ENTITY_SET_ID.name, ID_VALUE.name)
@@ -87,7 +87,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                                 it.key,
                                 propertyTypeFilters[it.key] ?: setOf<Filter>(),
                                 it.value,
-                                linked,
+                                isLinking,
                                 binaryPropertyTypes[it.key]!!,
                                 metadataFilters
                         )
@@ -342,14 +342,16 @@ internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
  */
 internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         entitiesClause: String,
-        metadataOptions: Set<MetadataOption>
+        metadataOptions: Set<MetadataOption>,
+        isLinking: Boolean
 ): String {
-    val metadataColumns = metadataOptions.joinToString(",") { it.name }
-    return if (metadataOptions.isEmpty()) {
-        "(SELECT $entityKeyIdColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
-    } else {
-        "(SELECT $entityKeyIdColumns,$metadataColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
-    }
+    val metadataColumns = metadataOptions.joinToString(separator = ",") { it.name }
+    val selectColumns = entityKeyIdColumns +
+            if(!metadataColumns.isEmpty()) ", $metadataColumns" else "" +
+                    if(isLinking) ", ${LINKING_ID.name}" else ""
+
+    return "(SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
+
 }
 
 internal fun arrayAggSql(fqn: String, binary: Boolean): String {
@@ -395,4 +397,13 @@ internal fun buildPropertyTypeEntitiesClause(
 internal fun buildFilterClause(fqn: String, filter: Set<Filter>): String {
     if (filter.isEmpty()) return ""
     return filter.joinToString(" AND ", prefix = " AND ") { it.asSql(fqn) }
+}
+
+internal fun selectEntityKeysOfLinkingIds( linkingIds:Set<UUID> ): String {
+    val linkingEntitiesClause = buildLinkingEntitiesClause(linkingIds)
+    return "SELECT $entityKeyIdColumns FROM ${selectEntityKeyIdsWithCurrentVersionSubquerySql(linkingEntitiesClause, setOf(), true)}"
+}
+
+internal fun buildLinkingEntitiesClause(linkingIds:Set<UUID>): String {
+    return " AND ${LINKING_ID.name} IN ( ${linkingIds.joinToString(",") { "'$it'" }} )"
 }

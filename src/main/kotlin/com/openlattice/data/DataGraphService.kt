@@ -100,20 +100,21 @@ open class DataGraphService(
             .build<MultiKey<*>, Map<String, Object>>()
 
     override fun getEntitySetData(
-            entitySetId: UUID,
+            entitySetIds: Set<UUID>,
             orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            isLinking: Boolean
     ): EntitySetData<FullQualifiedName> {
-        return eds.getEntitySetData(entitySetId, orderedPropertyNames, authorizedPropertyTypes)
+        return eds.getEntitySetData(entitySetIds, orderedPropertyNames, authorizedPropertyTypes, isLinking)
     }
 
     override fun getEntitySetData(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            isLinking: Boolean
     ): EntitySetData<FullQualifiedName> {
-        return eds.getEntities(entitySetId, entityKeyIds, orderedPropertyNames, authorizedPropertyTypes)
+        return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, isLinking)
     }
 
 
@@ -127,8 +128,9 @@ open class DataGraphService(
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): SetMultimap<FullQualifiedName, Any> {
+        val isLinking = edm.getEntitySet(entitySetId).isLinking
         return eds
-                .getEntities(entitySetId, ImmutableSet.of(entityKeyId), authorizedPropertyTypes)
+                .getEntities(entitySetId, ImmutableSet.of(entityKeyId), mapOf(entitySetId to authorizedPropertyTypes), isLinking)
                 .iterator()
                 .next()
     }
