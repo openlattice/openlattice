@@ -177,7 +177,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                         ps.addBatch()
                     }
                 }
-                return ps.executeUpdate()
+                return ps.executeBatch().sum()
             }
         }
     }
