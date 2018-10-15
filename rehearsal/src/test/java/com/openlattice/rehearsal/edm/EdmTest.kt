@@ -23,7 +23,18 @@ package com.openlattice.rehearsal.edm
 
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.edm.EdmApi
+import com.openlattice.edm.type.AssociationType
+import com.openlattice.rehearsal.GeneralException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Rule
+import org.junit.Test
+import java.util.*
+import kotlin.collections.LinkedHashSet
+import org.junit.rules.ExpectedException
+import java.lang.reflect.UndeclaredThrowableException
+
 
 /**
  *
@@ -36,7 +47,25 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
             val prodEdmApi = client.create(EdmApi::class.java)
             val prodEdm = prodEdmApi.entityDataModel
         }
+
+        @JvmStatic
+        @BeforeClass
+        fun init() {
+            loginAs("admin")
+        }
     }
 
+    @Test
+    fun testAssociationTypeCreationWrongCategory() {
+        val et = MultipleAuthenticatedUsersBase.createEntityType()
+        val at = AssociationType(Optional.of(et), LinkedHashSet(), LinkedHashSet(), false)
 
+        try {
+            edmApi.createAssociationType(at)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("You cannot create an edge type with not an AssociationType category", true))
+        }
+    }
 }
