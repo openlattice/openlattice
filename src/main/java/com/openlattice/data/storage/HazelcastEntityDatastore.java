@@ -111,13 +111,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Set<UUID> entitySetIds,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            boolean isLinking ) {
+            boolean linking ) {
         return new EntitySetData<>(
                 orderedPropertyNames,
                 dataQueryService.streamableEntitySet( entitySetIds,
                         authorizedPropertyTypes,
                         EnumSet.of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
-                        isLinking,
+                        linking,
                         Optional.empty() ) );
     }
 
@@ -224,7 +224,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             LinkedHashSet<String> orderedPropertyTypes,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            boolean isLinking ) {
+            boolean linking ) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return new EntitySetData<>(
                 orderedPropertyTypes,
@@ -232,7 +232,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                         entityKeyIds,
                         authorizedPropertyTypes,
                         EnumSet.noneOf( MetadataOption.class ),
-                        isLinking,
+                        linking,
                         Optional.empty()) );
     }
 
@@ -242,14 +242,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Set<UUID> ids,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            boolean isLinking ) {
+            boolean linking ) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return dataQueryService.streamableEntitySet(
                 entitySetId,
                 ids,
                 authorizedPropertyTypes,
                 EnumSet.noneOf( MetadataOption.class ),
-                isLinking,
+                linking,
                 Optional.empty() ).stream();
     }
 

@@ -52,15 +52,15 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         authorizedPropertyTypes: Map<UUID, Set<UUID>>,
         propertyTypeFilters: Map<UUID, Set<Filter>>,
         metadataOptions: Set<MetadataOption>,
-        isLinking: Boolean,
+        linking: Boolean,
         binaryPropertyTypes: Map<UUID, Boolean>,
         metadataFilters: String = ""
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds)
-    val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions, isLinking)
+    val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions, linking)
 
     val joinColumns =
-            if (isLinking) {
+            if (linking) {
                 listOf(LINKING_ID.name)
             } else {
                 listOf(ENTITY_SET_ID.name, ID_VALUE.name)
@@ -87,7 +87,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                                 it.key,
                                 propertyTypeFilters[it.key] ?: setOf<Filter>(),
                                 it.value,
-                                isLinking,
+                                linking,
                                 binaryPropertyTypes[it.key]!!,
                                 metadataFilters
                         )
@@ -343,12 +343,12 @@ internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
 internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         entitiesClause: String,
         metadataOptions: Set<MetadataOption>,
-        isLinking: Boolean
+        linking: Boolean
 ): String {
     val metadataColumns = metadataOptions.joinToString(separator = ",") { it.name }
     val selectColumns = entityKeyIdColumns +
             if(!metadataColumns.isEmpty()) ", $metadataColumns" else "" +
-                    if(isLinking) ", ${LINKING_ID.name}" else ""
+                    if(linking) ", ${LINKING_ID.name}" else ""
 
     return "(SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
 

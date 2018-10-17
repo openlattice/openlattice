@@ -188,7 +188,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         )
     }
 
-    fun getEntityKeysOfLinkingIds( linkingIds:Set<UUID> ) : PostgresIterable<EntityDataKey> {
+    fun getEntityDataKeysOfLinkingIds(linkingIds:Set<UUID> ) : PostgresIterable<EntityDataKey> {
         val adapter = Function<ResultSet, EntityDataKey> {
             ResultSetAdapters.entityDataKey(it)
         }
