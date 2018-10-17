@@ -123,10 +123,12 @@ public final class SerializationConstants {
     public static final String KEY_FIELD                        = "key";
     public static final String LAST_INDEX                       = "lastIndex";
     public static final String LAST_WRITE                       = "lastWrite";
+    public static final String LATITUDE                         = "latitude";
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
     public static final String LINKING_ENTITY_SET_FIELD         = "linkingEntitySet";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
+    public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
     public static final String LTE                              = "lte";
     public static final String MAX_HITS                         = "maxHits";
@@ -166,6 +168,7 @@ public final class SerializationConstants {
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
     public static final String PROPERTY_TYPE_IDS                = "propertyTypeIds";
     public static final String QUERY_ID                         = "queryId";
+    public static final String RADIUS                           = "radius";
     public static final String REASON                           = "reason";
     public static final String REQUEST                          = "request";
     public static final String REQUESTING_USER                  = "requestingUser";
@@ -194,6 +197,7 @@ public final class SerializationConstants {
     public static final String TITLE_FIELD                      = "title";                   // for EntitySet
     public static final String TRUSTED_ORGANIZATIONS_FIELD      = "trustedOrganizations";
     public static final String TYPE_FIELD                       = "type";
+    public static final String UNIT                             = "unit";
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";

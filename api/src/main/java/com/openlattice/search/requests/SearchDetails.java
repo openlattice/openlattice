@@ -19,6 +19,7 @@
 package com.openlattice.search.requests;
 
 import java.io.Serializable;
+import java.util.Objects;
 import java.util.UUID;
 
 import com.openlattice.client.serialization.SerializationConstants;
@@ -61,4 +62,19 @@ public class SearchDetails implements Serializable {
         return exactMatch;
     }
 
+    @Override public boolean equals( Object o ) {
+        if ( this == o )
+            return true;
+        if ( o == null || getClass() != o.getClass() )
+            return false;
+        SearchDetails that = (SearchDetails) o;
+        return exactMatch == that.exactMatch &&
+                Objects.equals( searchTerm, that.searchTerm ) &&
+                Objects.equals( propertyType, that.propertyType );
+    }
+
+    @Override public int hashCode() {
+
+        return Objects.hash( searchTerm, propertyType, exactMatch );
+    }
 }
