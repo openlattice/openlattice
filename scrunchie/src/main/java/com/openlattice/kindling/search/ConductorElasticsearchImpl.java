@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
 import com.openlattice.authorization.AclKey;
@@ -44,21 +45,16 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.openlattice.search.requests.EntityKeyIdSearchResult;
-import com.openlattice.search.requests.SearchDetails;
-import com.openlattice.search.requests.SearchResult;
+
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.requests.*;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
@@ -67,18 +63,17 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.search.SearchHit;
@@ -815,44 +810,122 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return true;
     }
 
-    @Override
-    public EntityKeyIdSearchResult executeEntitySetDataSearch(
-            UUID entitySetId,
-            String searchTerm,
-            int start,
-            int maxHits,
-            boolean fuzzy,
-            Set<UUID> authorizedPropertyTypes ) {
-        if ( !verifyElasticsearchConnection() ) { return new EntityKeyIdSearchResult( 0, Lists.newArrayList() ); }
+    private EntityDataKeySearchResult getEntityDataKeySearchResult( SearchResponse response ) {
+        Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
+        for ( SearchHit hit : response.getHits() ) {
+            entityDataKeys.add( new EntityDataKey( getEntitySetIdFromIndex( hit.getIndex() ),
+                    UUID.fromString( hit.getId() ) ) );
+        }
+        return new EntityDataKeySearchResult( response.getHits().getTotalHits(), entityDataKeys );
+    }
 
+    private static Map<String, Float> getFieldsMap( Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
         Map<String, Float> fieldsMap = Maps.newHashMap();
-        String[] authorizedPropertyTypeFields = authorizedPropertyTypes
+        authorizedPropertyTypesByEntitySet.values().stream().flatMap( ptSet -> ptSet.stream() )
+                .forEach( id -> fieldsMap.put( id.toString(), 0F ) );
+        authorizedPropertyTypesByEntitySet.values().stream().map( uuidSet -> uuidSet.unwrap() )
+                .reduce( ( s1, s2 ) -> Sets.intersection( s1, s2 ) ).get()
                 .stream()
-                .map( uuid -> {
+                .forEach( uuid -> {
                     fieldsMap.put( uuid.toString(), 1F );
-                    return uuid.toString();
-                } )
-                .collect( Collectors.toList() )
-                .toArray( new String[ authorizedPropertyTypes.size() ] );
+                } );
+
+        return fieldsMap;
+    }
+
+    private QueryBuilder getAdvancedSearchQuery(
+            SearchConstraints constraints,
+            Map<String, Float> fieldMap ) {
+
+        BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
+        constraints.getSearches().get().forEach( search -> {
+            if ( fieldMap.get( search.getPropertyType().toString() ) > 0 ) {
+                QueryStringQueryBuilder queryString = QueryBuilders
+                        .queryStringQuery( search.getSearchTerm() )
+                        .field( search.getPropertyType().toString(), 1F ).lenient( true );
+                if ( search.getExactMatch() ) {
+                    query.must( queryString );
+                    query.minimumShouldMatch( 0 );
+                } else { query.should( queryString ); }
+            }
+        } );
+
+        return query;
+
+    }
+
+    private QueryBuilder getSimpleSearchQuery(
+            SearchConstraints constraints,
+            Map<String, Float> fieldsMap ) {
+
+        String searchTerm = constraints.getSearchTerm().get();
+        boolean fuzzy = constraints.getFuzzy().get();
 
         String formattedSearchTerm = fuzzy ? getFormattedFuzzyString( searchTerm ) : searchTerm;
 
-        QueryStringQueryBuilder query = QueryBuilders.queryStringQuery( formattedSearchTerm )
+        return QueryBuilders.queryStringQuery( formattedSearchTerm )
                 .fields( fieldsMap )
                 .lenient( true );
-        SearchResponse response = client.prepareSearch( getIndexName( entitySetId ) )
-                .setQuery( query )
-                .setFetchSource( authorizedPropertyTypeFields, null )
-                .setFrom( start )
-                .setSize( maxHits )
+    }
+
+    private QueryBuilder getGeoDistanceSearchQuery(
+            SearchConstraints constraints,
+            Map<String, Float> fieldMap ) {
+
+        UUID propertyTypeId = constraints.getPropertyTypeId().get();
+        if ( !fieldMap.containsKey( propertyTypeId.toString() ) || fieldMap.get( propertyTypeId.toString() ) == 0F ) {
+            return null;
+        }
+
+        double latitude = constraints.getLatitude().get();
+        double longitude = constraints.getLongitude().get();
+        double radius = constraints.getRadius().get();
+
+        return QueryBuilders
+                .geoDistanceQuery( propertyTypeId.toString() )
+                .point( latitude, longitude )
+                .distance( radius, DistanceUnit.fromString( constraints.getDistanceUnit().get().name() ) );
+    }
+
+    private QueryBuilder getQueryForSearch(
+            SearchConstraints searchConstraints,
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
+        Map<String, Float> fieldsMap = getFieldsMap( authorizedPropertyTypesByEntitySet );
+
+        switch ( searchConstraints.getSearchType() ) {
+
+            case advanced:
+                return getAdvancedSearchQuery( searchConstraints, fieldsMap );
+
+            case geoDistance:
+                return getGeoDistanceSearchQuery( searchConstraints, fieldsMap );
+
+            case simple:
+            default:
+                return getSimpleSearchQuery( searchConstraints, fieldsMap );
+
+        }
+    }
+
+    @Override
+    public EntityDataKeySearchResult executeSearch(
+            SearchConstraints searchConstraints, Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
+        if ( !verifyElasticsearchConnection() ) {
+            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
+        }
+
+        String[] indexNames = Arrays.stream( searchConstraints.getEntitySetIds() )
+                .map( id -> getIndexName( id ) ).toArray( String[]::new );
+
+        SearchResponse response = client
+                .prepareSearch( indexNames )
+                .setQuery( getQueryForSearch( searchConstraints, authorizedPropertyTypesByEntitySet ) )
+                .setFrom( searchConstraints.getStart() )
+                .setSize( searchConstraints.getMaxHits() )
                 .execute()
                 .actionGet();
-        List<UUID> ids = Lists.newArrayList();
-        for ( SearchHit hit : response.getHits() ) {
-            ids.add( UUID.fromString( hit.getId() ) );
-        }
-        EntityKeyIdSearchResult result = new EntityKeyIdSearchResult( response.getHits().totalHits, ids );
-        return result;
+
+        return getEntityDataKeySearchResult( response );
     }
 
     @Override
@@ -933,53 +1006,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             fixedRate = 1800000 )
     public void verifyRunner() throws UnknownHostException {
         verifyElasticsearchConnection();
-    }
-
-    @Override
-    public EntityKeyIdSearchResult
-    executeAdvancedEntitySetDataSearch(
-            UUID entitySetId,
-            List<SearchDetails> searches,
-            int start,
-            int maxHits,
-            Set<UUID> authorizedPropertyTypes ) {
-        if ( !verifyElasticsearchConnection() ) { return new EntityKeyIdSearchResult( 0, Lists.newArrayList() ); }
-
-        Map<String, Float> fieldsMap = Maps.newHashMap();
-        String[] authorizedPropertyTypeFields = authorizedPropertyTypes
-                .stream()
-                .map( uuid -> {
-                    fieldsMap.put( uuid.toString(), 1F );
-                    return uuid.toString();
-                } )
-                .collect( Collectors.toList() )
-                .toArray( new String[ authorizedPropertyTypes.size() ] );
-
-        BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
-        searches.forEach( search -> {
-            QueryStringQueryBuilder queryString = QueryBuilders
-                    .queryStringQuery( search.getSearchTerm() )
-                    .field( search.getPropertyType().toString(), 1F ).lenient( true );
-            if ( search.getExactMatch() ) {
-                query.must( queryString );
-                query.minimumShouldMatch( 0 );
-            } else { query.should( queryString ); }
-        } );
-
-        SearchResponse response = client.prepareSearch( getIndexName( entitySetId ) )
-                .setQuery( query )
-                .setFetchSource( authorizedPropertyTypeFields, null )
-                .setFrom( start )
-                .setSize( maxHits )
-                .execute()
-                .actionGet();
-
-        List<UUID> ids = Lists.newArrayList();
-        for ( SearchHit hit : response.getHits() ) {
-            ids.add( UUID.fromString( hit.getId() ) );
-        }
-        EntityKeyIdSearchResult result = new EntityKeyIdSearchResult( response.getHits().totalHits, ids );
-        return result;
     }
 
     @Override
