@@ -32,6 +32,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.linking.LinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.rehearsal.SetupEnvironment;
@@ -60,6 +61,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static DataApi           dataApi;
     protected static SearchApi         searchApi;
     protected static OrganizationsApi  organizationsApi;
+    protected static LinkingApi        linkingApi;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -85,6 +87,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         dataApi = currentRetrofit.create( DataApi.class );
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
+        linkingApi = currentRetrofit.create( LinkingApi.class );
     }
 
     public static PropertyType getBinaryPropertyType() {

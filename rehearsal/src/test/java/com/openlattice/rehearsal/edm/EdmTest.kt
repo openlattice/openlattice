@@ -21,9 +21,11 @@
 
 package com.openlattice.rehearsal.edm
 
-import com.openlattice.client.RetrofitFactory
-import com.openlattice.edm.EdmApi
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Test
+import java.util.UUID
 
 /**
  *
@@ -31,12 +33,27 @@ import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
  */
 class EdmTest : MultipleAuthenticatedUsersBase() {
     companion object {
-        init {
-            val client = RetrofitFactory.newClient(RetrofitFactory.Environment.PRODUCTION, { "" })
-            val prodEdmApi = client.create(EdmApi::class.java)
-            val prodEdm = prodEdmApi.entityDataModel
+        @JvmStatic @BeforeClass fun init() {
+            loginAs("admin")
         }
     }
 
+    @Test
+    fun testAddAndRemoveLinkedEntitySets() {
+        val pt = createPropertyType()
+        val et = createEntityType( pt.id )
+        val linkingEs = createEntitySet( et, true, setOf() )
+        val es = createEntitySet()
 
+        linkingApi.addEntitySetsToLinkingEntitySet( linkingEs.id, setOf<UUID>(es.id) )
+        Assert.assertEquals( es.id, edmApi.getEntitySet( linkingEs.id ).linkedEntitySets.single() )
+
+        linkingApi.removeEntitySetsFromLinkingEntitySet( linkingEs.id, setOf(es.id) )
+        Assert.assertEquals( setOf<UUID>(), edmApi.getEntitySet( linkingEs.id ).linkedEntitySets )
+    }
+
+    @Test
+    fun testChecksOnAddAndRemoveLinkedEntitySets() {
+        // TODO: finish, when error catching is merged
+    }
 }
