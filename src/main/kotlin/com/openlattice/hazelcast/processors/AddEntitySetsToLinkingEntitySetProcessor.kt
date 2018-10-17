@@ -19,5 +19,19 @@ class AddEntitySetsToLinkingEntitySetProcessor( val entitySetIds : Set<UUID> ):
         return null
     }
 
+    override fun hashCode(): Int {
+        val prime = 53
+        return prime + entitySetIds?.hashCode()
+    }
 
+    override fun equals( other: Any? ): Boolean {
+        if ( other == null ) return false
+        if ( this::class.java != other::class.java ) return false
+
+        val otherProcessor = other as (AddEntitySetsToLinkingEntitySetProcessor)
+        if ( entitySetIds == null ) {
+            if ( otherProcessor.entitySetIds != null ) return false
+        } else if ( !entitySetIds.equals( otherProcessor.entitySetIds ) ) return false
+        return true
+    }
 }
