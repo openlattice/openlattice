@@ -20,12 +20,17 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingBiConsumer;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingConsumer;
 import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -37,6 +42,8 @@ import java.util.Set;
  * @author Ho Chung Siu
  */
 public final class OptionalStreamSerializers {
+    private static final Logger logger = LoggerFactory.getLogger( OptionalStreamSerializers.class );
+
     private OptionalStreamSerializers() {
     }
 
@@ -61,10 +68,51 @@ public final class OptionalStreamSerializers {
         }
     }
 
+    public static <T> void kryoSerialize( Output out, Optional<T> element, IoPerformingConsumer<T> c ) {
+        final boolean present = element.isPresent();
+        out.writeBoolean( present );
+        if ( present ) {
+            try {
+                c.accept( element.get() );
+            } catch (IOException e) {
+                logger.error( "Unable to kryo serialize element", e );
+            }
+        }
+    }
+
+    public static <T> void kryoSerialize(
+            Output out,
+            Optional<T> element,
+            IoPerformingBiConsumer<Output, T> c ) {
+        final boolean present = element.isPresent();
+        out.writeBoolean( present );
+        if ( present ) {
+            try {
+                c.accept( out, element.get() );
+            } catch ( IOException e ) {
+                logger.error( "Unable to kryo serialize element", e );
+            }
+        }
+    }
+
     public static <T> Optional<T> deserialize( ObjectDataInput in, IoPerformingFunction<ObjectDataInput, T> f )
             throws IOException {
         if ( in.readBoolean() ) {
             T elem = f.apply( in );
+            return ( elem == null ) ? Optional.empty() : Optional.of( elem );
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    public static <T> Optional<T> kryoDeserialize( Input in, IoPerformingFunction<Input, T> f ) {
+        if ( in.readBoolean() ) {
+            T elem = null;
+            try {
+                elem = f.apply( in );
+            } catch ( IOException e ) {
+                logger.error( "Unable to kryo deserialize element", e );
+            }
             return ( elem == null ) ? Optional.empty() : Optional.of( elem );
         } else {
             return Optional.empty();

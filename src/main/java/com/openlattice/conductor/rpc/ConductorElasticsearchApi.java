@@ -30,9 +30,8 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
-import com.openlattice.search.requests.EntityKeyIdSearchResult;
-import com.openlattice.search.requests.SearchDetails;
-import com.openlattice.search.requests.SearchResult;
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.requests.*;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
@@ -184,13 +183,10 @@ public interface ConductorElasticsearchApi {
 
     boolean deleteEntityData( EntityDataKey edk );
 
-    EntityKeyIdSearchResult executeEntitySetDataSearch(
-            UUID entitySetId,
-            String searchTerm,
-            int start,
-            int maxHits,
-            boolean fuzzy,
-            Set<UUID> authorizedPropertyTypes );
+    EntityDataKeySearchResult executeSearch(
+            SearchConstraints searchConstraints,
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet
+    );
 
     /**
      * Performs a capped size search across several entity sets.
@@ -211,13 +207,6 @@ public interface ConductorElasticsearchApi {
             Map<UUID, DelegatedStringSet> fieldSearches,
             int size,
             boolean explain );
-
-    EntityKeyIdSearchResult executeAdvancedEntitySetDataSearch(
-            UUID entitySetId,
-            List<SearchDetails> searches,
-            int start,
-            int maxHits,
-            Set<UUID> authorizedPropertyTypes );
 
     boolean saveEntityTypeToElasticsearch( EntityType entityType );
 

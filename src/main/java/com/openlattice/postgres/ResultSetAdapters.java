@@ -776,6 +776,7 @@ public final class ResultSetAdapters {
         if ( arr != null ) {
             switch ( propertyType.getDatatype() ) {
                 case String:
+                case GeographyPoint:
                     objects = Arrays.asList( (String[]) arr.getArray() );
                     break;
                 case Guid:

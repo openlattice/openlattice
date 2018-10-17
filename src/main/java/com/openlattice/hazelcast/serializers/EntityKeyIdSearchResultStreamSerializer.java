@@ -8,9 +8,7 @@ import com.openlattice.search.requests.EntityKeyIdSearchResult;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class EntityKeyIdSearchResultStreamSerializer
@@ -35,7 +33,7 @@ public class EntityKeyIdSearchResultStreamSerializer
     public EntityKeyIdSearchResult read( ObjectDataInput in ) throws IOException {
         long numHits = in.readLong();
         int numIds = in.readInt();
-        List<UUID> entityKeyIds = new ArrayList<>( numIds );
+        Set<UUID> entityKeyIds = new HashSet<>( numIds );
         for ( int i = 0; i < numIds; i++ ) {
             entityKeyIds.add( UUIDStreamSerializer.deserialize( in ) );
         }
