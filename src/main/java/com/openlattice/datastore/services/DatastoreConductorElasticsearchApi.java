@@ -23,6 +23,7 @@ package com.openlattice.datastore.services;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.durableexecutor.DurableExecutorService;
 import com.openlattice.apps.App;
@@ -36,9 +37,8 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.openlattice.search.requests.EntityKeyIdSearchResult;
-import com.openlattice.search.requests.SearchDetails;
-import com.openlattice.search.requests.SearchResult;
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.requests.*;
 
 import java.util.Optional;
 
@@ -262,29 +262,16 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         }
     }
 
-    @Override
-    public EntityKeyIdSearchResult executeEntitySetDataSearch(
-            UUID entitySetId,
-            String searchTerm,
-            int start,
-            int maxHits,
-            boolean fuzzy,
-            Set<UUID> authorizedPropertyTypes ) {
+    @Override public EntityDataKeySearchResult executeSearch(
+            SearchConstraints searchConstraints, Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
         try {
-            EntityKeyIdSearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    new SearchEntitySetDataLambda(
-                            entitySetId,
-                            searchTerm,
-                            start,
-                            maxHits,
-                            fuzzy,
-                            authorizedPropertyTypes ) ) )
-                    .get();
+            EntityDataKeySearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
+                    new SearchWithConstraintsLambda( searchConstraints, authorizedPropertyTypesByEntitySet ) ) ).get();
             return queryResults;
 
         } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute entity set data search" );
-            return new EntityKeyIdSearchResult( 0, Lists.newArrayList() );
+            logger.debug( "unable to execute entity set data search with constraints" );
+            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
     }
 
@@ -308,29 +295,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         } catch ( InterruptedException | ExecutionException e ) {
             logger.error( "Failed to execute search for entity set data search across indices: " + fieldSearches );
             return Lists.newArrayList();
-        }
-    }
-
-    @Override
-    public EntityKeyIdSearchResult executeAdvancedEntitySetDataSearch(
-            UUID entitySetId,
-            List<SearchDetails> searches,
-            int start,
-            int maxHits,
-            Set<UUID> authorizedPropertyTypes ) {
-        try {
-            EntityKeyIdSearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    new AdvancedSearchEntitySetDataLambda(
-                            entitySetId,
-                            searches,
-                            start,
-                            maxHits,
-                            authorizedPropertyTypes ) ) )
-                    .get();
-            return queryResults;
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute entity set data search" );
-            return new EntityKeyIdSearchResult( 0, Lists.newArrayList() );
         }
     }
 
