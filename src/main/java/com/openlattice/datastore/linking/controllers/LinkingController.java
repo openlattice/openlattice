@@ -20,34 +20,21 @@
 
 package com.openlattice.datastore.linking.controllers;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principals;
-import com.openlattice.data.EntityKey;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.set.LinkingEntitySet;
-import com.openlattice.linking.HazelcastListingService;
 import com.openlattice.linking.LinkingApi;
-import com.openlattice.linking.requests.LinkingRequest;
-import java.util.HashSet;
+import com.openlattice.linking.LinkingEntitySetQueryService;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import javax.inject.Inject;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import retrofit2.http.Body;
-import retrofit2.http.Path;
+
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -60,94 +47,87 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
     private AuthorizationManager authorizationManager;
 
     @Inject
-    private EdmManager edm;
+    private LinkingEntitySetQueryService linkingQueryService;
 
     @Inject
-    private HazelcastListingService listings;
+    private EdmManager edmManager;
 
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizationManager;
     }
 
-    private Set<UUID> validateAndGetOwnablePropertyTypes(
-            EntitySet linkedEntitySet,
-            Set<Map<UUID, UUID>> linkingProperties ) {
 
-        // Validate: each map in the set should have a unique value, which is distinct across the linking properties
-        // set.
-        Set<UUID> linkingES = new HashSet<>();
-        Set<UUID> validatedProperties = new HashSet<>();
-        SetMultimap<UUID, UUID> linkIndexedByPropertyTypes = HashMultimap.create();
-
-        linkingProperties.stream().forEach( link -> {
-            Set<UUID> values = new HashSet<>( link.values() );
-
-            Preconditions.checkArgument( values.size() == 1,
-                    "Each linking map should involve a unique property type." );
-            // Commented out the following check to allow easy dedupe for now.
-            /**
-             * Preconditions.checkArgument( link.entrySet().size() > 1, "Each linking map must be matching at least two
-             * entity sets." );
-             */
-            // Get the value of common property type id in the linking map.
-            UUID propertyId = values.iterator().next();
-            Preconditions.checkArgument( !validatedProperties.contains( propertyId ),
-                    "There should be only one linking map that involves property id " + propertyId );
-
-            for ( UUID esId : link.keySet() ) {
-                AclKey aclKey = new AclKey( esId, propertyId );
-                ensureLinkAccess( aclKey );
-                linkingES.add( esId );
-                linkIndexedByPropertyTypes.put( propertyId, esId );
-            }
-        } );
-
-        // Sanity check: authorized to link the entity set itself.
-        linkingES.stream().forEach( entitySetId -> ensureLinkAccess( new AclKey( entitySetId ) ) );
-
-        // Compute the ownable property types after merging. A property type is ownable if calling user has both READ
-        // and LINK permissions for that property type in all the entity sets involved.
-        Set<UUID> linkedPropertyTypes = edm.getEntityType( linkedEntitySet.getEntityTypeId() ).getProperties();
-
-        SetMultimap<UUID, UUID> propertyIdESMap = HashMultimap.create();
-        linkingES.stream().forEach( esId -> {
-            Set<UUID> properties = edm.getEntityTypeByEntitySetId( esId ).getProperties();
-            for ( UUID propertyId : properties ) {
-                propertyIdESMap.put( propertyId, esId );
-            }
-        } );
-
-        Set<UUID> ownablePropertyTypes = new HashSet<>();
-        for ( UUID propertyId : linkedPropertyTypes ) {
-            boolean ownable = propertyIdESMap.get( propertyId ).stream()
-                    .map( esId -> new AclKey( esId, propertyId ) )
-                    .allMatch( isAuthorized( Permission.LINK, Permission.READ ) );
-
-            if ( ownable ) {
-                ownablePropertyTypes.add( propertyId );
-            }
-        }
-        if ( ownablePropertyTypes.isEmpty() ) {
-            throw new IllegalArgumentException( "There will be no ownable properties in the linked entity set." );
-        }
-
-        return ownablePropertyTypes;
+    @Override
+    @RequestMapping(
+            path = SET,
+            method = RequestMethod.POST)
+    public Integer addEntitySetsToLinkingEntitySets( @RequestBody Map<UUID, Set<UUID>> entitySetIds ) {
+        return entitySetIds.entrySet().stream().mapToInt(
+                entry ->  addEntitySets(entry.getKey(), entry.getValue()) ).sum();
     }
 
-    @Override public Integer addEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId ) {
-        return null;
+    @Override
+    @RequestMapping(
+            path = SET + SET_ID_PATH,
+            method = RequestMethod.PUT)
+    public Integer addEntitySetsToLinkingEntitySet(
+            @PathVariable( SET_ID ) UUID linkingEntitySetId,
+            @RequestBody Set<UUID> entitySetIds ) {
+        return addEntitySets( linkingEntitySetId, entitySetIds );
     }
 
-    @Override public Integer removeEntitySetsFromLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId ) {
-        return null;
+    private Integer addEntitySets( UUID linkingEntitySetId,  Set<UUID> entitySetIds ) {
+        ensureOwnerAccess( new AclKey( linkingEntitySetId ) );
+        checkState(
+                edmManager.getEntitySet( linkingEntitySetId ).isLinking(),
+                "Can't add linked entity sets to a not linking entity set");
+        checkLinkedEntitySets( entitySetIds );
+
+        return edmManager.addLinkedEntitySets( linkingEntitySetId, entitySetIds );
+
+        // TODO: write to db
+        // update linked_entity_sets column in 1 entry in entity_sets table
     }
 
-    @Override public Integer addEntitySetsToLinkingEntitySets( Set<UUID> entitySetId ) {
-        return null;
+    @Override
+    @RequestMapping(
+            path = SET,
+            method = RequestMethod.DELETE)
+    public Integer removeEntitySetsFromLinkingEntitySets( @RequestBody Map<UUID, Set<UUID>> entitySetIds ) {
+        return entitySetIds.entrySet().stream().mapToInt(
+                entry ->  removeEntitySets(entry.getKey(), entry.getValue()) ).sum();
     }
 
-    @Override public Integer removeEntitySetsToLinkingEntitySet( Set<UUID> entitySetId ) {
-        return null;
+    @Override
+    @RequestMapping(
+            path = SET + SET_ID_PATH,
+            method = RequestMethod.DELETE)
+    public Integer removeEntitySetsFromLinkingEntitySet(
+            @PathVariable( SET_ID ) UUID linkingEntitySetId,
+            @RequestBody Set<UUID> entitySetIds ) {
+        return removeEntitySets( linkingEntitySetId, entitySetIds );
+    }
+
+    private Integer removeEntitySets( UUID linkingEntitySetId,  Set<UUID> entitySetIds ) {
+        ensureOwnerAccess( new AclKey( linkingEntitySetId ) );
+        checkState(
+                edmManager.getEntitySet( linkingEntitySetId ).isLinking(),
+                "Can't add linked entity sets to a not linking entity set");
+        checkLinkedEntitySets( entitySetIds );
+
+        return edmManager.removeLinkedEntitySets( linkingEntitySetId, entitySetIds );
+    }
+
+    private void checkLinkedEntitySets( Set<UUID> entitySetIds) {
+        checkNotNull(entitySetIds);
+        checkState(!entitySetIds.isEmpty(),  "Linked entity sets is empty" );
+
+        UUID entityTypeId = edmManager.getEntitySet( entitySetIds.iterator().next() ).getEntityTypeId();
+        checkState(
+                entitySetIds.stream()
+                        .map( it ->  edmManager.getEntitySet(it).getEntityTypeId() )
+                        .allMatch( entityTypeId::equals ),
+                "Linked entity sets are of differing entity types $entitySetIds" );
     }
 }

@@ -48,9 +48,8 @@ import com.openlattice.datastore.constants.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.LinkingEntitySetQueryService;
 import com.openlattice.search.SearchService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -123,7 +122,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     private SearchService searchService;
 
     @Inject
-    private LinkingQueryService linkingQueryService;
+    private LinkingEntitySetQueryService linkingQueryService;
 
     private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
@@ -207,13 +206,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         Set<UUID> allEntitySetIds = Sets.newHashSet( es.getLinkedEntitySets());
         checkState( !allEntitySetIds.isEmpty(),
                 "Linked entity sets are empty for linking entity set %s", linkingEntitySetId );
-
-        EntityType linkedEntityType = edmService.getEntityTypeByEntitySetId( allEntitySetIds.iterator().next() );
-        checkState( allEntitySetIds.stream().skip( 1 )
-                        .map( esId -> edmService.getEntityTypeByEntitySetId( esId ) )
-                        .allMatch( linkedEntityType::equals ),
-                "Linked entity sets are of differing entity types {}", allEntitySetIds );
-
+        // we don't check here for entity type equivalence, only when writing linked entity sets
         // In linked entity set calls, the selected entity key ids represent linking ids
         Optional<Set<UUID>> linkingIds = selection.getEntityKeyIds();
 
@@ -229,12 +222,9 @@ public class DataController implements DataApi, AuthorizingComponent {
             Map<UUID, Set<UUID>> entityKeyIdsOfLinkingIds = linkingQueryService.getEntitiesWithLinkingIds(
                     linkingIds.get());
 
-            return allEntitySetIds.stream().collect(Collectors.toMap(
-                    esId -> esId,
-                    esId -> Optional.of( entityKeyIdsOfLinkingIds.get( esId ) )
-            ));
+            return ImmutableMap.copyOf( Maps.transformValues( entityKeyIdsOfLinkingIds, Optional::of) );
         } else {
-           return allEntitySetIds.stream().collect(Collectors.toMap( esId -> esId, esId ->  Optional.empty() ));
+           return allEntitySetIds.stream().collect(Collectors.toMap( Function.identity(), esId ->  Optional.empty() ));
         }
     }
 
