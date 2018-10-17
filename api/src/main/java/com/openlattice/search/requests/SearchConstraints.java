@@ -49,7 +49,7 @@ public class SearchConstraints {
 
         // initialization
 
-        this.entitySetIds = entitySetIds;
+        this.entitySetIds = Arrays.copyOf( entitySetIds, entitySetIds.length );
         this.start = start;
         this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
         this.searchType = searchType.orElse( SearchType.simple );
@@ -194,7 +194,7 @@ public class SearchConstraints {
 
     @JsonProperty( SerializationConstants.ENTITY_SET_IDS )
     public UUID[] getEntitySetIds() {
-        return entitySetIds;
+        return Arrays.copyOf( entitySetIds, entitySetIds.length );
     }
 
     @JsonProperty( SerializationConstants.START )
