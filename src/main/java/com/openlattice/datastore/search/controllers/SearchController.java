@@ -161,14 +161,13 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                     .getAuthorizedPropertyTypesOnEntitySet( entitySetId,
                             EnumSet.of( Permission.READ ) );
             if ( !authorizedProperties.isEmpty() ) {
-                Map<UUID, Set<PropertyType>> authorizedPropertyTypes = Maps.newHashMap();
-                authorizedPropertyTypes.put( entitySetId, authorizedProperties );
                 return searchService.executeSearch( SearchConstraints
                         .simpleSearchConstraints( new UUID[] { entitySetId },
                                 searchTerm.getStart(),
                                 searchTerm.getMaxHits(),
                                 searchTerm.getSearchTerm(),
-                                searchTerm.getFuzzy() ), authorizedPropertyTypes );
+                                searchTerm.getFuzzy() ), ImmutableMap
+                        .of( entitySetId, authorizedProperties ) );
             }
         }
         return new DataSearchResult( 0, Lists.newArrayList() );
