@@ -36,13 +36,11 @@ import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AclKeySet;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
 import com.openlattice.authorization.mapstores.PrincipalMapstore;
-import com.openlattice.authorization.mapstores.PrincipalTreeMapstore;
 import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -57,8 +55,6 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
-import com.openlattice.linking.LinkingVertex;
-import com.openlattice.linking.LinkingVertexKey;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
@@ -83,7 +79,6 @@ import com.openlattice.postgres.mapstores.RequestsMapstore;
 import com.openlattice.postgres.mapstores.SchemasMapstore;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 import com.openlattice.postgres.mapstores.SyncIdsMapstore;
-import com.openlattice.postgres.mapstores.VertexIdsAfterLinkingMapstore;
 import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
@@ -235,11 +230,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, UUID> syncIdsMapstore() {
         return new SyncIdsMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<LinkingVertexKey, UUID> vertexIdsAfterLinkingMapstore() {
-        return new VertexIdsAfterLinkingMapstore( hikariDataSource );
     }
 
     @Bean

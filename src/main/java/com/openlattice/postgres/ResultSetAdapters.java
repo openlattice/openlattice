@@ -71,8 +71,6 @@ import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.graph.query.GraphQueryState;
 import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
-import com.openlattice.linking.LinkingVertex;
-import com.openlattice.linking.LinkingVertexKey;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
@@ -628,18 +626,6 @@ public final class ResultSetAdapters {
 
     public static Boolean multiValued( ResultSet rs ) throws SQLException {
         return rs.getBoolean( MULTI_VALUED.getName() );
-    }
-
-    public static LinkingVertex linkingVertex( ResultSet rs ) throws SQLException {
-        double diameter = diameter( rs );
-        Set<UUID> entityKeyIds = entityKeyIds( rs );
-        return new LinkingVertex( diameter, entityKeyIds );
-    }
-
-    public static LinkingVertexKey linkingVertexKey( ResultSet rs ) throws SQLException {
-        UUID graphId = graphId( rs );
-        UUID vertexId = vertexId( rs );
-        return new LinkingVertexKey( graphId, vertexId );
     }
 
     public static Status status( ResultSet rs ) throws SQLException {
