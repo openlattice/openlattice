@@ -57,6 +57,7 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.Fuzziness;
@@ -889,6 +890,24 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .distance( radius, DistanceUnit.fromString( constraints.getDistanceUnit().get().name() ) );
     }
 
+    private QueryBuilder getGeoPolygonSearchQuery( SearchConstraints constraints, Map<String, Float> fieldMap ) {
+
+        UUID propertyTypeId = constraints.getPropertyTypeId().get();
+        if ( !fieldMap.containsKey( propertyTypeId.toString() ) || fieldMap.get( propertyTypeId.toString() ) == 0F ) {
+            return null;
+        }
+
+        QueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
+
+        for ( List<List<Double>> zone : constraints.getZones().get() ) {
+            List<GeoPoint> polygon = zone.stream().map( pair -> new GeoPoint( pair.get( 1 ), pair.get( 0 ) ) )
+                    .collect( Collectors.toList() );
+            ( (BoolQueryBuilder) query ).should( QueryBuilders.geoPolygonQuery( propertyTypeId.toString(), polygon ) );
+        }
+
+        return query;
+    }
+
     private QueryBuilder getQueryForSearch(
             SearchConstraints searchConstraints,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
@@ -901,6 +920,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
             case geoDistance:
                 return getGeoDistanceSearchQuery( searchConstraints, fieldsMap );
+
+            case geoPolygon:
+                return getGeoPolygonSearchQuery( searchConstraints, fieldsMap );
 
             case simple:
             default:
@@ -916,12 +938,17 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
 
+        QueryBuilder query = getQueryForSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
+        if ( query == null ) {
+            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
+        }
+
         String[] indexNames = Arrays.stream( searchConstraints.getEntitySetIds() )
                 .map( id -> getIndexName( id ) ).toArray( String[]::new );
 
         SearchResponse response = client
                 .prepareSearch( indexNames )
-                .setQuery( getQueryForSearch( searchConstraints, authorizedPropertyTypesByEntitySet ) )
+                .setQuery( query )
                 .setFrom( searchConstraints.getStart() )
                 .setSize( searchConstraints.getMaxHits() )
                 .execute()
