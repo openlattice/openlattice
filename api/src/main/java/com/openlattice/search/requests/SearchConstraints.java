@@ -23,12 +23,17 @@ public class SearchConstraints {
     // advanced search
     private final Optional<List<SearchDetails>> searches;
 
+    // geo searches (distance + polygon)
+    private final Optional<UUID> propertyTypeId;
+
     // geo distance search
-    private final Optional<UUID>         propertyTypeId;
     private final Optional<Double>       latitude;
     private final Optional<Double>       longitude;
     private final Optional<Double>       radius;
     private final Optional<DistanceUnit> distanceUnit;
+
+    // geo polygon search
+    private final Optional<List<List<List<Double>>>> zones;
 
     @JsonCreator
     public SearchConstraints(
@@ -43,7 +48,8 @@ public class SearchConstraints {
             @JsonProperty( SerializationConstants.LATITUDE ) Optional<Double> latitude,
             @JsonProperty( SerializationConstants.LONGITUDE ) Optional<Double> longitude,
             @JsonProperty( SerializationConstants.RADIUS ) Optional<Double> radius,
-            @JsonProperty( SerializationConstants.UNIT ) Optional<DistanceUnit> distanceUnit
+            @JsonProperty( SerializationConstants.UNIT ) Optional<DistanceUnit> distanceUnit,
+            @JsonProperty( SerializationConstants.ZONES ) Optional<List<List<List<Double>>>> zones
 
     ) {
 
@@ -65,6 +71,8 @@ public class SearchConstraints {
         this.radius = radius;
         this.distanceUnit = distanceUnit;
 
+        this.zones = zones;
+
         // validation
         switch ( this.searchType ) {
             case advanced:
@@ -74,15 +82,22 @@ public class SearchConstraints {
 
             case geoDistance:
                 Preconditions.checkArgument( this.propertyTypeId.isPresent(),
-                        "Field propertyTypeId must be present for searches of type geo_distance" );
+                        "Field propertyTypeId must be present for searches of type geoDistance" );
                 Preconditions.checkArgument( this.latitude.isPresent(),
-                        "Field latitude must be present for searches of type geo_distance" );
+                        "Field latitude must be present for searches of type geoDistance" );
                 Preconditions.checkArgument( this.longitude.isPresent(),
-                        "Field longitude must be present for searches of type geo_distance" );
+                        "Field longitude must be present for searches of type geoDistance" );
                 Preconditions.checkArgument( this.radius.isPresent(),
-                        "Field radius must be present for searches of type geo_distance" );
+                        "Field radius must be present for searches of type geoDistance" );
                 Preconditions.checkArgument( this.distanceUnit.isPresent(),
-                        "Field distanceUnit must be present for searches of type geo_distance" );
+                        "Field distanceUnit must be present for searches of type geoDistance" );
+                break;
+
+            case geoPolygon:
+                Preconditions.checkArgument( this.propertyTypeId.isPresent(),
+                        "Field propertyTypeId must be present for searches of type geoPolygon" );
+                Preconditions.checkArgument( this.zones.isPresent() && this.zones.get().size() > 0,
+                        "Field zones must be present and non-empty for searches of type geoPolygon" );
                 break;
 
             case simple:
@@ -107,7 +122,8 @@ public class SearchConstraints {
             Optional<Double> latitude,
             Optional<Double> longitude,
             Optional<Double> radius,
-            Optional<DistanceUnit> distanceUnit ) {
+            Optional<DistanceUnit> distanceUnit,
+            Optional<List<List<List<Double>>>> zones ) {
         this( entitySetIds,
                 start,
                 maxHits,
@@ -119,7 +135,8 @@ public class SearchConstraints {
                 latitude,
                 longitude,
                 radius,
-                distanceUnit );
+                distanceUnit,
+                zones );
     }
 
     public static SearchConstraints simpleSearchConstraints(
@@ -147,6 +164,7 @@ public class SearchConstraints {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -162,6 +180,7 @@ public class SearchConstraints {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.of( searches ),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -189,7 +208,29 @@ public class SearchConstraints {
                 Optional.of( latitude ),
                 Optional.of( longitude ),
                 Optional.of( radius ),
-                Optional.of( distanceUnit ) );
+                Optional.of( distanceUnit ),
+                Optional.empty() );
+    }
+
+    public static SearchConstraints geoPolygonSearchConstraints(
+            UUID[] entitySetIds,
+            int start,
+            int maxHits,
+            UUID propertyTypeId,
+            List<List<List<Double>>> zones ) {
+        return new SearchConstraints( entitySetIds,
+                start,
+                maxHits,
+                Optional.of( SearchType.geoDistance ),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of( propertyTypeId ),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of( zones ) );
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_IDS )
@@ -252,6 +293,11 @@ public class SearchConstraints {
         return distanceUnit;
     }
 
+    @JsonProperty( SerializationConstants.ZONES )
+    public Optional<List<List<List<Double>>>> getZones() {
+        return zones;
+    }
+
     @Override public boolean equals( Object o ) {
         if ( this == o )
             return true;
@@ -269,7 +315,8 @@ public class SearchConstraints {
                 Objects.equals( latitude, that.latitude ) &&
                 Objects.equals( longitude, that.longitude ) &&
                 Objects.equals( radius, that.radius ) &&
-                Objects.equals( distanceUnit, that.distanceUnit );
+                Objects.equals( distanceUnit, that.distanceUnit ) &&
+                Objects.equals( zones, that.zones );
     }
 
     @Override public int hashCode() {
@@ -284,7 +331,8 @@ public class SearchConstraints {
                 latitude,
                 longitude,
                 radius,
-                distanceUnit );
+                distanceUnit,
+                zones );
         result = 31 * result + Arrays.hashCode( entitySetIds );
         return result;
     }
