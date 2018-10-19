@@ -19,18 +19,21 @@
  *
  */
 
-package com.openlattice.analysis.requests;
+package com.openlattice.upload;
+
+import java.util.List;
 
 /**
- *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public interface RangeFilter<T extends Comparable<T>> extends Filter {
+public interface UploadApi {
+    // @formatter:off
+    String SERVICE               = "/datastore";
+    String CONTROLLER            = "/upload";
+    String BASE                  = SERVICE + CONTROLLER;
+    // @formatter:on
 
-    boolean isLowerboundEqual();
 
-    boolean isUpperboundEqual();
-
-    T getLowerbound();
-
-    T getUpperbound();
+    List<String> getExistingFiles();
+    Integer uploadFiles();
 }

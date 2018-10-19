@@ -18,18 +18,13 @@
 
 package com.openlattice.linking;
 
-import com.google.common.collect.SetMultimap;
 import com.openlattice.data.DataApi;
-import com.openlattice.data.EntityKey;
-import com.openlattice.edm.type.LinkingEntityType;
-import com.openlattice.linking.requests.LinkingRequest;
+
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import retrofit2.http.Body;
-import retrofit2.http.DELETE;
-import retrofit2.http.POST;
-import retrofit2.http.PUT;
-import retrofit2.http.Path;
+
+import retrofit2.http.*;
 
 /**
  * This API is used for creating and managing synthetic entity sets created by linking several entity sets together. The
@@ -39,35 +34,24 @@ import retrofit2.http.Path;
  */
 public interface LinkingApi {
     String CONTROLLER       = "/linking";
-    String ENTITY_ID        = "entityId";
-    String LINKED_ENTITY_ID = "linkedEntityId";
-    /*
-     * These determine the service routing for the LB
-     */
     String SERVICE          = "/datastore";
     String BASE             = SERVICE + CONTROLLER;
-    String SET              = "set";
+
+    String SET              = "/set";
+
     String SET_ID           = "setId";
-    String SYNC_ID          = "syncId";
-    String TYPE             = "type";
+    String SET_ID_PATH      = "{" + SET_ID + "}";
 
-    /**
-     * Create a new linking entity set.
-     * @param entitySets The entity sets to include in the linking entity set.
-     */
-    @POST( BASE + "/" + SET )
-    UUID createLinkingEntitySet( @Body Set<UUID> entitySets );
+    @POST( BASE  + SET )
+    Integer addEntitySetsToLinkingEntitySets( @Body Map<UUID, Set<UUID>> entitySetIds );
 
-    @POST( BASE + "/" + SET )
-    Integer addEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId );
+    @HTTP( method = "DELETE", path = BASE + SET, hasBody = true)
+    Integer removeEntitySetsFromLinkingEntitySets( @Body Map<UUID, Set<UUID>> entitySetIds );
 
-    @DELETE( BASE + "/" + SET )
-    Integer removeEntitySetsToLinkingEntitySets( SetMultimap<UUID, UUID> entitySetId );
+    @PUT( BASE + SET + SET_ID_PATH )
+    Integer addEntitySetsToLinkingEntitySet( @Path( SET_ID ) UUID linkingEntitySetId, @Body Set<UUID> entitySetIds );
 
-    @PUT( BASE + "/" + SET + "/{" + SET_ID + "}" )
-    Integer addEntitySetsToLinkingEntitySets( Set<UUID> entitySetId );
-
-    @DELETE( BASE + "/" + SET + "/{" + SET_ID + "}" )
-    Integer removeEntitySetsToLinkingEntitySet( Set<UUID> entitySetId );
+    @HTTP( method = "DELETE", path =  BASE + SET + SET_ID_PATH, hasBody = true)
+    Integer removeEntitySetsFromLinkingEntitySet( @Path( SET_ID ) UUID linkingEntitySetId, @Body Set<UUID> entitySetIds );
 
 }

@@ -19,18 +19,21 @@
  *
  */
 
+
 package com.openlattice.analysis.requests;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 
 /**
  *
  */
-public interface RangeFilter<T extends Comparable<T>> extends Filter {
+@JsonTypeInfo( use = Id.CLASS )
+public interface Filter {
 
-    boolean isLowerboundEqual();
-
-    boolean isUpperboundEqual();
-
-    T getLowerbound();
-
-    T getUpperbound();
+    /**
+     * @param field Used for constructing the sql expression.
+     * @return The sql expression for this filter applied to the specified field.
+     */
+    String asSql( String field );
 }
