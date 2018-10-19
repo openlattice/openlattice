@@ -40,20 +40,24 @@ public interface EntityDatastore {
             Set<UUID> entitySetIds,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            boolean isLinking );
+            Boolean linking);
 
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            boolean isLinking );
+            Boolean linking);
+
+    Stream<SetMultimap<FullQualifiedName, Object>> getLinkingEntities(
+            Map<UUID, Optional<Set<UUID>>> entityKeyIds,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes);
 
     EntitySetData<FullQualifiedName> getEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             LinkedHashSet<String> orderedPropertyTypes,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            boolean isLinking );
+            Boolean linking);
 
     ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,

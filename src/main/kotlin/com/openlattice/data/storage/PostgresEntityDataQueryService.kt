@@ -59,21 +59,12 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             entityKeyIds: Set<UUID>
     ): Map<UUID, Map<UUID, Set<Any>>> {
-        return getEntitiesById(entitySetId, authorizedPropertyTypes, entityKeyIds, false)
-    }
-
-    fun getEntitiesById(
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>,
-            entityKeyIds: Set<UUID>,
-            isLinking: Boolean
-    ): Map<UUID, Map<UUID, Set<Any>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
         }
         return streamableEntitySet(
                 mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
-                EnumSet.noneOf(MetadataOption::class.java), isLinking, Optional.empty(), adapter
+                EnumSet.noneOf(MetadataOption::class.java), Optional.empty(), adapter
         ).toMap()
     }
 
@@ -81,15 +72,22 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entitySetIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
-            isLinking: Boolean,
-            version: Optional<Long> = Optional.empty()
+            version: Optional<Long> = Optional.empty(),
+            linking: Boolean = false
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
-        return streamableEntitySet(
-                entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
-                authorizedPropertyTypes,
-                metadataOptions,
-                isLinking,
-                version)
+        return if(linking) {
+            streamableLinkingEntitySet(
+                    entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
+                    authorizedPropertyTypes,
+                    metadataOptions,
+                    version)
+        } else {
+            streamableEntitySet(
+                    entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
+                    authorizedPropertyTypes,
+                    metadataOptions,
+                    version)
+        }
     }
 
     fun streamableEntitySet(
@@ -97,12 +95,22 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
-            isLinking: Boolean,
-            version: Optional<Long> = Optional.empty()
+            version: Optional<Long> = Optional.empty(),
+            linking: Boolean = false
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
-        return streamableEntitySet(
-                mapOf(entitySetId to Optional.of(entityKeyIds)) , authorizedPropertyTypes, metadataOptions, isLinking, version
-        )
+        return if(linking) {
+            streamableLinkingEntitySet(
+                    mapOf( entitySetId to Optional.of(entityKeyIds) ),
+                    authorizedPropertyTypes,
+                    metadataOptions,
+                    version)
+        } else {
+            streamableEntitySet(
+                    mapOf( entitySetId to Optional.of(entityKeyIds) ),
+                    authorizedPropertyTypes,
+                    metadataOptions,
+                    version)
+        }
     }
 
     fun streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
@@ -110,15 +118,14 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entityKeyIds: Optional<Set<UUID>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             metadataOptions: Set<MetadataOption>,
-            version: Optional<Long> = Optional.empty(),
-            isLinking: Boolean = false
+            version: Optional<Long> = Optional.empty()
     ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to
                     ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
         }
         return streamableEntitySet(
-                mapOf(entitySetId to entityKeyIds), mapOf(entitySetId to authorizedPropertyTypes), metadataOptions, isLinking,
+                mapOf(entitySetId to entityKeyIds), mapOf(entitySetId to authorizedPropertyTypes), metadataOptions,
                 version, adapter
         )
     }
@@ -127,22 +134,33 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
-            isLinking: Boolean,
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
-            ResultSetAdapters.implicitEntity(it, authorizedPropertyTypes, metadataOptions)
+            ResultSetAdapters.implicitNormalEntity(it, authorizedPropertyTypes, metadataOptions)
         }
-        return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, isLinking, version, adapter)
+        return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, version, adapter, false)
+    }
+
+    fun streamableLinkingEntitySet(
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            metadataOptions: Set<MetadataOption>,
+            version: Optional<Long> = Optional.empty()
+    ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
+        val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
+            ResultSetAdapters.implicitLinkedEntity(it, authorizedPropertyTypes, metadataOptions)
+        }
+        return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, version, adapter, true)
     }
 
     private fun <T> streamableEntitySet(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
-            isLinking: Boolean,
             version: Optional<Long>,
-            adapter: Function<ResultSet, T>
+            adapter: Function<ResultSet, T>,
+            linking: Boolean = false
     ): PostgresIterable<T> {
         return PostgresIterable(
                 Supplier<StatementHolder> {
@@ -166,7 +184,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                                         mapOf(),
                                         metadataOptions,
                                         version.get(),
-                                        isLinking,
+                                        linking,
                                         binaryPropertyTypes
                                 )
                             } else {
@@ -177,7 +195,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                                         authorizedPropertyTypes.mapValues { it.value.map { it.key }.toSet() },
                                         mapOf(),
                                         metadataOptions,
-                                        isLinking,
+                                        linking,
                                         binaryPropertyTypes
                                 )
                             }

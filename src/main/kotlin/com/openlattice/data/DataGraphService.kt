@@ -100,21 +100,12 @@ open class DataGraphService(
             .build<MultiKey<*>, Map<String, Object>>()
 
     override fun getEntitySetData(
-            entitySetIds: Set<UUID>,
-            orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            isLinking: Boolean
-    ): EntitySetData<FullQualifiedName> {
-        return eds.getEntitySetData(entitySetIds, orderedPropertyNames, authorizedPropertyTypes, isLinking)
-    }
-
-    override fun getEntitySetData(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             orderedPropertyNames: LinkedHashSet<String>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            isLinking: Boolean
+            linking: Boolean
     ): EntitySetData<FullQualifiedName> {
-        return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, isLinking)
+        return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, linking)
     }
 
 
@@ -128,11 +119,21 @@ open class DataGraphService(
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): SetMultimap<FullQualifiedName, Any> {
-        val isLinking = edm.getEntitySet(entitySetId).isLinking
-        return eds
-                .getEntities(entitySetId, ImmutableSet.of(entityKeyId), mapOf(entitySetId to authorizedPropertyTypes), isLinking)
-                .iterator()
-                .next()
+        return eds.getEntities(
+                entitySetId ,
+                setOf(entityKeyId),
+                mapOf(entitySetId to authorizedPropertyTypes),
+                false).iterator().next()
+    }
+
+    override fun getLinkingEntity(
+            entitySetIds: Set<UUID>,
+            entityKeyId: UUID,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): SetMultimap<FullQualifiedName, Any> {
+        return eds.getLinkingEntities(
+                entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
+                authorizedPropertyTypes).iterator().next()
     }
 
     override fun clearEntitySet(

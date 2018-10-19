@@ -22,6 +22,7 @@
 package com.openlattice.data
 
 import com.openlattice.data.storage.*
+import com.openlattice.postgres.DataTables
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -228,6 +229,35 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 "SQL Query: {}",
                 selectVersionOfPropertyTypeInEntitySet(
                         entitySetId, entityKeyIdsClause(setOf(entityKeyId)), propertyTypeId, fqn, version,false
+                )
+        )
+    }
+
+    @Test
+    fun testEntitySetQueryLinking() {
+        val entitySetId = UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace")
+
+        val propertyTypeMap = mapOf(
+                Pair(UUID.fromString("7b038634-a0b4-4ce1-a04f-85d1775937aa"), DataTables.quote( "nc.PersonSurName") ),
+                Pair(UUID.fromString("e9a0b4dc-5298-47c1-8837-20af172379a5"), DataTables.quote( "nc.PersonGivenName") )
+        );
+        val entityKeyIds = sequenceOf(
+                "73170000-0000-0000-8000-0000000004a9",
+                "4d9b0000-0000-0000-8000-00000000005d"
+        )
+                .map(UUID::fromString)
+                .toSet()
+        logger.info(
+                "Entity set query: \n{}",
+                selectEntitySetWithCurrentVersionOfPropertyTypes(
+                        mapOf(entitySetId to Optional.of(entityKeyIds)),
+                        propertyTypeMap,
+                        propertyTypeMap.keys,
+                        mapOf(entitySetId to propertyTypeMap.keys),
+                        mapOf(),
+                        setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
+                        true,
+                        propertyTypeMap.map { it.key to false }.toMap()
                 )
         )
     }

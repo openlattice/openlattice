@@ -781,12 +781,34 @@ public final class ResultSetAdapters {
         return data;
     }
 
-    public static SetMultimap<FullQualifiedName, Object> implicitEntity(
+    public static SetMultimap<FullQualifiedName, Object> implicitNormalEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Set<MetadataOption> metadataOptions ) throws SQLException {
-        final UUID entityKeyId = entityKeyId( rs );
+        return implicitEntity(rs, authorizedPropertyTypes, metadataOptions, false );
+    }
+
+    public static SetMultimap<FullQualifiedName, Object> implicitLinkedEntity(
+            ResultSet rs,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            Set<MetadataOption> metadataOptions ) throws SQLException {
+        return implicitEntity(rs, authorizedPropertyTypes, metadataOptions, true );
+    }
+
+    private static SetMultimap<FullQualifiedName, Object> implicitEntity(
+            ResultSet rs,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            Set<MetadataOption> metadataOptions,
+            Boolean linking ) throws SQLException {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
+
+        if(linking) {
+            final UUID entityKeyId = linkingId( rs );
+            data.put( ID_FQN, entityKeyId );
+        } else {
+            final UUID entityKeyId = entityKeyId( rs );
+            data.put( ID_FQN, entityKeyId );
+        }
 
         if ( metadataOptions.contains( MetadataOption.LAST_WRITE ) ) {
             data.put( LAST_WRITE_FQN, lastWrite( rs ) );
@@ -796,7 +818,6 @@ public final class ResultSetAdapters {
             data.put( LAST_INDEX_FQN, lastIndex( rs ) );
         }
 
-        data.put( ID_FQN, entityKeyId );
 
         final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
                 .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
@@ -811,6 +832,11 @@ public final class ResultSetAdapters {
 
         return data;
     }
+
+    public static UUID linkingId( ResultSet rs ) throws SQLException {
+        return (UUID) rs.getObject( LINKING_ID.getName() );
+    }
+
 
     public static Object lastWrite( ResultSet rs ) throws SQLException {
         return rs.getObject( LAST_WRITE.getName() );
