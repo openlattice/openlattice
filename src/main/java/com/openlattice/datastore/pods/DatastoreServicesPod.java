@@ -54,7 +54,6 @@ import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.LinkingEntitySetQueryService;
 import com.openlattice.neuron.Neuron;
 import com.openlattice.neuron.pods.NeuronPod;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -314,11 +313,6 @@ public class DatastoreServicesPod {
     @Bean
     public SearchService searchService() {
         return new SearchService( eventBus );
-    }
-
-    @Bean
-    public LinkingEntitySetQueryService linkingQueryService() {
-        return new LinkingEntitySetQueryService( dataQueryService(), dataModelService() );
     }
 
     @PostConstruct

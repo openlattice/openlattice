@@ -28,12 +28,12 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.linking.LinkingApi;
-import com.openlattice.linking.LinkingEntitySetQueryService;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import javax.inject.Inject;
 
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -43,11 +43,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping( LinkingApi.CONTROLLER )
 public class LinkingController implements LinkingApi, AuthorizingComponent {
 
-    @Inject
-    private AuthorizationManager authorizationManager;
+    private final String PERSON_FQN = "general.person";
 
     @Inject
-    private LinkingEntitySetQueryService linkingQueryService;
+    private AuthorizationManager authorizationManager;
 
     @Inject
     private EdmManager edmManager;
@@ -85,9 +84,6 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
         checkLinkedEntitySets( entitySetIds );
 
         return edmManager.addLinkedEntitySets( linkingEntitySetId, entitySetIds );
-
-        // TODO: write to db
-        // update linked_entity_sets column in 1 entry in entity_sets table
     }
 
     @Override
@@ -123,7 +119,7 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
         checkNotNull(entitySetIds);
         checkState(!entitySetIds.isEmpty(),  "Linked entity sets is empty" );
 
-        UUID entityTypeId = edmManager.getEntitySet( entitySetIds.iterator().next() ).getEntityTypeId();
+        UUID entityTypeId = edmManager.getEntityType( new FullQualifiedName( PERSON_FQN ) ).getId();
         checkState(
                 entitySetIds.stream()
                         .map( it ->  edmManager.getEntitySet(it).getEntityTypeId() )
