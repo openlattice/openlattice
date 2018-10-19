@@ -200,8 +200,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService
+        final var count = dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
+        signalCreatedEntities( entitySetId,
+                dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, replacementProperties.keySet() ) );
+        return count;
     }
 
     @Timed
