@@ -48,10 +48,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         out.writeUTF( object.getDescription() );
         SetStreamSerializers.serialize( out, object.getContacts(), ObjectDataOutput::writeUTF );
         out.writeBoolean( object.isLinking() );
-        SetStreamSerializers.serialize(
-                out,
-                object.getLinkedEntitySets(),
-                ( UUID entitySetId ) -> UUIDStreamSerializer.serialize( out, entitySetId ));
+        SetStreamSerializers.fastUUIDSetSerialize( out, object.getLinkedEntitySets() );
         out.writeBoolean( object.isExternal() );
     }
 
@@ -64,9 +61,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         Optional<String> description = Optional.of( in.readUTF() );
         Set<String> contacts = SetStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<Boolean> linking = Optional.of( in.readBoolean() );
-        Optional<Set<UUID>> linkedEntitySets = Optional.of( SetStreamSerializers.orderedDeserialize(
-                in,
-                UUIDStreamSerializer::deserialize ) );
+        Optional<Set<UUID>> linkedEntitySets = Optional.of( SetStreamSerializers.fastUUIDSetDeserialize( in ) );
         Optional<Boolean> external = Optional.of( in.readBoolean() );
 
         EntitySet es = new EntitySet(

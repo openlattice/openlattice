@@ -20,11 +20,7 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.DataTables.ID_FQN;
-import static com.openlattice.postgres.DataTables.LAST_INDEX;
-import static com.openlattice.postgres.DataTables.LAST_INDEX_FQN;
-import static com.openlattice.postgres.DataTables.LAST_WRITE;
-import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
+import static com.openlattice.postgres.DataTables.*;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.*;
 
@@ -888,5 +884,15 @@ public final class ResultSetAdapters {
 
     public static OffsetDateTime expirationDate( ResultSet rs ) throws SQLException {
         return rs.getObject( EXPIRATION_DATE_FIELD, OffsetDateTime.class );
+    }
+
+    public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn(MetadataOption metadataOption) {
+        switch(metadataOption) {
+            case LAST_WRITE: return LAST_WRITE;
+            case LAST_INDEX: return LAST_INDEX;
+            case LAST_LINK: return LAST_LINK;
+            case VERSION: return VERSION;
+            default: return null;
+        }
     }
 }

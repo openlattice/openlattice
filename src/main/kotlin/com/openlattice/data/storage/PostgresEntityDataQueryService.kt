@@ -652,24 +652,10 @@ fun selectEntitySetWithPropertyTypes(
 
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
-    val columns = setOf(
-            ID_VALUE.name,
-            if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                LAST_WRITE.name
-            } else {
-                ""
-            },
-            if (metadataOptions.contains(MetadataOption.LAST_INDEX)) {
-                LAST_INDEX.name
-            } else {
-                ""
-            },
-            if (metadataOptions.contains(MetadataOption.LAST_LINK)) {
-                LAST_LINK.name
-            } else {
-                ""
-            })
-            .union(authorizedPropertyTypes.values.map(::quote))
+    val columns = setOf(ID_VALUE.name) +
+            metadataOptions.map{ ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
+            authorizedPropertyTypes.values.map(::quote)
+
     return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM (SELECT * \n" +
             "FROM $esTableName " +
             "WHERE version > 0 $entityKeyIdsClause" +
@@ -691,24 +677,9 @@ fun selectEntitySetWithPropertyTypesAndVersion(
     val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
-    val columns = setOf(
-            ID_VALUE.name,
-            if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                LAST_WRITE.name
-            } else {
-                ""
-            },
-            if (metadataOptions.contains(MetadataOption.LAST_INDEX)) {
-                LAST_INDEX.name
-            } else {
-                ""
-            },
-            if (metadataOptions.contains(MetadataOption.LAST_LINK)) {
-                LAST_LINK.name
-            } else {
-                ""
-            })
-            .union(authorizedPropertyTypes.values.map(::quote))
+    val columns = setOf(ID_VALUE.name) +
+            metadataOptions.map{ ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
+            authorizedPropertyTypes.values.map(::quote)
 
     return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM ( SELECT * " +
             "FROM $esTableName " +

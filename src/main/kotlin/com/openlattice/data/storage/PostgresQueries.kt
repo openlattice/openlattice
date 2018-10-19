@@ -25,6 +25,7 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -316,7 +317,7 @@ internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
                 "       GROUP BY($entityKeyIdColumns)) as unfiltered_data_keys " +
                 "WHERE max_abs=abs_max ) as data_keys "
     } else {
-        val metadataColumns = metadataOptions.joinToString(",") { it.name }
+        val metadataColumns = metadataOptions.map(ResultSetAdapters::mapMetadataOptionToPostgresColumn).joinToString(",") { it.name }
         return "(SELECT $entityKeyIdColumns,$metadataColumns FROM ${IDS.name} INNER JOIN (SELECT $entityKeyIdColumns " +
                 "FROM ( SELECT $entityKeyIdColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
                 "       FROM (  SELECT $entityKeyIdColumns, unnest(versions) as versions " +
@@ -344,7 +345,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         metadataOptions: Set<MetadataOption>,
         linking: Boolean
 ): String {
-    val metadataColumns = metadataOptions.joinToString(separator = ",") { it.name }
+    val metadataColumns = metadataOptions.map(ResultSetAdapters::mapMetadataOptionToPostgresColumn).joinToString(",") { it.name }
     val selectColumns = entityKeyIdColumns +
             (if(!metadataColumns.isEmpty()) ", $metadataColumns" else "" ) +
             if(linking) ", ${LINKING_ID.name}" else ""
