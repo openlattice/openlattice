@@ -254,14 +254,6 @@ public class SearchService {
         return new DataSearchResult( result.getNumHits(), results );
     }
 
-    @Timed
-    public long getEntitySetSize( UUID entitySetId ) {
-        Set<UUID> properties = Sets
-                .newHashSet( dataModelService.getEntityTypeByEntitySetId( entitySetId ).getProperties() );
-        // TODO: linked
-        return elasticsearchApi.executeEntitySetDataSearch( entitySetId, "*", 0, 0, false, properties ).getNumHits();
-    }
-
     @Subscribe
     public void updateEntitySetMetadata( EntitySetMetadataUpdatedEvent event ) {
         elasticsearchApi.updateEntitySetMetadata( event.getEntitySet() );

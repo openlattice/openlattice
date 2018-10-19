@@ -108,6 +108,20 @@ open class DataGraphService(
         return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, linking)
     }
 
+    override fun getLinkingEntitySetSize( linkedEntitySetIds: Set<UUID> ): Long {
+        if( linkedEntitySetIds.isEmpty() ) {
+            return 0
+        }
+
+        return eds.getLinkingEntities(
+                linkedEntitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
+                mapOf() ).count()
+    }
+
+    override fun getEntitySetSize( entitySetId: UUID ): Long {
+        return eds.getEntities( entitySetId, setOf(), mapOf(), false).count()
+    }
+
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         graphService.deleteVerticesInEntitySet(entitySetId)
