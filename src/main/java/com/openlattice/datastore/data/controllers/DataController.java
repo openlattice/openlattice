@@ -581,10 +581,16 @@ public class DataController implements DataApi, AuthorizingComponent {
             path = { "/" + SET_ID_PATH + "/" + COUNT },
             method = RequestMethod.GET )
     public long getEntitySetSize( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
-        // If entityset is linking: should return distinct count of entities corresponding to the linked entity set ids
-        // TODO:
         ensureReadAccess( new AclKey( entitySetId ) );
-        return searchService.getEntitySetSize( entitySetId );
+
+        EntitySet es = edmService.getEntitySet( entitySetId );
+        // If entityset is linking: should return distinct count of entities corresponding to the linking entity set,
+        // which is the distinct count of linking_id s
+        if( es.isLinking() ) {
+            return dgm.getLinkingEntitySetSize( es.getLinkedEntitySets() );
+        } else {
+            return dgm.getEntitySetSize( entitySetId );
+        }
     }
 
     @Override
