@@ -36,13 +36,11 @@ import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AceValue;
 import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AclKeySet;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
 import com.openlattice.authorization.mapstores.PrincipalMapstore;
-import com.openlattice.authorization.mapstores.PrincipalTreeMapstore;
 import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -57,9 +55,6 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
-import com.openlattice.linking.LinkingVertex;
-import com.openlattice.linking.LinkingVertexKey;
-import com.openlattice.linking.WeightedLinkingVertexKeySet;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
@@ -74,8 +69,6 @@ import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.mapstores.EntitySetPropertyMetadataMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.openlattice.postgres.mapstores.EnumTypesMapstore;
-import com.openlattice.postgres.mapstores.LinkedEntityTypesMapstore;
-import com.openlattice.postgres.mapstores.LinkingVerticesMapstore;
 import com.openlattice.postgres.mapstores.NamesMapstore;
 import com.openlattice.postgres.mapstores.OrganizationAppsMapstore;
 import com.openlattice.postgres.mapstores.OrganizationDescriptionsMapstore;
@@ -86,7 +79,6 @@ import com.openlattice.postgres.mapstores.RequestsMapstore;
 import com.openlattice.postgres.mapstores.SchemasMapstore;
 import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 import com.openlattice.postgres.mapstores.SyncIdsMapstore;
-import com.openlattice.postgres.mapstores.VertexIdsAfterLinkingMapstore;
 import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
@@ -179,13 +171,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<String, UUID> aclKeysMapstore() {
-        AclKeysMapstore pakm = new AclKeysMapstore( hikariDataSource );
-
-        //        com.dataloom.edm.mapstores.AclKeysMapstore akm = new com.dataloom.edm.mapstores.AclKeysMapstore( session );
-        //        for ( String name : akm.loadAllKeys() ) {
-        //            pakm.store( name, akm.load( name ) );
-        //        }
-        return pakm;
+        return new AclKeysMapstore( hikariDataSource );
     }
 
     @Bean
@@ -195,13 +181,7 @@ public class MapstoresPod {
 
     @Bean
     public SelfRegisteringMapStore<UUID, String> namesMapstore() {
-        NamesMapstore pnm = new NamesMapstore( hikariDataSource );
-
-        //        com.dataloom.edm.mapstores.NamesMapstore nm = new com.dataloom.edm.mapstores.NamesMapstore( session );
-        //        for ( UUID key : nm.loadAllKeys() ) {
-        //            pnm.store( key, nm.load( key ) );
-        //        }
-        return pnm;
+        return new NamesMapstore( hikariDataSource );
     }
 
     @Bean
@@ -212,69 +192,28 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, String> orgTitlesMapstore() {
         OrganizationTitlesMapstore potm = new OrganizationTitlesMapstore( hikariDataSource );
-
-        //        StringMapstore otm = new StringMapstore(
-        //                HazelcastMap.ORGANIZATIONS_TITLES,
-        //                session,
-        //                Table.ORGANIZATIONS,
-        //                CommonColumns.ID,
-        //                CommonColumns.TITLE );
-        //
-        //        for ( UUID id : otm.loadAllKeys() ) {
-        //            potm.store( id, otm.load( id ) );
-        //        }
         return potm;
     }
 
     @Bean
     public SelfRegisteringMapStore<UUID, String> orgDescsMapstore() {
         OrganizationDescriptionsMapstore podm = new OrganizationDescriptionsMapstore( hikariDataSource );
-
-        //        StringMapstore odm = new StringMapstore(
-        //                HazelcastMap.ORGANIZATIONS_DESCRIPTIONS,
-        //                session,
-        //                Table.ORGANIZATIONS,
-        //                CommonColumns.ID,
-        //                CommonColumns.DESCRIPTION );
-        //        for ( UUID id : odm.loadAllKeys() ) {
-        //            podm.store( id, odm.load( id ) );
-        //        }
         return podm;
     }
 
     @Bean
     public SelfRegisteringMapStore<UUID, DelegatedStringSet> aaEmailDomainsMapstore() {
-        OrganizationEmailDomainsMapstore pedm = new OrganizationEmailDomainsMapstore( hikariDataSource );
-        return pedm;
+        return new OrganizationEmailDomainsMapstore( hikariDataSource );
     }
 
     @Bean
     public SelfRegisteringMapStore<UUID, PrincipalSet> membersMapstore() {
-        OrganizationMembersMapstore pmm = new OrganizationMembersMapstore( hikariDataSource );
-        return pmm;
+        return new OrganizationMembersMapstore( hikariDataSource );
     }
 
     @Bean
     public SelfRegisteringMapStore<UUID, DelegatedUUIDSet> orgAppsMapstore() {
         return new OrganizationAppsMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, DelegatedUUIDSet> linkedEntityTypesMapstore() {
-        return new LinkedEntityTypesMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, DelegatedUUIDSet> linkedEntitySetsMapstore() {
-        com.openlattice.postgres.mapstores.LinkedEntitySetsMapstore plesm =
-                new com.openlattice.postgres.mapstores.LinkedEntitySetsMapstore( hikariDataSource );
-        return plesm;
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<LinkingVertexKey, LinkingVertex> linkingVerticesMapstore() {
-        LinkingVerticesMapstore plvm = new LinkingVerticesMapstore( hikariDataSource );
-        return plvm;
     }
 
     @Bean
@@ -291,11 +230,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, UUID> syncIdsMapstore() {
         return new SyncIdsMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<LinkingVertexKey, UUID> vertexIdsAfterLinkingMapstore() {
-        return new VertexIdsAfterLinkingMapstore( hikariDataSource );
     }
 
     @Bean

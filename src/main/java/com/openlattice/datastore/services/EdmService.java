@@ -34,7 +34,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
@@ -83,6 +82,8 @@ import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
 import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
+import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
+import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
@@ -93,7 +94,6 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -407,21 +407,17 @@ public class EdmService implements EdmManager {
         return propertyTypes.keySet();
     }
 
-    @Override public int addLinkedEntitySets( UUID entitySetId, Set<UUID> linkedEntitySets ) {
-        final EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
+    @Override public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
+        final EntitySet entitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = entitySet.getLinkedEntitySets().size();
-        //TODO: Turn this into an entity processor
-        entitySet.getLinkedEntitySets().addAll( linkedEntitySets );
-        entitySets.set( entitySetId, entitySet );
+        entitySets.executeOnKey( linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( linkedEntitySets ) );
         return entitySet.getLinkedEntitySets().size() - startSize;
     }
 
-    @Override public int removeLinkedEntitySets( UUID entitySetId, Set<UUID> linkedEntitySets ) {
-        final EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
+    @Override public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
+        final EntitySet entitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = entitySet.getLinkedEntitySets().size();
-        //TODO: Turn this into an entity processor
-        entitySet.getLinkedEntitySets().removeAll( linkedEntitySets );
-        entitySets.set( entitySetId, entitySet );
+        entitySets.executeOnKey( linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
         return startSize - entitySet.getLinkedEntitySets().size();
     }
 

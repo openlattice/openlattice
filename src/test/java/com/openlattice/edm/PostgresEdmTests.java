@@ -37,6 +37,6 @@ public class PostgresEdmTests extends HzAuthzTest {
     public void testEntitySetTableRegistration() throws SQLException {
         PostgresTableManager ptm = testServer.getContext().getBean( PostgresTableManager.class );
         EntitySet es = TestDataFactory.entitySet();
-        ptm.registerTables( DataTables.buildEntitySetTableDefinition( es ) );
+
     }
 }

@@ -84,6 +84,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// TODO changed to search in linked data too
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
 
@@ -276,6 +277,7 @@ public class SearchService {
             Map<UUID, DelegatedStringSet> fieldSearches,
             int size,
             boolean explain ) {
+        // TODO linked
         return elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetIds,
                 fieldSearches,
                 size,
@@ -536,7 +538,7 @@ public class SearchService {
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
         if ( entityKeyIds.size() == 0 ) { return ImmutableList.of(); }
         return dataManager
-                .getEntities( entitySetId, entityKeyIds, authorizedPropertyTypes )
+                .getEntities( entitySetId, entityKeyIds, Map.of( entitySetId, authorizedPropertyTypes ), false )
                 .collect( Collectors.toList() );
     }
 

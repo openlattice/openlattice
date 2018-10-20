@@ -20,16 +20,7 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.PostgresColumn.LAST_PROPAGATE;
-import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
-import static com.openlattice.postgres.PostgresColumn.HASH;
-import static com.openlattice.postgres.PostgresColumn.ID;
-import static com.openlattice.postgres.PostgresColumn.ID_VALUE;
-import static com.openlattice.postgres.PostgresColumn.LAST_INDEX_FIELD;
-import static com.openlattice.postgres.PostgresColumn.LAST_LINK_FIELD;
-import static com.openlattice.postgres.PostgresColumn.LAST_WRITE_FIELD;
-import static com.openlattice.postgres.PostgresColumn.VERSION;
-import static com.openlattice.postgres.PostgresColumn.VERSIONS;
+import static com.openlattice.postgres.PostgresColumn.*;
 import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
 
 import com.google.common.collect.Maps;
@@ -84,7 +75,6 @@ public class DataTables {
     public static final  PostgresColumnDefinition           WRITERS        = new PostgresColumnDefinition(
             "writers",
             PostgresDatatype.UUID );
-    private static final Map<UUID, PostgresTableDefinition> ES_TABLES      = Maps.newConcurrentMap();
     private static final Encoder                            encoder        = Base64.getEncoder();
 
     private static Set<FullQualifiedName> unindexedProperties = Sets
@@ -118,71 +108,6 @@ public class DataTables {
             default:
                 return p.name();
         }
-    }
-
-    public static PostgresTableDefinition buildEntitySetTableDefinition( EntitySet entitySet ) {
-        return buildEntitySetTableDefinition( entitySet.getId() );
-    }
-
-    public static PostgresTableDefinition buildEntitySetTableDefinition( UUID entitySetId ) {
-        return ES_TABLES.computeIfAbsent( entitySetId, DataTables::doBuildEntitySetTableDefinition );
-    }
-
-    public static PostgresTableDefinition doBuildEntitySetTableDefinition( UUID entitySetId ) {
-        PostgresTableDefinition ptd = new PostgresTableDefinition( quote( entityTableName( entitySetId ) ) )
-                .addColumns( ID, VERSION, VERSIONS, LAST_WRITE, LAST_INDEX, LAST_LINK, READERS, WRITERS, OWNERS );
-
-        String idxPrefix = entityTableName( entitySetId );
-
-        PostgresIndexDefinition lastWriteIndex = new PostgresColumnsIndexDefinition( ptd, LAST_WRITE )
-                .name( quote( idxPrefix + "_last_write_idx" ) )
-                .ifNotExists()
-                .desc();
-        PostgresIndexDefinition lastIndexedIndex = new PostgresColumnsIndexDefinition( ptd, LAST_INDEX )
-                .name( quote( idxPrefix + "_last_indexed_idx" ) )
-                .ifNotExists()
-                .desc();
-        PostgresIndexDefinition lastLinkedIndex = new PostgresColumnsIndexDefinition( ptd, LAST_LINK )
-                .name( quote( idxPrefix + "_last_indexed_idx" ) )
-                .ifNotExists()
-                .desc();
-
-        PostgresIndexDefinition readersIndex = new PostgresColumnsIndexDefinition( ptd, READERS )
-                .name( quote( idxPrefix + "_readers_idx" ) )
-                .ifNotExists();
-        PostgresIndexDefinition writersIndex = new PostgresColumnsIndexDefinition( ptd, WRITERS )
-                .name( quote( idxPrefix + "_writers_idx" ) )
-                .ifNotExists();
-        PostgresIndexDefinition ownersIndex = new PostgresColumnsIndexDefinition( ptd, OWNERS )
-                .name( quote( idxPrefix + "_owners_idx" ) )
-                .ifNotExists();
-
-        PostgresIndexDefinition indexingIndex = new PostgresExpressionIndexDefinition( ptd,
-                "(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
-                .name( quote( idxPrefix + "_indexing_idx" ) )
-                .ifNotExists();
-
-        PostgresIndexDefinition linkedIndex = new PostgresExpressionIndexDefinition( ptd,
-                "(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")" )
-                .name( quote( idxPrefix + "_linked_idx" ) )
-                .ifNotExists();
-
-        ptd.addIndexes( lastWriteIndex,
-                lastIndexedIndex,
-                readersIndex,
-                writersIndex,
-                ownersIndex,
-                indexingIndex,
-                linkedIndex );
-
-        return ptd;
-    }
-
-    @Deprecated
-    public static PostgresTableDefinition buildPropertyTableDefinition(
-            EntitySet entitySet,
-            PropertyType propertyType ) {
-        return buildPropertyTableDefinition( propertyType );
     }
 
     public static PostgresTableDefinition buildPropertyTableDefinition(

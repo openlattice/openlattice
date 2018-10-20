@@ -52,14 +52,14 @@ import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
 import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.JsonDeserializer;
+import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.PostgresIterable.PostgresIterator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -68,6 +68,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -108,47 +109,17 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override
     @Timed
     public EntitySetData<FullQualifiedName> getEntitySetData(
-            UUID entitySetId,
+            Set<UUID> entitySetIds,
             LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            Boolean linking) {
         return new EntitySetData<>(
                 orderedPropertyNames,
-                dataQueryService.streamableEntitySet( entitySetId,
+                dataQueryService.streamableEntitySet( entitySetIds,
                         authorizedPropertyTypes,
-                        EnumSet
-                                .of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
-                        Optional.empty() ) );
-    }
-
-    @Timed
-    @Override
-    public SetMultimap<FullQualifiedName, Object> getEntity(
-            UUID entitySetId,
-            String entityId,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        UUID entityKeyId = idService.getEntityKeyId( new EntityKey( entitySetId, entityId ) );
-        PostgresIterator<SetMultimap<FullQualifiedName, Object>> pgIter = dataQueryService
-                .streamableEntitySet( entitySetId,
-                        authorizedPropertyTypes,
-                        EnumSet
-                                .of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
-                        Optional.empty() ).iterator();
-
-        SetMultimap<FullQualifiedName, Object> entity = pgIter.next();
-
-        try {
-            pgIter.close();
-        } catch ( IOException e ) {
-            logger.error( "Unable to close connection to database after reading key id {} for id {}!",
-                    entityKeyId,
-                    entityId );
-        }
-
-        if ( entity == null ) {
-            return ImmutableSetMultimap.of();
-        }
-
-        return entity;
+                        EnumSet.of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
+                        Optional.empty(),
+                        linking) );
     }
 
     @Timed
@@ -229,8 +200,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService
+        final var count = dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
+        signalCreatedEntities( entitySetId,
+                dataQueryService.getEntitiesById( entitySetId, authorizedPropertyTypes, replacementProperties.keySet() ) );
+        return count;
     }
 
     @Timed
@@ -249,45 +223,28 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return count;
     }
 
-    private Map<EntityDataKey, SetMultimap<FullQualifiedName, Object>> getAllEntities(
-            LinkedHashSet<EntityDataKey> dataKeys,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        final SetMultimap<UUID, UUID> entitySetToIds = HashMultimap.create();
-        final Map<EntityDataKey, SetMultimap<FullQualifiedName, Object>> entities = new HashMap<>( dataKeys.size() );
-
-        dataKeys.stream().forEach( key -> entitySetToIds.put( key.getEntityKeyId(), key.getEntitySetId() ) );
-
-        Multimaps
-                .asMap( entitySetToIds )
-                .forEach( ( k, v ) ->
-                        dataQueryService.streamableEntitySet(
-                                k,
-                                v,
-                                authorizedPropertyTypes,
-                                EnumSet.noneOf( MetadataOption.class ),
-                                Optional.empty() )
-                                .forEach( e -> entities.put(
-                                        new EntityDataKey( k, (UUID) e.get( DataTables.ID_FQN ).iterator().next() ),
-                                        e ) ) );
-        return entities;
-    }
-
     @Override
-    @Timed
-    public EntitySetData<FullQualifiedName> getEntities(
-            UUID entitySetId,
-            Set<UUID> ids,
+    @Timed public EntitySetData<FullQualifiedName> getEntities(
+            Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             LinkedHashSet<String> orderedPropertyTypes,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            Boolean linking) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
+        PostgresIterable result = (linking)
+                ? dataQueryService.streamableLinkingEntitySet(
+                    entityKeyIds,
+                    authorizedPropertyTypes,
+                    EnumSet.noneOf( MetadataOption.class ),
+                    Optional.empty())
+                : dataQueryService.streamableEntitySet(
+                    entityKeyIds,
+                    authorizedPropertyTypes,
+                    EnumSet.noneOf( MetadataOption.class ),
+                    Optional.empty());
+
         return new EntitySetData<>(
                 orderedPropertyTypes,
-                dataQueryService.streamableEntitySet(
-                        entitySetId,
-                        ids,
-                        authorizedPropertyTypes,
-                        EnumSet.noneOf( MetadataOption.class ),
-                        Optional.empty() ) );
+                result);
     }
 
     @Override
@@ -295,14 +252,29 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     public Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            Boolean linking) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return dataQueryService.streamableEntitySet(
                 entitySetId,
                 ids,
                 authorizedPropertyTypes,
                 EnumSet.noneOf( MetadataOption.class ),
-                Optional.empty() ).stream();
+                Optional.empty(),
+                linking ).stream();
+    }
+
+    @Override
+    @Timed
+    public Stream<SetMultimap<FullQualifiedName, Object>> getLinkingEntities(
+            Map<UUID, Optional<Set<UUID>>> entityKeyIds,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes) {
+        //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
+        return dataQueryService.streamableLinkingEntitySet(
+                entityKeyIds,
+                authorizedPropertyTypes,
+                EnumSet.noneOf( MetadataOption.class ),
+                Optional.empty()).stream();
     }
 
     @Override
@@ -320,12 +292,16 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         Multimaps
                 .asMap( entitySetIdsToEntityKeyIds )
                 .forEach( ( entitySetId, entityKeyIds ) -> entities
-                        .putAll( entitySetId, dataQueryService.streamableEntitySet(
-                                entitySetId,
-                                entityKeyIds,
-                                authorizedPropertyTypesByEntitySet.get( entitySetId ),
-                                EnumSet.noneOf( MetadataOption.class ),
-                                Optional.empty() ) ) );
+                        .putAll( entitySetId,
+                                dataQueryService.streamableEntitySet(
+                                        entitySetId,
+                                        entityKeyIds,
+                                        Map.of( entitySetId, authorizedPropertyTypesByEntitySet.get( entitySetId ) ), //TODO
+                                        EnumSet.noneOf( MetadataOption.class ),// TODO: do we need linked entity sets here??
+                                        Optional.empty(),
+                                        false )
+                        )
+                );
 
         return entities;
     }

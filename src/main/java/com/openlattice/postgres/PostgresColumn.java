@@ -345,6 +345,15 @@ public final class PostgresColumn {
     public static final String                   VERTEX_ID_FIELD             = "vertex_id";
     public static final PostgresColumnDefinition VERTEX_ID                   =
             new PostgresColumnDefinition( VERTEX_ID_FIELD, UUID );
+    public static final String                   LINKING_FIELD               = "linking";
+    public static final PostgresColumnDefinition LINKING                     =
+            new PostgresColumnDefinition( LINKING_FIELD, BOOLEAN );
+    public static final String                   LINKED_ENTITY_SETS_FIELD    = "linked_entity_sets";
+    public static final PostgresColumnDefinition LINKED_ENTITY_SETS          =
+            new PostgresColumnDefinition( LINKED_ENTITY_SETS_FIELD, UUID_ARRAY );
+    public static final String                   EXTERNAL_FIELD              = "external";
+    public static final PostgresColumnDefinition EXTERNAL                    =
+            new PostgresColumnDefinition( EXTERNAL_FIELD, BOOLEAN );
 
     private PostgresColumn() {
     }
