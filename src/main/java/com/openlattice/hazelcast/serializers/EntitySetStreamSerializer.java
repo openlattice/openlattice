@@ -29,6 +29,7 @@ import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.EntitySet;
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -46,23 +47,33 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         out.writeUTF( object.getTitle() );
         out.writeUTF( object.getDescription() );
         SetStreamSerializers.serialize( out, object.getContacts(), ObjectDataOutput::writeUTF );
+        out.writeBoolean( object.isLinking() );
+        SetStreamSerializers.fastUUIDSetSerialize( out, object.getLinkedEntitySets() );
+        out.writeBoolean( object.isExternal() );
     }
 
     @Override
     public EntitySet read( ObjectDataInput in ) throws IOException {
-        UUID id = UUIDStreamSerializer.deserialize( in );
+        Optional<UUID> id = Optional.of(UUIDStreamSerializer.deserialize( in ));
         UUID entityTypeId = UUIDStreamSerializer.deserialize( in );
         String name = in.readUTF();
         String title = in.readUTF();
         Optional<String> description = Optional.of( in.readUTF() );
         Set<String> contacts = SetStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
+        Optional<Boolean> linking = Optional.of( in.readBoolean() );
+        Optional<Set<UUID>> linkedEntitySets = Optional.of( SetStreamSerializers.fastUUIDSetDeserialize( in ) );
+        Optional<Boolean> external = Optional.of( in.readBoolean() );
+
         EntitySet es = new EntitySet(
                 id,
                 entityTypeId,
                 name,
                 title,
                 description,
-                contacts );
+                contacts,
+                linking,
+                linkedEntitySets,
+                external );
         return es;
     }
 

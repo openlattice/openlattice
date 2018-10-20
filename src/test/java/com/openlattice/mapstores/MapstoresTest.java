@@ -33,9 +33,6 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
 import com.openlattice.authorization.mapstores.UserMapstore;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDataMetadata;
-import com.openlattice.data.EntityDataValue;
 import com.openlattice.data.PropertyMetadata;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.EntitySet;
@@ -43,7 +40,6 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.mapstores.SyncIdsMapstore;
-import com.openlattice.postgres.mapstores.data.DataMapstoreProxy;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -144,16 +140,7 @@ public class MapstoresTest extends HzAuthzTest {
         Principal p = TestDataFactory.userPrincipal();
         edm.createEntitySet( p, entitySet );
         Thread.sleep( 1000 );
-        DataMapstoreProxy dmp = testServer.getContext().getBean( DataMapstoreProxy.class );
-        UUID entityKeyId = UUID.randomUUID();
 
-        long version = 0;
-
-        OffsetDateTime lastWrite = OffsetDateTime.now();
-        OffsetDateTime lastIndex = OffsetDateTime.now();
-
-        EntityDataKey entityDataKey = new EntityDataKey( entitySet.getId(), entityKeyId );
-        EntityDataMetadata metadata = new EntityDataMetadata( version, lastWrite, lastIndex );
         Map<UUID, Map<Object, PropertyMetadata>> properties = new HashMap<>();
         PropertyMetadata pm = new PropertyMetadata( RandomUtils.nextBytes( 16 ),
                 1,
@@ -170,15 +157,11 @@ public class MapstoresTest extends HzAuthzTest {
         properties.put( propertyTypes[ 7 ].getId(), ImmutableMap.of( UUID.randomUUID(), pm ) );
         properties.put( propertyTypes[ 8 ].getId(), ImmutableMap.of( RandomUtils.nextInt( 0, 1 << 30 ), pm ) );
         properties.put( propertyTypes[ 9 ].getId(), ImmutableMap.of( RandomUtils.nextDouble( 0, 1e20 ), pm ) );
-
-        EntityDataValue edv = new EntityDataValue( metadata, properties );
-        dmp.store( entityDataKey, edv );
     }
 
     @SuppressWarnings( { "rawtypes", "unchecked" } )
     private static void test( TestableSelfRegisteringMapStore ms ) {
-        if ( ms instanceof SyncIdsMapstore || ms instanceof PostgresCredentialMapstore || ms instanceof UserMapstore
-                || ms instanceof DataMapstoreProxy ) {
+        if ( ms instanceof SyncIdsMapstore || ms instanceof PostgresCredentialMapstore || ms instanceof UserMapstore ) {
             return;
         }
         Object expected = ms.generateTestValue();

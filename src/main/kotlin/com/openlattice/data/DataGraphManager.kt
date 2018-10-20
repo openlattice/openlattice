@@ -46,25 +46,29 @@ interface DataGraphManager {
      * Entity set methods
      */
     fun getEntitySetData(
-            entitySetId: UUID,
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            linking: Boolean
     ): EntitySetData<FullQualifiedName>
 
-    fun getEntitySetData(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): EntitySetData<FullQualifiedName>
+    fun getLinkingEntitySetSize( linkedEntitySetIds: Set<UUID> ): Long
+
+    fun getEntitySetSize( entitySetId: UUID ): Long
 
     /*
      * CRUD methods for entity
      */
     fun getEntity(
-            entityKeyId: UUID,
             entitySetId: UUID,
+            entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): SetMultimap<FullQualifiedName, Any>
+
+    fun getLinkingEntity(
+            entitySetIds: Set<UUID>,
+            entityKeyId: UUID,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): SetMultimap<FullQualifiedName, Any>
 
     //Soft deletes

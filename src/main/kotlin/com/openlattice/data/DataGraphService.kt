@@ -100,20 +100,26 @@ open class DataGraphService(
             .build<MultiKey<*>, Map<String, Object>>()
 
     override fun getEntitySetData(
-            entitySetId: UUID,
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            linking: Boolean
     ): EntitySetData<FullQualifiedName> {
-        return eds.getEntitySetData(entitySetId, orderedPropertyNames, authorizedPropertyTypes)
+        return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, linking)
     }
 
-    override fun getEntitySetData(
-            entitySetId: UUID,
-            entityKeyIds: Set<UUID>,
-            orderedPropertyNames: LinkedHashSet<String>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): EntitySetData<FullQualifiedName> {
-        return eds.getEntities(entitySetId, entityKeyIds, orderedPropertyNames, authorizedPropertyTypes)
+    override fun getLinkingEntitySetSize( linkedEntitySetIds: Set<UUID> ): Long {
+        if( linkedEntitySetIds.isEmpty() ) {
+            return 0
+        }
+
+        return eds.getLinkingEntities(
+                linkedEntitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
+                mapOf() ).count()
+    }
+
+    override fun getEntitySetSize( entitySetId: UUID ): Long {
+        return eds.getEntities( entitySetId, setOf(), mapOf(), false).count()
     }
 
 
@@ -127,10 +133,21 @@ open class DataGraphService(
             entityKeyId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): SetMultimap<FullQualifiedName, Any> {
-        return eds
-                .getEntities(entitySetId, ImmutableSet.of(entityKeyId), authorizedPropertyTypes)
-                .iterator()
-                .next()
+        return eds.getEntities(
+                entitySetId ,
+                setOf(entityKeyId),
+                mapOf(entitySetId to authorizedPropertyTypes),
+                false).iterator().next()
+    }
+
+    override fun getLinkingEntity(
+            entitySetIds: Set<UUID>,
+            entityKeyId: UUID,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): SetMultimap<FullQualifiedName, Any> {
+        return eds.getLinkingEntities(
+                entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
+                authorizedPropertyTypes).iterator().next()
     }
 
     override fun clearEntitySet(

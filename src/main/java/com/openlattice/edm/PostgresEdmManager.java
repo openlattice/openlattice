@@ -81,7 +81,6 @@ public class PostgresEdmManager implements DbEdmManager {
     @Timed
     public void createEntitySet( EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
         try {
-            createEntitySetTable(entitySet);
             for (PropertyType pt : propertyTypes) {
                 createPropertyTypeTableIfNotExist( pt );
             }
@@ -91,24 +90,9 @@ public class PostgresEdmManager implements DbEdmManager {
         //Method is idempotent and should be re-executable in case of a failure.
     }
 
-    private void createEntitySetTable( EntitySet entitySet ) throws SQLException {
-        PostgresTableDefinition ptd = DataTables.buildEntitySetTableDefinition( entitySet );
-        ptm.registerTables( ptd );
-    }
-
     @Override public void deleteEntitySet(
             EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
-        PostgresTableDefinition ptd = DataTables.buildEntitySetTableDefinition( entitySet );
-        dropTable( ptd.getName() );
         removePropertiesFromEntitySet( entitySet, propertyTypes );
-    }
-
-    private void dropTable( String table ) {
-        try ( Connection conn = hds.getConnection(); Statement s = conn.createStatement() ) {
-            s.execute( "DROP TABLE " + quote( table ) );
-        } catch ( SQLException e ) {
-            logger.error( "Encountered exception while dropping table: {}", table, e );
-        }
     }
 
     @Override public void removePropertiesFromEntitySet( EntitySet entitySet, PropertyType... propertyTypes ) {

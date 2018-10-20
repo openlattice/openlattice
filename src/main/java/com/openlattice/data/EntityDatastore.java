@@ -24,12 +24,10 @@ package com.openlattice.data;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.conductor.codecs.odata.EntityPropertyKey;
 import com.openlattice.edm.type.PropertyType;
 import java.nio.ByteBuffer;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -39,31 +37,31 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 public interface EntityDatastore {
 
     EntitySetData<FullQualifiedName> getEntitySetData(
-            UUID entitySetId,
+            Set<UUID> entitySetIds,
             LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            Boolean linking);
 
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            Boolean linking);
+
+    Stream<SetMultimap<FullQualifiedName, Object>> getLinkingEntities(
+            Map<UUID, Optional<Set<UUID>>> entityKeyIds,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes);
 
     EntitySetData<FullQualifiedName> getEntities(
-            UUID entitySetId,
-            Set<UUID> ids,
+            Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             LinkedHashSet<String> orderedPropertyTypes,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            Boolean linking);
 
     ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
-
-    @Deprecated
-    SetMultimap<FullQualifiedName, Object> getEntity(
-            UUID entitySetId,
-            String entityId,
-            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.

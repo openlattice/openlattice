@@ -21,21 +21,28 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, EntitySet value ) throws SQLException {
+        Array contacts = PostgresArrays.createTextArray( ps.getConnection(), value.getContacts().stream() );
+        Array linkedEntitySets = PostgresArrays.createUuidArray( ps.getConnection(), value.getLinkedEntitySets().stream() );
+
         bind( ps, key, 1 );
         ps.setString( 2, value.getName() );
         ps.setObject( 3, value.getEntityTypeId() );
         ps.setString( 4, value.getTitle() );
         ps.setString( 5, value.getDescription() );
-
-        Array contacts = PostgresArrays.createTextArray( ps.getConnection(), value.getContacts().stream() );
         ps.setArray( 6, contacts );
+        ps.setBoolean( 7, value.isLinking() );
+        ps.setArray( 8, linkedEntitySets );
+        ps.setBoolean( 9, value.isExternal() );
 
         // UPDATE
-        ps.setString( 7, value.getName() );
-        ps.setObject( 8, value.getEntityTypeId() );
-        ps.setString( 9, value.getTitle() );
-        ps.setString( 10, value.getDescription() );
-        ps.setArray( 11, contacts );
+        ps.setString( 10, value.getName() );
+        ps.setObject( 11, value.getEntityTypeId() );
+        ps.setString( 12, value.getTitle() );
+        ps.setString( 13, value.getDescription() );
+        ps.setArray( 14, contacts );
+        ps.setBoolean( 15, value.isLinking() );
+        ps.setArray( 16, linkedEntitySets );
+        ps.setBoolean( 17, value.isExternal() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
