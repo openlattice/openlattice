@@ -5,10 +5,7 @@ import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.ImmutableList;
-import com.openlattice.search.requests.DistanceUnit;
-import com.openlattice.search.requests.SearchConstraints;
-import com.openlattice.search.requests.SearchDetails;
-import com.openlattice.search.requests.SearchType;
+import com.openlattice.search.requests.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,40 +44,51 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
 
         out.writeInt( object.getStart() );
         out.writeInt( object.getMaxHits() );
-        out.writeString( object.getSearchType().name() );
+        out.writeInt( object.getConstraintGroups().size() );
 
-        OptionalStreamSerializers.kryoSerialize( out, object.getSearchTerm(), Output::writeString );
-        OptionalStreamSerializers.kryoSerialize( out, object.getFuzzy(), Output::writeBoolean );
+        for ( ConstraintGroup constraintGroup : object.getConstraintGroups() ) {
+            out.writeInt( constraintGroup.getMinimumMatches() );
+            out.writeInt( constraintGroup.getConstraints().size() );
 
-        OptionalStreamSerializers.kryoSerialize( out, object.getSearches(), ( output, searches ) -> {
-            output.writeInt( searches.size() );
-            for ( SearchDetails searchDetails : searches ) {
-                output.writeString( searchDetails.getSearchTerm() );
-                writeUUID( output, searchDetails.getPropertyType() );
-                output.writeBoolean( searchDetails.getExactMatch() );
+            for ( Constraint constraint : constraintGroup.getConstraints() ) {
+                out.writeString( constraint.getSearchType().name() );
+
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getSearchTerm(), Output::writeString );
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getFuzzy(), Output::writeBoolean );
+
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getSearches(), ( output, searches ) -> {
+                    output.writeInt( searches.size() );
+                    for ( SearchDetails searchDetails : searches ) {
+                        output.writeString( searchDetails.getSearchTerm() );
+                        writeUUID( output, searchDetails.getPropertyType() );
+                        output.writeBoolean( searchDetails.getExactMatch() );
+                    }
+                } );
+
+                OptionalStreamSerializers
+                        .kryoSerialize( out,
+                                constraint.getPropertyTypeId(),
+                                SearchConstraintsStreamSerializer::writeUUID );
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getLatitude(), Output::writeDouble );
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getLongitude(), Output::writeDouble );
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getRadius(), Output::writeDouble );
+                OptionalStreamSerializers
+                        .kryoSerialize( out,
+                                constraint.getDistanceUnit(),
+                                ( output, distanceUnit ) -> output.writeString( distanceUnit.name() ) );
+
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getZones(), ( output, zones ) -> {
+                    output.writeInt( zones.size() );
+                    for ( List<List<Double>> zone : zones ) {
+                        output.writeInt( zone.size() );
+                        for ( List<Double> coordinate : zone ) {
+                            output.writeDouble( coordinate.get( 0 ) );
+                            output.writeDouble( coordinate.get( 1 ) );
+                        }
+                    }
+                } );
             }
-        } );
-
-        OptionalStreamSerializers
-                .kryoSerialize( out, object.getPropertyTypeId(), SearchConstraintsStreamSerializer::writeUUID );
-        OptionalStreamSerializers.kryoSerialize( out, object.getLatitude(), Output::writeDouble );
-        OptionalStreamSerializers.kryoSerialize( out, object.getLongitude(), Output::writeDouble );
-        OptionalStreamSerializers.kryoSerialize( out, object.getRadius(), Output::writeDouble );
-        OptionalStreamSerializers
-                .kryoSerialize( out,
-                        object.getDistanceUnit(),
-                        ( output, distanceUnit ) -> output.writeString( distanceUnit.name() ) );
-
-        OptionalStreamSerializers.kryoSerialize( out, object.getZones(), ( output, zones ) -> {
-            output.writeInt( zones.size() );
-            for ( List<List<Double>> zone : zones ) {
-                output.writeInt( zone.size() );
-                for ( List<Double> coordinate : zone ) {
-                    output.writeDouble( coordinate.get( 0 ) );
-                    output.writeDouble( coordinate.get( 1 ) );
-                }
-            }
-        } );
+        }
     }
 
     public static SearchConstraints deserialize( Input in ) {
@@ -92,63 +100,79 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
 
         int start = in.readInt();
         int maxHits = in.readInt();
-        SearchType searchType = SearchType.valueOf( in.readString() );
 
-        Optional<String> searchTerm = OptionalStreamSerializers.kryoDeserialize( in, Input::readString );
-        Optional<Boolean> fuzzy = OptionalStreamSerializers.kryoDeserialize( in, Input::readBoolean );
+        int numConstraintGroups = in.readInt();
 
-        Optional<List<SearchDetails>> searches = OptionalStreamSerializers.kryoDeserialize( in, ( input ) -> {
-            int numSearches = input.readInt();
-            List<SearchDetails> searchDetailsList = new ArrayList<>( numSearches );
-            for ( int i = 0; i < numSearches; i++ ) {
-                String searchDetailTerm = input.readString();
-                UUID searchDetailProperty = readUUID( input );
-                boolean searchDetailExact = input.readBoolean();
-                searchDetailsList.add( new SearchDetails( searchDetailTerm, searchDetailProperty, searchDetailExact ) );
+        List<ConstraintGroup> constraintGroups = new ArrayList<>( numConstraintGroups );
+        for ( int i = 0; i < numConstraintGroups; i++ ) {
+            int minimumMatches = in.readInt();
+
+            int numConstraints = in.readInt();
+            List<Constraint> constraints = new ArrayList<>( numConstraints );
+
+            for ( int j = 0; j < numConstraints; j++ ) {
+                SearchType searchType = SearchType.valueOf( in.readString() );
+
+                Optional<String> searchTerm = OptionalStreamSerializers.kryoDeserialize( in, Input::readString );
+                Optional<Boolean> fuzzy = OptionalStreamSerializers.kryoDeserialize( in, Input::readBoolean );
+
+                Optional<List<SearchDetails>> searches = OptionalStreamSerializers.kryoDeserialize( in, ( input ) -> {
+                    int numSearches = input.readInt();
+                    List<SearchDetails> searchDetailsList = new ArrayList<>( numSearches );
+                    for ( int k = 0; k < numSearches; k++ ) {
+                        String searchDetailTerm = input.readString();
+                        UUID searchDetailProperty = readUUID( input );
+                        boolean searchDetailExact = input.readBoolean();
+                        searchDetailsList
+                                .add( new SearchDetails( searchDetailTerm, searchDetailProperty, searchDetailExact ) );
+                    }
+                    return searchDetailsList;
+                } );
+
+                Optional<UUID> propertyTypeId = OptionalStreamSerializers
+                        .kryoDeserialize( in, SearchConstraintsStreamSerializer::readUUID );
+                Optional<Double> latitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
+                Optional<Double> longitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
+                Optional<Double> radius = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
+                Optional<DistanceUnit> distanceUnit = OptionalStreamSerializers
+                        .kryoDeserialize( in, ( input ) -> DistanceUnit.valueOf( input.readString() ) );
+
+                Optional<List<List<List<Double>>>> zones = OptionalStreamSerializers.kryoDeserialize( in, ( input ) -> {
+                    int numZones = input.readInt();
+                    List<List<List<Double>>> zoneList = new ArrayList<>( numZones );
+                    for ( int k = 0; k < numZones; k++ ) {
+                        int numCoords = input.readInt();
+                        List<List<Double>> coordList = new ArrayList<>( numCoords );
+
+                        for ( int l = 0; l < numCoords; l++ ) {
+                            double left = input.readDouble();
+                            double right = input.readDouble();
+                            coordList.add( ImmutableList.of( left, right ) );
+                        }
+
+                        zoneList.add( coordList );
+                    }
+
+                    return zoneList;
+                } );
+
+                constraints.add( new Constraint( searchType,
+                        searchTerm,
+                        fuzzy,
+                        searches,
+                        propertyTypeId,
+                        latitude,
+                        longitude,
+                        radius,
+                        distanceUnit,
+                        zones ) );
             }
-            return searchDetailsList;
-        } );
 
-        Optional<UUID> propertyTypeId = OptionalStreamSerializers
-                .kryoDeserialize( in, SearchConstraintsStreamSerializer::readUUID );
-        Optional<Double> latitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
-        Optional<Double> longitude = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
-        Optional<Double> radius = OptionalStreamSerializers.kryoDeserialize( in, Input::readDouble );
-        Optional<DistanceUnit> distanceUnit = OptionalStreamSerializers
-                .kryoDeserialize( in, ( input ) -> DistanceUnit.valueOf( input.readString() ) );
+            constraintGroups.add( new ConstraintGroup( minimumMatches, constraints ) );
 
-        Optional<List<List<List<Double>>>> zones = OptionalStreamSerializers.kryoDeserialize( in, ( input ) -> {
-            int numZones = input.readInt();
-            List<List<List<Double>>> zoneList = new ArrayList<>( numZones );
-            for ( int i = 0; i < numZones; i++ ) {
-                int numCoords = input.readInt();
-                List<List<Double>> coordList = new ArrayList<>( numCoords );
+        }
 
-                for ( int j = 0; j < numCoords; j++ ) {
-                    double left = input.readDouble();
-                    double right = input.readDouble();
-                    coordList.add( ImmutableList.of( left, right ) );
-                }
-
-                zoneList.add( coordList );
-            }
-
-            return zoneList;
-        } );
-
-        return new SearchConstraints( entitySetIds,
-                start,
-                maxHits,
-                searchType,
-                searchTerm,
-                fuzzy,
-                searches,
-                propertyTypeId,
-                latitude,
-                longitude,
-                radius,
-                distanceUnit,
-                zones );
+        return new SearchConstraints( entitySetIds, start, maxHits, constraintGroups );
     }
 
 }
