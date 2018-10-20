@@ -40,6 +40,7 @@ import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.time.LocalDate;
@@ -466,14 +467,19 @@ public final class TestDataFactory {
     public static MetadataUpdate metadataUpdate() {
         final var propertyTags = LinkedHashMultimap.<UUID, String>create();
         propertyTags.put( UUID.randomUUID(), "SOME PROPERTY TAG" );
-        return new MetadataUpdate( Optional.of(RandomStringUtils.randomAlphanumeric( 5 )),
-                Optional.of(RandomStringUtils.randomAlphanumeric( 5 )),
+        return new MetadataUpdate( Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
                 Optional.empty(),
-                Optional.of(new HashSet<String>(Arrays.asList(RandomStringUtils.randomAlphanumeric( 3 ), RandomStringUtils.randomAlphanumeric( 5 )))),
-                Optional.of(fqn()),
-                Optional.of(r.nextBoolean()),
+                Optional.of( new HashSet<String>( Arrays.asList( RandomStringUtils.randomAlphanumeric( 3 ),
+                        RandomStringUtils.randomAlphanumeric( 5 ) ) ) ),
+                Optional.of( fqn() ),
+                Optional.of( r.nextBoolean() ),
                 Optional.empty(),
-                Optional.of(RandomStringUtils.randomAlphanumeric( 4 )),
-                Optional.of(propertyTags));
+                Optional.of( RandomStringUtils.randomAlphanumeric( 4 ) ),
+                Optional.of( propertyTags ) );
+    }
+
+    public static SearchDetails searchDetails() {
+        return new SearchDetails( RandomStringUtils.randomAlphanumeric( 10 ), UUID.randomUUID(), r.nextBoolean() );
     }
 }

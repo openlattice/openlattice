@@ -18,10 +18,8 @@
 
 package com.openlattice.search;
 
-import com.openlattice.search.requests.AdvancedSearch;
-import com.openlattice.search.requests.FQNSearchTerm;
-import com.openlattice.search.requests.Search;
-import com.openlattice.search.requests.SearchResult;
+import com.openlattice.search.requests.*;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,13 +27,8 @@ import java.util.UUID;
 
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.search.requests.DataSearchResult;
-import com.openlattice.search.requests.SearchTerm;
 
-import retrofit2.http.Body;
-import retrofit2.http.GET;
-import retrofit2.http.POST;
-import retrofit2.http.Path;
+import retrofit2.http.*;
 
 public interface SearchApi {
     /*
@@ -110,6 +103,18 @@ public interface SearchApi {
     SearchResult getEntitySets(
             @Path( START ) int start,
             @Path( NUM_RESULTS ) int maxHits );
+
+    /**
+     * Executes a search over the data of a given entity set to find rows that match the search term
+     *
+     * @param searchConstraints A JSON object that contains the entity set id(s) to search, the search type, the hit number
+     *                          to start returning results on for paging, the max number of hits to return, and any additional
+     *                          constraints specific to the search type
+     * @return A data search result object, containing the total number of hits for the given query, and the hits
+     * themselves
+     */
+    @PATCH( BASE )
+    DataSearchResult searchEntitySetData( @Body SearchConstraints searchConstraints );
 
     /**
      * Executes a search over the data of a given entity set to find rows that match the search term
