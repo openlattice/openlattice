@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import okhttp3.OkHttpClient;
+import retrofit2.CallAdapter;
 import retrofit2.Retrofit;
 
 public final class RetrofitFactory {
@@ -60,6 +61,11 @@ public final class RetrofitFactory {
 
     public static final Retrofit newClient( SerializableSupplier<String> jwtToken ) {
         return newClient( Environment.PRODUCTION, jwtToken );
+    }
+
+    public static final Retrofit newClient( Environment environment, Supplier<String> jwtToken, CallAdapter.Factory callFactory ) {
+        OkHttpClient.Builder httpBuilder = okhttpClientWithLoomAuth( jwtToken );
+        return decorateWithFactories( createBaseRhizomeRetrofitBuilder( environment, httpBuilder ), callFactory ).build();
     }
 
     public static final Retrofit newClient( Environment environment, Supplier<String> jwtToken ) {
@@ -96,6 +102,12 @@ public final class RetrofitFactory {
         return builder.addConverterFactory( new RhizomeByteConverterFactory() )
                 .addConverterFactory( new RhizomeJacksonConverterFactory( jsonMapper ) )
                 .addCallAdapterFactory( new RhizomeCallAdapterFactory() );
+    }
+
+    public static final Retrofit.Builder decorateWithFactories( Retrofit.Builder builder, CallAdapter.Factory callFactory ) {
+        return builder.addConverterFactory( new RhizomeByteConverterFactory() )
+                .addConverterFactory( new RhizomeJacksonConverterFactory( jsonMapper ) )
+                .addCallAdapterFactory( callFactory );
     }
 
     public static final OkHttpClient.Builder okhttpClientWithLoomAuth( Supplier<String> jwtToken ) {
