@@ -43,9 +43,7 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.requests.EntityDataKeySearchResult;
-import com.openlattice.search.requests.SearchConstraints;
-import com.openlattice.search.requests.SearchResult;
+import com.openlattice.search.requests.*;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
@@ -837,7 +835,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private QueryBuilder getAdvancedSearchQuery(
-            SearchConstraints constraints,
+            Constraint constraints,
             Map<String, Float> fieldMap ) {
 
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
@@ -858,7 +856,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private QueryBuilder getSimpleSearchQuery(
-            SearchConstraints constraints,
+            Constraint constraints,
             Map<String, Float> fieldsMap ) {
 
         String searchTerm = constraints.getSearchTerm().get();
@@ -872,7 +870,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private QueryBuilder getGeoDistanceSearchQuery(
-            SearchConstraints constraints,
+            Constraint constraints,
             Map<String, Float> fieldMap ) {
 
         UUID propertyTypeId = constraints.getPropertyTypeId().get();
@@ -890,7 +888,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .distance( radius, DistanceUnit.fromString( constraints.getDistanceUnit().get().name() ) );
     }
 
-    private QueryBuilder getGeoPolygonSearchQuery( SearchConstraints constraints, Map<String, Float> fieldMap ) {
+    private QueryBuilder getGeoPolygonSearchQuery( Constraint constraints, Map<String, Float> fieldMap ) {
 
         UUID propertyTypeId = constraints.getPropertyTypeId().get();
         if ( !fieldMap.containsKey( propertyTypeId.toString() ) || fieldMap.get( propertyTypeId.toString() ) == 0F ) {
@@ -911,24 +909,40 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     private QueryBuilder getQueryForSearch(
             SearchConstraints searchConstraints,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
+
         Map<String, Float> fieldsMap = getFieldsMap( authorizedPropertyTypesByEntitySet );
+        BoolQueryBuilder query = QueryBuilders.boolQuery();
 
-        switch ( searchConstraints.getSearchType() ) {
+        for ( ConstraintGroup constraintGroup : searchConstraints.getConstraintGroups() ) {
+            BoolQueryBuilder subQuery = QueryBuilders.boolQuery()
+                    .minimumShouldMatch( constraintGroup.getMinimumMatches() );
 
-            case advanced:
-                return getAdvancedSearchQuery( searchConstraints, fieldsMap );
+            for ( Constraint constraint : constraintGroup.getConstraints() ) {
 
-            case geoDistance:
-                return getGeoDistanceSearchQuery( searchConstraints, fieldsMap );
+                switch ( constraint.getSearchType() ) {
+                    case advanced:
+                        subQuery.should( getAdvancedSearchQuery( constraint, fieldsMap ) );
+                        break;
 
-            case geoPolygon:
-                return getGeoPolygonSearchQuery( searchConstraints, fieldsMap );
+                    case geoDistance:
+                        subQuery.should( getGeoDistanceSearchQuery( constraint, fieldsMap ) );
+                        break;
 
-            case simple:
-            default:
-                return getSimpleSearchQuery( searchConstraints, fieldsMap );
+                    case geoPolygon:
+                        subQuery.should( getGeoPolygonSearchQuery( constraint, fieldsMap ) );
+                        break;
 
+                    case simple:
+                        subQuery.should( getSimpleSearchQuery( constraint, fieldsMap ) );
+                        break;
+
+                }
+            }
+
+            query.must( subQuery );
         }
+
+        return query;
     }
 
     @Override
