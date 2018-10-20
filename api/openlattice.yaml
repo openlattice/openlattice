@@ -104,7 +104,7 @@ paths:
             schema:
               $ref: '#/components/schemas/entitySet'
       tags:
-        - edm-entityset
+        - edm
       security:
         - openlattice_auth: []
       responses:
@@ -441,7 +441,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/entityType'
+                  $ref: '#/components/schemas/associationType'
     post:
       summary: Creates a new AssociationType definition, if it doesn't exist.
       operationId: createAssociationType
@@ -854,7 +854,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PropertyUsageSummary'
+                  $ref: '#/components/schemas/propertyUsageSummary'
   /datastore/edm/summary/{propertyTypeId}:
     get:
       summary: Get Property Usage Summary for property with given ID.
@@ -875,7 +875,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PropertyUsageSummary'
+                $ref: '#/components/schemas/propertyUsageSummary'
 
 
   #       ....           ....           ....           ....
@@ -993,7 +993,7 @@ paths:
           schema:
             $ref: "#/components/schemas/entitySetId"
       tags:
-        - data-entityset
+        - data
       security:
         - openlattice_auth: []
       responses:
@@ -1064,9 +1064,8 @@ components:
       description: Success
   securitySchemes:
     openlattice_auth:
-        type: apiKey
-        in: header
-        name: Authorization
+        type: http
+        scheme: bearer
 
   schemas:
 
@@ -1120,20 +1119,17 @@ components:
       type: string
       format: uuid
       example: 73f4b728-6c1d-49ee-bc5a-a618adf68590
-    propertyTypeIds:
-      multipleOf: propertyTypeId
-      example: [73f4b728-6c1d-49ee-bc5a-a618adf68590, 73f4b728-6c1d-49ee-bc5a-a618adf68590]
     propertyType:
       type: object
-      title: A property type
       properties:
+        title:
+          type: string
         id:
           type: string
           format: uuid
         type:
-          $ref: "#/components/schemas/FullQualifiedName"
-        title:
-          type: string
+          type:
+            $ref: "#/components/schemas/FullQualifiedName"
         description:
           type: string
         schemas:
@@ -1149,19 +1145,19 @@ components:
           type: boolean
         analyzer:
           type: boolean
-      example:
-        id: 73f4b728-6c1d-49ee-bc5a-a618adf68590
-        description: This is the description of my property
-        title: myproperty
-        type:
-          namespace: lattice
-          name: propertyname
-        schemas:
-          - namespace: lattice
-            name: schemaname
-        datatype: string
-        piiField: false
-        analyzer: STANDARD
+    example:
+      id: 73f4b728-6c1d-49ee-bc5a-a618adf68590
+      description: This is the description of my property
+      title: myproperty
+      type:
+        namespace: lattice
+        name: propertyname
+      schemas:
+        - namespace: lattice
+          name: schemaname
+      datatype: string
+      piiField: false
+      analyzer: STANDARD
 
     # entity type
     entityTypeId:
@@ -1172,24 +1168,37 @@ components:
       title: An entity type
       type: object
       properties:
-        id:
-          type: entityTypeId
         title:
           type: string
         description:
           type: string
+        id:
+          type: string
         type:
-          $ref: "#/components/schemas/FullQualifiedName"
+          type:
+            $ref: "#/components/schemas/FullQualifiedName"
         schemas:
-          $ref: "#/components/schemas/FullQualifiedName"
+          type: array
+          items:
+            type:
+              $ref: "#/components/schemas/FullQualifiedName"
         key:
-          type: object
+          type: array
+          items:
+            type: string
         properties:
-          type: object
+          type: array
+          items:
+            type: string
+        propertyTags:
+          type:
+            type: object
         basetype:
-          type: string
-        category:
-          type: string
+          type:
+            type: string
+        # category:
+        #   type: string
+        #   enum: [AssociationType, EntityType]
       example:
         id: ec6865e6-e60e-424b-a071-6a9c1603d735
         type:
@@ -1200,9 +1209,7 @@ components:
           name: myschema
         key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
         properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
-    entityTypes:
-      multipleOf: entityType
-      title: An array of entityTypes
+        # category: EntityType
 
     # association type
     associationTypeId:
@@ -1215,13 +1222,15 @@ components:
         entityType:
           $ref: "#/components/schemas/entityType"
         src:
-          type: string
+          type: array
+          items:
+            type: string
         dst:
-          type: string
+          type: array
+          items:
+            type: string
         bidirectional:
           type: boolean
-        description:
-          type: string
       example:
         entityType:
           id: ec6865e6-e60e-424b-a071-6a9c1603d735
@@ -1237,13 +1246,17 @@ components:
         dst: [4b08e1f9-4a00-4169-92ea-10e377070220]
         description: AssociationType Description
         bidirectional: true
-    associationTypes:
-      multipleOf: associationType
-      title: An array of associationTypes
-    associationTypeIds:
-      multipleOf: associationTypeId
-      title: An array of associationTypeIds
+        category: AssociationType
 
+    propertyUsageSummary:
+      type: object
+      properties:
+        entityTypeId:
+          type: string
+        entitySetId:
+          type: string
+        count:
+          type: integer
     # SyncTicket:
     #   type: "string"
     #   format: "uuid"
@@ -1275,26 +1288,6 @@ components:
 tags:
 - name: edm
   description: Entity Data Model API's
-  externalDocs:
-    description: OpenLattice help pages
-    url: https://help.openlattice.com/
-- name: edm
-  description: Entity Set EDM API's
-  externalDocs:
-    description: OpenLattice help pages
-    url: https://help.openlattice.com/
-- name: entitytype
-  description: Entity Type API's
-  externalDocs:
-    description: OpenLattice help pages
-    url: https://help.openlattice.com/
-- name: propertytype
-  description: Property Type API's
-  externalDocs:
-    description: OpenLattice help pages
-    url: https://help.openlattice.com/
-- name: associationtype
-  description: Association Type API's
   externalDocs:
     description: OpenLattice help pages
     url: https://help.openlattice.com/
