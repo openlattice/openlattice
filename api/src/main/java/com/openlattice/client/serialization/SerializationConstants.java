@@ -60,6 +60,7 @@ public final class SerializationConstants {
     public static final String COMPARISON                       = "comparison";
     public static final String CONFIG                           = "config";
     public static final String CONFLICTS                        = "conflicts";
+    public static final String CONSTRAINTS                      = "constraints";
     public static final String CONTACTS                         = "contacts";
     public static final String COUNT                            = "count";
     public static final String CURRENT_SYNC                     = "currentSync";
@@ -134,6 +135,7 @@ public final class SerializationConstants {
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";
+    public static final String MIN                              = "min";
     public static final String MISSING                          = "missing";
     public static final String MULTI_VALUED                     = "multiValued";
     public static final String NAME                             = "name";

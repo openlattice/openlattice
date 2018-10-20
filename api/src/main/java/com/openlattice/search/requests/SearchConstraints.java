@@ -3,6 +3,7 @@ package com.openlattice.search.requests;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.search.SearchApi;
 
@@ -11,103 +12,28 @@ import java.util.*;
 public class SearchConstraints {
 
     // always required
-    private final UUID[]     entitySetIds;
-    private final int        start;
-    private final int        maxHits;
-    private final SearchType searchType;
-
-    // standard data search
-    private final Optional<String>  searchTerm;
-    private final Optional<Boolean> fuzzy;
-
-    // advanced search
-    private final Optional<List<SearchDetails>> searches;
-
-    // geo searches (distance + polygon)
-    private final Optional<UUID> propertyTypeId;
-
-    // geo distance search
-    private final Optional<Double>       latitude;
-    private final Optional<Double>       longitude;
-    private final Optional<Double>       radius;
-    private final Optional<DistanceUnit> distanceUnit;
-
-    // geo polygon search
-    private final Optional<List<List<List<Double>>>> zones;
+    private final UUID[]                entitySetIds;
+    private final int                   start;
+    private final int                   maxHits;
+    private final List<ConstraintGroup> constraintGroups;
 
     @JsonCreator
     public SearchConstraints(
             @JsonProperty( SerializationConstants.ENTITY_SET_IDS ) UUID[] entitySetIds,
             @JsonProperty( SerializationConstants.START ) int start,
             @JsonProperty( SerializationConstants.MAX_HITS ) int maxHits,
-            @JsonProperty( SerializationConstants.TYPE_FIELD ) Optional<SearchType> searchType,
-            @JsonProperty( SerializationConstants.SEARCH_TERM ) Optional<String> searchTerm,
-            @JsonProperty( SerializationConstants.FUZZY ) Optional<Boolean> fuzzy,
-            @JsonProperty( SerializationConstants.SEARCH_FIELDS ) Optional<List<SearchDetails>> searches,
-            @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID ) Optional<UUID> propertyTypeId,
-            @JsonProperty( SerializationConstants.LATITUDE ) Optional<Double> latitude,
-            @JsonProperty( SerializationConstants.LONGITUDE ) Optional<Double> longitude,
-            @JsonProperty( SerializationConstants.RADIUS ) Optional<Double> radius,
-            @JsonProperty( SerializationConstants.UNIT ) Optional<DistanceUnit> distanceUnit,
-            @JsonProperty( SerializationConstants.ZONES ) Optional<List<List<List<Double>>>> zones
+            @JsonProperty( SerializationConstants.CONSTRAINTS ) List<ConstraintGroup> constraintGroups
 
     ) {
-
-        // initialization
 
         this.entitySetIds = Arrays.copyOf( entitySetIds, entitySetIds.length );
         this.start = start;
         this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
-        this.searchType = searchType.orElse( SearchType.simple );
+        this.constraintGroups = constraintGroups;
 
-        this.searchTerm = searchTerm;
-        this.fuzzy = this.searchType.equals( SearchType.simple ) ? Optional.of( fuzzy.orElse( false ) ) : fuzzy;
+        Preconditions
+                .checkArgument( constraintGroups.size() > 0, "SearchConstraints constraintGroups cannot be empty" );
 
-        this.searches = searches;
-
-        this.propertyTypeId = propertyTypeId;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.radius = radius;
-        this.distanceUnit = distanceUnit;
-
-        this.zones = zones;
-
-        // validation
-        switch ( this.searchType ) {
-            case advanced:
-                Preconditions.checkArgument( this.searches.isPresent(),
-                        "Field searches must be present for searches of type advanced" );
-                break;
-
-            case geoDistance:
-                Preconditions.checkArgument( this.propertyTypeId.isPresent(),
-                        "Field propertyTypeId must be present for searches of type geoDistance" );
-                Preconditions.checkArgument( this.latitude.isPresent(),
-                        "Field latitude must be present for searches of type geoDistance" );
-                Preconditions.checkArgument( this.longitude.isPresent(),
-                        "Field longitude must be present for searches of type geoDistance" );
-                Preconditions.checkArgument( this.radius.isPresent(),
-                        "Field radius must be present for searches of type geoDistance" );
-                Preconditions.checkArgument( this.distanceUnit.isPresent(),
-                        "Field distanceUnit must be present for searches of type geoDistance" );
-                break;
-
-            case geoPolygon:
-                Preconditions.checkArgument( this.propertyTypeId.isPresent(),
-                        "Field propertyTypeId must be present for searches of type geoPolygon" );
-                Preconditions.checkArgument( this.zones.isPresent() && this.zones.get().size() > 0,
-                        "Field zones must be present and non-empty for searches of type geoPolygon" );
-                break;
-
-            case simple:
-                Preconditions.checkArgument( this.searchTerm.isPresent(),
-                        "Field searchTerm must be present for searches of type simple" );
-                Preconditions.checkArgument( this.fuzzy.isPresent(),
-                        "Field fuzzy must be present for searches of type simple" );
-                break;
-
-        }
     }
 
     public SearchConstraints(
@@ -127,16 +53,18 @@ public class SearchConstraints {
         this( entitySetIds,
                 start,
                 maxHits,
-                Optional.of( searchType ),
-                searchTerm,
-                fuzzy,
-                searches,
-                propertyTypeId,
-                latitude,
-                longitude,
-                radius,
-                distanceUnit,
-                zones );
+                ImmutableList.of( new ConstraintGroup( ImmutableList.of( new Constraint(
+                        Optional.of( searchType ),
+                        searchTerm,
+                        fuzzy,
+                        searches,
+                        propertyTypeId,
+                        latitude,
+                        longitude,
+                        radius,
+                        distanceUnit,
+                        zones
+                ) ) ) ) );
     }
 
     public static SearchConstraints simpleSearchConstraints(
@@ -156,16 +84,17 @@ public class SearchConstraints {
         return new SearchConstraints( entitySetIds,
                 start,
                 maxHits,
-                Optional.of( SearchType.simple ),
-                Optional.of( searchTerm ),
-                Optional.of( fuzzy ),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
+                ImmutableList.of( new ConstraintGroup( ImmutableList.of( new Constraint(
+                        Optional.of( SearchType.simple ),
+                        Optional.of( searchTerm ),
+                        Optional.of( fuzzy ),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty() ) ) ) ) );
     }
 
     public static SearchConstraints advancedSearchConstraints(
@@ -176,16 +105,17 @@ public class SearchConstraints {
         return new SearchConstraints( entitySetIds,
                 start,
                 maxHits,
-                Optional.of( SearchType.advanced ),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.of( searches ),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty() );
+                ImmutableList.of( new ConstraintGroup( ImmutableList.of( new Constraint(
+                        Optional.of( SearchType.advanced ),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of( searches ),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty() ) ) ) ) );
     }
 
     public static SearchConstraints geoDistanceSearchConstraints(
@@ -200,16 +130,17 @@ public class SearchConstraints {
         return new SearchConstraints( entitySetIds,
                 start,
                 maxHits,
-                Optional.of( SearchType.geoDistance ),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.of( propertyTypeId ),
-                Optional.of( latitude ),
-                Optional.of( longitude ),
-                Optional.of( radius ),
-                Optional.of( distanceUnit ),
-                Optional.empty() );
+                ImmutableList.of( new ConstraintGroup( ImmutableList.of( new Constraint(
+                        Optional.of( SearchType.geoDistance ),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of( propertyTypeId ),
+                        Optional.of( latitude ),
+                        Optional.of( longitude ),
+                        Optional.of( radius ),
+                        Optional.of( distanceUnit ),
+                        Optional.empty() ) ) ) ) );
     }
 
     public static SearchConstraints geoPolygonSearchConstraints(
@@ -221,16 +152,17 @@ public class SearchConstraints {
         return new SearchConstraints( entitySetIds,
                 start,
                 maxHits,
-                Optional.of( SearchType.geoDistance ),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.of( propertyTypeId ),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.of( zones ) );
+                ImmutableList.of( new ConstraintGroup( ImmutableList.of( new Constraint(
+                        Optional.of( SearchType.geoDistance ),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of( propertyTypeId ),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of( zones ) ) ) ) ) );
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_IDS )
@@ -248,54 +180,9 @@ public class SearchConstraints {
         return maxHits;
     }
 
-    @JsonProperty( SerializationConstants.TYPE_FIELD )
-    public SearchType getSearchType() {
-        return searchType;
-    }
-
-    @JsonProperty( SerializationConstants.SEARCH_TERM )
-    public Optional<String> getSearchTerm() {
-        return searchTerm;
-    }
-
-    @JsonProperty( SerializationConstants.FUZZY )
-    public Optional<Boolean> getFuzzy() {
-        return fuzzy;
-    }
-
-    @JsonProperty( SerializationConstants.SEARCH_FIELDS )
-    public Optional<List<SearchDetails>> getSearches() {
-        return searches;
-    }
-
-    @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID )
-    public Optional<UUID> getPropertyTypeId() {
-        return propertyTypeId;
-    }
-
-    @JsonProperty( SerializationConstants.LATITUDE )
-    public Optional<Double> getLatitude() {
-        return latitude;
-    }
-
-    @JsonProperty( SerializationConstants.LONGITUDE )
-    public Optional<Double> getLongitude() {
-        return longitude;
-    }
-
-    @JsonProperty( SerializationConstants.RADIUS )
-    public Optional<Double> getRadius() {
-        return radius;
-    }
-
-    @JsonProperty( SerializationConstants.UNIT )
-    public Optional<DistanceUnit> getDistanceUnit() {
-        return distanceUnit;
-    }
-
-    @JsonProperty( SerializationConstants.ZONES )
-    public Optional<List<List<List<Double>>>> getZones() {
-        return zones;
+    @JsonProperty( SerializationConstants.CONSTRAINTS )
+    public List<ConstraintGroup> getConstraintGroups() {
+        return constraintGroups;
     }
 
     @Override public boolean equals( Object o ) {
@@ -307,32 +194,12 @@ public class SearchConstraints {
         return start == that.start &&
                 maxHits == that.maxHits &&
                 Arrays.equals( entitySetIds, that.entitySetIds ) &&
-                searchType == that.searchType &&
-                Objects.equals( searchTerm, that.searchTerm ) &&
-                Objects.equals( fuzzy, that.fuzzy ) &&
-                Objects.equals( searches, that.searches ) &&
-                Objects.equals( propertyTypeId, that.propertyTypeId ) &&
-                Objects.equals( latitude, that.latitude ) &&
-                Objects.equals( longitude, that.longitude ) &&
-                Objects.equals( radius, that.radius ) &&
-                Objects.equals( distanceUnit, that.distanceUnit ) &&
-                Objects.equals( zones, that.zones );
+                Objects.equals( constraintGroups, that.constraintGroups );
     }
 
     @Override public int hashCode() {
 
-        int result = Objects.hash( start,
-                maxHits,
-                searchType,
-                searchTerm,
-                fuzzy,
-                searches,
-                propertyTypeId,
-                latitude,
-                longitude,
-                radius,
-                distanceUnit,
-                zones );
+        int result = Objects.hash( start, maxHits, constraintGroups );
         result = 31 * result + Arrays.hashCode( entitySetIds );
         return result;
     }
