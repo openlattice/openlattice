@@ -42,6 +42,7 @@ public class RemovePropertyTypesFromEntityTypeProcessor
     public Object process( Entry<UUID, EntityType> entry ) {
         EntityType et = entry.getValue();
         if ( et != null ) {
+            et.removePrimaryKeys( propertyTypeIds );
             et.removePropertyTypes( propertyTypeIds );
             entry.setValue( et );
         }
