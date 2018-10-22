@@ -32,6 +32,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.search.SearchApi;
@@ -147,10 +148,19 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            Set<UUID> authorizedProperties = authorizationsHelper.getAuthorizedPropertiesOnEntitySet( entitySetId,
-                    EnumSet.of( Permission.READ ) );
-            if ( !authorizedProperties.isEmpty() ) {
-                return searchService.executeEntitySetDataSearch( entitySetId, searchTerm, authorizedProperties );
+            EntitySet es = edm.getEntitySet( entitySetId );
+            if(es.isLinking() && !es.getLinkedEntitySets().isEmpty()) {
+                Map<UUID, Map<UUID, PropertyType>> authorizedProperties = authorizationsHelper
+                        .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of( Permission.READ ) );
+                if ( !authorizedProperties.isEmpty() ) {
+                    return searchService.executeLinkingEntitySetDataSearch( entitySetId, searchTerm, authorizedProperties );
+                }
+            } else {
+                Set<UUID> authorizedProperties = authorizationsHelper.getAuthorizedPropertiesOnEntitySet( entitySetId,
+                        EnumSet.of( Permission.READ ) );
+                if ( !authorizedProperties.isEmpty() ) {
+                    return searchService.executeEntitySetDataSearch( entitySetId, searchTerm, authorizedProperties );
+                }
             }
         }
         return new DataSearchResult( 0, Lists.newArrayList() );
@@ -167,9 +177,20 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            Set<UUID> authorizedProperties = authorizationsHelper.getAuthorizedPropertiesOnEntitySet( entitySetId,
-                    EnumSet.of( Permission.READ ) );
-            return searchService.executeAdvancedEntitySetDataSearch( entitySetId, search, authorizedProperties );
+
+            EntitySet es = edm.getEntitySet( entitySetId );
+            if(es.isLinking()) {
+                Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authorizationsHelper
+                        .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of(Permission.READ) );
+                return searchService.executeAdvancedLinkingEntitySetDataSearch(
+                        es.getLinkedEntitySets(),
+                        search,
+                        authorizedPropertyTypes );
+            } else {
+                Set<UUID> authorizedProperties = authorizationsHelper.getAuthorizedPropertiesOnEntitySet( entitySetId,
+                        EnumSet.of( Permission.READ ) );
+                return searchService.executeAdvancedEntitySetDataSearch( entitySetId, search, authorizedProperties );
+            }
         }
         return new DataSearchResult( 0, Lists.newArrayList() );
     }
@@ -261,6 +282,7 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     public List<NeighborEntityDetails> executeEntityNeighborSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_ID ) UUID entityId ) {
+        // TODO linked
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
@@ -278,6 +300,7 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearchBulk(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityIds ) {
+        // TODO: linked
         Map<UUID, List<NeighborEntityDetails>> result = Maps.newHashMap();
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),

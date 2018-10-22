@@ -92,8 +92,6 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSI
 import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
 import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
-// TODO: check for linked entity sets in CUD operations??
-
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
 public class DataController implements DataApi, AuthorizingComponent {
@@ -116,9 +114,6 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Inject
     private AuthenticationManager authProvider;
-
-    @Inject
-    private SearchService searchService;
 
     private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
@@ -221,7 +216,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                 dataEntitySetIds.iterator().next() );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes =
-                getAuthorizedPropertyTypes( dataEntitySetIds, selectedProperties);
+                authzHelper.getAuthorizedPropertyTypes( dataEntitySetIds, selectedProperties, EnumSet.of( Permission.READ ));
 
         final Map<UUID, PropertyType> allAuthorizedPropertyTypes =
                 authorizedPropertyTypes.values().stream().distinct()
@@ -239,16 +234,7 @@ public class DataController implements DataApi, AuthorizingComponent {
         return dgm.getEntitySetData( entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, linking );
     }
 
-    private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(Set<UUID> entitySetIds,
-                                                                          Set<UUID> selectedProperties) {
-        return entitySetIds.stream()
-                .collect( Collectors.toMap(
-                        it -> it,
-                        it -> authzHelper.getAuthorizedPropertyTypes(
-                                it,
-                                EnumSet.of( Permission.READ ),
-                                edmService.getPropertyTypesAsMap( selectedProperties ) ) ) );
-    }
+
 
     @Override
     @PutMapping(
@@ -609,8 +595,8 @@ public class DataController implements DataApi, AuthorizingComponent {
             checkState( !es.getLinkedEntitySets().isEmpty(),
                     "Linked entity sets are empty for linking entity set %s", entitySetId );
 
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes =
-                    getAuthorizedPropertyTypes( es.getLinkedEntitySets(), allProperties);
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authzHelper
+                    .getAuthorizedPropertyTypes( es.getLinkedEntitySets(), allProperties, EnumSet.of( Permission.READ ));
 
             return dgm.getLinkingEntity( es.getLinkedEntitySets(), entityKeyId, authorizedPropertyTypes );
         } else {
@@ -632,8 +618,8 @@ public class DataController implements DataApi, AuthorizingComponent {
             checkState( !es.getLinkedEntitySets().isEmpty(),
                     "Linked entity sets are empty for linking entity set %s", entitySetId );
 
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes =
-                    getAuthorizedPropertyTypes( es.getLinkedEntitySets(), Set.of(propertyTypeId));
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authzHelper
+                    .getAuthorizedPropertyTypes( es.getLinkedEntitySets(), Set.of(propertyTypeId), EnumSet.of( Permission.READ ));
             FullQualifiedName propertyTypeFqn = authorizedPropertyTypes.get( entitySetId ).get( propertyTypeId )
                     .getType();
             return dgm.getLinkingEntity( es.getLinkedEntitySets(), entityKeyId, authorizedPropertyTypes )
