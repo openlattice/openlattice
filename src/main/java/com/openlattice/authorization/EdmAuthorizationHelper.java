@@ -73,12 +73,33 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         return propertyTypes;
     }
 
+    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(Set<UUID> entitySetIds,
+                                                                          Set<UUID> selectedProperties,
+                                                                         EnumSet<Permission> requiredPermissions) {
+        return entitySetIds.stream()
+                .collect( Collectors.toMap(
+                        it -> it,
+                        it -> getAuthorizedPropertyTypes(
+                                it,
+                                requiredPermissions,
+                                edm.getPropertyTypesAsMap( selectedProperties ) ) ) );
+    }
+
     public Set<UUID> getAuthorizedPropertiesOnEntitySet(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions ) {
         return getAuthorizedPropertiesOnEntitySet(
                 entitySetId,
                 getAllPropertiesOnEntitySet( entitySetId ),
+                requiredPermissions );
+    }
+
+    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
+            Set<UUID> entitySetIds,
+            EnumSet<Permission> requiredPermissions ) {
+        return getAuthorizedPropertyTypes(
+                entitySetIds,
+                getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
                 requiredPermissions );
     }
 

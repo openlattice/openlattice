@@ -46,8 +46,7 @@ public interface EntityDatastore {
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Boolean linking);
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes);
 
     Stream<SetMultimap<FullQualifiedName, Object>> getLinkingEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,

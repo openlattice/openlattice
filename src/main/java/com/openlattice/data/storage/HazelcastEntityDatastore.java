@@ -252,8 +252,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     public Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Boolean linking) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         return dataQueryService.streamableEntitySet(
                 entitySetId,
@@ -261,7 +260,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 authorizedPropertyTypes,
                 EnumSet.noneOf( MetadataOption.class ),
                 Optional.empty(),
-                linking ).stream();
+                false ).stream();
     }
 
     @Override

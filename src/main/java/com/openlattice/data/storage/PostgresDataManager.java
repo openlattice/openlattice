@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class PostgresDataManager {
+    // TODO:
     protected final Logger logger = LoggerFactory.getLogger( getClass() );
 
     private final HikariDataSource hds;
