@@ -32,6 +32,7 @@ import com.openlattice.authorization.serializers.EntityDataLambdasStreamSerializ
 import com.openlattice.conductor.rpc.*;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.organization.Organization;
+import com.openlattice.search.requests.SearchConstraints;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.objenesis.strategy.StdInstantiatorStrategy;
 import org.springframework.stereotype.Component;
@@ -63,7 +64,8 @@ public class ConductorElasticsearchCallStreamSerializer
             kryo.register( ElasticsearchLambdas.class );
             kryo.register( EntityDataLambdas.class, new EntityDataLambdasStreamSerializer() );
             kryo.register( BulkEntityDataLambdas.class, new BulkEntityDataLambdasStreamSerializer() );
-            kryo.register( SearchEntitySetDataLambda.class );
+            kryo.register( SearchConstraints.class, new SearchConstraintsStreamSerializer() );
+            kryo.register( SearchWithConstraintsLambda.class, new SearchWithConstraintsLambdaStreamSerializer() );
             kryo.register( SerializedLambda.class );
             kryo.register( AclKey.class, new AclKeyKryoSerializer() );
 
