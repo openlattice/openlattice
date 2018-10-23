@@ -21,8 +21,6 @@
 
 package com.openlattice.linking.blocking
 
-import com.google.common.collect.Multimaps
-import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
@@ -39,10 +37,7 @@ import com.openlattice.linking.PERSON_FQN
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import org.springframework.util.concurrent.ListenableFuture
 import java.util.*
-import java.util.concurrent.Callable
-import java.util.stream.Stream
 import kotlin.streams.asSequence
 
 
@@ -72,8 +67,6 @@ class ElasticsearchBlocker(
             entity: Optional<Map<UUID, Set<Any>>>,
             top: Int
     ): Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>> {
-        val authorizedPropertyTypes = propertyTypes.getAll(personEntityType.properties)
-
         val blockedEntitySetSearchResults = elasticsearch.searchEntitySets(
                 entitySets.values.filter { it.entityTypeId.equals(personEntityType.id) }.map(EntitySet::getId),
                 getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
@@ -99,18 +92,6 @@ class ElasticsearchBlocker(
                 .toMap()
 
 
-    }
-
-    private fun getEntity(
-            entityDataKey: EntityDataKey, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Map<UUID, Set<Any>> {
-        return Multimaps.asMap(
-                dataQueryService.getEntitiesById(
-                        entityDataKey.entitySetId,
-                        authorizedPropertyTypes,
-                        setOf(entityDataKey.entityKeyId)
-                )[entityDataKey.entityKeyId]!!
-        )
     }
 
     /**
