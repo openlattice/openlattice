@@ -79,17 +79,14 @@ public class AceValue implements Set<Permission> {
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof AceValue ) ) { return false; }
-
         AceValue that = (AceValue) o;
-
-        if ( !permissions.equals( that.permissions ) ) { return false; }
-        return securableObjectType == that.securableObjectType;
+        return Objects.equals( permissions, that.permissions ) &&
+                securableObjectType == that.securableObjectType &&
+                Objects.equals( expirationDate, that.expirationDate );
     }
 
     @Override public int hashCode() {
-        int result = permissions.hashCode();
-        result = 31 * result + securableObjectType.hashCode();
-        return result;
+        return Objects.hash( permissions, securableObjectType, expirationDate );
     }
 
     @Override public boolean removeAll( Collection<?> c ) {
