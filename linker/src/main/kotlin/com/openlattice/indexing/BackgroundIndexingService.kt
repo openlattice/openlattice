@@ -98,8 +98,8 @@ class BackgroundIndexingService(
         logger.info("Starting background indexing task.")
         //Keep number of indexing jobs under control
         if (taskLock.tryLock()) {
-            ensureAllEntitySetIndexesExist()
             try {
+                ensureAllEntitySetIndexesExist()
                 val w = Stopwatch.createStarted()
                 //We shuffle entity sets to make sure we have a chance to work share and index everything
                 val lockedEntitySets = entitySets.values
@@ -215,7 +215,8 @@ class BackgroundIndexingService(
         val entitiesById = dataQueryService.getEntitiesById(
                 entitySetId,
                 propertyTypeMap,
-                batchToIndex
+                batchToIndex,
+                false
         )
 
         if (elasticsearchApi.createBulkEntityData(entitySetId, entitiesById)) {

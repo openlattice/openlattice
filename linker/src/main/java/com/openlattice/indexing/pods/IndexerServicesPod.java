@@ -56,6 +56,7 @@ import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.IOException;
@@ -77,6 +78,9 @@ import org.springframework.context.annotation.Profile;
 @Configuration
 public class IndexerServicesPod {
     private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
+
+    @Inject
+    private PostgresTableManager tableManager;
 
     @Inject
     private HazelcastInstance hazelcastInstance;
@@ -199,7 +203,7 @@ public class IndexerServicesPod {
 
     @Bean
     public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource );
+        return new PostgresEdmManager( hikariDataSource, tableManager );
     }
 
     @Bean
