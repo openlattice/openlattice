@@ -47,22 +47,15 @@ public class AceValueStreamSerializer implements SelfRegisteringStreamSerializer
     public void write( ObjectDataOutput out, AceValue object ) throws IOException {
         DelegatedPermissionEnumSetStreamSerializer.serialize( out, object.getPermissions() );
         serialize( out, object.getSecurableObjectType() );
-
-        OffsetDateTime dt = object.getExpirationDate();
-        out.writeBoolean( dt != null );
-        if ( dt != null ) {
-            OffsetDateTimeStreamSerializer.serialize( out, object.getExpirationDate() );
-        }
+        OffsetDateTimeStreamSerializer.serialize( out, object.getExpirationDate() );
     }
 
     @Override
     public AceValue read( ObjectDataInput in ) throws IOException {
         EnumSet<Permission> permissions = DelegatedPermissionEnumSetStreamSerializer.deserialize( in );
         SecurableObjectType objectType = deserialize( in );
-        OffsetDateTime expirationDate = null;
-        if ( in.readBoolean() ) {
-            OffsetDateTimeStreamSerializer.deserialize( in );
-        }
+        OffsetDateTime expirationDate = OffsetDateTimeStreamSerializer.deserialize( in );
+
         return new AceValue( permissions, objectType, expirationDate );
     }
 
