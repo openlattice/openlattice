@@ -873,6 +873,8 @@ public class EdmController implements EdmApi, AuthorizingComponent {
         if ( entityType == null ) {
             throw new IllegalArgumentException( "You cannot create an edge type without specifying its entity type" );
         }
+        Preconditions.checkArgument( entityType.getCategory().equals( SecurableObjectType.AssociationType ),
+                "You cannot create an edge type with not an AssociationType category" );
         createEntityType( entityType );
         modelService.createAssociationType( associationType, entityType.getId() );
         return entityType.getId();

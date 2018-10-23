@@ -54,8 +54,6 @@ import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.linking.HazelcastListingService;
-import com.openlattice.linking.HazelcastVertexMergingService;
 import com.openlattice.neuron.Neuron;
 import com.openlattice.neuron.pods.NeuronPod;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -180,11 +178,6 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public HazelcastListingService hazelcastListingService() {
-        return new HazelcastListingService( hazelcastInstance );
-    }
-
-    @Bean
     public ODataStorageService odataStorageService() {
         return new ODataStorageService(
                 hazelcastInstance,
@@ -282,11 +275,6 @@ public class DatastoreServicesPod {
     @Bean
     public DbCredentialService dcs() {
         return new DbCredentialService( hazelcastInstance, pgUserApi() );
-    }
-
-    @Bean
-    public HazelcastVertexMergingService vms() {
-        return new HazelcastVertexMergingService( hazelcastInstance );
     }
 
     @Bean

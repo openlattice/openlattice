@@ -206,8 +206,11 @@ public class DataManagerTest extends IntegrationTestsBootstrap {
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, PropertyType> propertyTypes ) {
         return Sets.newHashSet(
-                dataService.getEntitySetData( entitySetId, orderedPropertyNames, propertyTypes )
-                        .getEntities() );
+                dataService.getEntitySetData(
+                        Set.of(entitySetId),
+                        orderedPropertyNames,
+                        Map.of(entitySetId, propertyTypes),
+                        false ).getEntities() );
     }
 
     private LinkedHashMap<UUID, PropertyType> generateProperties( int n ) {
