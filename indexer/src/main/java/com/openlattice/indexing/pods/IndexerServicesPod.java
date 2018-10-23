@@ -241,7 +241,7 @@ public class IndexerServicesPod {
     @Bean
     public Matcher kerasMatcher() throws IOException, InvalidKerasConfigurationException,
             UnsupportedKerasConfigurationException {
-        final String simpleMlp = new ClassPathResource( "model_10-01-2018.h5" ).getFile().getPath();
+        final String simpleMlp = new ClassPathResource( "model_10-20-2018.h5" ).getFile().getPath();
         final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
         return new SocratesMatcher( model, fqnToIdMap );
