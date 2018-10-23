@@ -20,23 +20,21 @@
 
 package com.openlattice.kindling.search;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.requests.SearchConstraints;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 public class KindlingElasticsearchTests extends BaseElasticsearchTest {
 
@@ -62,18 +60,19 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
 
     @Test
     public void testSearchEntityData() {
-        Set<UUID> authorizedPropertyTypes = Sets.newHashSet();
+        DelegatedUUIDSet authorizedPropertyTypes = DelegatedUUIDSet.wrap( Sets.newHashSet() );
         authorizedPropertyTypes.add( namePropertyId );
         authorizedPropertyTypes.add( employeeTitlePropertyId );
         authorizedPropertyTypes.add( employeeDeptPropertyId );
         authorizedPropertyTypes.add( salaryPropertyId );
         authorizedPropertyTypes.add( employeeIdPropertyId );
-        elasticsearchApi.executeEntitySetDataSearch( chicagoEmployeesEntitySetId,
-                "police",
-                0,
-                50,
-                false,
-                authorizedPropertyTypes );
+        elasticsearchApi
+                .executeSearch( SearchConstraints.simpleSearchConstraints( new UUID[] { chicagoEmployeesEntitySetId },
+                        0,
+                        50,
+                        "police",
+                        false ),
+                        ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes ) );
     }
 
     @Test
