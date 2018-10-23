@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.search.controllers;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -32,22 +33,15 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.search.SearchApi;
-import com.openlattice.search.requests.AdvancedSearch;
-import com.openlattice.search.requests.DataSearchResult;
-import com.openlattice.search.requests.FQNSearchTerm;
-import com.openlattice.search.requests.Search;
-import com.openlattice.search.requests.SearchResult;
-import com.openlattice.search.requests.SearchTerm;
+import com.openlattice.search.requests.*;
 
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 import org.springframework.http.MediaType;
@@ -122,6 +116,22 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                         Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS ) );
     }
 
+    @RequestMapping(
+            path = { "/", "" },
+            method = RequestMethod.PATCH,
+            produces = { MediaType.APPLICATION_JSON_VALUE } )
+    @Override
+    public DataSearchResult searchEntitySetData( @RequestBody SearchConstraints searchConstraints ) {
+
+        Map<UUID, Set<PropertyType>> authorizedProperties = Arrays.stream( searchConstraints.getEntitySetIds() )
+                .collect( Collectors.toMap( Function.identity(), entitySetId -> {
+                    ensureReadAccess( new AclKey( entitySetId ) );
+                    return authorizationsHelper
+                            .getAuthorizedPropertyTypesOnEntitySet( entitySetId, EnumSet.of( Permission.READ ) );
+                } ) );
+        return searchService.executeSearch( searchConstraints, authorizedProperties );
+    }
+
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
@@ -147,10 +157,17 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            Set<UUID> authorizedProperties = authorizationsHelper.getAuthorizedPropertiesOnEntitySet( entitySetId,
-                    EnumSet.of( Permission.READ ) );
+            Set<PropertyType> authorizedProperties = authorizationsHelper
+                    .getAuthorizedPropertyTypesOnEntitySet( entitySetId,
+                            EnumSet.of( Permission.READ ) );
             if ( !authorizedProperties.isEmpty() ) {
-                return searchService.executeEntitySetDataSearch( entitySetId, searchTerm, authorizedProperties );
+                return searchService.executeSearch( SearchConstraints
+                        .simpleSearchConstraints( new UUID[] { entitySetId },
+                                searchTerm.getStart(),
+                                searchTerm.getMaxHits(),
+                                searchTerm.getSearchTerm(),
+                                searchTerm.getFuzzy() ), ImmutableMap
+                        .of( entitySetId, authorizedProperties ) );
             }
         }
         return new DataSearchResult( 0, Lists.newArrayList() );
@@ -167,9 +184,21 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            Set<UUID> authorizedProperties = authorizationsHelper.getAuthorizedPropertiesOnEntitySet( entitySetId,
-                    EnumSet.of( Permission.READ ) );
-            return searchService.executeAdvancedEntitySetDataSearch( entitySetId, search, authorizedProperties );
+            Set<PropertyType> authorizedProperties = authorizationsHelper
+                    .getAuthorizedPropertyTypesOnEntitySet( entitySetId,
+                            EnumSet.of( Permission.READ ) );
+            Set<UUID> propertyTypeIds = authorizedProperties.stream().map( pt -> pt.getId() )
+                    .collect( Collectors.toSet() );
+
+            List<SearchDetails> authorizedSearches = search.getSearches().stream()
+                    .filter( searchDetails -> propertyTypeIds.contains( searchDetails.getPropertyType() ) )
+                    .collect( Collectors.toList() );
+
+            return searchService.executeSearch( SearchConstraints.advancedSearchConstraints( new UUID[] { entitySetId },
+                    search.getStart(),
+                    search.getMaxHits(),
+                    authorizedSearches ), ImmutableMap
+                    .of( entitySetId, authorizedProperties ) );
         }
         return new DataSearchResult( 0, Lists.newArrayList() );
     }
