@@ -46,7 +46,7 @@ public class AceValue implements Set<Permission> {
     public AceValue( EnumSet<Permission> permissions, SecurableObjectType objectType, OffsetDateTime expirationDate ) {
         this.permissions = permissions;
         this.securableObjectType = checkNotNull( objectType, "Securable Object Type cannot be null" );
-        this.expirationDate = expirationDate;
+        this.expirationDate = checkNotNull(expirationDate);
     }
 
     public EnumSet<Permission> getPermissions() {

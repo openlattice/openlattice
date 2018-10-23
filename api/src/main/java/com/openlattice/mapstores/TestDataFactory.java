@@ -89,18 +89,24 @@ public final class TestDataFactory {
     }
 
     public static EntityType entityType( PropertyType... keys ) {
-        return childEntityType( null, keys );
+        return childEntityType( null, null, keys );
     }
 
-    public static EntityType childEntityType( UUID parentId, PropertyType... keys ) {
+    public static EntityType entityType( SecurableObjectType category, PropertyType... keys ) {
+        return childEntityType( null, category, keys );
+    }
+
+    public static EntityType childEntityType( UUID parentId, SecurableObjectType category, PropertyType... keys ) {
         return childEntityTypeWithPropertyType( parentId,
                 ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ),
+                category,
                 keys );
     }
 
     public static EntityType childEntityTypeWithPropertyType(
             UUID parentId,
             Set<UUID> propertyTypes,
+            SecurableObjectType category,
             PropertyType... keys ) {
         LinkedHashSet<UUID> k = keys.length > 0
                 ? Arrays.asList( keys ).stream().map( PropertyType::getId )
@@ -111,6 +117,8 @@ public final class TestDataFactory {
         for ( UUID id : k ) {
             propertyTags.put( id, "PRIMARY KEY TAG" );
         }
+
+        SecurableObjectType entityTypeCategory = (category == null) ? SecurableObjectType.EntityType : category;
 
         return new EntityType(
                 UUID.randomUUID(),
@@ -123,11 +131,11 @@ public final class TestDataFactory {
                         .union( k, propertyTypes ) ),
                 propertyTags,
                 Optional.ofNullable( parentId ),
-                Optional.of( SecurableObjectType.EntityType ) );
+                Optional.of( entityTypeCategory ) );
     }
 
     public static AssociationType associationType( PropertyType... keys ) {
-        EntityType et = entityType( keys );
+        EntityType et = entityType( SecurableObjectType.AssociationType,  keys );
         return new AssociationType(
                 Optional.of( et ),
                 Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
@@ -137,7 +145,7 @@ public final class TestDataFactory {
 
     public static AssociationType associationTypeWithProperties( Set<UUID> propertyTypes, PropertyType... keys ) {
         if ( propertyTypes.size() == 0 ) { return associationType( keys ); }
-        EntityType et = childEntityTypeWithPropertyType( null, propertyTypes, keys );
+        EntityType et = childEntityTypeWithPropertyType( null, propertyTypes, SecurableObjectType.AssociationType, keys );
         UUID ptId = propertyTypes.iterator().next();
         return new AssociationType(
                 Optional.of( et ),
@@ -304,7 +312,7 @@ public final class TestDataFactory {
 
     public static EdmDetails edmDetails() {
         Set<PropertyType> pts = ImmutableSet.of( propertyType(), propertyType(), propertyType() );
-        Set<EntityType> ets = ImmutableSet.of( entityType(), entityType(), entityType() );
+        Set<EntityType> ets = ImmutableSet.of( entityType(null), entityType(null), entityType(null) );
         Set<EntitySet> ess = ImmutableSet.of( entitySet() );
         return new EdmDetails(
                 pts.stream().collect( Collectors.toMap( AbstractSecurableType::getId, v -> v ) ),
