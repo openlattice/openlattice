@@ -22,14 +22,7 @@ package com.openlattice.search;
 
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
@@ -78,12 +71,8 @@ import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import com.openlattice.search.requests.AdvancedSearch;
-import com.openlattice.search.requests.DataSearchResult;
-import com.openlattice.search.requests.EntityKeyIdSearchResult;
-import com.openlattice.search.requests.SearchDetails;
-import com.openlattice.search.requests.SearchResult;
-import com.openlattice.search.requests.SearchTerm;
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+import com.openlattice.search.requests.*;
 
 import java.util.*;
 import java.util.function.Function;
@@ -153,6 +142,64 @@ public class SearchService {
                 authorizedEntitySetIds,
                 start,
                 maxHits );
+    }
+
+    @Timed
+    public DataSearchResult executeSearch(
+            SearchConstraints searchConstraints,
+            Map<UUID, Set<PropertyType>> authorizedPropertyTypesByEntitySet ) {
+        Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet.entrySet()
+                .stream()
+                .collect( Collectors.toMap( entry -> entry.getKey(),
+                        entry -> DelegatedUUIDSet.wrap( entry.getValue().stream().map( pt -> pt.getId() )
+                                .collect( Collectors.toSet() ) ) ) );
+
+        EntityDataKeySearchResult result = elasticsearchApi
+                .executeSearch( searchConstraints, authorizedPropertiesByEntitySet );
+
+        SetMultimap<UUID, UUID> entityKeyIdsByEntitySetId = HashMultimap.create();
+        result.getEntityDataKeys()
+                .forEach( edk -> entityKeyIdsByEntitySetId.put( edk.getEntitySetId(), edk.getEntityKeyId() ) );
+
+        List<SetMultimap<FullQualifiedName, Object>> results = entityKeyIdsByEntitySetId.keySet().parallelStream()
+                .map( entitySetId -> getResults(
+                        entitySetId,
+                        entityKeyIdsByEntitySetId.get( entitySetId ),
+                        Map.of(
+                                entitySetId,
+                                authorizedPropertyTypesByEntitySet.get( entitySetId ).stream()
+                                        .collect( Collectors.toMap( pt -> pt.getId(),
+                                        Function.identity() ) ) ) ) )
+                .flatMap( entityList -> entityList.stream() )
+                .collect( Collectors.toList() );
+
+        return new DataSearchResult( result.getNumHits(), results );
+    }
+
+
+    @Timed
+    public DataSearchResult executeLinkingSearch(
+            SearchConstraints searchConstraints,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
+        Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet
+                .entrySet().stream()
+                .collect( Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> DelegatedUUIDSet.wrap( Sets.newHashSet( entry.getValue().keySet() ) ) )
+                );
+        // TODO: load merged entities until meeting maxresults
+        // do the search -> get back a bunch of entity key ids
+        // lookup linking ids to group the results together
+        // if under the search results threshold because entities are merged, can load another page of results
+        // until  hit the threshold
+        EntityDataKeySearchResult result = elasticsearchApi
+                .executeSearch( searchConstraints, authorizedPropertiesByEntitySet );
+
+        List<SetMultimap<FullQualifiedName, Object>> results = getLinkingResults(
+                Sets.newHashSet( searchConstraints.getEntitySetIds() ),
+                authorizedPropertyTypesByEntitySet );
+        return new DataSearchResult( result.getNumHits(), results );
+
     }
 
     @Timed
@@ -233,47 +280,6 @@ public class SearchService {
         elasticsearchApi.deleteEntityData( edk );
     }
 
-    @Timed
-    public DataSearchResult executeEntitySetDataSearch(
-            UUID entitySetId,
-            SearchTerm searchTerm,
-            Set<UUID> authorizedProperties ) {
-        EntityKeyIdSearchResult result = elasticsearchApi.executeEntitySetDataSearch( entitySetId,
-                searchTerm.getSearchTerm(),
-                searchTerm.getStart(),
-                searchTerm.getMaxHits(),
-                searchTerm.getFuzzy(),
-                authorizedProperties );
-        Map<UUID, PropertyType> authorizedPropertyTypes = dataModelService
-                .getPropertyTypesAsMap( authorizedProperties );
-
-        List<SetMultimap<FullQualifiedName, Object>> results = getResults( entitySetId, result.getEntityKeyIds(),
-                Map.of( entitySetId, authorizedPropertyTypes ) );
-        return new DataSearchResult( result.getNumHits(), results );
-    }
-
-    @Timed
-    public DataSearchResult executeLinkingEntitySetDataSearch(
-            UUID entitySetId,
-            SearchTerm searchTerm,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
-
-        EntitySet es = dataModelService.getEntitySet( entitySetId );
-        Long numHits = es.getLinkedEntitySets().stream().map( esId -> elasticsearchApi.executeEntitySetDataSearch( esId,
-                searchTerm.getSearchTerm(),
-                searchTerm.getStart(),
-                searchTerm.getMaxHits(),
-                searchTerm.getFuzzy(),
-                new HashSet( authorizedPropertyTypes.get( esId ).keySet() ) ) )
-                .mapToLong( searchResult -> searchResult.getNumHits() )
-                .sum();
-
-        List<SetMultimap<FullQualifiedName, Object>> results = getLinkingResults( es.getLinkedEntitySets(),
-                authorizedPropertyTypes );
-        return new DataSearchResult( numHits, results );
-
-    }
-
     @Subscribe
     public void updateEntitySetMetadata( EntitySetMetadataUpdatedEvent event ) {
         elasticsearchApi.updateEntitySetMetadata( event.getEntitySet() );
@@ -296,67 +302,6 @@ public class SearchService {
                 fieldSearches,
                 size,
                 explain );
-    }
-
-    @Timed
-    public DataSearchResult executeAdvancedEntitySetDataSearch(
-            UUID entitySetId,
-            AdvancedSearch search,
-            Set<UUID> authorizedProperties ) {
-        List<SearchDetails> authorizedSearches = Lists.newArrayList();
-        search.getSearches().forEach( searchDetails -> {
-            if ( authorizedProperties.contains( searchDetails.getPropertyType() ) ) {
-                authorizedSearches.add( searchDetails );
-            }
-        } );
-
-        if ( !authorizedSearches.isEmpty() ) {
-            EntityKeyIdSearchResult result = elasticsearchApi.executeAdvancedEntitySetDataSearch( entitySetId,
-                    authorizedSearches,
-                    search.getStart(),
-                    search.getMaxHits(),
-                    authorizedProperties );
-            Map<UUID, PropertyType> authorizedPropertyTypes = dataModelService
-                    .getPropertyTypesAsMap( authorizedProperties );
-
-            List<SetMultimap<FullQualifiedName, Object>> results = getResults( entitySetId,
-                    result.getEntityKeyIds(),
-                    Map.of( entitySetId, authorizedPropertyTypes ) );
-            return new DataSearchResult( result.getNumHits(), results );
-        }
-
-        return new DataSearchResult( 0, Lists.newArrayList() );
-    }
-
-    @Timed
-    public DataSearchResult executeAdvancedLinkingEntitySetDataSearch(
-            Set<UUID> entitySetIds,
-            AdvancedSearch search,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
-
-
-        Map<UUID, List<SearchDetails>> authorizedSearches = new HashMap();
-        entitySetIds.forEach(
-                esId -> {
-                    List<SearchDetails> searchDetailsList = List.of();
-                    search.getSearches().forEach( searchDetails -> {
-                    if ( authorizedPropertyTypes.get( esId ).values().contains( searchDetails.getPropertyType() ) ) {
-                        searchDetailsList.add( searchDetails );
-                    } } );
-                    authorizedSearches.put( esId, searchDetailsList );
-                }
-        );
-
-        Long numHits = entitySetIds.stream().map( esId -> elasticsearchApi.executeAdvancedEntitySetDataSearch( esId,
-                authorizedSearches.get( esId ),
-                search.getStart(),
-                search.getMaxHits(),
-                new HashSet( authorizedPropertyTypes.get( esId ).keySet() ) ) )
-                .mapToLong( searchResult -> searchResult.getNumHits() )
-                .sum();
-
-        List<SetMultimap<FullQualifiedName, Object>> results = getLinkingResults( entitySetIds, authorizedPropertyTypes );
-        return new DataSearchResult( numHits, results );
     }
 
     @Subscribe
@@ -610,7 +555,7 @@ public class SearchService {
 
     private List<SetMultimap<FullQualifiedName, Object>> getResults(
             UUID entitySetId,
-            List<UUID> entityKeyIds,
+            Set<UUID> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
         if ( entityKeyIds.size() == 0 ) { return ImmutableList.of(); }
         return dataManager
