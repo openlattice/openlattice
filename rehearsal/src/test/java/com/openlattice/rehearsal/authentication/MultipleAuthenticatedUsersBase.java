@@ -26,6 +26,7 @@ import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.PermissionsApi;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DataApi;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
@@ -148,8 +149,16 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntityType createEntityType( UUID... propertyTypes ) {
+        return createEntityType(SecurableObjectType.EntityType, propertyTypes);
+    }
+
+    public static EntityType createEdgeEntityType( UUID... propertyTypes ) {
+        return createEntityType( SecurableObjectType.AssociationType, propertyTypes );
+    }
+
+    private static EntityType createEntityType( SecurableObjectType category,  UUID... propertyTypes ) {
         PropertyType k = createPropertyType();
-        EntityType expected = TestDataFactory.entityType( k );
+        EntityType expected = TestDataFactory.entityType( category, k );
         expected.removePropertyTypes( expected.getProperties() );
 
         if ( propertyTypes == null || propertyTypes.length == 0 ) {
@@ -184,8 +193,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntitySet createEntitySet() {
-        EntityType entityType = createEntityType();
-
+        EntityType entityType = createEntityType(null);
         return createEntitySet( entityType );
     }
 

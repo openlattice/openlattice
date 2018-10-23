@@ -174,7 +174,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun createEdges() {
-        val et = MultipleAuthenticatedUsersBase.createEntityType()
+        val et = MultipleAuthenticatedUsersBase.createEdgeEntityType()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
         val src = MultipleAuthenticatedUsersBase.createEntityType()
         val esSrc = MultipleAuthenticatedUsersBase.createEntitySet(src)
@@ -209,18 +209,26 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 Optional.of(HashSet(createdEdges.values()))
         )
 
+        // when loading entitysets, the result is grouped by entity key id
+        val stringEntityKeyIds = createdEdges.values().map { it.toString() }
+        val permutationOrder = (0 until numberOfEntries)
+                .sortedWith( compareBy{ stringEntityKeyIds[it] } )
+
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
-        Multimaps.asMap(edgesToBeCreated).entries.first().value.
+        val edgesCreatedData = Multimaps.asMap(edgesToBeCreated).entries.first().value
+        actualEdgeData.
                 mapIndexed { index, de ->
-                   val edgeDataLookup = lookupEdgeDataByFqn(actualEdgeData[numberOfEntries - index - 1].asMap())
-                    de.data.asMap().
-                        forEach { uuid, data -> Assert.assertEquals(data, edgeDataLookup[uuid]) }
+                   val edgeDataLookup = lookupEdgeDataByFqn(edgesCreatedData[permutationOrder[index]].data.asMap())
+                    de.asMap()
+                            .filter { it.key.name != "@id" }
+                            .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
                 }
     }
 
-    private fun lookupEdgeDataByFqn(edgeData: MutableMap<FullQualifiedName, MutableCollection<Any>>):
-            Map<UUID, MutableCollection<Any>> {
-        return edgeData.mapKeys { entry -> edmApi.getPropertyTypeId(entry.key.namespace, entry.key.name) }
+    private fun lookupEdgeDataByFqn(edgeData: MutableMap<UUID, MutableCollection<Any>>):
+            Map<FullQualifiedName, MutableCollection<Any>> {
+        return edgeData
+                .mapKeys { entry -> edmApi.getPropertyType(entry.key).type }
     }
 
 
@@ -238,7 +246,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             DataEdge(srcDataKey, dstDataKey, edgeData[index])
         }
 
-        return entitySetId to edges;
+        return entitySetId to edges
     }
 
     private fun keyByFqn(data: SetMultimap<UUID, Any>): SetMultimap<FullQualifiedName, Any> {
@@ -353,7 +361,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testUpdatePropertyTypeMetadata() {
         val pt = createPropertyType()
-        val et = createEntityType(pt.id)
+        val et = createEntityType( pt.id )
         val es = createEntitySet(et)
 
         // add test data
@@ -382,6 +390,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testGetLinkedEntitySets() {
+        // TODO: add linking_ids
         val pt = createPropertyType()
         val et = MultipleAuthenticatedUsersBase.createEntityType(pt.id)
         val es1 = MultipleAuthenticatedUsersBase.createEntitySet(et)
