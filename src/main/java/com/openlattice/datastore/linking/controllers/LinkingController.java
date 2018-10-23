@@ -124,6 +124,7 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
                 entitySetIds.stream()
                         .map( it ->  edmManager.getEntitySet(it).getEntityTypeId() )
                         .allMatch( entityTypeId::equals ),
-                "Linked entity sets are of differing entity types $entitySetIds" );
+                "Linked entity sets are of differing entity types than %s :{}",
+                PERSON_FQN, entitySetIds );
     }
 }
