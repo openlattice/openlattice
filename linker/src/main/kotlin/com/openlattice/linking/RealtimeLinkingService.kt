@@ -137,7 +137,7 @@ class RealtimeLinkingService
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, entitySetId)
     }
 
-//    @Scheduled(fixedRate = 30000)
+    @Scheduled(fixedRate = 30000)
     fun runLinking() {
         if (running.tryLock()) {
             try {
