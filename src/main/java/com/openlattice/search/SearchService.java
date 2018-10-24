@@ -70,15 +70,17 @@ import com.openlattice.neuron.audit.AuditEntitySetUtils;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
+import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -147,12 +149,13 @@ public class SearchService {
     @Timed
     public DataSearchResult executeSearch(
             SearchConstraints searchConstraints,
-            Map<UUID, Set<PropertyType>> authorizedPropertyTypesByEntitySet ) {
-        Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet.entrySet()
-                .stream()
-                .collect( Collectors.toMap( entry -> entry.getKey(),
-                        entry -> DelegatedUUIDSet.wrap( entry.getValue().stream().map( pt -> pt.getId() )
-                                .collect( Collectors.toSet() ) ) ) );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
+        Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet
+                .entrySet().stream()
+                .collect( Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> DelegatedUUIDSet.wrap( Sets.newHashSet( entry.getValue().keySet() ) ) )
+                );
 
         EntityDataKeySearchResult result = elasticsearchApi
                 .executeSearch( searchConstraints, authorizedPropertiesByEntitySet );
@@ -165,11 +168,7 @@ public class SearchService {
                 .map( entitySetId -> getResults(
                         entitySetId,
                         entityKeyIdsByEntitySetId.get( entitySetId ),
-                        Map.of(
-                                entitySetId,
-                                authorizedPropertyTypesByEntitySet.get( entitySetId ).stream()
-                                        .collect( Collectors.toMap( pt -> pt.getId(),
-                                        Function.identity() ) ) ) ) )
+                        authorizedPropertyTypesByEntitySet ) )
                 .flatMap( entityList -> entityList.stream() )
                 .collect( Collectors.toList() );
 
@@ -192,14 +191,78 @@ public class SearchService {
         // lookup linking ids to group the results together
         // if under the search results threshold because entities are merged, can load another page of results
         // until  hit the threshold
-        EntityDataKeySearchResult result = elasticsearchApi
-                .executeSearch( searchConstraints, authorizedPropertiesByEntitySet );
 
-        List<SetMultimap<FullQualifiedName, Object>> results = getLinkingResults(
-                Sets.newHashSet( searchConstraints.getEntitySetIds() ),
-                authorizedPropertyTypesByEntitySet );
-        return new DataSearchResult( result.getNumHits(), results );
+        int hitNum = 0;
+        long totalHits;
+        Map<UUID, List<Map<FullQualifiedName, Set<Object>>>> entityDataByLinkingId = new HashMap<>();
 
+        do {
+            SearchConstraints remainingSearchConstraint = new SearchConstraints(
+                    searchConstraints.getEntitySetIds(),
+                    searchConstraints.getStart() + hitNum,
+                    (searchConstraints.getMaxHits() - entityDataByLinkingId.size()) * 2,
+                    searchConstraints.getConstraintGroups() );
+
+            EntityDataKeySearchResult result = elasticsearchApi
+                    .executeSearch( remainingSearchConstraint, authorizedPropertiesByEntitySet );
+            totalHits = result.getNumHits();
+
+            if( !result.getEntityDataKeys().isEmpty() ) {
+                SetMultimap<UUID, UUID> entityKeyIdsByEntitySetId = HashMultimap.create();
+                Set<UUID> entityKeyIds = Sets.newHashSet();
+                result.getEntityDataKeys()
+                        .forEach( edk -> {
+                            entityKeyIdsByEntitySetId.put( edk.getEntitySetId(), edk.getEntityKeyId() );
+                            entityKeyIds.add( edk.getEntityKeyId() );
+                        } );
+
+                Map<UUID, Map<FullQualifiedName, Set<Object>>> results = entityKeyIdsByEntitySetId.keySet().parallelStream()
+                        .map( entitySetId -> getResultsById(
+                                entitySetId,
+                                entityKeyIdsByEntitySetId.get( entitySetId ),
+                                authorizedPropertyTypesByEntitySet ) )
+                        .map( it -> it.entrySet() )
+                        .flatMap( it -> it.stream() )
+                        .collect( Collectors.toMap( it -> it.getKey(), it -> it.getValue() ) );
+
+
+                PostgresIterable<Pair<UUID, UUID>> linkingIdsByEntityKeyIds = getLinkingIdsByEntityKeyIds( entityKeyIds );
+
+                int index = linkingIdsByEntityKeyIds.stream()
+                        .takeWhile( ids -> entityDataByLinkingId.size() < searchConstraints.getMaxHits() )
+                        .mapToInt( ids -> {
+                            entityDataByLinkingId.merge(
+                                    ids.getKey(),
+                                    List.of( results.get( ids.getValue() ) ),
+                                    ( list1, list2 ) -> Stream.of( list1, list2 )
+                                            .flatMap( Collection::stream )
+                                            .collect( Collectors.toList() ) );
+                            return 1;
+                        } )
+                        .sum();
+
+                hitNum += index;
+            }
+        } while ( entityDataByLinkingId.size() < searchConstraints.getMaxHits() );
+        return new DataSearchResult( totalHits, mergeEntityDataByLinkingId( entityDataByLinkingId ) );
+    }
+
+    private List<SetMultimap<FullQualifiedName, Object>> mergeEntityDataByLinkingId(
+            Map<UUID, List<Map<FullQualifiedName, Set<Object>>>> entityDataByLinkingId ) {
+
+        return entityDataByLinkingId.values().stream().map( linkedEntityDataList -> {
+            SetMultimap<FullQualifiedName, Object> mergedEntityDataMultimap = HashMultimap.create();
+            Map<FullQualifiedName, Set<Object>> mergedEntityData = linkedEntityDataList.stream()
+                    .reduce( ( dataMap, nextDataMap ) -> {
+                        nextDataMap
+                                .forEach( ( fqn, dataSet ) ->
+                                        dataMap.merge( fqn, dataSet, ( dataSet1, dataSet2 ) -> Stream.of( dataSet1, dataSet2 )
+                                                .flatMap( Collection::stream )
+                                                .collect( Collectors.toSet() ) ) );
+                        return dataMap; } ).get();
+            mergedEntityData.forEach(mergedEntityDataMultimap::putAll);
+            return mergedEntityDataMultimap;
+        }).collect( Collectors.toList() );
     }
 
     @Timed
@@ -563,13 +626,21 @@ public class SearchService {
                 .collect( Collectors.toList() );
     }
 
-    private List<SetMultimap<FullQualifiedName, Object>> getLinkingResults(
-            Set<UUID> entitySetIds,
+    private Map<UUID, Map<FullQualifiedName, Set<Object>>> getResultsById(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
+        if ( entityKeyIds.size() == 0 ) { return Map.of(); }
+        return dataManager
+                .getEntitiesById( entitySetId, ImmutableSet.copyOf( entityKeyIds ), authorizedPropertyTypes)
+                .stream().collect( Collectors.toMap(
+                        entityData -> entityData.getLeft(),
+                        entityData ->  entityData.getRight() ) );
+    }
 
-            Map<UUID, Optional<Set<UUID>>> linkedEntityKeyIds = Maps.asMap( entitySetIds, esId -> Optional.empty() );
-            return dataManager
-                    .getLinkingEntities( linkedEntityKeyIds, authorizedPropertyTypes ).collect( Collectors.toList() );
+    private PostgresIterable<Pair<UUID, UUID>> getLinkingIdsByEntityKeyIds(
+            Set<UUID> entityKeyIds) {
+            return dataManager.getLinkingIds( entityKeyIds );
     }
 
 

@@ -130,6 +130,21 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         )
     }
 
+    fun streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Map<FullQualifiedName, Set<Any>>>> {
+        val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, Map<FullQualifiedName, Set<Any>>>> {
+            org.apache.commons.lang3.tuple.Pair.of(
+                    ResultSetAdapters.id(it),
+                    ResultSetAdapters.implicitEntityValuesByFqn(it, authorizedPropertyTypes))
+        }
+        return streamableEntitySet(
+                mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
+                EnumSet.noneOf(MetadataOption::class.java), Optional.empty<Long>(), adapter, false)
+    }
+
     fun streamableEntitySet(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
@@ -218,6 +233,30 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             val rs = statement.executeQuery(selectEntityKeysOfLinkingIds(linkingIds))
             StatementHolder(connection, statement, rs)
         }, adapter)
+    }
+
+     fun getLinkingIds(entityKeyIds: Set<UUID>): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, UUID>> {
+         val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, UUID>> {
+             org.apache.commons.lang3.tuple.Pair.of(ResultSetAdapters.id(it), ResultSetAdapters.linkingId(it))
+         }
+         return streamableLinkingIdsOfEntities( entityKeyIds, adapter )
+     }
+
+    private fun <T> streamableLinkingIdsOfEntities(
+            entityKeyIds: Set<UUID>,
+            adapter: Function<ResultSet, T>
+    ):PostgresIterable<T> {
+        return PostgresIterable(
+                Supplier<StatementHolder> {
+                    val connection = hds.connection
+                    val statement = connection.createStatement()
+                    statement.fetchSize = FETCH_SIZE
+
+                    val rs = statement.executeQuery(buildGetLinkingIdsOfEntities(entityKeyIds))
+                    StatementHolder(connection, statement, rs)
+                },
+                adapter
+        )
     }
 
     fun upsertEntities(
@@ -762,5 +801,7 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     return "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
 }
 
-
+internal fun buildGetLinkingIdsOfEntities(entityKeyIds: Set<UUID>): String {
+    return "SELECT ${ID_VALUE.name}, ${LINKING_ID.name} FROM ${IDS.name} WHERE ${entityKeyIdsClause( entityKeyIds )}"
+}
 
