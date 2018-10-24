@@ -157,7 +157,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                         .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of( Permission.READ ) );
                 if ( !authorizedProperties.isEmpty() && !es.getLinkedEntitySets().isEmpty() ) {
                     return searchService.executeLinkingSearch( SearchConstraints
-                            .simpleSearchConstraints( ( UUID[] ) es.getLinkedEntitySets().toArray(),
+                            .simpleSearchConstraints(
+                                    es.getLinkedEntitySets().toArray(new UUID[es.getLinkedEntitySets().size()]),
                                     searchTerm.getStart(),
                                     searchTerm.getMaxHits(),
                                     searchTerm.getSearchTerm(),
