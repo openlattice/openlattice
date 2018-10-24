@@ -28,7 +28,9 @@ import com.google.common.collect.ImmutableSetMultimap
 import com.openlattice.analysis.AnalysisApi
 import com.openlattice.analysis.AnalysisService
 import com.openlattice.analysis.AuthorizedFilteredRanking
-import com.openlattice.analysis.requests.*
+import com.openlattice.analysis.requests.NeighborType
+import com.openlattice.analysis.requests.NeighborsRankingAggregation
+import com.openlattice.analysis.requests.Filter
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.requests.FileType
