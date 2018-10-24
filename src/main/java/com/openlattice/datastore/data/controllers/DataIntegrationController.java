@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.data.controllers;
 
+import com.codahale.metrics.annotation.Timed;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -36,9 +37,8 @@ import com.openlattice.data.integration.Association;
 import com.openlattice.data.integration.BulkDataCreation;
 import com.openlattice.data.integration.Entity;
 import com.openlattice.datastore.services.EdmService;
-import com.openlattice.search.SearchService;
 import com.openlattice.edm.type.PropertyType;
-
+import com.openlattice.search.SearchService;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
@@ -48,7 +48,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
-
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +85,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return authz;
     }
 
+    @Timed
     @PostMapping("/" + ENTITY_SET + "/" + SET_ID_PATH)
     @Override
     public IntegrationResults integrateEntities(
@@ -106,6 +106,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return results;
     }
 
+    @Timed
     @PostMapping("/" + ASSOCIATION + "/" + SET_ID_PATH)
     @Override
     public IntegrationResults integrateAssociations(
@@ -136,6 +137,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return results;
     }
 
+    @Timed
     @PostMapping({"/", ""})
     @Override
     public IntegrationResults integrateEntityAndAssociationData(
