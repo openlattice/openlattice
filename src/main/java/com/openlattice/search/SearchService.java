@@ -192,14 +192,14 @@ public class SearchService {
         // if under the search results threshold because entities are merged, can load another page of results
         // until  hit the threshold
 
-        int hitNum = 0;
+        int hitNum = searchConstraints.getStart();
         long totalHits;
         Map<UUID, List<Map<FullQualifiedName, Set<Object>>>> entityDataByLinkingId = new HashMap<>();
 
         do {
             SearchConstraints remainingSearchConstraint = new SearchConstraints(
                     searchConstraints.getEntitySetIds(),
-                    searchConstraints.getStart() + hitNum,
+                    hitNum,
                     (searchConstraints.getMaxHits() - entityDataByLinkingId.size()) * 2,
                     searchConstraints.getConstraintGroups() );
 
@@ -232,8 +232,8 @@ public class SearchService {
                         .takeWhile( ids -> entityDataByLinkingId.size() < searchConstraints.getMaxHits() )
                         .mapToInt( ids -> {
                             entityDataByLinkingId.merge(
-                                    ids.getKey(),
-                                    List.of( results.get( ids.getValue() ) ),
+                                    ids.getValue(), // linking_id
+                                    List.of( results.get( ids.getKey() ) ), // entity_key_id
                                     ( list1, list2 ) -> Stream.of( list1, list2 )
                                             .flatMap( Collection::stream )
                                             .collect( Collectors.toList() ) );
@@ -243,7 +243,7 @@ public class SearchService {
 
                 hitNum += index;
             }
-        } while ( entityDataByLinkingId.size() < searchConstraints.getMaxHits() );
+        } while ( entityDataByLinkingId.size() < searchConstraints.getMaxHits() && hitNum < totalHits );
         return new DataSearchResult( totalHits, mergeEntityDataByLinkingId( entityDataByLinkingId ) );
     }
 
