@@ -120,12 +120,9 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     @Override
     public DataSearchResult searchEntitySetData( @RequestBody SearchConstraints searchConstraints ) {
 
-        Map<UUID, Set<PropertyType>> authorizedProperties = Arrays.stream( searchConstraints.getEntitySetIds() )
-                .collect( Collectors.toMap( Function.identity(), entitySetId -> {
-                    ensureReadAccess( new AclKey( entitySetId ) );
-                    return authorizationsHelper
-                            .getAuthorizedPropertyTypesOnEntitySet( entitySetId, EnumSet.of( Permission.READ ) );
-                } ) );
+        Map<UUID, Map<UUID, PropertyType>> authorizedProperties = authorizationsHelper
+                .getAuthorizedPropertiesOnEntitySets( Sets.newHashSet( searchConstraints.getEntitySetIds() ),
+                        EnumSet.of( Permission.READ ) );
         return searchService.executeSearch( searchConstraints, authorizedProperties );
     }
 
@@ -168,17 +165,17 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                             authorizedProperties );
                 }
             } else {
-                Set<PropertyType> authorizedProperties = authorizationsHelper
-                        .getAuthorizedPropertyTypesOnEntitySet( entitySetId,
+                Map<UUID, Map<UUID, PropertyType>> authorizedProperties = authorizationsHelper
+                        .getAuthorizedPropertiesOnEntitySets( Set.of( entitySetId ),
                                 EnumSet.of( Permission.READ ) );
-                if ( !authorizedProperties.isEmpty() ) {
+                if ( !authorizedProperties.values().isEmpty() ) {
                     return searchService.executeSearch( SearchConstraints
                             .simpleSearchConstraints( new UUID[] { entitySetId },
                                     searchTerm.getStart(),
                                     searchTerm.getMaxHits(),
                                     searchTerm.getSearchTerm(),
-                                    searchTerm.getFuzzy() ), ImmutableMap
-                            .of( entitySetId, authorizedProperties ) );
+                                    searchTerm.getFuzzy() ),
+                            authorizedProperties);
                 }
             }
         }
@@ -217,11 +214,11 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                                 authorizedSearches ),
                         authorizedPropertyTypes );
             } else {
-                Set<PropertyType> authorizedProperties = authorizationsHelper
-                        .getAuthorizedPropertyTypesOnEntitySet( entitySetId,
+                Map<UUID, Map<UUID, PropertyType>> authorizedProperties = authorizationsHelper
+                        .getAuthorizedPropertiesOnEntitySets( Set.of( entitySetId ),
                                 EnumSet.of( Permission.READ ) );
-                Set<UUID> propertyTypeIds = authorizedProperties.stream().map( pt -> pt.getId() )
-                        .collect( Collectors.toSet() );
+
+                Set<UUID> propertyTypeIds = authorizedProperties.get( entitySetId ).keySet();
 
                 List<SearchDetails> authorizedSearches = search.getSearches().stream()
                         .filter( searchDetails -> propertyTypeIds.contains( searchDetails.getPropertyType() ) )
@@ -230,8 +227,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 return searchService.executeSearch( SearchConstraints.advancedSearchConstraints( new UUID[] { entitySetId },
                         search.getStart(),
                         search.getMaxHits(),
-                        authorizedSearches ), ImmutableMap
-                        .of( entitySetId, authorizedProperties ) );
+                        authorizedSearches ),
+                        authorizedProperties );
             }
         }
         return new DataSearchResult( 0, Lists.newArrayList() );
