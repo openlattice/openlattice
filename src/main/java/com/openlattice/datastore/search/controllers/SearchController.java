@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.search.controllers;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -196,7 +197,10 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 EnumSet.of( Permission.READ ) ) ) {
 
             EntitySet es = edm.getEntitySet( entitySetId );
-            if( es.isLinking() && !es.getLinkedEntitySets().isEmpty() ) {
+            if( es.isLinking() ) {
+                Preconditions.checkArgument(
+                        !es.getLinkedEntitySets().isEmpty(),
+                        "Linked entity sets does not consist of any entity sets." );
                 Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authorizationsHelper
                         .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of(Permission.READ) );
 
@@ -209,7 +213,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                         .collect( Collectors.toList() );
 
                 return searchService.executeLinkingSearch(
-                        SearchConstraints.advancedSearchConstraints( ( UUID[] ) es.getLinkedEntitySets().toArray(),
+                        SearchConstraints.advancedSearchConstraints(
+                                es.getLinkedEntitySets().toArray(new UUID[es.getLinkedEntitySets().size()]),
                                 search.getStart(),
                                 search.getMaxHits(),
                                 authorizedSearches ),
@@ -323,11 +328,29 @@ public class SearchController implements SearchApi, AuthorizingComponent {
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_ID ) UUID entityId ) {
         // TODO linked
-        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
-                Principals.getCurrentPrincipals(),
+        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            return searchService.executeEntityNeighborSearch( entitySetId, ImmutableSet.of( entityId ) )
-                    .get( entityId );
+            EntitySet es = edm.getEntitySet( entitySetId );
+            if( es.isLinking() ) {
+                Preconditions.checkArgument(
+                        !es.getLinkedEntitySets().isEmpty(),
+                        "Linked entity sets does not consist of any entity sets." );
+                Set<UUID> authorizedEntitySets = es.getLinkedEntitySets().stream()
+                        .filter( linkedEntitySetId ->
+                                authorizations.checkIfHasPermissions( new AclKey( linkedEntitySetId ),
+                                        Principals.getCurrentPrincipals(),
+                                        EnumSet.of( Permission.READ ) ) )
+                        .collect( Collectors.toSet() );
+                if( authorizedEntitySets.size() == 0 ) {
+                    logger.warn( "Read authorization failed for all the linked entity sets." );
+                    return Lists.newArrayList();
+                }
+                return searchService.executeLinkingEntityNeighborSearch( authorizedEntitySets, ImmutableSet.of( entityId ) )
+                        .get( entityId );
+            } else {
+                return searchService.executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), ImmutableSet.of( entityId ) )
+                        .get( entityId );
+            }
         }
         return Lists.newArrayList();
     }
@@ -340,12 +363,29 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearchBulk(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityIds ) {
-        // TODO: linked
         Map<UUID, List<NeighborEntityDetails>> result = Maps.newHashMap();
-        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
-                Principals.getCurrentPrincipals(),
+        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
-            result = searchService.executeEntityNeighborSearch( entitySetId, entityIds );
+            EntitySet es = edm.getEntitySet( entitySetId );
+            if( es.isLinking() ) {
+                Preconditions.checkArgument(
+                        !es.getLinkedEntitySets().isEmpty(),
+                        "Linking entity sets does not consist of any entity sets." );
+                Set<UUID> authorizedEntitySets = es.getLinkedEntitySets().stream()
+                        .filter( linkedEntitySetId ->
+                                authorizations.checkIfHasPermissions( new AclKey( linkedEntitySetId ),
+                                        Principals.getCurrentPrincipals(),
+                                        EnumSet.of( Permission.READ ) ) )
+                        .collect( Collectors.toSet() );
+                if( authorizedEntitySets.size() == 0 ) {
+                    logger.warn( "Read authorization failed for all the linked entity sets." );
+                    return result;
+                }
+
+                result = searchService.executeLinkingEntityNeighborSearch( authorizedEntitySets, entityIds );
+            } else {
+                result = searchService.executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), entityIds );
+            }
         }
         return result;
     }
