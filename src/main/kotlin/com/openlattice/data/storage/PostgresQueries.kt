@@ -398,9 +398,11 @@ internal fun buildFilterClause(fqn: String, filter: Set<Filter>): String {
     return filter.joinToString(" AND ", prefix = " AND ") { it.asSql(fqn) }
 }
 
-internal fun selectEntityKeysOfLinkingIds( linkingIds:Set<UUID> ): String {
+internal fun selectEntityKeyIdsByLinkingIds( linkingIds:Set<UUID> ): String {
     val linkingEntitiesClause = buildLinkingEntitiesClause(linkingIds)
-    return "SELECT $entityKeyIdColumns FROM ${selectEntityKeyIdsWithCurrentVersionSubquerySql(linkingEntitiesClause, setOf(), true)}"
+    return "SELECT ${LINKING_ID.name}, array_agg(${ID_VALUE.name}) AS ${ENTITY_KEY_IDS.name} " +
+            "FROM ${selectEntityKeyIdsWithCurrentVersionSubquerySql(linkingEntitiesClause, setOf(), true)} " +
+            "GROUP BY ${LINKING_ID.name} "
 }
 
 internal fun buildLinkingEntitiesClause(linkingIds:Set<UUID>): String {

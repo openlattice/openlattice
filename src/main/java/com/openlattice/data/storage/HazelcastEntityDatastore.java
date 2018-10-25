@@ -319,6 +319,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return dataQueryService.getLinkingIds(entityKeyIds);
     }
 
+    @Override
+    @Timed
+    public PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds ) {
+        return dataQueryService.getEntityKeyIdsOfLinkingIds( linkingIds );
+    }
+
     private EntityDataKey fromEntityKey( EntityKey entityKey ) {
         UUID entityKeyId = idService.getEntityKeyId( entityKey );
         return new EntityDataKey( entityKey.getEntitySetId(), entityKeyId );

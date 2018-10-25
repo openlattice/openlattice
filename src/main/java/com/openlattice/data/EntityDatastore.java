@@ -71,6 +71,8 @@ public interface EntityDatastore {
 
     PostgresIterable<Pair<UUID, UUID>> getLinkingIds(Set<UUID> entityKeyIds);
 
+    PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds );
+
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.
      */

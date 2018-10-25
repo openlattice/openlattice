@@ -277,7 +277,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
 
         logger.info(
                 "SQL Query: \n {}",
-                selectEntityKeysOfLinkingIds(linkingIds)
+                selectEntityKeyIdsByLinkingIds(linkingIds)
         )
     }
 
