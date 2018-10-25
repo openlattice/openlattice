@@ -22,7 +22,6 @@
 package com.openlattice.graph;
 
 import com.google.common.collect.SetMultimap;
-import com.openlattice.data.Property;
 import com.openlattice.graph.query.GraphQuery.AssociationIndexes;
 import java.util.List;
 import java.util.UUID;

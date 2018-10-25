@@ -45,7 +45,7 @@ public interface GraphApi {
     String BASE       = SERVICE + CONTROLLER;
 
     @POST( BASE + QUERY )
-    GraphQueryState submit( GraphQuery query );
+    GraphQueryState submit( SimpleGraphQuery query );
 
     @POST( BASE + QUERY + ID_PATH )
     GraphQueryState getQueryState( @Path( ID ) UUID queryId, @Body Set<Option> options );
