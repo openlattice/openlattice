@@ -84,7 +84,7 @@ class RealtimeLinkingService
     ) {
         entityKeyIds
                 .asSequence()
-                .map { blocker.block(entitySetId, it) }
+                .map {blocker.block(entitySetId, it)}
                 .map {
                     //block contains element being blocked
                     val blockKey = it.first
