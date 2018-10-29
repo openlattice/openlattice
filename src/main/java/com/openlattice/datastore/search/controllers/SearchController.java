@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.search.controllers;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -27,10 +28,14 @@ import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.organization.Organization;
+import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.search.SearchService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.search.SearchApi;
@@ -66,6 +71,9 @@ public class SearchController implements SearchApi, AuthorizingComponent {
 
     @Inject
     private EdmAuthorizationHelper authorizationsHelper;
+
+    @Inject
+    private HazelcastOrganizationService organizationService;
 
     @RequestMapping(
             path = { "/", "" },
@@ -384,6 +392,32 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     public Void triggerAllEntitySetDataIndex() {
         ensureAdminAccess();
         searchService.triggerAllEntitySetDataIndex();
+        return null;
+    }
+
+    @RequestMapping(
+            path = { ORGANIZATIONS + INDEX },
+            method = RequestMethod.GET )
+    @Override
+    public Void triggerAllOrganizationsIndex() {
+        ensureAdminAccess();
+        List<Organization> allOrganizations = Lists.newArrayList(
+                organizationService.getOrganizations(
+                        getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) ) // TODO: other access check??
+                                .parallel()
+                                .filter( Predicates.notNull()::apply )
+                                .map( AuthorizationUtils::getLastAclKeySafely ) ) );
+        searchService.triggerAllOrganizationsIndex( allOrganizations );
+        return null;
+    }
+
+    @RequestMapping(
+            path = { ORGANIZATIONS + INDEX + ORGANIZATION_ID_PATH },
+            method = RequestMethod.GET )
+    @Override
+    public Void triggerOrganizationIndex( @PathVariable( ORGANIZATION_ID ) UUID organizationId ) {
+        ensureAdminAccess();
+        searchService.triggerOrganizationIndex( organizationService.getOrganization( organizationId ) );
         return null;
     }
 }

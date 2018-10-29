@@ -214,6 +214,16 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         }
     }
 
+    @Override public boolean triggerOrganizationIndex( List<Organization> organizations ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall.wrap(
+                    ElasticsearchLambdas.triggerOrganizationIndex( organizations ) ) ).get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "Unable to trigger app type re-index" );
+            return false;
+        }
+    }
+
     @Override
     public boolean createEntityData(
             EntityDataKey edk,
