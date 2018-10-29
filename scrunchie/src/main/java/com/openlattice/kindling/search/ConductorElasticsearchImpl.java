@@ -779,6 +779,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         Map<String, Object> organizationObject = Maps.newHashMap();
+        organizationObject.put( ID, organization.getId() );
         organizationObject.put( TITLE, organization.getTitle() );
         organizationObject.put( DESCRIPTION, organization.getDescription() );
         UUID organizationId = organization.getSecurablePrincipal().getId();
@@ -1197,6 +1198,23 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean triggerAppTypeIndex( List<AppType> appTypes ) {
         Function<Object, String> idFn = at -> ( (AppType) at ).getId().toString();
         return triggerIndex( APP_TYPE_INDEX, APP_TYPE, appTypes, idFn );
+    }
+
+    @Override
+    public boolean triggerOrganizationIndex( List<Organization> organizations ) {
+        Function<Object, String> idFn = org -> ( (Map<String, Object>) org ).get(ID).toString();
+        List<Map<String, Object>> organizationObjects =
+                organizations.stream()
+                        .map( organization -> {
+                            Map<String, Object> organizationObject = Maps.newHashMap();
+                            organizationObject.put( ID, organization.getId() );
+                            organizationObject.put( TITLE, organization.getTitle() );
+                            organizationObject.put( DESCRIPTION, organization.getDescription() );
+                            return organizationObject;
+                        } )
+                        .collect( Collectors.toList() );
+
+        return triggerIndex( ORGANIZATIONS, ORGANIZATION_TYPE, organizationObjects, idFn );
     }
 
     @Override
