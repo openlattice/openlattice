@@ -96,6 +96,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -772,6 +774,22 @@ public final class ResultSetAdapters {
 
             if ( objects != null ) {
                 data.put( propertyType.getId(), new HashSet<>( objects ) );
+            }
+        }
+
+        return data;
+    }
+
+    public static Map<FullQualifiedName, Set<Object>> implicitEntityValuesByFqn(
+            ResultSet rs,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
+        final Map<FullQualifiedName, Set<Object>> data = new HashMap<>();
+
+        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
+            List<?> objects = propertyValue( rs, propertyType );
+
+            if ( objects != null ) {
+                data.put( propertyType.getType(), new HashSet<>( objects ) );
             }
         }
 

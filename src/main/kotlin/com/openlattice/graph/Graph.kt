@@ -239,6 +239,26 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
+    override fun getEdgesAndNeighborsForVerticesBulk(entitySetIds: Set<UUID>, vertexIds: Set<UUID>): Stream<Edge> {
+        if(entitySetIds.size == 1) {
+            return getEdgesAndNeighborsForVertices( entitySetIds.first(), vertexIds)
+        }
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.getConnection()
+                    val ids = PostgresArrays.createUuidArray(connection, vertexIds.stream())
+                    val stmt = connection.prepareStatement(BULK_BULK_NEIGHBORHOOD_SQL)
+                    stmt.setObject(1, entitySetIds)
+                    stmt.setArray(2, ids)
+                    stmt.setObject(3, entitySetIds)
+                    stmt.setArray(4, ids)
+                    val rs = stmt.executeQuery()
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
+        ).stream()
+    }
+
 
     /**
      * 1. Compute the table of all neighbors of all relevant neighbors to person entity sets.
@@ -631,6 +651,10 @@ private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
+
+private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
+        "( ${SRC_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${SRC_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${DST_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] )) )"
 
 
 private fun selectEdges(keys: Set<EdgeKey>): String {
