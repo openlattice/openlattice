@@ -23,6 +23,7 @@ package com.openlattice.data
 
 import com.openlattice.data.storage.*
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.PostgresColumn
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -276,7 +277,32 @@ class PostgresLinkedEntityDataQueryServiceTest {
 
         logger.info(
                 "SQL Query: \n {}",
-                selectEntityKeysOfLinkingIds(linkingIds)
+                selectEntityKeyIdsByLinkingIds(linkingIds)
         )
+    }
+
+    @Test
+    fun testBuildEntitiesClause() {
+        val entityKeyIds = Optional.of( setOf(
+                UUID.fromString("c270d705-3616-4abc-b16e-f891e264b784"),
+                UUID.fromString("7b038634-a0b4-4ce1-a04f-85d1775937aa"),
+                UUID.fromString("8293b7f3-d89d-44f5-bec2-6397a4c5af8b"),
+                UUID.fromString("5260cfbd-bfa4-40c1-ade5-cd83cc9f99b2"),
+                UUID.fromString("e9a0b4dc-5298-47c1-8837-20af172379a5"),
+                UUID.fromString("d0935a7e-efd3-4903-b673-0869ef527dea"),
+                UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13"),
+                UUID.fromString("1e6ff0f0-0545-4368-b878-677823459e57") ) )
+
+        logger.info(
+                "SQL Query: \n {}",
+                buildEntitiesClause(
+                        mapOf( UUID.fromString("1e6ff0f0-0545-4368-b878-677823459e57") to entityKeyIds ),
+                        false ) )
+
+        logger.info(
+                "SQL Query: \n {}",
+                buildEntitiesClause(
+                        mapOf( UUID.fromString("1e6ff0f0-0545-4368-b878-677823459e57") to Optional.of(setOf()) ),
+                        false ) )
     }
 }

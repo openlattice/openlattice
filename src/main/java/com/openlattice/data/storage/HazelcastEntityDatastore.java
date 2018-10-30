@@ -27,9 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -54,10 +52,8 @@ import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.postgres.JsonDeserializer;
 import com.openlattice.postgres.streams.PostgresIterable;
-import com.openlattice.postgres.streams.PostgresIterable.PostgresIterator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
@@ -69,6 +65,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -242,9 +239,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                     EnumSet.noneOf( MetadataOption.class ),
                     Optional.empty());
 
-        return new EntitySetData<>(
-                orderedPropertyTypes,
-                result);
+        return new EntitySetData<>( orderedPropertyTypes, result);
     }
 
     @Override
@@ -261,6 +256,19 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 EnumSet.noneOf( MetadataOption.class ),
                 Optional.empty(),
                 false ).stream();
+    }
+
+    @Override
+    @Timed
+    public PostgresIterable<Pair<UUID, Map<FullQualifiedName, Set<Object>>>> getEntitiesById(
+            UUID entitySetId,
+            Set<UUID> ids,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes) {
+        return dataQueryService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
+                entitySetId,
+                ids,
+                authorizedPropertyTypes.get(entitySetId)
+        );
     }
 
     @Override
@@ -303,6 +311,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 );
 
         return entities;
+    }
+
+    @Override
+    @Timed
+    public PostgresIterable<Pair<UUID, UUID>> getLinkingIds(Set<UUID> entityKeyIds) {
+        return dataQueryService.getLinkingIds(entityKeyIds);
+    }
+
+    @Override
+    @Timed
+    public PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds ) {
+        return dataQueryService.getEntityKeyIdsOfLinkingIds( linkingIds );
     }
 
     private EntityDataKey fromEntityKey( EntityKey entityKey ) {

@@ -67,6 +67,8 @@ public interface GraphService {
 
     Stream<Edge> getEdgesAndNeighborsForVertices( UUID entitySetId, Set<UUID> vertexIds );
 
+    Stream<Edge> getEdgesAndNeighborsForVerticesBulk(Set<UUID> entitySetIds, Set<UUID> vertexIds);
+
     Stream<IncrementableWeightId> topEntitiesOld(
             int limit,
             UUID entitySetId,

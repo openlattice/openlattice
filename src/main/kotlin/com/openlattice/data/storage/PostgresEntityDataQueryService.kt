@@ -130,6 +130,21 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         )
     }
 
+    fun streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Map<FullQualifiedName, Set<Any>>>> {
+        val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, Map<FullQualifiedName, Set<Any>>>> {
+            org.apache.commons.lang3.tuple.Pair.of(
+                    ResultSetAdapters.id(it),
+                    ResultSetAdapters.implicitEntityValuesByFqn(it, authorizedPropertyTypes))
+        }
+        return streamableEntitySet(
+                mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
+                EnumSet.noneOf(MetadataOption::class.java), Optional.empty<Long>(), adapter, false)
+    }
+
     fun streamableEntitySet(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
@@ -206,16 +221,32 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         )
     }
 
-    fun getEntityDataKeysOfLinkingIds(linkingIds:Set<UUID> ) : PostgresIterable<EntityDataKey> {
-        val adapter = Function<ResultSet, EntityDataKey> {
-            ResultSetAdapters.entityDataKey(it)
+     fun getLinkingIds(entityKeyIds: Set<UUID>): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, UUID>> {
+         val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, UUID>> {
+             org.apache.commons.lang3.tuple.Pair.of(ResultSetAdapters.id(it), ResultSetAdapters.linkingId(it))
+         }
+         return PostgresIterable( Supplier<StatementHolder> {
+             val connection = hds.connection
+             val statement = connection.createStatement()
+             statement.fetchSize = FETCH_SIZE
+
+             val rs = statement.executeQuery( selectLinkingIdsOfEntities( entityKeyIds ) )
+             StatementHolder(connection, statement, rs)
+         }, adapter)
+     }
+
+    fun getEntityKeyIdsOfLinkingIds(
+            linkingIds: Set<UUID>
+    ):PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>> {
+        val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>> {
+            org.apache.commons.lang3.tuple.Pair.of( ResultSetAdapters.linkingId(it), ResultSetAdapters.entityKeyIds(it) )
         }
         return PostgresIterable( Supplier<StatementHolder> {
             val connection = hds.connection
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
-            val rs = statement.executeQuery(selectEntityKeysOfLinkingIds(linkingIds))
+            val rs = statement.executeQuery( selectEntityKeyIdsByLinkingIds( linkingIds ) )
             StatementHolder(connection, statement, rs)
         }, adapter)
     }
@@ -757,10 +788,17 @@ internal fun subSelectFilteredVersionOfPropertyTypeInEntitySet(
 }
 
 internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
-    //TODO: Potential Latent bug-- shouldn't break anything but when empty set is passed it will do IN('') which may
-    //cause a type exception
-    return "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
+    return if( entityKeyIds.isEmpty() ) {
+        " TRUE "
+    } else {
+        "${ID_VALUE.name} IN ('" + entityKeyIds.joinToString("','") + "')"
+    }
 }
 
-
+internal fun selectLinkingIdsOfEntities(entityKeyIds: Set<UUID>): String {
+    val entitiesClause = " AND ${entityKeyIdsClause( entityKeyIds )} "
+    return "SELECT ${ID_VALUE.name}, ${LINKING_ID.name} " +
+            "FROM ${selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, setOf(), true)} " +
+            "WHERE ${LINKING_ID.name} IS NOT NULL  "
+}
 
