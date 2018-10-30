@@ -59,15 +59,17 @@ public interface SearchApi {
     String ENTITY_TYPE_ID    = "eid";
     String PROPERTY_TYPE_ID  = "pid";
 
-    String ENTITY_SET_ID = "entitySetId";
-    String NUM_RESULTS   = "numResults";
-    String ENTITY_ID     = "entityId";
-    String START         = "start";
+    String ENTITY_SET_ID    = "entitySetId";
+    String ORGANIZATION_ID  = "organizationId";
+    String NUM_RESULTS      = "numResults";
+    String ENTITY_ID        = "entityId";
+    String START            = "start";
 
-    String ENTITY_SET_ID_PATH = "/{" + ENTITY_SET_ID + "}";
-    String NUM_RESULTS_PATH   = "/{" + NUM_RESULTS + "}";
-    String ENTITY_ID_PATH     = "/{" + ENTITY_ID + "}";
-    String START_PATH         = "/{" + START + "}";
+    String ENTITY_SET_ID_PATH   = "/{" + ENTITY_SET_ID + "}";
+    String ORGANIZATION_ID_PATH = "/{" + ORGANIZATION_ID + "}";
+    String NUM_RESULTS_PATH     = "/{" + NUM_RESULTS + "}";
+    String ENTITY_ID_PATH       = "/{" + ENTITY_ID + "}";
+    String START_PATH           = "/{" + START + "}";
 
     int MAX_SEARCH_RESULTS = 10000;
 
@@ -271,4 +273,9 @@ public interface SearchApi {
     @GET( BASE + ENTITY_SETS + INDEX )
     Void triggerAllEntitySetDataIndex();
 
+    @GET( BASE + ORGANIZATIONS + INDEX )
+    Void triggerAllOrganizationsIndex();
+
+    @GET( BASE + ORGANIZATIONS + INDEX + ORGANIZATION_ID_PATH )
+    Void triggerOrganizationIndex( @Path( ORGANIZATION_ID ) UUID organizationId );
 }
