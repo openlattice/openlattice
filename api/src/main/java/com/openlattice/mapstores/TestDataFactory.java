@@ -312,7 +312,7 @@ public final class TestDataFactory {
 
     public static EdmDetails edmDetails() {
         Set<PropertyType> pts = ImmutableSet.of( propertyType(), propertyType(), propertyType() );
-        Set<EntityType> ets = ImmutableSet.of( entityType(null), entityType(null), entityType(null) );
+        Set<EntityType> ets = ImmutableSet.of( entityType(), entityType(), entityType() );
         Set<EntitySet> ess = ImmutableSet.of( entitySet() );
         return new EdmDetails(
                 pts.stream().collect( Collectors.toMap( AbstractSecurableType::getId, v -> v ) ),
