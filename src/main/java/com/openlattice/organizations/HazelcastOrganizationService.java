@@ -221,10 +221,10 @@ public class HazelcastOrganizationService {
             }
             return new Organization(
                     principal,
-                    MoreObjects.firstNonNull( Sets.newHashSet( autoApprovedEmailDomains.get() ), ImmutableSet.of() ),
-                    MoreObjects.firstNonNull( Sets.newHashSet( orgMembers ), ImmutableSet.of() ),
-                    Sets.newHashSet( roles ),
-                    MoreObjects.firstNonNull( Sets.newHashSet( apps ), ImmutableSet.of() ) );
+                    MoreObjects.firstNonNull( autoApprovedEmailDomains.get(), ImmutableSet.of() ),
+                    MoreObjects.firstNonNull( orgMembers, ImmutableSet.of() ),
+                    roles,
+                    MoreObjects.firstNonNull( apps, ImmutableSet.of() ) );
         } catch ( InterruptedException | ExecutionException e ) {
             logger.error( "Unable to load organization. {}", organizationId, e );
             return null;
