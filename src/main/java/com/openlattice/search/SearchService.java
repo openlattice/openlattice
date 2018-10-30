@@ -67,6 +67,7 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.neuron.audit.AuditEntitySetUtils;
+import com.openlattice.organization.Organization;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
@@ -743,6 +744,14 @@ public class SearchService {
 
     public void triggerAppTypeIndex( List<AppType> appTypes ) {
         elasticsearchApi.triggerAppTypeIndex( appTypes );
+    }
+
+    public void triggerAllOrganizationsIndex( List<Organization> allOrganizations ) {
+        elasticsearchApi.triggerOrganizationIndex( allOrganizations );
+    }
+
+    public void triggerOrganizationIndex( Organization organization ) {
+        elasticsearchApi.triggerOrganizationIndex( Lists.newArrayList( organization ) );
     }
 
 }

@@ -30,6 +30,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -228,6 +229,19 @@ public class HazelcastOrganizationService {
             logger.error( "Unable to load organization. {}", organizationId, e );
             return null;
         }
+    }
+
+    public Iterable<Organization> getOrganizations( Stream<UUID> organizationIds ) {
+        return organizationIds.map( this::getOrganization )
+                .map( org -> new Organization(
+                        org.getSecurablePrincipal(),
+                        org.getAutoApprovedEmails(),
+                        org.getMembers(),
+                        //TODO: If you're an organization you can view its roles.
+                        org.getRoles(),
+                        org.getApps() ) )
+                .filter( com.google.common.base.Predicates.notNull()::apply )
+                ::iterator;
     }
 
     public void destroyOrganization( UUID organizationId ) {

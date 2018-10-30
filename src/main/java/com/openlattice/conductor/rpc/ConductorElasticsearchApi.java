@@ -246,6 +246,8 @@ public interface ConductorElasticsearchApi {
 
     boolean triggerAppTypeIndex( List<AppType> appTypes );
 
+    boolean triggerOrganizationIndex( List<Organization> organizations );
+
     boolean saveAppToElasticsearch( App app );
 
     boolean deleteApp( UUID appId );

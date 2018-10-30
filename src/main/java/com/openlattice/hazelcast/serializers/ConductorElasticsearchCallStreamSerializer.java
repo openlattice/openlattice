@@ -32,6 +32,12 @@ import com.openlattice.authorization.serializers.EntityDataLambdasStreamSerializ
 import com.openlattice.conductor.rpc.*;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.organization.Organization;
+import com.openlattice.organizations.PrincipalSet;
+import com.openlattice.organizations.serializers.DelegatedStringSetKryoSerializer;
+import com.openlattice.organizations.serializers.DelegatedUUIDSetKryoSerializer;
+import com.openlattice.organizations.serializers.PrincipalSetKryoSerializer;
+import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.SearchConstraints;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.objenesis.strategy.StdInstantiatorStrategy;
@@ -58,7 +64,12 @@ public class ConductorElasticsearchCallStreamSerializer
                             new StdInstantiatorStrategy() ) );
             kryo.register( Object[].class );
             kryo.register( java.lang.Class.class );
-            kryo.register( Organization.class );
+
+            kryo.register( Organization.class);
+            kryo.register( DelegatedStringSet.class, new DelegatedStringSetKryoSerializer() );
+            kryo.register( DelegatedUUIDSet.class, new DelegatedUUIDSetKryoSerializer() );
+            kryo.register( PrincipalSet.class, new PrincipalSetKryoSerializer() );
+
 
             // Shared Lambdas
             kryo.register( ElasticsearchLambdas.class );
