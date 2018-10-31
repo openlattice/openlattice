@@ -21,17 +21,25 @@
 
 package com.openlattice.graph
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.google.common.base.Preconditions.checkState
 import com.openlattice.analysis.requests.Filter
+import com.openlattice.client.serialization.SerializationConstants
 import java.util.*
 
 /**
- * This class is a simple filter based graph query data class. The current limitation of this class is that it doesn't
- * operate on entity types. The caller is responsible for specifying the entity sets to operate on.
- *  
- * @param vertexFilters Defines constraints on vertices in the graph. A list of maps from entity set to property type id.
- * @param edgeFilters
+ *
+ * Used to constraint the entity types and entity sets that for a graph query. It
  */
-data class SimpleGraphQuery(
-        val entityConstraints: List<GraphEntityConstraint>,
-        val associationConstraints: List<SimpleAssociationQuery>
-)
+data class GraphEntityConstraint(
+        @JsonProperty(SerializationConstants.ENTITY_TYPE_ID) val entityTypeId: UUID,
+        @JsonProperty(SerializationConstants.ENTITY_SET_IDS) private val maybeEntitySetIds: Optional<MutableSet<UUID>>,
+        @JsonProperty(SerializationConstants.FILTERS) val filters: Map<UUID, Set<Filter>>
+) {
+    val entitySetIds : MutableSet<UUID> = maybeEntitySetIds.orElse( mutableSetOf() )
+    fun updateEntitySetIds( entitySetIds: Set<UUID> ) {
+        this.entitySetIds.clear()
+        this.entitySetIds.addAll(entitySetIds)
+    }
+}

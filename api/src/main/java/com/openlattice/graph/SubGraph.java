@@ -22,6 +22,7 @@
 package com.openlattice.graph;
 
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.Property;
 import com.openlattice.graph.query.GraphQuery.AssociationIndexes;
 import java.util.List;
 import java.util.UUID;
@@ -30,9 +31,9 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class SubGraph {
-    private final UUID                                                     queryId;
-    private final List<Iterable<SetMultimap<UUID, Property>>>              entities;
-    private final Iterable<AssociationIndexes>                             edges;
+    private final UUID                                        queryId;
+    private final List<Iterable<SetMultimap<UUID, Property>>> entities;
+    private final Iterable<AssociationIndexes>                edges;
 
     public SubGraph(
             UUID queryId,

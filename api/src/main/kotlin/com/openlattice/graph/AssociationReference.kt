@@ -24,5 +24,5 @@ package com.openlattice.graph
 data class AssociationReference(
         val srcIndex: Int,
         val dstIndex: Int,
-        val edgeIndexL: Int
+        val edgeIndex: Int
 )

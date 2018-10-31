@@ -109,6 +109,7 @@ public final class SerializationConstants {
     public static final String EXPIRATION                       = "expiration";
     public static final String EXPLANATION                      = "explanation";
     public static final String EXTERNAL                         = "external";
+    public static final String FILTERS                          = "filters";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
