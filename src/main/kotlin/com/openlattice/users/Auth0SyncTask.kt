@@ -61,7 +61,7 @@ class Auth0SyncTask(
 ) : Runnable {
 
     override fun run() {
-        if( !Auth0SyncHelpers.initialized ) return
+        if (!Auth0SyncHelpers.initialized) return
         val users: IMap<String, Auth0UserBasic> = Auth0SyncHelpers.hazelcastInstance.getMap(HazelcastMap.USERS.name)
         val retrofit: Retrofit = RetrofitFactory.newClient(
                 Auth0SyncHelpers.auth0TokenProvider.managementApiUrl
@@ -90,8 +90,15 @@ class Auth0SyncTask(
                             if (Auth0SyncHelpers.dbCredentialService.createUserIfNotExists(userId) != null) {
                                 createPrincipal(
                                         user, userId, globalOrganizationAclKey, userRoleAclKey,
-                                        openlatticeOrganizationAclKey,adminRoleAclKey
+                                        openlatticeOrganizationAclKey, adminRoleAclKey
                                 )
+                            } else if (user.roles.contains(SystemRole.ADMIN.getName())) {
+                                val principal = Auth0SyncHelpers.spm.getPrincipal(userId)
+                                if (principal != null && !Auth0SyncHelpers.spm.principalHasChildPrincipal(principal.aclKey, adminRoleAclKey)) {
+                                    Auth0SyncHelpers.organizationService
+                                            .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal.principal)
+                                }
+
                             }
                         }
                 pageOfUsers = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
