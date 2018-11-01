@@ -58,11 +58,12 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         }, Function { ResultSetAdapters.entitySetId(it) })
     }
 
-    override fun getEntitiesNeedingLinking(entitySetId: UUID): PostgresIterable<UUID> {
+    override fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int ): PostgresIterable<UUID> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(ENTITY_KEY_IDS_NEEDING_LINKING)
             ps.setObject(1, entitySetId)
+            ps.setObject(2, limit)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
         }, Function { ResultSetAdapters.id(it) })
@@ -276,4 +277,4 @@ private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name}
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ID.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ${ENTITY_SET_ID.name} = ? "
+        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ${ENTITY_SET_ID.name} = ? LIMIT ?"

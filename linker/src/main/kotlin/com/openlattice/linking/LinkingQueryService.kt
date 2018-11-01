@@ -52,7 +52,7 @@ interface LinkingQueryService {
     fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
 
     fun getEntitySetsNeedingLinking(entityTypesIds: Set<UUID>): PostgresIterable<UUID>
-    fun getEntitiesNeedingLinking(entitySetId: UUID): PostgresIterable<UUID>
+    fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int = 10000): PostgresIterable<UUID>
 }
 
 

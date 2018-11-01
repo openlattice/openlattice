@@ -21,6 +21,7 @@
 
 package com.openlattice.linking
 
+import com.google.common.base.Stopwatch
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.util.concurrent.ListeningExecutorService
@@ -82,7 +83,7 @@ class RealtimeLinkingService
             entitySetId: UUID,
             entityKeyIds: Iterable<UUID>
     ) {
-        logger.info("Running linking on entity set {}.", entitySetId)
+
         entityKeyIds
                 .asSequence()
                 .map { blocker.block(entitySetId, it) }
@@ -131,6 +132,7 @@ class RealtimeLinkingService
                     gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
                     gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
                 }
+
     }
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
@@ -152,9 +154,13 @@ class RealtimeLinkingService
         if (running.tryLock()) {
             try {
                 gqs.getEntitySetsNeedingLinking(linkableTypes).forEach {
-                    refreshLinks(
-                            it, gqs.getEntitiesNeedingLinking(it)
-                    )
+
+                    var entitiesNeedingLinking = gqs.getEntitiesNeedingLinking(it).toList()
+
+                    while (entitiesNeedingLinking.isNotEmpty()) {
+                        refreshLinks(it, entitiesNeedingLinking)
+                        entitiesNeedingLinking = gqs.getEntitiesNeedingLinking(it).toList()
+                    }
                 }
             } finally {
                 running.unlock()
@@ -163,15 +169,18 @@ class RealtimeLinkingService
     }
 
 
-    fun refreshLinks(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
+    private fun refreshLinks(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
         clearNeighborhoods(entitySetId, entityKeyIds.stream())
         runIterativeLinking(entitySetId, entityKeyIds)
     }
 
 
-    fun refreshLinks(entitySetId: UUID, entityKeyIds: Collection<UUID>) {
+    private fun refreshLinks(entitySetId: UUID, entityKeyIds: Collection<UUID>) {
+        logger.info("Running linking on entity set {}.", entitySetId)
+        val sw = Stopwatch.createStarted()
         clearNeighborhoods(entitySetId, entityKeyIds.stream())
         runIterativeLinking(entitySetId, entityKeyIds)
+        logger.info("Linked {} entities in {} ms", entityKeyIds.size, sw.elapsed(TimeUnit.MILLISECONDS))
     }
 
 }
