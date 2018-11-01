@@ -50,7 +50,6 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
-import javax.inject.Inject
 
 /**
  *
@@ -65,7 +64,6 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
     @Autowired
     lateinit var s3: AmazonS3
-
 
     fun getEntitiesById(
             entitySetId: UUID,
@@ -303,31 +301,35 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                                             "Encountered null property value of type {} for entity set {} with entity key id {}",
                                             propertyTypeId, entitySetId, entityKeyId
                                     )
-                                } else if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
-                                    //if data type is Binary, will be stored in S3 bucket
-                                    println("here")
-
-                                    val entityHash = it.hashCode()
-
-                                    //store entity set id/entity key id/property type id/entity hash hash as key in s3
-                                    val s3Key = entitySetId.toString() + entityKeyId.toString() + propertyTypeId.toString() + entityHash.toString()
-                                    val s3Entry = PutObjectRequest("bucketName", s3Key, it.toString())
-                                    try {
-                                        s3.putObject(s3Entry)
-                                    }
-                                    catch (e: AmazonServiceException ) {
-                                        logger.warn( "Amazon couldn't process call" )
-                                    }
-                                    catch (e: SdkClientException) {
-                                        logger.warn( "Amazon couldn't be contacted or the client couldn't parse the response from S3")
-                                    }
-                                    //store the path to the image and metadata in postgres, not sure where
-
                                 } else {
                                     val ps = preparedStatements[propertyTypeId]
                                     ps?.setObject(1, entityKeyId)
-                                    ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
-                                    ps?.setObject(3, it)
+
+                                    if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) { //if datatype is Binary
+                                        //store data in S3 bucket
+                                        println("here")
+                                        val propertyHash = it.hashCode()
+
+                                        //store entity set id/entity key id/property type id/entity hash hash as key in s3
+                                        val s3Key = entitySetId.toString() + entityKeyId.toString() + propertyTypeId.toString() + propertyHash.toString()
+                                        val s3Entry = PutObjectRequest("bucketName", s3Key, it.toString())
+                                        try {
+                                            s3.putObject(s3Entry)
+                                        } catch (e: AmazonServiceException) {
+                                            logger.warn("Amazon couldn't process call")
+                                        } catch (e: SdkClientException) {
+                                            logger.warn("Amazon couldn't be contacted or the client couldn't parse the response from S3")
+                                        }
+
+                                        //store key to data in S3 bucket in postgres as property value
+                                        ps?.setBytes(2, PostgresDataHasher.hashObject(s3Key, datatypes[propertyTypeId]))
+                                        ps?.setObject(3, s3Key)
+
+                                    } else {    //if datatype is not Binary
+                                        //store actual data in postgres
+                                        ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
+                                        ps?.setObject(3, it)
+                                    }
                                     ps?.addBatch()
                                     if (ps == null) {
                                         logger.warn(
