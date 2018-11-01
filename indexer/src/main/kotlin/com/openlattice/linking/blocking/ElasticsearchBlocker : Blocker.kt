@@ -67,20 +67,28 @@ class ElasticsearchBlocker(
     ).first()
 
     private val entitySetsCache = Suppliers
-            .memoizeWithExpiration({entitySets.values.filter { it.entityTypeId == personEntityType.id }
-            .map(EntitySet::getId)}, 500, TimeUnit.MILLISECONDS)
+            .memoizeWithExpiration({
+                                       entitySets.values.filter { it.entityTypeId == personEntityType.id }
+                                               .map(EntitySet::getId)
+                                   }, 500, TimeUnit.MILLISECONDS)
 
     override fun block(
             entityDataKey: EntityDataKey,
             entity: Optional<Map<UUID, Set<Any>>>,
             top: Int
     ): Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>> {
-        entitySets.values.filter { it.entityTypeId.equals(personEntityType.id) }.map(EntitySet::getId)
+        logger.info("Blocking for entity data key {}", entityDataKey)
+
         val blockedEntitySetSearchResults = elasticsearch.searchEntitySets(
                 entitySetsCache.get(),
                 getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
                 top,
                 false
+        )
+
+        logger.info(
+                "Entity data key {} resulted in {} results for block.", entityDataKey,
+                blockedEntitySetSearchResults.values.map { it.size }.sum()
         )
 
         val selfBlock: MutableSet<UUID> =
