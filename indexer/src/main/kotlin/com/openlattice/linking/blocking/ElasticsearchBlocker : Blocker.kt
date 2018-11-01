@@ -21,6 +21,7 @@
 
 package com.openlattice.linking.blocking
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.base.Suppliers
 import com.google.common.cache.CacheBuilder
@@ -73,6 +74,7 @@ class ElasticsearchBlocker(
                                                .map(EntitySet::getId)
                                    }, 500, TimeUnit.MILLISECONDS)
 
+    @Timed
     override fun block(
             entityDataKey: EntityDataKey,
             entity: Optional<Map<UUID, Set<Any>>>,
