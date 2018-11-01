@@ -22,6 +22,7 @@
 package com.openlattice.linking.matching
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.base.Stopwatch
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.Matcher
 import com.openlattice.linking.util.PersonMetric
@@ -29,8 +30,10 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import org.nd4j.linalg.factory.Nd4j
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 const val THRESHOLD = 0.9
 
@@ -39,6 +42,10 @@ const val THRESHOLD = 0.9
  */
 @Component
 class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<FullQualifiedName, UUID>) : Matcher {
+    companion object {
+        private val logger = LoggerFactory.getLogger(SocratesMatcher::class.java)
+    }
+
     private var localModel = ThreadLocal.withInitial { model }
 
     //            Thread.currentThread().contextClassLoader.getResourceAsStream("model.bin") }
@@ -79,6 +86,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
     override fun match(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
+        val sw = Stopwatch.createStarted()
         val model = localModel.get()
 
         val entityDataKey = block.first
@@ -90,11 +98,21 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
             val entity = it.value
             extractedEntities
                     .mapValues {
-                        model.getModelScore(arrayOf(PersonMetric.pDistance(entity, it.value, fqnToIdMap).map { it * 100.0 }.toDoubleArray()))
+                        model.getModelScore(
+                                arrayOf(
+                                        PersonMetric.pDistance(
+                                                entity, it.value, fqnToIdMap
+                                        ).map { it * 100.0 }.toDoubleArray()
+                                )
+                        )
                     }
                     .toMutableMap()
         }.toMutableMap()
-
+        logger.info(
+                "Matching block {} with {} elements took {} ",
+                block.first, block.second.values.map { it.size }.sum(),
+                sw.elapsed(TimeUnit.MILLISECONDS)
+        )
         return entityDataKey to matchedEntities
     }
 

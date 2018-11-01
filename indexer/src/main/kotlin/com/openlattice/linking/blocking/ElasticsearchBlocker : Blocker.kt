@@ -88,10 +88,12 @@ class ElasticsearchBlocker(
                 top,
                 false
         )
+        val sw = Stopwatch.createStarted()
 
         logger.info(
-                "Entity data key {} resulted in {} results for block.", entityDataKey,
-                blockedEntitySetSearchResults.values.map { it.size }.sum()
+                "Entity data key {} blocked to {} elements in {} ms.", entityDataKey,
+                blockedEntitySetSearchResults.values.map { it.size }.sum(),
+                sw.elapsed(TimeUnit.MILLISECONDS)
         )
 
         val selfBlock: MutableSet<UUID> =
@@ -99,10 +101,17 @@ class ElasticsearchBlocker(
 
         if (!selfBlock.contains(entityDataKey.entityKeyId)) {
             logger.error("Entity {} did not block to itself.", entityDataKey)
-//            selfBlock.add(entityDataKey.entityKeyId)
+            /*
+             * We're going to assume there is something pathological about elements that do not block to themselves.
+             * The main linking service will skip these elements anyway so we should avoid loading data related to
+             * pathological cases
+             */
+            return entityDataKey to mapOf()
         }
 
-        val sw  = Stopwatch.createStarted()
+        sw.reset()
+        sw.start()
+
         val loadedData = entityDataKey to blockedEntitySetSearchResults
                 .filter { it.value.isNotEmpty() }
                 .entries
@@ -115,7 +124,12 @@ class ElasticsearchBlocker(
                 }
                 .asSequence()
                 .toMap()
-        logger.info("Loading {} entities took {} ms." ,loadedData.second.values.map { it.size }.sum() , sw.elapsed(TimeUnit.MILLISECONDS) )
+
+        logger.info(
+                "Loading {} entities took {} ms.", loadedData.second.values.map { it.size }.sum(),
+                sw.elapsed(TimeUnit.MILLISECONDS)
+        )
+
         return loadedData
 
     }
