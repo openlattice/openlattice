@@ -74,9 +74,10 @@ class ElasticsearchBlocker(
                 false
         )
 
-        val selfBlock : MutableSet<UUID> = blockedEntitySetSearchResults[entityDataKey.entitySetId] ?: mutableSetOf()
+        val selfBlock: MutableSet<UUID> =
+                blockedEntitySetSearchResults.getOrPut(entityDataKey.entitySetId) { mutableSetOf<UUID>() }
 
-        if (selfBlock.contains(entityDataKey.entityKeyId)) {
+        if (!selfBlock.contains(entityDataKey.entityKeyId)) {
             logger.error("Entity {} did not block to itself.", entityDataKey)
             selfBlock.add(entityDataKey.entityKeyId)
         }
