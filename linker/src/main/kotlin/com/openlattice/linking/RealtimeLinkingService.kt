@@ -110,7 +110,7 @@ class RealtimeLinkingService
                     //In the future we can
                     try {
                         clusterUpdateLock.lock()
-                        var requiredClusters = gqs.getIdsOfClustersContaining(dataKeys).toList()
+                        val requiredClusters = gqs.getIdsOfClustersContaining(dataKeys).toList()
                         requiredClusters.forEach { clusterLocks.getOrPut(it) { ReentrantLock() }.lock() }
                         clusterUpdateLock.unlock()
 
@@ -155,9 +155,9 @@ class RealtimeLinkingService
                     }
                 }
                 .forEach { clusterUpdate ->
-                    clusterLocks[clusterUpdate.clusterId]!!.unlock()
                     gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
                     gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+                    clusterLocks[clusterUpdate.clusterId]!!.unlock()
                 }
 
     }

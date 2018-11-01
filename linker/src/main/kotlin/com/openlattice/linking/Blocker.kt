@@ -55,7 +55,7 @@ interface Blocker {
     fun block(
             entityDataKey: EntityDataKey,
             entity: Optional<Map<UUID, Set<Any>>> = Optional.empty(),
-            top: Int = 10
+            top: Int = 100
     ): Pair<EntityDataKey,Map<EntityDataKey, Map<UUID, Set<Any>>>>
 
 }
