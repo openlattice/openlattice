@@ -58,7 +58,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         }, Function { ResultSetAdapters.entitySetId(it) })
     }
 
-    override fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int ): PostgresIterable<UUID> {
+    override fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int): PostgresIterable<UUID> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(ENTITY_KEY_IDS_NEEDING_LINKING)
@@ -80,15 +80,32 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         }
     }
 
+    override fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.createStatement()
+                    val rs = stmt.executeQuery(buildIdsOfClusterContainingSql(dataKeys))
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function {
+                    ResultSetAdapters.clusterId(it)
+                })
+
+    }
+
+    //TODO: Possible optimization is to avoid copying of array when invoking this function
     override fun getClustersContaining(
-            dataKeys: Set<EntityDataKey>
+            clusterIds: Collection<UUID>
     ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
         return PostgresIterable<Pair<UUID, Pair<EntityDataKey, Pair<EntityDataKey, Double>>>>(
                 Supplier {
                     val connection = hds.connection
-                    val stmt = connection.createStatement()
-                    val rs = stmt.executeQuery(buildClusterContainingSql(dataKeys))
-                    StatementHolder(connection, stmt, rs)
+                    val ps = connection.prepareStatement(CLUSTER_CONTAINING_SQL)
+                    val arr = PostgresArrays.createUuidArray(connection, clusterIds)
+                    ps.setObject(1, arr)
+                    val rs = ps.executeQuery()
+                    StatementHolder(connection, ps, rs)
                 },
                 Function {
                     val clusterId = ResultSetAdapters.clusterId(it)
@@ -224,12 +241,13 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
     }
 }
 
-internal fun buildClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
+internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
     val dataKeysSql = dataKeys.joinToString(",") { "('${it.entitySetId}','${it.entityKeyId}')" }
-    return "SELECT * FROM ${MATCHED_ENTITIES.name} " +
+    return "SELECT distinct linking_id FROM ${MATCHED_ENTITIES.name} " +
             "WHERE ((${SRC_ENTITY_SET_ID.name},${SRC_ENTITY_KEY_ID.name}) IN ($dataKeysSql)) " +
             "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql))"
 }
+
 
 private val COLUMNS = listOf(
         LINKING_ID,
@@ -239,6 +257,8 @@ private val COLUMNS = listOf(
         DST_ENTITY_KEY_ID,
         SCORE
 ).joinToString(",", transform = PostgresColumnDefinition::getName)
+
+private val CLUSTER_CONTAINING_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} WHERE linking_id = ANY(?)"
 
 private val DELETE_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
         "WHERE ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ? " +
