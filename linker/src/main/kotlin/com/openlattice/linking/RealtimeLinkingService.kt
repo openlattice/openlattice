@@ -32,6 +32,7 @@ import com.openlattice.linking.clustering.ClusterUpdate
 import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -51,6 +52,7 @@ internal const val LOCK_TTL_SECS = 600L
 /**
  * Performs realtime linking of individuals as they are integrated ino the system.
  */
+@Component
 class RealtimeLinkingService
 (
         private val blocker: Blocker,

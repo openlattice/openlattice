@@ -21,6 +21,7 @@
 
 package com.openlattice.linking.matching
 
+import com.codahale.metrics.annotation.Timed
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.Matcher
 import com.openlattice.linking.util.PersonMetric
@@ -46,6 +47,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         localModel = ThreadLocal.withInitial { model }
     }
 
+    @Timed
     override fun initialize(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
@@ -73,6 +75,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
      * @param block The resulting block around for the entity data key in block.first
      * @return All pairs of entities in the block scored by the current model.
      */
+    @Timed
     override fun match(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
@@ -99,6 +102,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         return entity.map { it.key to DelegatedStringSet.wrap(it.value.map { it.toString() }.toSet()) }.toMap()
     }
 
+    @Timed
     override fun trimAndMerge(
             matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
     ) {
