@@ -21,6 +21,7 @@
 
 package com.openlattice.linking
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
@@ -150,6 +151,7 @@ class RealtimeLinkingService
     }
 
     @Scheduled(fixedRate = 30000)
+    @Timed
     fun runLinking() {
         if (running.tryLock()) {
             try {
