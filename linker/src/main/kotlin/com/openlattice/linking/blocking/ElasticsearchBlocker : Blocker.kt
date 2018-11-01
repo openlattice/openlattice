@@ -21,6 +21,7 @@
 
 package com.openlattice.linking.blocking
 
+import com.google.common.base.Stopwatch
 import com.google.common.base.Suppliers
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
@@ -99,7 +100,8 @@ class ElasticsearchBlocker(
 //            selfBlock.add(entityDataKey.entityKeyId)
         }
 
-        return entityDataKey to blockedEntitySetSearchResults
+        val sw  = Stopwatch.createStarted()
+        val loadedData = entityDataKey to blockedEntitySetSearchResults
                 .filter { it.value.isNotEmpty() }
                 .entries
                 .parallelStream()
@@ -111,7 +113,8 @@ class ElasticsearchBlocker(
                 }
                 .asSequence()
                 .toMap()
-
+        logger.info("Loading {} entities took {} ms." ,loadedData.second.values.map { it.size }.sum() )
+        return loadedData
 
     }
 
