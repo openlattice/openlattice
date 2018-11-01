@@ -154,12 +154,15 @@ class RealtimeLinkingService
         if (running.tryLock()) {
             try {
                 gqs.getEntitySetsNeedingLinking(linkableTypes).forEach {
+                    logger.info("Running linking on entity set {}.", it)
 
                     var entitiesNeedingLinking = gqs.getEntitiesNeedingLinking(it).toList()
 
                     while (entitiesNeedingLinking.isNotEmpty()) {
+                        val sw = Stopwatch.createStarted()
                         refreshLinks(it, entitiesNeedingLinking)
                         entitiesNeedingLinking = gqs.getEntitiesNeedingLinking(it).toList()
+                        logger.info("Linked {} entities in {} ms", entitiesNeedingLinking.size, sw.elapsed(TimeUnit.MILLISECONDS))
                     }
                 }
             } finally {
@@ -176,11 +179,10 @@ class RealtimeLinkingService
 
 
     private fun refreshLinks(entitySetId: UUID, entityKeyIds: Collection<UUID>) {
-        logger.info("Running linking on entity set {}.", entitySetId)
-        val sw = Stopwatch.createStarted()
+
         clearNeighborhoods(entitySetId, entityKeyIds.stream())
         runIterativeLinking(entitySetId, entityKeyIds)
-        logger.info("Linked {} entities in {} ms", entityKeyIds.size, sw.elapsed(TimeUnit.MILLISECONDS))
+
     }
 
 }
