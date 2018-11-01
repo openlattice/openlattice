@@ -84,8 +84,16 @@ class RealtimeLinkingService
     ) {
         entityKeyIds
                 .asSequence()
-                .map {blocker.block(entitySetId, it)}
-                .map {
+                .map { blocker.block(entitySetId, it) }
+                .filter {
+                    if (it.second.containsKey(it.first)) {
+                        return@filter true
+                    } else {
+                        logger.error("Skipping block for data key: {}", it.first)
+                    }
+
+                    false
+                }.map {
                     //block contains element being blocked
                     val blockKey = it.first
                     val elem = it.second[blockKey]!!
@@ -141,8 +149,12 @@ class RealtimeLinkingService
     fun runLinking() {
         if (running.tryLock()) {
             try {
-                gqs.getEntitySetsNeedingLinking(linkableTypes).forEach { refreshLinks(it, gqs.getEntitiesNeedingLinking(it)) }
-            } finally{
+                gqs.getEntitySetsNeedingLinking(linkableTypes).forEach {
+                    refreshLinks(
+                            it, gqs.getEntitiesNeedingLinking(it)
+                    )
+                }
+            } finally {
                 running.unlock()
             }
         }
