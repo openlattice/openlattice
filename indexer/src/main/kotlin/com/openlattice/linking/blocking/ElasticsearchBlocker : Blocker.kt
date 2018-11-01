@@ -115,7 +115,7 @@ class ElasticsearchBlocker(
                 }
                 .asSequence()
                 .toMap()
-        logger.info("Loading {} entities took {} ms." ,loadedData.second.values.map { it.size }.sum() )
+        logger.info("Loading {} entities took {} ms." ,loadedData.second.values.map { it.size }.sum() , sw.elapsed(TimeUnit.MILLISECONDS) )
         return loadedData
 
     }
