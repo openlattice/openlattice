@@ -119,6 +119,7 @@ class RealtimeLinkingService
 
                         if (clusters.isEmpty()) {
                             val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
+                            clusterLocks.getOrPut(clusterId) { ReentrantLock() }.lock()
                             val block = blockKey to mapOf(blockKey to elem)
                             return@map ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
                         }
