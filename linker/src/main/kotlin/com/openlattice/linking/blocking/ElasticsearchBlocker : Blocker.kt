@@ -21,6 +21,9 @@
 
 package com.openlattice.linking.blocking
 
+import com.google.common.base.Suppliers
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheLoader
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
@@ -38,6 +41,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.streams.asSequence
 
 
@@ -62,13 +66,18 @@ class ElasticsearchBlocker(
             Predicates.equal("type.fullQualifiedNameAsString", PERSON_FQN)
     ).first()
 
+    private val entitySetsCache = Suppliers
+            .memoizeWithExpiration({entitySets.values.filter { it.entityTypeId == personEntityType.id }
+            .map(EntitySet::getId)}, 500, TimeUnit.MILLISECONDS)
+
     override fun block(
             entityDataKey: EntityDataKey,
             entity: Optional<Map<UUID, Set<Any>>>,
             top: Int
     ): Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>> {
+        entitySets.values.filter { it.entityTypeId.equals(personEntityType.id) }.map(EntitySet::getId)
         val blockedEntitySetSearchResults = elasticsearch.searchEntitySets(
-                entitySets.values.filter { it.entityTypeId.equals(personEntityType.id) }.map(EntitySet::getId),
+                entitySetsCache.get(),
                 getFieldSearches(entity.orElseGet { dataLoader.getEntity(entityDataKey) }),
                 top,
                 false
@@ -79,7 +88,7 @@ class ElasticsearchBlocker(
 
         if (!selfBlock.contains(entityDataKey.entityKeyId)) {
             logger.error("Entity {} did not block to itself.", entityDataKey)
-            selfBlock.add(entityDataKey.entityKeyId)
+//            selfBlock.add(entityDataKey.entityKeyId)
         }
 
         return entityDataKey to blockedEntitySetSearchResults
