@@ -48,11 +48,12 @@ interface LinkingQueryService {
     fun getOrderedBlocks(): PostgresIterable<Pair<EntityDataKey, Long>>
     fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
     fun deleteNeighborhood(u: EntityDataKey): Int
-    fun getClustersContaining(dataKeys: Set<EntityDataKey>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
+    fun getClustersContaining(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
     fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
 
     fun getEntitySetsNeedingLinking(entityTypesIds: Set<UUID>): PostgresIterable<UUID>
     fun getEntitiesNeedingLinking(entitySetId: UUID, limit: Int = 10000): PostgresIterable<UUID>
+    fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID>
 }
 
 
