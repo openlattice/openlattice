@@ -46,7 +46,7 @@ import javax.annotation.PostConstruct
  */
 internal val LINKING_ENTITY_SET_ID = UUID(0, 0)
 internal const val PERSON_FQN = "general.person"
-internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 10000L
+internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
 internal const val LOCK_TTL_SECS = 600L
 
 /**

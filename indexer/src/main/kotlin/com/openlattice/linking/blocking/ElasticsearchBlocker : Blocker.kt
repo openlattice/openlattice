@@ -72,7 +72,7 @@ class ElasticsearchBlocker(
             .memoizeWithExpiration({
                                        entitySets.values.filter { it.entityTypeId == personEntityType.id }
                                                .map(EntitySet::getId)
-                                   }, 500, TimeUnit.MILLISECONDS)
+                                   }, 1000, TimeUnit.MILLISECONDS)
 
     @Timed
     override fun block(
