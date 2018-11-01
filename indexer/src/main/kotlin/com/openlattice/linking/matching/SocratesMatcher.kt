@@ -68,7 +68,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         val matchedEntities = extractedEntities
                 .mapValues {
                     model.getModelScore(
-                            arrayOf(PersonMetric.pDistance(extractedEntities[entityDataKey], it.value, fqnToIdMap))
+                            arrayOf(PersonMetric.pDistance(extractedEntities[entityDataKey], it.value, fqnToIdMap).map { it * 100.0 }.toDoubleArray())
                     )
                 }
                 .toMutableMap()
