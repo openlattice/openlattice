@@ -82,18 +82,19 @@ class RealtimeLinkingService
             entitySetId: UUID,
             entityKeyIds: Iterable<UUID>
     ) {
+        logger.info("Running linking on entity set {}.", entitySetId)
         entityKeyIds
                 .asSequence()
                 .map { blocker.block(entitySetId, it) }
-//                .filter {
-//                    if (it.second.containsKey(it.first)) {
-//                        return@filter true
-//                    } else {
-//                        logger.error("Skipping block for data key: {}", it.first)
-//                    }
-//
-//                    false
-//                }
+                .filter {
+                    if (it.second.containsKey(it.first)) {
+                        return@filter true
+                    } else {
+                        logger.error("Skipping block for data key: {}", it.first)
+                    }
+
+                    false
+                }
                 .map {
                     //block contains element being blocked
                     val blockKey = it.first
