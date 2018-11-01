@@ -24,6 +24,11 @@ import static com.openlattice.postgres.DataTables.*;
 import static com.openlattice.postgres.PostgresArrays.getTextArray;
 import static com.openlattice.postgres.PostgresColumn.*;
 
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.HttpMethod;
+import com.amazonaws.SdkClientException;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,7 +77,9 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+
 import java.io.IOException;
+import java.net.URL;
 import java.sql.Array;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -82,18 +89,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.Base64;
+import java.util.*;
 import java.util.Base64.Decoder;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -102,6 +99,7 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -110,6 +108,13 @@ public final class ResultSetAdapters {
     private static final Logger       logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
     private static final Decoder      DECODER = Base64.getMimeDecoder();
     private static final ObjectMapper mapper  = ObjectMappers.newJsonMapper();
+
+    private static AmazonS3 s3;
+
+    @Autowired
+    public ResultSetAdapters (AmazonS3 s3) {
+        ResultSetAdapters.s3 = s3;
+    }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -531,7 +536,15 @@ public final class ResultSetAdapters {
         Optional<Boolean> linking = Optional.ofNullable( linking( rs ) );
         Optional<Set<UUID>> linkedEntitySets = Optional.of( linkedEntitySets( rs ) );
         Optional<Boolean> external = Optional.ofNullable( external( rs ) );
-        return new EntitySet( id, entityTypeId, name, title, description, contacts, linking, linkedEntitySets, external );
+        return new EntitySet( id,
+                entityTypeId,
+                name,
+                title,
+                description,
+                contacts,
+                linking,
+                linkedEntitySets,
+                external );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {
@@ -773,10 +786,13 @@ public final class ResultSetAdapters {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.put( propertyType.getId(), new HashSet<>( objects ) );
+                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
+                    data.put( propertyType.getId(), new HashSet<>( generatePresignedUrls( objects ) ) );
+                } else {
+                    data.put( propertyType.getId(), new HashSet<>( objects ) );
+                }
             }
         }
-
         return data;
     }
 
@@ -789,7 +805,11 @@ public final class ResultSetAdapters {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.put( propertyType.getType(), new HashSet<>( objects ) );
+                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
+                    data.put( propertyType.getType(), new HashSet<>( generatePresignedUrls( objects ) ) );
+                } else {
+                    data.put( propertyType.getType(), new HashSet<>( objects ) );
+                }
             }
         }
 
@@ -800,14 +820,14 @@ public final class ResultSetAdapters {
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Set<MetadataOption> metadataOptions ) throws SQLException {
-        return implicitEntity(rs, authorizedPropertyTypes, metadataOptions, false );
+        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, false );
     }
 
     public static SetMultimap<FullQualifiedName, Object> implicitLinkedEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Set<MetadataOption> metadataOptions ) throws SQLException {
-        return implicitEntity(rs, authorizedPropertyTypes, metadataOptions, true );
+        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, true );
     }
 
     private static SetMultimap<FullQualifiedName, Object> implicitEntity(
@@ -817,7 +837,7 @@ public final class ResultSetAdapters {
             Boolean linking ) throws SQLException {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
 
-        if(linking) {
+        if ( linking ) {
             final UUID entityKeyId = linkingId( rs );
             data.put( ID_FQN, entityKeyId );
         } else {
@@ -833,7 +853,6 @@ public final class ResultSetAdapters {
             data.put( LAST_INDEX_FQN, lastIndex( rs ) );
         }
 
-
         final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
                 .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
                 .collect( Collectors.toSet() );
@@ -841,17 +860,43 @@ public final class ResultSetAdapters {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.putAll( propertyType.getType(), objects );
+                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
+                    data.putAll( propertyType.getType(), generatePresignedUrls( objects ) );
+                } else {
+                    data.putAll( propertyType.getType(), objects );
+                }
             }
         }
 
         return data;
     }
 
+    public static List<URL> generatePresignedUrls( List<?> objects ) {
+        List<URL> presignedUrls = new ArrayList<>();
+        for ( Object object : objects ) {
+            try {
+                //set urls to expire after five minutes
+                java.util.Date expirationTime = new java.util.Date();
+                long timeToLive = expirationTime.getTime() + ( 5000 * 60 );
+                expirationTime.setTime( timeToLive );
+
+                //generate presigned url for binary data
+                GeneratePresignedUrlRequest urlRequest = new GeneratePresignedUrlRequest( "bucketName",
+                        (String) object ).withMethod( HttpMethod.GET ).withExpiration( expirationTime );
+                URL url = s3.generatePresignedUrl( urlRequest );
+                presignedUrls.add( url );
+            } catch ( AmazonServiceException e ) {
+                logger.warn( "Amazon was unable to process the request" );
+            } catch ( SdkClientException e ) {
+                logger.warn( "Amazon S3 couldn't be contacted or the client couldn't parse the response from S3" );
+            }
+        }
+        return presignedUrls;
+    }
+
     public static UUID linkingId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID.getName() );
     }
-
 
     public static Object lastWrite( ResultSet rs ) throws SQLException {
         return rs.getObject( LAST_WRITE.getName() );
@@ -905,13 +950,18 @@ public final class ResultSetAdapters {
         return rs.getObject( EXPIRATION_DATE_FIELD, OffsetDateTime.class );
     }
 
-    public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn(MetadataOption metadataOption) {
-        switch(metadataOption) {
-            case LAST_WRITE: return LAST_WRITE;
-            case LAST_INDEX: return LAST_INDEX;
-            case LAST_LINK: return LAST_LINK;
-            case VERSION: return VERSION;
-            default: return null;
+    public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn( MetadataOption metadataOption ) {
+        switch ( metadataOption ) {
+            case LAST_WRITE:
+                return LAST_WRITE;
+            case LAST_INDEX:
+                return LAST_INDEX;
+            case LAST_LINK:
+                return LAST_LINK;
+            case VERSION:
+                return VERSION;
+            default:
+                return null;
         }
     }
 }
