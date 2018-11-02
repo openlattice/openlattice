@@ -3,3 +3,5 @@
 #
 
 bucketName: ""
+urlTTL: 30000
+region: ""
