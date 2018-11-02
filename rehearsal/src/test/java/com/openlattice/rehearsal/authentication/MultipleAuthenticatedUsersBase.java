@@ -26,12 +26,14 @@ import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.PermissionsApi;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DataApi;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.linking.LinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.rehearsal.SetupEnvironment;
@@ -39,6 +41,7 @@ import com.openlattice.requests.RequestsApi;
 import com.openlattice.search.SearchApi;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -59,6 +62,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static DataApi           dataApi;
     protected static SearchApi         searchApi;
     protected static OrganizationsApi  organizationsApi;
+    protected static LinkingApi        linkingApi;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -84,6 +88,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         dataApi = currentRetrofit.create( DataApi.class );
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
+        linkingApi = currentRetrofit.create( LinkingApi.class );
     }
 
     public static PropertyType getBinaryPropertyType() {
@@ -144,8 +149,16 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntityType createEntityType( UUID... propertyTypes ) {
+        return createEntityType(SecurableObjectType.EntityType, propertyTypes);
+    }
+
+    public static EntityType createEdgeEntityType( UUID... propertyTypes ) {
+        return createEntityType( SecurableObjectType.AssociationType, propertyTypes );
+    }
+
+    private static EntityType createEntityType( SecurableObjectType category,  UUID... propertyTypes ) {
         PropertyType k = createPropertyType();
-        EntityType expected = TestDataFactory.entityType( k );
+        EntityType expected = TestDataFactory.entityType( category, k );
         expected.removePropertyTypes( expected.getProperties() );
 
         if ( propertyTypes == null || propertyTypes.length == 0 ) {
@@ -180,19 +193,21 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntitySet createEntitySet() {
-        EntityType entityType = createEntityType();
-
+        EntityType entityType = createEntityType(null);
         return createEntitySet( entityType );
     }
 
-    public static EntitySet createEntitySet( EntityType entityType ) {
+    public static EntitySet createEntitySet( EntityType entityType, boolean linking,  Set<UUID> linkedEntitySetIds ) {
         EntitySet newES = new EntitySet(
-                UUID.randomUUID(),
+                Optional.of( UUID.randomUUID() ),
                 entityType.getId(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
                 "foobar",
-                Optional.<String>of( "barred" ),
-                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ) );
+                Optional.of( "barred" ),
+                ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
+                Optional.of( linking ),
+                Optional.of( linkedEntitySetIds ),
+                Optional.of( true ) );
 
         Map<String, UUID> entitySetIds = edmApi.createEntitySets( ImmutableSet.of( newES ) );
 
@@ -200,5 +215,9 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 entitySetIds.values().contains( newES.getId() ) );
 
         return newES;
+    }
+
+    public static EntitySet createEntitySet( EntityType entityType ) {
+        return createEntitySet( entityType, false, new HashSet<>() );
     }
 }
