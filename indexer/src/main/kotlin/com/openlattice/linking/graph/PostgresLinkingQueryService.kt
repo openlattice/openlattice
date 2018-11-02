@@ -23,8 +23,7 @@ package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.LinkingQueryService
-import com.openlattice.postgres.DataTables.LAST_LINK
-import com.openlattice.postgres.DataTables.LAST_WRITE
+import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
@@ -296,5 +295,5 @@ private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name}
         "   (SELECT id FROM entity_sets where entity_type_id in (SELECT UNNEST( (?)::uuid[] )))"
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ID.name} " +
-        "FROM ${IDS.name} " +
-        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ${ENTITY_SET_ID.name} = ? LIMIT ?"
+        "FROM ${IDS.name} " +q
+        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) AND ${ENTITY_SET_ID.name} = ? LIMIT ?"
