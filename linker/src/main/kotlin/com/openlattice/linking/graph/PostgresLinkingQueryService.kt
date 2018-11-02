@@ -291,9 +291,9 @@ private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
 
 private val ENTITY_SETS_NEEDING_LINKING = "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
         "FROM ${IDS.name} " +
-        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ${ENTITY_SET_ID.name} IN " +
-        "   (SELECT id FROM entity_sets where entity_type_id in (SELECT UNNEST( (?)::uuid[] )))"
+        "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +
+        " AND ${ENTITY_SET_ID.name} IN (SELECT id FROM entity_sets where entity_type_id in (SELECT UNNEST( (?)::uuid[] )))"
 
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ID.name} " +
-        "FROM ${IDS.name} " +q
+        "FROM ${IDS.name} " +
         "WHERE ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) AND ${ENTITY_SET_ID.name} = ? LIMIT ?"
