@@ -58,6 +58,7 @@ import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.PropertyValueKey;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.storage.MetadataOption;
+import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
@@ -110,10 +111,16 @@ public final class ResultSetAdapters {
     private static final ObjectMapper mapper  = ObjectMappers.newJsonMapper();
 
     private static AmazonS3 s3;
+    private static DatastoreConfiguration datastoreConfig;
 
-    @Autowired
+    @Autowired(required = false)
     public ResultSetAdapters (AmazonS3 s3) {
         ResultSetAdapters.s3 = s3;
+    }
+
+    @Autowired
+    public ResultSetAdapters (DatastoreConfiguration datastoreConfiguration) {
+        ResultSetAdapters.datastoreConfig = datastoreConfiguration;
     }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
@@ -877,11 +884,11 @@ public final class ResultSetAdapters {
             try {
                 //set urls to expire after five minutes
                 java.util.Date expirationTime = new java.util.Date();
-                long timeToLive = expirationTime.getTime() + ( 5000 * 60 );
+                long timeToLive = expirationTime.getTime() + ( datastoreConfig.getUrlTTL() );
                 expirationTime.setTime( timeToLive );
 
                 //generate presigned url for binary data
-                GeneratePresignedUrlRequest urlRequest = new GeneratePresignedUrlRequest( "bucketName",
+                GeneratePresignedUrlRequest urlRequest = new GeneratePresignedUrlRequest( datastoreConfig.getBucketName(),
                         (String) object ).withMethod( HttpMethod.GET ).withExpiration( expirationTime );
                 URL url = s3.generatePresignedUrl( urlRequest );
                 presignedUrls.add( url );
