@@ -157,7 +157,6 @@ class RealtimeLinkingService
                     gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
                     clusterLocks[clusterUpdate.clusterId]!!.unlock()
                 }
-
     }
 
     private fun cluster(
