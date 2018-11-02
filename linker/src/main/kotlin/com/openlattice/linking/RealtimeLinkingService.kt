@@ -23,22 +23,19 @@ package com.openlattice.linking
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.linking.clustering.ClusterUpdate
 import com.openlattice.postgres.streams.PostgresIterable
+import org.deeplearning4j.clustering.strategy.BaseClusteringStrategy
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
-import javax.annotation.PostConstruct
 
 
 /**
@@ -48,6 +45,7 @@ import javax.annotation.PostConstruct
 internal val LINKING_ENTITY_SET_ID = UUID(0, 0)
 internal const val PERSON_FQN = "general.person"
 internal const val REFRESH_PROPERTY_TYPES_INTERVAL_MILLIS = 30000L
+internal const val MINIMUM_SCORE = 0.75
 
 /**
  * Performs realtime linking of individuals as they are integrated ino the system.
@@ -117,32 +115,31 @@ class RealtimeLinkingService
                         val clusters = gqs.getClustersContaining(requiredClusters)
 
 
-                        if (clusters.isEmpty()) {
+                        var maybeBestCluster: ScoredCluster? = null
+                        var highestScore: Double = 10.0 //Arbitrary any negative value should suffice
+
+                        clusters
+                                .forEach {
+                                    val scoredCluster = cluster( blockKey, it, ::completeLinkCluster  )
+
+                                    if(scoredCluster.score > MINIMUM_SCORE ) {
+                                        if (highestScore > scoredCluster.score || highestScore >= 10) {
+                                            highestScore = scoredCluster.score
+                                            maybeBestCluster = scoredCluster
+                                        }
+                                    }
+
+                                    clusterLocks[it.key]!!.unlock()
+                                }
+                        if (maybeBestCluster == null ) {
                             val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
                             clusterLocks.getOrPut(clusterId) { ReentrantLock() }.lock()
                             val block = blockKey to mapOf(blockKey to elem)
                             return@map ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
                         }
 
-                        var maybeBestCluster: Pair<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>? = null
-                        var lowestAvgScore: Double = -10.0 //Arbitrary any negative value should suffice
-
-                        clusters
-                                .forEach {
-                                    val block = blockKey to loader.getEntities(collectKeys(it.value) + blockKey)
-                                    val matchedBlock = matcher.match(block)
-                                    val matchedCluster = matchedBlock.second
-                                    val clusterSize = matchedCluster.values.sumBy { it.size }
-                                    val avgScore = (matchedCluster.values.sumByDouble { it.values.sum() } / clusterSize)
-                                    if (lowestAvgScore > avgScore || lowestAvgScore < 0) {
-                                        lowestAvgScore = avgScore
-                                        maybeBestCluster = it.key to matchedCluster
-                                    }
-                                    clusterLocks[it.key]!!.unlock()
-                                }
-
                         val bestCluster = maybeBestCluster!!
-                        ClusterUpdate(bestCluster.first, blockKey, bestCluster.second)
+                        ClusterUpdate(bestCluster.clusterId, blockKey, bestCluster.cluster)
                     } catch (ex: Exception) {
                         if (clusterUpdateLock.isLocked) {
                             clusterUpdateLock.unlock()
@@ -162,6 +159,21 @@ class RealtimeLinkingService
                 }
 
     }
+
+    private fun cluster(
+            blockKey: EntityDataKey,
+            identifiedCluster: Map.Entry<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>,
+            clusteringStrategy: (Map<EntityDataKey, Map<EntityDataKey, Double>>) -> Double
+    ): ScoredCluster {
+        val block = blockKey to loader.getEntities(collectKeys(identifiedCluster.value) + blockKey)
+        //At some point, we may want to skip recomputing matches for existing cluster elements as an optimization.
+        //Since we're freshly loading entities it's not too bad to recompute everything.
+        val matchedBlock = matcher.match(block)
+        val matchedCluster = matchedBlock.second
+        val score = clusteringStrategy(matchedCluster)
+        return ScoredCluster(identifiedCluster.key, matchedCluster, score)
+    }
+
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
         return m!!.keys + m.values.flatMap { it.keys }
@@ -217,4 +229,20 @@ class RealtimeLinkingService
 
     }
 
+}
+
+data class ScoredCluster(
+        val clusterId: UUID,
+        val cluster: Map<EntityDataKey, Map<EntityDataKey, Double>>,
+        val score: Double
+)
+
+private fun avgLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
+    val clusterSize = matchedCluster.values.sumBy { it.size }
+    return (matchedCluster.values.sumByDouble { it.values.sum() } / clusterSize)
+}
+
+private fun completeLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
+    return matchedCluster.values.flatMap { it.values }.max() ?: 0.0
+//    return matchedCluster.values.max { it.values.max() }.java
 }
