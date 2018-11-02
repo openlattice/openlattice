@@ -34,10 +34,15 @@ import com.openlattice.client.RetrofitFactory;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.edm.EdmApi;
+
 import java.util.Collection;
+
+import com.openlattice.rhizome.proxy.RetrofitBuilders;
+import okhttp3.OkHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import retrofit2.Retrofit;
 
@@ -67,6 +72,8 @@ public class SetupEnvironment {
     protected static final Retrofit  retrofit2;
     protected static final Retrofit  retrofit3;
 
+    private static final Logger logger = LoggerFactory.getLogger( SetupEnvironment.class );
+
     static {
         RateLimiter limiter = RateLimiter.create( .5 );
 
@@ -91,7 +98,10 @@ public class SetupEnvironment {
 
         RetrofitFactory.configureObjectMapper( FullQualifiedNameJacksonSerializer::registerWithMapper );
 
-        retrofit = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenAdmin );
+        retrofit = RetrofitFactory.newClient(
+                RetrofitFactory.Environment.TESTING,
+                () -> tokenAdmin,
+                new ThrowingCallAdapterFactory() );
         retrofit1 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser1 );
         retrofit2 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser2 );
         retrofit3 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser3 );
@@ -138,6 +148,14 @@ public class SetupEnvironment {
             String principalId ) {
         checkState( principals.stream().anyMatch( sp -> sp.getPrincipal().getId().equals( principalId ) ) );
     }
+
+    public static Retrofit createRetrofitCallAdapter( RetrofitFactory.Environment environment, OkHttpClient httpClient ) {
+        return RetrofitBuilders.decorateWithRhizomeFactories( RetrofitBuilders
+                .createBaseRhizomeRetrofitBuilder( environment.getBaseUrl(), httpClient ) )
+                .build();
+    }
+
+
 
     protected static <T> T getApiAdmin( Class<T> clazz ) {
         return retrofit.create( clazz );
