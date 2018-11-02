@@ -31,6 +31,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
+import com.openlattice.datastore.configuration.DatastoreConfiguration
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -62,8 +63,11 @@ private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::cla
 
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
-    @Autowired
+    @Autowired(required = false)
     lateinit var s3: AmazonS3
+
+    @Autowired
+    lateinit var datastoreConfiguration: DatastoreConfiguration
 
     fun getEntitiesById(
             entitySetId: UUID,
@@ -312,7 +316,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
                                         //store entity set id/entity key id/property type id/entity hash hash as key in s3
                                         val s3Key = entitySetId.toString() + entityKeyId.toString() + propertyTypeId.toString() + propertyHash.toString()
-                                        val s3Entry = PutObjectRequest("bucketName", s3Key, it.toString())
+                                        val s3Entry = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, it.toString())
                                         try {
                                             s3.putObject(s3Entry)
                                         } catch (e: AmazonServiceException) {
