@@ -58,7 +58,7 @@ import kotlin.system.exitProcess
  */
 
 private const val EXPIRATION_MILLIS = 60000L
-private const val INDEX_RATE = 1000L
+private const val INDEX_RATE = 10000L
 
 class BackgroundIndexingService(
         private val hds: HikariDataSource,
@@ -123,7 +123,7 @@ class BackgroundIndexingService(
                 taskLock.unlock()
             }
         } else {
-            logger.info("Skipping indexing as thread limit hit.")
+            logger.info("Not starting new indexing job as an existing one is running.")
         }
     }
 
