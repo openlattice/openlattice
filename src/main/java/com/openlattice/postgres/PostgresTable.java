@@ -331,15 +331,16 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName() + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
-                        .name( "entity_key_ids_needs_linking_idx" )
+                        .name( "entity_key_ids_needing_indexing_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
-                        ENTITY_SET_ID.getName() + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")" )
-                        .name( "entity_key_ids_needs_linking_idx" )
+                        ENTITY_SET_ID.getName() + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")" )
+                        .name( "entity_key_ids_needing_linking_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName() + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")" )
-                        .name( "entity_key_ids_needs_propagation_idx" )
+                        .name( "entity_key_ids_needing_propagation_idx" )
                         .ifNotExists()
         );
         APPS.addIndexes(
