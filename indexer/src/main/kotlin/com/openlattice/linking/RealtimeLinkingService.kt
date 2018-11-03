@@ -105,7 +105,7 @@ class RealtimeLinkingService
                     val initializedBlock = matcher.initialize(it)
                     val dataKeys = collectKeys(initializedBlock.second)
                     //While a best cluster is being selected and updated we can't have other clusters being updated
-                    //In the future we can
+
                     try {
                         clusterUpdateLock.lock()
                         val requiredClusters = gqs.getIdsOfClustersContaining(dataKeys).toList()
@@ -116,22 +116,19 @@ class RealtimeLinkingService
 
 
                         var maybeBestCluster: ScoredCluster? = null
-                        var highestScore: Double = 10.0 //Arbitrary any negative value should suffice
+                        var highestScore = 10.0 //Arbitrary any negative value should suffice
 
                         clusters
                                 .forEach {
-                                    val scoredCluster = cluster( blockKey, it, ::completeLinkCluster  )
-
-                                    if(scoredCluster.score > MINIMUM_SCORE ) {
-                                        if (highestScore > scoredCluster.score || highestScore >= 10) {
-                                            highestScore = scoredCluster.score
-                                            maybeBestCluster = scoredCluster
-                                        }
+                                    val scoredCluster = cluster(blockKey, it, ::completeLinkCluster)
+                                    if (scoredCluster.score > MINIMUM_SCORE && (highestScore > scoredCluster.score || highestScore >= 10)) {
+                                        highestScore = scoredCluster.score
+                                        maybeBestCluster = scoredCluster
+                                    } else {
+                                        clusterLocks[it.key]!!.unlock()
                                     }
-
-                                    clusterLocks[it.key]!!.unlock()
                                 }
-                        if (maybeBestCluster == null ) {
+                        if (maybeBestCluster == null) {
                             val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
                             clusterLocks.getOrPut(clusterId) { ReentrantLock() }.lock()
                             val block = blockKey to mapOf(blockKey to elem)
@@ -222,7 +219,6 @@ class RealtimeLinkingService
 
 
     private fun refreshLinks(entitySetId: UUID, entityKeyIds: Collection<UUID>) {
-
         clearNeighborhoods(entitySetId, entityKeyIds.stream())
         runIterativeLinking(entitySetId, entityKeyIds.parallelStream())
 
@@ -242,6 +238,6 @@ private fun avgLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey,
 }
 
 private fun completeLinkCluster(matchedCluster: Map<EntityDataKey, Map<EntityDataKey, Double>>): Double {
-    return matchedCluster.values.flatMap { it.values }.max() ?: 0.0
+    return matchedCluster.values.flatMap { it.values }.min() ?: 0.0
 //    return matchedCluster.values.max { it.values.max() }.java
 }
