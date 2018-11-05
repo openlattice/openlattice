@@ -135,7 +135,7 @@ public interface EdmApi {
      * association types, and property types
      */
     @PATCH( BASE )
-    void updateEntityDataModel( EntityDataModel edm );
+    Void updateEntityDataModel( @Body EntityDataModel edm );
 
     /**
      * Gets the changes between the existing entity data model and the entity data model passed in, including schemas,

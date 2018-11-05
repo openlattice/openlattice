@@ -59,6 +59,14 @@ public final class RetrofitFactory {
         }
     }
 
+    /**
+     * Create a new client with no authentication
+     */
+    public static final Retrofit newClient( Environment environment ) {
+        return decorateWithLoomFactories( createBaseRhizomeRetrofitBuilder( environment, new OkHttpClient.Builder() ) )
+                .build();
+    }
+
     public static final Retrofit newClient( SerializableSupplier<String> jwtToken ) {
         return newClient( Environment.PRODUCTION, jwtToken );
     }
