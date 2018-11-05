@@ -34,6 +34,7 @@ import com.openlattice.data.requests.FileType
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
+import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -56,7 +57,7 @@ import java.util.*
 private val numberOfEntries = 10
 private val random = Random()
 
-class DataControllerTest : MultipleAuthenticatedUsersBase() {
+class DataControllerTest : SetupTestData() {
     companion object {
         val logger = LoggerFactory.getLogger(DataControllerTest.javaClass)
 
@@ -73,7 +74,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         @JvmStatic
         @BeforeClass
         fun init() {
-            loginAs("admin")
+            initEdm()
         }
     }
 

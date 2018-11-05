@@ -69,6 +69,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         retrofitMap.put( "user1", retrofit1 );
         retrofitMap.put( "user2", retrofit2 );
         retrofitMap.put( "user3", retrofit3 );
+        retrofitMap.put( "prod", retrofitProd );
     }
 
     /**

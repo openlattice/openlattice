@@ -71,6 +71,7 @@ public class SetupEnvironment {
     protected static final Retrofit  retrofit1;
     protected static final Retrofit  retrofit2;
     protected static final Retrofit  retrofit3;
+    protected static final Retrofit  retrofitProd;
 
     private static final Logger logger = LoggerFactory.getLogger( SetupEnvironment.class );
 
@@ -105,6 +106,7 @@ public class SetupEnvironment {
         retrofit1 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser1 );
         retrofit2 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser2 );
         retrofit3 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser3 );
+        retrofitProd = RetrofitFactory.newClient( RetrofitFactory.Environment.PRODUCTION );
 
         String idAdmin = (String) jwtAdmin.getPrincipal();
         String idUser1 = (String) jwtUser1.getPrincipal();
