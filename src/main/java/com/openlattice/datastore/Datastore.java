@@ -29,6 +29,7 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.conductor.codecs.pods.TypeCodecsPod;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
+import com.openlattice.datastore.pods.DatastoreConfigurationPod;
 import com.openlattice.datastore.pods.DatastoreSecurityPod;
 import com.openlattice.datastore.pods.DatastoreServicesPod;
 import com.openlattice.datastore.pods.DatastoreServletsPod;
@@ -38,6 +39,7 @@ import com.openlattice.postgres.PostgresPod;
 
 public class Datastore extends BaseRhizomeServer {
     public static final Class<?>[] datastorePods = new Class<?>[] {
+            DatastoreConfigurationPod.class,
             DatastoreServicesPod.class,
             TypeCodecsPod.class,
             SharedStreamSerializersPod.class,
