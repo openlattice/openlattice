@@ -36,6 +36,7 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
+import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
@@ -43,9 +44,7 @@ import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.data.storage.HazelcastEntityDatastore;
-import com.openlattice.data.storage.PostgresDataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.*;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.datastore.services.*;
@@ -72,6 +71,7 @@ import com.openlattice.search.EsEdmService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -82,6 +82,9 @@ import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import java.io.IOException;
+import java.net.URL;
+import java.util.Date;
+import java.util.List;
 
 import static com.openlattice.authorization.AuthorizingComponent.logger;
 import static com.openlattice.datastore.util.Util.returnAndLog;
@@ -90,7 +93,8 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
 @Import( {
         Auth0Pod.class,
         CassandraPod.class,
-        NeuronPod.class
+        NeuronPod.class,
+        AwsS3Pod.class
 } )
 public class DatastoreServicesPod {
 
@@ -111,31 +115,7 @@ public class DatastoreServicesPod {
     @Inject
     private Neuron                   neuron;
     @Inject
-    private ConfigurationService     configurationService;
-
-    @Autowired( required = false )
-    private AmazonS3                  s3;
-    @Autowired( required = false )
-    private AmazonLaunchConfiguration awsLaunchConfig;
-
-    @Bean( name = "datastoreConfiguration" )
-    @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
-    public DatastoreConfiguration getLocalDatastoreConfiguration() throws IOException {
-        DatastoreConfiguration config = configurationService.getConfiguration( DatastoreConfiguration.class );
-        logger.info( "Using local datastore configuration: {}", config );
-        return config;
-    }
-
-    @Bean( name = "datastoreConfiguration" )
-    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public DatastoreConfiguration getAwsDatastoreConfiguration() throws IOException {
-        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
-                awsLaunchConfig.getBucket(),
-                awsLaunchConfig.getFolder(),
-                DatastoreConfiguration.class );
-        logger.info( "Using aws datastore configuration: {}", config );
-        return config;
-    }
+    public DatastoreConfiguration   datastoreConfiguration;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -348,8 +328,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public SearchService searchService() {
-        return new SearchService( eventBus );
+    public ByteBlobDataManager byteBlobDataManager() {
+        return new ByteBlobDataService();
     }
 
     @PostConstruct
