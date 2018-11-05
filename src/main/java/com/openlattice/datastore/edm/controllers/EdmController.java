@@ -164,9 +164,10 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             method = RequestMethod.PATCH,
             consumes = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_YAML_VALUE } )
     @ResponseStatus( HttpStatus.OK )
-    public void updateEntityDataModel( @RequestBody EntityDataModel edm ) {
+    public Void updateEntityDataModel( @RequestBody EntityDataModel edm ) {
         ensureAdminAccess();
         modelService.setEntityDataModel( edm );
+        return null;
     }
 
     @Override
