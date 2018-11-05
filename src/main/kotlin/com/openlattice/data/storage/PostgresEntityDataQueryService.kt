@@ -21,17 +21,12 @@
 
 package com.openlattice.data.storage
 
-import com.openlattice.aws.AwsS3Pod
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.SdkClientException
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
-import com.openlattice.datastore.configuration.DatastoreConfiguration
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -44,6 +39,7 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -51,6 +47,7 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
+import javax.inject.Inject
 
 /**
  *
@@ -61,13 +58,11 @@ const val EXPANDED_VERSIONS = "expanded_versions"
 const val FETCH_SIZE = 100000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
+@Service
 class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
     @Autowired(required = false)
-    lateinit var s3: AmazonS3
-
-    @Autowired
-    lateinit var datastoreConfiguration: DatastoreConfiguration
+    lateinit var byteBlobDataManager: ByteBlobDataManager
 
     fun getEntitiesById(
             entitySetId: UUID,
@@ -316,14 +311,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
                                         //store entity set id/entity key id/property type id/entity hash hash as key in s3
                                         val s3Key = entitySetId.toString() + entityKeyId.toString() + propertyTypeId.toString() + propertyHash.toString()
-                                        val s3Entry = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, it.toString())
-                                        try {
-                                            s3.putObject(s3Entry)
-                                        } catch (e: AmazonServiceException) {
-                                            logger.warn("Amazon couldn't process call")
-                                        } catch (e: SdkClientException) {
-                                            logger.warn("Amazon couldn't be contacted or the client couldn't parse the response from S3")
-                                        }
+                                        byteBlobDataManager.putObject(s3Key, it)
 
                                         //store key to data in S3 bucket in postgres as property value
                                         ps?.setBytes(2, PostgresDataHasher.hashObject(s3Key, datatypes[propertyTypeId]))

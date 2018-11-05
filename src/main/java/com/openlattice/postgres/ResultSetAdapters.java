@@ -57,6 +57,8 @@ import com.openlattice.data.PropertyMetadata;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.PropertyValueKey;
 import com.openlattice.data.hazelcast.DataKey;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.ByteBlobDataService;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.edm.EntitySet;
@@ -102,25 +104,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.inject.Inject;
+
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public final class ResultSetAdapters {
-    private static final Logger       logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
-    private static final Decoder      DECODER = Base64.getMimeDecoder();
-    private static final ObjectMapper mapper  = ObjectMappers.newJsonMapper();
 
-    private static AmazonS3 s3;
-    private static DatastoreConfiguration datastoreConfig;
+    private static final Logger           logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
+    private static final Decoder          DECODER = Base64.getMimeDecoder();
+    private static final ObjectMapper     mapper  = ObjectMappers.newJsonMapper();
+    private static       ByteBlobDataManager byteBlobDataManager;
 
-    @Autowired(required = false)
-    public ResultSetAdapters (AmazonS3 s3) {
-        ResultSetAdapters.s3 = s3;
-    }
-
-    @Autowired
-    public ResultSetAdapters (DatastoreConfiguration datastoreConfiguration) {
-        ResultSetAdapters.datastoreConfig = datastoreConfiguration;
+    @Inject
+    public ResultSetAdapters( ByteBlobDataManager byteBlobDataManager ) {
+        ResultSetAdapters.byteBlobDataManager = byteBlobDataManager;
     }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
@@ -794,7 +792,7 @@ public final class ResultSetAdapters {
 
             if ( objects != null ) {
                 if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.put( propertyType.getId(), new HashSet<>( generatePresignedUrls( objects ) ) );
+                    data.put( propertyType.getId(), new HashSet<>( byteBlobDataManager.getPresignedUrls( objects ) ) );
                 } else {
                     data.put( propertyType.getId(), new HashSet<>( objects ) );
                 }
@@ -813,7 +811,7 @@ public final class ResultSetAdapters {
 
             if ( objects != null ) {
                 if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.put( propertyType.getType(), new HashSet<>( generatePresignedUrls( objects ) ) );
+                    data.put( propertyType.getType(), new HashSet<>( byteBlobDataManager.getPresignedUrls( objects ) ) );
                 } else {
                     data.put( propertyType.getType(), new HashSet<>( objects ) );
                 }
@@ -868,7 +866,7 @@ public final class ResultSetAdapters {
 
             if ( objects != null ) {
                 if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.putAll( propertyType.getType(), generatePresignedUrls( objects ) );
+                    data.putAll( propertyType.getType(), byteBlobDataManager.getPresignedUrls( objects ) );
                 } else {
                     data.putAll( propertyType.getType(), objects );
                 }
@@ -876,29 +874,6 @@ public final class ResultSetAdapters {
         }
 
         return data;
-    }
-
-    public static List<URL> generatePresignedUrls( List<?> objects ) {
-        List<URL> presignedUrls = new ArrayList<>();
-        for ( Object object : objects ) {
-            try {
-                //set urls to expire after five minutes
-                java.util.Date expirationTime = new java.util.Date();
-                long timeToLive = expirationTime.getTime() + ( datastoreConfig.getUrlTTL() );
-                expirationTime.setTime( timeToLive );
-
-                //generate presigned url for binary data
-                GeneratePresignedUrlRequest urlRequest = new GeneratePresignedUrlRequest( datastoreConfig.getBucketName(),
-                        (String) object ).withMethod( HttpMethod.GET ).withExpiration( expirationTime );
-                URL url = s3.generatePresignedUrl( urlRequest );
-                presignedUrls.add( url );
-            } catch ( AmazonServiceException e ) {
-                logger.warn( "Amazon was unable to process the request" );
-            } catch ( SdkClientException e ) {
-                logger.warn( "Amazon S3 couldn't be contacted or the client couldn't parse the response from S3" );
-            }
-        }
-        return presignedUrls;
     }
 
     public static UUID linkingId( ResultSet rs ) throws SQLException {
