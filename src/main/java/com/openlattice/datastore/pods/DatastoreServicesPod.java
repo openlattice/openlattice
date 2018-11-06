@@ -326,6 +326,11 @@ public class DatastoreServicesPod {
         return new EsEdmService( conductorElasticsearchApi() );
     }
 
+    @Bean
+    public SearchService searchService() {
+        return new SearchService( eventBus );
+    }
+
     @Bean(name = "byteBlobDataManager")
     @Profile(Profiles.LOCAL_CONFIGURATION_PROFILE)
     public ByteBlobDataManager localBlobDataManager() {
