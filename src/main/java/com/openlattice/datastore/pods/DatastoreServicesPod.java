@@ -93,8 +93,7 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
 @Import( {
         Auth0Pod.class,
         CassandraPod.class,
-        NeuronPod.class,
-        AwsS3Pod.class
+        NeuronPod.class
 } )
 public class DatastoreServicesPod {
 
@@ -115,7 +114,7 @@ public class DatastoreServicesPod {
     @Inject
     private Neuron                   neuron;
     @Inject
-    public DatastoreConfiguration   datastoreConfiguration;
+    private DatastoreConfiguration   datastoreConfiguration;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -327,9 +326,16 @@ public class DatastoreServicesPod {
         return new EsEdmService( conductorElasticsearchApi() );
     }
 
-    @Bean
-    public ByteBlobDataManager byteBlobDataManager() {
-        return new ByteBlobDataService();
+    @Bean(name = "byteBlobDataManager")
+    @Profile(Profiles.LOCAL_CONFIGURATION_PROFILE)
+    public ByteBlobDataManager localBlobDataManager() {
+        return new LocalBlobDataService(hikariDataSource);
+    }
+
+    @Bean(name = "byteBlobDataManager")
+    @Profile({Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE})
+    public ByteBlobDataManager awsBlobDataManager() {
+        return new AwsBlobDataService(datastoreConfiguration);
     }
 
     @PostConstruct
