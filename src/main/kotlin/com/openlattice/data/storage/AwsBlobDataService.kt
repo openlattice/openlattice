@@ -4,10 +4,12 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.HttpMethod
 import com.amazonaws.SdkClientException
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.DeleteObjectRequest
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
+import com.openlattice.aws.AwsS3Pod.newS3Client
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -16,22 +18,25 @@ import java.net.URL
 import java.util.*
 import javax.inject.Inject
 
-private val logger = LoggerFactory.getLogger(ByteBlobDataService::class.java)
+private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
 
 
 // may need to consider versioned nature of buckets
 @Service
-class ByteBlobDataService : ByteBlobDataManager {
+class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfiguration) : ByteBlobDataManager {
 
-    @Autowired(required = false)
-    private lateinit var awsS3: AmazonS3
-    @Autowired(required = false)
-    private lateinit var datastoreConfiguration: DatastoreConfiguration
+    val s3 = newS3Client(datastoreConfiguration)
 
-    override fun putObject(s3Key: String, data: Any) {
+    fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
+        var builder = AmazonS3ClientBuilder.standard()
+        builder.region = datastoreConfiguration.regionName
+        return builder.build()
+    }
+
+    override fun putObject(s3Key: String, data: ByteArray) {
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, data.toString())
         try {
-            awsS3.putObject(putRequest)
+            s3.putObject(putRequest)
         } catch (e: AmazonServiceException) {
             logger.warn("Amazon couldn't process call")
         } catch (e: SdkClientException) {
@@ -42,7 +47,7 @@ class ByteBlobDataService : ByteBlobDataManager {
     override fun deleteObject(s3Key: String) {
         val deleteRequest = DeleteObjectRequest(datastoreConfiguration.bucketName, s3Key)
         try {
-            awsS3.deleteObject(deleteRequest)
+            s3.deleteObject(deleteRequest)
         } catch (e: AmazonServiceException) {
             logger.warn("Amazon couldn't process call")
         } catch (e: SdkClientException) {
@@ -52,7 +57,7 @@ class ByteBlobDataService : ByteBlobDataManager {
 
     override fun getPresignedUrls(objects: List<Any>): List<URL> {
         var expirationTime = Date()
-        var timeToLive = expirationTime.time + datastoreConfiguration.urlTTL
+        var timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
         expirationTime.time = timeToLive
         var presignedUrls = mutableListOf<URL>()
         for (data in objects) {
@@ -65,7 +70,7 @@ class ByteBlobDataService : ByteBlobDataManager {
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, data.toString()).withMethod(HttpMethod.GET).withExpiration(expiration)
         var url = URL("")
         try {
-            url = awsS3.generatePresignedUrl(urlRequest)
+            url = s3.generatePresignedUrl(urlRequest)
         } catch (e: AmazonServiceException) {
             logger.warn("Amazon couldn't process call")
         } catch (e: SdkClientException) {
