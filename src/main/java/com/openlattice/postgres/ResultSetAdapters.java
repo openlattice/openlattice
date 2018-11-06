@@ -58,7 +58,6 @@ import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.PropertyValueKey;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.ByteBlobDataService;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
 import com.openlattice.edm.EntitySet;
