@@ -2,6 +2,6 @@
 # Datastore Server Configuration
 #
 
-bucketName: ""
-urlTTL: 30000
-region: ""
+bucketName: "tempy-media-storage"
+regionName: "us-gov-west-1"
+timeToLive: 30000
