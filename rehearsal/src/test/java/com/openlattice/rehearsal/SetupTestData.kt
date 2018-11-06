@@ -2,6 +2,7 @@ package com.openlattice.rehearsal
 
 import com.openlattice.edm.EntityDataModel
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import com.openlattice.shuttle.main
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 
 open class SetupTestData: MultipleAuthenticatedUsersBase() {
@@ -53,8 +54,9 @@ open class SetupTestData: MultipleAuthenticatedUsersBase() {
          */
         @JvmStatic
         fun importDataSet( flightFile: String, dataFile: String ) {
-            val currentRetrofit = retrofitMap.get( "admin" )
-
+            loginAs( "admin" )
+            //val data = this::class.java.classLoader.getResource("data")
+            //val currentRetrofit = retrofitMap.get( "admin" )
         }
     }
 

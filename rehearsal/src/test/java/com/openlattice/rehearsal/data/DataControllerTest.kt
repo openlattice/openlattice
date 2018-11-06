@@ -74,7 +74,8 @@ class DataControllerTest : SetupTestData() {
         @JvmStatic
         @BeforeClass
         fun init() {
-            initEdm()
+            //initEdm()
+            importDataSet("socratesA.yaml", "testdata1.csv")
         }
     }
 

@@ -68,6 +68,7 @@ dependencies {
         logger.quiet(project.name + " using project dependencies.")
         testCompile project(":conductor")
         testCompile project(":datastore")
+        testCompile project(":shuttle")
         testCompile( project(path: ":api", configuration: "tests"))
         testCompile( project(path: ":rhizome", configuration: "tests"))
         testCompile( project(path: ":rhizome-client", configuration: "tests"))
