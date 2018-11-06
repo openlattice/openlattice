@@ -285,7 +285,6 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entities.forEach {
                 entitySetPreparedStatement.setObject(1, it.key)
                 entitySetPreparedStatement.addBatch()
-                //val s3 = AmazonS3ClientBuilder.defaultClient() //TODO get the client built in AwsS3Pod
 
                 val entityKeyId = it.key
                 val entityData = JsonDeserializer.validateFormatAndNormalize(it.value, datatypes)
@@ -311,7 +310,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
 
                                         //store entity set id/entity key id/property type id/entity hash hash as key in s3
                                         val s3Key = entitySetId.toString() + entityKeyId.toString() + propertyTypeId.toString() + propertyHash.toString()
-                                        byteBlobDataManager.putObject(s3Key, it)
+                                        byteBlobDataManager.putObject(s3Key, PostgresDataHasher.hashObject(s3Key, datatypes[propertyTypeId]))
 
                                         //store key to data in S3 bucket in postgres as property value
                                         ps?.setBytes(2, PostgresDataHasher.hashObject(s3Key, datatypes[propertyTypeId]))
