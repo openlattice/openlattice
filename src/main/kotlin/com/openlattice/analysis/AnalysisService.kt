@@ -64,13 +64,13 @@ class AnalysisService : AuthorizingComponent {
         return dgm.getTopUtilizers(entitySetId, topUtilizerDetails, numResults, authorizedPropertyTypes)
     }
 
-    fun getNeighborTypes(entitySetId: UUID): Iterable<NeighborType> {
-        val neighborEntitySets = dgm.getNeighborEntitySets(entitySetId)
+    fun getNeighborTypes(entitySetIds: Set<UUID>): Iterable<NeighborType> {
+        val neighborEntitySets = dgm.getNeighborEntitySets(entitySetIds)
 
-        val entitySetIds = neighborEntitySets.asSequence()
+        val allEntitySetIds = neighborEntitySets.asSequence()
                 .flatMap { sequenceOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
                 .toSet()
-        val accessChecks = entitySetIds.map { AccessCheck(AclKey(it), EnumSet.of(Permission.READ)) }.toSet()
+        val accessChecks = allEntitySetIds.map { AccessCheck(AclKey(it), EnumSet.of(Permission.READ)) }.toSet()
         //TODO: These access checks should be performed in the controller.
         val authorizedEntitySetIds = authorizations
                 .accessChecksForPrincipals(accessChecks, Principals.getCurrentPrincipals())
@@ -85,7 +85,7 @@ class AnalysisService : AuthorizingComponent {
         val neighborTypes = Sets.newHashSet<NeighborType>()
 
         neighborEntitySets.forEach {
-            val src = entitySetId == it.srcEntitySetId
+            val src = entitySetIds.contains(it.srcEntitySetId)
             val associationEntitySetId = it.edgeEntitySetId
             val neighborEntitySetId = if (src) it.dstEntitySetId else it.srcEntitySetId
             if (authorizedEntitySetIds.contains(associationEntitySetId) && authorizedEntitySetIds
