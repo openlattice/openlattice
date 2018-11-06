@@ -4,7 +4,7 @@ import java.net.URL
 import java.util.*
 
 interface ByteBlobDataManager {
-    fun putObject(s3Key: String, data: Any)
+    fun putObject(s3Key: String, data: ByteArray)
 
     fun deleteObject(s3Key: String)
 
