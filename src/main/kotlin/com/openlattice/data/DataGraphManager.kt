@@ -160,7 +160,7 @@ interface DataGraphManager {
             linked: Boolean
     ): Iterable<Map<String, Any>>
 
-    fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets>
+    fun getNeighborEntitySets(entitySetId: Set<UUID>): List<NeighborSets>
 
     fun mergeEntities(
             entitySetId: UUID,
@@ -168,7 +168,7 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int
 
-    fun getNeighborEntitySetIds(entitySetId: UUID): Set<UUID>
+    fun getNeighborEntitySetIds(entitySetId: Set<UUID>): Set<UUID>
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
 
