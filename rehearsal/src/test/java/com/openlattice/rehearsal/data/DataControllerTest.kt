@@ -196,7 +196,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
 
         val edgesToBeCreated: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
-        val edgeData = createDataEdges(es.id, et.properties, idsSrc, idsDst)
+        val edgeData = createDataEdges(es.id, esSrc.id, esDst.id, et.properties, idsSrc, idsDst, numberOfEntries)
         edgesToBeCreated.putAll(edgeData.first, edgeData.second)
 
         val createdEdges = dataApi.createAssociations(edgesToBeCreated)
@@ -229,24 +229,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Map<FullQualifiedName, MutableCollection<Any>> {
         return edgeData
                 .mapKeys { entry -> edmApi.getPropertyType(entry.key).type }
-    }
-
-
-    private fun createDataEdges(
-            entitySetId: UUID,
-            properties: Set<UUID>,
-            srcIds: List<UUID>,
-            dstIds: List<UUID>
-    ): Pair<UUID, List<DataEdge>> {
-        val edgeData = TestDataFactory.randomStringEntityData(numberOfEntries, properties).values.toList()
-
-        val edges = srcIds.mapIndexed { index, data ->
-            val srcDataKey = EntityDataKey(entitySetId, srcIds[index])
-            val dstDataKey = EntityDataKey(entitySetId, dstIds[index])
-            DataEdge(srcDataKey, dstDataKey, edgeData[index])
-        }
-
-        return entitySetId to edges
     }
 
     private fun keyByFqn(data: SetMultimap<UUID, Any>): SetMultimap<FullQualifiedName, Any> {
