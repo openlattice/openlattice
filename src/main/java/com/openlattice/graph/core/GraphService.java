@@ -92,7 +92,7 @@ public interface GraphService {
             SetMultimap<UUID, UUID> srcFilters,
             SetMultimap<UUID, UUID> dstFilters );
 
-    List<NeighborSets> getNeighborEntitySets( UUID entitySetId );
+    List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
 
     PostgresIterable<EdgeKey> getEntitiesForDestination(List<UUID> srcEntitySetIds, List<UUID> edgeEntitySetIds, Set<UUID> dstEntityKeyIds);
 }

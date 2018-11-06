@@ -456,12 +456,12 @@ open class DataGraphService(
     }
 
 
-    override fun getNeighborEntitySets(entitySetId: UUID): List<NeighborSets> {
-        return graphService.getNeighborEntitySets(entitySetId)
+    override fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets> {
+        return graphService.getNeighborEntitySets(entitySetIds)
     }
 
-    override fun getNeighborEntitySetIds(entitySetId: UUID): Set<UUID> {
-        return getNeighborEntitySets(entitySetId)
+    override fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID> {
+        return getNeighborEntitySets(entitySetIds)
                 .flatMap { listOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
                 .toSet()
     }

@@ -421,18 +421,19 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
-    override fun getNeighborEntitySets(entitySetId: UUID?): List<NeighborSets> {
+    override fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets> {
         val neighbors: MutableList<NeighborSets> = ArrayList()
 
         val query = "SELECT DISTINCT ${SRC_ENTITY_SET_ID.name},${EDGE_ENTITY_SET_ID.name}, ${DST_ENTITY_SET_ID.name} " +
                 "FROM ${EDGES.name} " +
-                "WHERE ${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ?"
+                "WHERE ${SRC_ENTITY_SET_ID.name} = ANY(?) OR ${DST_ENTITY_SET_ID.name} = ANY(?)"
         val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(query)
             ps.use {
-                ps.setObject(1, entitySetId)
-                ps.setObject(2, entitySetId)
+                val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds)
+                ps.setObject(1, entitySetIdsArr)
+                ps.setObject(2, entitySetIdsArr)
                 val rs = ps.executeQuery()
                 while (rs.next()) {
                     val srcEntitySetId = rs.getObject(SRC_ENTITY_SET_ID.name) as UUID
