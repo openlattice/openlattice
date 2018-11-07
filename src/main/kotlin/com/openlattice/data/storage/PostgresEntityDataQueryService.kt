@@ -70,7 +70,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             entityKeyIds: Set<UUID>
     ): Map<UUID, Map<UUID, Set<Any>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
-            ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
+            ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes, byteBlobDataManager)
         }
         return streamableEntitySet(
                 mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
@@ -132,7 +132,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
     ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to
-                    ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes)
+                    ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes, byteBlobDataManager)
         }
         return streamableEntitySet(
                 mapOf(entitySetId to entityKeyIds), mapOf(entitySetId to authorizedPropertyTypes), metadataOptions,
@@ -148,7 +148,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, Map<FullQualifiedName, Set<Any>>>> {
             org.apache.commons.lang3.tuple.Pair.of(
                     ResultSetAdapters.id(it),
-                    ResultSetAdapters.implicitEntityValuesByFqn(it, authorizedPropertyTypes))
+                    ResultSetAdapters.implicitEntityValuesByFqn(it, authorizedPropertyTypes, byteBlobDataManager))
         }
         return streamableEntitySet(
                 mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
@@ -162,7 +162,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
-            ResultSetAdapters.implicitNormalEntity(it, authorizedPropertyTypes, metadataOptions)
+            ResultSetAdapters.implicitNormalEntity(it, authorizedPropertyTypes, metadataOptions, byteBlobDataManager)
         }
         return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, version, adapter, false)
     }
@@ -174,7 +174,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
         val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
-            ResultSetAdapters.implicitLinkedEntity(it, authorizedPropertyTypes, metadataOptions)
+            ResultSetAdapters.implicitLinkedEntity(it, authorizedPropertyTypes, metadataOptions, byteBlobDataManager)
         }
         return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, version, adapter, true)
     }
@@ -303,21 +303,20 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                                     val ps = preparedStatements[propertyTypeId]
                                     ps?.setObject(1, entityKeyId)
 
-                                    if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) { //if datatype is Binary
+                                    //Binary data types get stored in S3 bucket
+                                    if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
                                         //store data in S3 bucket
-                                        println("here")
                                         val propertyHash = it.hashCode()
 
-                                        //store entity set id/entity key id/property type id/entity hash hash as key in s3
-                                        val s3Key = entitySetId.toString() + entityKeyId.toString() + propertyTypeId.toString() + propertyHash.toString()
-                                        byteBlobDataManager.putObject(s3Key, PostgresDataHasher.hashObject(s3Key, datatypes[propertyTypeId]))
+                                        //store entity set id/entity key id/property type id/property hash as key in S3
+                                        val s3Key = entitySetId.toString() + "/" + entityKeyId.toString() + "/" + propertyTypeId.toString() + "/" + propertyHash.toString()
+                                        byteBlobDataManager.putObject(s3Key, it as ByteArray)
 
-                                        //store key to data in S3 bucket in postgres as property value
-                                        ps?.setBytes(2, PostgresDataHasher.hashObject(s3Key, datatypes[propertyTypeId]))
+                                        //store S3 key to data in postgres as property value
+                                        ps?.setBytes(2, PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String))
                                         ps?.setObject(3, s3Key)
 
-                                    } else {    //if datatype is not Binary
-                                        //store actual data in postgres
+                                    } else {
                                         ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
                                         ps?.setObject(3, it)
                                     }
