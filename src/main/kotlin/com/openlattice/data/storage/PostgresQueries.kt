@@ -84,9 +84,6 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                                 authorizedPropertyTypes,
                                 linking
                         )
-                        if (binaryPropertyTypes[it.key] == true) {
-                            println("image")
-                        }
                         val subQuerySql = selectCurrentVersionOfPropertyTypeSql(
                                 propertyTypeEntitiesClause,
                                 it.key,
