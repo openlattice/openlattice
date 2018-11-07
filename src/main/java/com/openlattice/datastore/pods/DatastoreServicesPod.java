@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
@@ -73,10 +74,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.*;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -113,8 +111,10 @@ public class DatastoreServicesPod {
     private EventBus                 eventBus;
     @Inject
     private Neuron                   neuron;
-    @Inject
-    private DatastoreConfiguration   datastoreConfiguration;
+    @Autowired( required = false )
+    private AmazonS3                  awsS3;
+    @Autowired( required = false )
+    private AmazonLaunchConfiguration awsLaunchConfig;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -331,16 +331,36 @@ public class DatastoreServicesPod {
         return new SearchService( eventBus );
     }
 
-    @Bean(name = "byteBlobDataManager")
-    @Profile(Profiles.LOCAL_CONFIGURATION_PROFILE)
-    public ByteBlobDataManager localBlobDataManager() {
-        return new LocalBlobDataService(hikariDataSource);
+    @Bean(name = "datastoreConfiguration")
+    @Profile( ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE )
+    public DatastoreConfiguration getLocalDatastoreConfiguration() {
+        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfiguration( DatastoreConfiguration.class );
+        logger.info( "Using local datastore configuration: {}", config );
+        return config;
+    }
+
+    @Bean( name = "datastoreConfiguration" )
+    public DatastoreConfiguration getAwsDatastoreConfiguration() {
+        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( awsS3,
+                awsLaunchConfig.getBucket(),
+                awsLaunchConfig.getFolder(),
+                DatastoreConfiguration.class );
+        logger.info( "Using aws datastore configuration: {}", config );
+        return config;
     }
 
     @Bean(name = "byteBlobDataManager")
+    @DependsOn("datastoreConfiguration")
+    @Profile(Profiles.LOCAL_CONFIGURATION_PROFILE)
+    public ByteBlobDataManager localBlobDataManager() {
+        return new LocalBlobDataService(getLocalDatastoreConfiguration(), hikariDataSource);
+    }
+
+    @Bean(name = "byteBlobDataManager")
+    @DependsOn("datastoreConfiguration")
     @Profile({Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE})
     public ByteBlobDataManager awsBlobDataManager() {
-        return new AwsBlobDataService(datastoreConfiguration);
+        return new AwsBlobDataService(getAwsDatastoreConfiguration());
     }
 
     @PostConstruct
