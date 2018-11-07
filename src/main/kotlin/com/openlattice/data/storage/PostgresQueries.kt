@@ -84,6 +84,9 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                                 authorizedPropertyTypes,
                                 linking
                         )
+                        if (binaryPropertyTypes[it.key] == true) {
+                            println("image")
+                        }
                         val subQuerySql = selectCurrentVersionOfPropertyTypeSql(
                                 propertyTypeEntitiesClause,
                                 it.key,
@@ -188,7 +191,7 @@ internal fun selectVersionOfPropertyTypeInEntitySetSql(
             if (linking) LINKING_ID.name
             else entityKeyIdColumns
 
-    val arrayAgg = arrayAggSql(fqn, binary)
+    val arrayAgg = arrayAggSql(fqn)
 
     val selectPropertyTypeIdsFilteredByVersion = selectPropertyTypeDataKeysFilteredByVersionSubquerySql(
             entitiesClause,
@@ -230,7 +233,7 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
             if (linking) LINKING_ID.name
             else entityKeyIdColumns
 
-    val arrayAgg = arrayAggSql(fqn, binary)
+    val arrayAgg = arrayAggSql(fqn)
 
     val filtersClause = buildFilterClause(fqn, filters)
 
@@ -354,9 +357,8 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 
 }
 
-internal fun arrayAggSql(fqn: String, binary: Boolean): String {
-    return if (binary) " array_agg(encode($fqn, 'base64')) as $fqn "
-    else " array_agg($fqn) as $fqn "
+internal fun arrayAggSql(fqn: String): String {
+    return " array_agg($fqn) as $fqn "
 }
 
 internal fun buildEntitiesClause( entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean ): String {
