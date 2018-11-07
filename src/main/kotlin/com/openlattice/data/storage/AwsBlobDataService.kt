@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.DeleteObjectRequest
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
+import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.openlattice.aws.AwsS3Pod.newS3Client
@@ -34,7 +35,11 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
     }
 
     override fun putObject(s3Key: String, data: ByteArray) {
-        val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, data.toString())
+        var dataInputStream = data.inputStream()
+        var metadata = ObjectMetadata()
+        metadata.contentLength = dataInputStream.available().toLong()
+        metadata.contentType = "image"
+        val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         try {
             s3.putObject(putRequest)
         } catch (e: AmazonServiceException) {
@@ -55,6 +60,10 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         }
     }
 
+    override fun getObjects(objects: List<Any>): List<Any> {
+        return getPresignedUrls(objects)
+    }
+
     override fun getPresignedUrls(objects: List<Any>): List<URL> {
         var expirationTime = Date()
         var timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
@@ -68,7 +77,7 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
 
     override fun getPresignedUrl(data: Any, expiration: Date): URL {
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, data.toString()).withMethod(HttpMethod.GET).withExpiration(expiration)
-        var url = URL("")
+        var url = URL("http://")
         try {
             url = s3.generatePresignedUrl(urlRequest)
         } catch (e: AmazonServiceException) {
