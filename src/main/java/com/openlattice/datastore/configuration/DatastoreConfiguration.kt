@@ -10,9 +10,11 @@ import com.openlattice.client.serialization.SerializationConstants
 
 @ReloadableConfiguration(uri = "datastore.yaml")
 data class DatastoreConfiguration(
-        @JsonProperty(SerializationConstants.BUCKET_NAME) val bucketName: String,
-        @JsonProperty(SerializationConstants.REGION_NAME) val regionName: String,
-        @JsonProperty(SerializationConstants.TIME_TO_LIVE) val timeToLive: Long): Configuration {
+        @JsonProperty("bucketName") val bucketName: String,
+        @JsonProperty("regionName") val regionName: String,
+        @JsonProperty("timeToLive") val timeToLive: Long,
+        @JsonProperty("accessKeyId") val accessKeyId: String,
+        @JsonProperty("secretAccessKey") val secretAccessKey: String): Configuration {
     //val serialVersionUID: Long = -3847142119887587616L //this is copied and slightly altered from ConstructorConfiguration.java, need to figure out how to generate one
     val key = SimpleConfigurationKey("datastore.yaml")
 
