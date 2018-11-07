@@ -40,7 +40,7 @@ public interface LinkingApi {
     String SET              = "/set";
 
     String SET_ID           = "setId";
-    String SET_ID_PATH      = "{" + SET_ID + "}";
+    String SET_ID_PATH      = "/{" + SET_ID + "}";
 
     @POST( BASE  + SET )
     Integer addEntitySetsToLinkingEntitySets( @Body Map<UUID, Set<UUID>> entitySetIds );
