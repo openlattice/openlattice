@@ -113,12 +113,6 @@ public final class ResultSetAdapters {
     private static final Logger           logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
     private static final Decoder          DECODER = Base64.getMimeDecoder();
     private static final ObjectMapper     mapper  = ObjectMappers.newJsonMapper();
-    private static       ByteBlobDataManager byteBlobDataManager;
-
-    @Inject
-    public ResultSetAdapters( ByteBlobDataManager byteBlobDataManager ) {
-        ResultSetAdapters.byteBlobDataManager = byteBlobDataManager;
-    }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -758,18 +752,7 @@ public final class ResultSetAdapters {
                     objects = Arrays.asList( (Boolean[]) arr.getArray() );
                     break;
                 case Binary:
-                    String[] objArray = (String[]) arr.getArray();
-
-                    //                    if ( objArray.length > 0 ) {
-                    //                        logger.info( "Contents of string: {}", objArray[ 0 ] );
-                    //                        logger.info( "Reading byte array with class: {}", objArray[ 0 ].getClass().getCanonicalName() );
-                    //                    }
-
-                    byte[][] raw = new byte[ objArray.length ][];
-                    for ( int i = 0; i < objArray.length; ++i ) {
-                        raw[ i ] = DECODER.decode( objArray[ i ] );
-                    }
-                    objects = Arrays.asList( raw );
+                    objects = Arrays.asList( (String[]) arr.getArray());
                     break;
                 default:
                     objects = null;
@@ -783,7 +766,8 @@ public final class ResultSetAdapters {
 
     public static Map<UUID, Set<Object>> implicitEntityValuesById(
             ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
+            Map<UUID, PropertyType> authorizedPropertyTypes,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
         final Map<UUID, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
@@ -791,7 +775,7 @@ public final class ResultSetAdapters {
 
             if ( objects != null ) {
                 if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.put( propertyType.getId(), new HashSet<>( byteBlobDataManager.getPresignedUrls( objects ) ) );
+                    data.put( propertyType.getId(), new HashSet<>( byteBlobDataManager.getObjects( objects ) ) );
                 } else {
                     data.put( propertyType.getId(), new HashSet<>( objects ) );
                 }
@@ -802,7 +786,8 @@ public final class ResultSetAdapters {
 
     public static Map<FullQualifiedName, Set<Object>> implicitEntityValuesByFqn(
             ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
+            Map<UUID, PropertyType> authorizedPropertyTypes,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
         final Map<FullQualifiedName, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
@@ -810,7 +795,7 @@ public final class ResultSetAdapters {
 
             if ( objects != null ) {
                 if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.put( propertyType.getType(), new HashSet<>( byteBlobDataManager.getPresignedUrls( objects ) ) );
+                    data.put( propertyType.getType(), new HashSet<>( byteBlobDataManager.getObjects( objects ) ) );
                 } else {
                     data.put( propertyType.getType(), new HashSet<>( objects ) );
                 }
@@ -823,21 +808,24 @@ public final class ResultSetAdapters {
     public static SetMultimap<FullQualifiedName, Object> implicitNormalEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Set<MetadataOption> metadataOptions ) throws SQLException {
-        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, false );
+            Set<MetadataOption> metadataOptions,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
+        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager,false );
     }
 
     public static SetMultimap<FullQualifiedName, Object> implicitLinkedEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Set<MetadataOption> metadataOptions ) throws SQLException {
-        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, true );
+            Set<MetadataOption> metadataOptions,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
+        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager, true );
     }
 
     private static SetMultimap<FullQualifiedName, Object> implicitEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Set<MetadataOption> metadataOptions,
+            ByteBlobDataManager byteBlobDataManager,
             Boolean linking ) throws SQLException {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
 
@@ -865,7 +853,7 @@ public final class ResultSetAdapters {
 
             if ( objects != null ) {
                 if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
-                    data.putAll( propertyType.getType(), byteBlobDataManager.getPresignedUrls( objects ) );
+                    data.putAll( propertyType.getType(), byteBlobDataManager.getObjects( objects ) );
                 } else {
                     data.putAll( propertyType.getType(), objects );
                 }
