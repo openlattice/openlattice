@@ -1,0 +1,167 @@
+associationTypeId:
+  get:
+    summary: Get the AssociationType definition for the given AssociationType UUID.
+    operationId: getAssociationType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: associationTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/associationTypeId"
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: "./definitions/EDM/components.yaml#/associationType"
+  delete:
+    summary: Delete the AssociationType definition for the given AssociationType UUID.
+    operationId: deleteAssociationType
+    tags:
+      - edm
+    parameters:
+      - name: associationTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/associationTypeId"
+    responses:
+      "200":
+        description: Success
+
+associationTypeDetails:
+  get:
+    summary: Get details about the AssociationType for the given AssociationType UUID.
+    operationId: getAssociationTypeDetails
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: associationTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/associationTypeId"
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: "./definitions/EDM/components.yaml#/associationType"
+
+associationTypeAvailable:
+  get:
+    summary: Get all available associations for the given AssociationType UUID.
+    operationId: getAllAvailableAssociationTypes
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: associationTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/associationTypeId"
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./definitions/EDM/components.yaml#/associationType"
+associationTypeDst:
+  put:
+    summary: Update the AssociationType dst entity types for the given AssociationType UUID by adding the given EntityType UUID.
+    operationId: addDstEntityTypeToAssociationType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: associationTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/associationTypeId"
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+    responses:
+      "200":
+        description: Success
+  delete:
+    summary: Updates the AssociationType dst entity types for the given AssociationType UUID by removing the given EntityType UUID.
+    operationId: removeDstEntityTypeFromAssociationType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: associationTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/associationTypeId"
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+    responses:
+      "200":
+        description: Success
+associationTypeSrc:
+  put:
+    summary: Update the AssociationType src entity types for the given AssociationType UUID by adding the given EntityType UUID.
+    operationId: addSrcEntityTypeToAssociationType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: associationTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/associationTypeId"
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+    responses:
+      "200":
+        description: Success
+  delete:
+    summary: Updates the AssociationType src entity types for the given AssociationType UUID by removing the given EntityType UUID.
+    operationId: removeSrcEntityTypeFromAssociationType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: associationTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/associationTypeId"
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+    responses:
+      "200":
+          description: Success

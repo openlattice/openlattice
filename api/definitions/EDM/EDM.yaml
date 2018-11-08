@@ -1,0 +1,49 @@
+EDM:
+  get:
+    summary: Gets the entity data model, including namespaces, schemas, entity types, association types, and property types.
+    operationId: getEntityDataModel
+    responses:
+      "200":
+        description: "An Entity Data Model"
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/EDM"
+  patch:
+    summary: Updates the entity data model, including schemas, entity types, association types, and property types.
+    operationId: updateEntityDataModel
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/EDM"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+EDMdiff:
+  post:
+    summary: Gets the changes between the existing entity data model and the entity data model passed in, including schemas, association types, entity types, and property types.
+    operationId: getEntityDataModelDiff
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/EDM"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+EDMversion:
+  get:
+    summary: Returns the current entity data model version.
+    operationId: getEntityDataModelDiff
+    responses:
+      "200":
+        description: "Success"

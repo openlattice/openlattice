@@ -1,0 +1,53 @@
+searchEmail:
+  get:
+    summary: Get the user id for the given email address.
+    operationId: searchAllUsersByEmail
+    tags:
+      - permissions
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: emailAddress
+        in: path
+        required: true
+        schema:
+          $ref: "./permissions/components.yaml#/emailAddress"
+    responses:
+      200:
+        description: Success
+        schema:
+          $ref: "./permissions/components.yaml#/aclKey"
+
+permissions:
+  post: #lattice-js l.29
+    summary: Get the ACL for the given ACL Key, only if the user is the owner of the ACL Key.
+    operationId: getAcl
+    tags:
+      - permissions
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: aclKey
+        in: query
+        required: true
+        schema:
+          $ref: "./permissions/components.yaml#/aclKey"
+    responses:
+      "200":
+        description: Success
+  patch: #lattice-js l.29
+    summary: Updates the ACL for a particular ACL Key, only if the user is the owner of the ACL Key.
+    operationId: updateAcl
+    tags:
+      - permissions
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: aclKey
+        in: query
+        required: true
+        schema:
+          $ref: "./permissions/components.yaml#/aclKey"
+    responses:
+      "200":
+        description: Success
