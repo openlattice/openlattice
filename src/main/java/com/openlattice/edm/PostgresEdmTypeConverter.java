@@ -92,7 +92,7 @@ public final class PostgresEdmTypeConverter {
             case Boolean:
                 return PostgresDatatype.BOOLEAN_ARRAY;
             case Binary:
-                return PostgresDatatype.BYTEA_ARRAY;
+                return PostgresDatatype.TEXT_ARRAY;
             default:
                 throw new NotImplementedException( "Don't know how to convert " + edmType.name() + " to array type" );
         }
