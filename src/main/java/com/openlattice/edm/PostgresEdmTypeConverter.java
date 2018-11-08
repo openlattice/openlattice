@@ -45,7 +45,7 @@ public final class PostgresEdmTypeConverter {
             case Byte:
             case SByte:
             case Binary:
-                return PostgresDatatype.BYTEA;
+                return PostgresDatatype.TEXT;
             case Int16:
                 return PostgresDatatype.SMALLINT;
             case Int32:
