@@ -1,13 +1,21 @@
 package com.openlattice.rehearsal
 
+import com.openlattice.authentication.AuthenticationTest
 import com.openlattice.edm.EntityDataModel
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import com.openlattice.shuttle.ShuttleCli
 import com.openlattice.shuttle.main
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import java.io.File
+import org.springframework.util.AntPathMatcher
+
+
 
 open class SetupTestData: MultipleAuthenticatedUsersBase() {
     companion object {
         private val OL_AUDIT_FQN = FullQualifiedName( "OPENLATTICE_AUDIT", "AUDIT" )
+        private const val DATA_FOLDER = "data"
+        private const val FLIGHT_FOLDER = "flights"
 
         @JvmStatic
         fun initEdm() {
@@ -53,10 +61,25 @@ open class SetupTestData: MultipleAuthenticatedUsersBase() {
          * Import datasets via Shuttle
          */
         @JvmStatic
-        fun importDataSet( flightFile: String, dataFile: String ) {
+        fun importDataSet( flightFileName: String, dataFileName: String ) {
+            val pathMatcher = AntPathMatcher()
+
+            pathMatcher.match("/test/{.+}", "/test/alma.al")
+
             loginAs( "admin" )
-            //val data = this::class.java.classLoader.getResource("data")
-            //val currentRetrofit = retrofitMap.get( "admin" )
+            val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
+
+            val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
+                    flightFileName).absolutePath
+            val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataFileName)
+                    .absolutePath
+
+            main(arrayOf(
+                    "-${ShuttleCli.FLIGHT}=$flightFile",
+                    "-${ShuttleCli.CSV}=$dataFile",
+                    "-${ShuttleCli.ENVIRONMENT}=LOCAL",
+                    "-${ShuttleCli.TOKEN}=$tokenAdmin",
+                    "-${ShuttleCli.CREATE}"))
         }
     }
 
