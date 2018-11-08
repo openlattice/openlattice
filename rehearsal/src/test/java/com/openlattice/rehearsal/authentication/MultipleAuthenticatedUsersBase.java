@@ -53,7 +53,7 @@ import org.junit.Assert;
 import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
-    protected static Map<String, Retrofit> retrofitMap = new HashMap<>();
+    protected final static Map<String, Retrofit> retrofitMap = new HashMap<>();
 
     protected static EdmApi            edmApi;
     protected static PermissionsApi    permissionsApi;
@@ -194,7 +194,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntitySet createEntitySet() {
-        EntityType entityType = createEntityType(null);
+        EntityType entityType = createEntityType();
         return createEntitySet( entityType );
     }
 

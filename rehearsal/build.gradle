@@ -30,7 +30,7 @@ plugins {
 description = "Integration Tests"
 group = "com.openlattice"
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "../../gradles/openlattice.gradle"
 
 sourceCompatibility=JavaVersion.VERSION_1_8
 
@@ -69,13 +69,14 @@ dependencies {
         testCompile project(":conductor")
         testCompile project(":datastore")
         testCompile project(":shuttle")
+
         testCompile( project(path: ":api", configuration: "tests"))
         testCompile( project(path: ":rhizome", configuration: "tests"))
         testCompile( project(path: ":rhizome-client", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
-        testCompile "com.openlattice:api:${api_version}"
-        testCompile "com.openlattice:rhizome:${rhizome_version}"
+        testCompile "com.openlattice:conductor-client:${conductor_client_version}"
+        testCompile "com.openlattice:shuttle:${shuttle_version}"
 
         testCompile "com.openlattice:api:${api_version}:tests"
         testCompile "com.openlattice:rhizome:${rhizome_version}:tests"

@@ -107,18 +107,18 @@ public class TestEdmConfigurer {
             EdmPrimitiveTypeKind.Int64 );
 
     public static EntityType      PERSON;
-    public static AssociationType EMPLOYED_IN;
     public static EntityType      ROLE;
+    public static final AssociationType EMPLOYED_IN;
 
     public static UUID      PERSON_ES_ID;
     public static EntitySet PERSON_ES;
     public static EntitySet EMPLOYED_IN_ES;
 
-    public static UUID EMPLOYEE_NAME_PROP_ID   = EMPLOYEE_NAME_PROP_TYPE.getId();
-    public static UUID EMPLOYEE_TITLE_PROP_ID  = EMPLOYEE_TITLE_PROP_TYPE.getId();
-    public static UUID ID_PROP_ID              = ID_PROP_TYPE.getId();
-    public static UUID EMPLOYEE_DEPT_PROP_ID   = EMPLOYEE_DEPT_PROP_TYPE.getId();
-    public static UUID EMPLOYEE_SALARY_PROP_ID = EMPLOYEE_SALARY_PROP_TYPE.getId();
+    public static final UUID EMPLOYEE_NAME_PROP_ID   = EMPLOYEE_NAME_PROP_TYPE.getId();
+    public static final UUID EMPLOYEE_TITLE_PROP_ID  = EMPLOYEE_TITLE_PROP_TYPE.getId();
+    public static final UUID ID_PROP_ID              = ID_PROP_TYPE.getId();
+    public static final UUID EMPLOYEE_DEPT_PROP_ID   = EMPLOYEE_DEPT_PROP_TYPE.getId();
+    public static final UUID EMPLOYEE_SALARY_PROP_ID = EMPLOYEE_SALARY_PROP_TYPE.getId();
 
     static {
         PERSON = with( PERSON_FQN );
