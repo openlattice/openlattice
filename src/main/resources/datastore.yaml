@@ -5,3 +5,5 @@
 bucketName: "tempy-media-storage"
 regionName: "us-gov-west-1"
 timeToLive: 300000
+accessKeyId: "TODO"
+secretAccessKey: "nah"
