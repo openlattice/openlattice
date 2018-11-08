@@ -1,0 +1,38 @@
+summary:
+  get:
+    summary: Get Property Usage Summary for all properties.
+    operationId: getAllPropertyUsageSummaries
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./definitions/EDM/components.yaml#/propertyUsageSummary"
+summaryProperty:
+  get:
+    summary: Get Property Usage Summary for property with given ID.
+    operationId: getPropertyUsageSummary
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: propertyTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/propertyTypeId"
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: "./definitions/EDM/components.yaml#/propertyUsageSummary"

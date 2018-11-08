@@ -1,0 +1,40 @@
+ace:
+  type: object
+  properties:
+    principal:
+      $ref: "./components.yaml#/principal"
+    permissions:
+      type: array
+      items:
+        type: string
+acl:
+  type: object
+  properties:
+    aclKey:
+      type: array
+      items:
+        $ref: "./components.yaml#/aclKey"
+    aces:
+      type: array
+      items:
+        $ref: "./components.yaml#/ace"
+aclData:
+  type: object
+  properties:
+    action:
+      type: string # this could be ADD, REMOVE, SET or REQUEST
+    acl:
+      $ref: "./components.yaml#/acl"
+aclKey:
+  type: array
+  items:
+    type: string
+principal:
+  type: object
+  properties:
+    type:
+      type: string
+    id:
+      type: array
+      items:
+        type: string

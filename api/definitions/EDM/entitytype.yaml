@@ -1,0 +1,253 @@
+entityTypeId:
+  get:
+    summary: Gets the EntityType definition for the given EntityType UUID.
+    operationId: getEntityType
+    tags:
+      - edm
+    parameters:
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: "./definitions/EDM/components.yaml#/entityType"
+  delete:
+    summary: Deletes the EntityType definition for the given EntityType UUID.
+    operationId: deleteEntityType
+    tags:
+      - edm
+    parameters:
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+    responses:
+      "200":
+        description: Success
+  patch:
+    summary: Updates the EntityType definition for the given EntityType UUID with the given metadata.
+    operationId: updateEntityTypeMetaData
+    parameters:
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/entityType"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+entityTypeName:
+  get:
+    summary: Gets the EntityType UUID for the given EntityType FQN.
+    operationId: getEntityTypeId
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+          example: openlattice
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          example: myentitytype
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+entityTypePropertyType:
+  put:
+    summary: Updates the EntityType definition for the given EntityType UUID by adding the given PropertyType UUID.
+    operationId: addPropertyTypeToEntityType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+      - name: propertyTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/propertyTypeId"
+    responses:
+      "200":
+        description: Success
+  delete:
+    summary: Updates the EntityType definition for the given EntityType UUID by removing the given PropertyType UUID.
+    operationId: removePropertyTypeFromEntityType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+      - name: propertyTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/propertyTypeId"
+    responses:
+      "200":
+        description: Success
+entityTypePropertyTypeForce:
+  delete:
+    summary: Updates the EntityType definition for the given EntityType UUID by removing the given PropertyType UUID, regardless of whether or not there is data associated with the entity type.
+    operationId: forceRemovePropertyTypeFromEntityType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+      - name: propertyTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/propertyTypeId"
+    responses:
+      "200":
+        description: Success
+entityTypes:
+  get:
+    summary: Gets all EntityType definitions.
+    operationId: getAllEntityTypes
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./definitions/EDM/components.yaml#/entityType"
+  post:
+    summary: Creates a new EntityType definition, if it doesn"t exist.
+    operationId: createEntityType
+    tags:
+      - edm
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/entityType"
+    responses:
+      "200":
+        description: Success
+associationTypes:
+  get:
+    summary: Gets all association EntityType definitions.
+    operationId: getAllAssociationEntityTypes
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./definitions/EDM/components.yaml#/associationType"
+  post:
+    summary: Creates a new AssociationType definition, if it doesn"t exist.
+    operationId: createAssociationType
+    tags:
+      - edm
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "./definitions/EDM/components.yaml#/associationType"
+    responses:
+      "200":
+        description: Success
+entityTypePropertyOrder:
+  patch:
+    summary: Updates the EntityType definition for the given EntityType UUID by reordering its properties as specified by the provided list.
+    operationId: reorderPropertyTypesInEntityType
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    parameters:
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+      - name: propertyTypeIds
+        in: path
+        required: true
+        schema:
+          type: array
+          items:
+            $ref: ./definitions/EDM/components.yaml#/propertyTypeId
+    responses:
+      "200":
+        description: Success
+entityTypeHierarchy:
+  patch:
+    summary: Get the EntityType hierarchy for the given EntityType UUID.
+    operationId: getEntityTypeHierarchy
+    parameters:
+      - name: entityTypeId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityTypeId"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
