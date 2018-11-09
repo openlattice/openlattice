@@ -27,8 +27,8 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         insertEntities(s3Key, data)
     }
 
-    override fun deleteObject(s3Key: String) {
-
+    override fun deleteObject(entitySetId: UUID, fqnColumn: String, propertyTable: String) {
+        TODO("implement")
     }
 
     override fun getObjects(objects: List<Any>): List<Any> {

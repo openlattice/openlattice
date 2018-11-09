@@ -52,8 +52,6 @@ class LocalAwsBlobDataService(private val datastoreConfiguration: DatastoreConfi
     }
 
     override fun deleteObject(s3Key: String) {
-        val column = it.value.type.toString()
-        val rs = s.executeQuery("SELECT $column FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid ")
         val deleteRequest = DeleteObjectRequest(datastoreConfiguration.bucketName, s3Key)
         try {
             s3.deleteObject(deleteRequest)

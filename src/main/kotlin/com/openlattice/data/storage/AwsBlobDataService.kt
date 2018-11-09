@@ -12,6 +12,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.openlattice.aws.AwsS3Pod.newS3Client
 import com.openlattice.datastore.configuration.DatastoreConfiguration
+import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -50,14 +51,7 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
     }
 
     override fun deleteObject(s3Key: String) {
-        val deleteRequest = DeleteObjectRequest(datastoreConfiguration.bucketName, s3Key)
-        try {
-            s3.deleteObject(deleteRequest)
-        } catch (e: AmazonServiceException) {
-            logger.warn("Amazon couldn't process call")
-        } catch (e: SdkClientException) {
-            logger.warn("Amazon couldn't be contacted or the client couldn't parse the response from S3")
-        }
+        TODO("implement")
     }
 
     override fun getObjects(objects: List<Any>): List<Any> {
