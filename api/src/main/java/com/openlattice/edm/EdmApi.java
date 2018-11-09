@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
@@ -65,6 +66,7 @@ public interface EdmApi {
     String NAME                = "name";
     String NAMESPACE           = "namespace";
     String NAMESPACES          = "namespaces";
+    String FULLQUALIFIED_NAME  = "fullQualifiedName";
     String ENTITY_SETS         = "entitySets";
     String ENTITY_TYPES        = "entityTypes";
     String ASSOCIATION_TYPES   = "associationTypes";
@@ -102,12 +104,14 @@ public interface EdmApi {
     String KEY_PATH              = "/key";
     String SUMMARY_PATH          = "/summary";
 
-    String NAMESPACE_PATH           = "/{" + NAMESPACE + "}";
-    String NAME_PATH                = "/{" + NAME + "}";
-    String ID_PATH                  = "/{" + ID + "}";
-    String ENTITY_TYPE_ID_PATH      = "/{" + ENTITY_TYPE_ID + "}";
-    String ASSOCIATION_TYPE_ID_PATH = "/{" + ASSOCIATION_TYPE_ID + "}";
-    String PROPERTY_TYPE_ID_PATH    = "/{" + PROPERTY_TYPE_ID + "}";
+    String NAMESPACE_PATH                   = "/{" + NAMESPACE + "}";
+    String NAME_PATH                        = "/{" + NAME + "}";
+    String FULLQUALIFIED_NAME_PATH          = "/{" + FULLQUALIFIED_NAME + "}";
+    String FULLQUALIFIED_NAME_PATH_REGEX    = "/{" + FULLQUALIFIED_NAME + ":.+" + "}";
+    String ID_PATH                          = "/{" + ID + "}";
+    String ENTITY_TYPE_ID_PATH              = "/{" + ENTITY_TYPE_ID + "}";
+    String ASSOCIATION_TYPE_ID_PATH         = "/{" + ASSOCIATION_TYPE_ID + "}";
+    String PROPERTY_TYPE_ID_PATH            = "/{" + PROPERTY_TYPE_ID + "}";
 
     String SCHEMA_BASE_PATH           = BASE + SCHEMA_PATH;
     String ENTITY_SETS_BASE_PATH      = BASE + ENTITY_SETS_PATH;
@@ -487,12 +491,21 @@ public interface EdmApi {
     /**
      * Get ID for entity type with given namespace and name.
      *
-     * @param namespace The namespace for a property.
-     * @param name The name for a property.
-     * @return ID for property type.
+     * @param namespace The namespace for an entity type.
+     * @param name The name for an entity type.
+     * @return ID for entity type.
      */
     @GET( BASE + IDS_PATH + ENTITY_TYPE_PATH + NAMESPACE_PATH + NAME_PATH )
     UUID getEntityTypeId( @Path( NAMESPACE ) String namespace, @Path( NAME ) String name );
+
+    /**
+     * Get ID for entity type with given {@link org.apache.olingo.commons.api.edm.FullQualifiedName}.
+     *
+     * @param fullQualifiedName The fullqualified name for a entity type.
+     * @return ID for entity type.
+     */
+    @GET( BASE + IDS_PATH + ENTITY_TYPE_PATH + FULLQUALIFIED_NAME_PATH )
+    UUID getEntityTypeId( @Path( FULLQUALIFIED_NAME ) FullQualifiedName fullQualifiedName);
 
     /**
      * Edit property type metadata for a given property type.

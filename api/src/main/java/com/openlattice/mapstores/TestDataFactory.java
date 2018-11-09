@@ -96,8 +96,21 @@ public final class TestDataFactory {
         return childEntityType( null, category, keys );
     }
 
+    public static EntityType entityType(
+            Optional<FullQualifiedName> fqn,
+            SecurableObjectType category,
+            PropertyType... keys ) {
+        return childEntityTypeWithPropertyType(
+                null,
+                fqn,
+                ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ),
+                category,
+                keys );
+    }
+
     public static EntityType childEntityType( UUID parentId, SecurableObjectType category, PropertyType... keys ) {
         return childEntityTypeWithPropertyType( parentId,
+                Optional.empty(),
                 ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ),
                 category,
                 keys );
@@ -105,6 +118,7 @@ public final class TestDataFactory {
 
     public static EntityType childEntityTypeWithPropertyType(
             UUID parentId,
+            Optional<FullQualifiedName> fqn,
             Set<UUID> propertyTypes,
             SecurableObjectType category,
             PropertyType... keys ) {
@@ -122,7 +136,7 @@ public final class TestDataFactory {
 
         return new EntityType(
                 UUID.randomUUID(),
-                fqn(),
+                fqn.orElseGet( TestDataFactory::fqn ),
                 RandomStringUtils.randomAlphanumeric( 5 ),
                 Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
                 ImmutableSet.of( fqn(), fqn(), fqn() ),
@@ -145,7 +159,12 @@ public final class TestDataFactory {
 
     public static AssociationType associationTypeWithProperties( Set<UUID> propertyTypes, PropertyType... keys ) {
         if ( propertyTypes.size() == 0 ) { return associationType( keys ); }
-        EntityType et = childEntityTypeWithPropertyType( null, propertyTypes, SecurableObjectType.AssociationType, keys );
+        EntityType et = childEntityTypeWithPropertyType(
+                null,
+                Optional.empty(),
+                propertyTypes,
+                SecurableObjectType.AssociationType,
+                keys );
         UUID ptId = propertyTypes.iterator().next();
         return new AssociationType(
                 Optional.of( et ),
