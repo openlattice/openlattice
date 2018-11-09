@@ -384,6 +384,10 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             authorizedPropertyTypes
                     .map {
                         val s = connection.createStatement()
+                        val propertyTable = quote(propertyTableName(it.key))
+                        if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                            byteBlobDataManager.deleteObject(entitySetId, authorizedPropertyTypes)
+                        }
                         val count: Int = s.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.key))
                         s.close()
                         count

@@ -9,8 +9,4 @@ interface ByteBlobDataManager {
     fun deleteObject(s3Key: String)
 
     fun getObjects(objects: List<Any>): List<Any>
-
-    fun getPresignedUrls(objects: List<Any>): List<URL>
-
-    fun getPresignedUrl(data: Any, expiration: Date): URL
 }

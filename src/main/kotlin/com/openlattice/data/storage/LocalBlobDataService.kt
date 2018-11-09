@@ -21,33 +21,10 @@ private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 
 
 @Service
-class LocalBlobDataService(private val datastoreConfiguration: DatastoreConfiguration, private val hds: HikariDataSource) : ByteBlobDataManager {
-
-    val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
-
-    val s3 = newS3Client(datastoreConfiguration)
-
-    fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
-        var builder = AmazonS3ClientBuilder.standard()
-        builder.region = datastoreConfiguration.regionName
-        builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
-        return builder.build()
-    }
+class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
 
     override fun putObject(s3Key: String, data: ByteArray) {
         insertEntities(s3Key, data)
-        var metadata = ObjectMetadata()
-        var dataInputStream = data.inputStream()
-        metadata.contentLength = dataInputStream.available().toLong()
-        metadata.contentType = "image"
-        val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
-        try {
-            s3.putObject(putRequest)
-        } catch (e: AmazonServiceException) {
-            logger.warn("Amazon couldn't process call")
-        } catch (e: SdkClientException) {
-            logger.warn("Amazon couldn't be contacted or the client couldn't parse the response from S3")
-        }
     }
 
     override fun deleteObject(s3Key: String) {
@@ -55,31 +32,7 @@ class LocalBlobDataService(private val datastoreConfiguration: DatastoreConfigur
     }
 
     override fun getObjects(objects: List<Any>): List<Any> {
-        return getPresignedUrls(objects)
-    }
-
-    override fun getPresignedUrls(objects: List<Any>): List<URL> {
-        var expirationTime = Date()
-        var timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
-        expirationTime.time = timeToLive
-        var presignedUrls = mutableListOf<URL>()
-        for (data in objects) {
-            presignedUrls.add(getPresignedUrl(data, expirationTime))
-        }
-        return presignedUrls
-    }
-
-    override fun getPresignedUrl(data: Any, expiration: Date): URL {
-        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, data.toString()).withMethod(HttpMethod.GET).withExpiration(expiration)
-        var url = URL("http://")
-        try {
-            url = s3.generatePresignedUrl(urlRequest)
-        } catch (e: AmazonServiceException) {
-            logger.warn("Amazon couldn't process call")
-        } catch (e: SdkClientException) {
-            logger.warn("Amazon S3 couldn't be contacted or the client couldn't parse the response from S3")
-        }
-        return url
+        TODO("implement")
     }
 
     fun insertEntities(s3Key: String, value: ByteArray) {
