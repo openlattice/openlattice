@@ -106,6 +106,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
             PropertyType... key ) {
         EntityType expected = TestDataFactory.childEntityTypeWithPropertyType(
                 baseTypeId,
+                Optional.empty(),
                 propertyTypes,
                 SecurableObjectType.EntityType,
                 key );
