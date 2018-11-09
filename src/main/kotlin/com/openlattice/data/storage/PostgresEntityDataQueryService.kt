@@ -21,6 +21,7 @@
 
 package com.openlattice.data.storage
 
+import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
@@ -308,6 +309,7 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum()
             preparedStatements.values.forEach(PreparedStatement::close)
             entitySetPreparedStatement.close()
+            checkState( updatedEntityCount >=  entities.size , "Updated entity metadata count mismatch")
 
             logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
@@ -640,13 +642,9 @@ fun upsertEntity(entitySetId: UUID, version: Long): String {
             LAST_PROPAGATE.name
     )
     //Last writer wins for entities
-    return "INSERT INTO ${IDS.name} (${columns.joinToString(",")}) " +
-            "VALUES( '$entitySetId', ?,$version,ARRAY[$version],now(),'-infinity','-infinity','-infinity') " +
-            "ON CONFLICT (${ID_VALUE.name}) " +
-            "DO UPDATE SET versions = ${IDS.name}.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "${VERSION.name} = EXCLUDED.${VERSION.name}, " +
-            "${LAST_WRITE.name} = EXCLUDED.${LAST_WRITE.name} " +
-            "WHERE EXCLUDED.${VERSION.name} > abs(${IDS.name}.version) "
+    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], " +
+            "${VERSION.name} = GREATEST(${VERSION.name},$version), ${LAST_WRITE.name} = now() " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = ?"
 }
 
 fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: String, version: Long): String {
