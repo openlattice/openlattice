@@ -369,9 +369,28 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
         return connection.use {
             return authorizedPropertyTypes
                     .map {
-                        val s = connection.createStatement()
-                        val count: Int = s.executeUpdate(deletePropertiesOfEntities(entitySetId, it.key, entityKeyIds))
-                        s.close()
+                        val ps = connection.prepareStatement(deletePropertiesOfEntities(entitySetId, it.key))
+                        var propertyEntry = it
+                        if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
+
+                        }
+                        entityKeyIds.forEach {
+                            ps.setObject(1, it)
+                            ps.addBatch()
+                            if (propertyEntry.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                                val propertyTable = quote(propertyTableName(propertyEntry.key))
+                                val fqnColumn = propertyEntry.value.type.toString()
+                                val binaryPS = connection.prepareStatement("SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) ")
+                                ps.setObject(1, it)
+                                val rs = binaryPS.executeQuery()
+                                while (rs.next()) {
+                                    byteBlobDataManager.deleteObject(rs.getString(fqnColumn))
+                                }
+                                binaryPS.close()
+                            }
+                        }
+                        val count: Int = ps.executeBatch().sum()
+                        ps.close()
                         count
                     }
                     .sum()
@@ -384,9 +403,15 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
             authorizedPropertyTypes
                     .map {
                         val s = connection.createStatement()
-                        val propertyTable = quote(propertyTableName(it.key))
                         if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
-                            byteBlobDataManager.deleteObject(entitySetId, authorizedPropertyTypes)
+                            val propertyTable = quote(propertyTableName(it.key))
+                            val fqnColumn = it.value.type.toString()
+                            val ps = connection.prepareStatement("SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid ")
+                            val rs = ps.executeQuery()
+                            while (rs.next()) {
+                                byteBlobDataManager.deleteObject(rs.getString(fqnColumn))
+                            }
+                            ps.close()
                         }
                         val count: Int = s.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.key))
                         s.close()
@@ -646,7 +671,7 @@ fun deletePropertiesInEntitySet(entitySetId: UUID, propertyTypeId: UUID): String
     return "DELETE FROM $propertyTable WHERE ${ENTITY_SET_ID.name} = '$entitySetId'::uuid "
 }
 
-fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID, entityKeyIds: Set<UUID>): String {
+fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID): String {
     return deletePropertiesInEntitySet(
             entitySetId, propertyTypeId
     ) + " WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
