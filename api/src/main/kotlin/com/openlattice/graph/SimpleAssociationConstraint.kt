@@ -21,8 +21,15 @@
 
 package com.openlattice.graph
 
-data class AssociationReference(
-        val srcIndex: Int,
-        val dstIndex: Int,
-        val edgeIndex: Int
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.openlattice.client.serialization.SerializationConstants
+import java.util.*
+
+data class SimpleAssociationConstraint(
+//        @JsonProperty(SerializationConstants.ASSOCIATION_TYPE_ID) val associationTypeId: UUID,
+        @JsonProperty(SerializationConstants.ASSOCIATION_DETAILS) val association: Pair<Int,Int>,
+        @JsonProperty(SerializationConstants.ASSOCIATION_CONSTRAINT) val constraint: GraphEntityConstraint
 )
+
+
+

@@ -29,6 +29,7 @@ public final class SerializationConstants {
     public static final String ACL_OBJECT_PATH                  = "aclKey";                  // Correspond to single hierarchy of securable objects.
     public static final String ACL_OBJECT_ROOT                  = "aclRoot";
     public static final String ACTION                           = "action";
+    public static final String AGGREGATIONS                     = "aggregations";
     public static final String AGGREGATION_TYPE                 = "aggregationType";
     public static final String ANALYZER                         = "analyzer";
     public static final String APPS                             = "apps";
@@ -38,6 +39,7 @@ public final class SerializationConstants {
     public static final String ASSOCIATIONS                     = "associations";
     public static final String ASSOCIATIONS_ENTITY_KEY_MAPPINGS = "associationsEntityKeyMappings";
     public static final String ASSOCIATION_AGGREGATIONS         = "associationAggregations";
+    public static final String ASSOCIATION_CONSTRAINT           = "associationConstraint";
     public static final String ASSOCIATION_COUNT                = "associationCount";
     public static final String ASSOCIATION_DEFINITIONS_FIELD    = "associationDefinitions";
     public static final String ASSOCIATION_DETAILS              = "associationDetails";
