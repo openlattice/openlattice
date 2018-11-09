@@ -7,7 +7,6 @@ import com.openlattice.shuttle.ShuttleCli
 import com.openlattice.shuttle.main
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.io.File
-import org.springframework.util.AntPathMatcher
 
 
 
@@ -62,10 +61,6 @@ open class SetupTestData: MultipleAuthenticatedUsersBase() {
          */
         @JvmStatic
         fun importDataSet( flightFileName: String, dataFileName: String ) {
-            val pathMatcher = AntPathMatcher()
-
-            pathMatcher.match("/test/{.+}", "/test/alma.al")
-
             loginAs( "admin" )
             val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
 

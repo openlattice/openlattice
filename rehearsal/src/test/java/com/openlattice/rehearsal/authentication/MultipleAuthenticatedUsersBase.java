@@ -49,6 +49,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
 import retrofit2.Retrofit;
 
@@ -149,17 +150,23 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return pt;
     }
 
+    public static EntityType createEntityType( FullQualifiedName fqn ) {
+        return createEntityType( Optional.of( fqn ), SecurableObjectType.EntityType );
+    }
+
     public static EntityType createEntityType( UUID... propertyTypes ) {
-        return createEntityType(SecurableObjectType.EntityType, propertyTypes);
+        return createEntityType( Optional.empty(), SecurableObjectType.EntityType, propertyTypes );
     }
 
     public static EntityType createEdgeEntityType( UUID... propertyTypes ) {
-        return createEntityType( SecurableObjectType.AssociationType, propertyTypes );
+        return createEntityType( Optional.empty(), SecurableObjectType.AssociationType, propertyTypes );
     }
 
-    private static EntityType createEntityType( SecurableObjectType category,  UUID... propertyTypes ) {
+    private static EntityType createEntityType( Optional<FullQualifiedName> fqn,
+                                                SecurableObjectType category,
+                                                UUID... propertyTypes ) {
         PropertyType k = createPropertyType();
-        EntityType expected = TestDataFactory.entityType( category, k );
+        EntityType expected = TestDataFactory.entityType( fqn, category, k );
         expected.removePropertyTypes( expected.getProperties() );
 
         if ( propertyTypes == null || propertyTypes.length == 0 ) {

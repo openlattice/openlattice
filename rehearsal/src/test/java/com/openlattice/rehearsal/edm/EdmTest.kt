@@ -21,9 +21,13 @@
 
 package com.openlattice.rehearsal.edm
 
+import com.google.common.collect.LinkedHashMultimap
+import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.edm.EdmApi
 import com.openlattice.edm.type.AssociationType
+import com.openlattice.edm.type.EntityType
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.GeneralException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -118,6 +122,23 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You cannot create an edge type with not an AssociationType category", true))
+        }
+    }
+
+    @Test
+    fun testGetEntityTypeIdByFqn() {
+        val validFqns = setOf( "a.a", "a.a.a", "aaaa.aa", "A.A", "AAA.AAA", "A_a.a_A", "123.456", "\"\',!.: +-_" )
+        val entityTypeFqns = edmApi.entityTypes.map { it.type.fullQualifiedNameAsString }
+        val entityTypeFqnsToIds = edmApi.entityTypes.associate { it.type.fullQualifiedNameAsString to it.id }
+        validFqns.forEach {
+            val expectedId  = if( entityTypeFqns.contains( it ) ) {
+                entityTypeFqnsToIds[it]
+            } else {
+                createEntityType( FullQualifiedName( it ) ).id
+            }
+
+            val actualId = edmApi.getEntityTypeId(FullQualifiedName( it ))
+            Assert.assertEquals( expectedId, actualId )
         }
     }
 }
