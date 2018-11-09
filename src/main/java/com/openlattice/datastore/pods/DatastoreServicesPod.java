@@ -332,14 +332,15 @@ public class DatastoreServicesPod {
     }
 
     @Bean(name = "datastoreConfiguration")
-    @Profile( ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE )
-    public DatastoreConfiguration getLocalDatastoreConfiguration() {
+    @Profile( Profiles.LOCAL_AWS_CONFIGURATION_PROFILE )
+    public DatastoreConfiguration getLocalAwsDatastoreConfiguration() {
         DatastoreConfiguration config = ResourceConfigurationLoader.loadConfiguration( DatastoreConfiguration.class );
-        logger.info( "Using local datastore configuration: {}", config );
+        logger.info( "Using local aws datastore configuration: {}", config );
         return config;
     }
 
     @Bean( name = "datastoreConfiguration" )
+    @Profile( {Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE} )
     public DatastoreConfiguration getAwsDatastoreConfiguration() {
         DatastoreConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( awsS3,
                 awsLaunchConfig.getBucket(),
@@ -350,10 +351,16 @@ public class DatastoreServicesPod {
     }
 
     @Bean(name = "byteBlobDataManager")
-    @DependsOn("datastoreConfiguration")
     @Profile(Profiles.LOCAL_CONFIGURATION_PROFILE)
     public ByteBlobDataManager localBlobDataManager() {
-        return new LocalBlobDataService(getLocalDatastoreConfiguration(), hikariDataSource);
+        return new LocalBlobDataService(hikariDataSource);
+    }
+
+    @Bean(name = "byteBlobDataManager")
+    @DependsOn("datastoreConfiguration")
+    @Profile(Profiles.LOCAL_AWS_CONFIGURATION_PROFILE)
+    public ByteBlobDataManager localAwsBlobDataManager() {
+        return new LocalAwsBlobDataService(getLocalAwsDatastoreConfiguration());
     }
 
     @Bean(name = "byteBlobDataManager")
