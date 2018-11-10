@@ -24,8 +24,11 @@ package com.openlattice.linking
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.ListeningExecutorService
+import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.edm.EntitySet
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.clustering.ClusterUpdate
 import com.openlattice.postgres.streams.PostgresIterable
 import org.deeplearning4j.clustering.strategy.BaseClusteringStrategy
@@ -53,6 +56,7 @@ internal const val MINIMUM_SCORE = 0.75
 @Component
 class RealtimeLinkingService
 (
+        hazelcastInstance: HazelcastInstance,
         private val blocker: Blocker,
         private val matcher: Matcher,
         private val ids: EntityKeyIdService,
@@ -69,6 +73,7 @@ class RealtimeLinkingService
     }
 
     private val running = ReentrantLock()
+    private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     /**
      * Linking:
      * 1) For each new person entity perform blocking
@@ -189,20 +194,27 @@ class RealtimeLinkingService
     fun runLinking() {
         if (running.tryLock()) {
             try {
-                gqs.getEntitySetsNeedingLinking(linkableTypes).forEach {
-                    logger.info("Running linking on entity set {}.", it)
+                //TODO: Make this more efficient than pulling the entire list of entity sets locally.
+                //For example use a fast aggregator or directly query postgres and partition operation of linking
+                val linkableEntitySets = entitySets
+                        .values
+                        .filter { linkableTypes.contains(it.entityTypeId) }
+                        .map(EntitySet::getId)
+                        .toSet()
 
-                    var entitiesNeedingLinking = gqs.getEntitiesNeedingLinking(it).toList()
 
-                    while (entitiesNeedingLinking.isNotEmpty()) {
-                        val sw = Stopwatch.createStarted()
-                        refreshLinks(it, entitiesNeedingLinking)
-                        entitiesNeedingLinking = gqs.getEntitiesNeedingLinking(it).toList()
-                        logger.info(
-                                "Linked {} entities in {} ms", entitiesNeedingLinking.size,
-                                sw.elapsed(TimeUnit.MILLISECONDS)
-                        )
-                    }
+                logger.info("Running linking using the following linkable entity sets {}.", linkableEntitySets)
+
+                var entitiesNeedingLinking = gqs.getEntitiesNeedingLinking(linkableEntitySets).toList()
+
+                while (entitiesNeedingLinking.isNotEmpty()) {
+                    val sw = Stopwatch.createStarted()
+                    refreshLinks(it, entitiesNeedingLinking)
+                    entitiesNeedingLinking = gqs.getEntitiesNeedingLinking(linkableEntitySets).toList()
+                    logger.info(
+                            "Linked {} entities in {} ms", entitiesNeedingLinking.size,
+                            sw.elapsed(TimeUnit.MILLISECONDS)
+                    )
                 }
             } finally {
                 running.unlock()
