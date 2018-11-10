@@ -219,6 +219,8 @@ class RealtimeLinkingService
             } finally {
                 running.unlock()
             }
+        } else {
+            logger.info("Linking is currently running. Not starting new task.")
         }
     }
 
