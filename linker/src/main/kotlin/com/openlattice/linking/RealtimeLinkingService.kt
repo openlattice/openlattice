@@ -98,7 +98,7 @@ class RealtimeLinkingService
 
                     false
                 }
-                .map {
+                .forEach {
                     //block contains element being blocked
                     val blockKey = it.first
                     val elem = it.second[blockKey]!!
@@ -128,15 +128,19 @@ class RealtimeLinkingService
                                         clusterLocks[it.key]!!.unlock()
                                     }
                                 }
+                        val clusterUpdate: ClusterUpdate
                         if (maybeBestCluster == null) {
                             val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
                             clusterLocks.getOrPut(clusterId) { ReentrantLock() }.lock()
                             val block = blockKey to mapOf(blockKey to elem)
-                            return@map ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
+                            clusterUpdate = ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
+                        } else {
+                            val bestCluster = maybeBestCluster!!
+                            clusterUpdate = ClusterUpdate(bestCluster.clusterId, blockKey, bestCluster.cluster)
                         }
-
-                        val bestCluster = maybeBestCluster!!
-                        ClusterUpdate(bestCluster.clusterId, blockKey, bestCluster.cluster)
+                        gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
+                        gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+                        clusterLocks[clusterUpdate.clusterId]!!.unlock()
                     } catch (ex: Exception) {
                         if (clusterUpdateLock.isLocked) {
                             clusterUpdateLock.unlock()
@@ -148,11 +152,6 @@ class RealtimeLinkingService
                         }
                         throw IllegalStateException("Error occured while performing linking.", ex)
                     }
-                }
-                .forEach { clusterUpdate ->
-                    gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
-                    gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
-                    clusterLocks[clusterUpdate.clusterId]!!.unlock()
                 }
     }
 
