@@ -48,6 +48,7 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.*;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.configuration.DatastoreConfiguration;
+import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.datastore.services.*;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
@@ -96,21 +97,21 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
 public class DatastoreServicesPod {
 
     @Inject
-    private Jdbi                     jdbi;
+    private Jdbi                      jdbi;
     @Inject
-    private PostgresTableManager     tableManager;
+    private PostgresTableManager      tableManager;
     @Inject
-    private HazelcastInstance        hazelcastInstance;
+    private HazelcastInstance         hazelcastInstance;
     @Inject
-    private HikariDataSource         hikariDataSource;
+    private HikariDataSource          hikariDataSource;
     @Inject
-    private Auth0Configuration       auth0Configuration;
+    private Auth0Configuration        auth0Configuration;
     @Inject
-    private ListeningExecutorService executor;
+    private ListeningExecutorService  executor;
     @Inject
-    private EventBus                 eventBus;
+    private EventBus                  eventBus;
     @Inject
-    private Neuron                   neuron;
+    private Neuron                    neuron;
     @Autowired( required = false )
     private AmazonS3                  awsS3;
     @Autowired( required = false )
@@ -331,8 +332,8 @@ public class DatastoreServicesPod {
         return new SearchService( eventBus );
     }
 
-    @Bean(name = "datastoreConfiguration")
-    @Profile( Profiles.LOCAL_AWS_CONFIGURATION_PROFILE )
+    @Bean( name = "datastoreConfiguration" )
+    @Profile( { Profiles.LOCAL_CONFIGURATION_PROFILE } )
     public DatastoreConfiguration getLocalAwsDatastoreConfiguration() {
         DatastoreConfiguration config = ResourceConfigurationLoader.loadConfiguration( DatastoreConfiguration.class );
         logger.info( "Using local aws datastore configuration: {}", config );
@@ -340,7 +341,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean( name = "datastoreConfiguration" )
-    @Profile( {Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE} )
+    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
     public DatastoreConfiguration getAwsDatastoreConfiguration() {
         DatastoreConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( awsS3,
                 awsLaunchConfig.getBucket(),
@@ -350,24 +351,25 @@ public class DatastoreServicesPod {
         return config;
     }
 
-    @Bean(name = "byteBlobDataManager")
-    @Profile(Profiles.LOCAL_CONFIGURATION_PROFILE)
+    @Bean( name = "byteBlobDataManager" )
+    @DependsOn( "datastoreConfiguration" )
+    @Profile( { DatastoreProfiles.MEDIA_LOCAL_PROFILE } )
     public ByteBlobDataManager localBlobDataManager() {
-        return new LocalBlobDataService(hikariDataSource);
+        return new LocalBlobDataService( hikariDataSource );
     }
 
-    @Bean(name = "byteBlobDataManager")
-    @DependsOn("datastoreConfiguration")
-    @Profile(Profiles.LOCAL_AWS_CONFIGURATION_PROFILE)
+    @Bean( name = "byteBlobDataManager" )
+    @DependsOn( "datastoreConfiguration" )
+    @Profile( { DatastoreProfiles.MEDIA_LOCAL_AWS_PROFILE } )
     public ByteBlobDataManager localAwsBlobDataManager() {
-        return new LocalAwsBlobDataService(getLocalAwsDatastoreConfiguration());
+        return new LocalAwsBlobDataService( getLocalAwsDatastoreConfiguration() );
     }
 
-    @Bean(name = "byteBlobDataManager")
-    @DependsOn("datastoreConfiguration")
-    @Profile({Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE})
+    @Bean( name = "byteBlobDataManager" )
+    @DependsOn( "datastoreConfiguration" )
+    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
     public ByteBlobDataManager awsBlobDataManager() {
-        return new AwsBlobDataService(getAwsDatastoreConfiguration());
+        return new AwsBlobDataService( getAwsDatastoreConfiguration() );
     }
 
     @PostConstruct
