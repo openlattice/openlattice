@@ -58,7 +58,7 @@ import kotlin.system.exitProcess
  */
 
 private const val EXPIRATION_MILLIS = 60000L
-private const val INDEX_RATE = 10000L
+private const val INDEX_RATE = 30000L
 
 class BackgroundIndexingService(
         private val hds: HikariDataSource,

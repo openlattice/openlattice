@@ -48,7 +48,7 @@ private const val AVG_SCORE_FIELD = "avg_score"
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
 
 
-    override fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<UUID> {
+    override fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID,UUID>> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(ENTITY_KEY_IDS_NEEDING_LINKING)
@@ -57,7 +57,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
             ps.setObject(2, limit)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
-        }, Function { ResultSetAdapters.id(it) })
+        }, Function { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) })
     }
 
     override fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int {
