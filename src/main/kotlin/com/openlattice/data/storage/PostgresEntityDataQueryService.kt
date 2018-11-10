@@ -379,14 +379,9 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                             ps.addBatch()
                             if (propertyEntry.value.datatype == EdmPrimitiveTypeKind.Binary) {
                                 val propertyTable = quote(propertyTableName(propertyEntry.key))
-                                val fqnColumn = propertyEntry.value.type.toString()
-                                val binaryPS = connection.prepareStatement("SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) ")
-                                ps.setObject(1, it)
-                                val rs = binaryPS.executeQuery()
-                                while (rs.next()) {
-                                    byteBlobDataManager.deleteObject(rs.getString(fqnColumn))
-                                }
-                                binaryPS.close()
+                                val fqn = propertyEntry.value.type.toString()
+                                val fqnColumn = quote(fqn)
+                                deletePropertyOfEntityFromS3(propertyTable, fqn, fqnColumn, entitySetId, it)
                             }
                         }
                         val count: Int = ps.executeBatch().sum()
@@ -405,13 +400,9 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                         val s = connection.createStatement()
                         if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
                             val propertyTable = quote(propertyTableName(it.key))
-                            val fqnColumn = it.value.type.toString()
-                            val ps = connection.prepareStatement("SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid ")
-                            val rs = ps.executeQuery()
-                            while (rs.next()) {
-                                byteBlobDataManager.deleteObject(rs.getString(fqnColumn))
-                            }
-                            ps.close()
+                            val fqn = it.value.type.toString()
+                            val fqnColumn = quote(fqn)
+                            deletePropertyInEntitySetFromS3(propertyTable, fqn, fqnColumn, entitySetId)
                         }
                         val count: Int = s.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.key))
                         s.close()
@@ -419,6 +410,38 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                     }
                     .sum()
         }
+    }
+
+    fun deletePropertyOfEntityFromS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID) {
+        val connection = hds.connection
+        val ps = connection.prepareStatement(selectPropertyOfEntityInS3(propertyTable, fqn, fqnColumn, entitySetId, entityKeyId))
+        ps.setObject(1, entityKeyId)
+        val rs = ps.executeQuery()
+        while (rs.next()) {
+            byteBlobDataManager.deleteObject(rs.getString(fqn))
+        }
+        ps.close()
+        connection.close()
+    }
+
+
+    fun deletePropertyInEntitySetFromS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID) {
+        val connection = hds.connection
+        val ps = connection.prepareStatement(selectPropertyInEntitySetInS3(propertyTable, fqn, fqnColumn, entitySetId))
+        val rs = ps.executeQuery()
+        while (rs.next()) {
+            byteBlobDataManager.deleteObject(rs.getString(fqn))
+        }
+        ps.close()
+    }
+
+
+    fun selectPropertyOfEntityInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID) : String {
+        return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    }
+
+    fun selectPropertyInEntitySetInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID) : String {
+        return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid "
     }
 
     /**
