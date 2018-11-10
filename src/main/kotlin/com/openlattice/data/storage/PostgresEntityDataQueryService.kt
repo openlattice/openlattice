@@ -371,9 +371,6 @@ class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
                     .map {
                         val ps = connection.prepareStatement(deletePropertiesOfEntities(entitySetId, it.key))
                         var propertyEntry = it
-                        if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
-
-                        }
                         entityKeyIds.forEach {
                             ps.setObject(1, it)
                             ps.addBatch()
