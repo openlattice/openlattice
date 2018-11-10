@@ -140,13 +140,14 @@ public class IndexerPostConfigurationServicesPod {
     @Bean
     public RealtimeLinkingService linkingService() throws IOException {
         var lc = linkingConfiguration();
-        return new RealtimeLinkingService( blocker(),
+        return new RealtimeLinkingService( hazelcastInstance,
+                blocker(),
                 matcher,
                 idService(),
                 dataLoader(),
                 lqs(),
                 executor,
                 edm.getEntityTypeUuids( lc.getEntityTypes() ),
-                lc.getBlockSize());
+                lc.getBlockSize() );
     }
 }
