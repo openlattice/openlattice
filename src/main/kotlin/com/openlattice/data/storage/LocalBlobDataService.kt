@@ -24,29 +24,59 @@ private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
 
     override fun putObject(s3Key: String, data: ByteArray) {
-        insertEntities(s3Key, data)
+        insertEntity(s3Key, data)
     }
 
     override fun deleteObject(s3Key: String) {
-        TODO("implement")
+        deleteEntity(s3Key)
     }
 
     override fun getObjects(objects: List<Any>): List<Any> {
-        TODO("implement")
+        return getEntities(objects)
     }
 
-    fun insertEntities(s3Key: String, value: ByteArray) {
+    fun insertEntity(s3Key: String, value: ByteArray) {
         val connection = hds.connection
-        val preparedStatement = connection.prepareStatement(insertEntity())
+        val preparedStatement = connection.prepareStatement(insertEntitySql())
         preparedStatement.setString(1, s3Key)
         preparedStatement.setBytes(2, value)
-        val update = preparedStatement.execute()
+        preparedStatement.execute()
         preparedStatement.close()
         connection.close()
     }
 
+    fun deleteEntity(s3Key: String) {
+        val connection = hds.connection
+        val preparedStatement = connection.prepareStatement(deleteEntitySql(s3Key))
+        preparedStatement.executeUpdate()
+        preparedStatement.close()
+        connection.close()
+    }
 
-    fun insertEntity(): String {
+    fun getEntities(objects: List<Any>): List<ByteArray> {
+        val entities = listOf<ByteArray>()
+        val connection = hds.connection
+        connection.use {
+            val ps = connection.prepareStatement(selectEntitySql())
+            for (data in objects) {
+                ps.setObject(1, data)
+                ps.addBatch()
+            }
+            val rs = ps.executeBatch()
+            //something to parse the resultset and build list of values
+        }
+        return entities
+    }
+
+    fun insertEntitySql(): String {
         return "INSERT INTO mock_s3_bucket(key, object) VALUES(?, ?)"
+    }
+
+    fun deleteEntitySql(s3Key: String): String {
+        return "DELETE FROM mock_s3_bucket WHERE key = '$s3Key'"
+    }
+
+    fun selectEntitySql(): String {
+        return "SELECT \"value\" FROM mock_s3_bucket WHERE key = ?"
     }
 }
