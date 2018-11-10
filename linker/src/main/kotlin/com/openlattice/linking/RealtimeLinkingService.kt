@@ -112,10 +112,18 @@ class RealtimeLinkingService
                     //While a best cluster is being selected and updated we can't have other clusters being updated
 
                     try {
+                        logger.info("Acquiring cluster update lock.")
                         clusterUpdateLock.lock()
+                        logger.info("Acquired cluster update lock.")
                         val requiredClusters = gqs.getIdsOfClustersContaining(dataKeys).toList()
+                        logger.info(
+                                "Currently held cluster locks: {}",
+                                clusterLocks.filter { it.value.isLocked }.map { it.key })
+                        logger.info("Acquiring locks for required clusters: {}", requiredClusters)
                         requiredClusters.forEach { clusterLocks.getOrPut(it) { ReentrantLock() }.lock() }
+                        logger.info("Acquired locks for required clusters: {}", requiredClusters)
                         clusterUpdateLock.unlock()
+                        logger.info("Released cluster update lock.")
 
                         val clusters = gqs.getClustersContaining(requiredClusters)
 
