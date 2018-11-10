@@ -112,7 +112,7 @@ class BackgroundIndexingService(
                         .mapToInt(this::indexEntitySet)
                         .sum()
 
-                lockedEntitySets.forEach(indexingLocks::delete)
+                lockedEntitySets.map(EntitySet::getId).forEach(indexingLocks::delete)
 
                 logger.info(
                         "Completed indexing {} elements in {} ms",
