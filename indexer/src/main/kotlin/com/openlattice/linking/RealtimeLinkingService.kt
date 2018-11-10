@@ -189,9 +189,10 @@ class RealtimeLinkingService
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, entitySetId)
     }
 
-    @Scheduled(fixedRate = 30000)
     @Timed
+    @Scheduled(fixedRate = 30000)
     fun runLinking() {
+        logger.info("Trying to start linking job.")
         if (running.tryLock()) {
             try {
                 //TODO: Make this more efficient than pulling the entire list of entity sets locally.
@@ -222,6 +223,8 @@ class RealtimeLinkingService
                             sw.elapsed(TimeUnit.MILLISECONDS)
                     )
                 }
+            } catch (ex: Exception) {
+                logger.info("Encountered error while linking!", ex)
             } finally {
                 running.unlock()
             }
