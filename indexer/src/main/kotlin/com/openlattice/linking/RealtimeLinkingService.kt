@@ -129,32 +129,37 @@ class RealtimeLinkingService
 
 
                         var maybeBestCluster: ScoredCluster? = null
-                        var highestScore = 10.0 //Arbitrary any negative value should suffice
+                        var highestScore = 10.0 //Arbitrary any positive value should suffice
 
                         clusters
                                 .forEach {
                                     val scoredCluster = cluster(blockKey, it, ::completeLinkCluster)
                                     if (scoredCluster.score > MINIMUM_SCORE && (highestScore > scoredCluster.score || highestScore >= 10)) {
                                         highestScore = scoredCluster.score
+                                        Optional
+                                                .ofNullable(maybeBestCluster?.clusterId)
+                                                .ifPresent { clusterLocks[it]?.unlock() }
                                         maybeBestCluster = scoredCluster
                                     } else {
                                         clusterLocks[it.key]!!.unlock()
                                     }
                                 }
-                        val clusterUpdate: ClusterUpdate
-                        if (maybeBestCluster == null) {
+                        val clusterUpdate = if (maybeBestCluster == null) {
                             val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
                             clusterLocks.getOrPut(clusterId) { ReentrantLock() }.lock()
                             val block = blockKey to mapOf(blockKey to elem)
-                            clusterUpdate = ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
+                            ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
                         } else {
                             val bestCluster = maybeBestCluster!!
-                            clusterUpdate = ClusterUpdate(bestCluster.clusterId, blockKey, bestCluster.cluster)
+                            ClusterUpdate(bestCluster.clusterId, blockKey, bestCluster.cluster)
                         }
+
                         gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
                         gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
                         clusterLocks[clusterUpdate.clusterId]!!.unlock()
+
                     } catch (ex: Exception) {
+                        logger.error("An error occurred while performing linking.", ex)
                         if (clusterUpdateLock.isLocked) {
                             clusterUpdateLock.unlock()
                         }
