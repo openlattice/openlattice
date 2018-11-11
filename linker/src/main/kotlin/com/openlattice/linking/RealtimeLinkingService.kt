@@ -68,7 +68,7 @@ class RealtimeLinkingService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
-        private val clusterLocks: MutableMap<UUID, ReentrantLock> = CacheBuilder
+        private val clusterLocks: MutableMap<UUID, ReentrantLock> = mutableMapOf()
         private val clusterUpdateLock = ReentrantLock()
     }
 
