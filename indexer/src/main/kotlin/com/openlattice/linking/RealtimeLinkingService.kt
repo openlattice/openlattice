@@ -68,7 +68,7 @@ class RealtimeLinkingService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
-        private val clusterLocks: MutableMap<UUID, ReentrantLock> = mutableMapOf()
+        private val clusterLocks: MutableMap<UUID, ReentrantLock> = CacheBuilder
         private val clusterUpdateLock = ReentrantLock()
     }
 
@@ -235,6 +235,8 @@ class RealtimeLinkingService
                             "Linked {} entities in {} ms", entitiesNeedingLinking.size,
                             sw.elapsed(TimeUnit.MILLISECONDS)
                     )
+                    clusterLocks.clear()
+                    logger.info("Cleared {} cluster locks.", clusterLocks.size)
                 }
             } catch (ex: Exception) {
                 logger.info("Encountered error while linking!", ex)
