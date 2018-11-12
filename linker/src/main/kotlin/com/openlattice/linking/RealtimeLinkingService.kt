@@ -108,23 +108,26 @@ class RealtimeLinkingService
                     //block contains element being blocked
                     val blockKey = it.first
                     val elem = it.second[blockKey]!!
+                    val sw = Stopwatch.createStarted()
+                    logger.info("Initializing matching for block {}", blockKey)
                     val initializedBlock = matcher.initialize(it)
+                    logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
                     val dataKeys = collectKeys(initializedBlock.second)
                     //While a best cluster is being selected and updated we can't have other clusters being updated
 
                     try {
-                        logger.info("Acquiring cluster update lock.")
+                        logger.debug("Acquiring cluster update lock.")
                         clusterUpdateLock.lock()
-                        logger.info("Acquired cluster update lock.")
+                        logger.debug("Acquired cluster update lock.")
                         val requiredClusters = gqs.getIdsOfClustersContaining(dataKeys).toList()
-                        logger.info(
+                        logger.debug(
                                 "Currently held cluster locks: {}",
                                 clusterLocks.filter { it.value.isLocked }.map { it.key })
-                        logger.info("Acquiring locks for required clusters: {}", requiredClusters)
+                        logger.debug("Acquiring locks for required clusters: {}", requiredClusters)
                         requiredClusters.forEach { clusterLocks.getOrPut(it) { ReentrantLock() }.lock() }
-                        logger.info("Acquired locks for required clusters: {}", requiredClusters)
+                        logger.debug("Acquired locks for required clusters: {}", requiredClusters)
                         clusterUpdateLock.unlock()
-                        logger.info("Released cluster update lock.")
+                        logger.debug("Released cluster update lock.")
 
                         val clusters = gqs.getClustersContaining(requiredClusters)
 
