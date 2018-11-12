@@ -31,8 +31,8 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         deleteEntity(s3Key)
     }
 
-    override fun getObjects(objects: List<Any>): List<Any> {
-        return getEntities(objects)
+    override fun getObjects(keys: List<Any>): List<Any> {
+        return getEntities(keys)
     }
 
     fun insertEntity(s3Key: String, value: ByteArray) {
@@ -53,17 +53,17 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         connection.close()
     }
 
-    fun getEntities(objects: List<Any>): List<ByteArray> {
-        val entities = listOf<ByteArray>()
+    fun getEntities(keys: List<Any>): List<ByteArray> {
+        val entities = mutableListOf<ByteArray>()
         val connection = hds.connection
         connection.use {
-            val ps = connection.prepareStatement(selectEntitySql())
-            for (data in objects) {
-                ps.setObject(1, data)
-                ps.addBatch()
+            for (key in keys) {
+                val ps = connection.prepareStatement(selectEntitySql(key as String))
+                val rs = ps.executeQuery()
+                while (rs.next()) {
+                    entities.add(rs.getBytes(1))
+                }
             }
-            val rs = ps.executeBatch()
-            //something to parse the resultset and build list of values
         }
         return entities
     }
@@ -76,7 +76,7 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         return "DELETE FROM mock_s3_bucket WHERE key = '$s3Key'"
     }
 
-    fun selectEntitySql(): String {
-        return "SELECT \"value\" FROM mock_s3_bucket WHERE key = ?"
+    fun selectEntitySql(s3Key: String): String {
+        return "SELECT \"object\" FROM mock_s3_bucket WHERE key = '$s3Key'"
     }
 }
