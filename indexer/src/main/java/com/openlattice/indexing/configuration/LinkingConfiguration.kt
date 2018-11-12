@@ -21,36 +21,43 @@
 
 package com.openlattice.indexing.configuration
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import java.util.*
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
 
 const val BLOCK_SIZE_FIELD = "block-size"
+const val BLACKLIST = "blacklist"
 const val DEFAULT_BLOCK_SIZE = 10000
 const val ENTITY_TYPES_FIELD = "entity-types"
 private val DEFAULT_ENTITY_TYPES = setOf(FullQualifiedName("general.person"))
 
+/**
+ * Configuration class for linking.
+ */
 @ReloadableConfiguration(uri = "linking.yaml")
 data class LinkingConfiguration(
         @JsonProperty(ENTITY_TYPES_FIELD) val entityTypes: Set<FullQualifiedName> = DEFAULT_ENTITY_TYPES,
-        @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE
+        @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
+        @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf()
 ) : Configuration {
     companion object {
-
+        private val key = SimpleConfigurationKey("linking.yaml")
         @JvmStatic
-        @get:JvmName("key")
-        val key = SimpleConfigurationKey("linking.yaml")
+        fun key(): ConfigurationKey {
+            return key
+        }
+
+
     }
 
+    @JsonIgnore
     override fun getKey(): ConfigurationKey {
-        return key
+        return key()
     }
 }
