@@ -2,12 +2,8 @@ package com.openlattice.data
 
 import com.kryptnostic.rhizome.configuration.RhizomeConfiguration
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService
-import com.kryptnostic.rhizome.core.Rhizome
-import com.openlattice.ResourceConfigurationLoader
 import com.openlattice.data.storage.ByteBlobDataManager
-import com.openlattice.data.storage.LocalAwsBlobDataService
 import com.openlattice.data.storage.LocalBlobDataService
-import com.openlattice.datastore.configuration.DatastoreConfiguration
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.junit.Assert
@@ -15,9 +11,7 @@ import org.junit.Before
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.net.URL
 import java.util.*
-import javax.inject.Inject
 
 class LocalBlobDataServiceTest {
     private val logger: Logger = LoggerFactory.getLogger(LocalAwsBlobDataServiceTest::class.java)
