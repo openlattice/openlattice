@@ -35,6 +35,8 @@ data class SimpleGraphQuery(
         val associationConstraints: List<SimpleAssociationConstraint>
 ) {
     init {
-        checkState(entityConstraints.size > 0, "At least one entity constraint must be specified.")
+        checkState(entityConstraints.isNotEmpty(), "At least one entity constraint must be specified.")
     }
 }
+
+//data class QueryOptions( val anchorIndex : Int, val
