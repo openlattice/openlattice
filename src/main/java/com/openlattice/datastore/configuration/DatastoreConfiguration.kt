@@ -15,7 +15,6 @@ data class DatastoreConfiguration(
         @JsonProperty("timeToLive") val timeToLive: Long,
         @JsonProperty("accessKeyId") val accessKeyId: String,
         @JsonProperty("secretAccessKey") val secretAccessKey: String): Configuration {
-    //val serialVersionUID: Long = -3847142119887587616L //this is copied and slightly altered from ConstructorConfiguration.java, need to figure out how to generate one
     val key = SimpleConfigurationKey("datastore.yaml")
 
     @JsonIgnore
