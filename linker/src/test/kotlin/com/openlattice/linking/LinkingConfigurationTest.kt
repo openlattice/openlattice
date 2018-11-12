@@ -21,18 +21,34 @@
 
 package com.openlattice.linking
 
+import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.indexing.configuration.LinkingConfiguration
 import com.openlattice.serializer.AbstractJacksonSerializationTest
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
+import org.apache.commons.lang.math.RandomUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.junit.BeforeClass
+import java.util.*
 
 /**
  *
  */
 class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingConfiguration>() {
-    override fun getSampleData(): LinkingConfiguration {
-        return LinkingConfiguration(listOf("blah.boo", "foo.fah").map(::FullQualifiedName).toSet())
+    companion object {
+        @BeforeClass
+        @JvmStatic
+        fun configureObjectMappers() {
+            AbstractJacksonYamlSerializationTest.registerModule(FullQualifiedNameJacksonSerializer::registerWithMapper)
+        }
     }
+
+    override fun getSampleData(): LinkingConfiguration {
+        return LinkingConfiguration(
+                listOf("blah.boo", "foo.fah").map(::FullQualifiedName).toSet(), RandomUtils.nextInt(),
+                setOf(UUID.randomUUID())
+        )
+    }
+
 
     override fun getClazz(): Class<LinkingConfiguration> {
         return LinkingConfiguration::class.java

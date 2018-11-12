@@ -148,6 +148,7 @@ public class IndexerPostConfigurationServicesPod {
                 lqs(),
                 executor,
                 edm.getEntityTypeUuids( lc.getEntityTypes() ),
+                lc.getBlacklist(),
                 lc.getBlockSize() );
     }
 }

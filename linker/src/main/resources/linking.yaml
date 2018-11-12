@@ -1,3 +1,12 @@
 entity-types:
   - "general.person"
 block-size: 1000
+blacklist:
+  - c5512075-bbf4-4b74-80f3-391dbaf0bc7d
+  - 8c9e3bcf-89df-4049-a24e-2322037162a4
+  - 152eb3e4-c9b3-4ecc-89b8-a19e81677d09
+  - efd3a154-dbc7-4a09-9062-72f131e8fcce
+  - 72b3feaa-07e5-43ea-8b4f-8355917d429a
+  - fbf8ec4d-4ec8-418f-9a0e-618521978dc0
+  - 2ef9d5ce-0245-4f85-95ab-6e4b06f8c8a7
+  - 71ddddd6-3c5d-4a8b-8fe3-808d1eb13f19
