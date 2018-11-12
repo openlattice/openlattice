@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 class LocalBlobDataServiceTest {
-    private val logger: Logger = LoggerFactory.getLogger(LocalAwsBlobDataServiceTest::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(LocalBlobDataServiceTest::class.java)
     private lateinit var byteBlobDataManager : ByteBlobDataManager
 
     @Before
