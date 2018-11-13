@@ -85,6 +85,8 @@ public interface SecurePrincipalsManager {
 
     Collection<SecurablePrincipal> getParentPrincipalsOfPrincipal( AclKey aclKey );
 
+    boolean principalHasChildPrincipal( AclKey parent, AclKey child );
+
     // Methods about users
     Collection<Principal> getAllUsersWithPrincipal( AclKey principal );
 
