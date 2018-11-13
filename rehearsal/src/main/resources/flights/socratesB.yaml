@@ -1,6 +1,7 @@
 entityDefinitions:
   SocratesTest:
     entitySetName: "SocratesTestB"
+    fqn: general.person
     propertyDefinitions:
       nc.PersonGivenName:
         type: "nc.PersonGivenName"

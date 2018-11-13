@@ -30,7 +30,7 @@ plugins {
 description = "Integration Tests"
 group = "com.openlattice"
 
-apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
+apply from: "../../gradles/openlattice.gradle"
 
 sourceCompatibility=JavaVersion.VERSION_1_8
 

@@ -145,6 +145,11 @@ public class SetupEnvironment {
         Assert.assertTrue( adminUser.getRoles().contains( "admin" ) );
     }
 
+    public static Auth0UserBasic getUserInfo( Principal principal ) {
+        PrincipalApi pApi = retrofit.create( PrincipalApi.class );
+        return pApi.getUser( principal.getId() );
+    }
+
     public static void ensurePrincipalHasPrincipalsWithName(
             Collection<SecurablePrincipal> principals,
             String principalId ) {
