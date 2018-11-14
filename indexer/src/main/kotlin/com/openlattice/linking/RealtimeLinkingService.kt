@@ -23,6 +23,7 @@ package com.openlattice.linking
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
+import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityDataKey
@@ -30,6 +31,7 @@ import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.clustering.ClusterUpdate
+import com.openlattice.linking.events.LinkingFinishedEvent
 import com.openlattice.postgres.streams.PostgresIterable
 import org.deeplearning4j.clustering.strategy.BaseClusteringStrategy
 import org.slf4j.LoggerFactory
@@ -65,7 +67,8 @@ class RealtimeLinkingService
         private val executor: ListeningExecutorService,
         private val linkableTypes: Set<UUID>,
         private val entitySetBlacklist : Set<UUID>,
-        private val blockSize: Int
+        private val blockSize: Int,
+        private val eventBus: EventBus
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
@@ -210,17 +213,17 @@ class RealtimeLinkingService
     @Scheduled(fixedRate = 30000)
     fun runLinking() {
         logger.info("Trying to start linking job.")
+        var linkableEntitySets = setOf<UUID>()
         if (running.tryLock()) {
             try {
                 //TODO: Make this more efficient than pulling the entire list of entity sets locally.
                 //For example use a fast aggregator or directly query postgres and partition operation of linking
-                val linkableEntitySets = entitySets
+                linkableEntitySets = entitySets
                         .values
                         .filter { linkableTypes.contains(it.entityTypeId) }
                         .filter { !entitySetBlacklist.contains(it.id) }
                         .map(EntitySet::getId)
                         .toSet()
-
 
                 logger.info("Running linking using the following linkable entity sets {}.", linkableEntitySets)
 
@@ -247,6 +250,7 @@ class RealtimeLinkingService
                 logger.info("Encountered error while linking!", ex)
             } finally {
                 running.unlock()
+                eventBus.post( LinkingFinishedEvent( linkableEntitySets ) )
             }
         } else {
             logger.info("Linking is currently running. Not starting new task.")
