@@ -1,5 +1,7 @@
 package com.openlattice.data
 
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.openlattice.ResourceConfigurationLoader
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.LocalAwsBlobDataService
@@ -21,9 +23,21 @@ class LocalAwsBlobDataServiceTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
+            val s3 = newS3Client()
+
+
+            val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
+                    "lattice-test-config",
+                    "datastore-test",
+                    DatastoreConfiguration::class.java)
             val byteBlobDataManager = LocalAwsBlobDataService(config)
             this.byteBlobDataManager = byteBlobDataManager
+        }
+
+        fun newS3Client(): AmazonS3 {
+            var builder = AmazonS3ClientBuilder.standard()
+            builder.region = "us-gov-west-1"
+            return builder.build()
         }
 
         @AfterClass
