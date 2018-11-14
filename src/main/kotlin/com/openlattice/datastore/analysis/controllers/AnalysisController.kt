@@ -23,6 +23,7 @@ package com.openlattice.datastore.analysis.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions.checkArgument
+import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableSetMultimap
 import com.openlattice.analysis.AnalysisApi
@@ -201,8 +202,25 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     )
     @Timed
     override fun getNeighborTypes(@PathVariable(AnalysisApi.ENTITY_SET_ID) entitySetId: UUID): Iterable<NeighborType> {
-        ensureReadAccess(AclKey(entitySetId))
-        return analysisService!!.getNeighborTypes(entitySetId)
+        ensureReadAccess( AclKey( entitySetId ) )
+
+        val entitySet = edm.getEntitySet( entitySetId )
+
+        val allEntitySetIds = if( entitySet.isLinking ) {
+            val linkedEntitySetIds = HashSet( entitySet.linkedEntitySets )
+            checkState(!linkedEntitySetIds.isEmpty(),
+                    "Linked entity sets are empty for linking entity set %s, id %s",
+                    entitySet.name,
+                    entitySet.id )
+            val authorizedLinkedEntitySetIds = entitySet.linkedEntitySets
+                    .filter { isAuthorized( Permission.READ ).test( AclKey( entitySetId ) ) }.toSet()
+
+            authorizedLinkedEntitySetIds
+        } else {
+            setOf( entitySetId )
+        }
+
+        return analysisService!!.getNeighborTypes( allEntitySetIds )
     }
 
     override fun getAuthorizationManager(): AuthorizationManager? {
