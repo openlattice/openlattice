@@ -23,7 +23,6 @@ package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
-import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -44,7 +43,6 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
-import javax.inject.Inject
 
 /**
  *
