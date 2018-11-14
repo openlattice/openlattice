@@ -64,7 +64,8 @@ class RealtimeLinkingService
         private val gqs: LinkingQueryService,
         private val executor: ListeningExecutorService,
         private val linkableTypes: Set<UUID>,
-        private val entitySetBlacklist : Set<UUID>,
+        private val entitySetBlacklist: Set<UUID>,
+        private val whitelist: Optional<Set<UUID>>,
         private val blockSize: Int
 ) {
     companion object {
@@ -218,6 +219,7 @@ class RealtimeLinkingService
                         .values
                         .filter { linkableTypes.contains(it.entityTypeId) }
                         .filter { !entitySetBlacklist.contains(it.id) }
+                        .filter { es -> whitelist.map { it.contains(es.id) }.orElse(true) }
                         .map(EntitySet::getId)
                         .toSet()
 
