@@ -23,6 +23,7 @@ package com.openlattice.indexing.pods;
 import static com.openlattice.linking.MatcherKt.DL4J;
 import static com.openlattice.linking.MatcherKt.KERAS;
 
+import com.google.common.eventbus.EventBus;
 import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
@@ -84,6 +85,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private Matcher matcher;
+
+    @Inject
+    private EventBus eventBus;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
@@ -149,6 +153,7 @@ public class IndexerPostConfigurationServicesPod {
                 executor,
                 edm.getEntityTypeUuids( lc.getEntityTypes() ),
                 lc.getBlacklist(),
-                lc.getBlockSize() );
+                lc.getBlockSize(),
+                eventBus );
     }
 }
