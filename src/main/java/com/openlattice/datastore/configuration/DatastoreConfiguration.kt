@@ -6,13 +6,19 @@ import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 
+const val BUCKET_NAME = "bucketName"
+const val REGION_NAME = "regionName"
+const val TIME_TO_LIVE = "timeToLive"
+const val ACCESS_KEY_ID = "accessKeyId"
+const val SECRET_ACCESS_KEY = "secretAccessKey"
+
 @ReloadableConfiguration(uri = "datastore.yaml")
 data class DatastoreConfiguration(
-        @JsonProperty("bucketName") val bucketName: String,
-        @JsonProperty("regionName") val regionName: String,
-        @JsonProperty("timeToLive") val timeToLive: Long,
-        @JsonProperty("accessKeyId") val accessKeyId: String,
-        @JsonProperty("secretAccessKey") val secretAccessKey: String): Configuration {
+        @JsonProperty(BUCKET_NAME) val bucketName: String,
+        @JsonProperty(REGION_NAME) val regionName: String,
+        @JsonProperty(TIME_TO_LIVE) val timeToLive: Long,
+        @JsonProperty(ACCESS_KEY_ID) val accessKeyId: String,
+        @JsonProperty(SECRET_ACCESS_KEY) val secretAccessKey: String): Configuration {
 
     companion object {
         @JvmStatic
