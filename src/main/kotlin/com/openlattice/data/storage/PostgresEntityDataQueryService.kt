@@ -21,9 +21,6 @@
 
 package com.openlattice.data.storage
 
-import com.amazonaws.AmazonServiceException
-import com.amazonaws.SdkClientException
-import com.amazonaws.services.s3.model.PutObjectRequest
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.EntityDataKey
