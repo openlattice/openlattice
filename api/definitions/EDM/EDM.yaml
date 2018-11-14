@@ -36,7 +36,7 @@ EDMdiff:
       content:
         application/json:
           schema:
-            $ref: "./definitions/EDM/components.yaml#/EDM"
+            $ref: "./definitions/EDM/components.yaml#/EDMdiff"
     tags:
       - edm
     security:
@@ -47,7 +47,7 @@ EDMdiff:
         content:
           application/json:
             schema:
-              $ref: "./definitions/EDM/components.yaml#/EDM"
+              $ref: "./definitions/EDM/components.yaml#/EDMdiff"
 EDMversion:
   get:
     summary: Returns the current entity data model version.
