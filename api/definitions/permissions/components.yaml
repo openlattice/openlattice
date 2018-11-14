@@ -1,0 +1,25 @@
+aclKey:
+  type: string
+  format: uuid
+principal:
+  type: object
+  properties:
+    type:
+      type: string
+    id:
+      type: array
+      items:
+        type: string
+ace:
+  type: object
+  properties:
+    principal:
+      type:
+        $ref: "./components.yaml#/principal"
+    permissions:
+      type: array
+      items:
+        type: string
+emailAddress:
+  type: string
+  example: info@openlattice.com

@@ -27,106 +27,98 @@ paths:
   # edm
 
   /datastore/edm/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDM
+    $ref: ./EDM/EDM.yaml#/EDM
   /datastore/diff/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDMdiff
+    $ref: ./EDM/EDM.yaml#/EDMdiff
   /datastore/version/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDMversion
+    $ref: ./EDM/EDM.yaml#/EDMversion
 
   # entity sets
 
   /datastore/edm/entity/set/{entitySetId}:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySetId
+    $ref: ./EDM/entityset.yaml#/entitySetId
   /datastore/edm/ids/entity/set/{entitySetName}:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySetName
+    $ref: ./EDM/entityset.yaml#/entitySetName
   /datastore/edm/entity/set:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySet
+    $ref: ./EDM/entityset.yaml#/entitySet
   /datastore/edm/entity/set/{entitySetId}/property/type:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySetPropertyTypes
+    $ref: ./EDM/entityset.yaml#/entitySetPropertyTypes
   /datastore/edm/entity/set/{entitySetId}/property/type/{propertyTypeId}/:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySetPropertyType
+    $ref: ./EDM/entityset.yaml#/entitySetPropertyType
 
   #entity types
 
   /datastore/edm/entity/type/{entityTypeId}:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypeId
+    $ref: ./EDM/entitytype.yaml#/entityTypeId
   /datastore/edm/ids/entity/type/{namespace}/{name}:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypeName
+    $ref: ./EDM/entitytype.yaml#/entityTypeName
   /datastore/edm/entity/type/{entityTypeId}/{propertyTypeId}:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypePropertyType
+    $ref: ./EDM/entitytype.yaml#/entityTypePropertyType
   /datastore/edm/entity/type/{entityTypeId}/{propertyTypeId}/force:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypePropertyTypeForce
+    $ref: ./EDM/entitytype.yaml#/entityTypePropertyTypeForce
   /datastore/edm/entity/type/:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypes
+    $ref: ./EDM/entitytype.yaml#/entityTypes
   /datastore/edm/association/type/:
-    $ref: ./definitions/EDM/entitytype.yaml#/associationTypes
+    $ref: ./EDM/entitytype.yaml#/associationTypes
   /datastore/edm/entity/type/{entityTypeId}/property/type:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypePropertyOrder
+    $ref: ./EDM/entitytype.yaml#/entityTypePropertyOrder
   /datastore/edm/entity/type/{entityTypeId}/hierarchy:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypeHierarchy
+    $ref: ./EDM/entitytype.yaml#/entityTypeHierarchy
 
   # property Types
 
   /datastore/edm/property/type/{propertyTypeId}:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypeId
+    $ref: ./EDM/propertytype.yaml#/propertyTypeId
   /datastore/edm/property/type/{propertyTypeId}/force:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypeForce
+    $ref: ./EDM/propertytype.yaml#/propertyTypeForce
   /datastore/edm/ids/property/type/{namespace}/{name}:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypeName
+    $ref: ./EDM/propertytype.yaml#/propertyTypeName
   /datastore/edm/property/type/:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypes
+    $ref: ./EDM/propertytype.yaml#/propertyTypes
   /datastore/edm/property/type/namespace/{namespace}:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypeNamespace
+    $ref: ./EDM/propertytype.yaml#/propertyTypeNamespace
 
   # association types
 
   /datastore/edm/association/type/{associationTypeId}:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeId
+    $ref: ./EDM/associationtype.yaml#/associationTypeId
   /datastore/edm/association/type/{associationTypeId}/detailed:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeDetails
+    $ref: ./EDM/associationtype.yaml#/associationTypeDetails
   /datastore/edm/association/type/{associationTypeId}/available:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeAvailable
+    $ref: ./EDM/associationtype.yaml#/associationTypeAvailable
   /datastore/edm/association/type/{associationTypeId}/dst/{entityTypeId}:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeDst
+    $ref: ./EDM/associationtype.yaml#/associationTypeDst
   /datastore/edm/association/type/{associationTypeId}/src/{entityTypeId}:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeSrc
+    $ref: ./EDM/associationtype.yaml#/associationTypeSrc
 
   # summary
 
   /datastore/edm/summary:
-    $ref: ./definitions/EDM/summary.yaml#/summary
+    $ref: ./EDM/summary.yaml#/summary
   /datastore/edm/summary/{propertyTypeId}:
-    $ref: ./definitions/EDM/summary.yaml#/summaryProperty
+    $ref: ./EDM/summary.yaml#/summaryProperty
 
-  #####################
-  ## DIRECTORY API"s ##
-  #####################
+  #######################
+  ## PERMISSIONS API"s ##
+  #######################
 
   /datastore/principals/users/search/email/"{emailAddress}":
-    $ref: ./definitions/directory/principal.yaml#/searchEmail
-
-  #########################
-  ## AUTHORIZATION API"s ##
-  #########################
-
+    $ref: ./permissions/permissions.yaml#/searchEmail
   /datastore/permissions:
-    $ref: ./definitions/authorization/permissions.yaml#/permissions
-
-components:
-  securitySchemes:
-    openlattice_auth:
-      type: apiKey
-      in: header
-      name: Authorization
+    $ref: ./permissions/permissions.yaml#/permissions
 
 
 tags:
 - name: edm
   description: Entity Data Model API"s
+  externalDocs:
+    description: OpenLattice help pages
+    url: https://help.openlattice.com/
 - name: permissions
   description: Permissions API"s
-- name: directory
-  description: Directory API"s
+  externalDocs:
+    description: OpenLattice help pages
+    url: https://help.openlattice.com/
 externalDocs:
   description: "Find out more about OpenLattice"
   url: "https://openlattice.com/"
