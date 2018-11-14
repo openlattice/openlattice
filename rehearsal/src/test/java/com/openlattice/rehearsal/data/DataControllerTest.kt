@@ -26,12 +26,14 @@ import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
 import com.google.common.collect.Maps.transformValues
+import com.google.common.eventbus.Subscribe
 import com.openlattice.data.DataEdge
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.linking.events.LinkingFinishedEvent
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.SetupTestData
@@ -74,9 +76,11 @@ class DataControllerTest : SetupTestData() {
         @JvmStatic
         @BeforeClass
         fun init() {
-            initEdm()
-            importDataSet("socratesB.yaml", "testdata2.csv")
-            importDataSet("associationTestFlight.yaml", "emptyTestData.csv")
+            importDataSet("socratesA.yaml", "testdata1.csv", setOf( "SocratesTestA" ) )
+            importDataSet("associationTestFlight.yaml", "emptyTestData.csv", setOf() )
+            while( !linkingFinished ) {
+                Thread.sleep(1000)
+            }
         }
     }
 

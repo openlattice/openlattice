@@ -21,74 +21,38 @@
 
 package com.openlattice.rehearsal
 
+import com.google.common.eventbus.Subscribe
 import com.openlattice.authentication.AuthenticationTest
 import com.openlattice.edm.EntityDataModel
-import com.openlattice.organizations.PrincipalSet
-import com.openlattice.organizations.mapstores.PrincipalSetMapstore
+import com.openlattice.linking.events.LinkingFinishedEvent
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.shuttle.ShuttleCli
 import com.openlattice.shuttle.main
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.io.File
+import java.util.*
 
 /**
- * Helper functions for setting up data model and integrating data before running tests.
+ * Helper functions for integrating data before running tests.
  */
 open class SetupTestData: MultipleAuthenticatedUsersBase() {
     companion object {
-        private val OL_AUDIT_FQN = FullQualifiedName( "OPENLATTICE_AUDIT", "AUDIT" )
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
 
         /**
-         * Import EDM from production environment. Note: It assumes that entity data model is empty and that properties
-         * being created don't already exist
+         * Indicates whether the [com.openlattice.linking.RealtimeLinkingService] is finished
          */
         @JvmStatic
-        fun initEdm() {
-            loginAs( "prod" )
-            val prodEdm = removeAuditType( edmApi.entityDataModel )
-
-            loginAs( "admin" )
-            // update version number
-            val localVersion = edmApi.entityDataModelVersion
-
-            val edm = EntityDataModel(
-                    localVersion,
-                    prodEdm.namespaces,
-                    prodEdm.schemas,
-                    prodEdm.entityTypes,
-                    prodEdm.associationTypes,
-                    prodEdm.propertyTypes )
-
-            edmApi.updateEntityDataModel( edm )
-        }
-
-        /**
-         * Filter out audit entity sets
-         */
-        @JvmStatic
-        fun removeAuditType(edm: EntityDataModel): EntityDataModel {
-            val propertyTypes = edm.propertyTypes.filter { it.type.toString() != OL_AUDIT_FQN.toString() }
-            val entityTypes = edm.entityTypes.filter{ it.type.toString() != OL_AUDIT_FQN.toString() }
-            val associationTypes = edm.associationTypes.filter {
-                it.associationEntityType.type.toString() != OL_AUDIT_FQN.toString()
-            }
-
-            return EntityDataModel(
-                    edm.version,
-                    edm.namespaces,
-                    edm.schemas,
-                    entityTypes,
-                    associationTypes,
-                    propertyTypes )
-        }
+        var linkingFinished = false
+        private val importedGeneralPersonEntitySets = setOf<UUID>()
 
         /**
          * Import datasets via Shuttle
+         * @param
          */
         @JvmStatic
-        fun importDataSet( flightFileName: String, dataFileName: String ) {
+        fun importDataSet( flightFileName: String, dataFileName: String, generalPersonEntitySetFqns: Set<String> ) {
             loginAs( "admin" )
             val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
 
@@ -104,6 +68,19 @@ open class SetupTestData: MultipleAuthenticatedUsersBase() {
                     "-${ShuttleCli.ENVIRONMENT}=LOCAL",
                     "-${ShuttleCli.TOKEN}=$tokenAdmin",
                     "-${ShuttleCli.CREATE}=$email"))
+
+            if(generalPersonEntitySetFqns.isNotEmpty()) {
+                linkingFinished = false
+                generalPersonEntitySetFqns.forEach {
+                    importedGeneralPersonEntitySets.plus( edmApi.getEntitySetId( it ) ) }
+            }
+        }
+
+        @Subscribe
+        fun linkingFinished( event: LinkingFinishedEvent) {
+            if( importedGeneralPersonEntitySets.all { event.linkableEntitySets.contains( it ) } ) {
+                linkingFinished = true
+            }
         }
     }
 
