@@ -51,6 +51,7 @@ interface Blocker {
      *
      * @param entityDataKey The entity data key id of the entity upon which to perform blocking.
      * @return A block of potentially matching objects as a mapping from entity data keys to entity properties
+     *
      */
     fun block(
             entityDataKey: EntityDataKey,
