@@ -25,7 +25,6 @@ class LocalAwsBlobDataServiceTest {
         fun setUp() {
             val s3 = newS3Client()
 
-
             val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
                     "lattice-test-config",
                     "datastore-test",
@@ -36,7 +35,7 @@ class LocalAwsBlobDataServiceTest {
 
         fun newS3Client(): AmazonS3 {
             var builder = AmazonS3ClientBuilder.standard()
-            builder.region = "us-gov-west-1"
+            builder.region = "us-west-1"
             return builder.build()
         }
 
