@@ -23,7 +23,18 @@ package com.openlattice.graph
 
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.SetMultimap
+import com.hazelcast.core.HazelcastInstance
+import com.openlattice.analysis.AuthorizedFilteredRanking
+import com.openlattice.analysis.requests.AggregationType
+import com.openlattice.analysis.requests.FilteredRankingAggregation
+import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.datastore.services.EdmManager
+import com.openlattice.datastore.services.EdmService
+import com.openlattice.edm.type.PropertyType
+import com.openlattice.mapstores.TestDataFactory
+import com.zaxxer.hikari.HikariDataSource
 import org.junit.Test
+import org.mockito.Mockito
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -74,5 +85,63 @@ class TopUtilizersTests {
         )
         val sql = getTopUtilizersSql(entitySetId, srcFilters, dstFilters)
         logger.info("top utilizers sql: {}", sql)
+    }
+
+    @Test
+    fun testNewTopUtilizers() {
+        val hds = HikariDataSource()
+        val edmService = Mockito.mock(EdmManager::class.java)
+        val graph = Graph(hds, edmService)
+
+        val limit = 200
+        val entitySetIds = setOf(
+                "0a48710c-3899-4743-b1f7-28c6f99aa202",
+                "d4e29d9c-df8c-4c30-a405-2e6941601fbc",
+                "d724d8f2-da4c-46e0-b5d8-5db8c3367b50")
+                .map(UUID::fromString).toSet()
+        val filteredRanking = FilteredRankingAggregation(
+                UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202"),
+                UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a"),
+                Optional.empty(),
+                Optional.empty(),
+                mapOf(UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to //
+                        WeightedRankingAggregation(AggregationType.MAX, 3.1)),
+                mapOf(UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to
+                        WeightedRankingAggregation(AggregationType.MAX, 3.1)),
+                true,
+                Optional.empty()
+        )
+
+        val associationSets: Map<UUID, Set<UUID>> =
+                mapOf(UUID.fromString("c3a43642-b995-456f-879f-8b38ea2a2fc3") to
+                        listOf(
+                            "0a48710c-3899-4743-b1f7-28c6f99aa202",
+                            "d4e29d9c-df8c-4c30-a405-2e6941601fbc",
+                            "d724d8f2-da4c-46e0-b5d8-5db8c3367b50").map(UUID::fromString).toSet())
+        val associationPropertyTypes: Map<UUID, PropertyType> = mapOf(UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to
+        TestDataFactory.propertyType())
+
+        val entitySets: Map<UUID, Set<UUID>> =
+                mapOf( UUID.fromString("e9e38764-1f16-4b98-a173-2f0dd6ae9b8c") to
+                        listOf(
+                                "c5da7a05-24a4-480e-9573-f5a118daec1a",
+                                "c80aae3a-7d21-4a6e-9672-5adf34f65e1e").map(UUID::fromString).toSet() )
+        val entitySetPropertyTypes: Map<UUID, PropertyType> = mapOf(UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to
+                TestDataFactory.propertyType())
+
+
+
+        val filteredRankings = listOf(
+                AuthorizedFilteredRanking(
+                        filteredRanking,
+                        associationSets,
+                        associationPropertyTypes,
+                        entitySets,
+                        entitySetPropertyTypes)
+        )
+
+        val sql = graph.buildTopEntitiesQuery(limit, entitySetIds, filteredRankings, true)
+
+        logger.info(sql)
     }
 }
