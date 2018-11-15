@@ -3,35 +3,33 @@ package com.openlattice.data.storage
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.HttpMethod
 import com.amazonaws.SdkClientException
+import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.DeleteObjectRequest
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants
-import com.openlattice.aws.AwsS3Pod.newS3Client
 import com.openlattice.datastore.configuration.DatastoreConfiguration
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.net.URL
 import java.util.*
-import javax.inject.Inject
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
 
-
-// may need to consider versioned nature of buckets
 @Service
 class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfiguration) : ByteBlobDataManager {
+
+    val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
 
     val s3 = newS3Client(datastoreConfiguration)
 
     fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
         var builder = AmazonS3ClientBuilder.standard()
         builder.region = datastoreConfiguration.regionName
+        builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
         return builder.build()
     }
 
