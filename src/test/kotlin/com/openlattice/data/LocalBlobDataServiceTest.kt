@@ -43,7 +43,6 @@ class LocalBlobDataServiceTest {
         @AfterClass
         @JvmStatic
         fun cleanUp() {
-            byteBlobDataManager.deleteObject(key1)
             val sql = "DROP TABLE mock_s3_bucket"
             val connection = hds.connection
             val ps = connection.prepareStatement(sql)
