@@ -14,7 +14,6 @@ import java.util.*
 class LocalBlobDataServiceTest {
     private val logger: Logger = LoggerFactory.getLogger(LocalBlobDataServiceTest::class.java)
 
-
     companion object {
         @JvmStatic
         private lateinit var byteBlobDataManager: ByteBlobDataManager
@@ -39,7 +38,7 @@ class LocalBlobDataServiceTest {
             ps.executeUpdate()
             connection.close()
         }
-        
+
     }
 
     @Test
