@@ -30,10 +30,8 @@ import com.openlattice.postgres.streams.PostgresIterable;
 import kotlin.Pair;
 
 import com.openlattice.postgres.streams.PostgresIterable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -80,7 +78,8 @@ public interface GraphService {
             Set<UUID> entitySetIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             List<AuthorizedFilteredRanking> details,
-            boolean linked );
+            boolean linked,
+            Optional<UUID> linkingEntitySetId);
 
     /**
      * @param srcFilters Association type ids to neighbor entity set ids
