@@ -1,8 +1,5 @@
 package com.openlattice.data.storage
 
-import java.net.URL
-import java.util.*
-
 interface ByteBlobDataManager {
     fun putObject(s3Key: String, data: ByteArray)
 

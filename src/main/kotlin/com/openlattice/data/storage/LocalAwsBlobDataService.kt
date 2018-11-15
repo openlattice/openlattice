@@ -12,8 +12,6 @@ import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.openlattice.datastore.configuration.DatastoreConfiguration
-import com.openlattice.postgres.PostgresColumn
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.net.URL
