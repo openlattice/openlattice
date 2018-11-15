@@ -7,8 +7,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
+import com.openlattice.data.storage.AwsBlobDataService
 import com.openlattice.data.storage.ByteBlobDataManager
-import com.openlattice.data.storage.LocalAwsBlobDataService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.junit.*
 import org.slf4j.Logger
@@ -34,7 +34,7 @@ class LocalAwsBlobDataServiceTest {
                     awsTestConfig.bucket,
                     awsTestConfig.folder,
                     DatastoreConfiguration::class.java)
-            val byteBlobDataManager = LocalAwsBlobDataService(config)
+            val byteBlobDataManager = AwsBlobDataService(config)
             this.byteBlobDataManager = byteBlobDataManager
         }
 
