@@ -18,6 +18,7 @@ class LocalBlobDataServiceTest {
     companion object {
         @JvmStatic
         private lateinit var byteBlobDataManager: ByteBlobDataManager
+        private lateinit var hds: HikariDataSource
         private var key1 = ""
 
         @BeforeClass
@@ -25,15 +26,29 @@ class LocalBlobDataServiceTest {
         fun setUp() {
             val rhizomeConfiguration = ConfigurationService.StaticLoader.loadConfiguration(RhizomeConfiguration::class.java)
             val hc = HikariConfig(rhizomeConfiguration?.getHikariConfiguration()?.get())
-            val hds = HikariDataSource(hc)
+            hds = HikariDataSource(hc)
             val byteBlobDataManager = LocalBlobDataService(hds)
             this.byteBlobDataManager = byteBlobDataManager
+            addMockS3Bucket()
+        }
+
+        fun addMockS3Bucket() {
+            val sql = "CREATE TABLE mock_s3_bucket (key text, object bytea)"
+            val connection = hds.connection
+            val ps = connection.prepareStatement(sql)
+            ps.executeUpdate()
+            connection.close()
         }
 
         @AfterClass
         @JvmStatic
         fun cleanUp() {
             byteBlobDataManager.deleteObject(key1)
+            val sql = "DROP TABLE mock_s3_bucket"
+            val connection = hds.connection
+            val ps = connection.prepareStatement(sql)
+            ps.executeUpdate()
+            connection.close()
         }
     }
 
