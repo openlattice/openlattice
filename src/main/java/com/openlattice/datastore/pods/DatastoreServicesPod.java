@@ -362,7 +362,7 @@ public class DatastoreServicesPod {
     @DependsOn( "datastoreConfiguration" )
     @Profile( { DatastoreProfiles.MEDIA_LOCAL_AWS_PROFILE } )
     public ByteBlobDataManager localAwsBlobDataManager() {
-        return new LocalAwsBlobDataService( getLocalAwsDatastoreConfiguration() );
+        return new AwsBlobDataService( getLocalAwsDatastoreConfiguration() );
     }
 
     @Bean( name = "byteBlobDataManager" )
