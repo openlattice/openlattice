@@ -140,7 +140,7 @@ class TopUtilizersTests {
                         entitySetPropertyTypes)
         )
 
-        val sql = graph.buildTopEntitiesQuery(limit, entitySetIds, filteredRankings, true)
+        val sql = graph.buildTopEntitiesQuery(limit, entitySetIds, filteredRankings, true, Optional.of( UUID.randomUUID()) )
 
         logger.info(sql)
     }
