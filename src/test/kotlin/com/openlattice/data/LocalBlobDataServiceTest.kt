@@ -39,16 +39,7 @@ class LocalBlobDataServiceTest {
             ps.executeUpdate()
             connection.close()
         }
-
-        @AfterClass
-        @JvmStatic
-        fun cleanUp() {
-            val sql = "DROP TABLE mock_s3_bucket"
-            val connection = hds.connection
-            val ps = connection.prepareStatement(sql)
-            ps.executeUpdate()
-            connection.close()
-        }
+        
     }
 
     @Test
