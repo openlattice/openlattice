@@ -20,24 +20,30 @@
 
 package com.openlattice.datastore.pods;
 
+import static com.openlattice.datastore.util.Util.returnAndLog;
+
 import com.amazonaws.services.s3.AmazonS3;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.kryptnostic.rhizome.pods.CassandraPod;
-import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.analysis.AnalysisService;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.*;
-import com.openlattice.aws.AwsS3Pod;
+import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizationQueryService;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.EdmAuthorizationHelper;
+import com.openlattice.authorization.HazelcastAbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.PostgresUserApi;
+import com.openlattice.authorization.Principals;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
@@ -45,11 +51,16 @@ import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.data.storage.*;
+import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.data.storage.PostgresDataManager;
+import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.apps.services.AppService;
-import com.openlattice.datastore.configuration.DatastoreConfiguration;
-import com.openlattice.datastore.constants.DatastoreProfiles;
-import com.openlattice.datastore.services.*;
+import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
+import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.datastore.services.EdmService;
+import com.openlattice.datastore.services.ODataStorageService;
+import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -72,27 +83,20 @@ import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.EsEdmService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
-import org.jdbi.v3.core.Jdbi;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.*;
-
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
-import java.io.IOException;
-import java.net.URL;
-import java.util.Date;
-import java.util.List;
-
-import static com.openlattice.authorization.AuthorizingComponent.logger;
-import static com.openlattice.datastore.util.Util.returnAndLog;
+import org.jdbi.v3.core.Jdbi;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 @Configuration
 @Import( {
         Auth0Pod.class,
+        ByteBlobServicePod.class,
         CassandraPod.class,
-        NeuronPod.class
+        NeuronPod.class,
 } )
 public class DatastoreServicesPod {
 
@@ -110,12 +114,13 @@ public class DatastoreServicesPod {
     private ListeningExecutorService  executor;
     @Inject
     private EventBus                  eventBus;
-    @Inject
-    private Neuron                    neuron;
     @Autowired( required = false )
     private AmazonS3                  awsS3;
     @Autowired( required = false )
     private AmazonLaunchConfiguration awsLaunchConfig;
+
+    @Inject
+    private ByteBlobDataManager byteBlobDataManager;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -141,6 +146,7 @@ public class DatastoreServicesPod {
                 hikariDataSource,
                 dataModelService(),
                 authorizationManager(),
+                byteBlobDataManager,
                 defaultObjectMapper()
         );
     }
@@ -170,11 +176,6 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresTypeManager entityTypeManager() {
         return new PostgresTypeManager( hikariDataSource );
-    }
-
-    @Bean
-    public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource );
     }
 
     @Bean
@@ -248,15 +249,6 @@ public class DatastoreServicesPod {
         return new SyncTicketService( hazelcastInstance );
     }
 
-    @Bean
-    public RequestQueryService rqs() {
-        return new RequestQueryService( hikariDataSource );
-    }
-
-    @Bean
-    public HazelcastRequestsManager hazelcastRequestsManager() {
-        return new HazelcastRequestsManager( hazelcastInstance, rqs(), neuron );
-    }
 
     @Bean
     public AnalysisService analysisService() {
@@ -332,44 +324,9 @@ public class DatastoreServicesPod {
         return new SearchService( eventBus );
     }
 
-    @Bean( name = "datastoreConfiguration" )
-    @Profile( { Profiles.LOCAL_CONFIGURATION_PROFILE } )
-    public DatastoreConfiguration getLocalAwsDatastoreConfiguration() {
-        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfiguration( DatastoreConfiguration.class );
-        logger.info( "Using local aws datastore configuration: {}", config );
-        return config;
-    }
-
-    @Bean( name = "datastoreConfiguration" )
-    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public DatastoreConfiguration getAwsDatastoreConfiguration() {
-        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( awsS3,
-                awsLaunchConfig.getBucket(),
-                awsLaunchConfig.getFolder(),
-                DatastoreConfiguration.class );
-        logger.info( "Using aws datastore configuration: {}", config );
-        return config;
-    }
-
-    @Bean( name = "byteBlobDataManager" )
-    @DependsOn( "datastoreConfiguration" )
-    @Profile( { DatastoreProfiles.MEDIA_LOCAL_PROFILE } )
-    public ByteBlobDataManager localBlobDataManager() {
-        return new LocalBlobDataService( hikariDataSource );
-    }
-
-    @Bean( name = "byteBlobDataManager" )
-    @DependsOn( "datastoreConfiguration" )
-    @Profile( { DatastoreProfiles.MEDIA_LOCAL_AWS_PROFILE } )
-    public ByteBlobDataManager localAwsBlobDataManager() {
-        return new AwsBlobDataService( getLocalAwsDatastoreConfiguration() );
-    }
-
-    @Bean( name = "byteBlobDataManager" )
-    @DependsOn( "datastoreConfiguration" )
-    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public ByteBlobDataManager awsBlobDataManager() {
-        return new AwsBlobDataService( getAwsDatastoreConfiguration() );
+    @Bean
+    public PostgresEntityDataQueryService dataQueryService() {
+        return new PostgresEntityDataQueryService( hikariDataSource,byteBlobDataManager  );
     }
 
     @PostConstruct

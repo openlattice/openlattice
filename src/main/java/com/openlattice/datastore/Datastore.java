@@ -36,6 +36,7 @@ import com.openlattice.postgres.PostgresPod;
 
 public class Datastore extends BaseRhizomeServer {
     public static final Class<?>[] datastorePods = new Class<?>[] {
+            ByteBlobServicePod.class,
             DatastoreServicesPod.class,
             TypeCodecsPod.class,
             SharedStreamSerializersPod.class,
