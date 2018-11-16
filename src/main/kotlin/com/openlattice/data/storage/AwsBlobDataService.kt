@@ -39,28 +39,13 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = "image"
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
-        try {
-            s3.putObject(putRequest)
-        } catch (e: AmazonServiceException) {
-            e.printStackTrace()
-            logger.warn("Amazon couldn't process call")
-        } catch (e: SdkClientException) {
-            e.printStackTrace()
-            logger.warn("Amazon couldn't be contacted or the client couldn't parse the response from S3")
-        }
+        s3.putObject(putRequest)
+
     }
 
     override fun deleteObject(s3Key: String) {
         val deleteRequest = DeleteObjectRequest(datastoreConfiguration.bucketName, s3Key)
-        try {
-            s3.deleteObject(deleteRequest)
-        } catch (e: AmazonServiceException) {
-            e.printStackTrace()
-            logger.warn("Amazon couldn't process call")
-        } catch (e: SdkClientException) {
-            e.printStackTrace()
-            logger.warn("Amazon couldn't be contacted or the client couldn't parse the response from S3")
-        }
+        s3.deleteObject(deleteRequest)
     }
 
     override fun getObjects(keys: List<Any>): List<Any> {
@@ -80,7 +65,9 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
     }
 
     fun getPresignedUrl(key: Any, expiration: Date): URL {
-        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(HttpMethod.GET).withExpiration(expiration)
+        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
+                HttpMethod.GET
+        ).withExpiration(expiration)
         var url = URL("http://")
         try {
             url = s3.generatePresignedUrl(urlRequest)
