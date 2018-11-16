@@ -29,6 +29,7 @@ public final class SerializationConstants {
     public static final String ACL_OBJECT_PATH                  = "aclKey";                  // Correspond to single hierarchy of securable objects.
     public static final String ACL_OBJECT_ROOT                  = "aclRoot";
     public static final String ACTION                           = "action";
+    public static final String AGGREGATIONS                     = "aggregations";
     public static final String AGGREGATION_TYPE                 = "aggregationType";
     public static final String ANALYZER                         = "analyzer";
     public static final String APPS                             = "apps";
@@ -38,6 +39,7 @@ public final class SerializationConstants {
     public static final String ASSOCIATIONS                     = "associations";
     public static final String ASSOCIATIONS_ENTITY_KEY_MAPPINGS = "associationsEntityKeyMappings";
     public static final String ASSOCIATION_AGGREGATIONS         = "associationAggregations";
+    public static final String ASSOCIATION_CONSTRAINT           = "associationConstraint";
     public static final String ASSOCIATION_COUNT                = "associationCount";
     public static final String ASSOCIATION_DEFINITIONS_FIELD    = "associationDefinitions";
     public static final String ASSOCIATION_DETAILS              = "associationDetails";
@@ -64,9 +66,10 @@ public final class SerializationConstants {
     public static final String CONTACTS                         = "contacts";
     public static final String COUNT                            = "count";
     public static final String CURRENT_SYNC                     = "currentSync";
+    public static final String DATA                             = "data";
+    public static final String DATASOURCE_IDS                   = "datasourceIds";
     public static final String DATATYPE_FIELD                   = "datatype";
     public static final String DATA_ID                          = "dataId";
-    public static final String DATA                             = "data";
     public static final String DEFAULT_SHOW                     = "defaultShow";
     public static final String DEIDENTIFIED                     = "deidentified";
     public static final String DESCRIPTION_FIELD                = "description";
@@ -74,8 +77,8 @@ public final class SerializationConstants {
     public static final String DIFF                             = "diff";
     public static final String DST                              = "dst";
     public static final String DST_ENTITY_INDEX                 = "dstEntityIndex";
-    public static final String DST_ENTITY_SET_ID                = "dstEntitySetId";
     public static final String DST_ENTITY_KEY_ID                = "dstEntityKeyId";
+    public static final String DST_ENTITY_SET_ID                = "dstEntitySetId";
     public static final String EDGE                             = "edge";
     public static final String EDGE_COUNT                       = "edgeCount";
     public static final String EDM_TEMPLATES_FIELD              = "edmTemplates";
@@ -108,6 +111,7 @@ public final class SerializationConstants {
     public static final String EXPIRATION                       = "expiration";
     public static final String EXPLANATION                      = "explanation";
     public static final String EXTERNAL                         = "external";
+    public static final String FILTERS                          = "filters";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
@@ -165,6 +169,7 @@ public final class SerializationConstants {
     public static final String PROPERTIES_FIELD                 = "properties";
     public static final String PROPERTY_DEFINITIONS             = "propertyDefinitions";
     public static final String PROPERTY_FIELD                   = "property";
+    public static final String PROPERTY_METADATA                = "propertyMetadata";
     public static final String PROPERTY_TAGS                    = "propertyTags";
     public static final String PROPERTY_TYPES                   = "propertyTypes";
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
@@ -186,8 +191,8 @@ public final class SerializationConstants {
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
     public static final String SRC                              = "src";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";
-    public static final String SRC_ENTITY_SET_ID                = "srcEntitySetId";
     public static final String SRC_ENTITY_KEY_ID                = "srcEntityKeyId";
+    public static final String SRC_ENTITY_SET_ID                = "srcEntitySetId";
     public static final String START                            = "start";
     public static final String STATE                            = "state";
     public static final String STATUS                           = "status";

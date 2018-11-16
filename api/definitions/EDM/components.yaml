@@ -34,12 +34,10 @@ EDM:
 EDMdiff:
   type: object
   properties:
-    conflict:
-      type:
-        $ref: "./components.yaml#/EDM"
+    conflicts:
+      $ref: "./components.yaml#/EDM"
     diff:
-      type:
-        $ref: "./components.yaml#/EDM"
+      $ref: "./components.yaml#/EDM"
 schema:
   type: object
   properties:
@@ -122,7 +120,7 @@ propertyType:
     multiValued:
       type: boolean
     analyzer:
-      type: boolean
+      type: string
 
 # entity type
 entityTypeId:
@@ -153,7 +151,7 @@ entityType:
       items:
         type: string
     propertyTags:
-      type: string # <-- this is wrong and needs to be fixed !!
+      type: object # <-- this is wrong and needs to be fixed !!
     basetype:
        type: string
     category:
