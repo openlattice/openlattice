@@ -49,8 +49,8 @@ class GraphController
 @Inject
 constructor(
         private val graphQueryService: GraphQueryService,
-        private val authorizationManager: AuthorizationManager,
-        private val filtered
+        private val authorizationManager: AuthorizationManager
+//        private val filtered
 ) : GraphApi, AuthorizingComponent {
 
 
@@ -65,7 +65,8 @@ constructor(
         //Collect the data to authorize
 
         //Collect the things to perserve
-        return graphQueryService.submitQuery(query);
+//        return graphQueryService.submitQuery(query);
+        TODO("Not implemented")
     }
 
     @Timed
