@@ -41,7 +41,8 @@ public class Datastore extends BaseRhizomeServer {
             TypeCodecsPod.class,
             SharedStreamSerializersPod.class,
             AwsS3Pod.class,
-            JdbcPod.class,
+            JdbcPod.class,,
+            DatastoreNeuronPod.class,
             PostgresPod.class
     };
     public static final Class<?>[] rhizomePods = new Class<?>[] {
