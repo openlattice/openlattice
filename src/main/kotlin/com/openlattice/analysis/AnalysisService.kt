@@ -55,22 +55,8 @@ class AnalysisService : AuthorizingComponent {
     @Inject
     private lateinit var authorizationHelper: EdmAuthorizationHelper
 
-<<<<<<< Updated upstream
-    fun getTopUtilizers(
-            entitySetId: UUID,
-            numResults: Int,
-            topUtilizerDetails: List<FilteredRankingAggregation>,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Stream<SetMultimap<FullQualifiedName, Any>> {
-        return dgm.getTopUtilizers(entitySetId, topUtilizerDetails, numResults, authorizedPropertyTypes)
-    }
-
     fun getNeighborTypes(entitySetIds: Set<UUID>): Iterable<NeighborType> {
         val neighborEntitySets = dgm.getNeighborEntitySets(entitySetIds)
-=======
-    fun getNeighborTypes(entitySetId: UUID): Iterable<NeighborType> {
-        val neighborEntitySets = dgm.getNeighborEntitySets(entitySetId)
->>>>>>> Stashed changes
 
         val allEntitySetIds = neighborEntitySets.asSequence()
                 .flatMap { sequenceOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
