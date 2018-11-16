@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.edm;
 
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.graph.query.GraphQueryState.Option;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -89,7 +90,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
         PropertyType k = createPropertyType();
         PropertyType p2 = createPropertyType();
 
-        EntityType expected = TestDataFactory.childEntityType( baseTypeId, k );
+        EntityType expected = TestDataFactory.childEntityType( baseTypeId, SecurableObjectType.EntityType, k );
         expected.removePropertyTypes( expected.getProperties() );
         expected.addPropertyTypes( ImmutableSet.of( k.getId(), p1.getId(), p2.getId() ) );
 
@@ -103,7 +104,8 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
             UUID baseTypeId,
             Set<UUID> propertyTypes,
             PropertyType... key ) {
-        EntityType expected = TestDataFactory.childEntityTypeWithPropertyType( baseTypeId, propertyTypes, key );
+        EntityType expected = TestDataFactory.childEntityTypeWithPropertyType( baseTypeId,propertyTypes,SecurableObjectType.EntityType,key );
+
 
         UUID entityTypeId = edm.createEntityType( expected );
         Assert.assertNotNull( "Entity type creation shouldn't return null UUID.", entityTypeId );

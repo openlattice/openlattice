@@ -31,6 +31,7 @@ import com.openlattice.graph.GraphApi.ID
 import com.openlattice.graph.GraphApi.ID_PATH
 import com.openlattice.graph.GraphApi.QUERY
 import com.openlattice.graph.GraphQueryService
+import com.openlattice.graph.SimpleGraphQuery
 import com.openlattice.graph.SubGraph
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
@@ -49,25 +50,31 @@ class GraphController
 constructor(
         private val graphQueryService: GraphQueryService,
         private val authorizationManager: AuthorizationManager
+//        private val filtered
 ) : GraphApi, AuthorizingComponent {
 
-    @Timed
-    @PostMapping(
-            value = QUERY,
-            consumes = [MediaType.APPLICATION_JSON_VALUE],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
-    )
-    override fun submit(query: GraphQuery): GraphQueryState {
 
-        return graphQueryService.submitQuery(query);
+
+    @Timed
+//    @PostMapping(
+//            value = QUERY,
+//            consumes = [MediaType.APPLICATION_JSON_VALUE],
+//            produces = [MediaType.APPLICATION_JSON_VALUE]
+//    )
+    override fun submit(query: SimpleGraphQuery): GraphQueryState {
+        //Collect the data to authorize
+
+        //Collect the things to perserve
+//        return graphQueryService.submitQuery(query);
+        TODO("Not implemented")
     }
 
     @Timed
-    @PostMapping(
-            value = QUERY + ID_PATH,
-            consumes = [MediaType.APPLICATION_JSON_VALUE],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
-    )
+//    @PostMapping(
+//            value = QUERY + ID_PATH,
+//            consumes = [MediaType.APPLICATION_JSON_VALUE],
+//            produces = [MediaType.APPLICATION_JSON_VALUE]
+//    )
     override fun getQueryState(
             @PathVariable(ID) queryId: UUID,
             @RequestBody options: Set<GraphQueryState.Option>
