@@ -35,6 +35,7 @@ const val BLOCK_SIZE_FIELD = "block-size"
 const val BLACKLIST = "blacklist"
 const val DEFAULT_BLOCK_SIZE = 10000
 const val ENTITY_TYPES_FIELD = "entity-types"
+const val WHITELIST = "whitelist"
 private val DEFAULT_ENTITY_TYPES = setOf(FullQualifiedName("general.person"))
 
 /**
@@ -44,6 +45,7 @@ private val DEFAULT_ENTITY_TYPES = setOf(FullQualifiedName("general.person"))
 data class LinkingConfiguration(
         @JsonProperty(ENTITY_TYPES_FIELD) val entityTypes: Set<FullQualifiedName> = DEFAULT_ENTITY_TYPES,
         @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
+        @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf()
 ) : Configuration {
     companion object {
