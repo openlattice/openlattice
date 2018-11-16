@@ -469,8 +469,9 @@ public class DataController implements DataApi, AuthorizingComponent {
          * 1 - collect all relevant EntitySets and PropertyTypes
          */
 
+        // TODO: linking entity sets , linking id (if needed)
         // getNeighborEntitySetIds() returns source, destination, and edge EntitySet ids
-        Set<UUID> neighborEntitySetIds = dgm.getNeighborEntitySetIds( vertexEntitySetId );
+        Set<UUID> neighborEntitySetIds = dgm.getNeighborEntitySetIds( ImmutableSet.of( vertexEntitySetId ) );
         Set<UUID> allEntitySetIds = ImmutableSet.<UUID>builder()
                 .add( vertexEntitySetId )
                 .addAll( neighborEntitySetIds )

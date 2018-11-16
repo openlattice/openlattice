@@ -31,6 +31,7 @@ import com.openlattice.graph.GraphApi.ID
 import com.openlattice.graph.GraphApi.ID_PATH
 import com.openlattice.graph.GraphApi.QUERY
 import com.openlattice.graph.GraphQueryService
+import com.openlattice.graph.SimpleGraphQuery
 import com.openlattice.graph.SubGraph
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
@@ -48,8 +49,11 @@ class GraphController
 @Inject
 constructor(
         private val graphQueryService: GraphQueryService,
-        private val authorizationManager: AuthorizationManager
+        private val authorizationManager: AuthorizationManager,
+        private val filtered
 ) : GraphApi, AuthorizingComponent {
+
+
 
     @Timed
     @PostMapping(
@@ -57,8 +61,10 @@ constructor(
             consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun submit(query: GraphQuery): GraphQueryState {
+    override fun submit(query: SimpleGraphQuery): GraphQueryState {
+        //Collect the data to authorize
 
+        //Collect the things to perserve
         return graphQueryService.submitQuery(query);
     }
 
