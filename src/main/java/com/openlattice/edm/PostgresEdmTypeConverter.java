@@ -45,7 +45,7 @@ public final class PostgresEdmTypeConverter {
             case Byte:
             case SByte:
             case Binary:
-                return PostgresDatatype.BYTEA;
+                return PostgresDatatype.TEXT;
             case Int16:
                 return PostgresDatatype.SMALLINT;
             case Int32:
@@ -92,7 +92,7 @@ public final class PostgresEdmTypeConverter {
             case Boolean:
                 return PostgresDatatype.BOOLEAN_ARRAY;
             case Binary:
-                return PostgresDatatype.BYTEA_ARRAY;
+                return PostgresDatatype.TEXT_ARRAY;
             default:
                 throw new NotImplementedException( "Don't know how to convert " + edmType.name() + " to array type" );
         }

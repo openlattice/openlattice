@@ -20,48 +20,24 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.DataTables.*;
-import static com.openlattice.postgres.PostgresArrays.getTextArray;
-import static com.openlattice.postgres.PostgresColumn.*;
-
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AclKeySet;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.Entity;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDataMetadata;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.PropertyMetadata;
-import com.openlattice.data.PropertyUsageSummary;
-import com.openlattice.data.PropertyValueKey;
+import com.openlattice.data.*;
 import com.openlattice.data.hazelcast.DataKey;
+import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.Analyzer;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
-import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.type.*;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.graph.query.GraphQueryState;
@@ -72,44 +48,34 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
-import java.io.IOException;
-import java.sql.Array;
-import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Base64.Decoder;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.sql.*;
+import java.sql.Date;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.Base64.Decoder;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.openlattice.postgres.DataTables.*;
+import static com.openlattice.postgres.PostgresArrays.getTextArray;
+import static com.openlattice.postgres.PostgresColumn.*;
+
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public final class ResultSetAdapters {
-    private static final Logger       logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
-    private static final Decoder      DECODER = Base64.getMimeDecoder();
-    private static final ObjectMapper mapper  = ObjectMappers.newJsonMapper();
+
+    private static final Logger           logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
+    private static final Decoder          DECODER = Base64.getMimeDecoder();
+    private static final ObjectMapper     mapper  = ObjectMappers.newJsonMapper();
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -531,7 +497,15 @@ public final class ResultSetAdapters {
         Optional<Boolean> linking = Optional.ofNullable( linking( rs ) );
         Optional<Set<UUID>> linkedEntitySets = Optional.of( linkedEntitySets( rs ) );
         Optional<Boolean> external = Optional.ofNullable( external( rs ) );
-        return new EntitySet( id, entityTypeId, name, title, description, contacts, linking, linkedEntitySets, external );
+        return new EntitySet( id,
+                entityTypeId,
+                name,
+                title,
+                description,
+                contacts,
+                linking,
+                linkedEntitySets,
+                external );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {
@@ -741,18 +715,7 @@ public final class ResultSetAdapters {
                     objects = Arrays.asList( (Boolean[]) arr.getArray() );
                     break;
                 case Binary:
-                    String[] objArray = (String[]) arr.getArray();
-
-                    //                    if ( objArray.length > 0 ) {
-                    //                        logger.info( "Contents of string: {}", objArray[ 0 ] );
-                    //                        logger.info( "Reading byte array with class: {}", objArray[ 0 ].getClass().getCanonicalName() );
-                    //                    }
-
-                    byte[][] raw = new byte[ objArray.length ][];
-                    for ( int i = 0; i < objArray.length; ++i ) {
-                        raw[ i ] = DECODER.decode( objArray[ i ] );
-                    }
-                    objects = Arrays.asList( raw );
+                    objects = Arrays.asList( (String[]) arr.getArray());
                     break;
                 default:
                     objects = null;
@@ -766,30 +729,39 @@ public final class ResultSetAdapters {
 
     public static Map<UUID, Set<Object>> implicitEntityValuesById(
             ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
+            Map<UUID, PropertyType> authorizedPropertyTypes,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
         final Map<UUID, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.put( propertyType.getId(), new HashSet<>( objects ) );
+                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
+                    data.put( propertyType.getId(), new HashSet<>( byteBlobDataManager.getObjects( objects ) ) );
+                } else {
+                    data.put( propertyType.getId(), new HashSet<>( objects ) );
+                }
             }
         }
-
         return data;
     }
 
     public static Map<FullQualifiedName, Set<Object>> implicitEntityValuesByFqn(
             ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) throws SQLException {
+            Map<UUID, PropertyType> authorizedPropertyTypes,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
         final Map<FullQualifiedName, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.put( propertyType.getType(), new HashSet<>( objects ) );
+                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
+                    data.put( propertyType.getType(), new HashSet<>( byteBlobDataManager.getObjects( objects ) ) );
+                } else {
+                    data.put( propertyType.getType(), new HashSet<>( objects ) );
+                }
             }
         }
 
@@ -799,25 +771,28 @@ public final class ResultSetAdapters {
     public static SetMultimap<FullQualifiedName, Object> implicitNormalEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Set<MetadataOption> metadataOptions ) throws SQLException {
-        return implicitEntity(rs, authorizedPropertyTypes, metadataOptions, false );
+            Set<MetadataOption> metadataOptions,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
+        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager,false );
     }
 
     public static SetMultimap<FullQualifiedName, Object> implicitLinkedEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Set<MetadataOption> metadataOptions ) throws SQLException {
-        return implicitEntity(rs, authorizedPropertyTypes, metadataOptions, true );
+            Set<MetadataOption> metadataOptions,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
+        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager, true );
     }
 
     private static SetMultimap<FullQualifiedName, Object> implicitEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Set<MetadataOption> metadataOptions,
+            ByteBlobDataManager byteBlobDataManager,
             Boolean linking ) throws SQLException {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
 
-        if(linking) {
+        if ( linking ) {
             final UUID entityKeyId = linkingId( rs );
             data.put( ID_FQN, entityKeyId );
         } else {
@@ -833,7 +808,6 @@ public final class ResultSetAdapters {
             data.put( LAST_INDEX_FQN, lastIndex( rs ) );
         }
 
-
         final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
                 .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
                 .collect( Collectors.toSet() );
@@ -841,7 +815,11 @@ public final class ResultSetAdapters {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {
-                data.putAll( propertyType.getType(), objects );
+                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
+                    data.putAll( propertyType.getType(), byteBlobDataManager.getObjects( objects ) );
+                } else {
+                    data.putAll( propertyType.getType(), objects );
+                }
             }
         }
 
@@ -851,7 +829,6 @@ public final class ResultSetAdapters {
     public static UUID linkingId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID.getName() );
     }
-
 
     public static Object lastWrite( ResultSet rs ) throws SQLException {
         return rs.getObject( LAST_WRITE.getName() );
@@ -901,13 +878,18 @@ public final class ResultSetAdapters {
         return rs.getObject( EXPIRATION_DATE_FIELD, OffsetDateTime.class );
     }
 
-    public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn(MetadataOption metadataOption) {
-        switch(metadataOption) {
-            case LAST_WRITE: return LAST_WRITE;
-            case LAST_INDEX: return LAST_INDEX;
-            case LAST_LINK: return LAST_LINK;
-            case VERSION: return VERSION;
-            default: return null;
+    public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn( MetadataOption metadataOption ) {
+        switch ( metadataOption ) {
+            case LAST_WRITE:
+                return LAST_WRITE;
+            case LAST_INDEX:
+                return LAST_INDEX;
+            case LAST_LINK:
+                return LAST_LINK;
+            case VERSION:
+                return VERSION;
+            default:
+                return null;
         }
     }
 }

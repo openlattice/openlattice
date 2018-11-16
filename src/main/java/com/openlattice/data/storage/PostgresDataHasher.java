@@ -86,6 +86,56 @@ public final class PostgresDataHasher {
         }
         return h.hash().asBytes();
     }
+
+    public static String hashObjectToHex( Object value, EdmPrimitiveTypeKind dataType ) {
+        final Hasher h = hf.newHasher();
+        switch ( dataType ) {
+            case Boolean:
+                h.putBoolean( (Boolean) value );
+                break;
+            case Binary:
+                h.putBytes( (byte[]) value );
+                break;
+            case Date:
+            case DateTimeOffset:
+            case Duration:
+            case TimeOfDay:
+                h.putString( value.toString(), Charsets.UTF_8 );
+                break;
+            case Guid:
+                final UUID id = (UUID) value;
+                h.putLong( id.getLeastSignificantBits() );
+                h.putLong( id.getMostSignificantBits() );
+                break;
+
+            case Decimal:
+            case Double:
+            case Single:
+                h.putDouble( (Double) value );
+                break;
+
+            case Byte:
+            case SByte:
+                h.putByte( (Byte) value );
+                break;
+            case Int16:
+                h.putShort( (Short) value );
+                break;
+            case Int32:
+                h.putInt( (Integer) value );
+                break;
+            case Int64:
+                h.putLong( (Long) value );
+                break;
+            case String:
+            case GeographyPoint:
+                h.putString( (String) value, Charsets.UTF_8 );
+                break;
+            default:
+                throw new UnsupportedOperationException( "Unable to hash datatype: " + dataType.toString() );
+        }
+        return h.hash().toString();
+    }
 }
 
 
