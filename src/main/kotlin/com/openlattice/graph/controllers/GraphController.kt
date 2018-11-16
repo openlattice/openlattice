@@ -56,11 +56,11 @@ constructor(
 
 
     @Timed
-    @PostMapping(
-            value = QUERY,
-            consumes = [MediaType.APPLICATION_JSON_VALUE],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
-    )
+//    @PostMapping(
+//            value = QUERY,
+//            consumes = [MediaType.APPLICATION_JSON_VALUE],
+//            produces = [MediaType.APPLICATION_JSON_VALUE]
+//    )
     override fun submit(query: SimpleGraphQuery): GraphQueryState {
         //Collect the data to authorize
 
