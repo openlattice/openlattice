@@ -32,7 +32,9 @@ import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
+import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundIndexingService;
@@ -62,9 +64,11 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
+@Import( { ByteBlobServicePod.class } )
 public class IndexerPostConfigurationServicesPod {
 
     @Inject
@@ -85,6 +89,9 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private Matcher matcher;
 
+    @Inject
+    private ByteBlobDataManager byteBlobDataManager;
+
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
         return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
@@ -102,7 +109,7 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource );
+        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
     }
 
     @Bean
