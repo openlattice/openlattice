@@ -28,9 +28,9 @@ paths:
 
   /datastore/edm/:
     $ref: ./definitions/EDM/EDM.yaml#/EDM
-  /datastore/diff/:
+  /datastore/edm/diff/:
     $ref: ./definitions/EDM/EDM.yaml#/EDMdiff
-  /datastore/version/:
+  /datastore/edm/version/:
     $ref: ./definitions/EDM/EDM.yaml#/EDMversion
 
   # entity sets
