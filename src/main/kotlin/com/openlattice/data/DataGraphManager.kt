@@ -157,7 +157,8 @@ interface DataGraphManager {
             numResults: Int,
             filteredRankings: List<AuthorizedFilteredRanking>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            linked: Boolean
+            linked: Boolean,
+            linkingEntitySetId: Optional<UUID>
     ): Iterable<Map<String, Any>>
 
     fun getNeighborEntitySets(entitySetId: Set<UUID>): List<NeighborSets>

@@ -21,6 +21,7 @@
 
 package com.openlattice.graph
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
@@ -240,8 +241,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun getEdgesAndNeighborsForVerticesBulk(entitySetIds: Set<UUID>, vertexIds: Set<UUID>): Stream<Edge> {
-        if(entitySetIds.size == 1) {
-            return getEdgesAndNeighborsForVertices( entitySetIds.first(), vertexIds)
+        if (entitySetIds.size == 1) {
+            return getEdgesAndNeighborsForVertices(entitySetIds.first(), vertexIds)
         }
         return PostgresIterable(
                 Supplier {
@@ -271,8 +272,10 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             entitySetIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             filteredRankings: List<AuthorizedFilteredRanking>,
-            linked: Boolean
+            linked: Boolean,
+            linkingEntitySetId: Optional<UUID>
     ): PostgresIterable<Map<String, Any>> {
+
         /*
          * The plan is that there are set of association entity sets and either source or destination entity sets.
          *
@@ -297,12 +300,52 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
          * | person_ek | 1_assoc_ptId_agg | 2_assoc_pt_id_agg | 1_entity_ptId_agg | 2_entity_ptId_agg | score
          */
 
-        val idColumns = if (linked) {
-            listOf(LINKING_ID.name to EdmPrimitiveTypeKind.Guid)
-        } else {
-            listOf(SELF_ENTITY_SET_ID to EdmPrimitiveTypeKind.Guid, SELF_ENTITY_KEY_ID to EdmPrimitiveTypeKind.Guid)
-        }
 
+        val idColumns = listOf(
+                SELF_ENTITY_SET_ID to EdmPrimitiveTypeKind.Guid,
+                SELF_ENTITY_KEY_ID to EdmPrimitiveTypeKind.Guid)
+
+        val aggregationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
+            buildAggregationColumnMap(
+                    index,
+                    authorizedFilteredRanking.associationPropertyTypes,
+                    authorizedFilteredRanking.filteredRanking.associationAggregations,
+                    ASSOC
+            ).map { it.value to authorizedFilteredRanking.associationPropertyTypes[it.key]!!.datatype } +
+                    buildAggregationColumnMap(
+                            index,
+                            authorizedFilteredRanking.entitySetPropertyTypes,
+                            authorizedFilteredRanking.filteredRanking.neighborTypeAggregations,
+                            ENTITY
+                    ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!.datatype } +
+                    (associationCountColumnName(index) to EdmPrimitiveTypeKind.Int64) +
+                    (entityCountColumnName(index) to EdmPrimitiveTypeKind.Int64)
+        }.flatten().plus(idColumns).plus(SCORE.name to EdmPrimitiveTypeKind.Double).toMap()
+
+        val sql = buildTopEntitiesQuery(limit, entitySetIds, filteredRankings, linked, linkingEntitySetId)
+
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.createStatement()
+                    val rs = stmt.executeQuery(sql)
+                    StatementHolder(connection, stmt, rs)
+                }, Function { rs ->
+            return@Function aggregationColumns.map { (col, type) ->
+                when (type) {
+                    EdmPrimitiveTypeKind.Guid -> col to (rs.getObject(col) as UUID)
+                    else -> col to rs.getObject(col)
+                }
+            }.toMap()
+        })
+    }
+
+    @VisibleForTesting
+    fun buildTopEntitiesQuery(limit: Int,
+                              entitySetIds: Set<UUID>,
+                              filteredRankings: List<AuthorizedFilteredRanking>,
+                              linked: Boolean,
+                              linkingEntitySetId: Optional<UUID>): String {
         val joinColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
 
         val associationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
@@ -329,23 +372,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     .orElse("")
         }.filter(String::isNotBlank)
 
-        val aggregationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
-            buildAggregationColumnMap(
-                    index,
-                    authorizedFilteredRanking.associationPropertyTypes,
-                    authorizedFilteredRanking.filteredRanking.associationAggregations,
-                    ASSOC
-            ).map { it.value to authorizedFilteredRanking.associationPropertyTypes[it.key]!!.datatype } +
-                    buildAggregationColumnMap(
-                            index,
-                            authorizedFilteredRanking.entitySetPropertyTypes,
-                            authorizedFilteredRanking.filteredRanking.neighborTypeAggregations,
-                            ENTITY
-                    ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!.datatype } +
-                    (associationCountColumnName(index) to EdmPrimitiveTypeKind.Int64 )+
-                    (entityCountColumnName(index) to EdmPrimitiveTypeKind.Int64)
-        }.flatten().plus(idColumns).plus(SCORE.name to EdmPrimitiveTypeKind.Double).toMap()
-
 
         val scoreColumn = (associationColumns + entityColumns + countColumns)
                 .joinToString("+", prefix = "(", postfix = ") as score")
@@ -356,8 +382,16 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
                     val tableSql = buildAssociationTable(index, entitySetIds, authorizedFilteredRanking, linked)
                     //We are guaranteed at least one association for a valid top utilizers request
+
                     if (index == 0) {
-                        "SELECT *,$scoreColumn FROM ($tableSql) as assoc_table$index "
+                        val selectedColumns =
+                                if (linked) {
+                                    " *, UUID('${linkingEntitySetId.get()}') as $SELF_ENTITY_SET_ID, ${LINKING_ID.name} as $SELF_ENTITY_KEY_ID, $scoreColumn "
+                                } else {
+                                    " *,$scoreColumn "
+                                }
+                        "SELECT $selectedColumns FROM ($tableSql) as assoc_table$index "
+
                     } else {
                         "FULL OUTER JOIN ($tableSql) as assoc_table$index USING($joinColumns) "
                     }
@@ -369,20 +403,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }.joinToString("\n")
         val sql = "$associationSql \n$entitiesSql \nORDER BY score DESC \nLIMIT $limit"
 
-        return PostgresIterable(
-                Supplier {
-                    val connnection = hds.connection
-                    val stmt = connnection.createStatement()
-                    val rs = stmt.executeQuery(sql)
-                    StatementHolder(connnection, stmt, rs)
-                }, Function { rs ->
-            return@Function aggregationColumns.map { (col, type) ->
-                when (type) {
-                    EdmPrimitiveTypeKind.Guid -> col to (rs.getObject(col) as UUID)
-                    else -> col to rs.getObject(col)
-                }
-            }.toMap()
-        })
+        return sql
     }
 
 
@@ -468,7 +489,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 authorizedFilteredRanking.associationSets,
                 authorizedFilteredRanking.filteredRanking.associationFilters,
                 setOf(),
-                linked,
+                false,
                 associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
         )
 
@@ -477,13 +498,13 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
             "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
-            "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
+                    "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         }
 
         val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking)
-        val joinColumns = if (linked) LINKING_ID.name else entityKeyIdColumns
+        val joinColumns = entityKeyIdColumns
         val groupingColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
-        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID FROM ${IDS.name}, ${LINKING_ID.name}"
+        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
         val spineSql = if (linked) {
             "SELECT edges.*,${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
                     "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
@@ -527,7 +548,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 authorizedFilteredRanking.entitySets,
                 authorizedFilteredRanking.filteredRanking.neighborFilters,
                 setOf(),
-                linked,
+                false,
                 entitySetPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
         )
 
@@ -536,13 +557,13 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
             "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
-            "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
+                    "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         }
 
         val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking)
-        val joinColumns = if (linked) LINKING_ID.name else entityKeyIdColumns
+        val joinColumns = entityKeyIdColumns
         val groupingColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
-        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID FROM ${IDS.name}, ${LINKING_ID.name}"
+        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
         val spineSql = if (linked) {
             "SELECT edges.*,${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
                     "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
@@ -701,8 +722,8 @@ private fun buildEdgeFilteringClause(
     }
 
     val entitySetsClause =
-        "$entitySetColumn IN (${authorizedEntitySets.joinToString(",") { "'$it'" }}) " +
-                "AND $selfEntitySetColumn IN (${selfEntitySetIds.joinToString(",") { "'$it'" }})"
+            "$entitySetColumn IN (${authorizedEntitySets.joinToString(",") { "'$it'" }}) " +
+                    "AND $selfEntitySetColumn IN (${selfEntitySetIds.joinToString(",") { "'$it'" }})"
 
     return "($associationsClause AND $entitySetsClause)"
 }

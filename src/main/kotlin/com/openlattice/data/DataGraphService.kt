@@ -362,7 +362,8 @@ open class DataGraphService(
             numResults: Int,
             filteredRankings: List<AuthorizedFilteredRanking>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            linked: Boolean
+            linked: Boolean,
+            linkingEntitySetId: Optional<UUID>
     ): Iterable<Map<String, Any>> {
 //        val maybeUtilizers = queryCache
 //                .getIfPresent(MultiKey(entitySetIds, filteredRankings))
@@ -376,7 +377,8 @@ open class DataGraphService(
                 entitySetIds,
                 authorizedPropertyTypes,
                 filteredRankings,
-                linked
+                linked,
+                linkingEntitySetId
         )
 
 //            queryCache.put(MultiKey(entitySetIds, filteredRankings), utilizers)

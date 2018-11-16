@@ -796,7 +796,7 @@ public final class ResultSetAdapters {
             final UUID entityKeyId = linkingId( rs );
             data.put( ID_FQN, entityKeyId );
         } else {
-            final UUID entityKeyId = entityKeyId( rs );
+            final UUID entityKeyId = id( rs );
             data.put( ID_FQN, entityKeyId );
         }
 
@@ -836,10 +836,6 @@ public final class ResultSetAdapters {
 
     public static Object lastIndex( ResultSet rs ) throws SQLException {
         return rs.getObject( LAST_INDEX.getName() );
-    }
-
-    public static UUID entityKeyId( ResultSet rs ) throws SQLException {
-        return (UUID) rs.getObject( ID_VALUE.getName() );
     }
 
     public static Boolean linking( ResultSet rs ) throws SQLException {

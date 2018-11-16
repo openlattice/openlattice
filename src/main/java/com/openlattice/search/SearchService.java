@@ -87,6 +87,8 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.openlattice.postgres.DataTables.ID_FQN;
+
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
 
@@ -248,11 +250,11 @@ public class SearchService {
         } while ( entityDataByLinkingId.size() - start < maxHits && hitNum < totalHits );
 
         if( entityDataByLinkingId.size() >= start ) {
-            return new DataSearchResult( totalHits, mergeEntityDataByLinkingId(
-                    entityDataByLinkingId
-                            .values().stream()
-                            .skip( start )
-                            .collect( Collectors.toList() ) ) );
+            List<Map.Entry<UUID, List<Map<FullQualifiedName, Set<Object>>>>> entityDataByLinkingIdList = entityDataByLinkingId
+                    .entrySet().stream()
+                    .skip( start )
+                    .collect( Collectors.toList() );
+            return new DataSearchResult( totalHits, mergeEntityDataByLinkingId( entityDataByLinkingIdList ) );
         } else {
             return new DataSearchResult( totalHits, Lists.newArrayList() );
         }
@@ -260,11 +262,11 @@ public class SearchService {
     }
 
     private List<SetMultimap<FullQualifiedName, Object>> mergeEntityDataByLinkingId(
-            List<List<Map<FullQualifiedName, Set<Object>>>> entityDataOfLinkingIds ) {
+            List<Map.Entry<UUID, List<Map<FullQualifiedName, Set<Object>>>>> entityDataOfLinkingIds ) {
 
         return entityDataOfLinkingIds.stream().map( linkedEntityDataList -> {
             SetMultimap<FullQualifiedName, Object> mergedEntityDataMultimap = HashMultimap.create();
-            Map<FullQualifiedName, Set<Object>> mergedEntityData = linkedEntityDataList.stream()
+            Map<FullQualifiedName, Set<Object>> mergedEntityData = linkedEntityDataList.getValue().stream()
                     .reduce( ( dataMap, nextDataMap ) -> {
                         nextDataMap
                                 .forEach( ( fqn, dataSet ) ->
@@ -272,6 +274,7 @@ public class SearchService {
                                                 .flatMap( Collection::stream )
                                                 .collect( Collectors.toSet() ) ) );
                         return dataMap; } ).get();
+            mergedEntityData.put( ID_FQN, ImmutableSet.of( linkedEntityDataList.getKey() ) );
             mergedEntityData.forEach(mergedEntityDataMultimap::putAll);
             return mergedEntityDataMultimap;
         }).collect( Collectors.toList() );
