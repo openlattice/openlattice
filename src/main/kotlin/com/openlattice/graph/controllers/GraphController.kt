@@ -70,11 +70,11 @@ constructor(
     }
 
     @Timed
-    @PostMapping(
-            value = QUERY + ID_PATH,
-            consumes = [MediaType.APPLICATION_JSON_VALUE],
-            produces = [MediaType.APPLICATION_JSON_VALUE]
-    )
+//    @PostMapping(
+//            value = QUERY + ID_PATH,
+//            consumes = [MediaType.APPLICATION_JSON_VALUE],
+//            produces = [MediaType.APPLICATION_JSON_VALUE]
+//    )
     override fun getQueryState(
             @PathVariable(ID) queryId: UUID,
             @RequestBody options: Set<GraphQueryState.Option>
