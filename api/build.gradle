@@ -18,7 +18,7 @@ plugins {
     id 'idea'
     id 'jacoco'
     id 'checkstyle'
-    id 'com.github.spotbugs' version '1.6.2'
+    id 'com.github.spotbugs' version '1.6.3'
     id 'org.jetbrains.kotlin.jvm' version '1.2.71'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.2.71'
     id 'org.hidetake.swagger.generator' version '2.12.0'
