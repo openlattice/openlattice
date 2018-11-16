@@ -801,11 +801,8 @@ internal fun selectVersionOfPropertyTypeInEntitySet(
         binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    val arrayAgg = if (binary) {
-        " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)} "
-    } else {
-        " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
-    }
+    val arrayAgg = " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
+
 
     return "(SELECT ${ENTITY_SET_ID.name}, " +
             "   ${ID_VALUE.name}, " +
@@ -826,11 +823,8 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
         binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    val arrayAgg = if (binary) {
-        " array_agg(encode(${DataTables.quote(fqn)}, 'base64')) as ${DataTables.quote(fqn)} "
-    } else {
-        " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
-    }
+    val arrayAgg = " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
+
     return "(SELECT ${ENTITY_SET_ID.name}," +
             " ${ID_VALUE.name}," +
             " $arrayAgg" +
