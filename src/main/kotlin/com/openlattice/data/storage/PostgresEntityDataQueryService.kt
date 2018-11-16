@@ -54,12 +54,10 @@ const val EXPANDED_VERSIONS = "expanded_versions"
 const val FETCH_SIZE = 100000
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
-@Service
-class PostgresEntityDataQueryService(private val hds: HikariDataSource) {
-
-    @Autowired(required = false)
-    lateinit var byteBlobDataManager: ByteBlobDataManager
-
+class PostgresEntityDataQueryService(
+        private val hds: HikariDataSource,
+        private val byteBlobDataManager: ByteBlobDataManager
+) {
     fun getEntitiesById(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,

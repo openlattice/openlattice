@@ -22,6 +22,7 @@
 package com.openlattice.graph
 
 import com.openlattice.authorization.*
+import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithPropertyTypes
@@ -42,10 +43,11 @@ class EntityQueryExecutingVisitor(
         private val hds: HikariDataSource,
         private val edm: EdmManager,
         private val authorizationManager: AuthorizationManager,
+        private val byteBlobDataManager: ByteBlobDataManager,
         val queryId: UUID
 ) : EntityQueryVisitor, AuthorizingComponent {
     private val authzHelper = EdmAuthorizationHelper(edm, authorizationManager)
-    private val pgeqs = PostgresEntityDataQueryService(hds)
+    private val pgeqs = PostgresEntityDataQueryService(hds,byteBlobDataManager)
 
     private val indexGen = AtomicInteger()
     private val expiry = System.currentTimeMillis() + 10 * 60 * 1000 //10 minute, arbitary

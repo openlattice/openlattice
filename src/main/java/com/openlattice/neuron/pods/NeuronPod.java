@@ -36,9 +36,11 @@ import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
+import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.PostgresEdmManager;
@@ -52,9 +54,7 @@ import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.neuron.Neuron;
 import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
-
 import javax.inject.Inject;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -62,6 +62,7 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @Import( {
         AuditEntitySetPod.class,
+        ByteBlobServicePod.class,
         CassandraPod.class
 } )
 public class NeuronPod {
@@ -80,6 +81,9 @@ public class NeuronPod {
 
     @Inject
     private HikariDataSource hikariDataSource;
+
+    @Inject
+    private ByteBlobDataManager byteBlobDataManager;
 
     /*
      *
@@ -115,7 +119,7 @@ public class NeuronPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource );
+        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
     }
 
     @Bean
