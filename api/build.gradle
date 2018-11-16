@@ -4,7 +4,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "org.openapitools:openapi-generator-gradle-plugin:3.2.2"
+        classpath "org.openapitools:openapi-generator-gradle-plugin:3.3.0"
     }
 
     configurations.classpath {
@@ -19,8 +19,8 @@ plugins {
     id 'jacoco'
     id 'checkstyle'
     id 'com.github.spotbugs' version '1.6.2'
-    id 'org.jetbrains.kotlin.jvm' version '1.2.61'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.61'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.71'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.2.71'
     id 'org.hidetake.swagger.generator' version '2.12.0'
 }
 
