@@ -1,0 +1,216 @@
+fullQualifiedName:
+  type: object
+  properties:
+    name:
+      type: string
+    namespace:
+      type: string
+EDM:
+  type: object
+  properties:
+    version:
+      type: string
+      format: uuid
+    namespaces:
+      type: array
+      items:
+        type: string
+    schemas:
+      type: array
+      items:
+        $ref: "./components.yaml#/schema"
+    propertyTypes:
+      type: array
+      items:
+        $ref: "./components.yaml#/propertyType"
+    entityTypes:
+      type: array
+      items:
+        $ref: "./components.yaml#/entityType"
+    associationTypes:
+      type: array
+      items:
+        $ref: "./components.yaml#/associationType"
+EDMdiff:
+  type: object
+  properties:
+    conflicts:
+      $ref: "./components.yaml#/EDM"
+    diff:
+      $ref: "./components.yaml#/EDM"
+schema:
+  type: object
+  properties:
+    entityTypes:
+      type: array
+      items:
+        $ref: "./components.yaml#/entityType"
+    propertyTypes:
+      type: array
+      items:
+        $ref: "./components.yaml#/propertyType"
+    fqn:
+      $ref: "./components.yaml#/fullQualifiedName"
+# entity sets
+entitySetId:
+  type: string
+  format: uuid
+entitySetName:
+  title: Entity set name
+  type: string
+  example: PoliceRecords
+entitySet:
+  title: An entity set
+  type: object
+  properties:
+    name:
+      $ref: "./components.yaml#/entitySetName"
+    id:
+      $ref: "./components.yaml#/entitySetId"
+    title:
+      type: string
+    contacts:
+      type: array
+      items:
+        type: string
+    entityTypeId:
+      $ref: "./components.yaml#/entityTypeId"
+    description:
+      type: string
+    linking:
+      type: boolean
+    linked_entity_sets:
+      type: array
+      items:
+        type: string
+    external:
+      type: boolean
+  example:
+    entityTypeId: 963b597b-b28d-4f59-b2e6-4d443499e464
+    id: 843b597b-b28d-4f59-b2e6-4d443499e323
+    name: NameOfMyEntitySet
+    title: This is the title of the entitySet
+    contacts: ["support@openlattice.com"]
+    description: This is a more elaborate description of the entity set.
+
+# property type
+propertyTypeId:
+  type: string
+  format: uuid
+propertyType:
+  type: object
+  properties:
+    title:
+      type: string
+    id:
+      type: string
+      format: uuid
+    type:
+      $ref: "./components.yaml#/fullQualifiedName"
+    description:
+      type: string
+    schemas:
+      type: array
+      items:
+        $ref: "./components.yaml#/fullQualifiedName"
+    datatype:
+      type: string
+    piiField:
+      type: boolean
+    multiValued:
+      type: boolean
+    analyzer:
+      type: string
+
+# entity type
+entityTypeId:
+  type: string
+  format: uuid
+entityType:
+  title: An entity type
+  type: object
+  properties:
+    title:
+      type: string
+    description:
+      type: string
+    id:
+      type: string
+    type:
+      $ref: "./components.yaml#/fullQualifiedName"
+    schemas:
+      type: array
+      items:
+        $ref: "./components.yaml#/fullQualifiedName"
+    key:
+      type: array
+      items:
+        type: string
+    properties:
+      type: array
+      items:
+        type: string
+    propertyTags:
+      type: object # <-- this is wrong and needs to be fixed !!
+    basetype:
+       type: string
+    category:
+      type: string
+      enum: [AssociationType, EntityType]
+  example:
+    id: ec6865e6-e60e-424b-a071-6a9c1603d735
+    type:
+      namespace: lattice
+      name: myentity
+    schemas:
+      namespace: lattice
+      name: myschema
+    key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
+    properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
+    category: EntityType
+#
+# # association type
+associationTypeId:
+  type: string
+  format: uuid
+  example: 73f4b728-6c1d-49ee-bc5a-a618adf68590
+associationType:
+  type: object
+  properties:
+    entityType:
+      $ref: "./components.yaml#/entityType"
+    src:
+      type: array
+      items:
+        type: string
+    dst:
+      type: array
+      items:
+        type: string
+    bidirectional:
+      type: boolean
+  example:
+    entityType:
+      id: ec6865e6-e60e-424b-a071-6a9c1603d735
+      type:
+        namespace: lattice
+        name: myentity
+      schemas:
+        namespace: lattice
+        name: myschema
+      key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
+      properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
+    src: [ec6865e6-e60e-424b-a071-6a9c1603d735]
+    dst: [4b08e1f9-4a00-4169-92ea-10e377070220]
+    description: AssociationType Description
+    bidirectional: true
+    category: AssociationType
+propertyUsageSummary:
+  type: object
+  properties:
+    entityTypeId:
+      type: string
+    entitySetId:
+      type: string
+    count:
+      type: integer

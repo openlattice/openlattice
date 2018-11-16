@@ -19,28 +19,24 @@
  *
  */
 
-package com.openlattice.graph;
+package com.openlattice.graph
 
-import com.google.common.collect.SetMultimap;
-import com.openlattice.data.Property;
-import com.openlattice.graph.query.GraphQuery.AssociationIndexes;
-import java.util.List;
-import java.util.UUID;
+import com.google.common.base.Preconditions.checkState
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * This class is a simple filter based graph query data class. The current limitation of this class is that it doesn't
+ * operate on entity types. The caller is responsible for specifying the entity sets to operate on.
+ *
+ * @param vertexFilters Defines constraints on vertices in the graph. A list of maps from entity set to property type id.
+ * @param edgeFilters
  */
-public class SubGraph {
-    private final UUID                                        queryId;
-    private final List<Iterable<SetMultimap<UUID, Property>>> entities;
-    private final Iterable<AssociationIndexes>                edges;
-
-    public SubGraph(
-            UUID queryId,
-            List<Iterable<SetMultimap<UUID, Property>>> entities,
-            Iterable<AssociationIndexes> edges ) {
-        this.queryId = queryId;
-        this.entities = entities;
-        this.edges = edges;
+data class SimpleGraphQuery(
+        val entityConstraints: List<GraphEntityConstraint>,
+        val associationConstraints: List<SimpleAssociationConstraint>
+) {
+    init {
+        checkState(entityConstraints.isNotEmpty(), "At least one entity constraint must be specified.")
     }
 }
+
+//data class QueryOptions( val anchorIndex : Int, val
