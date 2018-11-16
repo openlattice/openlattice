@@ -48,15 +48,12 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletResponse
 import kotlin.collections.LinkedHashSet
 
+private val mm = HashMultimap.create<FullQualifiedName, Any>(ImmutableSetMultimap.of(COUNT_FQN, 0))
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-
-private val mm = HashMultimap.create<FullQualifiedName, Any>(ImmutableSetMultimap.of(COUNT_FQN, 0))
-
-data class ResolvedEntitySet(val entitySetIds: Set<UUID>, val linked: Boolean)
-
 @RestController
 @RequestMapping(AnalysisApi.CONTROLLER)
 class AnalysisController : AnalysisApi, AuthorizingComponent {
