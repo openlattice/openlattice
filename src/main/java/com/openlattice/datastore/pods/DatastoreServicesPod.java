@@ -20,17 +20,24 @@
 
 package com.openlattice.datastore.pods;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
+import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
+import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
+import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.kryptnostic.rhizome.pods.CassandraPod;
+import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.analysis.AnalysisService;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
+import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
@@ -38,10 +45,10 @@ import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.data.storage.HazelcastEntityDatastore;
-import com.openlattice.data.storage.PostgresDataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.*;
 import com.openlattice.datastore.apps.services.AppService;
+import com.openlattice.datastore.configuration.DatastoreConfiguration;
+import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.datastore.services.*;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
@@ -66,13 +73,19 @@ import com.openlattice.search.EsEdmService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.*;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
+import java.io.IOException;
+import java.net.URL;
+import java.util.Date;
+import java.util.List;
+
+import static com.openlattice.authorization.AuthorizingComponent.logger;
 import static com.openlattice.datastore.util.Util.returnAndLog;
 
 @Configuration
@@ -84,21 +97,25 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
 public class DatastoreServicesPod {
 
     @Inject
-    private Jdbi                     jdbi;
+    private Jdbi                      jdbi;
     @Inject
-    private PostgresTableManager     tableManager;
+    private PostgresTableManager      tableManager;
     @Inject
-    private HazelcastInstance        hazelcastInstance;
+    private HazelcastInstance         hazelcastInstance;
     @Inject
-    private HikariDataSource         hikariDataSource;
+    private HikariDataSource          hikariDataSource;
     @Inject
-    private Auth0Configuration       auth0Configuration;
+    private Auth0Configuration        auth0Configuration;
     @Inject
-    private ListeningExecutorService executor;
+    private ListeningExecutorService  executor;
     @Inject
-    private EventBus                 eventBus;
+    private EventBus                  eventBus;
     @Inject
-    private Neuron                   neuron;
+    private Neuron                    neuron;
+    @Autowired( required = false )
+    private AmazonS3                  awsS3;
+    @Autowired( required = false )
+    private AmazonLaunchConfiguration awsLaunchConfig;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -313,6 +330,46 @@ public class DatastoreServicesPod {
     @Bean
     public SearchService searchService() {
         return new SearchService( eventBus );
+    }
+
+    @Bean( name = "datastoreConfiguration" )
+    @Profile( { Profiles.LOCAL_CONFIGURATION_PROFILE } )
+    public DatastoreConfiguration getLocalAwsDatastoreConfiguration() {
+        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfiguration( DatastoreConfiguration.class );
+        logger.info( "Using local aws datastore configuration: {}", config );
+        return config;
+    }
+
+    @Bean( name = "datastoreConfiguration" )
+    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
+    public DatastoreConfiguration getAwsDatastoreConfiguration() {
+        DatastoreConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( awsS3,
+                awsLaunchConfig.getBucket(),
+                awsLaunchConfig.getFolder(),
+                DatastoreConfiguration.class );
+        logger.info( "Using aws datastore configuration: {}", config );
+        return config;
+    }
+
+    @Bean( name = "byteBlobDataManager" )
+    @DependsOn( "datastoreConfiguration" )
+    @Profile( { DatastoreProfiles.MEDIA_LOCAL_PROFILE } )
+    public ByteBlobDataManager localBlobDataManager() {
+        return new LocalBlobDataService( hikariDataSource );
+    }
+
+    @Bean( name = "byteBlobDataManager" )
+    @DependsOn( "datastoreConfiguration" )
+    @Profile( { DatastoreProfiles.MEDIA_LOCAL_AWS_PROFILE } )
+    public ByteBlobDataManager localAwsBlobDataManager() {
+        return new AwsBlobDataService( getLocalAwsDatastoreConfiguration() );
+    }
+
+    @Bean( name = "byteBlobDataManager" )
+    @DependsOn( "datastoreConfiguration" )
+    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
+    public ByteBlobDataManager awsBlobDataManager() {
+        return new AwsBlobDataService( getAwsDatastoreConfiguration() );
     }
 
     @PostConstruct
