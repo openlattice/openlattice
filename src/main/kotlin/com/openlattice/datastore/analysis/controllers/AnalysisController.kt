@@ -48,15 +48,12 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletResponse
 import kotlin.collections.LinkedHashSet
 
+private val mm = HashMultimap.create<FullQualifiedName, Any>(ImmutableSetMultimap.of(COUNT_FQN, 0))
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-
-private val mm = HashMultimap.create<FullQualifiedName, Any>(ImmutableSetMultimap.of(COUNT_FQN, 0))
-
-data class ResolvedEntitySet(val entitySetIds: Set<UUID>, val linked: Boolean)
-
 @RestController
 @RequestMapping(AnalysisApi.CONTROLLER)
 class AnalysisController : AnalysisApi, AuthorizingComponent {
@@ -117,13 +114,17 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             return getFilteredRankings(
                     entitySet.linkedEntitySets,
                     numResults,
-                    filteredRankings, columnTitles, entitySet.isLinking
+                    filteredRankings,
+                    columnTitles,
+                    entitySet.isLinking, Optional.of(entitySetId)
             )
         } else {
             return getFilteredRankings(
                     setOf(entitySetId),
                     numResults,
-                    filteredRankings, columnTitles, entitySet.isLinking
+                    filteredRankings,
+                    columnTitles,
+                    entitySet.isLinking, Optional.empty()
             )
         }
 
@@ -154,7 +155,8 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             numResults: Int,
             filteredRankings: NeighborsRankingAggregation,
             columnTitles: LinkedHashSet<String>,
-            linked: Boolean
+            linked: Boolean,
+            linkingEntitySetId: Optional<UUID>
     ): Iterable<Map<String, Any>> {
         val authorizedPropertyTypes =
                 entitySetIds.map { entitySetId ->
@@ -191,7 +193,8 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
                 numResults,
                 authorizedFilteredRankings,
                 authorizedPropertyTypes,
-                linked
+                linked,
+                linkingEntitySetId
         )
     }
 
