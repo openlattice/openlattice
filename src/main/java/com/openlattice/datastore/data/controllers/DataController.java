@@ -447,7 +447,12 @@ public class DataController implements DataApi, AuthorizingComponent {
             method = RequestMethod.DELETE )
     public Integer clearAllEntitiesFromEntitySet( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
         ensureOwnerAccess( new AclKey( entitySetId ) );
-        final EntityType entityType = edmService.getEntityTypeByEntitySetId( entitySetId );
+        final EntitySet entitySet = edmService.getEntitySet( entitySetId );
+        if ( entitySet.isLinking() ) {
+            throw new ForbiddenException( "You cannot clear all data from a linked entity set." );
+        }
+
+        final EntityType entityType = edmService.getEntityType( entitySet.getEntityTypeId() );
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.OWNER ) );
         if ( !authorizedPropertyTypes.keySet().containsAll( entityType.getProperties() ) ) {
