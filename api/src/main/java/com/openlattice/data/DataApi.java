@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 public interface DataApi {
     // @formatter:off
@@ -45,7 +46,7 @@ public interface DataApi {
     String BASE                  = SERVICE + CONTROLLER;
     // @formatter:on
 
-    String ASSOCIATION           = "association";
+    String ASSOCIATION = "association";
 
     String COUNT                 = "count";
     String ENTITY_KEY_ID         = "entityKeyId";
@@ -54,6 +55,7 @@ public interface DataApi {
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
+    String ENTITIES              = "entities";
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
     String FILE_TYPE             = "fileType";
@@ -77,7 +79,7 @@ public interface DataApi {
 
     /**
      * @param req If syncId is not specified in the request, will retrieve the data from the current syncIds. If
-     * selectedProperties are not specified, all readable properties will be fetched.
+     *            selectedProperties are not specified, all readable properties will be fetched.
      * @return An iterable containing the entity data, using property type FQNs as keys
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
@@ -96,7 +98,7 @@ public interface DataApi {
      *
      * @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
-     * @param entity The new entity details object that will be merged into old values, with property type ids as keys.
+     * @param entity      The new entity details object that will be merged into old values, with property type ids as keys.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Integer mergeIntoEntityInEntitySet(
@@ -109,7 +111,7 @@ public interface DataApi {
      *
      * @param entitySetId The id of the entity set the entity belongs to.
      * @param entityKeyId The id of the entity to replace.
-     * @param entity The new entity details object that will replace the old value, with property type ids as keys.
+     * @param entity      The new entity details object that will replace the old value, with property type ids as keys.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
     Integer replaceEntityInEntitySet(
@@ -128,8 +130,8 @@ public interface DataApi {
      * </ul>
      *
      * @param entitySetId The id of the entity set to write to.
-     * @param entities A map of entity key ids to entities to merge
-     * @param updateType The update type to perform.
+     * @param entities    A map of entity key ids to entities to merge
+     * @param updateType  The update type to perform.
      * @return The total number of entities updated.
      */
     @PUT( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
@@ -147,7 +149,7 @@ public interface DataApi {
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. An association is the triple of source, destination, and edge
-     * entitiy key ids.
+     *                     entitiy key ids.
      */
     @PUT( BASE + "/" + ASSOCIATION )
     Integer createAssociations( @Body Set<DataEdgeKey> associations );
@@ -156,7 +158,7 @@ public interface DataApi {
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. Keys are association entity set ids and values for each keys
-     * are the data to be created.
+     *                     are the data to be created.
      */
     @POST( BASE + "/" + ASSOCIATION )
     ListMultimap<UUID, UUID> createAssociations( @Body ListMultimap<UUID, DataEdge> associations );
@@ -187,6 +189,14 @@ public interface DataApi {
     Void clearEntityFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
 
     /**
+     * Clears all entities from an entity set.
+     *
+     * @param entitySetId The id of the entity set to delete from.
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITIES )
+    Integer clearAllEntitiesFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId );
+
+    /**
      * Clears the Entity matching the given Entity id and all of its neighbor Entities
      *
      * @param vertexEntitySetId the id of the EntitySet to delete from
@@ -207,8 +217,8 @@ public interface DataApi {
     /**
      * Replaces a single entity from an entity set.
      *
-     * @param entitySetId The id of the entity set the entity belongs to.
-     * @param entityKeyId The id of the entity to replace.
+     * @param entitySetId  The id of the entity set the entity belongs to.
+     * @param entityKeyId  The id of the entity to replace.
      * @param entityByFqns The new entity details object that will replace the old value, with property type FQNs as keys.
      */
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
