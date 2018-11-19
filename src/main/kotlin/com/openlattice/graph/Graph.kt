@@ -45,6 +45,7 @@ import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
@@ -223,12 +224,12 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
-    override fun getEdgesAndNeighborsForVertices(entitySetId: UUID, vertexIds: Set<UUID>): Stream<Edge> {
+    override fun getEdgesAndNeighborsForVertices(entitySetId: UUID, filter: EntityNeighborsFilter): Stream<Edge> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.getConnection()
-                    val ids = PostgresArrays.createUuidArray(connection, vertexIds.stream())
-                    val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
+                    val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
+                    val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, false))
                     stmt.setObject(1, entitySetId)
                     stmt.setArray(2, ids)
                     stmt.setObject(3, entitySetId)
@@ -240,15 +241,16 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
-    override fun getEdgesAndNeighborsForVerticesBulk(entitySetIds: Set<UUID>, vertexIds: Set<UUID>): Stream<Edge> {
+
+    override fun getEdgesAndNeighborsForVerticesBulk(entitySetIds: Set<UUID>, filter: EntityNeighborsFilter): Stream<Edge> {
         if (entitySetIds.size == 1) {
-            return getEdgesAndNeighborsForVertices(entitySetIds.first(), vertexIds)
+            return getEdgesAndNeighborsForVertices(entitySetIds.first(), filter)
         }
         return PostgresIterable(
                 Supplier {
                     val connection = hds.getConnection()
-                    val ids = PostgresArrays.createUuidArray(connection, vertexIds.stream())
-                    val stmt = connection.prepareStatement(BULK_BULK_NEIGHBORHOOD_SQL)
+                    val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
+                    val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, true))
                     stmt.setObject(1, entitySetIds)
                     stmt.setArray(2, ids)
                     stmt.setObject(3, entitySetIds)
@@ -677,6 +679,41 @@ private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
 private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${SRC_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${SRC_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) ) OR " +
         "( ${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${DST_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] )) )"
+
+internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
+    var srcEntitySetSql = "${SRC_ENTITY_SET_ID.name} = ?"
+    var dstEntitySetSql = "${DST_ENTITY_SET_ID.name} = ?"
+
+    if (multipleEntitySetIds) {
+        srcEntitySetSql = "${SRC_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) )"
+        dstEntitySetSql = "${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) )"
+    }
+
+    var srcSql = "$srcEntitySetSql AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    if (filter.dstEntitySetIds.isPresent) {
+        if (filter.dstEntitySetIds.get().size  > 0 ) {
+            srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(",") { "'$it'" }}))"
+        } else {
+            srcSql = "false AND $srcSql "
+        }
+    }
+
+    var dstSql = "$dstEntitySetSql AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))"
+    if (filter.srcEntitySetIds.isPresent) {
+        if (filter.srcEntitySetIds.get().size > 0) {
+            dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(",") { "'$it'" }}))"
+        } else {
+            dstSql = "false AND $dstSql "
+        }
+    }
+
+    if (filter.associationEntitySetIds.isPresent) {
+        srcSql += " AND ( ${EDGE_ENTITY_SET_ID.name} IN (${filter.associationEntitySetIds.get().joinToString(",") { "'$it'" }}))"
+        dstSql += " AND ( ${EDGE_ENTITY_SET_ID.name} IN (${filter.associationEntitySetIds.get().joinToString(",") { "'$it'" }}))"
+    }
+
+    return "SELECT * FROM ${EDGES.name} WHERE ( " + srcSql + " ) OR ( " + dstSql + " )"
+}
 
 
 private fun selectEdges(keys: Set<EdgeKey>): String {
