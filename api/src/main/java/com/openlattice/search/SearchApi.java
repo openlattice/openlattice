@@ -242,27 +242,41 @@ public interface SearchApi {
      * Executes a search for all neighbors of an entity that are connected by an association
      *
      * @param entitySetId the entity set id of the entity
-     * @param entityId    the entity key id of the entity
+     * @param entityKeyId    the entity key id of the entity
      * @return A list of objects containing information about the neighbor and association
      */
     @GET( BASE + ENTITY_SET_ID_PATH + ENTITY_ID_PATH )
     List<NeighborEntityDetails> executeEntityNeighborSearch(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId );
+            @Path( ENTITY_ID ) UUID entityKeyId );
 
     /**
      * Executes a search for all neighbors of multiple entities of the same entity set that are connected by an
      * association
      *
      * @param entitySetId the entity set id of the entities
-     * @param entityIds   the entity key ids of the entities
+     * @param entityKeyIds   the entity key ids of the entities
      * @return A map from each entity id to a list of objects containing information about the neighbors and
      * associations of that entity
      */
     @POST( BASE + ENTITY_SET_ID_PATH + NEIGHBORS )
     Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearchBulk(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Set<UUID> entityIds );
+            @Body Set<UUID> entityKeyIds );
+
+    /**
+     * Executes a search for all neighbors of multiple entities of the same entity set that are connected by an
+     * association
+     *
+     * @param entitySetId the entity set id of the entities
+     * @param filter   optional constraints on entityKeyIds to include and filters on src/dst/edge entity set ids
+     * @return A map from each entity id to a list of objects containing information about the neighbors and
+     * associations of that entity
+     */
+    @POST( BASE + ENTITY_SET_ID_PATH + NEIGHBORS + ADVANCED )
+    Map<UUID, List<NeighborEntityDetails>> executeFilteredEntityNeighborSearch(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body EntityNeighborsFilter filter );
 
     @GET( BASE + EDM + INDEX )
     Void triggerEdmIndex();
