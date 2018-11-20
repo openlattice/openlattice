@@ -34,6 +34,7 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.LinkingApi;
+import com.openlattice.linking.RealtimeLinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.rehearsal.SetupEnvironment;
@@ -56,14 +57,15 @@ import retrofit2.Retrofit;
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected final static Map<String, Retrofit> retrofitMap = new HashMap<>();
 
-    protected static EdmApi            edmApi;
-    protected static PermissionsApi    permissionsApi;
-    protected static AuthorizationsApi authorizationsApi;
-    protected static RequestsApi       requestsApi;
-    protected static DataApi           dataApi;
-    protected static SearchApi         searchApi;
-    protected static OrganizationsApi  organizationsApi;
-    protected static LinkingApi        linkingApi;
+    protected static EdmApi             edmApi;
+    protected static PermissionsApi     permissionsApi;
+    protected static AuthorizationsApi  authorizationsApi;
+    protected static RequestsApi        requestsApi;
+    protected static DataApi            dataApi;
+    protected static SearchApi          searchApi;
+    protected static OrganizationsApi   organizationsApi;
+    protected static LinkingApi         linkingApi;
+    protected static RealtimeLinkingApi realtimeLinkingApi;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -91,6 +93,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
         linkingApi = currentRetrofit.create( LinkingApi.class );
+        realtimeLinkingApi = currentRetrofit.create( RealtimeLinkingApi.class );
     }
 
     public static PropertyType getBinaryPropertyType() {

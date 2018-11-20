@@ -26,14 +26,12 @@ import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
 import com.google.common.collect.Maps.transformValues
-import com.google.common.eventbus.Subscribe
 import com.openlattice.data.DataEdge
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.requests.MetadataUpdate
-import com.openlattice.linking.events.LinkingFinishedEvent
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.SetupTestData
@@ -76,10 +74,12 @@ class DataControllerTest : SetupTestData() {
         @JvmStatic
         @BeforeClass
         fun init() {
-            importDataSet("socratesA.yaml", "testdata1.csv", setOf( "SocratesTestA" ) )
-            importDataSet("associationTestFlight.yaml", "emptyTestData.csv", setOf() )
-            while( !linkingFinished ) {
-                Thread.sleep(1000)
+            importDataSet("socratesA.yaml", "testdata1.csv", setOf("SocratesTestA"))
+            importDataSet("associationTestFlight.yaml", "emptyTestData.csv", setOf())
+
+            Thread.sleep(5000)
+            while (!checkLinkingFinished()) {
+                Thread.sleep(2000)
             }
         }
     }
@@ -93,7 +93,7 @@ class DataControllerTest : SetupTestData() {
         val testData = transformValues(TestDataFactory.randomStringEntityData(numberOfEntries, et.properties), Multimaps::asMap)
         dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
         val ess = EntitySetSelection(Optional.of(et.properties))
-        val results = Sets.newHashSet( dataApi.loadEntitySetData(es.id, ess, FileType.json) )
+        val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
 
         Assert.assertEquals(numberOfEntries.toLong(), results.size.toLong())
     }
@@ -106,8 +106,8 @@ class DataControllerTest : SetupTestData() {
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
         val testData = Maps.transformValues(
-                TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(),pt.id),
-                Multimaps::asMap )
+                TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(), pt.id),
+                Multimaps::asMap)
         MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
 
         val ess = EntitySetSelection(Optional.of(et.properties))
@@ -214,17 +214,16 @@ class DataControllerTest : SetupTestData() {
         // when loading entitysets, the result is grouped by entity key id
         val stringEntityKeyIds = createdEdges.values().map { it.toString() }
         val permutationOrder = (0 until numberOfEntries)
-                .sortedWith( compareBy{ stringEntityKeyIds[it] } )
+                .sortedWith(compareBy { stringEntityKeyIds[it] })
 
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
         val edgesCreatedData = Multimaps.asMap(edgesToBeCreated).entries.first().value
-        actualEdgeData.
-                mapIndexed { index, de ->
-                   val edgeDataLookup = lookupEdgeDataByFqn(edgesCreatedData[permutationOrder[index]].data.asMap())
-                    de.asMap()
-                            .filter { it.key.name != "@id" }
-                            .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
-                }
+        actualEdgeData.mapIndexed { index, de ->
+            val edgeDataLookup = lookupEdgeDataByFqn(edgesCreatedData[permutationOrder[index]].data.asMap())
+            de.asMap()
+                    .filter { it.key.name != "@id" }
+                    .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
+        }
     }
 
     private fun lookupEdgeDataByFqn(edgeData: MutableMap<UUID, MutableCollection<Any>>):
@@ -285,7 +284,7 @@ class DataControllerTest : SetupTestData() {
         val d = LocalDate.now()
         val odt = OffsetDateTime.ofInstant(Instant.now(), ZoneId.of("UTC"))
         val testData = Arrays.asList(HashMultimap.create(ImmutableSetMultimap
-                        .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))) as SetMultimap<UUID, Any>)
+                .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))) as SetMultimap<UUID, Any>)
 
         //added transformValues()
         val ids = MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
@@ -301,8 +300,8 @@ class DataControllerTest : SetupTestData() {
         val p2v = LocalDate.parse(result.get(p2.type).iterator().next() as CharSequence)
         //There is a problem with the represenation of the DateTime of pv1, gets truncated. Instead code now
         //compares if odt and p1v are within 100 milliseconds
-        val odtMillisec = odt.nano/1000000
-        val p1vMillisec = p1v.nano/1000000
+        val odtMillisec = odt.nano / 1000000
+        val p1vMillisec = p1v.nano / 1000000
         Assert.assertTrue(abs(odtMillisec - p1vMillisec) < 100)
         Assert.assertEquals(d, p2v)
     }
@@ -363,7 +362,7 @@ class DataControllerTest : SetupTestData() {
     @Test
     fun testUpdatePropertyTypeMetadata() {
         val pt = createPropertyType()
-        val et = createEntityType( pt.id )
+        val et = createEntityType(pt.id)
         val es = createEntitySet(et)
 
         // add test data
@@ -376,11 +375,11 @@ class DataControllerTest : SetupTestData() {
         // Update propertytype type
         val update = MetadataUpdate(Optional.of(pt.title), Optional.empty(), Optional.of(es.name),
                 Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
-                Optional.empty(), Optional.empty(),Optional.empty())
+                Optional.empty(), Optional.empty(), Optional.empty())
         edmApi.updatePropertyTypeMetadata(pt.id, update)
 
         val ess = EntitySetSelection(Optional.of(et.properties))
-        val results = Sets.newHashSet( dataApi.loadEntitySetData(es.id, ess, FileType.json) )
+        val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
 
         val fqns = results.iterator().next().keys()
         Assert.assertEquals(1, fqns.asSequence().filter { it.namespace.equals(newNameSpace) }.count())

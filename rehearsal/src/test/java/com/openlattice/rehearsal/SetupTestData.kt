@@ -21,21 +21,17 @@
 
 package com.openlattice.rehearsal
 
-import com.google.common.eventbus.Subscribe
 import com.openlattice.authentication.AuthenticationTest
-import com.openlattice.edm.EntityDataModel
-import com.openlattice.linking.events.LinkingFinishedEvent
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.shuttle.ShuttleCli
 import com.openlattice.shuttle.main
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.io.File
 import java.util.*
 
 /**
  * Helper functions for integrating data before running tests.
  */
-open class SetupTestData: MultipleAuthenticatedUsersBase() {
+open class SetupTestData : MultipleAuthenticatedUsersBase() {
     companion object {
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
@@ -43,8 +39,6 @@ open class SetupTestData: MultipleAuthenticatedUsersBase() {
         /**
          * Indicates whether the [com.openlattice.linking.RealtimeLinkingService] is finished
          */
-        @JvmStatic
-        var linkingFinished = false
         private val importedGeneralPersonEntitySets = setOf<UUID>()
 
         /**
@@ -52,15 +46,15 @@ open class SetupTestData: MultipleAuthenticatedUsersBase() {
          * @param
          */
         @JvmStatic
-        fun importDataSet( flightFileName: String, dataFileName: String, generalPersonEntitySetFqns: Set<String> ) {
-            loginAs( "admin" )
+        fun importDataSet(flightFileName: String, dataFileName: String, generalPersonEntitySetFqns: Set<String>) {
+            loginAs("admin")
             val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
 
             val flightFile = File(Thread.currentThread().contextClassLoader.getResource(FLIGHT_FOLDER).file,
                     flightFileName).absolutePath
             val dataFile = File(Thread.currentThread().contextClassLoader.getResource(DATA_FOLDER).file, dataFileName)
                     .absolutePath
-            val email = getUserInfo( SetupEnvironment.admin ).email
+            val email = getUserInfo(SetupEnvironment.admin).email
 
             main(arrayOf(
                     "-${ShuttleCli.FLIGHT}=$flightFile",
@@ -69,18 +63,17 @@ open class SetupTestData: MultipleAuthenticatedUsersBase() {
                     "-${ShuttleCli.TOKEN}=$tokenAdmin",
                     "-${ShuttleCli.CREATE}=$email"))
 
-            if(generalPersonEntitySetFqns.isNotEmpty()) {
-                linkingFinished = false
+            if (generalPersonEntitySetFqns.isNotEmpty()) {
                 generalPersonEntitySetFqns.forEach {
-                    importedGeneralPersonEntitySets.plus( edmApi.getEntitySetId( it ) ) }
+                    importedGeneralPersonEntitySets.plus(edmApi.getEntitySetId(it))
+                }
             }
         }
 
-        @Subscribe
-        fun linkingFinished( event: LinkingFinishedEvent) {
-            if( importedGeneralPersonEntitySets.all { event.linkableEntitySets.contains( it ) } ) {
-                linkingFinished = true
-            }
+        @JvmStatic
+        fun checkLinkingFinished(): Boolean {
+            val finished = importedGeneralPersonEntitySets.all { realtimeLinkingApi.linkingFinishedEntitySets.contains(it) }
+            return finished
         }
     }
 
