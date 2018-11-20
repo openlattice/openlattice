@@ -98,6 +98,7 @@ public final class SerializationConstants {
     public static final String ENTITY_SET_AGGREGATIONS          = "entitySetAggregations";
     public static final String ENTITY_SET_FIELD                 = "entitySet";
     public static final String ENTITY_SET_ID                    = "entitySetId";
+    public static final String ENTITY_SET_ID_TO_ENTITY_ID       = "entitySetIdToEntityId";
     public static final String ENTITY_SET_IDS                   = "entitySetIds";
     public static final String ENTITY_SET_NAME                  = "entitySetName";
     public static final String ENTITY_TYPE                      = "entityType";
