@@ -20,3 +20,5 @@ whitelist:
   - 46c83978-a50c-4cff-939a-7b1a8c0ad52c
   - c5a9e6b5-822e-44ca-b19d-e10628618574
   - efd3a154-dbc7-4a09-9062-72f131e8fcce
+  # Only for rehearsal tests
+  - 91551726-afa2-4aee-8579-46cdfc610b97
