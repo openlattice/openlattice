@@ -61,7 +61,7 @@ public interface OrganizationsApi {
     String ROLE_ID           = "roleId";
     String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
     String USER_ID           = "userId";
-    String USER_ID_PATH      = "/{" + USER_ID + "}";
+    String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
 
     @GET( BASE )
     Iterable<Organization> getOrganizations();
