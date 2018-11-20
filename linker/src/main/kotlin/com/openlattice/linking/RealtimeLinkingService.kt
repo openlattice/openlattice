@@ -31,9 +31,7 @@ import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.clustering.ClusterUpdate
-import com.openlattice.linking.events.LinkingFinishedEvent
 import com.openlattice.postgres.streams.PostgresIterable
-import org.deeplearning4j.clustering.strategy.BaseClusteringStrategy
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -253,7 +251,6 @@ class RealtimeLinkingService
                 logger.info("Encountered error while linking!", ex)
             } finally {
                 running.unlock()
-                eventBus.post( LinkingFinishedEvent( linkableEntitySets ) )
             }
         } else {
             logger.info("Linking is currently running. Not starting new task.")
