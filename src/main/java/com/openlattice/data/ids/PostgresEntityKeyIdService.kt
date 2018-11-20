@@ -138,6 +138,23 @@ class PostgresEntityKeyIdService(
         }
     }
 
+    //returns a map of entity set id to a map of entity id to entity key id
+    override fun getEntityKeyIds(
+            entitySetIdToEntityIds: Map<UUID, Set<String>>
+    ): Map<UUID, Map<String, UUID>> {
+        val nIds = entitySetIdToEntityIds.values.sumBy { it.size } //gets total number of entityIds in entity set
+        val idsToAssign = idGenerationService.getNextIds(nIds)
+        checkState(idsToAssign.size == nIds, "Insufficient ids generated.")
+
+        val idIterator = idsToAssign.iterator()
+        return entitySetIdToEntityIds.map {
+            val entityIdToEntityKeyId = it.value.map {
+                it to idIterator.next()
+            }.toMap()
+            it.key to entityIdToEntityKeyId
+        }.toMap()
+    }
+
     override fun getEntityKeyIds(
             entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID> {
