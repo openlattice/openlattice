@@ -48,6 +48,7 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.RealtimeLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
+import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
@@ -65,6 +66,7 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
 import java.io.IOException;
+
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
@@ -139,7 +141,8 @@ public class IndexerPostConfigurationServicesPod {
         return new ElasticsearchBlocker( elasticsearchApi(), dataQueryService(), dataLoader(), hazelcastInstance );
     }
 
-    @Bean public LinkingQueryService lqs() {
+    @Bean
+    public LinkingQueryService lqs() {
         return new PostgresLinkingQueryService( hikariDataSource );
     }
 
@@ -163,5 +166,15 @@ public class IndexerPostConfigurationServicesPod {
                 lc.getWhitelist(),
                 lc.getBlockSize(),
                 eventBus );
+    }
+
+    @Bean
+    public RealtimeLinkingController realtimeLinkingController() {
+        var lc = linkingConfiguration();
+        return new RealtimeLinkingController(
+                lqs(),
+                edm.getEntityTypeUuids( lc.getEntityTypes() ),
+                lc.getBlacklist(),
+                lc.getWhitelist() );
     }
 }
