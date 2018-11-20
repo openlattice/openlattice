@@ -271,7 +271,7 @@ public class ElasticsearchLambdas implements Serializable {
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> triggerOrganizationIndex( List<Organization> organizations ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( org ) -> org
+        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .triggerOrganizationIndex( organizations );
     }
 

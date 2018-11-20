@@ -27,6 +27,7 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.postgres.streams.PostgresIterable;
+import com.openlattice.search.requests.EntityNeighborsFilter;
 import kotlin.Pair;
 
 import com.openlattice.postgres.streams.PostgresIterable;
@@ -63,9 +64,9 @@ public interface GraphService {
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 
-    Stream<Edge> getEdgesAndNeighborsForVertices( UUID entitySetId, Set<UUID> vertexIds );
+    Stream<Edge> getEdgesAndNeighborsForVertices( UUID entitySetId, EntityNeighborsFilter filter );
 
-    Stream<Edge> getEdgesAndNeighborsForVerticesBulk(Set<UUID> entitySetIds, Set<UUID> vertexIds);
+    Stream<Edge> getEdgesAndNeighborsForVerticesBulk(Set<UUID> entitySetIds, EntityNeighborsFilter filter);
 
     Stream<IncrementableWeightId> topEntitiesOld(
             int limit,
