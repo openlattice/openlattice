@@ -18,8 +18,7 @@
 
 package com.openlattice.linking;
 
-import com.google.common.collect.ImmutableSet;
-import retrofit2.http.POST;
+import retrofit2.http.GET;
 
 import java.util.Set;
 import java.util.UUID;
@@ -29,14 +28,14 @@ import java.util.UUID;
  */
 public interface RealtimeLinkingApi {
 
-    String SERVICE          = "/datastore";
-    String CONTROLLER       = "/matching";
+    String SERVICE          = "/indexer";
+    String CONTROLLER       = "/linking";
     String BASE             = SERVICE + CONTROLLER;
 
     String FINISHED         = "/finished";
 
     String SET              = "/set";
 
-    @POST( BASE + FINISHED + SET )
+    @GET( BASE + FINISHED + SET )
     Set<UUID> getLinkingFinishedEntitySets( );
 }
