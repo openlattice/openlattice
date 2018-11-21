@@ -20,14 +20,9 @@
 
 package com.openlattice.indexing.pods;
 
-import static com.openlattice.linking.MatcherKt.DL4J;
-import static com.openlattice.linking.MatcherKt.KERAS;
-
 import com.google.common.eventbus.EventBus;
-import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService.StaticLoader;
 import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
@@ -50,25 +45,15 @@ import com.openlattice.linking.RealtimeLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
-import com.openlattice.linking.matching.SocratesMatcher;
-import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
-import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
-import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
-import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
-import org.deeplearning4j.util.ModelSerializer;
-import org.eclipse.jetty.plus.jndi.Link;
-import org.nd4j.linalg.io.ClassPathResource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import javax.inject.Inject;
 import java.io.IOException;
 
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
 
 @Configuration
 @Import( { ByteBlobServicePod.class } )
@@ -91,9 +76,6 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private Matcher matcher;
-
-    @Inject
-    private EventBus eventBus;
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
@@ -164,8 +146,7 @@ public class IndexerPostConfigurationServicesPod {
                 edm.getEntityTypeUuids( lc.getEntityTypes() ),
                 lc.getBlacklist(),
                 lc.getWhitelist(),
-                lc.getBlockSize(),
-                eventBus );
+                lc.getBlockSize() );
     }
 
     @Bean
