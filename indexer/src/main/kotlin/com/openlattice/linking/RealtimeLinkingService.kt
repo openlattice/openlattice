@@ -66,8 +66,7 @@ class RealtimeLinkingService
         private val linkableTypes: Set<UUID>,
         private val entitySetBlacklist: Set<UUID>,
         private val whitelist: Optional<Set<UUID>>,
-        private val blockSize: Int,
-        private val eventBus: EventBus
+        private val blockSize: Int
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
