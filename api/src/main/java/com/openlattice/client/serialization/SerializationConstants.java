@@ -175,6 +175,7 @@ public final class SerializationConstants {
     public static final String PROPERTY_TYPES                   = "propertyTypes";
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
     public static final String PROPERTY_TYPE_IDS                = "propertyTypeIds";
+    public static final String PROPERTY_TYPE_ID_TO_STORAGE_DEST = "propertyTypeIdToStorageDest";
     public static final String QUERY_ID                         = "queryId";
     public static final String RADIUS                           = "radius";
     public static final String REASON                           = "reason";

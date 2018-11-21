@@ -23,16 +23,18 @@ public class BulkDataCreation2 implements Serializable {
     private Set<Entity>      entities;
     private Set<Association> associations;
     private Map<UUID, Set<String>> entitySetIdToEntityIds;
-    //map of propertyType UUID to destination
+    private Map<UUID, String> propertyTypeIdToStorageDest;
 
     @JsonCreator
     public BulkDataCreation2(
             @JsonProperty( SerializationConstants.ENTITIES ) Set<Entity> entities,
             @JsonProperty( SerializationConstants.ASSOCIATIONS ) Set<Association> associations,
-            @JsonProperty( SerializationConstants.ENTITY_SET_ID_TO_ENTITY_ID ) Map<UUID, Set<String>> entitySetIdToEntityIds) {
+            @JsonProperty( SerializationConstants.ENTITY_SET_ID_TO_ENTITY_ID ) Map<UUID, Set<String>> entitySetIdToEntityIds,
+            @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID_TO_STORAGE_DEST ) Map<UUID, String> propertyTypeIdToStorageDest) {
         this.entities = entities;
         this.associations = associations;
         this.entitySetIdToEntityIds = entitySetIdToEntityIds;
+        this.propertyTypeIdToStorageDest = propertyTypeIdToStorageDest;
     }
 
     @JsonProperty( SerializationConstants.ENTITIES )
@@ -40,14 +42,13 @@ public class BulkDataCreation2 implements Serializable {
         return entities;
     }
 
-    @JsonProperty( SerializationConstants.ENTITY_SET_ID_TO_ENTITY_ID)
-    public Map<UUID, Set<String>> getEntitySetIdToEntityIds() {
-        return entitySetIdToEntityIds;
-    }
-
-    @JsonProperty( SerializationConstants.ASSOCIATIONS )
-    public Set<Association> getAssociations() {
-        return associations;
+    @Override public String toString() {
+        return "BulkDataCreation2{" +
+                "entities=" + entities +
+                ", associations=" + associations +
+                ", entitySetIdToEntityIds=" + entitySetIdToEntityIds +
+                ", propertyTypeIdToStorageDest=" + propertyTypeIdToStorageDest +
+                '}';
     }
 
     @Override public boolean equals( Object o ) {
@@ -58,11 +59,26 @@ public class BulkDataCreation2 implements Serializable {
         BulkDataCreation2 that = (BulkDataCreation2) o;
         return Objects.equals( entities, that.entities ) &&
                 Objects.equals( associations, that.associations ) &&
-                Objects.equals( entitySetIdToEntityIds, that.entitySetIdToEntityIds );
+                Objects.equals( entitySetIdToEntityIds, that.entitySetIdToEntityIds ) &&
+                Objects.equals( propertyTypeIdToStorageDest, that.propertyTypeIdToStorageDest );
     }
 
     @Override public int hashCode() {
-        return Objects.hash( entities, associations, entitySetIdToEntityIds );
+        return Objects.hash( entities, associations, entitySetIdToEntityIds, propertyTypeIdToStorageDest );
+    }
+
+    public Map<UUID, String> getPropertyTypeIdToStorageDest() {
+        return propertyTypeIdToStorageDest;
+    }
+
+    @JsonProperty( SerializationConstants.ENTITY_SET_ID_TO_ENTITY_ID)
+    public Map<UUID, Set<String>> getEntitySetIdToEntityIds() {
+        return entitySetIdToEntityIds;
+    }
+
+    @JsonProperty( SerializationConstants.ASSOCIATIONS )
+    public Set<Association> getAssociations() {
+        return associations;
     }
 
     private void writeObject( ObjectOutputStream oos )
@@ -103,13 +119,6 @@ public class BulkDataCreation2 implements Serializable {
             Map<UUID, Set<Object>> details = deserializeEntityDetails( ois );
             associations.add( new Association( key, src, dst, details ) );
         }
-    }
-
-    @Override public String toString() {
-        return "BulkDataCreation{" +
-                "entities=" + entities +
-                ", associations=" + associations +
-                '}';
     }
 
     private static void serialize( ObjectOutputStream oos, UUID id ) throws IOException {
