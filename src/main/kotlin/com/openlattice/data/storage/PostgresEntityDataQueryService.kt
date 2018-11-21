@@ -330,7 +330,7 @@ class PostgresEntityDataQueryService(
             val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum()
             preparedStatements.values.forEach(PreparedStatement::close)
             entitySetPreparedStatement.close()
-            checkState( updatedEntityCount >=  entities.size , "Updated entity metadata count mismatch")
+            checkState( updatedEntityCount == entities.size , "Updated entity metadata count mismatch")
 
             logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 

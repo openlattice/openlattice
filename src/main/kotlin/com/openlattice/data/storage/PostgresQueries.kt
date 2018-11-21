@@ -58,7 +58,11 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         metadataFilters: String = ""
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
-    val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions, linking)
+    val entitiesSubquerySql = if(linking) {
+        selectLinkingIdsOfWithCurrentVersionSubquerySql(entitiesClause, metadataOptions)
+    } else {
+        selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, metadataOptions, linking)
+    }
 
     val joinColumns =
             if (linking) {
@@ -97,7 +101,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                     }
                     .joinToString("\n")
 
-    val fullQuery = "SELECT DISTINCT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
+    val fullQuery = "SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
     return fullQuery
 }
 
@@ -117,7 +121,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
         binaryPropertyTypes: Map<UUID, Boolean>
 ): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
-    val entitiesSubquerySql = selectEntityKeyIdsFilteredByVersionSubquerySql(entitiesClause, version, metadataOptions)
+    val entitiesSubquerySql = selectEntityKeyIdsFilteredByVersionSubquerySql(entitiesClause, version, metadataOptions, linking)
 
     val joinColumns =
             if (linking) {
@@ -275,7 +279,7 @@ internal fun selectPropertyTypeDataKeysFilteredByVersionSubquerySql(
             "FROM ( SELECT $entityKeyIdColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
             "       FROM (  SELECT $entityKeyIdColumns, unnest(versions) as versions " +
             "           FROM $propertyTable " +
-            "           WHERE $entitiesClause $filtersClause) as $EXPANDED_VERSIONS " +
+            "           WHERE TRUE $entitiesClause $filtersClause) as $EXPANDED_VERSIONS " +
             "       WHERE abs(versions) <= $version " +
             "       GROUP BY($entityKeyIdColumns)) as unfiltered_data_keys " +
             "WHERE max_abs=abs_max ) as data_keys "
@@ -305,29 +309,40 @@ internal fun selectPropertyTypeDataKeysFilteredByVersionSubquerySql(
 internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
         entitiesClause: String,
         version: Long,
-        metadataOptions: Set<MetadataOption>
+        metadataOptions: Set<MetadataOption>,
+        linking: Boolean
 ): String {
-    return if (metadataOptions.isEmpty()) {
-        "(SELECT $entityKeyIdColumns " +
-                "FROM ( SELECT $entityKeyIdColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
-                "       FROM (  SELECT $entityKeyIdColumns, unnest(versions) as versions " +
-                "           FROM ${IDS.name} " +
-                "           WHERE $entitiesClause ) as $EXPANDED_VERSIONS " +
-                "       WHERE abs(versions) <= $version " +
-                "       GROUP BY($entityKeyIdColumns)) as unfiltered_data_keys " +
-                "WHERE max_abs=abs_max ) as data_keys "
+    val selectedColumns = if(linking) {
+        LINKING_ID.name
     } else {
-        val metadataColumns = metadataOptions.map(ResultSetAdapters::mapMetadataOptionToPostgresColumn).joinToString(",") { it.name }
-        return "(SELECT $entityKeyIdColumns,$metadataColumns FROM ${IDS.name} INNER JOIN (SELECT $entityKeyIdColumns " +
-                "FROM ( SELECT $entityKeyIdColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
-                "       FROM (  SELECT $entityKeyIdColumns, unnest(versions) as versions " +
-                "           FROM ${IDS.name} " +
-                "           WHERE $entitiesClause ) as $EXPANDED_VERSIONS " +
-                "       WHERE abs(versions) <= $version " +
-                "       GROUP BY($entityKeyIdColumns)) as unfiltered_data_keys " +
-                "WHERE max_abs=abs_max ) as data_keys ) as decorated_keys USING ($entityKeyIdColumns)"
+        entityKeyIdColumns
     }
 
+    // Distinct needed, when we select linking_ids (and group by them)
+    // since we select from entity_key_ids where linking_id can correspond to multiple rows
+    val distinct = if(linking) "DISTINCT " else ""
+
+    return if (metadataOptions.isEmpty()) {
+        "(SELECT $distinct $selectedColumns " +
+                "FROM ( SELECT $selectedColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
+                "       FROM (  SELECT $selectedColumns, unnest(versions) as versions " +
+                "           FROM ${IDS.name} " +
+                "           WHERE TRUE $entitiesClause ) as $EXPANDED_VERSIONS " +
+                "       WHERE abs(versions) <= $version " +
+                "       GROUP BY($selectedColumns)) as unfiltered_data_keys " +
+                "WHERE max_abs=abs_max ) "
+    } else {
+        //TODO: needs fix with aliases
+        val metadataColumns = metadataOptions.map(ResultSetAdapters::mapMetadataOptionToPostgresColumn).joinToString(",") { it.name }
+        return "(SELECT $distinct $selectedColumns,$metadataColumns FROM ${IDS.name} INNER JOIN (SELECT $selectedColumns " +
+                "FROM ( SELECT $selectedColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
+                "       FROM (  SELECT $selectedColumns, unnest(versions) as versions " +
+                "           FROM ${IDS.name} " +
+                "           WHERE TRUE $entitiesClause ) as $EXPANDED_VERSIONS " +
+                "       WHERE abs(versions) <= $version " +
+                "       GROUP BY($selectedColumns)) as unfiltered_data_keys " +
+                "WHERE max_abs=abs_max ) as data_keys ) as decorated_keys USING ($entityKeyIdColumns)"
+    }
 }
 
 /**
@@ -352,6 +367,16 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 
     return "(SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
 
+}
+
+internal fun selectLinkingIdsOfWithCurrentVersionSubquerySql(
+        entitiesClause: String,
+        metadataOptions: Set<MetadataOption>
+): String {
+    val metadataColumns = metadataOptions.map(ResultSetAdapters::mapMetadataOptionToPostgresColumn).joinToString(",") { it.name }
+    val selectColumns = LINKING_ID.name + (if(!metadataColumns.isEmpty()) ", $metadataColumns" else "" )
+
+    return "(SELECT DISTINCT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
 }
 
 internal fun arrayAggSql(fqn: String): String {
