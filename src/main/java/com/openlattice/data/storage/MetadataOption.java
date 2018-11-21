@@ -30,6 +30,5 @@ public enum MetadataOption {
     LAST_INDEX,
     LAST_LINK,
     LAST_WRITE,
-    LINKING_ID,
     VERSION
 }
