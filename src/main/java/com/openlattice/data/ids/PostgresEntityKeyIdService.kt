@@ -36,6 +36,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.stream.Collectors
 import kotlin.collections.HashMap
 
 /**
@@ -142,17 +143,71 @@ class PostgresEntityKeyIdService(
     override fun getEntityKeyIds(
             entitySetIdToEntityIds: Map<UUID, Set<String>>
     ): Map<UUID, Map<String, UUID>> {
-        val nIds = entitySetIdToEntityIds.values.sumBy { it.size } //gets total number of entityIds in entity set
+        val entityIdAndKeyIdBySet = HashMap<UUID, Map<String, UUID>>(entitySetIdToEntityIds.size)
+
+        //get any entityKeyIds that already exist
+        entityIdAndKeyIdBySet.putAll(loadEntityKeyIds(entitySetIdToEntityIds))
+
+        //generate any entityKeyIds that don't exist yet
+        val missing = entitySetIdToEntityIds.minus(entityIdAndKeyIdBySet.keys)
+
+        val nIds = missing.values.flatten().size
         val idsToAssign = idGenerationService.getNextIds(nIds)
         checkState(idsToAssign.size == nIds, "Insufficient ids generated.")
 
         val idIterator = idsToAssign.iterator()
-        return entitySetIdToEntityIds.map {
+        val remainingIds = missing.map {
             val entityIdToEntityKeyId = it.value.map {
                 it to idIterator.next()
             }.toMap()
             it.key to entityIdToEntityKeyId
         }.toMap()
+
+        entityIdAndKeyIdBySet.putAll(storeEntityKeyId(remainingIds))
+
+        return entityIdAndKeyIdBySet
+    }
+
+    private fun loadEntityKeyIds(entityIdBySet: Map<UUID, Set<String>>): Map<UUID, Map<String, UUID>>{
+        return hds.connection.use {
+            val connection = it
+            val idsBySet = HashMap<UUID, MutableMap<String, UUID>>(entityIdBySet.size)
+            val idToKeyId = HashMap<String, UUID>(entityIdBySet.values.size)
+
+            entityIdBySet.forEach {
+                        val ps = connection.prepareStatement(entityKeyIdsSql)
+                        ps.setObject(1, it.key)
+                        ps.setArray(2, PostgresArrays.createTextArray(connection, it.value))
+                        val rs = ps.executeQuery()
+                        while (rs.next()) {
+                            val entityKeyId = rs.getObject(ID.name, UUID::class.java)
+                            val entityId = rs.getString(ENTITY_ID_FIELD)
+                            idToKeyId[entityId] = entityKeyId
+                        }
+                        idsBySet[it.key] = idToKeyId
+                    }
+            return idsBySet
+        }
+    }
+
+    private fun storeEntityKeyId(remainingIds: Map<UUID, Map<String, UUID>>): Map<UUID, Map<String, UUID>> {
+        val connection = hds.connection
+        connection.use {
+            val ps = connection.prepareStatement(INSERT_SQL)
+            remainingIds.forEach {
+                ps.setObject(1, it.key)
+                it.value.forEach {
+                    ps.setString(2, it.key)
+                    ps.setObject(3, it.value)
+                    ps.addBatch()
+                }
+            }
+            val totalWritten = ps.executeBatch().sum()
+            if (totalWritten != remainingIds.size) {
+                logger.warn("Expected ${remainingIds.size} entity key writes. Only $totalWritten writes registered.")
+            }
+        }
+        return remainingIds
     }
 
     override fun getEntityKeyIds(
