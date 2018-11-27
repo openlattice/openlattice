@@ -32,18 +32,15 @@ import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.Permission;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataIntegrationApi;
+import com.openlattice.data.EntityKey;
 import com.openlattice.data.IntegrationResults;
-import com.openlattice.data.integration.Association;
-import com.openlattice.data.integration.BulkDataCreation;
-import com.openlattice.data.integration.Entity;
+import com.openlattice.data.integration.*;
+import com.openlattice.data.storage.DataSinkManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -69,6 +66,8 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     private EdmService dms;
     @Inject
     private DataGraphManager dgm;
+    @Inject
+    private DataSinkManager dataSink;
     @Inject
     private AuthorizationManager authz;
     @Inject
@@ -187,6 +186,35 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         entities.forEach(entity -> propertyTypesByEntitySet
                 .putAll(entity.getEntitySetId(), entity.getDetails().keySet()));
         return propertyTypesByEntitySet;
+    }
+
+    @Timed
+    @PostMapping( "/" + DATA_SINK )
+    @Override
+    public IntegrationResults sinkData( DataSinkObject data ) {
+        final Set<EntityIdsAndData> entityIdsAndData = data.getEntities();
+        final Set<UUID> entitySetIds = entityIdsAndData.stream().map( entity -> entity.getEntitySetId() ).collect(
+                Collectors.toSet() );
+        final Set<Entity> entities = new HashSet<>();
+
+        entityIdsAndData.forEach( e -> {
+            EntityKey key = new EntityKey( e.getEntitySetId(), e.getEntityId() );
+            entities.add( new Entity( key, e.getProperties() ) );
+        } );
+
+        //Ensure that we have read access to entity set metadata.
+        entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+
+        accessCheck( EdmAuthorizationHelper
+                .aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
+
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
+                entitySetIds.stream()
+                        .collect( Collectors.toMap( Function.identity(),
+                                entitySetId -> authzHelper
+                                        .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
+
+        return dataSink.integrateEntities(entityIdsAndData, authorizedPropertyTypesByEntitySet);
     }
 
 }
