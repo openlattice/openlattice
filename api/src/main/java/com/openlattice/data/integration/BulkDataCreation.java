@@ -66,13 +66,16 @@ public class BulkDataCreation implements Serializable {
 
     private Set<Entity>      entities;
     private Set<Association> associations;
+    private Map<UUID, String> propertyTypeIdToStorageDest;
 
     @JsonCreator
     public BulkDataCreation(
             @JsonProperty( SerializationConstants.ENTITIES ) Set<Entity> entities,
-            @JsonProperty( SerializationConstants.ASSOCIATIONS ) Set<Association> associations ) {
+            @JsonProperty( SerializationConstants.ASSOCIATIONS ) Set<Association> associations,
+            @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID_TO_STORAGE_DEST) Map<UUID, String> propertyTypeIdToStorageDest) {
         this.entities = entities;
         this.associations = associations;
+        this.propertyTypeIdToStorageDest = propertyTypeIdToStorageDest;
     }
 
     @JsonProperty( SerializationConstants.ENTITIES )
@@ -83,6 +86,32 @@ public class BulkDataCreation implements Serializable {
     @JsonProperty( SerializationConstants.ASSOCIATIONS )
     public Set<Association> getAssociations() {
         return associations;
+    }
+
+    @Override public String toString() {
+        return "BulkDataCreation{" +
+                "entities=" + entities +
+                ", associations=" + associations +
+                ", propertyTypeIdToStorageDest=" + propertyTypeIdToStorageDest +
+                '}';
+    }
+
+    @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID_TO_STORAGE_DEST )
+    public Map<UUID, String> getPropertyTypeIdToStorageDest() {return propertyTypeIdToStorageDest;}
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o )
+            return true;
+        if ( o == null || getClass() != o.getClass() )
+            return false;
+        BulkDataCreation that = (BulkDataCreation) o;
+        return Objects.equals( entities, that.entities ) &&
+                Objects.equals( associations, that.associations ) &&
+                Objects.equals( propertyTypeIdToStorageDest, that.propertyTypeIdToStorageDest );
+    }
+
+    @Override public int hashCode() {
+        return Objects.hash( entities, associations, propertyTypeIdToStorageDest );
     }
 
     private void writeObject( ObjectOutputStream oos )
@@ -102,11 +131,13 @@ public class BulkDataCreation implements Serializable {
             serialize( oos, association.getDetails() );
         }
 
+        oos.writeObject(propertyTypeIdToStorageDest);
     }
 
     private void readObject( ObjectInputStream ois ) throws IOException, ClassNotFoundException {
         entities = new HashSet<>();
         associations = new HashSet<>();
+        propertyTypeIdToStorageDest = new HashMap<>();
 
         int entityCount = ois.readInt();
         for ( int i = 0; i < entityCount; ++i ) {
@@ -123,26 +154,8 @@ public class BulkDataCreation implements Serializable {
             Map<UUID, Set<Object>> details = deserializeEntityDetails( ois );
             associations.add( new Association( key, src, dst, details ) );
         }
-    }
 
-    @Override public boolean equals( Object o ) {
-        if ( this == o ) { return true; }
-        if ( !( o instanceof BulkDataCreation ) ) { return false; }
-        BulkDataCreation that = (BulkDataCreation) o;
-        return Objects.equals( entities, that.entities ) &&
-                Objects.equals( associations, that.associations );
-    }
-
-    @Override public int hashCode() {
-
-        return Objects.hash( entities, associations );
-    }
-
-    @Override public String toString() {
-        return "BulkDataCreation{" +
-                "entities=" + entities +
-                ", associations=" + associations +
-                '}';
+        propertyTypeIdToStorageDest = (HashMap) ois.readObject();
     }
 
     private static void serialize( ObjectOutputStream oos, UUID id ) throws IOException {
