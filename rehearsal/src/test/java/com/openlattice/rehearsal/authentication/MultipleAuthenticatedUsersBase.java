@@ -40,6 +40,7 @@ import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.rehearsal.SetupEnvironment;
 import com.openlattice.requests.RequestsApi;
 import com.openlattice.search.SearchApi;
+
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,6 +50,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
@@ -56,15 +58,16 @@ import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected final static Map<String, Retrofit> retrofitMap = new HashMap<>();
+    protected final static Map<String, Retrofit> indexerRetrofitMap = new HashMap<>();
 
-    protected static EdmApi             edmApi;
-    protected static PermissionsApi     permissionsApi;
-    protected static AuthorizationsApi  authorizationsApi;
-    protected static RequestsApi        requestsApi;
-    protected static DataApi            dataApi;
-    protected static SearchApi          searchApi;
-    protected static OrganizationsApi   organizationsApi;
-    protected static LinkingApi         linkingApi;
+    protected static EdmApi edmApi;
+    protected static PermissionsApi permissionsApi;
+    protected static AuthorizationsApi authorizationsApi;
+    protected static RequestsApi requestsApi;
+    protected static DataApi dataApi;
+    protected static SearchApi searchApi;
+    protected static OrganizationsApi organizationsApi;
+    protected static LinkingApi linkingApi;
     protected static RealtimeLinkingApi realtimeLinkingApi;
 
     static {
@@ -73,6 +76,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         retrofitMap.put( "user2", retrofit2 );
         retrofitMap.put( "user3", retrofit3 );
         retrofitMap.put( "prod", retrofitProd );
+        indexerRetrofitMap.put( "admin", retrofitIndexer );
     }
 
     /**
@@ -93,7 +97,11 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
         linkingApi = currentRetrofit.create( LinkingApi.class );
-        realtimeLinkingApi = currentRetrofit.create( RealtimeLinkingApi.class );
+
+        Retrofit indexerRetrofit = indexerRetrofitMap.get( user );
+        if ( indexerRetrofit != null ) {
+            realtimeLinkingApi = indexerRetrofit.create( RealtimeLinkingApi.class );
+        }
     }
 
     public static PropertyType getBinaryPropertyType() {
@@ -178,7 +186,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             expected.addPropertyTypes( ImmutableSet.of( k.getId(), p1.getId(), p2.getId() ) );
         } else {
             expected.addPropertyTypes( ImmutableSet.copyOf( propertyTypes ) );
-            expected.addPropertyTypes(ImmutableSet.of(k.getId()));
+            expected.addPropertyTypes( ImmutableSet.of( k.getId() ) );
         }
 
         UUID entityTypeId = edmApi.createEntityType( expected );
@@ -208,7 +216,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return createEntitySet( entityType );
     }
 
-    public static EntitySet createEntitySet( EntityType entityType, boolean linking,  Set<UUID> linkedEntitySetIds ) {
+    public static EntitySet createEntitySet( EntityType entityType, boolean linking, Set<UUID> linkedEntitySetIds ) {
         EntitySet newES = new EntitySet(
                 Optional.of( UUID.randomUUID() ),
                 entityType.getId(),

@@ -39,13 +39,12 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         /**
          * Indicates whether the [com.openlattice.linking.RealtimeLinkingService] is finished
          */
-        private val importedGeneralPersonEntitySets = setOf<UUID>()
+        private val importedGeneralPersonEntitySets = mutableSetOf<UUID>()
 
         /**
          * Import datasets via Shuttle
          * @param
          */
-        @JvmStatic
         fun importDataSet(flightFileName: String, dataFileName: String, generalPersonEntitySetFqns: Set<String>) {
             loginAs("admin")
             val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
@@ -65,14 +64,16 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
 
             if (generalPersonEntitySetFqns.isNotEmpty()) {
                 generalPersonEntitySetFqns.forEach {
-                    importedGeneralPersonEntitySets.plus(edmApi.getEntitySetId(it))
+                    importedGeneralPersonEntitySets.add(edmApi.getEntitySetId(it))
                 }
             }
         }
 
-        @JvmStatic
         fun checkLinkingFinished(): Boolean {
-            val finished = importedGeneralPersonEntitySets.all { realtimeLinkingApi.linkingFinishedEntitySets.contains(it) }
+            val finishedEntitySets = realtimeLinkingApi.linkingFinishedEntitySets
+            val finished = importedGeneralPersonEntitySets.all { finishedEntitySets.contains(it) }
+
+            logger.info("Linking is finished:{} with imported entity sets: {}", finished, importedGeneralPersonEntitySets)
             return finished
         }
     }

@@ -74,7 +74,7 @@ class DataControllerTest : SetupTestData() {
         @JvmStatic
         @BeforeClass
         fun init() {
-            importDataSet("socratesA.yaml", "testdata1.csv", setOf("SocratesTestA"))
+            importDataSet("socratesA.yaml", "testdata1_trunc.csv", setOf("SocratesTestA"))
             importDataSet("associationTestFlight.yaml", "emptyTestData.csv", setOf())
 
             Thread.sleep(5000)
@@ -90,8 +90,8 @@ class DataControllerTest : SetupTestData() {
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
         //added transformValues()
-        val testData = transformValues(TestDataFactory.randomStringEntityData(numberOfEntries, et.properties), Multimaps::asMap)
-        dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties).values.toList()
+        dataApi.createEntities(es.id, testData)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
 
@@ -105,10 +105,9 @@ class DataControllerTest : SetupTestData() {
         val et = MultipleAuthenticatedUsersBase.createEntityType(pt.id)
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
-        val testData = Maps.transformValues(
-                TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(), pt.id),
-                Multimaps::asMap)
-        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
+        val testData = TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(), pt.id).values
+                .toList()
+        MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
 
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
@@ -213,13 +212,11 @@ class DataControllerTest : SetupTestData() {
 
         // when loading entitysets, the result is grouped by entity key id
         val stringEntityKeyIds = createdEdges.values().map { it.toString() }
-        val permutationOrder = (0 until numberOfEntries)
-                .sortedWith(compareBy { stringEntityKeyIds[it] })
 
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
         val edgesCreatedData = Multimaps.asMap(edgesToBeCreated).entries.first().value
         actualEdgeData.mapIndexed { index, de ->
-            val edgeDataLookup = lookupEdgeDataByFqn(edgesCreatedData[permutationOrder[index]].data.asMap())
+            val edgeDataLookup = lookupEdgeDataByFqn(edgesCreatedData[numberOfEntries - index - 1].data.asMap())
             de.asMap()
                     .filter { it.key.name != "@id" }
                     .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
@@ -228,8 +225,7 @@ class DataControllerTest : SetupTestData() {
 
     private fun lookupEdgeDataByFqn(edgeData: MutableMap<UUID, MutableCollection<Any>>):
             Map<FullQualifiedName, MutableCollection<Any>> {
-        return edgeData
-                .mapKeys { entry -> edmApi.getPropertyType(entry.key).type }
+        return edgeData.mapKeys { entry -> edmApi.getPropertyType(entry.key).type }
     }
 
 
@@ -312,11 +308,8 @@ class DataControllerTest : SetupTestData() {
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
         //added transformValues()
-        val entities = TestDataFactory.randomStringEntityData(
-                numberOfEntries,
-                et.properties
-        )
-        dataApi.updateEntitiesInEntitySet(es.id, transformValues(entities, Multimaps::asMap), UpdateType.Replace)
+        val entities = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties).values.toList()
+        dataApi.createEntities(es.id, entities)
 
         // load selected data
         val selectedProperties = et.properties.asSequence()
@@ -339,7 +332,7 @@ class DataControllerTest : SetupTestData() {
         }
 
         val expectedValues = HashSet<Set<String>>()
-        for (entity in entities.values) {
+        for (entity in entities) {
             expectedValues
                     .add(
                             entity.asMap().entries
@@ -366,8 +359,8 @@ class DataControllerTest : SetupTestData() {
         val es = createEntitySet(et)
 
         // add test data
-        val testData = transformValues(TestDataFactory.randomStringEntityData(1, et.properties), Multimaps::asMap)
-        MultipleAuthenticatedUsersBase.dataApi.updateEntitiesInEntitySet(es.id, testData, UpdateType.Replace)
+        val testData = TestDataFactory.randomStringEntityData(1, et.properties).values.toList()
+        MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
 
         val oldNameSpace = pt.type.namespace
         val newNameSpace = oldNameSpace + "extrachars"
