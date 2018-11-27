@@ -68,7 +68,6 @@ dependencies {
         logger.quiet(project.name + " using project dependencies.")
         testCompile project(":conductor")
         testCompile project(":datastore")
-        testCompile project(":indexer")
         testCompile project(":shuttle")
 
         testCompile( project(path: ":api", configuration: "tests"))
@@ -77,7 +76,6 @@ dependencies {
     } else {
         logger.quiet(project.name + " using jar dependencies.")
         testCompile "com.openlattice:conductor-client:${conductor_client_version}"
-        testCompile "com.openlattice:indexer:${indexer_version}"
         testCompile "com.openlattice:shuttle:${shuttle_version}"
 
         testCompile "com.openlattice:api:${api_version}:tests"
