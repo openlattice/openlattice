@@ -7,7 +7,7 @@ import java.util.*
 * and a map of property type id to properties that belong to that entity
 */
 
-data class EntityIdsAndData(
+data class EntityData(
         @JsonProperty val entitySetId: UUID,
         @JsonProperty val entityId: String,
         @JsonProperty val entityKeyId: UUID,
