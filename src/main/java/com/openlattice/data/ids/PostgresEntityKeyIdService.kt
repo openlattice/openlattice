@@ -168,24 +168,24 @@ class PostgresEntityKeyIdService(
         return entityIdAndKeyIdBySet
     }
 
-    private fun loadEntityKeyIds(entityIdBySet: Map<UUID, Set<String>>): Map<UUID, Map<String, UUID>>{
+    private fun loadEntityKeyIds(entityIdBySet: Map<UUID, Set<String>>): Map<UUID, Map<String, UUID>> {
         return hds.connection.use {
             val connection = it
             val idsBySet = HashMap<UUID, MutableMap<String, UUID>>(entityIdBySet.size)
-            val idToKeyId = HashMap<String, UUID>(entityIdBySet.values.size)
 
             entityIdBySet.forEach {
-                        val ps = connection.prepareStatement(entityKeyIdsSql)
-                        ps.setObject(1, it.key)
-                        ps.setArray(2, PostgresArrays.createTextArray(connection, it.value))
-                        val rs = ps.executeQuery()
-                        while (rs.next()) {
-                            val entityKeyId = rs.getObject(ID.name, UUID::class.java)
-                            val entityId = rs.getString(ENTITY_ID_FIELD)
-                            idToKeyId[entityId] = entityKeyId
-                        }
-                        idsBySet[it.key] = idToKeyId
-                    }
+                val idToKeyId = HashMap<String, UUID>(it.value.size)
+                val ps = connection.prepareStatement(entityKeyIdsSql)
+                ps.setObject(1, it.key)
+                ps.setArray(2, PostgresArrays.createTextArray(connection, it.value))
+                val rs = ps.executeQuery()
+                while (rs.next()) {
+                    val entityKeyId = ResultSetAdapters.id(rs)
+                    val entityId = rs.getString(ENTITY_ID_FIELD)
+                    idToKeyId[entityId] = entityKeyId
+                }
+                idsBySet[it.key] = idToKeyId
+            }
             return idsBySet
         }
     }
