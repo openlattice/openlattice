@@ -20,10 +20,10 @@
 
 package com.openlattice.indexing.pods;
 
-import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.ResourceConfigurationLoader;
+import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityKeyIdService;
@@ -79,6 +79,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
+
+    @Inject
+    private AuthorizationManager authz;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
@@ -154,8 +157,8 @@ public class IndexerPostConfigurationServicesPod {
         var lc = linkingConfiguration();
         return new RealtimeLinkingController(
                 lqs(),
-                edm.getEntityTypeUuids( lc.getEntityTypes() ),
-                lc.getBlacklist(),
-                lc.getWhitelist() );
+                authz,
+                edm,
+                lc);
     }
 }

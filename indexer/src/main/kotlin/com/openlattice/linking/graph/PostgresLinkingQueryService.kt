@@ -47,22 +47,25 @@ private const val AVG_SCORE_FIELD = "avg_score"
  */
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
 
-    override fun getLinkableEntitySets(linkableEntityTypeIds: Set<UUID>, entitySetBlacklist: Set<UUID>, whitelist: Set<UUID>): PostgresIterable<UUID> {
+    override fun getLinkableEntitySets(
+            linkableEntityTypeIds: Set<UUID>,
+            entitySetBlacklist: Set<UUID>,
+            whitelist: Set<UUID>): PostgresIterable<UUID> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(LINKABLE_ENTITY_SET_IDS)
             val entityTypeArr = PostgresArrays.createUuidArray(connection, linkableEntityTypeIds)
-            val blackListArr = PostgresArrays.createUuidArray(connection, linkableEntityTypeIds)
-            val whitelistArr = PostgresArrays.createUuidArray(connection, linkableEntityTypeIds)
+            val blackListArr = PostgresArrays.createUuidArray(connection, entitySetBlacklist)
+            val whitelistArr = PostgresArrays.createUuidArray(connection, whitelist)
             ps.setObject(1, entityTypeArr)
             ps.setObject(2, blackListArr)
-            ps.setObject(2, whitelistArr)
+            ps.setObject(3, whitelistArr)
             val rs = ps.executeQuery()
             StatementHolder(connection, ps, rs)
-        }, Function { ResultSetAdapters.entitySetId(it) })
+        }, Function { ResultSetAdapters.id(it) })
     }
 
-    override fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID,UUID>> {
+    override fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID, UUID>> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(ENTITY_KEY_IDS_NEEDING_LINKING)
@@ -302,5 +305,4 @@ private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.
 
 private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "FROM ${ENTITY_SETS.name} " +
-        "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) " +
-        "AND ${VERSION.name} > 0 "
+        "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
