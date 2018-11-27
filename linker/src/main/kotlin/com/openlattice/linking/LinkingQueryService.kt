@@ -51,7 +51,8 @@ interface LinkingQueryService {
     fun getClustersContaining(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
     fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
 
-    fun getEntitiesNeedingLinking(entitySetId: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
+    fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
+    fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
     fun getLinkableEntitySets(linkableEntityTypeIds: Set<UUID>, entitySetBlacklist: Set<UUID>, whitelist: Set<UUID>): PostgresIterable<UUID>
     fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID>
 }
