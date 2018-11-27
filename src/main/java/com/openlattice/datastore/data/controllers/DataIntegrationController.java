@@ -192,12 +192,12 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @PostMapping( "/" + DATA_SINK )
     @Override
     public IntegrationResults sinkData( DataSinkObject data ) {
-        final Set<EntityIdsAndData> entityIdsAndData = data.getEntities();
-        final Set<UUID> entitySetIds = entityIdsAndData.stream().map( entity -> entity.getEntitySetId() ).collect(
+        final Set<EntityData> entityData = data.getEntities();
+        final Set<UUID> entitySetIds = entityData.stream().map( entity -> entity.getEntitySetId() ).collect(
                 Collectors.toSet() );
         final Set<Entity> entities = new HashSet<>();
 
-        entityIdsAndData.forEach( e -> {
+        entityData.forEach( e -> {
             EntityKey key = new EntityKey( e.getEntitySetId(), e.getEntityId() );
             entities.add( new Entity( key, e.getProperties() ) );
         } );
@@ -214,12 +214,12 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
 
-        return dataSink.integrateEntities(entityIdsAndData, authorizedPropertyTypesByEntitySet);
+        return dataSink.integrateEntities( entityData, authorizedPropertyTypesByEntitySet);
     }
 
     @Override
-    public Map<UUID, Map<String, UUID>> getEntityKeyIds(Map<UUID, Set<String>> entityIdsBySet) {
-        return idService.getEntityKeyIds( entityIdsBySet );
+    public Map<EntityKey, UUID> getEntityKeyIds(Set<EntityKey> entityKeys) {
+        return idService.getEntityKeyIds( entityKeys );
     }
 
 }
