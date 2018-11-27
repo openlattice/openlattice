@@ -20,6 +20,7 @@
 
 package com.openlattice.indexing;
 
+import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
@@ -38,7 +39,7 @@ import com.openlattice.postgres.PostgresTablesPod;
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Indexer extends RhizomeApplicationServer {
+public class Indexer extends BaseRhizomeServer {
     public static final Class<?>[] rhizomePods = new Class<?>[]{
             RegistryBasedHazelcastInstanceConfigurationPod.class,
             Auth0Pod.class };
@@ -67,12 +68,12 @@ public class Indexer extends RhizomeApplicationServer {
     }
 
     @Override
-    public void sprout( String... activeProfiles ) {
-        super.sprout( activeProfiles );
+    public void start( String... activeProfiles ) throws Exception {
+        super.start( activeProfiles );
         getContext().getBean( MailService.class ).processEmailRequestsQueue();
     }
 
-    public static void main( String[] args ) {
-        new Indexer().sprout( args );
+    public static void main( String[] args ) throws Exception {
+        new Indexer().start( args );
     }
 }
