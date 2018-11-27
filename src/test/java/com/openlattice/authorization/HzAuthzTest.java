@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization;
 
+import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.neuron.Neuron;
@@ -79,7 +80,8 @@ public class HzAuthzTest {
                 ElasticSearchPod.class
         );
 
-        testServer.sprout( ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE );
+        testServer.sprout( ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,
+                DatastoreProfiles.MEDIA_LOCAL_PROFILE );
         hazelcastInstance = testServer.getContext().getBean( HazelcastInstance.class );
 
         neuron = testServer.getContext().getBean( Neuron.class );
