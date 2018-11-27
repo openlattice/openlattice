@@ -30,11 +30,9 @@ import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.Permission;
-import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.DataIntegrationApi;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.IntegrationResults;
+import com.openlattice.data.*;
 import com.openlattice.data.integration.*;
+import com.openlattice.data.integration.Entity;
 import com.openlattice.data.storage.DataSinkManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
@@ -59,25 +57,27 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(DataIntegrationApi.CONTROLLER)
 public class DataIntegrationController implements DataIntegrationApi, AuthorizingComponent {
-    private static final Logger logger = LoggerFactory
+    private static final Logger                                    logger = LoggerFactory
             .getLogger(DataIntegrationController.class);
-    private static final EnumSet<Permission> WRITE_PERMISSION = EnumSet.of(Permission.WRITE);
+    private static final EnumSet<Permission>                       WRITE_PERMISSION = EnumSet.of(Permission.WRITE);
     @Inject
-    private EdmService dms;
+    private              EdmService                                dms;
     @Inject
-    private DataGraphManager dgm;
+    private              DataGraphManager                          dgm;
     @Inject
-    private DataSinkManager dataSink;
+    private              DataSinkManager                           dataSink;
     @Inject
-    private AuthorizationManager authz;
+    private              EntityKeyIdService                        idService;
     @Inject
-    private EdmAuthorizationHelper authzHelper;
+    private              AuthorizationManager                      authz;
     @Inject
-    private AuthenticationManager authProvider;
+    private              EdmAuthorizationHelper                    authzHelper;
     @Inject
-    private SearchService searchService;
-    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
-    private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
+    private              AuthenticationManager                     authProvider;
+    @Inject
+    private              SearchService                             searchService;
+    private              LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
+    private              LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @Override
     public AuthorizationManager getAuthorizationManager() {
@@ -215,6 +215,11 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                                         .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
 
         return dataSink.integrateEntities(entityIdsAndData, authorizedPropertyTypesByEntitySet);
+    }
+
+    @Override
+    public Map<UUID, Map<String, UUID>> getEntityKeyIds(Map<UUID, Set<String>> entityIdsBySet) {
+        return idService.getEntityKeyIds( entityIdsBySet );
     }
 
 }
