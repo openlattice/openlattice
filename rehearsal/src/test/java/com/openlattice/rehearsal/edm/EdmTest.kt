@@ -46,10 +46,14 @@ import java.lang.reflect.UndeclaredThrowableException
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class EdmTest : MultipleAuthenticatedUsersBase() {
-    private val PERSON_NAMESPACE = "general"
-    private val PERSON_NAME = "person"
 
+const val PERSON_NAMESPACE = "general"
+const val PERSON_NAME = "person"
+
+const val PERSON_GIVEN_NAME_NAMESPACE = "nc"
+const val PERSON_GIVEN_NAME_NAME = "PersonGivenName"
+
+class EdmTest : MultipleAuthenticatedUsersBase() {
     companion object {
         @JvmStatic @BeforeClass fun init() {
             loginAs("admin")

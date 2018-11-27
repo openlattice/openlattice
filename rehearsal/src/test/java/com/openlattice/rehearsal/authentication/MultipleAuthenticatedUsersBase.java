@@ -217,8 +217,15 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static EntitySet createEntitySet( EntityType entityType, boolean linking, Set<UUID> linkedEntitySetIds ) {
+        return createEntitySet( UUID.randomUUID(), entityType, linking, linkedEntitySetIds );
+    }
+
+    public static EntitySet createEntitySet( UUID entitySetId,
+                                             EntityType entityType,
+                                             boolean linking,
+                                             Set<UUID> linkedEntitySetIds ) {
         EntitySet newES = new EntitySet(
-                Optional.of( UUID.randomUUID() ),
+                Optional.of( entitySetId ),
                 entityType.getId(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
                 "foobar",
@@ -238,5 +245,9 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
 
     public static EntitySet createEntitySet( EntityType entityType ) {
         return createEntitySet( entityType, false, new HashSet<>() );
+    }
+
+    public static EntitySet createEntitySet( UUID entitySetId, EntityType entityType ) {
+        return createEntitySet( entitySetId, entityType, false, new HashSet<>() );
     }
 }

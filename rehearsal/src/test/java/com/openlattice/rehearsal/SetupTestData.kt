@@ -25,6 +25,7 @@ import com.openlattice.authentication.AuthenticationTest
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.shuttle.ShuttleCli
 import com.openlattice.shuttle.main
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.io.File
 import java.util.*
 
@@ -37,15 +38,10 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
         private const val FLIGHT_FOLDER = "flights"
 
         /**
-         * Indicates whether the [com.openlattice.linking.RealtimeLinkingService] is finished
-         */
-        private val importedGeneralPersonEntitySets = mutableSetOf<UUID>()
-
-        /**
          * Import datasets via Shuttle
          * @param
          */
-        fun importDataSet(flightFileName: String, dataFileName: String, generalPersonEntitySetFqns: Set<String>) {
+        fun importDataSet(flightFileName: String, dataFileName: String) {
             loginAs("admin")
             val tokenAdmin = AuthenticationTest.getAuthentication(authOptions).credentials
 
@@ -61,19 +57,16 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
                     "-${ShuttleCli.ENVIRONMENT}=LOCAL",
                     "-${ShuttleCli.TOKEN}=$tokenAdmin",
                     "-${ShuttleCli.CREATE}=$email"))
-
-            if (generalPersonEntitySetFqns.isNotEmpty()) {
-                generalPersonEntitySetFqns.forEach {
-                    importedGeneralPersonEntitySets.add(edmApi.getEntitySetId(it))
-                }
-            }
         }
 
-        fun checkLinkingFinished(): Boolean {
+        /**
+         * Indicates whether the [com.openlattice.linking.RealtimeLinkingService] is finished for entitysets
+         */
+        fun checkLinkingFinished( importedGeneralPersonFqns: Set<String>): Boolean {
             val finishedEntitySets = realtimeLinkingApi.linkingFinishedEntitySets
-            val finished = importedGeneralPersonEntitySets.all { finishedEntitySets.contains(it) }
+            val finished = importedGeneralPersonFqns.all { finishedEntitySets.contains(edmApi.getEntitySetId(it)) }
 
-            logger.info("Linking is finished:{} with imported entity sets: {}", finished, importedGeneralPersonEntitySets)
+            logger.info("Linking is finished:{} with imported entity sets: {}", finished, importedGeneralPersonFqns)
             return finished
         }
     }
