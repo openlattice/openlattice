@@ -84,4 +84,9 @@ public interface DataIntegrationApi {
     @POST (BASE + "/" + DATA_SINK)
     IntegrationResults sinkData(@Body DataSinkObject data);
 
+    @POST (BASE + "/" + ENTITY_KEY_ID)
+    Map<UUID, Map<String, UUID>> getEntityKeyIds(
+            @Body Map<UUID, Set<String>> entityIdsBySet
+    );
+
 }
