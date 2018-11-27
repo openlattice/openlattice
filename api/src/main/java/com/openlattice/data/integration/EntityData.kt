@@ -8,7 +8,6 @@ import java.util.*
 */
 
 data class EntityIdsAndData(
-        //@JsonProperty val entitySetIdToIdsAndKeys: MutableMap<UUID, Map<String, UUID>>,
         @JsonProperty val entitySetId: UUID,
         @JsonProperty val entityId: String,
         @JsonProperty val entityKeyId: UUID,
