@@ -36,6 +36,7 @@ public final class RetrofitFactory {
     private static final String STAGING_BASE_URL = "https://api.staging.openlattice.com/";
     private static final String LOCAL_BASE_URL   = "http://localhost:8080/";
     private static final String TESTING_BASE_URL = "http://localhost:8080/";
+    private static final String TESTING_INDEXER_URL = "http://localhost:8081/";
 
     private static final ObjectMapper jsonMapper = ObjectMappers.getJsonMapper();
 
@@ -46,7 +47,8 @@ public final class RetrofitFactory {
         PRODUCTION( BASE_URL ),
         STAGING( STAGING_BASE_URL ),
         LOCAL( LOCAL_BASE_URL ),
-        TESTING( TESTING_BASE_URL );
+        TESTING( TESTING_BASE_URL ),
+        TESTING_INDEXER( TESTING_INDEXER_URL );
 
         private final String baseUrl;
 
