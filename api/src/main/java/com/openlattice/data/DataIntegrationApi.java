@@ -24,6 +24,8 @@ import com.openlattice.data.integration.BulkDataCreation;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import com.openlattice.data.integration.DataSinkObject;
 import retrofit2.http.Body;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
@@ -43,6 +45,7 @@ public interface DataIntegrationApi {
 
     String ENTITY_SET  = "set";
     String ASSOCIATION = "association";
+    String DATA_SINK = "dataSink";
 
     String ENTITY_SET_ID    = "setId";
     String ENTITY_KEY_ID    = "entityKeyId";
@@ -77,5 +80,8 @@ public interface DataIntegrationApi {
     IntegrationResults integrateEntityAndAssociationData(
             @Body BulkDataCreation data,
             @Query( DETAILED_RESULTS ) boolean detailedResults );
+
+    @POST (BASE + "/" + DATA_SINK)
+    IntegrationResults sinkData(@Body DataSinkObject data);
 
 }
