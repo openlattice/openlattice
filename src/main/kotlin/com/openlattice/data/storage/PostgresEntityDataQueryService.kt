@@ -296,20 +296,12 @@ class PostgresEntityDataQueryService(
                                 } else {
                                     val ps = preparedStatements[propertyTypeId]
                                     ps?.setObject(1, entityKeyId)
-
-                                    //Binary data types get stored in S3 bucket
-                                    if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
-                                        //store data in S3 bucket
+                                    if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) { //binary data are stored in s3 bucket
+                                        //store key to s3 data in postgres as property value
                                         val propertyHash = PostgresDataHasher.hashObjectToHex(it, EdmPrimitiveTypeKind.Binary)
-
-                                        //store entity set id/entity key id/property type id/property hash as key in S3
                                         val s3Key = entitySetId.toString() + "/" + entityKeyId.toString() + "/" + propertyTypeId.toString() + "/" + propertyHash
-                                        byteBlobDataManager.putObject(s3Key, it as ByteArray)
-
-                                        //store S3 key to data in postgres as property value
                                         ps?.setBytes(2, PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String))
                                         ps?.setObject(3, s3Key)
-
                                     } else {
                                         ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
                                         ps?.setObject(3, it)
