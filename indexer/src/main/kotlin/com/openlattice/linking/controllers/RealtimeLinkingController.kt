@@ -43,7 +43,7 @@ class RealtimeLinkingController(
         val linkableEntitySets = lqs
                 .getLinkableEntitySets(linkableTypes, entitySetBlacklist, whitelist.orElse(setOf()))
                 .toSet()
-
-        return linkableEntitySets.minus(lqs.getEntitiesNeedingLinking(linkableEntitySets).map { it.first })
+        val entitySetsNeedLinking = lqs.getEntitiesNotLinked(linkableEntitySets).map { it.first }
+        return linkableEntitySets.minus(entitySetsNeedLinking)
     }
 }

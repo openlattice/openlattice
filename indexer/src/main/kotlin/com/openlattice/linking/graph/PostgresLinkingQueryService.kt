@@ -77,6 +77,18 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         }, Function { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) })
     }
 
+    override fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID, UUID>> {
+        return PostgresIterable(Supplier {
+            val connection = hds.connection
+            val ps = connection.prepareStatement(ENTITY_KEY_IDS_NOT_LINKED)
+            val arr = PostgresArrays.createUuidArray(connection, entitySetIds)
+            ps.setObject(1, arr)
+            ps.setObject(2, limit)
+            val rs = ps.executeQuery()
+            StatementHolder(connection, ps, rs)
+        }, Function { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) })
+    }
+
     override fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int {
         hds.connection.use {
             it.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use {
@@ -301,7 +313,12 @@ private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +
-        " AND ${VERSION.name} > 0 LIMIT ?"
+        "AND ${VERSION.name} > 0 LIMIT ?"
+
+private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
+        "FROM ${IDS.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
+        "AND ${VERSION.name} > 0 LIMIT ?"
 
 private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "FROM ${ENTITY_SETS.name} " +
