@@ -198,6 +198,11 @@ open class DataGraphService(
                 .sum()
     }
 
+    override fun getEntityKeyIds( entityKeys: Set<EntityKey> ): Set<Map.Entry<EntityKey, UUID>> {
+        val idsMap = idService.getEntityKeyIds(entityKeys)
+        return idsMap.entries.toSet()
+    }
+
     override fun integrateEntities(
             entitySetId: UUID,
             entities: Map<String, Map<UUID, Set<Any>>>,
