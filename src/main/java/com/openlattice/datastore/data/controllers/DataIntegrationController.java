@@ -43,31 +43,27 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(DataIntegrationApi.CONTROLLER)
+@RequestMapping( DataIntegrationApi.CONTROLLER )
 public class DataIntegrationController implements DataIntegrationApi, AuthorizingComponent {
-    private static final Logger                                    logger = LoggerFactory
-            .getLogger(DataIntegrationController.class);
-    private static final EnumSet<Permission>                       WRITE_PERMISSION = EnumSet.of(Permission.WRITE);
+    private static final Logger                                    logger           = LoggerFactory
+            .getLogger( DataIntegrationController.class );
+    private static final EnumSet<Permission>                       WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
     @Inject
     private              EdmService                                dms;
     @Inject
     private              DataGraphManager                          dgm;
     @Inject
-    private              DataSinkManager                           dataSink;
+    private              DataSinkManager                           postgresDataSinkService;
     @Inject
-    private              EntityKeyIdService                        idService;
+    private              DataSinkManager                           awsDataSinkService;
     @Inject
     private              AuthorizationManager                      authz;
     @Inject
@@ -85,113 +81,115 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     }
 
     @Timed
-    @PostMapping("/" + ENTITY_SET + "/" + SET_ID_PATH)
+    @PostMapping( "/" + ENTITY_SET + "/" + SET_ID_PATH )
     @Override
     public IntegrationResults integrateEntities(
-            @PathVariable(ENTITY_SET_ID) UUID entitySetId,
-            @RequestParam(value = DETAILED_RESULTS, required = false, defaultValue = "false") boolean detailedResults,
-            @RequestBody Map<String, Map<UUID, Set<Object>>> entities) {
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" ) boolean detailedResults,
+            @RequestBody Map<String, Map<UUID, Set<Object>>> entities ) {
         //Ensure that we have read access to entity set metadata.
-        ensureReadAccess(new AclKey(entitySetId));
+        ensureReadAccess( new AclKey( entitySetId ) );
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes(entitySetId, WRITE_PERMISSION);
+                .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
 
-        final Map<String, UUID> entityKeyIds = dgm.integrateEntities(entitySetId, entities, authorizedPropertyTypes);
-        final IntegrationResults results = new IntegrationResults(entityKeyIds.size(),
+        final Map<String, UUID> entityKeyIds = dgm.integrateEntities( entitySetId, entities, authorizedPropertyTypes );
+        final IntegrationResults results = new IntegrationResults( entityKeyIds.size(),
                 0,
-                detailedResults ? Optional.of(ImmutableMap.of(entitySetId, entityKeyIds)) : Optional.empty(),
-                Optional.empty());
+                detailedResults ? Optional.of( ImmutableMap.of( entitySetId, entityKeyIds ) ) : Optional.empty(),
+                Optional.empty() );
         return results;
     }
 
     @Timed
-    @PostMapping("/" + ASSOCIATION + "/" + SET_ID_PATH)
+    @PostMapping( "/" + ASSOCIATION + "/" + SET_ID_PATH )
     @Override
     public IntegrationResults integrateAssociations(
             @RequestBody Set<Association> associations,
-            @RequestParam(value = DETAILED_RESULTS, required = false, defaultValue = "false")
-                    boolean detailedResults) {
+            @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" )
+                    boolean detailedResults ) {
         final Set<UUID> associationEntitySets = associations.stream()
-                .map(association -> association.getKey().getEntitySetId())
-                .collect(Collectors.toSet());
+                .map( association -> association.getKey().getEntitySetId() )
+                .collect( Collectors.toSet() );
         //Ensure that we have read access to entity set metadata.
-        associationEntitySets.forEach(entitySetId -> ensureReadAccess(new AclKey(entitySetId)));
-        accessCheck(EdmAuthorizationHelper
-                .aclKeysForAccessCheck(requiredAssociationPropertyTypes(associations), WRITE_PERMISSION));
+        associationEntitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+        accessCheck( EdmAuthorizationHelper
+                .aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
                 associationEntitySets.stream()
-                        .collect(Collectors.toMap(Function.identity(),
+                        .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
-                                        .getAuthorizedPropertyTypes(entitySetId, EnumSet.of(Permission.WRITE))));
+                                        .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) ) ) );
 
         //        checkAllAssociationsInEntitySet( entitySetId, associations );
         final Map<UUID, Map<String, UUID>> entityKeyIds = dgm
-                .integrateAssociations(associations, authorizedPropertyTypesByEntitySet);
-        final IntegrationResults results = new IntegrationResults(0,
-                entityKeyIds.values().stream().mapToInt(Map::size).sum(),
+                .integrateAssociations( associations, authorizedPropertyTypesByEntitySet );
+        final IntegrationResults results = new IntegrationResults( 0,
+                entityKeyIds.values().stream().mapToInt( Map::size ).sum(),
                 Optional.empty(),
-                detailedResults ? Optional.of(entityKeyIds) : Optional.empty());
+                detailedResults ? Optional.of( entityKeyIds ) : Optional.empty() );
         return results;
     }
 
     @Timed
-    @PostMapping({"/", ""})
+    @PostMapping( { "/", "" } )
     @Override
     public IntegrationResults integrateEntityAndAssociationData(
             @RequestBody BulkDataCreation data,
-            @RequestParam(value = DETAILED_RESULTS, required = false, defaultValue = "false")
-                    boolean detailedResults) {
+            @RequestParam( value = DETAILED_RESULTS, required = false, defaultValue = "false" )
+                    boolean detailedResults ) {
         final Set<Entity> entities = data.getEntities();
         final Set<Association> associations = data.getAssociations();
 
         final Set<UUID> entitySets = entities.stream()
-                .map(entity -> entity.getKey().getEntitySetId())
-                .collect(Collectors.toSet());
+                .map( entity -> entity.getKey().getEntitySetId() )
+                .collect( Collectors.toSet() );
 
         final Set<UUID> associationEntitySets = associations.stream()
-                .map(association -> association.getKey().getEntitySetId())
-                .collect(Collectors.toSet());
+                .map( association -> association.getKey().getEntitySetId() )
+                .collect( Collectors.toSet() );
 
         //Ensure that we have read access to entity set metadata.
-        entitySets.forEach(entitySetId -> ensureReadAccess(new AclKey(entitySetId)));
-        associationEntitySets.forEach(entitySetId -> ensureReadAccess(new AclKey(entitySetId)));
+        entitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+        associationEntitySets.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
 
-        accessCheck(EdmAuthorizationHelper
-                .aclKeysForAccessCheck(requiredEntityPropertyTypes(entities), WRITE_PERMISSION));
-        accessCheck(EdmAuthorizationHelper
-                .aclKeysForAccessCheck(requiredAssociationPropertyTypes(associations), WRITE_PERMISSION));
+        accessCheck( EdmAuthorizationHelper
+                .aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
+        accessCheck( EdmAuthorizationHelper
+                .aclKeysForAccessCheck( requiredAssociationPropertyTypes( associations ), WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
-                Stream.concat(entitySets.stream(), associationEntitySets.stream())
-                        .collect(Collectors.toMap(Function.identity(),
+                Stream.concat( entitySets.stream(), associationEntitySets.stream() )
+                        .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
-                                        .getAuthorizedPropertyTypes(entitySetId, WRITE_PERMISSION)));
+                                        .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
 
-        return dgm.integrateEntitiesAndAssociations(data.getEntities(),
+        return dgm.integrateEntitiesAndAssociations( data.getEntities(),
                 data.getAssociations(),
-                authorizedPropertyTypesByEntitySet);
+                authorizedPropertyTypesByEntitySet );
     }
 
-    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes(Set<Association> associations) {
+    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
         final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        associations.forEach(association -> propertyTypesByEntitySet
-                .putAll(association.getKey().getEntitySetId(), association.getDetails().keySet()));
+        associations.forEach( association -> propertyTypesByEntitySet
+                .putAll( association.getKey().getEntitySetId(), association.getDetails().keySet() ) );
         return propertyTypesByEntitySet;
     }
 
-    private static SetMultimap<UUID, UUID> requiredEntityPropertyTypes(Set<Entity> entities) {
+    private static SetMultimap<UUID, UUID> requiredEntityPropertyTypes( Set<Entity> entities ) {
         final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        entities.forEach(entity -> propertyTypesByEntitySet
-                .putAll(entity.getEntitySetId(), entity.getDetails().keySet()));
+        entities.forEach( entity -> propertyTypesByEntitySet
+                .putAll( entity.getEntitySetId(), entity.getDetails().keySet() ) );
         return propertyTypesByEntitySet;
     }
 
     @Timed
-    @PostMapping( "/" + DATA_SINK )
+    @PostMapping( "/" + DATA_SINK + "/" + STORAGE_DESTINATION_PATH )
     @Override
-    public IntegrationResults sinkData( DataSinkObject data ) {
+    public IntegrationResults sinkData(
+            @PathVariable( STORAGE_DESTINATION_PATH ) StorageDestination storageDest,
+            @RequestBody DataSinkObject data ) {
         final Set<EntityData> entityData = data.getEntities();
         final Set<UUID> entitySetIds = entityData.stream().map( entity -> entity.getEntitySetId() ).collect(
                 Collectors.toSet() );
@@ -213,13 +211,17 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                         .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
-
-        return dataSink.integrateEntities( entityData, authorizedPropertyTypesByEntitySet);
+        if ( storageDest.equals( StorageDestination.AWS ) ) {
+            return awsDataSinkService.integrateEntities( entityData, authorizedPropertyTypesByEntitySet );
+        } else {
+            return postgresDataSinkService.integrateEntities( entityData, authorizedPropertyTypesByEntitySet );
+        }
     }
 
     @Override
-    public Map<EntityKey, UUID> getEntityKeyIds(Set<EntityKey> entityKeys) {
-        return idService.getEntityKeyIds( entityKeys );
+    @PostMapping( "/" + ENTITY_KEY_IDS )
+    public Set<Map.Entry<EntityKey, UUID>> getEntityKeyIds( @RequestBody Set<EntityKey> entityKeys ) {
+        return dgm.getEntityKeyIds( entityKeys );
     }
 
 }
