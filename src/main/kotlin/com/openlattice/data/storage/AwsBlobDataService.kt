@@ -70,7 +70,7 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
                 HttpMethod.GET
         ).withExpiration(expiration)
-        var url = URL("http://")
+        lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)
         } catch (e: AmazonServiceException) {
