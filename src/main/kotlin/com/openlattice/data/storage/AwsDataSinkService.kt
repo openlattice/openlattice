@@ -2,7 +2,7 @@ package com.openlattice.data.storage
 
 import com.google.common.collect.Multimaps
 import com.openlattice.data.IntegrationResults
-import com.openlattice.data.integration.EntityIdsAndData
+import com.openlattice.data.integration.EntityData
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.JsonDeserializer
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -18,7 +18,7 @@ class AwsDataSinkService : DataSinkManager {
     @Inject
     lateinit var byteBlobDataManager: ByteBlobDataManager
 
-    override fun integrateEntities(entities: Set<EntityIdsAndData>, authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>): IntegrationResults? {
+    override fun integrateEntities(entities: Set<EntityData>, authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>): IntegrationResults? {
         val entitiesBySet = HashMap<UUID, MutableMap<UUID, Map<UUID, Set<Any>>>>()
 
         for (entity in entities) {
