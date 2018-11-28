@@ -29,7 +29,13 @@ class LocalAwsBlobDataServiceTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
+            val awsTestConfig = ResourceConfigurationLoader
+                    .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
+            val s3 = newS3Client(awsTestConfig)
+            val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
+                    awsTestConfig.bucket,
+                    awsTestConfig.folder,
+                    DatastoreConfiguration::class.java)
             val byteBlobDataManager = AwsBlobDataService(config)
             this.byteBlobDataManager = byteBlobDataManager
         }
@@ -80,5 +86,4 @@ class LocalAwsBlobDataServiceTest {
         val returnedURL = returnedDataList[0] as URL
         val returnedData = returnedURL.readBytes()
     }
-
 }
