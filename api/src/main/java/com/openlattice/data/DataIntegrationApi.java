@@ -21,15 +21,14 @@ package com.openlattice.data;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.integration.Association;
 import com.openlattice.data.integration.BulkDataCreation;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import com.openlattice.data.integration.DataSinkObject;
-import retrofit2.http.Body;
-import retrofit2.http.POST;
-import retrofit2.http.Path;
-import retrofit2.http.Query;
+import com.openlattice.data.integration.StorageDestination;
+import retrofit2.http.*;
 
 public interface DataIntegrationApi {
     /*
@@ -43,21 +42,24 @@ public interface DataIntegrationApi {
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
-    String ENTITY_SET  = "set";
-    String ASSOCIATION = "association";
-    String DATA_SINK = "dataSink";
+    String ENTITY_SET     = "set";
+    String ASSOCIATION    = "association";
+    String DATA_SINK      = "dataSink";
+    String ENTITY_KEY_IDS = "entityKeyIds";
 
-    String ENTITY_SET_ID    = "setId";
-    String ENTITY_KEY_ID    = "entityKeyId";
-    String PROPERTY_TYPE_ID = "propertyTypeId";
+    String ENTITY_SET_ID       = "setId";
+    String ENTITY_KEY_ID       = "entityKeyId";
+    String PROPERTY_TYPE_ID    = "propertyTypeId";
+    String STORAGE_DESTINATION = "storageDesination";
 
     String COUNT            = "count";
     String DETAILED_RESULTS = "detailedResults";
     String UPDATE           = "update";
 
-    String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
-    String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
-    String PROPERTY_TYPE_ID_PATH = "{" + PROPERTY_TYPE_ID + "}";
+    String ENTITY_KEY_ID_PATH       = "{" + ENTITY_KEY_ID + "}";
+    String SET_ID_PATH              = "{" + ENTITY_SET_ID + "}";
+    String PROPERTY_TYPE_ID_PATH    = "{" + PROPERTY_TYPE_ID + "}";
+    String STORAGE_DESTINATION_PATH = "{" + STORAGE_DESTINATION + "}";
 
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     IntegrationResults integrateEntities(
@@ -69,7 +71,7 @@ public interface DataIntegrationApi {
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
-     * UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
+     *                     UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
      */
     @POST( BASE + "/" + ASSOCIATION + "/" + SET_ID_PATH )
     IntegrationResults integrateAssociations(
@@ -81,11 +83,14 @@ public interface DataIntegrationApi {
             @Body BulkDataCreation data,
             @Query( DETAILED_RESULTS ) boolean detailedResults );
 
-    @POST (BASE + "/" + DATA_SINK)
-    IntegrationResults sinkData(@Body DataSinkObject data);
+    @POST( BASE + "/" + DATA_SINK + "/" + STORAGE_DESTINATION_PATH )
+    IntegrationResults sinkData(
+            @Path( STORAGE_DESTINATION_PATH ) StorageDestination storageDest,
+            @Body DataSinkObject data
+    );
 
-    @POST (BASE + "/" + ENTITY_KEY_ID)
-    Map<EntityKey, UUID> getEntityKeyIds(
+    @POST( BASE + "/" + ENTITY_KEY_IDS )
+    Set<Map.Entry<EntityKey, UUID>> getEntityKeyIds(
             @Body Set<EntityKey> entityKeys
     );
 
