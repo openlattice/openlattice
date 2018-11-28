@@ -14,6 +14,7 @@ import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.junit.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.FileNotFoundException
 import java.net.URL
 import java.util.*
 
@@ -23,21 +24,12 @@ class LocalAwsBlobDataServiceTest {
     companion object {
         @JvmStatic
         private lateinit var byteBlobDataManager: ByteBlobDataManager
-        private lateinit var s3: AmazonS3
-        private lateinit var bucketName: String
         private var key1 = ""
 
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            val awsTestConfig = ResourceConfigurationLoader
-                    .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
-            this.s3 = newS3Client(awsTestConfig)
-            this.bucketName = awsTestConfig.bucket
-            val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
-                    awsTestConfig.bucket,
-                    awsTestConfig.folder,
-                    DatastoreConfiguration::class.java)
+            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
             val byteBlobDataManager = AwsBlobDataService(config)
             this.byteBlobDataManager = byteBlobDataManager
         }
@@ -72,7 +64,7 @@ class LocalAwsBlobDataServiceTest {
         Assert.assertArrayEquals(data, returnedData)
     }
 
-    @Test
+    @Test(expected = FileNotFoundException::class)
     fun testDeleteObject() {
         val data = ByteArray(10)
         Random().nextBytes(data)
@@ -84,10 +76,9 @@ class LocalAwsBlobDataServiceTest {
 
         byteBlobDataManager.putObject(key2, data)
         byteBlobDataManager.deleteObject(key2)
-        var objects = listOf<Any>()
-        if (s3.doesObjectExist(bucketName, key2))
-            objects = byteBlobDataManager.getObjects(listOf(key2))
-        Assert.assertEquals(0, objects.size)
+        val returnedDataList = byteBlobDataManager.getObjects(listOf(key2))
+        val returnedURL = returnedDataList[0] as URL
+        val returnedData = returnedURL.readBytes()
     }
 
 }
