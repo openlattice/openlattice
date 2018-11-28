@@ -66,13 +66,13 @@ public class BulkDataCreation implements Serializable {
 
     private Set<Entity>      entities;
     private Set<Association> associations;
-    private Map<UUID, String> propertyTypeIdToStorageDest;
+    private Map<UUID, StorageDestination> propertyTypeIdToStorageDest;
 
     @JsonCreator
     public BulkDataCreation(
             @JsonProperty( SerializationConstants.ENTITIES ) Set<Entity> entities,
             @JsonProperty( SerializationConstants.ASSOCIATIONS ) Set<Association> associations,
-            @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID_TO_STORAGE_DEST) Map<UUID, String> propertyTypeIdToStorageDest) {
+            @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID_TO_STORAGE_DEST) Map<UUID, StorageDestination> propertyTypeIdToStorageDest) {
         this.entities = entities;
         this.associations = associations;
         this.propertyTypeIdToStorageDest = propertyTypeIdToStorageDest;
@@ -97,7 +97,7 @@ public class BulkDataCreation implements Serializable {
     }
 
     @JsonProperty( SerializationConstants.PROPERTY_TYPE_ID_TO_STORAGE_DEST )
-    public Map<UUID, String> getPropertyTypeIdToStorageDest() {return propertyTypeIdToStorageDest;}
+    public Map<UUID, StorageDestination> getPropertyTypeIdToStorageDest() {return propertyTypeIdToStorageDest;}
 
     @Override public boolean equals( Object o ) {
         if ( this == o )
