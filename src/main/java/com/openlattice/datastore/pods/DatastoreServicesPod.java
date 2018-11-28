@@ -45,16 +45,11 @@ import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.DataGraphService;
-import com.openlattice.data.EntityDatastore;
-import com.openlattice.data.EntityKeyIdService;
+import com.openlattice.data.*;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
+import com.openlattice.data.integration.EntityData;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
-import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.HazelcastEntityDatastore;
-import com.openlattice.data.storage.PostgresDataManager;
-import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.*;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
@@ -67,6 +62,7 @@ import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
@@ -86,10 +82,16 @@ import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 @Configuration
 @Import( {
@@ -327,6 +329,14 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService( hikariDataSource,byteBlobDataManager  );
+    }
+
+    @Bean DataSinkManager postgresDataSinkService() {
+        return new PostgresDataSinkService();
+    }
+
+    @Bean DataSinkManager awsDataSinkService() {
+        return new AwsDataSinkService();
     }
 
     @PostConstruct
