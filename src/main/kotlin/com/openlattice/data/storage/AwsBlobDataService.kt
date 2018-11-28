@@ -60,7 +60,7 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         for (key in keys) {
             if (key == null)
                 logger.error("key is null, which is unexpected")
-            else if (s3.doesObjectExist(datastoreConfiguration.bucketName, key as String))
+            else
                 presignedUrls.add(getPresignedUrl(key, expirationTime))
         }
         return presignedUrls
