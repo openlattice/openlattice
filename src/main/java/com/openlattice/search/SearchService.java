@@ -189,12 +189,8 @@ public class SearchService {
                         Map.Entry::getKey,
                         entry -> DelegatedUUIDSet.wrap( Sets.newHashSet( entry.getValue().keySet() ) ) )
                 );
-        // Load merged entities until meeting maxresults or out of entities
-        // do the search -> get back a bunch of entity key ids
-        // lookup linking ids to group the results together
-        // if under the search results threshold because entities are merged, load another page of results...
-
-        int hitNum = searchConstraints.getStart();
+        // Always have to load all entities to ensure, all linked entity data is included
+        int hitNum = 0;
         long totalHits;
         final int start = searchConstraints.getStart();
         final int maxHits = searchConstraints.getMaxHits();
@@ -205,7 +201,7 @@ public class SearchService {
             SearchConstraints remainingSearchConstraint = new SearchConstraints(
                     searchConstraints.getEntitySetIds(),
                     hitNum,
-                    (searchConstraints.getMaxHits() - entityDataByLinkingId.size()) * 2,
+                    SearchApi.MAX_SEARCH_RESULTS,
                     searchConstraints.getConstraintGroups() );
 
             EntityDataKeySearchResult result = elasticsearchApi
@@ -233,8 +229,6 @@ public class SearchService {
                 PostgresIterable<Pair<UUID, UUID>> linkingIdsByEntityKeyIds = getLinkingIdsByEntityKeyIds( entityKeyIds );
 
                 linkingIdsByEntityKeyIds.stream()
-                        .takeWhile( ids ->
-                                entityDataByLinkingId.size() - start < maxHits )
                         .forEach( ids -> {
                             entityDataByLinkingId.merge(
                                     ids.getValue(), // linking_id
@@ -246,14 +240,15 @@ public class SearchService {
 
                 hitNum += entityKeyIds.size();
             }
-        } while ( entityDataByLinkingId.size() - start < maxHits && hitNum < totalHits );
+        } while ( hitNum < totalHits );
 
         if( entityDataByLinkingId.size() >= start ) {
-            List<Map.Entry<UUID, List<Map<FullQualifiedName, Set<Object>>>>> entityDataByLinkingIdList = entityDataByLinkingId
-                    .entrySet().stream()
-                    .skip( start )
-                    .collect( Collectors.toList() );
-            return new DataSearchResult( totalHits, mergeEntityDataByLinkingId( entityDataByLinkingIdList ) );
+            List<SetMultimap<FullQualifiedName, Object>> mergedEntityDataByLinkingId =
+                    mergeEntityDataByLinkingId( entityDataByLinkingId ).stream()
+                            .skip( start )
+                            .limit( maxHits )
+                            .collect( Collectors.toList());
+            return new DataSearchResult( totalHits, mergedEntityDataByLinkingId );
 
         } else {
             return new DataSearchResult( totalHits, Lists.newArrayList() );
@@ -262,9 +257,9 @@ public class SearchService {
     }
 
     private List<SetMultimap<FullQualifiedName, Object>> mergeEntityDataByLinkingId(
-            List<Map.Entry<UUID, List<Map<FullQualifiedName, Set<Object>>>>> entityDataOfLinkingIds ) {
+            Map<UUID, List<Map<FullQualifiedName, Set<Object>>>> entityDataOfLinkingIds ) {
 
-        return entityDataOfLinkingIds.stream().map( linkedEntityDataList -> {
+        return entityDataOfLinkingIds.entrySet().stream().map( linkedEntityDataList -> {
             SetMultimap<FullQualifiedName, Object> mergedEntityDataMultimap = HashMultimap.create();
             Map<FullQualifiedName, Set<Object>> mergedEntityData = linkedEntityDataList.getValue().stream()
                     .reduce( ( dataMap, nextDataMap ) -> {
