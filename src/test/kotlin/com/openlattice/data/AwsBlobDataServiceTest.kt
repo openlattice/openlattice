@@ -3,6 +3,7 @@ package com.openlattice.data
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
@@ -22,6 +23,8 @@ class LocalAwsBlobDataServiceTest {
     companion object {
         @JvmStatic
         private lateinit var byteBlobDataManager: ByteBlobDataManager
+        private lateinit var s3: AmazonS3
+        private lateinit var bucketName: String
         private var key1 = ""
 
         @BeforeClass
@@ -29,7 +32,8 @@ class LocalAwsBlobDataServiceTest {
         fun setUp() {
             val awsTestConfig = ResourceConfigurationLoader
                     .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
-            val s3 = newS3Client(awsTestConfig)
+            this.s3 = newS3Client(awsTestConfig)
+            this.bucketName = awsTestConfig.bucket
             val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
                     awsTestConfig.bucket,
                     awsTestConfig.folder,
@@ -69,7 +73,7 @@ class LocalAwsBlobDataServiceTest {
     }
 
     @Test
-    fun testDeletObject() {
+    fun testDeleteObject() {
         val data = ByteArray(10)
         Random().nextBytes(data)
         var key2 = ""
@@ -80,8 +84,10 @@ class LocalAwsBlobDataServiceTest {
 
         byteBlobDataManager.putObject(key2, data)
         byteBlobDataManager.deleteObject(key2)
-        val objects = byteBlobDataManager.getObjects(listOf(key2))
-        Assert.assertEquals(objects.size, 0)
+        var objects = listOf<Any>()
+        if (s3.doesObjectExist(bucketName, key2))
+            objects = byteBlobDataManager.getObjects(listOf(key2))
+        Assert.assertEquals(0, objects.size)
     }
 
 }
