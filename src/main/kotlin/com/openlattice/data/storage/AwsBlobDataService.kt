@@ -58,7 +58,7 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         expirationTime.time = timeToLive
         var presignedUrls = mutableListOf<URL>()
         for (key in keys) {
-            if (s3.doesObjectExist(datastoreConfiguration.bucketName, key as String))
+            if (key != null && s3.doesObjectExist(datastoreConfiguration.bucketName, key as String))
                 presignedUrls.add(getPresignedUrl(key, expirationTime))
         }
         return presignedUrls
