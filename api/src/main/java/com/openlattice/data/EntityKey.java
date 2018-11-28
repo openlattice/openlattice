@@ -22,6 +22,8 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -84,5 +86,17 @@ public class EntityKey implements Comparable<EntityKey> {
                 "entitySetId=" + entitySetId +
                 ", entityId='" + entityId + '\'' +
                 '}';
+    }
+
+    private static UUID deserializeUUID( ObjectInputStream ois ) throws IOException {
+        long lsb = ois.readLong();
+        long msb = ois.readLong();
+        return new UUID( msb, lsb );
+    }
+
+    private static EntityKey deserializeEntityKey( ObjectInputStream ois ) throws IOException {
+        UUID entitySetId = deserializeUUID( ois );
+        String entityId = ois.readUTF();
+        return new EntityKey( entitySetId, entityId );
     }
 }
