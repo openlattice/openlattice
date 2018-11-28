@@ -53,6 +53,11 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         localModel = ThreadLocal.withInitial { model }
     }
 
+    /**
+     * Gets an initial block of entities that closely match the entity.
+     * @param block A block of potential matches based on search
+     * @return block The resulting block around the entity data key in block.first
+     */
     @Timed
     override fun initialize(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
@@ -62,12 +67,21 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         val entityDataKey = block.first
         val entities = block.second
 
-        val extractedEntities = entities.mapValues { extractProperties(it.value) }
+        // extract properties and features for all entities in block
+        val firstProperties = extractProperties(entities[entityDataKey]!!)
+        val extractedFeatures = entities.mapValues {
+            val extractedProperties = extractProperties(it.value)
+            extractFeatures(firstProperties, extractedProperties)
+        }
 
-        val matchedEntities = extractedEntities
-                .mapValues { computeScore(model, extractedEntities[entityDataKey]!!, it.value) }
-                .toMutableMap()
+        // compute scores
+        val matchedEntities = extractedFeatures.mapValues {
+            computeScore(model, it.value)
+        }.toMutableMap()
+
         val initializedBlock = entityDataKey to mutableMapOf(entityDataKey to matchedEntities)
+
+        // trim low scores
         trimAndMerge(initializedBlock)
         return initializedBlock
     }
@@ -82,56 +96,65 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
         val sw = Stopwatch.createStarted()
-        val model = localModel.get()
 
+        val model = localModel.get()
         val entityDataKey = block.first
         val entities = block.second
 
-        val extractedEntities = entities.mapValues { extractProperties(it.value) }
 
-        val matchedEntities = extractedEntities.mapValues {
-            val entity = it.value
-            extractedEntities
-                    .mapValues { computeScore(model, entity, it.value) }
-                    .toMutableMap()
-        }.toMutableMap()
+        // extract properties and features for all entities in block
+        val extractedFeatures = entities.mapValues {
+            val selfProperties = extractProperties(it.value)
+            entities.mapValues {
+                val otherProperties = extractProperties(it.value)
+                extractFeatures(selfProperties, otherProperties)
+            }
+
+        }
+
+        val featureExtractionSW = sw.elapsed(TimeUnit.MILLISECONDS)
         logger.info(
-                "Matching block {} with {} elements took {} ",
+                "Matching block {} with {} elements: feature extraction took {} ",
                 block.first, block.second.values.map { it.size }.sum(),
                 sw.elapsed(TimeUnit.MILLISECONDS)
+        )
+
+        // extract scores
+        val matchedEntities = extractedFeatures.mapValues {
+            it.value.mapValues {
+                val score = computeScore(model, it.value)
+                computeScore(model, it.value)
+            }.toMutableMap()
+        }.toMutableMap()
+
+        logger.info(
+                "Matching block {} with {} elements: computing scores took {} ",
+                block.first, block.second.values.map { it.size }.sum(),
+                sw.elapsed(TimeUnit.MILLISECONDS) - featureExtractionSW
         )
         return entityDataKey to matchedEntities
     }
 
     private fun computeScore(
-            model: MultiLayerNetwork, lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
+            model: MultiLayerNetwork, features: Array<DoubleArray>
     ): Double {
         val sw = Stopwatch.createStarted()
-        val (extractionTimeMillis, features) = extractFeatures(sw, lhs, rhs)
         val score = model.getModelScore(features)
         val totalMillis = sw.elapsed(TimeUnit.MILLISECONDS)
-        val matchingMillis = totalMillis - extractionTimeMillis
-
-        logger.info(
-                "Feature extraction = {} ms, Matching = {} ms, % time spent matching {}", extractionTimeMillis,
-                matchingMillis, (1.0 * matchingMillis) / totalMillis
-        )
-
+        val matchingMillis = totalMillis
         return score
     }
 
     private fun extractFeatures(
-            sw: Stopwatch, lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
-    ): Pair<Long, Array<DoubleArray>> {
+            lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
+    ): Array<DoubleArray> {
         val features = arrayOf(
                 PersonMetric.pDistance(
                         lhs, rhs, fqnToIdMap
                 ).map { it * 100.0 }.toDoubleArray()
         )
-        val elapsedMillis = sw.elapsed(TimeUnit.MILLISECONDS)
 
-        extractionMillis += elapsedMillis
-        return elapsedMillis to features;
+        return features;
     }
 
     private fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
