@@ -3,6 +3,7 @@ package com.openlattice.data
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
@@ -13,6 +14,7 @@ import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.junit.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.FileNotFoundException
 import java.net.URL
 import java.util.*
 
@@ -68,8 +70,8 @@ class LocalAwsBlobDataServiceTest {
         Assert.assertArrayEquals(data, returnedData)
     }
 
-    @Test
-    fun testDeletObject() {
+    @Test(expected = FileNotFoundException::class)
+    fun testDeleteObject() {
         val data = ByteArray(10)
         Random().nextBytes(data)
         var key2 = ""
@@ -80,8 +82,8 @@ class LocalAwsBlobDataServiceTest {
 
         byteBlobDataManager.putObject(key2, data)
         byteBlobDataManager.deleteObject(key2)
-        val objects = byteBlobDataManager.getObjects(listOf(key2))
-        Assert.assertEquals(objects.size, 0)
+        val returnedDataList = byteBlobDataManager.getObjects(listOf(key2))
+        val returnedURL = returnedDataList[0] as URL
+        val returnedData = returnedURL.readBytes()
     }
-
 }
