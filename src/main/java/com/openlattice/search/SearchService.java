@@ -471,6 +471,7 @@ public class SearchService {
                 .flatMap( entityKeyIdsOfLinkingId -> entityKeyIdsOfLinkingId.getRight().stream() )
                 .collect( Collectors.toSet() );
 
+        // Will return only entries, where there is at least 1 neighbor
         Map<UUID, List<NeighborEntityDetails>> entityNeighbors = executeEntityNeighborSearch(
                 linkedEntitySetIds,
                 new EntityNeighborsFilter( entityKeyIds,
@@ -478,16 +479,23 @@ public class SearchService {
                         filter.getDstEntitySetIds(),
                         filter.getAssociationEntitySetIds() ) );
 
-        return entityKeyIdsByLinkingIds.stream().collect( Collectors.toMap(
-                Pair::getLeft, // linking_id
-                entityKeyIdsOfLinkingId -> {
-                    ImmutableList.Builder<NeighborEntityDetails> linkedNeighbours = ImmutableList.builder();
-                    entityKeyIdsOfLinkingId.getRight().forEach(
-                            entityKeyId -> linkedNeighbours.addAll( entityNeighbors.get( entityKeyId ) )
-                    );
-                    return linkedNeighbours.build();
-                }
-        ) );
+        if(entityNeighbors.isEmpty()) {
+            return entityNeighbors;
+        }
+
+        return entityKeyIdsByLinkingIds.stream()
+                .filter( entityKeyIdsOfLinkingId ->
+                        entityNeighbors.keySet().stream().anyMatch( entityKeyIdsOfLinkingId.getRight()::contains ) )
+                .collect( Collectors.toMap(
+                        Pair::getLeft, // linking_id
+                        entityKeyIdsOfLinkingId -> {
+                            ImmutableList.Builder<NeighborEntityDetails> linkedNeighbours = ImmutableList.builder();
+                            entityKeyIdsOfLinkingId.getRight().stream()
+                                    .filter( entityKeyId -> entityNeighbors.containsKey( entityKeyId ) )
+                                    .forEach( entityKeyId -> linkedNeighbours.addAll( entityNeighbors.get( entityKeyId ) ) );
+                            return linkedNeighbours.build();
+                        }
+                ) );
     }
 
     @Timed
@@ -664,7 +672,7 @@ public class SearchService {
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
         if ( entityKeyIds.size() == 0 ) { return ImmutableList.of(); }
         return dataManager
-                .getEntities( entitySetId, ImmutableSet.copyOf( entityKeyIds ), authorizedPropertyTypes)
+                .getEntities( entitySetId, ImmutableSet.copyOf( entityKeyIds ), authorizedPropertyTypes )
                 .collect( Collectors.toList() );
     }
 
