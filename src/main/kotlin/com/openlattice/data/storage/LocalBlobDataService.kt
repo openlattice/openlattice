@@ -3,12 +3,21 @@ package com.openlattice.data.storage
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.net.URL
+import java.util.*
 
 private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 
 
 @Service
 class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
+    override fun getPresignedUrl(key: Any, expiration: Date): URL {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun getPresignedUrls(keys: List<Any>): List<URL> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
     override fun putObject(s3Key: String, data: ByteArray) {
         insertEntity(s3Key, data)

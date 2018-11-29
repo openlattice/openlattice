@@ -11,6 +11,7 @@ import com.openlattice.data.storage.AwsBlobDataService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.junit.*
+import org.junit.rules.Stopwatch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.URL
@@ -27,7 +28,7 @@ class LocalAwsBlobDataServiceTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            val awsTestConfig = ResourceConfigurationLoader
+/*            val awsTestConfig = ResourceConfigurationLoader
                     .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
             val s3 = newS3Client(awsTestConfig)
             val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
@@ -35,10 +36,14 @@ class LocalAwsBlobDataServiceTest {
                     awsTestConfig.folder,
                     DatastoreConfiguration::class.java)
             val byteBlobDataManager = AwsBlobDataService(config)
+            this.byteBlobDataManager = byteBlobDataManager*/
+
+            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
+            val byteBlobDataManager = AwsBlobDataService(config)
             this.byteBlobDataManager = byteBlobDataManager
         }
 
-        private fun newS3Client(awsConfig: AmazonLaunchConfiguration) : AmazonS3 {
+        private fun newS3Client(awsConfig: AmazonLaunchConfiguration): AmazonS3 {
             val builder = AmazonS3ClientBuilder.standard()
             builder.region = Region.getRegion(awsConfig.region.or(Regions.DEFAULT_REGION)).name
             return builder.build()
@@ -54,7 +59,7 @@ class LocalAwsBlobDataServiceTest {
 
     @Test
     fun testPutAndGetObject() {
-        val data = ByteArray(10)
+/*        val data = ByteArray(10)
         Random().nextBytes(data)
         for (i in 1..3) {
             key1 = key1.plus(UUID.randomUUID().toString())
@@ -66,11 +71,31 @@ class LocalAwsBlobDataServiceTest {
         val returnedURL = returnedDataList[0] as URL
         val returnedData = returnedURL.readBytes()
         Assert.assertArrayEquals(data, returnedData)
+    }*/
+        val data = ByteArray(10)
+        Random().nextBytes(data)
+        var keys = mutableListOf<String>()
+        for (i in 1..400) {
+            var key = ""
+            for (j in 1..3) {
+                key = key.plus(UUID.randomUUID().toString()).plus("/")
+            }
+            key = key.plus(data.hashCode())
+            keys.add(key)
+        }
+//        keys.forEach {
+//            byteBlobDataManager.putObject(it, data)
+//        }
+        val start = System.currentTimeMillis()
+        byteBlobDataManager.getPresignedUrls(keys)
+        val stop = System.currentTimeMillis()
+        val duration = stop - start
+        println(duration)
     }
 
     @Test
     fun testDeletObject() {
-        val data = ByteArray(10)
+/*        val data = ByteArray(10)
         Random().nextBytes(data)
         var key2 = ""
         for (i in 1..3) {
@@ -81,7 +106,28 @@ class LocalAwsBlobDataServiceTest {
         byteBlobDataManager.putObject(key2, data)
         byteBlobDataManager.deleteObject(key2)
         val objects = byteBlobDataManager.getObjects(listOf(key2))
-        Assert.assertEquals(objects.size, 0)
+        Assert.assertEquals(objects.size, 0)*/
+        val start = System.currentTimeMillis()
+        val data = ByteArray(10)
+        Random().nextBytes(data)
+        var keys = mutableListOf<String>()
+        for (i in 1..10000) {
+            var key = ""
+            for (j in 1..3) {
+                key = key.plus(UUID.randomUUID().toString()).plus("/")
+            }
+            key = key.plus(data.hashCode())
+            keys.add(key)
+            keys.forEach {
+                byteBlobDataManager.putObject(it, data)
+                byteBlobDataManager.deleteObject(it)
+                val objects = byteBlobDataManager.getObjects(listOf(it))
+                //Assert.assertEquals(0, objects.size)
+            }
+        }
+        val stop = System.currentTimeMillis()
+        val duration = stop-start
+        println(duration)
     }
 
 }

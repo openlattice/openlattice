@@ -52,7 +52,7 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         return getPresignedUrls(keys)
     }
 
-    fun getPresignedUrls(keys: List<Any>): List<URL> {
+    override fun getPresignedUrls(keys: List<Any>): List<URL> {
         var expirationTime = Date()
         var timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
         expirationTime.time = timeToLive
@@ -64,7 +64,7 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         return presignedUrls
     }
 
-    fun getPresignedUrl(key: Any, expiration: Date): URL {
+    override fun getPresignedUrl(key: Any, expiration: Date): URL {
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
                 HttpMethod.GET
         ).withExpiration(expiration)
