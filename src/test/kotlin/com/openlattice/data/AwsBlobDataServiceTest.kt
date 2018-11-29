@@ -4,6 +4,7 @@ import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
+import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
@@ -11,11 +12,12 @@ import com.openlattice.data.storage.AwsBlobDataService
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.junit.*
-import org.junit.rules.Stopwatch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.FileNotFoundException
 import java.net.URL
 import java.util.*
+import java.util.concurrent.Executors
 
 class LocalAwsBlobDataServiceTest {
     private val logger: Logger = LoggerFactory.getLogger(LocalAwsBlobDataServiceTest::class.java)
@@ -28,18 +30,14 @@ class LocalAwsBlobDataServiceTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-/*            val awsTestConfig = ResourceConfigurationLoader
+            val awsTestConfig = ResourceConfigurationLoader
                     .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
             val s3 = newS3Client(awsTestConfig)
             val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
                     awsTestConfig.bucket,
                     awsTestConfig.folder,
                     DatastoreConfiguration::class.java)
-            val byteBlobDataManager = AwsBlobDataService(config)
-            this.byteBlobDataManager = byteBlobDataManager*/
-
-            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
-            val byteBlobDataManager = AwsBlobDataService(config)
+            val byteBlobDataManager = AwsBlobDataService(config, MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2)))
             this.byteBlobDataManager = byteBlobDataManager
         }
 
@@ -59,7 +57,7 @@ class LocalAwsBlobDataServiceTest {
 
     @Test
     fun testPutAndGetObject() {
-/*        val data = ByteArray(10)
+        val data = ByteArray(10)
         Random().nextBytes(data)
         for (i in 1..3) {
             key1 = key1.plus(UUID.randomUUID().toString())
@@ -71,31 +69,11 @@ class LocalAwsBlobDataServiceTest {
         val returnedURL = returnedDataList[0] as URL
         val returnedData = returnedURL.readBytes()
         Assert.assertArrayEquals(data, returnedData)
-    }*/
-        val data = ByteArray(10)
-        Random().nextBytes(data)
-        var keys = mutableListOf<String>()
-        for (i in 1..400) {
-            var key = ""
-            for (j in 1..3) {
-                key = key.plus(UUID.randomUUID().toString()).plus("/")
-            }
-            key = key.plus(data.hashCode())
-            keys.add(key)
-        }
-//        keys.forEach {
-//            byteBlobDataManager.putObject(it, data)
-//        }
-        val start = System.currentTimeMillis()
-        byteBlobDataManager.getPresignedUrls(keys)
-        val stop = System.currentTimeMillis()
-        val duration = stop - start
-        println(duration)
     }
 
-    @Test
-    fun testDeletObject() {
-/*        val data = ByteArray(10)
+    @Test(expected = FileNotFoundException::class)
+    fun testDeleteObject() {
+        val data = ByteArray(10)
         Random().nextBytes(data)
         var key2 = ""
         for (i in 1..3) {
@@ -105,9 +83,14 @@ class LocalAwsBlobDataServiceTest {
 
         byteBlobDataManager.putObject(key2, data)
         byteBlobDataManager.deleteObject(key2)
-        val objects = byteBlobDataManager.getObjects(listOf(key2))
-        Assert.assertEquals(objects.size, 0)*/
-        val start = System.currentTimeMillis()
+        val returnedDataList = byteBlobDataManager.getObjects(listOf(key2))
+        val returnedURL = returnedDataList[0] as URL
+        val returnedData = returnedURL.readBytes()
+    }
+
+    @Ignore
+    @Test
+    fun testSpeedOfGetPresignedURL() {
         val data = ByteArray(10)
         Random().nextBytes(data)
         var keys = mutableListOf<String>()
@@ -118,16 +101,11 @@ class LocalAwsBlobDataServiceTest {
             }
             key = key.plus(data.hashCode())
             keys.add(key)
-            keys.forEach {
-                byteBlobDataManager.putObject(it, data)
-                byteBlobDataManager.deleteObject(it)
-                val objects = byteBlobDataManager.getObjects(listOf(it))
-                //Assert.assertEquals(0, objects.size)
-            }
         }
+        val start = System.currentTimeMillis()
+        byteBlobDataManager.getPresignedUrls(keys)
         val stop = System.currentTimeMillis()
-        val duration = stop-start
-        println(duration)
+        val duration = stop - start
     }
 
 }
