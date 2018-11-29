@@ -11,16 +11,21 @@ import com.amazonaws.services.s3.model.DeleteObjectRequest
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.net.URL
 import java.util.*
+import java.util.concurrent.Callable
 
 private val logger = LoggerFactory.getLogger(AwsBlobDataService::class.java)
 
 @Service
-class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfiguration) : ByteBlobDataManager {
+class AwsBlobDataService(
+        private val datastoreConfiguration: DatastoreConfiguration,
+        private val executorService: ListeningExecutorService
+) : ByteBlobDataManager {
 
     val s3Credentials = BasicAWSCredentials(datastoreConfiguration.accessKeyId, datastoreConfiguration.secretAccessKey)
 
@@ -56,14 +61,10 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         var expirationTime = Date()
         var timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
         expirationTime.time = timeToLive
-        var presignedUrls = mutableListOf<URL>()
-        for (key in keys) {
-            if (key == null)
-                logger.error("key is null, which is unexpected")
-            else if (s3.doesObjectExist(datastoreConfiguration.bucketName, key as String))
-                presignedUrls.add(getPresignedUrl(key, expirationTime))
-        }
-        return presignedUrls
+
+        return keys
+                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime) }) }
+                .map { it.get() }
     }
 
     fun getPresignedUrl(key: Any, expiration: Date): URL {
@@ -82,4 +83,6 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         }
         return url
     }
+
+
 }
