@@ -58,8 +58,8 @@ class AwsBlobDataService(
     }
 
     fun getPresignedUrls(keys: List<Any>): List<URL> {
-        var expirationTime = Date()
-        var timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
+        val expirationTime = Date()
+        val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
         expirationTime.time = timeToLive
 
         return keys
@@ -71,14 +71,12 @@ class AwsBlobDataService(
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
                 HttpMethod.GET
         ).withExpiration(expiration)
-        var url = URL("http://")
+        lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)
         } catch (e: AmazonServiceException) {
-            e.printStackTrace()
             logger.warn("Amazon couldn't process call")
         } catch (e: SdkClientException) {
-            e.printStackTrace()
             logger.warn("Amazon S3 couldn't be contacted or the client couldn't parse the response from S3")
         }
         return url
