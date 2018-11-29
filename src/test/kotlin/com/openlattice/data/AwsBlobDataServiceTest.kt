@@ -4,6 +4,7 @@ import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
+import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
@@ -15,6 +16,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.URL
 import java.util.*
+import java.util.concurrent.Executors
 
 class LocalAwsBlobDataServiceTest {
     private val logger: Logger = LoggerFactory.getLogger(LocalAwsBlobDataServiceTest::class.java)
@@ -30,15 +32,21 @@ class LocalAwsBlobDataServiceTest {
             val awsTestConfig = ResourceConfigurationLoader
                     .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
             val s3 = newS3Client(awsTestConfig)
-            val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
+            val config = ResourceConfigurationLoader.loadConfigurationFromS3(
+                    s3,
                     awsTestConfig.bucket,
                     awsTestConfig.folder,
-                    DatastoreConfiguration::class.java)
-            val byteBlobDataManager = AwsBlobDataService(config)
+                    DatastoreConfiguration::class.java
+            )
+            val byteBlobDataManager = AwsBlobDataService(
+                    config, MoreExecutors.listeningDecorator(
+                    Executors.newFixedThreadPool(2)
+            )
+            )
             this.byteBlobDataManager = byteBlobDataManager
         }
 
-        private fun newS3Client(awsConfig: AmazonLaunchConfiguration) : AmazonS3 {
+        private fun newS3Client(awsConfig: AmazonLaunchConfiguration): AmazonS3 {
             val builder = AmazonS3ClientBuilder.standard()
             builder.region = Region.getRegion(awsConfig.region.or(Regions.DEFAULT_REGION)).name
             return builder.build()
