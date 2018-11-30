@@ -44,13 +44,13 @@ public interface DataIntegrationApi {
 
     String ENTITY_SET     = "set";
     String ASSOCIATION    = "association";
-    String DATA_SINK      = "dataSink";
     String ENTITY_KEY_IDS = "entityKeyIds";
+    String DATA_SINK = "dataSink";
 
     String ENTITY_SET_ID       = "setId";
     String ENTITY_KEY_ID       = "entityKeyId";
     String PROPERTY_TYPE_ID    = "propertyTypeId";
-    String STORAGE_DESTINATION = "storageDesination";
+    String STORAGE_DESTINATION = "storageDestination";
 
     String COUNT            = "count";
     String DETAILED_RESULTS = "detailedResults";
@@ -83,14 +83,14 @@ public interface DataIntegrationApi {
             @Body BulkDataCreation data,
             @Query( DETAILED_RESULTS ) boolean detailedResults );
 
-    @POST( BASE + "/" + DATA_SINK + "/" + STORAGE_DESTINATION_PATH )
+    @POST( BASE + "/" + STORAGE_DESTINATION_PATH + "/" + DATA_SINK)
     IntegrationResults sinkData(
-            @Path( STORAGE_DESTINATION_PATH ) StorageDestination storageDest,
+            @Path( STORAGE_DESTINATION ) StorageDestination storageDestination,
             @Body DataSinkObject data
     );
 
     @POST( BASE + "/" + ENTITY_KEY_IDS )
-    Set<Map.Entry<EntityKey, UUID>> getEntityKeyIds(
+    Map<UUID, Map<String, UUID>> getEntityKeyIds(
             @Body Set<EntityKey> entityKeys
     );
 
