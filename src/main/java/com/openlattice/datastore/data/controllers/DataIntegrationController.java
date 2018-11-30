@@ -185,10 +185,10 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     }
 
     @Timed
-    @PostMapping( "/" + DATA_SINK + "/" + STORAGE_DESTINATION_PATH )
+    @PostMapping( "/" + STORAGE_DESTINATION_PATH + "/" + DATA_SINK )
     @Override
     public IntegrationResults sinkData(
-            @PathVariable( STORAGE_DESTINATION_PATH ) StorageDestination storageDest,
+            @PathVariable( STORAGE_DESTINATION ) StorageDestination storageDestination,
             @RequestBody DataSinkObject data ) {
         final Set<EntityData> entityData = data.getEntities();
         final Set<UUID> entitySetIds = entityData.stream().map( entity -> entity.getEntitySetId() ).collect(
@@ -211,7 +211,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                         .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
-        if ( storageDest.equals( StorageDestination.AWS ) ) {
+        if ( storageDestination.equals( StorageDestination.AWS ) ) {
             return awsDataSinkService.integrateEntities( entityData, authorizedPropertyTypesByEntitySet );
         } else {
             return postgresDataSinkService.integrateEntities( entityData, authorizedPropertyTypesByEntitySet );
@@ -220,8 +220,10 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
 
     @Override
     @PostMapping( "/" + ENTITY_KEY_IDS )
-    public Set<Map.Entry<EntityKey, UUID>> getEntityKeyIds( @RequestBody Set<EntityKey> entityKeys ) {
+    public Map<UUID, Map<String, UUID>> getEntityKeyIds( @RequestBody Set<EntityKey> entityKeys ) {
         return dgm.getEntityKeyIds( entityKeys );
     }
 
 }
+
+
