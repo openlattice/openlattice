@@ -18,14 +18,10 @@
 
 package com.openlattice.data;
 
-import com.dataloom.mappers.ObjectMappers;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.openlattice.data.serializers.EntityKeyJacksonSerializer;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.Objects;
 import java.util.UUID;
 
