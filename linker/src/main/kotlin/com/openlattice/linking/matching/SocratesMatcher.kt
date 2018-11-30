@@ -122,7 +122,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         // extract list of keys (instead of map)
         val featureKeys = extractedFeatures.flatMap { (entityDataKey1, features) ->
             listOf(features.map {
-                it.key to entityDataKey1
+                entityDataKey1 to it.key
             })
         }.flatten()
 
