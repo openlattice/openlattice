@@ -114,18 +114,17 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
 
         // transform features to matrix and compute scores
         val featureMatrix = extractedFeatures.flatMap { (entityDataKey1, features) ->
-            listOf(features.map {
+            features.map {
                 it.value[0]
-            }).flatten()
+            }
         }
 
         // extract list of keys (instead of map)
         val featureKeys = extractedFeatures.flatMap { (entityDataKey1, features) ->
             listOf(features.map {
-                Pair(entityDataKey1, it.key)
+                it.key to entityDataKey1
             })
         }.flatten()
-
 
         val featureExtractionSW = sw.elapsed(TimeUnit.MILLISECONDS)
 
