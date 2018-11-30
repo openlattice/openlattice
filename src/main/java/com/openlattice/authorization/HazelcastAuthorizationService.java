@@ -29,6 +29,7 @@ import static com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 import com.google.common.eventbus.EventBus;
@@ -261,9 +262,24 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Set<Principal> principals,
             EnumSet<Permission> requiredPermissions ) {
-        return accessChecksForPrincipals( ImmutableSet.of( new AccessCheck( key, requiredPermissions ) ), principals )
-                .flatMap( authorization -> authorization.getPermissions().values().stream() )
-                .filter( hasPermission -> !hasPermission ).collect( Collectors.toSet() ).size() == 0;
+        boolean returnVal = false;
+        Stopwatch s = Stopwatch.createStarted();
+        final var permissionsMap = new EnumMap<Permission, Boolean>( Permission.class );
+        final var authzMap = ImmutableMap.of( key, permissionsMap );
+
+        for ( Permission permission : requiredPermissions ) {
+            permissionsMap.put( permission, false );
+        }
+
+        final EnumMap<Permission, Boolean> result =
+                aces.aggregate( new AuthorizationAggregator( authzMap ), matches( authzMap.keySet(), principals ) )
+                        .getPermissions()
+                        .get( key );
+        if ( result == null ) {
+            return false;
+        } else {
+            return result.values().stream().allMatch( p -> p );
+        }
     }
 
     @Override
