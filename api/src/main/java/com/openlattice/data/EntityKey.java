@@ -18,9 +18,11 @@
 
 package com.openlattice.data;
 
+import com.dataloom.mappers.ObjectMappers;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.openlattice.data.serializers.EntityKeyJacksonSerializer;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -88,15 +90,4 @@ public class EntityKey implements Comparable<EntityKey> {
                 '}';
     }
 
-    private static UUID deserializeUUID( ObjectInputStream ois ) throws IOException {
-        long lsb = ois.readLong();
-        long msb = ois.readLong();
-        return new UUID( msb, lsb );
-    }
-
-    private static EntityKey deserializeEntityKey( ObjectInputStream ois ) throws IOException {
-        UUID entitySetId = deserializeUUID( ois );
-        String entityId = ois.readUTF();
-        return new EntityKey( entitySetId, entityId );
-    }
 }
