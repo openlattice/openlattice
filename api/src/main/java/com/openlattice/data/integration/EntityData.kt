@@ -11,4 +11,4 @@ data class EntityData(
         @JsonProperty val entitySetId: UUID,
         @JsonProperty val entityId: String,
         @JsonProperty val entityKeyId: UUID,
-        @JsonProperty val properties: MutableMap<UUID, Set<Any>>)
+        @JsonProperty val properties: Map<UUID, Set<Any>>)
