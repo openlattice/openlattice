@@ -51,6 +51,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
+import kotlin.collections.HashSet
 
 /**
  *
@@ -198,9 +199,21 @@ open class DataGraphService(
                 .sum()
     }
 
-    override fun getEntityKeyIds( entityKeys: Set<EntityKey> ): Set<Map.Entry<EntityKey, UUID>> {
+    override fun getEntityKeyIds( entityKeys: Set<EntityKey> ): Map<UUID, Map<String, UUID>> {
         val idsMap = idService.getEntityKeyIds(entityKeys)
-        return idsMap.entries
+        val newMap = mutableMapOf<UUID, MutableMap<String, UUID>>()
+        for ((k,v) in idsMap) {
+            val entitySetId = k.entitySetId
+            val entityId = k.entityId
+            val entityKeyId = v
+            if (newMap.containsKey(entitySetId)) {
+                val mapValue = newMap[entitySetId]!!
+                mapValue[entityId] = entityKeyId
+            } else {
+                newMap[entitySetId] = mutableMapOf(entityId to entityKeyId)
+            }
+        }
+        return newMap
     }
 
     override fun integrateEntities(

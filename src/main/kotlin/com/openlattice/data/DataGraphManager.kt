@@ -93,7 +93,7 @@ interface DataGraphManager {
      * Bulk endpoints for entities/associations
      */
 
-    fun getEntityKeyIds( entityKeys: Set<EntityKey> ): Set<Map.Entry<EntityKey, UUID>>
+    fun getEntityKeyIds( entityKeys: Set<EntityKey> ): Map<UUID, Map<String, UUID>>
 
     fun integrateEntities(
             entitySetId: UUID,
