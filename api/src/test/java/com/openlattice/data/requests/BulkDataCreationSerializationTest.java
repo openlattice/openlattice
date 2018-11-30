@@ -49,10 +49,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.joda.time.DateTime;
@@ -69,7 +67,7 @@ public class BulkDataCreationSerializationTest {
     public void test() throws IOException, ClassNotFoundException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream( baos );
-        BulkDataCreation bdc = new BulkDataCreation( new HashSet<>(), new HashSet<>() );
+        BulkDataCreation bdc = new BulkDataCreation( new HashSet<>(), new HashSet<>(), new HashMap<>() );
 
         bdc.getEntities().add( new Entity( TestDataFactory.entityKey(), getObjects() ) );
         oos.writeObject( bdc );
