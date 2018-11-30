@@ -257,6 +257,7 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 hasAnyPermissions( permissions ) );
     }
 
+    @Timed
     @Override
     public boolean checkIfHasPermissions(
             AclKey key,
