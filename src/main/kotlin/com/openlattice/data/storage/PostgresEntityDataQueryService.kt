@@ -300,6 +300,7 @@ class PostgresEntityDataQueryService(
                                         //store key to s3 data in postgres as property value
                                         val propertyHash = PostgresDataHasher.hashObjectToHex(it, EdmPrimitiveTypeKind.Binary)
                                         val s3Key = entitySetId.toString() + "/" + entityKeyId.toString() + "/" + propertyTypeId.toString() + "/" + propertyHash
+                                        byteBlobDataManager.putObject(s3Key, it as ByteArray)
                                         ps?.setBytes(2, PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String))
                                         ps?.setObject(3, s3Key)
                                     } else {
