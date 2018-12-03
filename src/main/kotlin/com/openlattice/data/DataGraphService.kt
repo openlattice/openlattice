@@ -296,7 +296,7 @@ open class DataGraphService(
                     entityKeyIds.putAll(entitySetId, ids)
 
                     val edgeKeys = it.value.asSequence().mapIndexed { index, dataEdge ->
-                        EdgeKey(dataEdge.src, dataEdge.dst, EntityDataKey(entitySetId, ids[index]))
+                        DataEdgeKey(dataEdge.src, dataEdge.dst, EntityDataKey(entitySetId, ids[index]))
                     }.toSet()
                     graphService.createEdges(edgeKeys)
                 }
@@ -304,7 +304,7 @@ open class DataGraphService(
         return entityKeyIds
     }
 
-    override fun integrateAssociations(
+    override fun  integrateAssociations(
             associations: Set<Association>,
             authorizedPropertiesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Map<String, UUID>> {
@@ -342,7 +342,7 @@ open class DataGraphService(
                     val dst = EntityDataKey(association.dst.entitySetId, dstId)
                     val edge = EntityDataKey(association.key.entitySetId, edgeId)
 
-                    EdgeKey(src, dst, edge)
+                    DataEdgeKey(src, dst, edge)
                 }
                 .toSet()
         graphService.createEdges(edges)
@@ -373,6 +373,10 @@ open class DataGraphService(
 
         integrateAssociations(associations, authorizedPropertiesByEntitySetId)
         return null
+    }
+
+    override fun createEdges(edges: Set<DataEdgeKey>): Int {
+        return graphService.createEdges(edges);
     }
 
     override fun getFilteredRankings(
