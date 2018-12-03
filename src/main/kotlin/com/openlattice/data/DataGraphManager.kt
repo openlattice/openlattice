@@ -175,4 +175,5 @@ interface DataGraphManager {
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
 
+    fun createEdges(edges: Set<DataEdgeKey>): Int
 }
