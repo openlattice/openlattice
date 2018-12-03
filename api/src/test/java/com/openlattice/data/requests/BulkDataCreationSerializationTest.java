@@ -67,7 +67,7 @@ public class BulkDataCreationSerializationTest {
     public void test() throws IOException, ClassNotFoundException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream( baos );
-        BulkDataCreation bdc = new BulkDataCreation( new HashSet<>(), new HashSet<>(), new HashMap<>() );
+        BulkDataCreation bdc = new BulkDataCreation( new HashSet<>(), new HashSet<>() );
 
         bdc.getEntities().add( new Entity( TestDataFactory.entityKey(), getObjects() ) );
         oos.writeObject( bdc );
