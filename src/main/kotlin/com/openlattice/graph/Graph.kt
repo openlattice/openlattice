@@ -27,6 +27,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredRanking
 import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.data.storage.entityKeyIdColumns
@@ -72,7 +73,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun createEdges(keys: MutableSet<EdgeKey>): Int {
+    override fun createEdges(keys: MutableSet<DataEdgeKey>): Int {
         hds.connection.use {
             val ps = it.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
