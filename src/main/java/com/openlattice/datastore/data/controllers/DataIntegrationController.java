@@ -24,6 +24,7 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -34,21 +35,27 @@ import com.openlattice.data.*;
 import com.openlattice.data.integration.*;
 import com.openlattice.data.integration.Entity;
 import com.openlattice.data.storage.DataSinkManager;
+import com.openlattice.data.storage.PostgresDataHasher;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
 
+import java.net.URL;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 
+import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
+import retrofit2.http.Body;
+import retrofit2.http.PUT;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
@@ -185,12 +192,10 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     }
 
     @Timed
-    @PostMapping( "/" + STORAGE_DESTINATION_PATH + "/" + DATA_SINK )
+    @PostMapping( "/" + POSTGRES_DATA_SINK )
     @Override
-    public IntegrationResults sinkData(
-            @PathVariable( STORAGE_DESTINATION ) StorageDestination storageDestination,
-            @RequestBody DataSinkObject data ) {
-        final Set<EntityData> entityData = data.getEntities();
+    public IntegrationResults sinkToPostgres(
+            @RequestBody Set<EntityData> entityData ) {
         final Set<UUID> entitySetIds = entityData.stream().map( entity -> entity.getEntitySetId() ).collect(
                 Collectors.toSet() );
         final Set<Entity> entities = new HashSet<>();
@@ -211,11 +216,35 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                         .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
-        if ( storageDestination.equals( StorageDestination.AWS ) ) {
-            return awsDataSinkService.integrateEntities( entityData, authorizedPropertyTypesByEntitySet );
-        } else {
-            return postgresDataSinkService.integrateEntities( entityData, authorizedPropertyTypesByEntitySet );
-        }
+        return postgresDataSinkService.integrateEntities( entityData, authorizedPropertyTypesByEntitySet );
+    }
+
+    @Timed
+    @PostMapping( "/" + S3_DATA_SINK )
+    @Override
+    public Map<URL, byte[]> generatePresignedUrls(
+            @RequestBody Set<S3EntityData> data ) {
+        final Set<UUID> entitySetIds = data.stream().map( s3Entity -> s3Entity.getEntitySetId() ).collect(
+                Collectors.toSet() );
+        final SetMultimap<UUID, UUID> propertyIdsByEntitySet = HashMultimap.create();
+        data.forEach( entity -> {
+            propertyIdsByEntitySet
+                    .put( entity.getEntitySetId(), entity.getPropertyTypeId() );
+        } );
+
+        //Ensure that we have read access to entity set metadata.
+        entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+
+        accessCheck( EdmAuthorizationHelper
+                .aclKeysForAccessCheck( propertyIdsByEntitySet, WRITE_PERMISSION ) );
+
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes =
+                entitySetIds.stream()
+                        .collect( Collectors.toMap( Function.identity(),
+                                entitySetId -> authzHelper
+                                        .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
+
+        return awsDataSinkService.generatePresignedUrls( data, authorizedPropertyTypes );
     }
 
     @Override
@@ -224,6 +253,12 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return dgm.getEntityKeyIds( entityKeys );
     }
 
-}
+    @Override
+    @PutMapping( "/" + EDGES )
+    public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
+        return dgm.createEdges( edges );
 
+    }
+
+}
 
