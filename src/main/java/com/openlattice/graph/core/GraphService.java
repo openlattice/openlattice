@@ -22,6 +22,7 @@ package com.openlattice.graph.core;
 
 import com.google.common.collect.SetMultimap;
 import com.openlattice.analysis.AuthorizedFilteredRanking;
+import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
@@ -40,7 +41,7 @@ import java.util.stream.Stream;
  */
 public interface GraphService {
 
-    int createEdges( Set<EdgeKey> keys );
+    int createEdges( Set<DataEdgeKey> keys );
 
     int clearEdges( Set<EdgeKey> keys );
 
