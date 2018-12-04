@@ -199,17 +199,17 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         final Set<UUID> entitySetIds = entityData.stream().map( entity -> entity.getEntitySetId() ).collect(
                 Collectors.toSet() );
         final Set<Entity> entities = new HashSet<>();
-
-        entityData.forEach( e -> {
-            EntityKey key = new EntityKey( e.getEntitySetId(), e.getEntityId() );
-            entities.add( new Entity( key, e.getProperties() ) );
+        final SetMultimap<UUID, UUID> propertyIdsByEntitySet = HashMultimap.create();
+        entityData.forEach( entity -> {
+            propertyIdsByEntitySet
+                    .putAll( entity.getEntitySetId(), entity.getProperties().keySet() );
         } );
 
         //Ensure that we have read access to entity set metadata.
         entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
 
         accessCheck( EdmAuthorizationHelper
-                .aclKeysForAccessCheck( requiredEntityPropertyTypes( entities ), WRITE_PERMISSION ) );
+                .aclKeysForAccessCheck( propertyIdsByEntitySet, WRITE_PERMISSION ) );
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
                 entitySetIds.stream()
