@@ -1,5 +1,6 @@
 package com.openlattice.data.storage
 
+import com.amazonaws.HttpMethod
 import com.openlattice.data.IntegrationResults
 import com.openlattice.data.integration.EntityData
 import com.openlattice.data.integration.S3EntityData
@@ -33,8 +34,8 @@ class AwsDataSinkService : DataSinkManager {
         val timeToLive = expirationTime.time + 6000000
         expirationTime.time = timeToLive
         entities.forEach {
-            val key = it.entitySetId.toString() + "/" + it.entityKeyId.toString() + "/" + it.propertyTypeId + "/" + it.propertyHash
-            val url = byteBlobDataManager.getPresignedUrl(key, expirationTime)
+            val key = it.entitySetId.toString() + "/" + it.entityKeyId.toString() + "/" + it.propertyTypeId.toString() + "/" + it.propertyHash
+            val url = byteBlobDataManager.getPresignedUrl(key, expirationTime, HttpMethod.PUT)
             postgresData[it] = key
             urls[url] = it.properties
         }

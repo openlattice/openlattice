@@ -67,18 +67,16 @@ class AwsBlobDataService(
                 .map { it.get() }
     }
 
-    override fun getPresignedUrl(key: Any, expiration: Date): URL {
+    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod): URL {
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
-                HttpMethod.GET
+                httpMethod
         ).withExpiration(expiration)
         var url = URL("http://")
         try {
             url = s3.generatePresignedUrl(urlRequest)
         } catch (e: AmazonServiceException) {
-            e.printStackTrace()
             logger.warn("Amazon couldn't process call")
         } catch (e: SdkClientException) {
-            e.printStackTrace()
             logger.warn("Amazon S3 couldn't be contacted or the client couldn't parse the response from S3")
         }
         return url

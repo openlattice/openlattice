@@ -1,5 +1,6 @@
 package com.openlattice.data.storage
 
+import com.amazonaws.HttpMethod
 import java.net.URL
 import java.util.*
 
@@ -10,6 +11,6 @@ interface ByteBlobDataManager {
 
     fun getObjects(objects: List<Any>): List<Any>
 
-    fun getPresignedUrl(key: Any, expiration: Date): URL
+    fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod = HttpMethod.GET): URL
     fun getPresignedUrls(keys: List<Any>): List<URL>
 }

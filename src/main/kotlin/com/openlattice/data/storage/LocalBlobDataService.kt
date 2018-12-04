@@ -1,5 +1,6 @@
 package com.openlattice.data.storage
 
+import com.amazonaws.HttpMethod
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -11,7 +12,7 @@ private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 
 @Service
 class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
-    override fun getPresignedUrl(key: Any, expiration: Date): URL {
+    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod): URL {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
