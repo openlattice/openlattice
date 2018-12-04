@@ -15,6 +15,6 @@ public interface S3Api {
     @PUT
     Call<Void> writeToS3(
             @Url String url,
-            @Body RequestBody data
+            @Body byte[] data
     );
 }
