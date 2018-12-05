@@ -12,5 +12,5 @@ interface DataSinkManager {
 
     fun integrateEntities(entities: Map<String, Any>): IntegrationResults?
 
-    fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Map<URL, ByteArray>
+    fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<URL>
 }

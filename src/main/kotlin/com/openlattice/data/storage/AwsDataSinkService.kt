@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 import com.amazonaws.HttpMethod
+import com.google.common.collect.Sets
 import com.openlattice.data.IntegrationResults
 import com.openlattice.data.integration.EntityData
 import com.openlattice.data.integration.S3EntityData
@@ -27,9 +28,9 @@ class AwsDataSinkService : DataSinkManager {
         return null
     }
 
-    override fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Map<URL, ByteArray> {
+    override fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<URL> {
         val postgresData = mutableMapOf<S3EntityData, String>()
-        val urls = mutableMapOf<URL, ByteArray>()
+        val urls = Sets.newHashSet<URL>()
         val expirationTime = Date()
         val timeToLive = expirationTime.time + 6000000
         expirationTime.time = timeToLive
@@ -37,7 +38,7 @@ class AwsDataSinkService : DataSinkManager {
             val key = it.entitySetId.toString() + "/" + it.entityKeyId.toString() + "/" + it.propertyTypeId.toString() + "/" + it.propertyHash
             val url = byteBlobDataManager.getPresignedUrl(key, expirationTime, HttpMethod.PUT)
             postgresData[it] = key
-            urls[url] = it.properties
+            urls.add(url)
         }
         //write s3Keys to postgres
         postgresData.forEach {
@@ -79,9 +80,10 @@ class AwsDataSinkService : DataSinkManager {
                         propertyTypeId, entitySetId, entityKeyId
                 )
             } else {
+                val hashAsBytes = ByteArray(propertyHash.length / 2) { propertyHash.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
                 val ps = preparedStatements[propertyTypeId]
                 ps?.setObject(1, entityKeyId)
-                ps?.setBytes(2, PostgresDataHasher.hashObject(data.key.properties, datatypes[propertyTypeId]))
+                ps?.setBytes(2, hashAsBytes)
                 ps?.setObject(3, s3Key)
                 ps?.addBatch()
                 if (ps == null) {

@@ -42,9 +42,9 @@ class PostgresDataSinkService : DataSinkManager {
         return null
     }
 
-    override fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Map<URL, ByteArray> {
+    override fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<URL> {
         //TODO AHHHH
-        return emptyMap()
+        return emptySet()
     }
 
 }
