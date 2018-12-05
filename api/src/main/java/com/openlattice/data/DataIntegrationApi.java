@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.openlattice.edm.type.PropertyType;
 import retrofit2.http.*;
 
 public interface DataIntegrationApi {
@@ -45,6 +46,7 @@ public interface DataIntegrationApi {
     String EDGES              = "edges";
     String POSTGRES_DATA_SINK = "postgresDataSink";
     String S3_DATA_SINK       = "s3DataSink";
+    String PROPERTY_TYPES     = "propertyTypes";
 
     String ENTITY_SET_ID    = "setId";
     String ENTITY_KEY_ID    = "entityKeyId";
@@ -98,5 +100,10 @@ public interface DataIntegrationApi {
     @PUT( BASE + "/" + EDGES )
     int createEdges(
             @Body Set<DataEdgeKey> edges
+    );
+
+    @GET( BASE + "/" + PROPERTY_TYPES + "/" + SET_ID_PATH )
+    Map<UUID, PropertyType> getPropertyTypesForEntitySet(
+            @Path( ENTITY_SET_ID ) UUID entitySetId
     );
 }
