@@ -24,7 +24,6 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -35,27 +34,23 @@ import com.openlattice.data.*;
 import com.openlattice.data.integration.*;
 import com.openlattice.data.integration.Entity;
 import com.openlattice.data.storage.DataSinkManager;
-import com.openlattice.data.storage.PostgresDataHasher;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
 
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 
-import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
-import retrofit2.http.Body;
-import retrofit2.http.PUT;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
@@ -222,7 +217,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Timed
     @PostMapping( "/" + S3_DATA_SINK )
     @Override
-    public Map<URL, byte[]> generatePresignedUrls(
+    public Set<URL> generatePresignedUrls(
             @RequestBody Set<S3EntityData> data ) {
         final Set<UUID> entitySetIds = data.stream().map( s3Entity -> s3Entity.getEntitySetId() ).collect(
                 Collectors.toSet() );
@@ -257,7 +252,12 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
         return dgm.createEdges( edges );
+    }
 
+    @Override
+    @GetMapping( "/" + PROPERTY_TYPES + "/" + SET_ID_PATH)
+    public Map<UUID, PropertyType> getPropertyTypesForEntitySet( @PathVariable(ENTITY_SET_ID) UUID entitySetId) {
+        return dms.getPropertyTypesForEntitySet( entitySetId );
     }
 
 }
