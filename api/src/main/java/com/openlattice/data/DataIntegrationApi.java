@@ -18,7 +18,6 @@
 
 package com.openlattice.data;
 
-import com.google.common.collect.SetMultimap;
 import com.openlattice.data.integration.*;
 
 import java.net.URL;
@@ -87,7 +86,7 @@ public interface DataIntegrationApi {
     );
 
     @POST( BASE + "/" + S3_DATA_SINK )
-    Map<URL, byte[]> generatePresignedUrls(
+    Set<URL> generatePresignedUrls(
             @Body Set<S3EntityData> data
     );
 
