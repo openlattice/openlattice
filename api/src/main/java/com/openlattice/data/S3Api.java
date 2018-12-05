@@ -1,10 +1,7 @@
 package com.openlattice.data;
 
-import okhttp3.RequestBody;
 import retrofit2.Call;
-import retrofit2.http.Body;
-import retrofit2.http.PUT;
-import retrofit2.http.Url;
+import retrofit2.http.*;
 
 public interface S3Api {
 
