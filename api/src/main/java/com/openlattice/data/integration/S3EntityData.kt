@@ -7,6 +7,5 @@ data class S3EntityData(
         @JsonProperty val entitySetId: UUID,
         @JsonProperty val entityKeyId: UUID,
         @JsonProperty val propertyTypeId: UUID,
-        @JsonProperty val propertyHash: String,
-        @JsonProperty val properties: ByteArray
+        @JsonProperty val propertyHash: String
 )
