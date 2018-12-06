@@ -33,7 +33,8 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.data.*;
 import com.openlattice.data.integration.*;
 import com.openlattice.data.integration.Entity;
-import com.openlattice.data.storage.DataSinkManager;
+import com.openlattice.data.storage.AwsDataSinkService;
+import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
@@ -63,9 +64,9 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Inject
     private              DataGraphManager                          dgm;
     @Inject
-    private              DataSinkManager                           postgresDataSinkService;
+    private              PostgresDataSinkService                   postgresDataSinkService;
     @Inject
-    private              DataSinkManager                           awsDataSinkService;
+    private              AwsDataSinkService                        awsDataSinkService;
     @Inject
     private              AuthorizationManager                      authz;
     @Inject

@@ -331,11 +331,11 @@ public class DatastoreServicesPod {
         return new PostgresEntityDataQueryService( hikariDataSource,byteBlobDataManager  );
     }
 
-    @Bean DataSinkManager postgresDataSinkService() {
+    @Bean PostgresDataSinkService postgresDataSinkService() {
         return new PostgresDataSinkService();
     }
 
-    @Bean DataSinkManager awsDataSinkService() {
+    @Bean AwsDataSinkService awsDataSinkService() {
         return new AwsDataSinkService();
     }
 
