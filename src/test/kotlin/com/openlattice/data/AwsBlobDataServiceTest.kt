@@ -1,5 +1,6 @@
 package com.openlattice.data
 
+import com.amazonaws.HttpMethod
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
@@ -30,7 +31,7 @@ class LocalAwsBlobDataServiceTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            val awsTestConfig = ResourceConfigurationLoader
+/*            val awsTestConfig = ResourceConfigurationLoader
                     .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
             val s3 = newS3Client(awsTestConfig)
             val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
@@ -45,6 +46,11 @@ class LocalAwsBlobDataServiceTest {
             val builder = AmazonS3ClientBuilder.standard()
             builder.region = Region.getRegion(awsConfig.region.or(Regions.DEFAULT_REGION)).name
             return builder.build()
+        */
+            //for local testing
+            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
+            val byteBlobDataManager = AwsBlobDataService(config, MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2)))
+            this.byteBlobDataManager = byteBlobDataManager
         }
 
         @AfterClass
@@ -108,4 +114,12 @@ class LocalAwsBlobDataServiceTest {
         val duration = stop - start
     }
 
+    @Test
+    fun getSpecificUrl() {
+        var expirationTime = Date()
+        var timeToLive = expirationTime.time + 600000
+        expirationTime.time = timeToLive
+        val url = byteBlobDataManager.getPresignedUrl("110a585b-fba1-49ab-a839-c7075cada6eb/5fde0000-0000-0000-8000-0000000024f7/19aa5ba7-647a-4185-ae91-54c466106df3/0bdb10ab6c099fa77840cef28e5ad43e", expirationTime, HttpMethod.GET)
+        println(url)
+    }
 }

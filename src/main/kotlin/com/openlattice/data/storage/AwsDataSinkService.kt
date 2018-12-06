@@ -17,18 +17,13 @@ import javax.inject.Inject
 private val logger = LoggerFactory.getLogger(AwsDataSinkService::class.java)
 
 @Service
-class AwsDataSinkService : DataSinkManager {
+class AwsDataSinkService {
     @Inject
     lateinit var byteBlobDataManager: ByteBlobDataManager
     @Inject
     lateinit var hds: HikariDataSource
 
-    override fun integrateEntities(entities: Set<EntityData>, authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>): IntegrationResults? {
-        //TODO I WILL DEAL WITH YOU LATER
-        return null
-    }
-
-    override fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<URL> {
+    fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<URL> {
         val postgresData = mutableMapOf<S3EntityData, String>()
         val urls = Sets.newHashSet<URL>()
         val expirationTime = Date()
@@ -101,10 +96,6 @@ class AwsDataSinkService : DataSinkManager {
             logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
         }
 
-    }
-
-    override fun integrateEntities(entities: Map<String, Any>): IntegrationResults? {
-        return null
     }
 
 }
