@@ -31,7 +31,8 @@ class LocalAwsBlobDataServiceTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-/*            val awsTestConfig = ResourceConfigurationLoader
+            //for testing on bamboo
+            val awsTestConfig = ResourceConfigurationLoader
                     .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
             val s3 = newS3Client(awsTestConfig)
             val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
@@ -40,17 +41,17 @@ class LocalAwsBlobDataServiceTest {
                     DatastoreConfiguration::class.java)
             val byteBlobDataManager = AwsBlobDataService(config, MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2)))
             this.byteBlobDataManager = byteBlobDataManager
+
+/*            //for local testing
+            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
+            val byteBlobDataManager = AwsBlobDataService(config, MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2)))
+            this.byteBlobDataManager = byteBlobDataManager*/
         }
 
         private fun newS3Client(awsConfig: AmazonLaunchConfiguration): AmazonS3 {
             val builder = AmazonS3ClientBuilder.standard()
             builder.region = Region.getRegion(awsConfig.region.or(Regions.DEFAULT_REGION)).name
             return builder.build()
-        */
-            //for local testing
-            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
-            val byteBlobDataManager = AwsBlobDataService(config, MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2)))
-            this.byteBlobDataManager = byteBlobDataManager
         }
 
         @AfterClass
@@ -114,6 +115,7 @@ class LocalAwsBlobDataServiceTest {
         val duration = stop - start
     }
 
+    @Ignore
     @Test
     fun getSpecificUrl() {
         var expirationTime = Date()
