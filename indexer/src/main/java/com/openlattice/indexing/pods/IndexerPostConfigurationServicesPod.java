@@ -20,13 +20,8 @@
 
 package com.openlattice.indexing.pods;
 
-import static com.openlattice.linking.MatcherKt.DL4J;
-import static com.openlattice.linking.MatcherKt.KERAS;
-
-import com.google.common.io.Resources;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService.StaticLoader;
 import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
@@ -48,24 +43,15 @@ import com.openlattice.linking.Matcher;
 import com.openlattice.linking.RealtimeLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
-import com.openlattice.linking.matching.SocratesMatcher;
-import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
-import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
-import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
-import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
-import org.deeplearning4j.util.ModelSerializer;
-import org.eclipse.jetty.plus.jndi.Link;
-import org.nd4j.linalg.io.ClassPathResource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.inject.Inject;
 import java.io.IOException;
+
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
 
 @Configuration
 @Import( { ByteBlobServicePod.class } )
@@ -117,7 +103,8 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundIndexingService( hikariDataSource,
                 hazelcastInstance,
                 dataQueryService(),
-                elasticsearchApi() );
+                elasticsearchApi(),
+                edm );
     }
 
     @Bean
@@ -135,7 +122,8 @@ public class IndexerPostConfigurationServicesPod {
         return new ElasticsearchBlocker( elasticsearchApi(), dataQueryService(), dataLoader(), hazelcastInstance );
     }
 
-    @Bean public LinkingQueryService lqs() {
+    @Bean
+    public LinkingQueryService lqs() {
         return new PostgresLinkingQueryService( hikariDataSource );
     }
 
