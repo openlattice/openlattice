@@ -113,7 +113,10 @@ class BackgroundIndexingService(
 
                 val totalIndexed = lockedEntitySets
                         .parallelStream()
-                        .mapToInt(this::indexEntitySet)
+                        .mapToInt {
+                            if (it.isLinking) indexLinkingEntitySet(it)
+                            else indexEntitySet(it)
+                        }
                         .sum()
 
                 lockedEntitySets.forEach(this::deleteIndexingLock)
@@ -214,7 +217,7 @@ class BackgroundIndexingService(
             updateExpiration(entitySet)
             while (entityKeyIdsIterator.hasNext()) {
                 val batch = getBatch(entityKeyIdsIterator)
-                indexCount += indexEntities(entitySet.id, batch, propertyTypes, false)
+                indexCount += indexEntities(entitySet, batch, propertyTypes, false, Optional.empty())
             }
             entityKeyIdsIterator = entityKeyIds.iterator()
         }
@@ -257,7 +260,7 @@ class BackgroundIndexingService(
                 while (linkingIdsIterator.hasNext()) {
                     val batch = getBatch(linkingIdsIterator)
                     updateExpiration(entitySet)
-                    indexCount += indexEntities(it.first, batch, propertyTypes, true)
+                    indexCount += indexEntities(entitySet, batch, propertyTypes, true, Optional.of(it.first))
                     updateExpiration(entitySet)
                 }
                 linkingIdsIterator = it.second.iterator()
@@ -275,13 +278,15 @@ class BackgroundIndexingService(
     }
 
     private fun indexEntities(
-            entitySetId: UUID,
+            entitySet: EntitySet,
             batchToIndex: Set<UUID>,
             propertyTypeMap: Map<UUID, PropertyType>,
-            linked: Boolean
+            linked: Boolean,
+            linkedEntitySetId: Optional<UUID>
     ): Int {
         val esb = Stopwatch.createStarted()
         var indexCount = 0
+        val entitySetId = if (linked) linkedEntitySetId.get() else entitySet.id
 
         val entitiesById = if (linked) {
             dataQueryService.getLinkedEntitiesByLinkingId(
@@ -296,11 +301,12 @@ class BackgroundIndexingService(
             )
         }
 
-        if (elasticsearchApi.createBulkEntityData(entitySetId, entitiesById)) { //TODO
+        if (elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
             indexCount += dataQueryService.markAsIndexed(entitySetId, batchToIndex, linked)
             logger.info(
-                    "Indexed batch of {} elements for {} in {} ms",
+                    "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
+                    entitySet.name,
                     entitySetId,
                     esb.elapsed(TimeUnit.MILLISECONDS)
             )
