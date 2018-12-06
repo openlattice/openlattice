@@ -64,11 +64,26 @@ class PostgresEntityDataQueryService(
             entityKeyIds: Set<UUID>
     ): Map<UUID, Map<UUID, Set<Any>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
-            ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes, byteBlobDataManager)
+            ResultSetAdapters.id(it) to
+                    ResultSetAdapters.implicitEntityValuesById(it, mapOf(entitySetId to authorizedPropertyTypes), byteBlobDataManager)
         }
         return streamableEntitySet(
                 mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
                 EnumSet.noneOf(MetadataOption::class.java), Optional.empty(), adapter
+        ).toMap()
+    }
+
+    fun getLinkedEntitiesByLinkingId(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    ): Map<UUID, Map<UUID, Set<Any>>> {
+        val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
+            ResultSetAdapters.linkingId(it) to
+                    ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypesByEntitySetId, byteBlobDataManager)
+        }
+        return streamableEntitySet(
+                linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId,
+                EnumSet.noneOf(MetadataOption::class.java), Optional.empty(), adapter, true
         ).toMap()
     }
 
@@ -94,6 +109,7 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    @JvmOverloads
     fun streamableEntitySet(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
@@ -126,7 +142,7 @@ class PostgresEntityDataQueryService(
     ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to
-                    ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypes, byteBlobDataManager)
+                    ResultSetAdapters.implicitEntityValuesById(it, mapOf(entitySetId to authorizedPropertyTypes), byteBlobDataManager)
         }
         return streamableEntitySet(
                 mapOf(entitySetId to entityKeyIds), mapOf(entitySetId to authorizedPropertyTypes), metadataOptions,
@@ -589,15 +605,13 @@ class PostgresEntityDataQueryService(
         }
     }
 
-    fun markAsIndexed(entitySetId: UUID, batchToIndex: Set<UUID>): Int {
+    fun markAsIndexed(entitySetId: UUID, batchToIndex: Set<UUID>, linking: Boolean): Int {
         hds.connection.use {
-            it.prepareStatement(updateLastIndexSql(entitySetId)).use {
-                val arr = PostgresArrays.createUuidArray(it.connection, batchToIndex)
-                it.setObject(1, OffsetDateTime.now())
-                it.setArray(2, arr)
-                return it.executeUpdate()
-            }
-
+            it.prepareStatement(updateLastIndexSql(mapOf(entitySetId to Optional.of(batchToIndex)), linking))
+                    .use {
+                        it.setObject(1, OffsetDateTime.now())
+                        return it.executeUpdate()
+                    }
         }
     }
 
@@ -626,9 +640,10 @@ class PostgresEntityDataQueryService(
     }
 }
 
-fun updateLastIndexSql(entitySetId: UUID): String {
-    return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+fun updateLastIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
+    val entitiesClause = buildEntitiesClause(idsByEntitySetId, linking)
+
+    return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? WHERE TRUE $entitiesClause"
 }
 
 fun updateLastLinkSql(entitySetId: UUID): String {

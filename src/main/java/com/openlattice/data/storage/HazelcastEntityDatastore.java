@@ -254,8 +254,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 ids,
                 authorizedPropertyTypes,
                 EnumSet.noneOf( MetadataOption.class ),
-                Optional.empty(),
-                false ).stream();
+                Optional.empty()).stream();
     }
 
     @Override
@@ -305,8 +304,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                                         entityKeyIds,
                                         Map.of( entitySetId, authorizedPropertyTypesByEntitySet.get( entitySetId ) ), //TODO
                                         EnumSet.noneOf( MetadataOption.class ),// TODO: do we need linked entity sets here??
-                                        Optional.empty(),
-                                        false )
+                                        Optional.empty())
                         )
                 );
 
