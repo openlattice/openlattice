@@ -32,15 +32,15 @@ class AwsBlobDataService(
     val s3 = newS3Client(datastoreConfiguration)
 
     fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
-        var builder = AmazonS3ClientBuilder.standard()
+        val builder = AmazonS3ClientBuilder.standard()
         builder.region = datastoreConfiguration.regionName
         builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
         return builder.build()
     }
 
     override fun putObject(s3Key: String, data: ByteArray) {
-        var metadata = ObjectMetadata()
-        var dataInputStream = data.inputStream()
+        val metadata = ObjectMetadata()
+        val dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = "image"
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
@@ -58,8 +58,8 @@ class AwsBlobDataService(
     }
 
     override fun getPresignedUrls(keys: List<Any>): List<URL> {
-        var expirationTime = Date()
-        var timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
+        val expirationTime = Date()
+        val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
         expirationTime.time = timeToLive
 
         return keys
