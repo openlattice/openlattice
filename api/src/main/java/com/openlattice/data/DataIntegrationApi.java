@@ -88,7 +88,7 @@ public interface DataIntegrationApi {
     );
 
     @POST( BASE + "/" + S3_DATA_SINK )
-    Set<URL> generatePresignedUrls(
+    Set<String> generatePresignedUrls(
             @Body Set<S3EntityData> data
     );
 
