@@ -13,11 +13,11 @@ private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 @Service
 class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
     override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod): URL {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        throw UnsupportedOperationException()
     }
 
     override fun getPresignedUrls(keys: List<Any>): List<URL> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        throw UnsupportedOperationException()
     }
 
     override fun putObject(s3Key: String, data: ByteArray) {
