@@ -98,7 +98,6 @@ public final class SerializationConstants {
     public static final String ENTITY_SET_AGGREGATIONS          = "entitySetAggregations";
     public static final String ENTITY_SET_FIELD                 = "entitySet";
     public static final String ENTITY_SET_ID                    = "entitySetId";
-    public static final String ENTITY_SET_ID_TO_ENTITY_ID       = "entitySetIdToEntityId";
     public static final String ENTITY_SET_IDS                   = "entitySetIds";
     public static final String ENTITY_SET_NAME                  = "entitySetName";
     public static final String ENTITY_TYPE                      = "entityType";
@@ -175,7 +174,6 @@ public final class SerializationConstants {
     public static final String PROPERTY_TYPES                   = "propertyTypes";
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
     public static final String PROPERTY_TYPE_IDS                = "propertyTypeIds";
-    public static final String PROPERTY_TYPE_ID_TO_STORAGE_DEST = "propertyTypeIdToStorageDest";
     public static final String QUERY_ID                         = "queryId";
     public static final String RADIUS                           = "radius";
     public static final String REASON                           = "reason";
