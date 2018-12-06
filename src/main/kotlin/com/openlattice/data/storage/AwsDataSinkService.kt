@@ -23,9 +23,9 @@ class AwsDataSinkService {
     @Inject
     lateinit var hds: HikariDataSource
 
-    fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<URL> {
+    fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<String> {
         val postgresData = mutableMapOf<S3EntityData, String>()
-        val urls = Sets.newHashSet<URL>()
+        val urls = Sets.newHashSet<String>()
         val expirationTime = Date()
         val timeToLive = expirationTime.time + 6000000
         expirationTime.time = timeToLive
@@ -33,7 +33,7 @@ class AwsDataSinkService {
             val key = it.entitySetId.toString() + "/" + it.entityKeyId.toString() + "/" + it.propertyTypeId.toString() + "/" + it.propertyHash
             val url = byteBlobDataManager.getPresignedUrl(key, expirationTime, HttpMethod.PUT)
             postgresData[it] = key
-            urls.add(url)
+            urls.add(url.toString())
         }
         //write s3Keys to postgres
         postgresData.forEach {
