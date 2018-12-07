@@ -332,34 +332,15 @@ class BackgroundIndexingService(
     }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
-        val couldLockEntitySet =
-                indexingLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
-
-        return if (entitySet.isLinking) {
-            couldLockEntitySet && entitySet.linkedEntitySets
-                    .fold(true)
-                    { acc, linkedEntitySetId ->
-                        acc && indexingLocks
-                                .putIfAbsent(linkedEntitySetId, System.currentTimeMillis()
-                                        + EXPIRATION_MILLIS) == null
-                    }
-        } else {
-            couldLockEntitySet
-        }
+        return indexingLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
     }
 
     private fun deleteIndexingLock(entitySet: EntitySet) {
         indexingLocks.delete(entitySet.id)
-        if (entitySet.isLinking) {
-            entitySet.linkedEntitySets.forEach(indexingLocks::delete)
-        }
     }
 
     private fun updateExpiration(entitySet: EntitySet) {
         indexingLocks.set(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS)
-        if (entitySet.isLinking) {
-            entitySet.linkedEntitySets.forEach { indexingLocks.set(it, System.currentTimeMillis() + EXPIRATION_MILLIS) }
-        }
     }
 
     private fun getBatch(entityKeyIdStream: Iterator<UUID>): Set<UUID> {
