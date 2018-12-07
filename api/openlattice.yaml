@@ -98,6 +98,16 @@ paths:
   /datastore/edm/summary/{propertyTypeId}:
     $ref: ./definitions/EDM/summary.yaml#/summaryProperty
 
+  # schema
+
+  /datastore/edm/schema/{namespace}/{name}:
+    $ref: ./definitions/EDM/schema.yaml#/schemaFqn
+  /datastore/edm/schema:
+    $ref: ./definitions/EDM/schema.yaml#/schema
+  /datastore/edm/schema/{namespace}:
+    $ref: ./definitions/EDM/schema.yaml#/schemaNamespace
+
+
   #####################
   ## DIRECTORY API"s ##
   #####################
