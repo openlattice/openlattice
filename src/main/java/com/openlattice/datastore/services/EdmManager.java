@@ -46,6 +46,8 @@ import java.util.stream.Stream;
 
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
+import javax.annotation.Nullable;
+
 public interface EdmManager {
     void clearTables();
 
@@ -93,6 +95,9 @@ public interface EdmManager {
     Set<EntitySet> getLinkedEntitySets( UUID entitySetId );
 
     Set<UUID> getLinkedEntitySetIds( UUID entitySetId );
+
+    @Nullable
+    List<PropertyType> getLinkedPropertyTypes( UUID entitySetId);
 
     void createEntityType( EntityType objectType );
 

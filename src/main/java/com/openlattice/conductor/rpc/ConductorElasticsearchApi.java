@@ -36,6 +36,7 @@ import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -139,11 +140,16 @@ public interface ConductorElasticsearchApi {
     final String BIDIRECTIONAL  = "bidirectional";
     final String URL            = "url";
 
-    boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes );
+    boolean saveEntitySetToElasticsearch(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes,
+            @Nullable List<PropertyType> linkedEntitySetPropertyTypes );
 
     Set<UUID> getEntitySetWithIndices();
 
-    boolean createSecurableObjectIndex( UUID entitySetId, List<PropertyType> propertyTypes );
+    boolean createSecurableObjectIndex(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes );
 
     boolean deleteEntitySet( UUID entitySetId );
 

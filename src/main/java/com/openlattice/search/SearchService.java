@@ -77,8 +77,10 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -729,8 +731,13 @@ public class SearchService {
         Map<UUID, PropertyType> propertyTypes = dataModelService.getPropertyTypesAsMap( propertyTypeIds );
         List<PropertyType> propertyTypeList = Lists.newArrayList( propertyTypes.values() );
 
+        List<PropertyType> linkedEntitySetPropertyTypes = dataModelService.getLinkedPropertyTypes( entitySetId );
+
         elasticsearchApi.deleteEntitySet( entitySetId );
-        elasticsearchApi.saveEntitySetToElasticsearch( dataModelService.getEntitySet( entitySetId ), propertyTypeList );
+        elasticsearchApi.saveEntitySetToElasticsearch(
+                dataModelService.getEntitySet( entitySetId ),
+                propertyTypeList,
+                linkedEntitySetPropertyTypes );
 
         Set<PropertyType> propertyTypesToLoad = propertyTypeList.stream()
                 .filter( pt -> !pt.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ).collect(

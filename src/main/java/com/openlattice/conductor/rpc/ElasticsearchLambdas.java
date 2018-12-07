@@ -43,16 +43,17 @@ public class ElasticsearchLambdas implements Serializable {
 
     public static Function<ConductorElasticsearchApi, Boolean> submitEntitySetToElasticsearch(
             EntitySet entitySet,
-            List<PropertyType> propertyTypes ) {
+            List<PropertyType> propertyTypes,
+            List<PropertyType> linkedEntitySetPropertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .saveEntitySetToElasticsearch( entitySet, propertyTypes );
+                .saveEntitySetToElasticsearch( entitySet, propertyTypes, linkedEntitySetPropertyTypes );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> createSecurableObjectIndex(
-            UUID entitySetId,
+            EntitySet entitySet,
             List<PropertyType> propertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .createSecurableObjectIndex( entitySetId, propertyTypes );
+                .createSecurableObjectIndex( entitySet, propertyTypes );
     }
 
     public static Function<ConductorElasticsearchApi, SearchResult> executeEntitySetMetadataQuery(

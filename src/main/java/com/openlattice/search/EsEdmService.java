@@ -5,6 +5,7 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class EsEdmService {
@@ -16,8 +17,11 @@ public class EsEdmService {
     }
 
     @Timed
-    public void createEntitySet(EntitySet entitySet, List<PropertyType> propertyTypes ) {
-        elasticsearchApi.saveEntitySetToElasticsearch( entitySet, propertyTypes );
+    public void createEntitySet(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes,
+            @Nullable List<PropertyType> linkedEntitySetPropertyTypes ) {
+        elasticsearchApi.saveEntitySetToElasticsearch( entitySet, propertyTypes, linkedEntitySetPropertyTypes );
     }
 
     public void createPropertyType( PropertyType propertyType ) {
