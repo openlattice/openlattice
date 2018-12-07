@@ -431,11 +431,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean createSecurableObjectIndex( UUID securableObjectId, List<PropertyType> propertyTypes ) {
+    public boolean createSecurableObjectIndex(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        String indexName = getIndexName( securableObjectId );
-        String typeName = getTypeName( securableObjectId );
+        String indexName = getIndexName( entitySet.getId() );
+        String typeName = getTypeName( entitySet.getId() );
 
         boolean exists = client.admin().indices()
                 .prepareExists( indexName ).execute().actionGet().isExists();
@@ -443,22 +445,26 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             return true;
         }
 
-        // constant Map<String, String> type fields
-        Map<String, String> objectField = Maps.newHashMap();
-        Map<String, String> nestedField = Maps.newHashMap();
-        Map<String, String> keywordField = Maps.newHashMap();
-        objectField.put( TYPE, OBJECT );
-        nestedField.put( TYPE, NESTED );
-        keywordField.put( TYPE, KEYWORD );
-
         // securable_object_row type mapping
         Map<String, Object> securableObjectData = Maps.newHashMap();
         Map<String, Object> securableObjectMapping = Maps.newHashMap();
         Map<String, Object> properties = Maps.newHashMap();
 
-        for ( PropertyType propertyType : propertyTypes ) {
-            if ( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ) {
-                properties.put( propertyType.getId().toString(), getFieldMapping( propertyType ) );
+        if(entitySet.isLinking()) {
+            entitySet.getLinkedEntitySets().forEach( ( entitySetId ) -> {
+                for ( PropertyType linkedPropertyType : propertyTypes ) {
+                    if ( !linkedPropertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ) {
+                        properties.put(
+                                entitySetId.toString() + "." + linkedPropertyType.getId().toString(),
+                                getFieldMapping( linkedPropertyType ) );
+                    }
+                }
+            } );
+        } else {
+            for ( PropertyType propertyType : propertyTypes ) {
+                if ( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ) {
+                    properties.put( propertyType.getId().toString(), getFieldMapping( propertyType ) );
+                }
             }
         }
 
@@ -477,7 +483,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes ) {
+    public boolean saveEntitySetToElasticsearch(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes,
+            List<PropertyType> linkedEntitySetPropertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
         Map<String, Object> entitySetDataModel = Maps.newHashMap();
         entitySetDataModel.put( ENTITY_SET, entitySet );
@@ -487,7 +496,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             client.prepareIndex( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySet.getId().toString() )
                     .setSource( s, XContentType.JSON )
                     .execute().actionGet();
-            createSecurableObjectIndex( entitySet.getId(), propertyTypes );
+            createSecurableObjectIndex(
+                    entitySet,
+                    (entitySet.isLinking()) ? linkedEntitySetPropertyTypes : propertyTypes );
             return true;
         } catch ( JsonProcessingException e ) {
             logger.debug( "error saving entity set to elasticsearch" );
