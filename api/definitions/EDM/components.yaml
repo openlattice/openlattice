@@ -237,12 +237,18 @@ associationType:
     description: AssociationType Description
     bidirectional: true
     category: AssociationType
+allPropertyUsageSummary:
+  type: object
+  additionalProperties:
+    $ref:  "./components.yaml#/propertyUsageSummary"
 propertyUsageSummary:
   type: object
   properties:
     entityTypeId:
       type: string
     entitySetId:
+      type: string
+    entitySetName:
       type: string
     count:
       type: integer
