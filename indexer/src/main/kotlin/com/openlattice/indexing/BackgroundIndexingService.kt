@@ -179,9 +179,9 @@ class BackgroundIndexingService(
     }
 
     private fun getDirtyLinkingIdsQuery(): String {
-        return "SELECT ${ENTITY_SET_ID.name}, ARRAY_AGG(${LINKING_ID.name}) FROM ${IDS.name}" +
+        return "SELECT ${ENTITY_SET_ID.name}, ARRAY_AGG(${LINKING_ID.name}) as ${LINKING_ID.name} FROM ${IDS.name} " +
                 "WHERE ${LINKING_ID.name} IS NOT NULL AND ${LAST_INDEX.name} < ${LAST_WRITE.name} " +
-                "AND ${ENTITY_SET_ID.name} IN UNNEST( (?)::uuid[] ) " +
+                "AND ${ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) " +
                 "GROUP BY ${ENTITY_SET_ID.name} " +
                 "LIMIT $FETCH_SIZE"
 
