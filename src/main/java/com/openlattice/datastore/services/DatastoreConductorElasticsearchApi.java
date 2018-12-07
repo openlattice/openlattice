@@ -63,10 +63,16 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes ) {
+    public boolean saveEntitySetToElasticsearch(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes,
+            List<PropertyType> linkedEntitySetPropertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.submitEntitySetToElasticsearch( entitySet, propertyTypes ) ) )
+                    .wrap( ElasticsearchLambdas.submitEntitySetToElasticsearch(
+                            entitySet,
+                            propertyTypes,
+                            linkedEntitySetPropertyTypes ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity set to elasticsearch" );
@@ -86,11 +92,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean createSecurableObjectIndex( UUID entitySetId, List<PropertyType> propertyTypes ) {
+    public boolean createSecurableObjectIndex(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.createSecurableObjectIndex(
-                            entitySetId,
+                            entitySet,
                             propertyTypes ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
