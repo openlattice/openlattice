@@ -142,7 +142,23 @@ class BackgroundIndexingService(
             logger.info("The following entity sets where missing indices: {}", missingEntitySets)
             missingEntitySets.values.forEach { es ->
                 val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes.get(es.entityTypeId)!!.properties)
-                elasticsearchApi.saveEntitySetToElasticsearch(es, missingEntitySetPropertyTypes.values.toList())
+                val linkedEntitySetPropertyTypes = if (es.isLinking) {
+                    if (es.linkedEntitySets.isEmpty()) {
+                        logger.warn("Linking entity set has no linked entity sets")
+                        null
+                    } else {
+                        propertyTypes.getAll(
+                                entityTypes[entitySets[es.linkedEntitySets.first()]!!.entityTypeId]!!.properties)
+                                .values.toList()
+                    }
+                } else {
+                    null
+                }
+
+                elasticsearchApi.saveEntitySetToElasticsearch(
+                        es,
+                        missingEntitySetPropertyTypes.values.toList(),
+                        linkedEntitySetPropertyTypes)
                 logger.info("Created missing index for entity set ${es.name} with id ${es.entityTypeId}")
             }
         }
