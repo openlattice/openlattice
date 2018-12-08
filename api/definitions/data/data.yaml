@@ -1,0 +1,85 @@
+entitySetId:
+  get:
+    summary: Gets an iterable containing the entity data, using property type FQNs as key
+    operationId: loadEntitySetData
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+    tags:
+      - data
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: "An Entity Set definition"
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./definitions/data/components.yaml#/entity"
+  post:
+    summary: Creates a list of new entities by UUID's
+    operationId: createEntities
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+                $ref: "./definitions/data/components.yaml#/entity"
+    tags:
+      - data
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: "A list of entity keys that were generated"
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+entities:
+  delete:
+    summary: Clears the Entity matching the given Entity id and all of its neighbor Entities
+    operationId: clearAllEntitiesFromEntitySet
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+    tags:
+      - data
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: "Success"
+count:
+  get:
+    summary: Gets the number of entities in an entity set.
+    operationId: getEntitySetSize
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+    tags:
+      - data
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: The number of entities in an entity set.
+        content:
+          application/json:
+            schema:
+              type: integer
