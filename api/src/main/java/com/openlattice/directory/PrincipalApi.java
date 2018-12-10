@@ -18,12 +18,16 @@
 
 package com.openlattice.directory;
 
+import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.authorization.AclKey;
+
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
@@ -47,11 +51,12 @@ public interface PrincipalApi {
     /*
      * Fixed paths
      */
-    String EMAIL  = "/email";
-    String ROLES  = "/roles";
-    String SEARCH = "/search";
-    String USERS  = "/users";
-    String DB     = "/db";
+    String EMAIL   = "/email";
+    String ROLES   = "/roles";
+    String SEARCH  = "/search";
+    String USERS   = "/users";
+    String DB      = "/db";
+    String CURRENT = "/current";
 
     String SEARCH_EMAIL = SEARCH + EMAIL;
 
@@ -64,8 +69,14 @@ public interface PrincipalApi {
     String SEARCH_QUERY_PATH       = "/{" + SEARCH_QUERY + "}";
     String EMAIL_SEARCH_QUERY_PATH = "/{" + SEARCH_QUERY + ":.+" + "}";
 
+    @POST( BASE )
+    SecurablePrincipal getSecurablePrincipal( @Body Principal principal );
+
     @GET( BASE + USERS )
     Map<String, Auth0UserBasic> getAllUsers();
+
+    @GET( BASE + ROLES + CURRENT )
+    Set<SecurablePrincipal> getCurrentRoles();
 
     @GET( BASE + ROLES )
     Map<AclKey, Role> getAvailableRoles();
