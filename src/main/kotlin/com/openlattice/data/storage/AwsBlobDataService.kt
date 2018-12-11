@@ -7,10 +7,7 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.DeleteObjectRequest
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
-import com.amazonaws.services.s3.model.ObjectMetadata
-import com.amazonaws.services.s3.model.PutObjectRequest
+import com.amazonaws.services.s3.model.*
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -41,6 +38,12 @@ class AwsBlobDataService(private val datastoreConfiguration: DatastoreConfigurat
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         s3.putObject(putRequest)
 
+    }
+
+    override fun deleteObjects(s3Keys: List<String>) {
+        val keysToDelete = s3Keys.map{DeleteObjectsRequest.KeyVersion(it)}.toList()
+        val deleteRequest = DeleteObjectsRequest(datastoreConfiguration.bucketName).withKeys(keysToDelete)
+        s3.deleteObjects(deleteRequest)
     }
 
     override fun deleteObject(s3Key: String) {

@@ -21,9 +21,11 @@
 
 package com.openlattice.data.storage
 
+import com.amazonaws.services.s3.model.DeleteObjectsRequest
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
+import com.google.common.collect.Sets
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -393,8 +395,7 @@ class PostgresEntityDataQueryService(
                         if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
                             val propertyTable = quote(propertyTableName(it.key))
                             val fqn = it.value.type.toString()
-                            val fqnColumn = quote(fqn)
-                            deletePropertyInEntitySetFromS3(propertyTable, fqn, fqnColumn, entitySetId)
+                            deletePropertiesInEntitySetFromS3(propertyTable, fqn, entitySetId)
                         }
                         val count: Int = s.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.key))
                         s.close()
@@ -417,14 +418,21 @@ class PostgresEntityDataQueryService(
     }
 
 
-    fun deletePropertyInEntitySetFromS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID) {
+    fun deletePropertiesInEntitySetFromS3(propertyTable: String, fqn: String, entitySetId: UUID) {
+        val s3Keys = mutableListOf<String>()
         val connection = hds.connection
-        val ps = connection.prepareStatement(selectPropertyInEntitySetInS3(propertyTable, fqn, fqnColumn, entitySetId))
+        val ps = connection.prepareStatement(selectPropertiesInEntitySetInS3(propertyTable, quote(fqn), entitySetId))
         val rs = ps.executeQuery()
         while (rs.next()) {
-            byteBlobDataManager.deleteObject(rs.getString(fqn))
+            s3Keys.add(rs.getString(fqn))
+            if (s3Keys.size == 1000) {
+                byteBlobDataManager.deleteObjects(s3Keys)
+                s3Keys.clear()
+            }
         }
+        byteBlobDataManager.deleteObjects(s3Keys)
         ps.close()
+        connection.close()
     }
 
 
@@ -432,7 +440,7 @@ class PostgresEntityDataQueryService(
         return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
     }
 
-    fun selectPropertyInEntitySetInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID) : String {
+    fun selectPropertiesInEntitySetInS3(propertyTable: String, fqnColumn: String, entitySetId: UUID) : String {
         return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid "
     }
 
