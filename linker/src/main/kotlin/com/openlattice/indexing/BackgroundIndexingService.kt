@@ -222,7 +222,7 @@ class BackgroundIndexingService(
             updateExpiration(entitySet)
             while (entityKeyIdsIterator.hasNext()) {
                 val batch = getBatch(entityKeyIdsIterator)
-                indexCount += indexEntities(entitySet, batch, propertyTypes, false, Optional.empty())
+                indexCount += indexEntities(entitySet, batch, propertyTypes, Optional.empty())
             }
             entityKeyIdsIterator = entityKeyIds.iterator()
         }
@@ -265,7 +265,7 @@ class BackgroundIndexingService(
                 while (linkingIdsIterator.hasNext()) {
                     val batch = getBatch(linkingIdsIterator)
                     updateExpiration(entitySet)
-                    indexCount += indexEntities(entitySet, batch, propertyTypes, true, Optional.of(it.first))
+                    indexCount += indexEntities(entitySet, batch, propertyTypes, Optional.of(it.first))
                     updateExpiration(entitySet)
                 }
             }
@@ -285,11 +285,11 @@ class BackgroundIndexingService(
             entitySet: EntitySet,
             batchToIndex: Set<UUID>,
             propertyTypeMap: Map<UUID, PropertyType>,
-            linked: Boolean,
             linkedEntitySetId: Optional<UUID>
     ): Int {
         val esb = Stopwatch.createStarted()
         var indexCount = 0
+        val linked = entitySet.isLinking
         val entitySetId = if (linked) linkedEntitySetId.get() else entitySet.id
 
         val entitiesById = if (linked) {
@@ -298,11 +298,7 @@ class BackgroundIndexingService(
                     mapOf(entitySetId to propertyTypeMap)
             )
         } else {
-            dataQueryService.getEntitiesById(
-                    entitySetId,
-                    propertyTypeMap,
-                    batchToIndex
-            )
+            dataQueryService.getEntitiesById(entitySetId, propertyTypeMap, batchToIndex)
         }
 
         if (elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
