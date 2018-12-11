@@ -65,14 +65,12 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     @Override
     public boolean saveEntitySetToElasticsearch(
             EntitySet entitySet,
-            List<PropertyType> propertyTypes,
-            List<PropertyType> linkedEntitySetPropertyTypes ) {
+            List<PropertyType> propertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.submitEntitySetToElasticsearch(
                             entitySet,
-                            propertyTypes,
-                            linkedEntitySetPropertyTypes ) ) )
+                            propertyTypes ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity set to elasticsearch" );
