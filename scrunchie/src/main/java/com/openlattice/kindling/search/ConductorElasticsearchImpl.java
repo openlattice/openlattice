@@ -485,8 +485,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     @Override
     public boolean saveEntitySetToElasticsearch(
             EntitySet entitySet,
-            List<PropertyType> propertyTypes,
-            List<PropertyType> linkedEntitySetPropertyTypes ) {
+            List<PropertyType> propertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
         Map<String, Object> entitySetDataModel = Maps.newHashMap();
         entitySetDataModel.put( ENTITY_SET, entitySet );
@@ -498,7 +497,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                     .execute().actionGet();
             createSecurableObjectIndex(
                     entitySet,
-                    (entitySet.isLinking()) ? linkedEntitySetPropertyTypes : propertyTypes );
+                    propertyTypes );
             return true;
         } catch ( JsonProcessingException e ) {
             logger.debug( "error saving entity set to elasticsearch" );

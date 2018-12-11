@@ -98,8 +98,8 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
 
     @BeforeClass
     public static void createIndicesAndData() {
-        elasticsearchApi.saveEntitySetToElasticsearch( chicagoEmployees, propertyTypesList, null );
-        elasticsearchApi.saveEntitySetToElasticsearch( entitySet2, propertyTypesList, null );
+        elasticsearchApi.saveEntitySetToElasticsearch( chicagoEmployees, propertyTypesList );
+        elasticsearchApi.saveEntitySetToElasticsearch( entitySet2, propertyTypesList );
         elasticsearchApi.createOrganization( organization );
         createEntityData();
     }
