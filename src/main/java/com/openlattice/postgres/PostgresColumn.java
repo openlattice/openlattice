@@ -192,6 +192,12 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( KEY_FIELD, UUID_ARRAY ).notNull();
     public static final String                   LAST_INDEX_FIELD            = "last_index";
     public static final String                   LAST_LINK_FIELD             = "last_link";
+    public static final String                   LAST_LINK_INDEX_FIELD       = "last_link_index";
+    public static final PostgresColumnDefinition LAST_LINK_INDEX             = new PostgresColumnDefinition(
+            LAST_LINK_INDEX_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
     public static final String                   LAST_PROPAGATE_FIELD        = "last_propagate";
     public static final PostgresColumnDefinition LAST_PROPAGATE              = new PostgresColumnDefinition(
             LAST_PROPAGATE_FIELD,
