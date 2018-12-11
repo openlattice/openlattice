@@ -60,6 +60,7 @@ public interface DataApi {
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
     String S3_URL                = "s3Url";
+    String S3_URLS               = "s3Urls";
     String FILE_TYPE             = "fileType";
     String NEIGHBORS             = "neighbors";
     String PARTIAL               = "partial";
@@ -69,7 +70,8 @@ public interface DataApi {
      * These determine the service routing for the LB
      */
     String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
-    String S3_URL_PATH              = "{" + S3_URL + "}";
+    String S3_URL_PATH           = "{" + S3_URL + "}";
+    String S3_URLS_PATH          = "{" + S3_URLS + "}";
     String TOKEN                 = "token";
     String TYPE                  = "type";
     String UPDATE                = "update";
@@ -259,4 +261,7 @@ public interface DataApi {
 
     @GET( BASE + "/" + S3_URL_PATH )
     String getBase64EncodedString( @Path( S3_URL ) URL url );
+
+    @GET( BASE + "/" + S3_URLS_PATH )
+    Map<URL, String> getBase64EncodedStrings( @Path( S3_URLS ) Set<URL> urls );
 }
