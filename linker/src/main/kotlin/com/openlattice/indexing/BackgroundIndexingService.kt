@@ -142,24 +142,10 @@ class BackgroundIndexingService(
             val missingEntitySets = entitySets.getAll(missingIndices)
             logger.info("The following entity sets where missing indices: {}", missingEntitySets)
             missingEntitySets.values.forEach { es ->
-                val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes.get(es.entityTypeId)!!.properties)
-                val linkedEntitySetPropertyTypes = if (es.isLinking) {
-                    if (es.linkedEntitySets.isEmpty()) {
-                        logger.warn("Linking entity set has no linked entity sets")
-                        null
-                    } else {
-                        propertyTypes.getAll(
-                                entityTypes[entitySets[es.linkedEntitySets.first()]!!.entityTypeId]!!.properties)
-                                .values.toList()
-                    }
-                } else {
-                    null
-                }
-
+                val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes[es.entityTypeId]!!.properties)
                 elasticsearchApi.saveEntitySetToElasticsearch(
                         es,
-                        missingEntitySetPropertyTypes.values.toList(),
-                        linkedEntitySetPropertyTypes)
+                        missingEntitySetPropertyTypes.values.toList())
                 logger.info("Created missing index for entity set ${es.name} with id ${es.entityTypeId}")
             }
         }
@@ -272,7 +258,7 @@ class BackgroundIndexingService(
         var indexCount = 0
 
         linkingIdsByEntitySetIds.forEach {
-            var linkingIdsIterator = it.second.iterator()
+            val linkingIdsIterator = it.second.iterator()
 
             while (linkingIdsIterator.hasNext()) {
                 updateExpiration(entitySet)
@@ -282,7 +268,6 @@ class BackgroundIndexingService(
                     indexCount += indexEntities(entitySet, batch, propertyTypes, true, Optional.of(it.first))
                     updateExpiration(entitySet)
                 }
-                linkingIdsIterator = it.second.iterator()
             }
         }
 
