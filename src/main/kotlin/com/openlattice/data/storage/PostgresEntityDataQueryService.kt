@@ -346,7 +346,7 @@ class PostgresEntityDataQueryService(
             val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum()
             preparedStatements.values.forEach(PreparedStatement::close)
             entitySetPreparedStatement.close()
-            checkState( updatedEntityCount == entities.size , "Updated entity metadata count mismatch")
+            checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
 
             logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
@@ -444,11 +444,11 @@ class PostgresEntityDataQueryService(
     }
 
 
-    fun selectPropertyOfEntityInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID) : String {
+    fun selectPropertyOfEntityInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID): String {
         return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
     }
 
-    fun selectPropertyInEntitySetInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID) : String {
+    fun selectPropertyInEntitySetInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID): String {
         return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid "
     }
 
@@ -607,7 +607,10 @@ class PostgresEntityDataQueryService(
 
     fun markAsIndexed(entitySetId: UUID, batchToIndex: Set<UUID>, linking: Boolean): Int {
         hds.connection.use {
-            it.prepareStatement(updateLastIndexSql(mapOf(entitySetId to Optional.of(batchToIndex)), linking))
+            val updateSql =
+                    if (linking) updateLastLinkIndexSql(mapOf(entitySetId to Optional.of(batchToIndex)))
+                    else updateLastIndexSql(entitySetId)
+            it.prepareStatement(updateSql)
                     .use {
                         it.setObject(1, OffsetDateTime.now())
                         return it.executeUpdate()
@@ -640,10 +643,15 @@ class PostgresEntityDataQueryService(
     }
 }
 
-fun updateLastIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
-    val entitiesClause = buildEntitiesClause(idsByEntitySetId, linking)
+fun updateLastIndexSql(entitySetId: UUID): String {
+    return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+}
 
-    return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? WHERE TRUE $entitiesClause"
+fun updateLastLinkIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
+    val entitiesClause = buildEntitiesClause(idsByEntitySetId, true)
+
+    return "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? WHERE TRUE $entitiesClause"
 }
 
 fun updateLastLinkSql(entitySetId: UUID): String {
@@ -716,16 +724,6 @@ fun deleteEntitySet(entitySetId: UUID): String {
 }
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
-    val columns = setOf(
-            ENTITY_SET_ID.name,
-            ID_VALUE.name,
-            VERSION.name,
-            VERSIONS.name,
-            LAST_WRITE.name,
-            LAST_INDEX.name,
-            LAST_LINK.name,
-            LAST_PROPAGATE.name
-    )
     //Last writer wins for entities
     return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], " +
             "${VERSION.name} = GREATEST(${VERSION.name},$version), ${LAST_WRITE.name} = now() " +
@@ -767,7 +765,7 @@ fun selectEntitySetWithPropertyTypes(
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
     val columns = setOf(ID_VALUE.name) +
-            metadataOptions.map{ ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
+            metadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
             authorizedPropertyTypes.values.map(::quote)
 
     return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM (SELECT * \n" +
@@ -792,7 +790,7 @@ fun selectEntitySetWithPropertyTypesAndVersion(
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
     val columns = setOf(ID_VALUE.name) +
-            metadataOptions.map{ ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
+            metadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
             authorizedPropertyTypes.values.map(::quote)
 
     return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM ( SELECT * " +
