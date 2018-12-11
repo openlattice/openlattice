@@ -19,9 +19,8 @@ public class EsEdmService {
     @Timed
     public void createEntitySet(
             EntitySet entitySet,
-            List<PropertyType> propertyTypes,
-            @Nullable List<PropertyType> linkedEntitySetPropertyTypes ) {
-        elasticsearchApi.saveEntitySetToElasticsearch( entitySet, propertyTypes, linkedEntitySetPropertyTypes );
+            List<PropertyType> propertyTypes ) {
+        elasticsearchApi.saveEntitySetToElasticsearch( entitySet, propertyTypes );
     }
 
     public void createPropertyType( PropertyType propertyType ) {

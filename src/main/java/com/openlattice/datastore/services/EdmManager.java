@@ -97,9 +97,6 @@ public interface EdmManager {
 
     Set<UUID> getLinkedEntitySetIds( UUID entitySetId );
 
-    @Nullable
-    List<PropertyType> getLinkedPropertyTypes( UUID entitySetId);
-
     void createEntityType( EntityType objectType );
 
     EntityType getEntityType( String namespace, String name );

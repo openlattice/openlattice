@@ -18,7 +18,7 @@ public class ElasticSearchPod {
     @Bean
     public EsEdmService esEdmService() {
         EsEdmService mockEsEdmService = Mockito.mock(EsEdmService.class);
-        doNothing().when(mockEsEdmService).createEntitySet(isA(EntitySet.class), isA(List.class), isA( List.class ));
+        doNothing().when(mockEsEdmService).createEntitySet(isA(EntitySet.class), isA(List.class) );
         doNothing().when(mockEsEdmService).createPropertyType(isA(PropertyType.class));
 
         return mockEsEdmService;

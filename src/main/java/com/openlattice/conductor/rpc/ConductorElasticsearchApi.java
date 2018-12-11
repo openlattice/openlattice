@@ -142,8 +142,7 @@ public interface ConductorElasticsearchApi {
 
     boolean saveEntitySetToElasticsearch(
             EntitySet entitySet,
-            List<PropertyType> propertyTypes,
-            @Nullable List<PropertyType> linkedEntitySetPropertyTypes );
+            List<PropertyType> propertyTypes );
 
     Set<UUID> getEntitySetWithIndices();
 

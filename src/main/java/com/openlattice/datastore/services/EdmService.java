@@ -478,8 +478,7 @@ public class EdmService implements EdmManager {
             List<PropertyType> ownablePropertyTypes = Lists
                     .newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
             edmManager.createEntitySet( entitySet, ownablePropertyTypes );
-            List<PropertyType> linkedPropertyTypes = getLinkedPropertyTypes( entitySet.getId() );
-            esEdmService.createEntitySet( entitySet, ownablePropertyTypes, linkedPropertyTypes );
+            esEdmService.createEntitySet( entitySet, ownablePropertyTypes );
 
             // No subscribers currently
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
@@ -490,23 +489,6 @@ public class EdmService implements EdmManager {
             aclKeyReservations.release( entitySet.getId() );
             throw new IllegalStateException( "Unable to create entity set: " + entitySet.getId() );
         }
-    }
-
-    @Override
-    @Nullable
-    public List<PropertyType> getLinkedPropertyTypes( UUID entitySetId ) {
-        EntitySet entitySet = getEntitySet( entitySetId );
-        if ( entitySet.isLinking() ) {
-            if ( entitySet.getLinkedEntitySets().isEmpty() ) {
-                logger.warn( "Linking entity set has no linked entity sets" );
-            } else {
-                Set<UUID> linkedPropertyTypeIds = getEntityTypeByEntitySetId( entitySet.getLinkedEntitySets().iterator().next() )
-                        .getProperties();
-                Map<UUID, PropertyType> linkedPropertyTypes = getPropertyTypesAsMap( linkedPropertyTypeIds );
-                return Lists.newArrayList( linkedPropertyTypes.values() );
-            }
-        }
-        return null;
     }
 
     private void setupDefaultEntitySetPropertyMetadata( UUID entitySetId, UUID entityTypeId ) {

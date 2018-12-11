@@ -731,13 +731,10 @@ public class SearchService {
         Map<UUID, PropertyType> propertyTypes = dataModelService.getPropertyTypesAsMap( propertyTypeIds );
         List<PropertyType> propertyTypeList = Lists.newArrayList( propertyTypes.values() );
 
-        List<PropertyType> linkedEntitySetPropertyTypes = dataModelService.getLinkedPropertyTypes( entitySetId );
-
         elasticsearchApi.deleteEntitySet( entitySetId );
         elasticsearchApi.saveEntitySetToElasticsearch(
                 dataModelService.getEntitySet( entitySetId ),
-                propertyTypeList,
-                linkedEntitySetPropertyTypes );
+                propertyTypeList );
 
         Set<PropertyType> propertyTypesToLoad = propertyTypeList.stream()
                 .filter( pt -> !pt.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ).collect(
