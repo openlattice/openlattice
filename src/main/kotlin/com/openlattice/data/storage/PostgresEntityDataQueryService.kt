@@ -609,7 +609,7 @@ class PostgresEntityDataQueryService(
         hds.connection.use {
             val updateSql =
                     if (linking) updateLastLinkIndexSql(mapOf(entitySetId to Optional.of(batchToIndex)))
-                    else updateLastIndexSql(entitySetId)
+                    else updateLastIndexSql(entitySetId, batchToIndex)
             it.prepareStatement(updateSql)
                     .use {
                         it.setObject(1, OffsetDateTime.now())
@@ -643,9 +643,13 @@ class PostgresEntityDataQueryService(
     }
 }
 
-fun updateLastIndexSql(entitySetId: UUID): String {
+fun updateLastIndexSql(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
+    val idsClause = if(!entityKeyIds.isEmpty()) {
+        " AND ${ID.name} IN ('" + entityKeyIds.joinToString("','") { it.toString() } + "')"
+    } else ""
+
     return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' ($idsClause)"
 }
 
 fun updateLastLinkIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
