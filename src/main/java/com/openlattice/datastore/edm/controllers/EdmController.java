@@ -1006,12 +1006,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata(
             @PathVariable( ID ) UUID entitySetId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
-        Set<UUID> authorizedPropertyTypes = modelService.getEntityTypeByEntitySetId( entitySetId ).getProperties()
-                .stream().filter( propertyTypeId -> authorizations
-                        .checkIfHasPermissions( new AclKey( entitySetId, propertyTypeId ),
-                                Principals.getCurrentPrincipals(),
-                                EnumSet.of( Permission.READ ) )
-                ).collect( Collectors.toSet() );
+        Set<UUID> authorizedPropertyTypes = authzHelper.getAuthorizedPropertiesOnEntitySet( entitySetId, EnumSet.of( Permission.READ ) );
         return modelService.getAllEntitySetPropertyMetadata( entitySetId, authorizedPropertyTypes );
     }
 
