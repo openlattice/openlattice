@@ -24,6 +24,7 @@ package com.openlattice.datastore.pods;
 import static com.openlattice.authorization.AuthorizingComponent.logger;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.ResourceConfigurationLoader;
@@ -46,9 +47,14 @@ import org.springframework.context.annotation.Profile;
 @Configuration
 public class ByteBlobServicePod {
     @Inject
-    private HikariDataSource          hikariDataSource;
+    private HikariDataSource hikariDataSource;
+
+    @Inject
+    private ListeningExecutorService executorService;
+
     @Autowired( required = false )
-    private AmazonS3                  awsS3;
+    private AmazonS3 awsS3;
+
     @Autowired( required = false )
     private AmazonLaunchConfiguration awsLaunchConfig;
 
@@ -82,14 +88,14 @@ public class ByteBlobServicePod {
     @DependsOn( "datastoreConfiguration" )
     @Profile( { DatastoreProfiles.MEDIA_LOCAL_AWS_PROFILE } )
     public ByteBlobDataManager localAwsBlobDataManager() {
-        return new AwsBlobDataService( getLocalAwsDatastoreConfiguration() );
+        return new AwsBlobDataService( getLocalAwsDatastoreConfiguration(), executorService );
     }
 
     @Bean( name = "byteBlobDataManager" )
     @DependsOn( "datastoreConfiguration" )
     @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
     public ByteBlobDataManager awsBlobDataManager() {
-        return new AwsBlobDataService( getAwsDatastoreConfiguration() );
+        return new AwsBlobDataService( getAwsDatastoreConfiguration(), executorService );
     }
 
 }
