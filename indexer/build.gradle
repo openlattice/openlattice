@@ -100,6 +100,7 @@ run {
 
 println "Enabled profiles: " + Arrays.toString(run.args)
 
+
 configurations {
     provided
 }
@@ -123,6 +124,8 @@ dependencies {
     testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
 
     compile "org.ow2.asm:asm:5.0.4"
+    compile "org.nd4j:nd4j-cuda-9.2-platform:${deeplearning4j}"
+
     if (project.hasProperty('developmentMode') && project.developmentMode) {
         logger.quiet(project.name + " using project dependencies.")
         compile project(":rhizome")
