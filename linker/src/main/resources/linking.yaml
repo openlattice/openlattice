@@ -20,6 +20,12 @@ whitelist:
   - 46c83978-a50c-4cff-939a-7b1a8c0ad52c
   - c5a9e6b5-822e-44ca-b19d-e10628618574
   - efd3a154-dbc7-4a09-9062-72f131e8fcce
+  - c33c2561-d347-462c-9cce-6eb77e72a1da
+  - daea22b7-96bb-4352-92d6-050093af1b3f
+  - c4451c09-4329-4c10-b445-3af890d4a311
+  - dab43bcf-901f-4b45-92c1-45459c351809
+  - 0f2487ba-7e13-4f38-992e-e4157ee43b06
+
   # Only for rehearsal tests
   - 91551726-afa2-4aee-8579-46cdfc610b97
   - 65847f7b-c939-414f-bb45-863cd594e412

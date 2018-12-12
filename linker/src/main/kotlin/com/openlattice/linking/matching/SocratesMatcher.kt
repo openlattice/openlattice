@@ -43,6 +43,7 @@ private val logger = LoggerFactory.getLogger(SocratesMatcher::class.java)
  */
 @Component
 class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<FullQualifiedName, UUID>) : Matcher {
+
     private var extractionMillis = 0L
     private var matchingMillis = 0L
     private var localModel = ThreadLocal.withInitial { model }
@@ -53,6 +54,11 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         localModel = ThreadLocal.withInitial { model }
     }
 
+    /**
+     * Gets an initial block of entities that closely match the entity.
+     * @param block A block of potential matches based on search
+     * @return block The resulting block around the entity data key in block.first
+     */
     @Timed
     override fun initialize(
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
@@ -62,12 +68,21 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         val entityDataKey = block.first
         val entities = block.second
 
-        val extractedEntities = entities.mapValues { extractProperties(it.value) }
+        // extract properties and features for all entities in block
+        val firstProperties = extractProperties(entities[entityDataKey]!!)
+        val extractedFeatures = entities.mapValues {
+            val extractedProperties = extractProperties(it.value)
+            extractFeatures(firstProperties, extractedProperties)
+        }
 
-        val matchedEntities = extractedEntities
-                .mapValues { computeScore(model, extractedEntities[entityDataKey]!!, it.value) }
-                .toMutableMap()
+        // transform features to matrix and compute scores
+        val featureKeys = extractedFeatures.map { it.key }.toTypedArray()
+        val featureMatrix = extractedFeatures.map { it.value[0] }.toTypedArray()
+        val scores = computeScore(model, featureMatrix).toTypedArray()
+        val matchedEntities = featureKeys.zip(scores).toMap().toMutableMap()
         val initializedBlock = entityDataKey to mutableMapOf(entityDataKey to matchedEntities)
+
+        // trim low scores
         trimAndMerge(initializedBlock)
         return initializedBlock
     }
@@ -82,56 +97,82 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
             block: Pair<EntityDataKey, Map<EntityDataKey, Map<UUID, Set<Any>>>>
     ): Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>> {
         val sw = Stopwatch.createStarted()
-        val model = localModel.get()
 
+        val model = localModel.get()
         val entityDataKey = block.first
         val entities = block.second
 
-        val extractedEntities = entities.mapValues { extractProperties(it.value) }
 
-        val matchedEntities = extractedEntities.mapValues {
-            val entity = it.value
-            extractedEntities
-                    .mapValues { computeScore(model, entity, it.value) }
-                    .toMutableMap()
+        // extract properties and features for all entities in block
+        val extractedFeatures = entities.mapValues {
+            val selfProperties = extractProperties(it.value)
+            entities.mapValues {
+                val otherProperties = extractProperties(it.value)
+                extractFeatures(selfProperties, otherProperties)
+            }
+        }
+
+        // transform features to matrix and compute scores
+        val featureMatrix = extractedFeatures.flatMap { (entityDataKey1, features) ->
+            features.map {
+                it.value[0]
+            }
+        }
+
+        // extract list of keys (instead of map)
+        val featureKeys = extractedFeatures.flatMap { (entityDataKey1, features) ->
+            features.map {
+                entityDataKey1 to it.key
+            }
+        }
+
+        val featureExtractionSW = sw.elapsed(TimeUnit.MILLISECONDS)
+
+        // get scores from matrix
+        val scores = computeScore(model, featureMatrix.toTypedArray())
+
+        // collect and combine keys and scores
+        val results = scores.zip(featureKeys).map {
+            ResultSet(it.second.first, it.second.second, it.first)
+        }
+
+        // from list of results to expected output
+        val matchedEntities = results.groupBy { it.lhs }.mapValues { x ->
+            x.value.groupBy { it.rhs }.mapValues { x -> x.value.get(0).score }.toMutableMap()
         }.toMutableMap()
+
         logger.info(
-                "Matching block {} with {} elements took {} ",
+                "Matching block {} with {} elements: feature extraction: {} ms - matching: {} ms - total: {} ms",
                 block.first, block.second.values.map { it.size }.sum(),
+                featureExtractionSW,
+                sw.elapsed(TimeUnit.MILLISECONDS) - featureExtractionSW,
                 sw.elapsed(TimeUnit.MILLISECONDS)
         )
+
         return entityDataKey to matchedEntities
+
     }
 
     private fun computeScore(
-            model: MultiLayerNetwork, lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
-    ): Double {
+            model: MultiLayerNetwork, features: Array<DoubleArray>
+    ): DoubleArray {
         val sw = Stopwatch.createStarted()
-        val (extractionTimeMillis, features) = extractFeatures(sw, lhs, rhs)
-        val score = model.getModelScore(features)
+        val scores = model.getModelScore(features)
         val totalMillis = sw.elapsed(TimeUnit.MILLISECONDS)
-        val matchingMillis = totalMillis - extractionTimeMillis
-
-        logger.info(
-                "Feature extraction = {} ms, Matching = {} ms, % time spent matching {}", extractionTimeMillis,
-                matchingMillis, (1.0 * matchingMillis) / totalMillis
-        )
-
-        return score
+        val matchingMillis = totalMillis
+        return scores
     }
 
     private fun extractFeatures(
-            sw: Stopwatch, lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
-    ): Pair<Long, Array<DoubleArray>> {
+            lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
+    ): Array<DoubleArray> {
         val features = arrayOf(
                 PersonMetric.pDistance(
                         lhs, rhs, fqnToIdMap
                 ).map { it * 100.0 }.toDoubleArray()
         )
-        val elapsedMillis = sw.elapsed(TimeUnit.MILLISECONDS)
 
-        extractionMillis += elapsedMillis
-        return elapsedMillis to features;
+        return features;
     }
 
     private fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
@@ -143,22 +184,25 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
             matchedBlock: Pair<EntityDataKey, MutableMap<EntityDataKey, MutableMap<EntityDataKey, Double>>>
     ) {
         //Trim non-center matching thigns.
-        matchedBlock.second[matchedBlock.first] = matchedBlock.second[matchedBlock.first]?.filter { it.value > THRESHOLD }?.toMutableMap() ?: mutableMapOf()
+        matchedBlock.second[matchedBlock.first] = matchedBlock.second[matchedBlock.first]?.filter {
+            it.value > THRESHOLD
+        }?.toMutableMap() ?: mutableMapOf()
     }
 }
 
-fun MultiLayerNetwork.getModelScore(features: Array<DoubleArray>): Double {
+fun MultiLayerNetwork.getModelScore(features: Array<DoubleArray>): DoubleArray {
     return try {
-        output(Nd4j.create(features)).getDouble(0)
+        output(Nd4j.create(features)).toDoubleVector()
     } catch (ex: Exception) {
         logger.error("Failed to compute model score trying again! Features = {}", features.toList(), ex)
         try {
-            output(Nd4j.create(features)).getDouble(0)
+            output(Nd4j.create(features)).toDoubleVector()
         } catch (ex2: Exception) {
             logger.error("Failed to compute model score a second time! Return 0! Features = {}", features.toList(), ex)
-            0.0
+            Nd4j.ones(features.size).toDoubleVector()
         }
     }
 
 }
 
+data class ResultSet(val lhs: EntityDataKey, val rhs: EntityDataKey, val score: Double)
