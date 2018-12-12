@@ -422,6 +422,7 @@ class PostgresEntityDataQueryService(
         val s3Keys = mutableListOf<String>()
         val connection = hds.connection
         val ps = connection.prepareStatement(selectPropertiesInEntitySetInS3(propertyTable, quote(fqn), entitySetId))
+        ps.fetchSize = FETCH_SIZE
         val rs = ps.executeQuery()
         while (rs.next()) {
             s3Keys.add(rs.getString(fqn))
