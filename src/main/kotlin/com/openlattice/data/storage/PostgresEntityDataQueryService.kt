@@ -332,7 +332,7 @@ class PostgresEntityDataQueryService(
             val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum()
             preparedStatements.values.forEach(PreparedStatement::close)
             entitySetPreparedStatement.close()
-            checkState( updatedEntityCount == entities.size , "Updated entity metadata count mismatch")
+            checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
 
             logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
@@ -419,29 +419,25 @@ class PostgresEntityDataQueryService(
 
 
     fun deletePropertiesInEntitySetFromS3(propertyTable: String, fqn: String, entitySetId: UUID) {
-        val s3Keys = mutableListOf<String>()
-        val connection = hds.connection
-        val ps = connection.prepareStatement(selectPropertiesInEntitySetInS3(propertyTable, quote(fqn), entitySetId))
-        ps.fetchSize = FETCH_SIZE
-        val rs = ps.executeQuery()
-        while (rs.next()) {
-            s3Keys.add(rs.getString(fqn))
-            if (s3Keys.size == 1000) {
-                byteBlobDataManager.deleteObjects(s3Keys)
-                s3Keys.clear()
-            }
-        }
-        if (!s3Keys.isEmpty()) byteBlobDataManager.deleteObjects(s3Keys)
-        ps.close()
-        connection.close()
+        PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val ps = connection.prepareStatement(selectPropertiesInEntitySetInS3(propertyTable, quote(fqn), entitySetId))
+                    ps.fetchSize = FETCH_SIZE
+                    val rs = ps.executeQuery()
+                    StatementHolder(connection, ps, rs)
+                },
+                Function<ResultSet, String> {
+                    it.getString(fqn)
+                }).asSequence().chunked(1000).forEach { byteBlobDataManager.deleteObjects(it) }
     }
 
 
-    fun selectPropertyOfEntityInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID) : String {
+    fun selectPropertyOfEntityInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID): String {
         return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
     }
 
-    fun selectPropertiesInEntitySetInS3(propertyTable: String, fqnColumn: String, entitySetId: UUID) : String {
+    fun selectPropertiesInEntitySetInS3(propertyTable: String, fqnColumn: String, entitySetId: UUID): String {
         return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid "
     }
 
