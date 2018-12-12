@@ -260,8 +260,8 @@ public interface DataApi {
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId );
 
     @GET( BASE + "/" + S3_URL_PATH )
-    String getBase64EncodedString( @Path( S3_URL ) URL url );
+    String getBase64EncodedString( @Path( S3_URL ) String url );
 
     @GET( BASE + "/" + S3_URLS_PATH )
-    Map<URL, String> getBase64EncodedStrings( @Path( S3_URLS ) Set<URL> urls );
+    Map<String, String> getBase64EncodedStrings( @Path( S3_URLS ) Set<String> urls );
 }
