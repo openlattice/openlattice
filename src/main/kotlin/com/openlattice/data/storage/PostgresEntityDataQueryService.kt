@@ -649,7 +649,7 @@ fun updateLastIndexSql(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
     } else ""
 
     return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' ($idsClause)"
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' $idsClause"
 }
 
 fun updateLastLinkIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
