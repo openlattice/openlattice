@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
-import com.kryptnostic.rhizome.pods.CassandraPod;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
@@ -62,8 +61,7 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @Import( {
         AuditEntitySetPod.class,
-        ByteBlobServicePod.class,
-        CassandraPod.class
+        ByteBlobServicePod.class
 } )
 public class NeuronPod {
 
