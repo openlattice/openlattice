@@ -341,7 +341,20 @@ open class DataGraphService(
 
         for (entity in entities) {
             val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { HashMap() }
-            entitiesToCreate[entity.entityId] = entity.details
+            if (entity.entityId in entitiesToCreate.keys) {
+                val mergedEntity = mutableMapOf<UUID, Set<Any>>()
+                mergedEntity.putAll(entity.details)
+                entitiesToCreate[entity.entityId]!!.forEach { k ->
+                    if (k.key in mergedEntity.keys) {
+                        mergedEntity.put(k.key,mergedEntity[k.key]!!.plus(k.value))
+                    } else {
+                        mergedEntity.put(k.key,k.value)
+                    }
+                }
+                entitiesToCreate[entity.entityId] = mergedEntity
+            } else {
+                entitiesToCreate[entity.entityId] = entity.details
+            }
         }
 
         entitiesByEntitySet
