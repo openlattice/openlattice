@@ -430,7 +430,7 @@ class PostgresEntityDataQueryService(
                 s3Keys.clear()
             }
         }
-        byteBlobDataManager.deleteObjects(s3Keys)
+        if (!s3Keys.isEmpty()) byteBlobDataManager.deleteObjects(s3Keys)
         ps.close()
         connection.close()
     }
