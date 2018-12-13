@@ -149,12 +149,6 @@ open class DataGraphService(
                 authorizedPropertyTypes).iterator().next()
     }
 
-    override fun clearAllEntitiesFromEntitySet(
-            entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
-        return eds.clearAllEntitiesFromEntitySet(entitySetId, authorizedPropertyTypes)
-    }
-
     override fun clearEntitySet(
             entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {

@@ -113,20 +113,12 @@ public interface EntityDatastore {
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
-     * Clears (soft-deletes) the contents of an entity set by setting version to {@code -now()} and deletes the entity set index
-     *
-     * @param entitySetId The id of the entity set to clear.
-     * @return The number of rows cleared from the entity set.
-     */
-    int clearEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
-
-    /**
      * Clears (soft-deletes) the contents of an entity set by setting version to {@code -now()}
      *
      * @param entitySetId The id of the entity set to clear.
      * @return The number of rows cleared from the entity set.
      */
-    int clearAllEntitiesFromEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
+    int clearEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
