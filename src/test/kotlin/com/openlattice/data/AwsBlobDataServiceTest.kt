@@ -4,6 +4,7 @@ import com.amazonaws.HttpMethod
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.google.common.util.concurrent.MoreExecutors
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
@@ -35,11 +36,17 @@ class LocalAwsBlobDataServiceTest {
             val awsTestConfig = ResourceConfigurationLoader
                     .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
             val s3 = newS3Client(awsTestConfig)
-            val config = ResourceConfigurationLoader.loadConfigurationFromS3(s3,
+            val config = ResourceConfigurationLoader.loadConfigurationFromS3(
+                    s3,
                     awsTestConfig.bucket,
                     awsTestConfig.folder,
-                    DatastoreConfiguration::class.java)
-            val byteBlobDataManager = AwsBlobDataService(config, MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2)))
+                    DatastoreConfiguration::class.java
+            )
+            val byteBlobDataManager = AwsBlobDataService(
+                    config, MoreExecutors.listeningDecorator(
+                    Executors.newFixedThreadPool(2)
+            )
+            )
             this.byteBlobDataManager = byteBlobDataManager
 
 /*            //for local testing
