@@ -213,6 +213,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     @Timed
+    @Override public int clearAllEntitiesFromEntitySet(
+            UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
+    }
+
+    @Timed
     @Override public int clearEntities(
             UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var count = dataQueryService.clearEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );

@@ -74,6 +74,10 @@ interface DataGraphManager {
     //Soft deletes
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
 
+    fun clearAllEntitiesFromEntitySet(
+            entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int
+
     fun clearEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int
