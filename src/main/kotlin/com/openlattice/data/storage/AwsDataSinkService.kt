@@ -1,6 +1,7 @@
 package com.openlattice.data.storage
 
 import com.amazonaws.HttpMethod
+import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import com.openlattice.data.IntegrationResults
 import com.openlattice.data.integration.EntityData
@@ -23,9 +24,9 @@ class AwsDataSinkService {
     @Inject
     lateinit var hds: HikariDataSource
 
-    fun generatePresignedUrls(entities: Set<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<String> {
+    fun generatePresignedUrls(entities: List<S3EntityData>, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): List<String> {
         val postgresData = mutableMapOf<S3EntityData, String>()
-        val urls = Sets.newHashSet<String>()
+        val urls = Lists.newArrayList<String>()
         val expirationTime = Date()
         val timeToLive = expirationTime.time + 6000000
         expirationTime.time = timeToLive
