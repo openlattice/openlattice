@@ -21,6 +21,7 @@ package com.openlattice.data;
 import com.openlattice.data.integration.*;
 
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -88,8 +89,8 @@ public interface DataIntegrationApi {
     );
 
     @POST( BASE + "/" + S3_DATA_SINK )
-    Set<String> generatePresignedUrls(
-            @Body Set<S3EntityData> data
+    List<String> generatePresignedUrls(
+            @Body List<S3EntityData> data
     );
 
     @POST( BASE + "/" + ENTITY_KEY_IDS )
