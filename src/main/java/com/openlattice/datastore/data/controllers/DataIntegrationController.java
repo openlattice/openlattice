@@ -218,8 +218,8 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Timed
     @PostMapping( "/" + S3_DATA_SINK )
     @Override
-    public Set<String> generatePresignedUrls(
-            @RequestBody Set<S3EntityData> data ) {
+    public List<String> generatePresignedUrls(
+            @RequestBody List<S3EntityData> data ) {
         final Set<UUID> entitySetIds = data.stream().map( s3Entity -> s3Entity.getEntitySetId() ).collect(
                 Collectors.toSet() );
         final SetMultimap<UUID, UUID> propertyIdsByEntitySet = HashMultimap.create();
