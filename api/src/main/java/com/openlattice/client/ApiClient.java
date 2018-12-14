@@ -23,12 +23,15 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.client.RetrofitFactory.Environment;
 import com.openlattice.client.serialization.SerializableSupplier;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.DataIntegrationApi;
+import com.openlattice.directory.PrincipalApi;
 import com.openlattice.edm.EdmApi;
+import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.search.SearchApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,11 +43,11 @@ public class ApiClient implements ApiFactoryFactory {
 
     private static final long serialVersionUID = -5757911484718872922L;
 
-    private static final Logger logger = LoggerFactory
+    private static final Logger                         logger      = LoggerFactory
             .getLogger( ApiClient.class );
-    private final ApiFactoryFactory retrofitSupplier;
-    private transient Supplier<ApiFactory>           restAdapter = null;
-    private transient LoadingCache<Class<?>, Object> apiCache    = null;
+    private final        ApiFactoryFactory              retrofitSupplier;
+    private transient    Supplier<ApiFactory>           restAdapter = null;
+    private transient    LoadingCache<Class<?>, Object> apiCache    = null;
 
     public ApiClient( Environment environment, SerializableSupplier<String> jwtToken ) {
         this( () -> {
@@ -65,9 +68,14 @@ public class ApiClient implements ApiFactoryFactory {
         logger.info( "API client ready!" );
     }
 
+    public AuthorizationsApi getAuthorizationsApi() throws ExecutionException {
+        return (AuthorizationsApi) get().create( AuthorizationsApi.class );
+    }
+
     public DataIntegrationApi getDataIntegrationApi() {
         return (DataIntegrationApi) get().create( DataIntegrationApi.class );
     }
+
     public DataApi getDataApi() throws ExecutionException {
         return (DataApi) get().create( DataApi.class );
     }
@@ -76,8 +84,16 @@ public class ApiClient implements ApiFactoryFactory {
         return (PermissionsApi) get().create( PermissionsApi.class );
     }
 
+    public PrincipalApi getPrincipalApi() throws ExecutionException {
+        return (PrincipalApi) get().create( PrincipalApi.class );
+    }
+
     public EdmApi getEdmApi() throws ExecutionException {
         return (EdmApi) get().create( EdmApi.class );
+    }
+
+    public OrganizationsApi getOrganizationsApi() throws ExecutionException {
+        return (OrganizationsApi) get().create( OrganizationsApi.class );
     }
 
     public SearchApi getSearchApi() {
