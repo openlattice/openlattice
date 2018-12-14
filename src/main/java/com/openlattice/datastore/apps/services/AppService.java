@@ -412,7 +412,7 @@ public class AppService {
                 if ( !appConfigKeys.contains( appConfigKey ) ) {
                     createEntitySetForApp( appConfigKey,
                             org.getTitle(),
-                            ownerPrincipals.iterator().next(),
+                            ownerPrincipals.stream().filter( principal -> principal.getType().equals( PrincipalType.USER ) ).iterator().next(),
                             appPrincipal,
                             appRoles,
                             ownerPrincipals );
@@ -420,5 +420,4 @@ public class AppService {
             } );
         } );
     }
-
 }
