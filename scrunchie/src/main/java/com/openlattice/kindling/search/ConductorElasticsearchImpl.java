@@ -593,6 +593,18 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
+    public boolean clearEntitySetData( UUID entitySetId ) {
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
+        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE ).filter( QueryBuilders.matchAllQuery() )
+                .source( getIndexName( entitySetId ) )
+                .execute()
+                .actionGet();
+
+        return true;
+    }
+
+    @Override
     public Map<UUID, Set<UUID>> searchEntitySets(
             Iterable<UUID> entitySetIds,
             Map<UUID, DelegatedStringSet> fieldSearches,
