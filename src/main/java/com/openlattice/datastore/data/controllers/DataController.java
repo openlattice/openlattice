@@ -315,6 +315,21 @@ public class DataController implements DataApi, AuthorizingComponent {
         return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
     }
 
+    @Timed
+    @Override
+    @PostMapping( path =  "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + CONTENT_TYPE_PATH )
+    public List<UUID> createEntities(
+            @RequestParam( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestParam( CONTENT_TYPE ) List<String> contentTypes,
+            @RequestBody List<SetMultimap<UUID, Object>> entities ) {
+        //Ensure that we have read access to entity set metadata.
+        ensureReadAccess( new AclKey( entitySetId ) );
+        //Load authorized property types
+        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
+        return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
+    }
+
     @Override
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH,
