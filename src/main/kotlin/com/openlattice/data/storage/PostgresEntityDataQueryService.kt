@@ -21,9 +21,11 @@
 
 package com.openlattice.data.storage
 
+import com.amazonaws.services.s3.model.DeleteObjectsRequest
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
+import com.google.common.collect.Sets
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -330,7 +332,7 @@ class PostgresEntityDataQueryService(
             val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum()
             preparedStatements.values.forEach(PreparedStatement::close)
             entitySetPreparedStatement.close()
-            checkState( updatedEntityCount == entities.size , "Updated entity metadata count mismatch")
+            checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
 
             logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
@@ -393,8 +395,7 @@ class PostgresEntityDataQueryService(
                         if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
                             val propertyTable = quote(propertyTableName(it.key))
                             val fqn = it.value.type.toString()
-                            val fqnColumn = quote(fqn)
-                            deletePropertyInEntitySetFromS3(propertyTable, fqn, fqnColumn, entitySetId)
+                            deletePropertiesInEntitySetFromS3(propertyTable, fqn, entitySetId)
                         }
                         val count: Int = s.executeUpdate(deletePropertiesInEntitySet(entitySetId, it.key))
                         s.close()
@@ -417,22 +418,26 @@ class PostgresEntityDataQueryService(
     }
 
 
-    fun deletePropertyInEntitySetFromS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID) {
-        val connection = hds.connection
-        val ps = connection.prepareStatement(selectPropertyInEntitySetInS3(propertyTable, fqn, fqnColumn, entitySetId))
-        val rs = ps.executeQuery()
-        while (rs.next()) {
-            byteBlobDataManager.deleteObject(rs.getString(fqn))
-        }
-        ps.close()
+    fun deletePropertiesInEntitySetFromS3(propertyTable: String, fqn: String, entitySetId: UUID) {
+        PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val ps = connection.prepareStatement(selectPropertiesInEntitySetInS3(propertyTable, quote(fqn), entitySetId))
+                    ps.fetchSize = FETCH_SIZE
+                    val rs = ps.executeQuery()
+                    StatementHolder(connection, ps, rs)
+                },
+                Function<ResultSet, String> {
+                    it.getString(fqn)
+                }).asSequence().chunked(1000).forEach { byteBlobDataManager.deleteObjects(it) }
     }
 
 
-    fun selectPropertyOfEntityInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID) : String {
+    fun selectPropertyOfEntityInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID): String {
         return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
     }
 
-    fun selectPropertyInEntitySetInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID) : String {
+    fun selectPropertiesInEntitySetInS3(propertyTable: String, fqnColumn: String, entitySetId: UUID): String {
         return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid "
     }
 

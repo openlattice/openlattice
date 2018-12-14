@@ -124,7 +124,9 @@ open class DataGraphService(
 
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
-        graphService.deleteVerticesInEntitySet(entitySetId)
+        logger.info("Deleting edges of entity set: {}", entitySetId)
+        val edgesDeletedCount = graphService.deleteVerticesInEntitySet(entitySetId)
+        logger.info("Finished deleting {} edges.", edgesDeletedCount)
         return eds.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
     }
 
