@@ -460,7 +460,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                     "You must be an owner of all entity set properties to clear the entity set data." );
         }
 
-        return dgm.clearAllEntitiesFromEntitySet( entitySetId, authorizedPropertyTypes );
+        return dgm.clearEntitySet( entitySetId, authorizedPropertyTypes );
     }
 
     @Override public Integer deleteEntityProperties(
