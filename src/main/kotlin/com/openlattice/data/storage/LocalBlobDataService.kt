@@ -17,6 +17,9 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
     override fun deleteObject(s3Key: String) {
         deleteEntity(s3Key)
     }
+    override fun deleteObjects(s3Keys: List<String>) {
+        s3Keys.forEach{deleteEntity(it)}
+    }
 
     override fun getObjects(keys: List<Any>): List<Any> {
         return getEntities(keys)
