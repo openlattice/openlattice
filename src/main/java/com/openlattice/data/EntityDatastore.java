@@ -25,6 +25,7 @@ package com.openlattice.data;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.edm.type.PropertyType;
+
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Stream;
@@ -42,34 +43,33 @@ public interface EntityDatastore {
             Set<UUID> entitySetIds,
             LinkedHashSet<String> orderedPropertyNames,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Boolean linking);
-
+            Boolean linking );
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes);
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
     PostgresIterable<Pair<UUID, Map<FullQualifiedName, Set<Object>>>> getEntitiesById(
             UUID entitySetId,
             Set<UUID> ids,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes);
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
     Stream<SetMultimap<FullQualifiedName, Object>> getLinkingEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes);
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
     EntitySetData<FullQualifiedName> getEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             LinkedHashSet<String> orderedPropertyTypes,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Boolean linking);
+            Boolean linking );
 
     ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
 
-    PostgresIterable<Pair<UUID, UUID>> getLinkingIds(Set<UUID> entityKeyIds);
+    PostgresIterable<Pair<UUID, UUID>> getLinkingIds( Set<UUID> entityKeyIds );
 
     PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds );
 
