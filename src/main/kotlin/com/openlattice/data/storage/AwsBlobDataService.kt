@@ -13,6 +13,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
+import okhttp3.MediaType
+import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.net.URL
@@ -43,9 +45,9 @@ class AwsBlobDataService(
         var dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = "image"
-        /*
-        Tika tika = new Tika()
-        MediaType mediaType = tika.detect(dataInputStream, ?)
+        val tika = Tika()
+        val tikaMetadata = Metadata()
+        tika.detect(dataInputStream, tikaMetadata)
         metadata.contentType = mediaType.getType() + mediaType.getSubtype()
         */
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
