@@ -43,6 +43,11 @@ class AwsBlobDataService(
         var dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = "image"
+        /*
+        Tika tika = new Tika()
+        MediaType mediaType = tika.detect(dataInputStream, ?)
+        metadata.contentType = mediaType.getType() + mediaType.getSubtype()
+        */
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         s3.putObject(putRequest)
 
