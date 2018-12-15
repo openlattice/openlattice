@@ -72,7 +72,8 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
                         50,
                         "police",
                         false ),
-                        ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes ) );
+                        ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes ),
+                        false );
     }
 
     @Test
