@@ -35,10 +35,9 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.neuron.audit.AuditEntitySetUtils
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn
+import com.openlattice.postgres.PostgresColumn.LAST_LINK_INDEX
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresColumn.LINKING_ID
 import com.openlattice.postgres.PostgresTable.IDS
@@ -170,7 +169,7 @@ class BackgroundIndexingService(
                 "WHERE ${LINKING_ID.name} IS NOT NULL " +
                 "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
-                "AND ${PostgresColumn.LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
+                "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
                 "AND ${ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) " +
                 "GROUP BY ${ENTITY_SET_ID.name} " +
                 "LIMIT $FETCH_SIZE"
@@ -253,8 +252,7 @@ class BackgroundIndexingService(
         val linkingIdsByEntitySetIds = getDirtyLinkingIds(entitySet.linkedEntitySets)
 
         // in linking entity sets, all linked entity sets must have the same entity type
-        val propertyTypes = getPropertyTypeForEntityType(edm.getEntitySet(entitySet.linkedEntitySets.first())
-                .entityTypeId)
+        val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
         var indexCount = 0
 
         linkingIdsByEntitySetIds.forEach {
@@ -307,7 +305,7 @@ class BackgroundIndexingService(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
                     entitySet.name,
-                    entitySetId,
+                    entitySet.id,
                     esb.elapsed(TimeUnit.MILLISECONDS)
             )
         }
