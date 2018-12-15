@@ -1326,9 +1326,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean saveObjectToElasticsearch( String index, String type, Object obj, String id ) {
-        if ( !verifyElasticsearchConnection() ) {
-            return false;
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         try {
             String s = ObjectMappers.getJsonMapper().writeValueAsString( obj );
@@ -1343,9 +1341,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private boolean deleteObjectById( String index, String type, String id ) {
-        if ( !verifyElasticsearchConnection() ) {
-            return false;
-        }
+        if ( !verifyElasticsearchConnection() ) { return false; }
 
         client.prepareDelete( index, type, id ).execute().actionGet();
         return true;
