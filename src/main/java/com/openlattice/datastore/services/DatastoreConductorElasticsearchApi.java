@@ -279,10 +279,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override public EntityDataKeySearchResult executeSearch(
-            SearchConstraints searchConstraints, Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
+            SearchConstraints searchConstraints,
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
+            boolean linking ) {
         try {
             EntityDataKeySearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    new SearchWithConstraintsLambda( searchConstraints, authorizedPropertyTypesByEntitySet ) ) ).get();
+                    new SearchWithConstraintsLambda( searchConstraints, authorizedPropertyTypesByEntitySet, linking ) ) )
+                    .get();
             return queryResults;
 
         } catch ( InterruptedException | ExecutionException e ) {
