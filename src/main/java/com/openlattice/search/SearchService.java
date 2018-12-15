@@ -158,6 +158,10 @@ public class SearchService {
             SearchConstraints searchConstraints,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet,
             boolean linking) {
+        if ( authorizedPropertyTypesByEntitySet.values().isEmpty() ) {
+            return new DataSearchResult( 0, Lists.newArrayList() );
+        }
+
         Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet
                 .entrySet().stream()
                 .collect( Collectors.toMap(
@@ -166,7 +170,7 @@ public class SearchService {
                 );
 
         EntityDataKeySearchResult result = elasticsearchApi
-                .executeSearch( searchConstraints, authorizedPropertiesByEntitySet );
+                .executeSearch( searchConstraints, authorizedPropertiesByEntitySet, linking );
 
         SetMultimap<UUID, UUID> entityKeyIdsByEntitySetId = HashMultimap.create();
         result.getEntityDataKeys()

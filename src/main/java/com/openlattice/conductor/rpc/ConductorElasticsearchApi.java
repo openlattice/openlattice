@@ -190,7 +190,8 @@ public interface ConductorElasticsearchApi {
 
     EntityDataKeySearchResult executeSearch(
             SearchConstraints searchConstraints,
-            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
+            boolean linking
     );
 
     /**
