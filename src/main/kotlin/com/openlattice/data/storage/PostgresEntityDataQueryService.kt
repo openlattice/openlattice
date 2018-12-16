@@ -21,11 +21,10 @@
 
 package com.openlattice.data.storage
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
-import com.google.common.collect.Sets
+import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -37,8 +36,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.sql.PreparedStatement
 import java.sql.ResultSet
