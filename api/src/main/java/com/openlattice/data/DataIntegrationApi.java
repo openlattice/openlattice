@@ -30,36 +30,32 @@ import com.openlattice.edm.type.PropertyType;
 import retrofit2.http.*;
 
 public interface DataIntegrationApi {
-    /*
-     * These determine the service routing for the LB
-     */
-    String SERVICE    = "/datastore";
+    String ASSOCIATION        = "association";
     String CONTROLLER = "/integration";
-    String BASE       = SERVICE + CONTROLLER;
-
+    String COUNT            = "count";
+    String DETAILED_RESULTS = "detailedResults";
+    String EDGES              = "edges";
+    String ENTITY_KEY_ID    = "entityKeyId";
+    String ENTITY_KEY_IDS     = "entityKeyIds";
+    String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
     /**
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
     String ENTITY_SET         = "set";
-    String ASSOCIATION        = "association";
-    String ENTITY_KEY_IDS     = "entityKeyIds";
-    String EDGES              = "edges";
-    String POSTGRES_DATA_SINK = "postgresDataSink";
-    String S3_DATA_SINK       = "s3DataSink";
-    String PROPERTY_TYPES     = "propertyTypes";
-
     String ENTITY_SET_ID    = "setId";
-    String ENTITY_KEY_ID    = "entityKeyId";
+    String POSTGRES_DATA_SINK = "postgresDataSink";
+    String PROPERTY_TYPES     = "propertyTypes";
     String PROPERTY_TYPE_ID = "propertyTypeId";
-
-    String COUNT            = "count";
-    String DETAILED_RESULTS = "detailedResults";
-    String UPDATE           = "update";
-
-    String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
-    String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
     String PROPERTY_TYPE_ID_PATH = "{" + PROPERTY_TYPE_ID + "}";
+    String S3_DATA_SINK       = "s3DataSink";
+    /*
+     * These determine the service routing for the LB
+     */
+    String SERVICE    = "/datastore";
+    String BASE       = SERVICE + CONTROLLER;
+    String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
+    String UPDATE           = "update";
 
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     IntegrationResults integrateEntities(
@@ -67,11 +63,14 @@ public interface DataIntegrationApi {
             @Query( DETAILED_RESULTS ) boolean detailedResults,
             @Body Map<String, Map<UUID, Set<Object>>> entities );
 
+    @POST( BASE )
+    IntegrationResults integrateEntities( @Body Set<EntityData> data );
+
     /**
      * Creates a new set of associations.
      *
      * @param associations Set of associations to create. An association is the usual (String entityId, SetMultimap &lt;
-     *                     UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
+     * UUID, Object &gt; details of entity) pairing enriched with source/destination EntityKeys
      */
     @POST( BASE + "/" + ASSOCIATION + "/" + SET_ID_PATH )
     IntegrationResults integrateAssociations(
@@ -83,10 +82,7 @@ public interface DataIntegrationApi {
             @Body BulkDataCreation data,
             @Query( DETAILED_RESULTS ) boolean detailedResults );
 
-    @POST( BASE + "/" + POSTGRES_DATA_SINK + "/" )
-    IntegrationResults sinkToPostgres(
-            @Body Set<EntityData> data
-    );
+
 
     @POST( BASE + "/" + S3_DATA_SINK )
     List<String> generatePresignedUrls(
