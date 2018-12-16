@@ -31,7 +31,7 @@ import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
-import com.openlattice.datastore.constants.CustomMediaType;
+import com.openlattice.web.mediatypes.CustomMediaType;
 import com.openlattice.datastore.exceptions.BadRequestException;
 import com.openlattice.datastore.exceptions.BatchException;
 import com.openlattice.datastore.services.EdmManager;

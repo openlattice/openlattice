@@ -173,25 +173,10 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 authorizedPropertyTypesByEntitySet );
     }
 
-    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
-        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        associations.forEach( association -> propertyTypesByEntitySet
-                .putAll( association.getKey().getEntitySetId(), association.getDetails().keySet() ) );
-        return propertyTypesByEntitySet;
-    }
-
-    private static SetMultimap<UUID, UUID> requiredEntityPropertyTypes( Set<Entity> entities ) {
-        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
-        entities.forEach( entity -> propertyTypesByEntitySet
-                .putAll( entity.getEntitySetId(), entity.getDetails().keySet() ) );
-        return propertyTypesByEntitySet;
-    }
-
     @Timed
-    @PostMapping( "/" + POSTGRES_DATA_SINK )
+    @PostMapping( "/" )
     @Override
-    public IntegrationResults sinkToPostgres(
-            @RequestBody Set<EntityData> entityData ) {
+    public IntegrationResults integrateEntities( @RequestBody Set<EntityData> entityData ) {
         final Set<UUID> entitySetIds = entityData.stream().map( entity -> entity.getEntitySetId() ).collect(
                 Collectors.toSet() );
         final Set<Entity> entities = new HashSet<>();
@@ -256,9 +241,23 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     }
 
     @Override
-    @GetMapping( "/" + PROPERTY_TYPES + "/" + SET_ID_PATH)
-    public Map<UUID, PropertyType> getPropertyTypesForEntitySet( @PathVariable(ENTITY_SET_ID) UUID entitySetId) {
+    @GetMapping( "/" + PROPERTY_TYPES + "/" + SET_ID_PATH )
+    public Map<UUID, PropertyType> getPropertyTypesForEntitySet( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
         return dms.getPropertyTypesForEntitySet( entitySetId );
+    }
+
+    private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
+        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
+        associations.forEach( association -> propertyTypesByEntitySet
+                .putAll( association.getKey().getEntitySetId(), association.getDetails().keySet() ) );
+        return propertyTypesByEntitySet;
+    }
+
+    private static SetMultimap<UUID, UUID> requiredEntityPropertyTypes( Set<Entity> entities ) {
+        final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
+        entities.forEach( entity -> propertyTypesByEntitySet
+                .putAll( entity.getEntitySetId(), entity.getDetails().keySet() ) );
+        return propertyTypesByEntitySet;
     }
 
 }
