@@ -191,8 +191,19 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 EnumSet.of( Permission.READ ) ) ) {
             EntitySet es = edm.getEntitySet( entitySetId );
             final Set<UUID> entitySets = ( es.isLinking() ) ? es.getLinkedEntitySets() : Set.of( entitySetId );
+            final Set<UUID> authorizedEntitySets = entitySets.stream().filter( esId ->
+                    authorizations.checkIfHasPermissions(
+                            new AclKey( esId ),
+                            Principals.getCurrentPrincipals(),
+                            EnumSet.of( Permission.READ ) ) )
+                    .collect( Collectors.toSet() );
             Map<UUID, Map<UUID, PropertyType>> authorizedProperties = authorizationsHelper
-                    .getAuthorizedPropertiesOnEntitySets( entitySets, EnumSet.of( Permission.READ ) );
+                    .getAuthorizedPropertiesOnEntitySets( authorizedEntitySets, EnumSet.of( Permission.READ ) );
+
+            if ( authorizedEntitySets.size() == 0 ) {
+                logger.warn( "Read authorization failed for all the entity sets." );
+                return new DataSearchResult( 0, Lists.newArrayList() );
+            }
 
             return searchService.executeSearch( SearchConstraints
                             .simpleSearchConstraints(
@@ -228,20 +239,12 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authorizationsHelper
                         .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of( Permission.READ ) );
 
-                Set<UUID> propertyTypeIds = authorizedPropertyTypes.values().stream().map( pt -> pt.keySet() )
-                        .reduce( ( s1, s2 ) -> Sets.intersection( s1, s2 ) ).get();
-
-                // only those are authorized, where propertytype is authorized for every entity set
-                List<SearchDetails> authorizedSearches = search.getSearches().stream()
-                        .filter( searchDetails -> propertyTypeIds.contains( searchDetails.getPropertyType() ) )
-                        .collect( Collectors.toList() );
-
                 return searchService.executeSearch(
                         SearchConstraints.advancedSearchConstraints(
                                 new UUID[]{ entitySetId },
                                 search.getStart(),
                                 search.getMaxHits(),
-                                authorizedSearches ),
+                                search.getSearches() ),
                         authorizedPropertyTypes,
                         true );
             } else {
