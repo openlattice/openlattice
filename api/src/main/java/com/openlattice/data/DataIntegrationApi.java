@@ -99,8 +99,5 @@ public interface DataIntegrationApi {
             @Body Set<DataEdgeKey> edges
     );
 
-    @GET( BASE + "/" + PROPERTY_TYPES + "/" + SET_ID_PATH )
-    Map<UUID, PropertyType> getPropertyTypesForEntitySet(
-            @Path( ENTITY_SET_ID ) UUID entitySetId
-    );
+
 }
