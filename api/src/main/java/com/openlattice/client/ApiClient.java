@@ -29,6 +29,7 @@ import com.openlattice.client.RetrofitFactory.Environment;
 import com.openlattice.client.serialization.SerializableSupplier;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.DataIntegrationApi;
+import com.openlattice.data.S3Api;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.organization.OrganizationsApi;
@@ -69,35 +70,39 @@ public class ApiClient implements ApiFactoryFactory {
     }
 
     public AuthorizationsApi getAuthorizationsApi() throws ExecutionException {
-        return (AuthorizationsApi) get().create( AuthorizationsApi.class );
+        return get().create( AuthorizationsApi.class );
     }
 
     public DataIntegrationApi getDataIntegrationApi() {
-        return (DataIntegrationApi) get().create( DataIntegrationApi.class );
+        return get().create( DataIntegrationApi.class );
     }
 
     public DataApi getDataApi() throws ExecutionException {
-        return (DataApi) get().create( DataApi.class );
+        return get().create( DataApi.class );
     }
 
     public PermissionsApi getPermissionsApi() throws ExecutionException {
-        return (PermissionsApi) get().create( PermissionsApi.class );
+        return get().create( PermissionsApi.class );
     }
 
     public PrincipalApi getPrincipalApi() throws ExecutionException {
-        return (PrincipalApi) get().create( PrincipalApi.class );
+        return get().create( PrincipalApi.class );
     }
 
     public EdmApi getEdmApi() throws ExecutionException {
-        return (EdmApi) get().create( EdmApi.class );
+        return get().create( EdmApi.class );
     }
 
     public OrganizationsApi getOrganizationsApi() throws ExecutionException {
-        return (OrganizationsApi) get().create( OrganizationsApi.class );
+        return get().create( OrganizationsApi.class );
     }
 
     public SearchApi getSearchApi() {
-        return (SearchApi) get().create( SearchApi.class );
+        return get().create( SearchApi.class );
+    }
+
+    public S3Api getS3Api() {
+        return get().create( S3Api.class );
     }
 
     public ApiFactory get() {
