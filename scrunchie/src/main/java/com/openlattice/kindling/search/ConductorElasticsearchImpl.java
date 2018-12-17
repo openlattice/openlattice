@@ -850,8 +850,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     /**
-     * Creates a map with keys of all the property type ids across the input and puts weights {0, 1} as value.
-     * It only puts a 1 value, if the user has authorization on that property type in all searched entity sets.
+     * Creates a map with keys of all the property type ids puts 1 weights as value.
      */
     private static Map<String, Float> getFieldsMap( DelegatedUUIDSet authorizedPropertyTypes ) {
         Map<String, Float> fieldsMap = Maps.newHashMap();
@@ -878,13 +877,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return fieldsMap;
     }
 
-    private QueryBuilder getAdvancedSearchQuery(
-            Constraint constraints,
-            Map<String, Float> fieldMap ) {
+    private QueryBuilder getAdvancedSearchQuery( Constraint constraints, Set<UUID> authorizedProperties ) {
 
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
         constraints.getSearches().get().forEach( search -> {
-            if ( fieldMap.get( search.getPropertyType().toString() ) > 0 ) {
+            if ( authorizedProperties.contains( search.getPropertyType() ) ) {
                 QueryStringQueryBuilder queryString = QueryBuilders
                         .queryStringQuery( search.getSearchTerm() )
                         .field( search.getPropertyType().toString(), 1F ).lenient( true );
@@ -913,12 +910,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .lenient( true );
     }
 
-    private QueryBuilder getGeoDistanceSearchQuery(
-            Constraint constraints,
-            Map<String, Float> fieldMap ) {
+    private QueryBuilder getGeoDistanceSearchQuery( Constraint constraints, Set<UUID> authorizedProperties ) {
 
         UUID propertyTypeId = constraints.getPropertyTypeId().get();
-        if ( !fieldMap.containsKey( propertyTypeId.toString() ) || fieldMap.get( propertyTypeId.toString() ) == 0F ) {
+        if ( !authorizedProperties.contains( propertyTypeId ) ) {
             return null;
         }
 
@@ -932,10 +927,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .distance( radius, DistanceUnit.fromString( constraints.getDistanceUnit().get().name() ) );
     }
 
-    private QueryBuilder getGeoPolygonSearchQuery( Constraint constraints, Map<String, Float> fieldMap ) {
+    private QueryBuilder getGeoPolygonSearchQuery( Constraint constraints, Set<UUID> authorizedProperties ) {
 
         UUID propertyTypeId = constraints.getPropertyTypeId().get();
-        if ( !fieldMap.containsKey( propertyTypeId.toString() ) || fieldMap.get( propertyTypeId.toString() ) == 0F ) {
+        if ( !authorizedProperties.contains( propertyTypeId ) ) {
             return null;
         }
 
@@ -952,8 +947,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     private QueryBuilder getQueryForSearch(
             SearchConstraints searchConstraints,
-            Map<String, Float> fieldsMap ) {
-
+            Map<String, Float> fieldsMap,
+            Set<UUID> authorizedProperties ) {
         BoolQueryBuilder query = QueryBuilders.boolQuery();
 
         for ( ConstraintGroup constraintGroup : searchConstraints.getConstraintGroups() ) {
@@ -964,15 +959,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
                 switch ( constraint.getSearchType() ) {
                     case advanced:
-                        subQuery.should( getAdvancedSearchQuery( constraint, fieldsMap ) );
+                        subQuery.should( getAdvancedSearchQuery( constraint, authorizedProperties ) );
                         break;
 
                     case geoDistance:
-                        subQuery.should( getGeoDistanceSearchQuery( constraint, fieldsMap ) );
+                        subQuery.should( getGeoDistanceSearchQuery( constraint, authorizedProperties ) );
                         break;
 
                     case geoPolygon:
-                        subQuery.should( getGeoPolygonSearchQuery( constraint, fieldsMap ) );
+                        subQuery.should( getGeoPolygonSearchQuery( constraint, authorizedProperties ) );
                         break;
 
                     case simple:
@@ -1009,7 +1004,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         authorizedPropertyTypesByEntitySet.keySet().forEach(
                 ( entitySetId ) -> {
                     Map<String, Float> fieldsMap = getFieldsMap( authorizedPropertyTypesByEntitySet.get( entitySetId ) );
-                    QueryBuilder query = getQueryForSearch( searchConstraints, fieldsMap );
+                    QueryBuilder query = getQueryForSearch(
+                            searchConstraints,
+                            fieldsMap,
+                            authorizedPropertyTypesByEntitySet.get( entitySetId ).unwrap() );
 
                     SearchRequestBuilder request = client
                             .prepareSearch( getIndexName( entitySetId ) )
@@ -1028,7 +1026,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             SearchConstraints searchConstraints,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
         Map<String, Float> fieldsMap = getLinkingFieldsMap( authorizedPropertyTypesByEntitySet );
-        QueryBuilder query = getQueryForSearch( searchConstraints, fieldsMap );
+        QueryBuilder query = getQueryForSearch(
+                searchConstraints,
+                fieldsMap,
+                authorizedPropertyTypesByEntitySet.values().stream()
+                        .flatMap( propertyIds -> propertyIds.unwrap().stream() )
+                        .collect( Collectors.toSet()) );
         if ( query == null ) {
             return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
