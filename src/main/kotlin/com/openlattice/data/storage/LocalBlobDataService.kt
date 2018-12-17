@@ -10,7 +10,7 @@ private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 @Service
 class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
 
-    override fun putObject(s3Key: String, data: ByteArray) {
+    override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
         insertEntity(s3Key, data)
     }
 

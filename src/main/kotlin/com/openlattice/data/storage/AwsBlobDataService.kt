@@ -40,16 +40,11 @@ class AwsBlobDataService(
         return builder.build()
     }
 
-    override fun putObject(s3Key: String, data: ByteArray) {
+    override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
         var metadata = ObjectMetadata()
         var dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
-        metadata.contentType = "image"
-        val tika = Tika()
-        val tikaMetadata = Metadata()
-        tika.detect(dataInputStream, tikaMetadata)
-        metadata.contentType = mediaType.getType() + mediaType.getSubtype()
-        */
+        metadata.contentType = contentType
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         s3.putObject(putRequest)
 
