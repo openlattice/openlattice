@@ -232,39 +232,29 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 EnumSet.of( Permission.READ ) ) ) {
 
             EntitySet es = edm.getEntitySet( entitySetId );
-            if ( es.isLinking() ) {
-                Preconditions.checkArgument(
-                        !es.getLinkedEntitySets().isEmpty(),
-                        "Linked entity sets does not consist of any entity sets." );
-                Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authorizationsHelper
-                        .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of( Permission.READ ) );
+            final Set<UUID> entitySets = ( es.isLinking() ) ? es.getLinkedEntitySets() : Set.of( entitySetId );
+            final Set<UUID> authorizedEntitySets = entitySets.stream().filter( esId ->
+                    authorizations.checkIfHasPermissions(
+                            new AclKey( esId ),
+                            Principals.getCurrentPrincipals(),
+                            EnumSet.of( Permission.READ ) ) )
+                    .collect( Collectors.toSet() );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authorizationsHelper
+                    .getAuthorizedPropertiesOnEntitySets( authorizedEntitySets, EnumSet.of( Permission.READ ) );
 
-                return searchService.executeSearch(
-                        SearchConstraints.advancedSearchConstraints(
-                                new UUID[]{ entitySetId },
-                                search.getStart(),
-                                search.getMaxHits(),
-                                search.getSearches() ),
-                        authorizedPropertyTypes,
-                        true );
-            } else {
-                Map<UUID, Map<UUID, PropertyType>> authorizedProperties = authorizationsHelper
-                        .getAuthorizedPropertiesOnEntitySets( Set.of( entitySetId ),
-                                EnumSet.of( Permission.READ ) );
-
-                Set<UUID> propertyTypeIds = authorizedProperties.get( entitySetId ).keySet();
-
-                List<SearchDetails> authorizedSearches = search.getSearches().stream()
-                        .filter( searchDetails -> propertyTypeIds.contains( searchDetails.getPropertyType() ) )
-                        .collect( Collectors.toList() );
-
-                return searchService.executeSearch( SearchConstraints.advancedSearchConstraints( new UUID[]{ entitySetId },
-                        search.getStart(),
-                        search.getMaxHits(),
-                        authorizedSearches ),
-                        authorizedProperties,
-                        false );
+            if ( authorizedEntitySets.size() == 0 ) {
+                logger.warn( "Read authorization failed for all the entity sets." );
+                return new DataSearchResult( 0, Lists.newArrayList() );
             }
+
+            return searchService.executeSearch(
+                    SearchConstraints.advancedSearchConstraints(
+                            new UUID[]{ entitySetId },
+                            search.getStart(),
+                            search.getMaxHits(),
+                            search.getSearches() ),
+                    authorizedPropertyTypes,
+                    es.isLinking() );
         }
         return new DataSearchResult( 0, Lists.newArrayList() );
     }
