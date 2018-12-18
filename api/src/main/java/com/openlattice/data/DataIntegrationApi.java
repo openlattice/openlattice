@@ -20,42 +20,43 @@ package com.openlattice.data;
 
 import com.openlattice.data.integration.*;
 
-import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.openlattice.edm.type.PropertyType;
 import retrofit2.http.*;
 
 public interface DataIntegrationApi {
-    String ASSOCIATION        = "association";
-    String CONTROLLER = "/integration";
-    String COUNT            = "count";
-    String DETAILED_RESULTS = "detailedResults";
-    String EDGES              = "edges";
-    String ENTITY_KEY_ID    = "entityKeyId";
-    String ENTITY_KEY_IDS     = "entityKeyIds";
+
+    /*
+     * These determine the service routing for the LB
+     */
+
+    // @formatter:off
+    String SERVICE               = "/datastore";
+    String CONTROLLER            = "/integration";
+    String BASE                  = SERVICE + CONTROLLER;
+    // @formatter:on
+
+    String ASSOCIATION = "association";
+
+    String COUNT                 = "count";
+    String DETAILED_RESULTS      = "detailedResults";
+    String EDGES                 = "edges";
+    String ENTITY_KEY_ID         = "entityKeyId";
+    String ENTITY_KEY_IDS        = "entityKeyIds";
     String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
     /**
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
-    String ENTITY_SET         = "set";
-    String ENTITY_SET_ID    = "setId";
-    String POSTGRES_DATA_SINK = "postgresDataSink";
-    String PROPERTY_TYPES     = "propertyTypes";
-    String PROPERTY_TYPE_ID = "propertyTypeId";
-    String PROPERTY_TYPE_ID_PATH = "{" + PROPERTY_TYPE_ID + "}";
-    String S3_DATA_SINK       = "s3DataSink";
-    /*
-     * These determine the service routing for the LB
-     */
-    String SERVICE    = "/datastore";
-    String BASE       = SERVICE + CONTROLLER;
-    String SET_ID_PATH           = "{" + ENTITY_SET_ID + "}";
-    String UPDATE           = "update";
+    String ENTITY_SET            = "set";
+    String ENTITY_SET_ID         = "setId";
+    String SET_ID_PATH = "{" + ENTITY_SET_ID + "}";
+    String UPDATE      = "update";
+
+    String S3               = "s3";
 
     @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     IntegrationResults integrateEntities(
@@ -82,22 +83,13 @@ public interface DataIntegrationApi {
             @Body BulkDataCreation data,
             @Query( DETAILED_RESULTS ) boolean detailedResults );
 
-
-
-    @POST( BASE + "/" + S3_DATA_SINK )
-    List<String> generatePresignedUrls(
-            @Body List<S3EntityData> data
-    );
+    @POST( BASE + "/" + S3 )
+    List<String> generatePresignedUrls( @Body List<S3EntityData> data );
 
     @POST( BASE + "/" + ENTITY_KEY_IDS )
-    Map<UUID, Map<String, UUID>> getEntityKeyIds(
-            @Body Set<EntityKey> entityKeys
-    );
+    Map<UUID, Map<String, UUID>> getEntityKeyIds( @Body Set<EntityKey> entityKeys );
 
     @PUT( BASE + "/" + EDGES )
-    int createEdges(
-            @Body Set<DataEdgeKey> edges
-    );
-
+    int createEdges( @Body Set<DataEdgeKey> edges );
 
 }
