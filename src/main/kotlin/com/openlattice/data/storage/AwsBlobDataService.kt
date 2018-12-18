@@ -14,7 +14,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import okhttp3.MediaType
-import org.apache.tika.Tika
+//import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.net.URL
@@ -65,14 +65,15 @@ class AwsBlobDataService(
         expirationTime.time = timeToLive
 
         return keys
-                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime) }) }
+                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime, Optional.empty()) }) }
                 .map { it.get() }
     }
 
-    fun getPresignedUrl(key: Any, expiration: Date): URL {
+    fun getPresignedUrl(key: Any, expiration: Date, contentType: Optional<String>): URL {
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
                 HttpMethod.GET
         ).withExpiration(expiration)
+        contentType.ifPresent { urlRequest.contentType = contentType.get() }
         lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)
