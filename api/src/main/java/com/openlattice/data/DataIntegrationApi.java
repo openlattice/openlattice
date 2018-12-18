@@ -87,7 +87,7 @@ public interface DataIntegrationApi {
     List<String> generatePresignedUrls( @Body List<S3EntityData> data );
 
     @POST( BASE + "/" + ENTITY_KEY_IDS )
-    Map<UUID, Map<String, UUID>> getEntityKeyIds( @Body Set<EntityKey> entityKeys );
+    List<UUID> getEntityKeyIds( @Body List<EntityKey> entityKeys );
 
     @PUT( BASE + "/" + EDGES )
     int createEdges( @Body Set<DataEdgeKey> edges );
