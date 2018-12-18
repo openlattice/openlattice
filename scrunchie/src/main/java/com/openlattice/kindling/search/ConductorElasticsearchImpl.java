@@ -649,40 +649,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return UUID.fromString( index.substring( SECURABLE_OBJECT_INDEX_PREFIX.length() ) );
     }
 
-    @Override
-    public List<UUID> executeEntitySetDataSearchAcrossIndices(
-            Iterable<UUID> entitySetIds, Map<UUID, DelegatedStringSet> fieldSearches, int size, boolean explain ) {
-        if ( !verifyElasticsearchConnection() ) { return null; }
-
-        BoolQueryBuilder query = new BoolQueryBuilder();
-        fieldSearches.entrySet().stream().forEach( entry -> {
-            BoolQueryBuilder fieldQuery = new BoolQueryBuilder();
-            entry.getValue().stream().forEach( searchTerm -> fieldQuery.should(
-                    QueryBuilders.matchQuery( entry.getKey().toString(), searchTerm ).fuzziness( Fuzziness.AUTO )
-                            .lenient( true ) ) );
-            fieldQuery.minimumShouldMatch( 1 );
-            query.should( fieldQuery );
-        } );
-        query.minimumShouldMatch( 1 );
-
-        List<String> indexNames = StreamUtil.stream( entitySetIds )
-                .map( id -> getIndexName( id ) )
-                .collect( Collectors.toList() );
-
-        SearchResponse response = client.prepareSearch( indexNames.toArray( new String[0] ) )
-                .setQuery( query )
-                .setFrom( 0 )
-                .setSize( size )
-                .setExplain( explain )
-                .execute()
-                .actionGet();
-        List<UUID> results = Lists.newArrayList();
-        for ( SearchHit hit : response.getHits() ) {
-            results.add( UUID.fromString( hit.getId() ) );
-        }
-        return results;
-    }
-
     /**
      * Return a byte array of values with formatting the property ids(keys) to either {@literal <}propertyTypeId>
      * or {@literal <}entitySetId.propertyTypeId> depending on if it's a linking entity or not.
