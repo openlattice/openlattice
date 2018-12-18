@@ -211,12 +211,6 @@ public interface ConductorElasticsearchApi {
             int size,
             boolean explain );
 
-    List<UUID> executeEntitySetDataSearchAcrossIndices(
-            Iterable<UUID> entitySetIds,
-            Map<UUID, DelegatedStringSet> fieldSearches,
-            int size,
-            boolean explain );
-
     boolean saveEntityTypeToElasticsearch( EntityType entityType );
 
     boolean saveAssociationTypeToElasticsearch( AssociationType associationType );

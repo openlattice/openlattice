@@ -279,19 +279,6 @@ public class SearchService {
                 event.getNewPropertyTypes() );
     }
 
-    @Timed
-    public List<UUID> executeEntitySetDataSearchAcrossIndices(
-            Iterable<UUID> entitySetIds,
-            Map<UUID, DelegatedStringSet> fieldSearches,
-            int size,
-            boolean explain ) {
-        // TODO linking entity sets, if we ever use it that way
-        return elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetIds,
-                fieldSearches,
-                size,
-                explain );
-    }
-
     @Subscribe
     public void createEntityType( EntityTypeCreatedEvent event ) {
         EntityType entityType = event.getEntityType();
