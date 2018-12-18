@@ -39,8 +39,6 @@ import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.search.SearchService;
 
-import java.net.URL;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -201,7 +199,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     }
 
     @Timed
-    @PostMapping( "/" + S3_DATA_SINK )
+    @PostMapping( "/" + S3 )
     @Override
     public List<String> generatePresignedUrls(
             @RequestBody List<S3EntityData> data ) {
@@ -240,11 +238,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return dgm.createEdges( edges );
     }
 
-    @Override
-    @GetMapping( "/" + PROPERTY_TYPES + "/" + SET_ID_PATH )
-    public Map<UUID, PropertyType> getPropertyTypesForEntitySet( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
-        return dms.getPropertyTypesForEntitySet( entitySetId );
-    }
+
 
     private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
         final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
