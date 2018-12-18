@@ -357,11 +357,16 @@ open class DataGraphService(
             associations: Set<Association>,
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): IntegrationResults? {
-        val entitiesByEntitySet = HashMap<UUID, MutableMap<String, Map<UUID, Set<Any>>>>()
+        val entitiesByEntitySet = HashMap<UUID, MutableMap<String, MutableMap<UUID, MutableSet<Any>>>>()
 
         for (entity in entities) {
-            val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { HashMap() }
-            entitiesToCreate[entity.entityId] = entity.details
+            val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { mutableMapOf() }
+            val entityDetails = entitiesToCreate.getOrPut(entity.entityId) { entity.details }
+            if(entityDetails !== entity.details) {
+                entity.details.forEach { propertyTypeId, values ->
+                    entityDetails.getOrPut(propertyTypeId){ mutableSetOf() }.addAll( values )
+                }
+            }
         }
 
         entitiesByEntitySet
