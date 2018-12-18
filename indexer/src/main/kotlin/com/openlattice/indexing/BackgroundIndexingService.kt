@@ -299,7 +299,7 @@ class BackgroundIndexingService(
             dataQueryService.getEntitiesById(entitySetId, propertyTypeMap, batchToIndex)
         }
 
-        if (elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
+        if (elasticsearchApi.createBulkEntityData(entitySet.id, mapOf(entitySetId to entitiesById), linked)) {
             indexCount += dataQueryService.markAsIndexed(entitySetId, batchToIndex, linked)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
