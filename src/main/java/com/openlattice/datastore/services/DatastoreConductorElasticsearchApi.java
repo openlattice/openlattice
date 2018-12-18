@@ -303,24 +303,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public List<UUID> executeEntitySetDataSearchAcrossIndices(
-            Iterable<UUID> entitySetIds,
-            Map<UUID, DelegatedStringSet> fieldSearches,
-            int size,
-            boolean explain ) {
-        try {
-            List<UUID> queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    new SearchEntitySetDataAcrossIndicesLambda( entitySetIds, fieldSearches, size, explain ) ) )
-                    .get();
-            return queryResults;
-
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.error( "Failed to execute search for entity set data search across indices: " + fieldSearches );
-            return Lists.newArrayList();
-        }
-    }
-
-    @Override
     public boolean saveEntityTypeToElasticsearch( EntityType entityType ) {
         try {
             return executor.submit( ConductorElasticsearchCall
