@@ -45,7 +45,10 @@ interface EntityKeyIdService {
     fun getEntityKeys(entityKeyIds: Set<UUID>): MutableMap<UUID, EntityKey>
 
     fun reserveIds(entitySetId: UUID, count: Int): List<UUID>
+
     fun getEntityKeyIds(
             entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID>
+
+    fun reserveEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID>
 }

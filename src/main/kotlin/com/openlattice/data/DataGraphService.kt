@@ -67,6 +67,9 @@ open class DataGraphService(
         private val eds: EntityDatastore,
         private val edm: EdmManager
 ) : DataGraphManager {
+    override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
+        return idService.reserveEntityKeyIds(entityKeys)
+    }
 
 
     //TODO: Move to a utility class
@@ -204,23 +207,6 @@ open class DataGraphService(
                 .stream()
                 .mapToInt { e -> eds.deleteEntities(e.key, e.value, authorizedPropertyTypes) }
                 .sum()
-    }
-
-    override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Map<UUID, Map<String, UUID>> {
-        val idsMap = idService.getEntityKeyIds(entityKeys)
-        val newMap = mutableMapOf<UUID, MutableMap<String, UUID>>()
-        for ((k, v) in idsMap) {
-            val entitySetId = k.entitySetId
-            val entityId = k.entityId
-            val entityKeyId = v
-            if (newMap.containsKey(entitySetId)) {
-                val mapValue = newMap[entitySetId]!!
-                mapValue[entityId] = entityKeyId
-            } else {
-                newMap[entitySetId] = mutableMapOf(entityId to entityKeyId)
-            }
-        }
-        return newMap
     }
 
     override fun integrateEntities(

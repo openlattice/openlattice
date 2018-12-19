@@ -84,6 +84,11 @@ class PostgresEntityKeyIdService(
         return entityKeyIds
     }
 
+    override fun reserveEntityKeyIds( entityKeys: Set<EntityKey> ): Set<UUID> {
+        val ids = idGenerationService.getNextIds(entityKeys.size)
+        storeEntityKeyIds(entityKeys.zip( ids ).toMap())
+        return ids
+    }
 
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
