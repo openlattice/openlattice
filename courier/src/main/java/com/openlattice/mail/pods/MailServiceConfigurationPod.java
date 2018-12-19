@@ -16,6 +16,7 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
 package com.openlattice.mail.pods;
@@ -23,50 +24,37 @@ package com.openlattice.mail.pods;
 import com.amazonaws.services.s3.AmazonS3;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
-import com.kryptnostic.rhizome.configuration.amazon.AwsLaunchConfiguration;
-import com.kryptnostic.rhizome.emails.configuration.MailServiceConfiguration;
 import com.openlattice.ResourceConfigurationLoader;
+import com.openlattice.mail.config.MailServiceConfig;
 import java.io.IOException;
-
-import javax.inject.Inject;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import com.openlattice.mail.config.MailServiceConfig;
-import com.openlattice.mail.config.MailServiceRequirements;
-import com.openlattice.mail.services.MailRenderer;
-import com.openlattice.mail.services.MailService;
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
 /**
- * This is the plugin pod that will activate a mail service lambda
- *
+ * Configuration class for loading configuration information for mail service pod.
  */
 @Configuration
-@Import( { MailServiceConfigurationPod.class } )
-public class MailServicePod {
+public class MailServiceConfigurationPod {
+    @Autowired( required = false )
+    private AmazonS3 awsS3;
 
-    @Inject
-    private MailServiceRequirements requirements;
-
-    @Inject
-    private ConfigurationService config;
-
-    @Inject
-    private MailServiceConfig mailServiceConfig;
+    @Autowired( required = false )
+    private AmazonLaunchConfiguration awsLaunchConfig;
 
     @Bean
-    public MailService mailService() throws IOException {
-        return new MailService( mailServiceConfig, mailRenderer(), requirements.getEmailQueue() );
+    @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
+    public MailServiceConfig mailServiceConfig() throws IOException {
+        return ResourceConfigurationLoader.loadConfiguration( MailServiceConfig.class );
     }
 
     @Bean
-    public MailRenderer mailRenderer() {
-        return new MailRenderer();
+    @Profile( Profiles.AWS_CONFIGURATION_PROFILE )
+    public MailServiceConfig awsMailServiceConfig() {
+        return ResourceConfigurationLoader.loadConfigurationFromS3( awsS3,
+                awsLaunchConfig.getBucket(),
+                awsLaunchConfig.getFolder(),
+                MailServiceConfig.class );
     }
-
 }
