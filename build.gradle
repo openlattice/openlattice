@@ -108,7 +108,7 @@ dependencies {
     compile "org.apache.olingo:odata-commons-core:${odata_version}"
     compile "org.apache.olingo:odata-server-api:${odata_version}"
     compile "org.apache.olingo:odata-server-core:${odata_version}"
-    compile "org.apache.tika:tika-core:1.19.1"
+    //compile "org.apache.tika:tika-core:1.19.1"
 
     compile "org.xerial.snappy:snappy-java:${snappy_version}"
     compile "net.jpountz.lz4:lz4:${lz4_version}"
