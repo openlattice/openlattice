@@ -52,35 +52,41 @@ public interface AuthorizationManager {
      */
     void setSecurableObjectType( AclKey aclKey, SecurableObjectType objectType );
 
+    @Timed
     void addPermission(
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions );
 
+    @Timed
     void addPermission(
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions,
             OffsetDateTime expirationDate );
 
+    @Timed
     void removePermission(
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions );
 
+    @Timed
     void setPermission(
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions );
 
+    @Timed
     void setPermission(
             AclKey aclKeys,
             Principal principal,
             EnumSet<Permission> permissions,
             OffsetDateTime expirationDate );
-
+    @Timed
     void deletePermissions( AclKey aclKey );
 
+    @Timed
     void deletePrincipalPermissions( Principal principal );
 
     @Timed Map<AclKey, EnumMap<Permission, Boolean>> maybeFastAccessChecksForPrincipals(
@@ -96,6 +102,7 @@ public interface AuthorizationManager {
             Set<AccessCheck> accessChecks,
             Set<Principal> principals );
 
+    @Timed
     boolean checkIfHasPermissions(
             AclKey aclKeys,
             Set<Principal> principals,
