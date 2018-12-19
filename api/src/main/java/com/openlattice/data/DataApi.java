@@ -258,10 +258,4 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId );
-
-    @GET( BASE + "/" + S3_URL_PATH )
-    String getBase64EncodedString( @Path( S3_URL ) String url );
-
-    @GET( BASE + "/" + S3_URLS_PATH )
-    Map<String, String> getBase64EncodedStrings( @Path( S3_URLS ) Set<String> urls );
 }

@@ -20,6 +20,7 @@ package com.openlattice.data;
 
 import com.openlattice.data.integration.*;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,9 +65,6 @@ public interface DataIntegrationApi {
             @Query( DETAILED_RESULTS ) boolean detailedResults,
             @Body Map<String, Map<UUID, Set<Object>>> entities );
 
-    @POST( BASE )
-    IntegrationResults integrateEntities( @Body Set<EntityData> data );
-
     /**
      * Creates a new set of associations.
      *
@@ -84,7 +82,7 @@ public interface DataIntegrationApi {
             @Query( DETAILED_RESULTS ) boolean detailedResults );
 
     @POST( BASE + "/" + S3 )
-    List<String> generatePresignedUrls( @Body List<S3EntityData> data );
+    List<String> generatePresignedUrls( @Body Collection<S3EntityData> data );
 
     @POST( BASE + "/" + ENTITY_KEY_IDS )
     List<UUID> getEntityKeyIds( @Body List<EntityKey> entityKeys );
