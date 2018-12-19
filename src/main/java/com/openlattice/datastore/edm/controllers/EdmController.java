@@ -814,7 +814,8 @@ public class EdmController implements EdmApi, AuthorizingComponent {
         return getEntityTypeId( fqn );
     }
 
-    @Override public UUID getEntityTypeId( FullQualifiedName fqn ) {
+
+    private UUID getEntityTypeId( FullQualifiedName fqn ) {
         return Preconditions.checkNotNull(
                 modelService.getTypeAclKey( fqn ),
                 "Entity Type %s does not exists.",
