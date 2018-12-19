@@ -26,15 +26,8 @@ import static com.google.common.base.Preconditions.checkState;
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.auth.UserInfo;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.authorization.SystemRole;
+import com.google.common.collect.ImmutableSet;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.directory.PrincipalApi;
@@ -42,13 +35,12 @@ import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Optional;
+
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
+
 import org.apache.commons.lang.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -78,11 +70,40 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
     @Override
     @RequestMapping(
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public SecurablePrincipal getSecurablePrincipal( @RequestBody Principal principal ) {
+        AclKey aclKey = spm.lookup( principal );
+
+        if ( !principal.getType().equals( PrincipalType.USER ) ) {
+            ensureReadAccess( aclKey );
+        }
+
+        return spm.getSecurablePrincipal( aclKey );
+    }
+
+    @Override
+    @RequestMapping(
             path = USERS,
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, Auth0UserBasic> getAllUsers() {
         return userDirectoryService.getAllUsers();
+    }
+
+    @Override
+    @RequestMapping(
+            path = { ROLES + CURRENT },
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Set<SecurablePrincipal> getCurrentRoles() {
+        return Principals.getCurrentPrincipals()
+                .stream()
+                .filter( principal -> principal.getType().equals( PrincipalType.ROLE ) )
+                .map( principal -> spm.lookup( principal ))
+                .filter( aclKey -> aclKey != null )
+                .map( aclKey -> spm.getSecurablePrincipal( aclKey ) )
+                .collect( Collectors.toSet() );
     }
 
     @Override
