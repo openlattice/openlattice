@@ -98,6 +98,26 @@ paths:
   /datastore/edm/summary/{propertyTypeId}:
     $ref: ./definitions/EDM/summary.yaml#/summaryProperty
 
+  # schema
+
+  /datastore/edm/schema/{namespace}/{name}:
+    $ref: ./definitions/EDM/schema.yaml#/schemaFqn
+  /datastore/edm/schema:
+    $ref: ./definitions/EDM/schema.yaml#/schema
+  /datastore/edm/schema/{namespace}:
+    $ref: ./definitions/EDM/schema.yaml#/schemaNamespace
+
+  ################
+  ## DATA API"s ##
+  ################
+
+  /datastore/data/set/{entitySetId}:
+    $ref: ./definitions/data/data.yaml#/entitySetId
+  /datastore/data/set/{entitySetId}/entities:
+    $ref: ./definitions/data/data.yaml#/entities
+  /datastore/data/set/{entitySetId}/count:
+    $ref: ./definitions/data/data.yaml#/count
+
   #####################
   ## DIRECTORY API"s ##
   #####################
@@ -127,6 +147,8 @@ tags:
   description: Permissions API"s
 - name: directory
   description: Directory API"s
+- name: data
+  description: Data API's
 externalDocs:
   description: "Find out more about OpenLattice"
   url: "https://openlattice.com/"
