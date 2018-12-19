@@ -76,6 +76,11 @@ public class ElasticsearchLambdas implements Serializable {
                 .deleteEntitySet( entitySetId );
     }
 
+    public static Function<ConductorElasticsearchApi, Boolean> clearEntitySetData( UUID entitySetId ) {
+        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
+                .clearEntitySetData( entitySetId );
+    }
+
     public static Function<ConductorElasticsearchApi, Boolean> createOrganization( Organization organization ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .createOrganization( organization );

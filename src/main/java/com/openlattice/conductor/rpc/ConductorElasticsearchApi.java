@@ -147,6 +147,8 @@ public interface ConductorElasticsearchApi {
 
     boolean deleteEntitySet( UUID entitySetId );
 
+    boolean clearEntitySetData( UUID entitySetId );
+
     SearchResult executeEntitySetMetadataSearch(
             Optional<String> optionalSearchTerm,
             Optional<UUID> optionalEntityType,
