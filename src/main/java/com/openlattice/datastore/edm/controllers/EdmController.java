@@ -28,6 +28,7 @@ import com.google.common.collect.Sets;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
@@ -108,6 +109,9 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     @Inject
     private EdmAuthorizationHelper authzHelper;
+
+    @Inject
+    private DataGraphManager dgm;
 
     @RequestMapping(
             path = CLEAR_PATH,
@@ -456,8 +460,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
         modelService.deleteEntitySet( entitySetId );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( entitySetId ) );
-        dataManager.deleteEntitySetData( entitySetId, authorizedPropertyTypes );
-
+        dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
         return null;
     }
 
