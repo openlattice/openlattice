@@ -367,9 +367,10 @@ open class DataGraphService(
         for (entity in entities) {
             val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { mutableMapOf() }
             val entityDetails = entitiesToCreate.getOrPut(entity.entityId) { entity.details }
-            if (entityDetails !== entity.details) {
+            if(entityDetails !== entity.details) {
                 entity.details.forEach { propertyTypeId, values ->
-                    entityDetails.getOrPut(propertyTypeId) { mutableSetOf() }.addAll(values)
+                    entityDetails.getOrPut(propertyTypeId){ mutableSetOf() }.addAll( values )
+
                 }
             }
         }
