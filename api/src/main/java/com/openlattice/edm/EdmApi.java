@@ -89,6 +89,7 @@ public interface EdmApi {
     String ENTITY_SETS_PATH      = "/entity/set";
     String ENTITY_TYPE_PATH      = "/entity/type";
     String PROPERTY_TYPE_PATH    = "/property/type";
+    String PROPERTIES_PATH       = "/properties";
     String COMPLEX_TYPE_PATH     = "/complex/type";
     String ASSOCIATION_TYPE_PATH = "/association/type";
     String HIERARCHY_PATH        = "/hierarchy";
@@ -634,6 +635,9 @@ public interface EdmApi {
 
     @GET( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH )
     Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( @Path( ID ) UUID entitySetId );
+
+    @GET( ENTITY_SETS_BASE_PATH + ID_PATH + PROPERTIES_PATH )
+    Map<UUID, PropertyType> getPropertyTypesForEntitySet( @Path( ID ) UUID entitySetId );
 
     @GET( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )
     EntitySetPropertyMetadata getEntitySetPropertyMetadata(
