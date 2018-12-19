@@ -26,28 +26,30 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kryptnostic.rhizome.configuration.Configuration;
 import com.kryptnostic.rhizome.configuration.ConfigurationKey;
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey;
+import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration;
 
+@ReloadableConfiguration( uri = "mail-service-config.yaml" )
 public final class MailServiceConfig implements Configuration {
-    private static final long         serialVersionUID    = -6047689414585379842L;
+    private static final long serialVersionUID = -6047689414585379842L;
 
-    protected static final ConfigurationKey key                 = new SimpleConfigurationKey( "mail-service-config.yaml" );
+    protected static final ConfigurationKey key = new SimpleConfigurationKey( "mail-service-config.yaml" );
 
     protected static final String SMTP_HOST_PROPERTY = "smtp-host";
     protected static final String SMTP_PORT_PROPERTY = "smtp-port";
     protected static final String USERNAME_PROPERTY  = "username";
     protected static final String PASSWORD_PROPERTY  = "password";
 
-    protected final String            smtpHost;
-    protected final int               smtpPort;
-    protected final String            username;
-    protected final String            password;
+    protected final String smtpHost;
+    protected final int    smtpPort;
+    protected final String username;
+    protected final String password;
 
     @JsonCreator
     public MailServiceConfig(
             @JsonProperty( SMTP_HOST_PROPERTY ) String smtpHost,
             @JsonProperty( SMTP_PORT_PROPERTY ) int smtpPort,
             @JsonProperty( USERNAME_PROPERTY ) String username,
-            @JsonProperty( PASSWORD_PROPERTY ) String password) {
+            @JsonProperty( PASSWORD_PROPERTY ) String password ) {
 
         /*
          * TODO: copy of MailServiceConfiguration.java from Rhizome; need to think about how configuration will work
