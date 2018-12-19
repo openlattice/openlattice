@@ -48,6 +48,7 @@ import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
+import com.openlattice.edm.events.EntitySetDataClearedEvent;
 import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.postgres.JsonDeserializer;
@@ -182,6 +183,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         }
     }
 
+    private void signalEntitySetDataCleared( UUID entitySetId ) {
+        eventBus.post( new EntitySetDataClearedEvent( entitySetId ) );
+    }
+
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesDeletedEvent( entitySetId, entityKeyIds ) );
@@ -207,7 +212,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     @Override public int clearEntitySet(
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        return dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
+        final var count = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
+        signalEntitySetDataCleared(entitySetId);
+        return count;
     }
 
     @Timed
