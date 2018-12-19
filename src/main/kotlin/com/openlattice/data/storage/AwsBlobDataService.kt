@@ -46,7 +46,7 @@ class AwsBlobDataService(
     }
 
     override fun deleteObjects(s3Keys: List<String>) {
-        val keysToDelete = s3Keys.map{DeleteObjectsRequest.KeyVersion(it)}.toList()
+        val keysToDelete = s3Keys.map { DeleteObjectsRequest.KeyVersion(it) }.toList()
         val deleteRequest = DeleteObjectsRequest(datastoreConfiguration.bucketName).withKeys(keysToDelete)
         s3.deleteObjects(deleteRequest)
     }
@@ -71,9 +71,8 @@ class AwsBlobDataService(
     }
 
     override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod): URL {
-        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
-                httpMethod
-        ).withExpiration(expiration)
+        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString())
+                .withMethod(httpMethod).withExpiration(expiration)
         lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)

@@ -52,9 +52,9 @@ interface DataGraphManager {
             linking: Boolean
     ): EntitySetData<FullQualifiedName>
 
-    fun getLinkingEntitySetSize( linkedEntitySetIds: Set<UUID> ): Long
+    fun getLinkingEntitySetSize(linkedEntitySetIds: Set<UUID>): Long
 
-    fun getEntitySetSize( entitySetId: UUID ): Long
+    fun getEntitySetSize(entitySetId: UUID): Long
 
     /*
      * CRUD methods for entity
@@ -93,7 +93,7 @@ interface DataGraphManager {
      * Bulk endpoints for entities/associations
      */
 
-    fun getEntityKeyIds( entityKeys: Set<EntityKey> ): Map<UUID, Map<String, UUID>>
+    fun getEntityKeyIds(entityKeys: Set<EntityKey>): Map<UUID, Map<String, UUID>>
 
     fun integrateEntities(
             entitySetId: UUID,
@@ -176,4 +176,5 @@ interface DataGraphManager {
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
 
     fun createEdges(edges: Set<DataEdgeKey>): Int
+    fun createAssociations(associations: Set<DataEdgeKey>): Int
 }

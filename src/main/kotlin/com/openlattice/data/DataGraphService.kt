@@ -67,6 +67,8 @@ open class DataGraphService(
         private val eds: EntityDatastore,
         private val edm: EdmManager
 ) : DataGraphManager {
+
+
     //TODO: Move to a utility class
     companion object {
 
@@ -109,18 +111,19 @@ open class DataGraphService(
         return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, linking)
     }
 
-    override fun getLinkingEntitySetSize( linkedEntitySetIds: Set<UUID> ): Long {
-        if( linkedEntitySetIds.isEmpty() ) {
+    override fun getLinkingEntitySetSize(linkedEntitySetIds: Set<UUID>): Long {
+        if (linkedEntitySetIds.isEmpty()) {
             return 0
         }
 
         return eds.getLinkingEntities(
                 linkedEntitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
-                mapOf() ).count()
+                mapOf()
+        ).count()
     }
 
-    override fun getEntitySetSize( entitySetId: UUID ): Long {
-        return eds.getEntities( entitySetId, setOf(), mapOf()).count()
+    override fun getEntitySetSize(entitySetId: UUID): Long {
+        return eds.getEntities(entitySetId, setOf(), mapOf()).count()
     }
 
 
@@ -137,9 +140,10 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): SetMultimap<FullQualifiedName, Any> {
         return eds.getEntities(
-                entitySetId ,
+                entitySetId,
                 setOf(entityKeyId),
-                mapOf(entitySetId to authorizedPropertyTypes)).iterator().next()
+                mapOf(entitySetId to authorizedPropertyTypes)
+        ).iterator().next()
     }
 
     override fun getLinkingEntity(
@@ -149,7 +153,8 @@ open class DataGraphService(
     ): SetMultimap<FullQualifiedName, Any> {
         return eds.getLinkingEntities(
                 entitySetIds.map { it to Optional.of(setOf(entityKeyId)) }.toMap(),
-                authorizedPropertyTypes).iterator().next()
+                authorizedPropertyTypes
+        ).iterator().next()
     }
 
     override fun clearEntitySet(
@@ -201,10 +206,10 @@ open class DataGraphService(
                 .sum()
     }
 
-    override fun getEntityKeyIds( entityKeys: Set<EntityKey> ): Map<UUID, Map<String, UUID>> {
+    override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Map<UUID, Map<String, UUID>> {
         val idsMap = idService.getEntityKeyIds(entityKeys)
         val newMap = mutableMapOf<UUID, MutableMap<String, UUID>>()
-        for ((k,v) in idsMap) {
+        for ((k, v) in idsMap) {
             val entitySetId = k.entitySetId
             val entityId = k.entityId
             val entityKeyId = v
@@ -306,7 +311,7 @@ open class DataGraphService(
         return entityKeyIds
     }
 
-    override fun  integrateAssociations(
+    override fun integrateAssociations(
             associations: Set<Association>,
             authorizedPropertiesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Map<String, UUID>> {
@@ -362,9 +367,9 @@ open class DataGraphService(
         for (entity in entities) {
             val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { mutableMapOf() }
             val entityDetails = entitiesToCreate.getOrPut(entity.entityId) { entity.details }
-            if(entityDetails !== entity.details) {
+            if (entityDetails !== entity.details) {
                 entity.details.forEach { propertyTypeId, values ->
-                    entityDetails.getOrPut(propertyTypeId){ mutableSetOf() }.addAll( values )
+                    entityDetails.getOrPut(propertyTypeId) { mutableSetOf() }.addAll(values)
                 }
             }
         }
@@ -486,6 +491,9 @@ open class DataGraphService(
         return Stream.empty()
     }
 
+    override fun createAssociations(associations: Set<DataEdgeKey>): Int {
+        return graphService.createEdges(associations);
+    }
 
     override fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets> {
         return graphService.getNeighborEntitySets(entitySetIds)
