@@ -286,15 +286,26 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
-    public Integer createAssociations( Set<DataEdgeKey> associations ) {
-        Set<UUID> entitySetIds = associations.stream()
+    @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
+        //TODO: This allows creating an edge even if you don't have access to key properties on association
+        //entity set. Consider requiring access to key properties on association in order to allow creating edge.
+        associations.stream()
+                .flatMap( dataEdgeKey -> Stream.of( dataEdgeKey.getSrc().getEntitySetId(),
+                        dataEdgeKey.getDst().getEntitySetId(),
+                        dataEdgeKey.getEdge().getEntitySetId() ) );
+
+        final Set<UUID> entitySetIds = associations.stream()
                 .flatMap( edgeKey -> Stream.of(
                         edgeKey.getSrc().getEntitySetId(),
                         edgeKey.getDst().getEntitySetId(),
                         edgeKey.getEdge().getEntitySetId() ) )
                 .collect( Collectors.toSet() );
 
-        return null;
+        //Ensure that we have read access to entity set metadata.
+        entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+
+        return dgm.createAssociations( associations );
     }
 
     @Timed
@@ -350,7 +361,6 @@ public class DataController implements DataApi, AuthorizingComponent {
                         .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) ) ) );
-
         return dgm.createAssociations( associations, authorizedPropertyTypesByEntitySet );
     }
 

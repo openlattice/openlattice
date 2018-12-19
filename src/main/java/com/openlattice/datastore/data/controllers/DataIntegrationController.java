@@ -171,12 +171,15 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 authorizedPropertyTypesByEntitySet );
     }
 
+    @Override public List<String> generatePresignedUrls( Collection<S3EntityData> data ) {
+        throw new UnsupportedOperationException( "This shouldn't be invoked. Just here for the interface and efficiency" );
+    }
+
     @Timed
     @PostMapping( "/" + S3 )
-    @Override
     public List<String> generatePresignedUrls(
             @RequestBody List<S3EntityData> data ) {
-        final Set<UUID> entitySetIds = data.stream().map( s3Entity -> s3Entity.getEntitySetId() ).collect(
+        final Set<UUID> entitySetIds = data.stream().map( S3EntityData::getEntitySetId ).collect(
                 Collectors.toSet() );
         final SetMultimap<UUID, UUID> propertyIdsByEntitySet = HashMultimap.create();
         data.forEach( entity -> {
