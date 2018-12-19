@@ -164,9 +164,10 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             method = RequestMethod.PATCH,
             consumes = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_YAML_VALUE } )
     @ResponseStatus( HttpStatus.OK )
-    public void updateEntityDataModel( @RequestBody EntityDataModel edm ) {
+    public Void updateEntityDataModel( @RequestBody EntityDataModel edm ) {
         ensureAdminAccess();
         modelService.setEntityDataModel( edm );
+        return null;
     }
 
     @Override
@@ -807,9 +808,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     public UUID getEntityTypeId( @PathVariable( NAMESPACE ) String namespace, @PathVariable( NAME ) String name ) {
         FullQualifiedName fqn = new FullQualifiedName( namespace, name );
-        return Preconditions.checkNotNull( modelService.getTypeAclKey( fqn ),
+        return getEntityTypeId( fqn );
+    }
+
+    @Override
+    @RequestMapping(
+            path = IDS_PATH + ENTITY_TYPE_PATH + FULLQUALIFIED_NAME_PATH_REGEX,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public UUID getEntityTypeId( @PathVariable( FULLQUALIFIED_NAME ) FullQualifiedName fullQualifiedName ) {
+        return Preconditions.checkNotNull( modelService.getTypeAclKey( fullQualifiedName ),
                 "Entity Type %s does not exists.",
-                fqn.getFullQualifiedNameAsString() );
+                fullQualifiedName.getFullQualifiedNameAsString() );
     }
 
     @Override

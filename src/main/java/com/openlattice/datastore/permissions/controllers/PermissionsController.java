@@ -180,7 +180,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                     }
                     //build paths
                     for ( List<Principal> path : child_paths ) {
-                        var new_path = new ArrayList( path );
+                        var new_path = new ArrayList<>( path );
                         new_path.add( parent );
                         if ( !paths.contains( new_path ) ) { paths.add( new_path ); }
                     }
