@@ -151,7 +151,7 @@ public class PostgresEdmManager implements DbEdmManager {
     }
 
     public Iterable<EntitySet> getAllEntitySets() {
-        String getAllEntitySets = String.format("SELECT * FROM %1$s", ENTITY_SETS);
+        String getAllEntitySets = String.format( "SELECT * FROM %1$s", ENTITY_SETS );
         try ( Connection connection = hds.getConnection();
               PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
               ResultSet rs = ps.executeQuery() ) {
@@ -168,8 +168,8 @@ public class PostgresEdmManager implements DbEdmManager {
     }
 
     public Iterable<EntitySet> getAllEntitySetsForType( UUID entityTypeId ) {
-        String getEntitySetsByType = String.format("SELECT * FROM %1$s WHERE %2$s = ?", ENTITY_SETS,
-                ENTITY_TYPE_ID_FIELD);
+        String getEntitySetsByType = String.format( "SELECT * FROM %1$s WHERE %2$s = ?", ENTITY_SETS,
+                ENTITY_TYPE_ID_FIELD );
         try ( Connection connection = hds.getConnection();
               PreparedStatement ps = connection.prepareStatement( getEntitySetsByType ) ) {
             List<EntitySet> result = Lists.newArrayList();
@@ -182,6 +182,24 @@ public class PostgresEdmManager implements DbEdmManager {
             return result;
         } catch ( SQLException e ) {
             logger.debug( "Unable to load entity sets for entity type id {}", entityTypeId.toString(), e );
+            return ImmutableList.of();
+        }
+    }
+
+    public Iterable<EntitySet> getAllLinkingEntitySets() {
+        String getLinkingEntitySets = String.format( "SELECT * FROM %1$s WHERE %2$s = true", ENTITY_SETS,
+                PostgresColumn.LINKING.getName() );
+        try ( Connection connection = hds.getConnection();
+              PreparedStatement ps = connection.prepareStatement( getLinkingEntitySets ) ) {
+            List<EntitySet> result = Lists.newArrayList();
+            ResultSet rs = ps.executeQuery();
+            while ( rs.next() ) {
+                result.add( ResultSetAdapters.entitySet( rs ) );
+            }
+
+            return result;
+        } catch ( SQLException e ) {
+            logger.debug( "Unable to load all linking entity sets", e );
             return ImmutableList.of();
         }
     }

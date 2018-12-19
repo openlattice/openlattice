@@ -400,7 +400,31 @@ public class EdmService implements EdmManager {
         Util.deleteSafely( entitySets, entitySetId );
         aclKeyReservations.release( entitySetId );
         syncIds.remove( entitySetId );
+        if( !entitySet.isLinking() ) {
+            checkAndRemoveEntitySetLinkings( entitySetId );
+        }
         eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
+        logger.info( "Entity set {}({}) deleted successfully", entitySet.getName(), entitySetId );
+    }
+
+    /**
+     * Checks and removes links if deleted entity set is linked to a linking entity set
+     *
+     * @param entitySetId the id of the deleted entity set
+     */
+    private void checkAndRemoveEntitySetLinkings( UUID entitySetId ) {
+        edmManager.getAllLinkingEntitySets().forEach(
+                linkingEntitySet -> {
+                    if ( linkingEntitySet.getLinkedEntitySets().contains( entitySetId ) ) {
+                        removeLinkedEntitySets( linkingEntitySet.getId(), Set.of( entitySetId ) );
+                        logger.info(
+                                "Removed link between linking entity set {}({}) and deleted entity set ({})",
+                                linkingEntitySet.getName(),
+                                linkingEntitySet.getId(),
+                                entitySetId );
+                    }
+                }
+        );
     }
 
     @Override
