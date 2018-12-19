@@ -30,7 +30,7 @@ import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey;
 public final class MailServiceConfig implements Configuration {
     private static final long         serialVersionUID    = -6047689414585379842L;
 
-    protected static ConfigurationKey key                 = new SimpleConfigurationKey( "mail-service-config.yaml" );
+    protected static final ConfigurationKey key                 = new SimpleConfigurationKey( "mail-service-config.yaml" );
 
     protected static final String SMTP_HOST_PROPERTY = "smtp-host";
     protected static final String SMTP_PORT_PROPERTY = "smtp-port";
