@@ -39,8 +39,8 @@ public class GreenMailTest {
 
     protected static final int         PORT              = ServerSetupTest.SMTPS.getPort();
 
-    protected static GreenMail         greenMailServer;
-    protected static MailServiceConfig testMailServiceConfig;
+    protected static final GreenMail         greenMailServer;
+    protected static final MailServiceConfig testMailServiceConfig;
 
     static  {
 
