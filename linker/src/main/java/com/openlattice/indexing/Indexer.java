@@ -22,7 +22,6 @@ package com.openlattice.indexing;
 
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
-import com.kryptnostic.rhizome.pods.CassandraPod;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.indexing.pods.GraphProcessorPod;
 import com.openlattice.indexing.pods.PlasmaCoupling;
@@ -44,7 +43,6 @@ import com.openlattice.postgres.PostgresTablesPod;
  */
 public class Indexer extends RhizomeApplicationServer {
     public static final Class<?>[] rhizomePods = new Class<?>[] {
-            CassandraPod.class,
             RegistryBasedHazelcastInstanceConfigurationPod.class };
 
     public static final Class<?>[] conductorPods = new Class<?>[] {
@@ -54,7 +52,6 @@ public class Indexer extends RhizomeApplicationServer {
             PlasmaCoupling.class,
             MailServicePod.class,
             Auth0Pod.class,
-            CassandraPod.class,
             CassandraTablesPod.class,
             MapstoresPod.class,
             JdbcPod.class,
