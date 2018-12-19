@@ -1001,7 +1001,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata(
             @PathVariable( ID ) UUID entitySetId ) {
-        //You should be able to get propert
+        //You should be able to get properties without having read access
         ensureReadAccess( new AclKey( entitySetId ) );
         return modelService.getAllEntitySetPropertyMetadata( entitySetId );
     }
