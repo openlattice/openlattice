@@ -21,11 +21,10 @@
 
 package com.openlattice.data.storage
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
-import com.google.common.collect.Sets
+import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
@@ -37,8 +36,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Service
 import java.nio.ByteBuffer
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -298,20 +295,13 @@ class PostgresEntityDataQueryService(
                                 } else {
                                     val ps = preparedStatements[propertyTypeId]
                                     ps?.setObject(1, entityKeyId)
-
-                                    //Binary data types get stored in S3 bucket
-                                    if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
-                                        //store data in S3 bucket
+                                    if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) { //binary data are stored in s3 bucket
+                                        //store key to s3 data in postgres as property value
                                         val propertyHash = PostgresDataHasher.hashObjectToHex(it, EdmPrimitiveTypeKind.Binary)
-
-                                        //store entity set id/entity key id/property type id/property hash as key in S3
                                         val s3Key = entitySetId.toString() + "/" + entityKeyId.toString() + "/" + propertyTypeId.toString() + "/" + propertyHash
                                         byteBlobDataManager.putObject(s3Key, it as ByteArray)
-
-                                        //store S3 key to data in postgres as property value
                                         ps?.setBytes(2, PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String))
                                         ps?.setObject(3, s3Key)
-
                                     } else {
                                         ps?.setBytes(2, PostgresDataHasher.hashObject(it, datatypes[propertyTypeId]))
                                         ps?.setObject(3, it)

@@ -217,9 +217,7 @@ public interface EdmManager {
 
     EntityDataModelDiff getEntityDataModelDiff( EntityDataModel edm );
 
-    Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata(
-            UUID entitySetId,
-            Set<UUID> authorizedPropertyTypes );
+    Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( UUID entitySetId );
 
     EntitySetPropertyMetadata getEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId );
 

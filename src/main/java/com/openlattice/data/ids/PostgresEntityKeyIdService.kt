@@ -36,6 +36,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.stream.Collectors
 import kotlin.collections.HashMap
 
 /**
@@ -137,7 +138,6 @@ class PostgresEntityKeyIdService(
             return ids
         }
     }
-
     override fun getEntityKeyIds(
             entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID> {

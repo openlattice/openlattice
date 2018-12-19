@@ -417,7 +417,8 @@ public class EdmService implements EdmManager {
     @Override public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
         final EntitySet entitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = entitySet.getLinkedEntitySets().size();
-        entitySets.executeOnKey( linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
+        entitySets.executeOnKey( linkingEntitySetId,
+                new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
         return startSize - entitySet.getLinkedEntitySets().size();
     }
 
@@ -1466,10 +1467,8 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata(
-            UUID entitySetId,
-            Set<UUID> authorizedPropertyTypes ) {
-        return authorizedPropertyTypes.stream()
+    public Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( UUID entitySetId ) {
+        return getEntityTypeByEntitySetId( entitySetId ).getProperties().stream()
                 .collect( Collectors.toMap( propertyTypeId -> propertyTypeId,
                         propertyTypeId -> getEntitySetPropertyMetadata( entitySetId, propertyTypeId ) ) );
     }
