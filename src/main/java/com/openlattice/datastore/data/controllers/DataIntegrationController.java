@@ -172,33 +172,6 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     }
 
     @Timed
-    @PostMapping( "/" )
-    @Override
-    public IntegrationResults integrateEntities( @RequestBody Set<EntityData> entityData ) {
-        final Set<UUID> entitySetIds = entityData.stream().map( entity -> entity.getEntitySetId() ).collect(
-                Collectors.toSet() );
-        final Set<Entity> entities = new HashSet<>();
-        final SetMultimap<UUID, UUID> propertyIdsByEntitySet = HashMultimap.create();
-        entityData.forEach( entity -> {
-            propertyIdsByEntitySet
-                    .putAll( entity.getEntitySetId(), entity.getProperties().keySet() );
-        } );
-
-        //Ensure that we have read access to entity set metadata.
-        entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
-
-        accessCheck( EdmAuthorizationHelper
-                .aclKeysForAccessCheck( propertyIdsByEntitySet, WRITE_PERMISSION ) );
-
-        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
-                entitySetIds.stream()
-                        .collect( Collectors.toMap( Function.identity(),
-                                entitySetId -> authzHelper
-                                        .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
-        return postgresDataSinkService.integrateEntities( entityData, authorizedPropertyTypesByEntitySet );
-    }
-
-    @Timed
     @PostMapping( "/" + S3 )
     @Override
     public List<String> generatePresignedUrls(
@@ -226,7 +199,12 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         return awsDataSinkService.generatePresignedUrls( data, authorizedPropertyTypes );
     }
 
+    //Just sugar to conform to API interface. While still allow efficient serialization.
     @Override
+    public List<UUID> getEntityKeyIds( List<EntityKey> entityKeys ) {
+        throw new UnsupportedOperationException( "Nobody should be calling this." );
+    }
+
     @PostMapping( "/" + ENTITY_KEY_IDS )
     public Map<UUID, Map<String, UUID>> getEntityKeyIds( @RequestBody Set<EntityKey> entityKeys ) {
         return dgm.getEntityKeyIds( entityKeys );
@@ -237,8 +215,6 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
         return dgm.createEdges( edges );
     }
-
-
 
     private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
         final SetMultimap<UUID, UUID> propertyTypesByEntitySet = HashMultimap.create();
