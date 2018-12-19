@@ -36,41 +36,41 @@ import com.openlattice.postgres.PostgresPod;
 
 public class Datastore extends BaseRhizomeServer {
     public static final Class<?>[] datastorePods = new Class<?>[] {
-            ByteBlobServicePod.class,
-            DatastoreServicesPod.class,
-            TypeCodecsPod.class,
-            SharedStreamSerializersPod.class,
-            AwsS3Pod.class,
-            JdbcPod.class,
-            DatastoreNeuronPod.class,
-            PostgresPod.class
-    };
-    public static final Class<?>[] rhizomePods = new Class<?>[] {
-            RegistryBasedHazelcastInstanceConfigurationPod.class,
-            Auth0Pod.class };
-    public static final Class<?>[] webPods     = new Class<?>[] {
-            DatastoreServletsPod.class,
-            DatastoreSecurityPod.class, };
+                ByteBlobServicePod.class,
+                DatastoreServicesPod.class,
+                TypeCodecsPod.class,
+                SharedStreamSerializersPod.class,
+                AwsS3Pod.class,
+                JdbcPod.class,
+                DatastoreNeuronPod.class,
+                PostgresPod.class
+        };
+        public static final Class<?>[] rhizomePods = new Class<?>[] {
+                RegistryBasedHazelcastInstanceConfigurationPod.class,
+                Auth0Pod.class };
+        public static final Class<?>[] webPods     = new Class<?>[] {
+                DatastoreServletsPod.class,
+                DatastoreSecurityPod.class, };
 
-    static {
-        ObjectMappers.foreach( FullQualifiedNameJacksonSerializer::registerWithMapper );
-    }
+        static {
+            ObjectMappers.foreach( FullQualifiedNameJacksonSerializer::registerWithMapper );
+        }
 
     public Datastore( Class<?>... pods ) {
-        super( Pods.concatenate(
-                pods,
-                webPods,
-                rhizomePods,
-                RhizomeApplicationServer.DEFAULT_PODS,
-                datastorePods ) );
-    }
+            super( Pods.concatenate(
+                    pods,
+                    webPods,
+                    rhizomePods,
+                    RhizomeApplicationServer.DEFAULT_PODS,
+                    datastorePods ) );
+        }
 
-    @Override public void start( String... profiles ) throws Exception {
-        super.start( profiles );
-    }
+        @Override public void start( String... profiles ) throws Exception {
+            super.start( profiles );
+        }
 
-    public static void main( String[] args ) throws Exception {
-        Datastore datastore = new Datastore();
-        datastore.start( args );
+        public static void main( String[] args ) throws Exception {
+            Datastore datastore = new Datastore();
+            datastore.start( args );
     }
 }

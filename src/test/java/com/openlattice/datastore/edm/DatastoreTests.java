@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.openlattice.conductor.rpc.Employee;
 import com.openlattice.datastore.IntegrationTestsBootstrap;
-import com.openlattice.datastore.converters.IterableCsvHttpMessageConverter;
+import com.openlattice.web.converters.IterableCsvHttpMessageConverter;
 import com.openlattice.datastore.odata.EdmProviderImpl;
 import com.openlattice.datastore.odata.Transformers.EntitySetTransformer;
 import com.openlattice.datastore.odata.Transformers.EntityTypeTransformer;
