@@ -256,12 +256,13 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
+                    val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, true))
-                    stmt.setObject(1, entitySetIds)
+                    stmt.setArray(1, entitySetIdsArr)
                     stmt.setArray(2, ids)
-                    stmt.setObject(3, entitySetIds)
+                    stmt.setObject(3, entitySetIdsArr)
                     stmt.setArray(4, ids)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
@@ -701,15 +702,13 @@ private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${DST_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] )) )"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
-    var srcEntitySetSql = "${SRC_ENTITY_SET_ID.name} = ?"
-    var dstEntitySetSql = "${DST_ENTITY_SET_ID.name} = ?"
-
-    if (multipleEntitySetIds) {
-        srcEntitySetSql = "${SRC_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) )"
-        dstEntitySetSql = "${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) )"
+    val (srcEntitySetSql, dstEntitySetSql) = if (multipleEntitySetIds) {
+        "${SRC_ENTITY_SET_ID.name} = ANY( ? )" to "${DST_ENTITY_SET_ID.name} = ANY( ? )"
+    } else {
+        "${SRC_ENTITY_SET_ID.name} = ?" to "${DST_ENTITY_SET_ID.name} = ?"
     }
 
-    var srcSql = "$srcEntitySetSql AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    var srcSql = "$srcEntitySetSql AND ${SRC_ENTITY_KEY_ID.name} = ANY(?) "
     if (filter.dstEntitySetIds.isPresent) {
         if (filter.dstEntitySetIds.get().size  > 0 ) {
             srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(",") { "'$it'" }}))"
@@ -718,7 +717,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         }
     }
 
-    var dstSql = "$dstEntitySetSql AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))"
+    var dstSql = "$dstEntitySetSql AND ${DST_ENTITY_KEY_ID.name} = ANY(?)"
     if (filter.srcEntitySetIds.isPresent) {
         if (filter.srcEntitySetIds.get().size > 0) {
             dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(",") { "'$it'" }}))"
