@@ -47,11 +47,40 @@ private const val AVG_SCORE_FIELD = "avg_score"
  */
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
 
+    override fun getLinkableEntitySets(
+            linkableEntityTypeIds: Set<UUID>,
+            entitySetBlacklist: Set<UUID>,
+            whitelist: Set<UUID>): PostgresIterable<UUID> {
+        return PostgresIterable(Supplier {
+            val connection = hds.connection
+            val ps = connection.prepareStatement(LINKABLE_ENTITY_SET_IDS)
+            val entityTypeArr = PostgresArrays.createUuidArray(connection, linkableEntityTypeIds)
+            val blackListArr = PostgresArrays.createUuidArray(connection, entitySetBlacklist)
+            val whitelistArr = PostgresArrays.createUuidArray(connection, whitelist)
+            ps.setObject(1, entityTypeArr)
+            ps.setObject(2, blackListArr)
+            ps.setObject(3, whitelistArr)
+            val rs = ps.executeQuery()
+            StatementHolder(connection, ps, rs)
+        }, Function { ResultSetAdapters.id(it) })
+    }
 
-    override fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID,UUID>> {
+    override fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID, UUID>> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(ENTITY_KEY_IDS_NEEDING_LINKING)
+            val arr = PostgresArrays.createUuidArray(connection, entitySetIds)
+            ps.setObject(1, arr)
+            ps.setObject(2, limit)
+            val rs = ps.executeQuery()
+            StatementHolder(connection, ps, rs)
+        }, Function { ResultSetAdapters.entitySetId(it) to ResultSetAdapters.id(it) })
+    }
+
+    override fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int): PostgresIterable<Pair<UUID, UUID>> {
+        return PostgresIterable(Supplier {
+            val connection = hds.connection
+            val ps = connection.prepareStatement(ENTITY_KEY_IDS_NOT_LINKED)
             val arr = PostgresArrays.createUuidArray(connection, entitySetIds)
             ps.setObject(1, arr)
             ps.setObject(2, limit)
@@ -284,4 +313,13 @@ private val UPDATE_LINKED_ENTITIES_SQL = "UPDATE ${IDS.name} " +
 private val ENTITY_KEY_IDS_NEEDING_LINKING = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
         "FROM ${IDS.name} " +
         "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} AND ( ${LAST_INDEX.name} >= ${LAST_WRITE.name}) " +
-        " AND ${VERSION.name} > 0 LIMIT ?"
+        "AND ${VERSION.name} > 0 LIMIT ?"
+
+private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name} " +
+        "FROM ${IDS.name} " +
+        "WHERE ${ENTITY_SET_ID.name} = ANY(?) AND ${LAST_LINK.name} < ${LAST_WRITE.name} " +
+        "AND ${VERSION.name} > 0 LIMIT ?"
+
+private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
+        "FROM ${ENTITY_SETS.name} " +
+        "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "

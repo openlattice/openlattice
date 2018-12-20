@@ -20,11 +20,11 @@
 
 package com.openlattice.indexing;
 
+import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
-import com.openlattice.indexing.pods.GraphProcessorPod;
-import com.openlattice.indexing.pods.PlasmaCoupling;
+import com.openlattice.indexing.pods.*;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.datastore.cassandra.CassandraTablesPod;
@@ -33,19 +33,18 @@ import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
-import com.openlattice.indexing.pods.IndexerPostConfigurationServicesPod;
-import com.openlattice.indexing.pods.IndexerServicesPod;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTablesPod;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class Indexer extends RhizomeApplicationServer {
-    public static final Class<?>[] rhizomePods = new Class<?>[] {
-            RegistryBasedHazelcastInstanceConfigurationPod.class };
+public class Indexer extends BaseRhizomeServer {
+    public static final Class<?>[] rhizomePods = new Class<?>[]{
+            RegistryBasedHazelcastInstanceConfigurationPod.class,
+            Auth0Pod.class };
 
-    public static final Class<?>[] conductorPods = new Class<?>[] {
+    public static final Class<?>[] conductorPods = new Class<?>[]{
             IndexerPostConfigurationServicesPod.class,
             IndexerServicesPod.class,
             SharedStreamSerializersPod.class,
@@ -62,17 +61,19 @@ public class Indexer extends RhizomeApplicationServer {
             GraphProcessorPod.class
     };
 
+    public static final Class<?>[] webPods = new Class<?>[]{ IndexerServletsPod.class, IndexerSecurityPod.class };
+
     public Indexer() {
-        super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, rhizomePods, conductorPods ) );
+        super( Pods.concatenate( RhizomeApplicationServer.DEFAULT_PODS, webPods, rhizomePods, conductorPods ) );
     }
 
     @Override
-    public void sprout( String... activeProfiles ) {
-        super.sprout( activeProfiles );
+    public void start( String... activeProfiles ) throws Exception {
+        super.start( activeProfiles );
         getContext().getBean( MailService.class ).processEmailRequestsQueue();
     }
 
-    public static void main( String[] args ) {
-        new Indexer().sprout( args );
+    public static void main( String[] args ) throws Exception {
+        new Indexer().start( args );
     }
 }
