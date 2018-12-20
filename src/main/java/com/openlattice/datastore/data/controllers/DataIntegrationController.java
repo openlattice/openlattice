@@ -204,12 +204,12 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
 
     //Just sugar to conform to API interface. While still allow efficient serialization.
     @Override
-    public List<UUID> getEntityKeyIds( List<EntityKey> entityKeys ) {
+    public List<UUID> getEntityKeyIds( Set<EntityKey> entityKeys ) {
         throw new UnsupportedOperationException( "Nobody should be calling this." );
     }
 
     @PostMapping( "/" + ENTITY_KEY_IDS )
-    public Set<UUID> getEntityKeyIds( @RequestBody Set<EntityKey> entityKeys ) {
+    public Set<UUID> getEntityKeyIds( @RequestBody LinkedHashSet<EntityKey> entityKeys ) {
         return dgm.getEntityKeyIds( entityKeys );
     }
 
