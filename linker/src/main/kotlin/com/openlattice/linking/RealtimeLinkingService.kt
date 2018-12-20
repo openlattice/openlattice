@@ -23,6 +23,7 @@ package com.openlattice.linking
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
+import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityDataKey
@@ -31,7 +32,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.clustering.ClusterUpdate
 import com.openlattice.postgres.streams.PostgresIterable
-import org.deeplearning4j.clustering.strategy.BaseClusteringStrategy
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -211,11 +211,12 @@ class RealtimeLinkingService
     @Scheduled(fixedRate = 30000)
     fun runLinking() {
         logger.info("Trying to start linking job.")
+        var linkableEntitySets = setOf<UUID>()
         if (running.tryLock()) {
             try {
                 //TODO: Make this more efficient than pulling the entire list of entity sets locally.
                 //For example use a fast aggregator or directly query postgres and partition operation of linking
-                val linkableEntitySets = entitySets
+                linkableEntitySets = entitySets
                         .values
                         .filter { linkableTypes.contains(it.entityTypeId) }
                         .filter { !entitySetBlacklist.contains(it.id) }
