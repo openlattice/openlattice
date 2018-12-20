@@ -60,6 +60,7 @@ import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.IOException;
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
@@ -249,5 +250,10 @@ public class IndexerServicesPod {
         final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
         return new SocratesMatcher( model, fqnToIdMap );
+    }
+
+    @PostConstruct
+    void initPrincipals() {
+        Principals.init( principalService() );
     }
 }

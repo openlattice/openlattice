@@ -36,10 +36,10 @@ public class ConductorBootstrap {
         INDEXER = new Indexer();
         if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
             LoggerFactory.getLogger( ConductorBootstrap.class ).info("Running on bamboo!");
-            INDEXER.sprout( "awstest", "postgres" );
+            INDEXER.sprout( "awstest", "postgres", "keras" );
         } else {
             LoggerFactory.getLogger( ConductorBootstrap.class ).info("Not running on bamboo!");
-            INDEXER.sprout( "local", "postgres" );
+            INDEXER.sprout( "local", "postgres", "keras" );
         }
     }
 
