@@ -70,9 +70,9 @@ class ElasticsearchBlocker(
 
     private val entitySetsCache = Suppliers
             .memoizeWithExpiration({
-                                       entitySets.values.filter { it.entityTypeId == personEntityType.id }
-                                               .map(EntitySet::getId)
-                                   }, 1000, TimeUnit.MILLISECONDS)
+                entitySets.values.filter { it.entityTypeId == personEntityType.id }
+                        .map(EntitySet::getId)
+            }, 1000, TimeUnit.MILLISECONDS)
 
     @Timed
     override fun block(
@@ -106,7 +106,16 @@ class ElasticsearchBlocker(
              * The main linking service will skip these elements anyway so we should avoid loading data related to
              * pathological cases
              */
-            return entityDataKey to mapOf()
+            /* There can be cases, when there is no sufficient data for an entity to be blocked to itself
+             * (example: only 1 property has value)
+             * If it cannot block to itself, we only link it to itself
+             */
+            return entityDataKey to dataLoader
+                    .getEntityStream(entityDataKey.entitySetId, setOf(entityDataKey.entityKeyId))
+                    .stream()
+                    .map { EntityDataKey(entityDataKey.entitySetId, it.first) to it.second }
+                    .asSequence()
+                    .toMap()
         }
 
         sw.reset()
