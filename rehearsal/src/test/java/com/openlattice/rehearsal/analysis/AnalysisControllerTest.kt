@@ -6,6 +6,8 @@ import com.google.common.collect.ListMultimap
 import com.openlattice.data.DataEdge
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import com.openlattice.rehearsal.edm.PERSON_NAME
+import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
 import org.apache.olingo.commons.api.edm.EdmPrimitiveType
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.junit.Assert
