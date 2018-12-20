@@ -44,13 +44,12 @@ import com.openlattice.data.EntitySetData;
 import com.openlattice.data.UpdateType;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
-import com.openlattice.datastore.constants.CustomMediaType;
+import com.openlattice.web.mediatypes.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.search.SearchService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -222,9 +221,9 @@ public class DataController implements DataApi, AuthorizingComponent {
                         EnumSet.of( Permission.READ ) );
 
         final Map<UUID, PropertyType> allAuthorizedPropertyTypes =
-                authorizedPropertyTypes.values().stream().distinct()
-                        .flatMap( it -> it.entrySet().stream() )
-                        .collect( Collectors.toMap( it -> it.getKey(), it -> it.getValue() ) );
+                authorizedPropertyTypes.values().stream()
+                        .flatMap( it -> it.values().stream() ).distinct()
+                        .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) );
 
         final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( allAuthorizedPropertyTypes.size() );
 
@@ -287,15 +286,26 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
-    public Integer createAssociations( Set<DataEdgeKey> associations ) {
-        Set<UUID> entitySetIds = associations.stream()
+    @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
+        //TODO: This allows creating an edge even if you don't have access to key properties on association
+        //entity set. Consider requiring access to key properties on association in order to allow creating edge.
+        associations.stream()
+                .flatMap( dataEdgeKey -> Stream.of( dataEdgeKey.getSrc().getEntitySetId(),
+                        dataEdgeKey.getDst().getEntitySetId(),
+                        dataEdgeKey.getEdge().getEntitySetId() ) );
+
+        final Set<UUID> entitySetIds = associations.stream()
                 .flatMap( edgeKey -> Stream.of(
                         edgeKey.getSrc().getEntitySetId(),
                         edgeKey.getDst().getEntitySetId(),
                         edgeKey.getEdge().getEntitySetId() ) )
                 .collect( Collectors.toSet() );
 
-        return null;
+        //Ensure that we have read access to entity set metadata.
+        entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+
+        return dgm.createAssociations( associations );
     }
 
     @Timed
@@ -351,7 +361,6 @@ public class DataController implements DataApi, AuthorizingComponent {
                         .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) ) ) );
-
         return dgm.createAssociations( associations, authorizedPropertyTypesByEntitySet );
     }
 

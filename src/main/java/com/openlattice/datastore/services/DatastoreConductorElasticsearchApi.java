@@ -119,6 +119,16 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
+    public boolean clearEntitySetData( UUID entitySetId ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall
+                    .wrap( ElasticsearchLambdas.clearEntitySetData( entitySetId ) ) ).get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "unable to clear entity set data from elasticsearch" );
+            return false;
+        }    }
+
+    @Override
     public SearchResult executeEntitySetMetadataSearch(
             Optional<String> optionalSearchTerm,
             Optional<UUID> optionalEntityType,
