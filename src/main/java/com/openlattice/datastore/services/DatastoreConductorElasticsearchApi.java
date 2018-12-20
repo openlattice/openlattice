@@ -91,13 +91,15 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
 
     @Override
     public boolean createSecurableObjectIndex(
-            EntitySet entitySet,
-            List<PropertyType> propertyTypes ) {
+            UUID entitySetId,
+            List<PropertyType> propertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
         try {
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.createSecurableObjectIndex(
-                            entitySet,
-                            propertyTypes ) ) )
+                            entitySetId,
+                            propertyTypes,
+                            linkedEntitySetIds ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity set to elasticsearch" );
@@ -157,6 +159,24 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.updatePropertyTypesInEntitySet( entitySetId,
                             newPropertyTypes ) ) )
+                    .get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "unable to update property types in entity set in elasticsearch" );
+            return false;
+        }
+    }
+
+    @Override
+    public boolean addLinkedEntitySetsToEntitySet(
+            UUID linkingEntitySetId,
+            List<PropertyType> propertyTypes,
+            Set<UUID> newLinkedEntitySets ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall
+                    .wrap( ElasticsearchLambdas.addLinkedEntitySetsToEntitySet(
+                            linkingEntitySetId,
+                            propertyTypes,
+                            newLinkedEntitySets ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to update property types in entity set in elasticsearch" );
