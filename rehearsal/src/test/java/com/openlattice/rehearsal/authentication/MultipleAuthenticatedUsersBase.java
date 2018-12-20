@@ -21,6 +21,10 @@
 package com.openlattice.rehearsal.authentication;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Streams;
+import com.openlattice.analysis.AnalysisApi;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationsApi;
@@ -28,6 +32,8 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.DataApi;
+import com.openlattice.data.DataEdge;
+import com.openlattice.data.EntityDataKey;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
@@ -49,7 +55,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import kotlin.Pair;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -69,6 +80,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static OrganizationsApi organizationsApi;
     protected static LinkingApi linkingApi;
     protected static RealtimeLinkingApi realtimeLinkingApi;
+    protected static AnalysisApi       analysisApi;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -97,6 +109,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
         linkingApi = currentRetrofit.create( LinkingApi.class );
+        analysisApi = currentRetrofit.create( AnalysisApi.class );
 
         Retrofit indexerRetrofit = indexerRetrofitMap.get( user );
         if ( indexerRetrofit != null ) {
@@ -118,9 +131,9 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     public static void checkPermissionsMap(
             Map<Permission, Boolean> permissionMap,
             EnumSet<Permission> expectedPermissions ) {
-        EnumSet.allOf( Permission.class ).forEach( permission -> {
-            Assert.assertEquals( expectedPermissions.contains( permission ), permissionMap.get( permission ) );
-        } );
+        EnumSet.allOf( Permission.class ).forEach( permission ->
+            Assert.assertEquals( expectedPermissions.contains( permission ), permissionMap.get( permission ) )
+        );
     }
 
     public static void checkUserPermissions( AclKey aclKey, EnumSet<Permission> expected ) {
@@ -249,5 +262,29 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
 
     public static EntitySet createEntitySet( UUID entitySetId, EntityType entityType ) {
         return createEntitySet( entitySetId, entityType, false, new HashSet<>() );
+    }
+
+    public static Pair<UUID, List<DataEdge>> createDataEdges(
+            UUID edgeEntitySetId,
+            UUID srcEntitySetId,
+            UUID dstEntitySetId,
+            Set<UUID> properties,
+            List<UUID> srcIds,
+            List<UUID> dstIds,
+            int numberOfEntries) {
+        List<SetMultimap<UUID, Object>> edgeData = Lists.newArrayList(
+                TestDataFactory.randomStringEntityData(numberOfEntries, properties).values() );
+
+        List<DataEdge> edges = Streams
+                .mapWithIndex(
+                        Stream.of( srcIds.toArray() ),
+                        ( data, index ) -> {
+                            int idx = (int) index;
+                            EntityDataKey srcDataKey = new EntityDataKey( srcEntitySetId, srcIds.get( idx) );
+                            EntityDataKey dstDataKey = new EntityDataKey( dstEntitySetId, dstIds.get( idx ) );
+                            return new DataEdge( srcDataKey, dstDataKey, edgeData.get( idx ) ); } )
+                .collect( Collectors.toList() );
+
+        return new Pair<>(edgeEntitySetId, edges);
     }
 }

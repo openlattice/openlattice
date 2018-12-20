@@ -54,6 +54,9 @@ const val PERSON_GIVEN_NAME_NAMESPACE = "nc"
 const val PERSON_GIVEN_NAME_NAME = "PersonGivenName"
 
 class EdmTest : MultipleAuthenticatedUsersBase() {
+    private val PERSON_NAMESPACE = "general"
+    private val PERSON_NAME = "person"
+
     companion object {
         @JvmStatic @BeforeClass fun init() {
             loginAs("admin")
