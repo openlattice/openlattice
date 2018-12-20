@@ -221,9 +221,9 @@ public class DataController implements DataApi, AuthorizingComponent {
                         EnumSet.of( Permission.READ ) );
 
         final Map<UUID, PropertyType> allAuthorizedPropertyTypes =
-                authorizedPropertyTypes.values().stream().distinct()
-                        .flatMap( it -> it.entrySet().stream() )
-                        .collect( Collectors.toMap( it -> it.getKey(), it -> it.getValue() ) );
+                authorizedPropertyTypes.values().stream()
+                        .flatMap( it -> it.values().stream() ).distinct()
+                        .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) );
 
         final LinkedHashSet<String> orderedPropertyNames = new LinkedHashSet<>( allAuthorizedPropertyTypes.size() );
 
