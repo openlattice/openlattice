@@ -50,7 +50,7 @@ import retrofit2.Retrofit;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class SetupEnvironment {
-    protected static final AuthenticationTestRequestOptions authOptions  = new AuthenticationTestRequestOptions()
+    protected static final AuthenticationTestRequestOptions authOptions = new AuthenticationTestRequestOptions()
             .setUsernameOrEmail( "tests@openlattice.com" )
             .setPassword( "openlattice" );
     protected static final AuthenticationTestRequestOptions authOptions1 = new AuthenticationTestRequestOptions()
@@ -67,12 +67,14 @@ public class SetupEnvironment {
     protected static final Principal user1;
     protected static final Principal user2;
     protected static final Principal user3;
-    protected static final Retrofit  retrofit;
-    protected static final Retrofit  retrofit1;
-    protected static final Retrofit  retrofit2;
-    protected static final Retrofit  retrofit3;
+    protected static final Retrofit retrofit;
+    protected static final Retrofit retrofitIndexer;
+    protected static final Retrofit retrofit1;
+    protected static final Retrofit retrofit2;
+    protected static final Retrofit retrofit3;
+    protected static final Retrofit retrofitProd;
 
-    private static final Logger logger = LoggerFactory.getLogger( SetupEnvironment.class );
+    protected static final Logger logger = LoggerFactory.getLogger( SetupEnvironment.class );
 
     static {
         RateLimiter limiter = RateLimiter.create( .5 );
@@ -91,10 +93,10 @@ public class SetupEnvironment {
         TokenHolder thUser2 = AuthenticationTest.tokenHolder( authOptions2 );
         TokenHolder thUser3 = AuthenticationTest.tokenHolder( authOptions3 );
 
-        String tokenAdmin = (String) jwtAdmin.getCredentials();
-        String tokenUser1 = (String) jwtUser1.getCredentials();
-        String tokenUser2 = (String) jwtUser2.getCredentials();
-        String tokenUser3 = (String) jwtUser3.getCredentials();
+        String tokenAdmin = ( String ) jwtAdmin.getCredentials();
+        String tokenUser1 = ( String ) jwtUser1.getCredentials();
+        String tokenUser2 = ( String ) jwtUser2.getCredentials();
+        String tokenUser3 = ( String ) jwtUser3.getCredentials();
 
         RetrofitFactory.configureObjectMapper( FullQualifiedNameJacksonSerializer::registerWithMapper );
 
@@ -102,14 +104,16 @@ public class SetupEnvironment {
                 RetrofitFactory.Environment.TESTING,
                 () -> tokenAdmin,
                 new ThrowingCallAdapterFactory() );
+        retrofitIndexer = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING_INDEXER, () -> tokenAdmin );
         retrofit1 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser1 );
         retrofit2 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser2 );
         retrofit3 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser3 );
+        retrofitProd = RetrofitFactory.newClient( RetrofitFactory.Environment.PRODUCTION );
 
-        String idAdmin = (String) jwtAdmin.getPrincipal();
-        String idUser1 = (String) jwtUser1.getPrincipal();
-        String idUser2 = (String) jwtUser2.getPrincipal();
-        String idUser3 = (String) jwtUser3.getPrincipal();
+        String idAdmin = ( String ) jwtAdmin.getPrincipal();
+        String idUser1 = ( String ) jwtUser1.getPrincipal();
+        String idUser2 = ( String ) jwtUser2.getPrincipal();
+        String idUser3 = ( String ) jwtUser3.getPrincipal();
 
         Collection<SecurablePrincipal> rolesAdmin = retrofit.create( PrincipalApi.class )
                 .activateUser( thAdmin.getAccessToken() );
@@ -143,6 +147,11 @@ public class SetupEnvironment {
         Assert.assertTrue( adminUser.getRoles().contains( "admin" ) );
     }
 
+    public static Auth0UserBasic getUserInfo( Principal principal ) {
+        PrincipalApi pApi = retrofit.create( PrincipalApi.class );
+        return pApi.getUser( principal.getId() );
+    }
+
     public static void ensurePrincipalHasPrincipalsWithName(
             Collection<SecurablePrincipal> principals,
             String principalId ) {
@@ -154,7 +163,6 @@ public class SetupEnvironment {
                 .createBaseRhizomeRetrofitBuilder( environment.getBaseUrl(), httpClient ) )
                 .build();
     }
-
 
 
     protected static <T> T getApiAdmin( Class<T> clazz ) {
