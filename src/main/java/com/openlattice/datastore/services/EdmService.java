@@ -432,28 +432,36 @@ public class EdmService implements EdmManager {
         return propertyTypes.keySet();
     }
 
-    @Override public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
-        final EntitySet entitySet = Util.getSafely( entitySets, linkingEntitySetId );
-        final int startSize = entitySet.getLinkedEntitySets().size();
-        entitySets.executeOnKey( linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( linkedEntitySets ) );
-        return entitySet.getLinkedEntitySets().size() - startSize;
+    @Override
+    public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
+        final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
+        final int startSize = linkingEntitySet.getLinkedEntitySets().size();
+        entitySets.executeOnKey( linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
+        eventBus.post( new LinkedEntitySetAddedEvent(
+                linkingEntitySet.getId(),
+                Lists.newArrayList( getPropertyTypesForEntitySet( linkingEntitySetId ).values() ),
+                newLinkedEntitySets ) );
+        return linkingEntitySet.getLinkedEntitySets().size() - startSize;
     }
 
-    @Override public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
+    @Override
+    public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
         final EntitySet entitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = entitySet.getLinkedEntitySets().size();
         entitySets.executeOnKey( linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
         return startSize - entitySet.getLinkedEntitySets().size();
     }
 
-    @Override public Set<EntitySet> getLinkedEntitySets( UUID entitySetId ) {
+    @Override
+    public Set<EntitySet> getLinkedEntitySets( UUID entitySetId ) {
         final EntitySet es = Util.getSafely( entitySets, entitySetId );
         return es == null
                 ? ImmutableSet.of()
                 : ImmutableSet.copyOf( entitySets.getAll( es.getLinkedEntitySets() ).values() );
     }
 
-    @Override public Set<UUID> getLinkedEntitySetIds( UUID entitySetId ) {
+    @Override
+    public Set<UUID> getLinkedEntitySetIds( UUID entitySetId ) {
         final EntitySet es = Util.getSafely( entitySets, entitySetId );
         return es == null ? ImmutableSet.of() : es.getLinkedEntitySets();
     }

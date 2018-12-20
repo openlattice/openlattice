@@ -147,8 +147,9 @@ public interface ConductorElasticsearchApi {
     Set<UUID> getEntitySetWithIndices();
 
     boolean createSecurableObjectIndex(
-            EntitySet entitySet,
-            List<PropertyType> propertyTypes );
+            UUID entitySetId,
+            List<PropertyType> propertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds );
 
     boolean deleteEntitySet( UUID entitySetId );
 
@@ -163,6 +164,10 @@ public interface ConductorElasticsearchApi {
     boolean updateEntitySetMetadata( EntitySet entitySet );
 
     boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> newPropertyTypes );
+
+    boolean addLinkedEntitySetsToEntitySet( UUID linkingEntitySetId,
+                                            List<PropertyType> propertyTypes,
+                                            Set<UUID> newLinkedEntitySets );
 
     boolean createOrganization( Organization organization );
 
