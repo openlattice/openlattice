@@ -27,6 +27,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredRanking
 import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.data.storage.entityKeyIdColumns
@@ -72,7 +73,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun createEdges(keys: MutableSet<EdgeKey>): Int {
+    override fun createEdges(keys: MutableSet<DataEdgeKey>): Int {
         hds.connection.use {
             val ps = it.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
@@ -127,7 +128,14 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun deleteVerticesInEntitySet(entitySetId: UUID?): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val connection = hds.connection
+        connection.use{
+            val ps = connection.prepareStatement(DELETE_BY_SET_SQL)
+            ps.setObject(1, entitySetId)
+            ps.setObject(2, entitySetId)
+            ps.setObject(3, entitySetId)
+            return ps.executeUpdate()
+        }
     }
 
     override fun deleteVertices(entitySetId: UUID?, vertices: MutableSet<UUID>?): Int {
@@ -248,12 +256,13 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
+                    val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, true))
-                    stmt.setObject(1, entitySetIds)
+                    stmt.setArray(1, entitySetIdsArr)
                     stmt.setArray(2, ids)
-                    stmt.setObject(3, entitySetIds)
+                    stmt.setObject(3, entitySetIdsArr)
                     stmt.setArray(4, ids)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
@@ -525,8 +534,10 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
                 .filter(String::isNotBlank)
                 .joinToString(",")
+        val nullCheck = if(linked) "WHERE ${LINKING_ID.name} IS NOT NULL" else ""
         return "SELECT $allColumns " +
-                "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
+                "FROM ($spineSql $nullCheck) as spine " +
+                "INNER JOIN ($dataSql) as data USING($joinColumns) " +
                 "GROUP BY ($groupingColumns)"
     }
 
@@ -584,8 +595,10 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
                 .filter(String::isNotBlank)
                 .joinToString(",")
+        val nullCheck = if(linked) "WHERE ${LINKING_ID.name} IS NOT NULL" else ""
         return "SELECT $allColumns " +
-                "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
+                "FROM ($spineSql $nullCheck) as spine " +
+                "INNER JOIN ($dataSql) as data USING($joinColumns) " +
                 "GROUP BY ($groupingColumns)"
     }
 }
@@ -615,6 +628,12 @@ private val INSERT_COLUMNS = setOf(
         VERSION,
         VERSIONS
 ).map { it.name }.toSet()
+
+private val SET_ID_COLUMNS = setOf(
+        SRC_ENTITY_SET_ID,
+        DST_ENTITY_SET_ID,
+        EDGE_ENTITY_SET_ID
+).map{it.name}.toSet()
 
 /**
  * Builds the SQL query for top utilizers.
@@ -668,6 +687,8 @@ private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versio
         "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
+private val DELETE_BY_SET_SQL = "DELETE FROM ${EDGES.name} WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
+
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?)"
@@ -681,15 +702,13 @@ private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${DST_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] )) )"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
-    var srcEntitySetSql = "${SRC_ENTITY_SET_ID.name} = ?"
-    var dstEntitySetSql = "${DST_ENTITY_SET_ID.name} = ?"
-
-    if (multipleEntitySetIds) {
-        srcEntitySetSql = "${SRC_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) )"
-        dstEntitySetSql = "${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) )"
+    val (srcEntitySetSql, dstEntitySetSql) = if (multipleEntitySetIds) {
+        "${SRC_ENTITY_SET_ID.name} = ANY( ? )" to "${DST_ENTITY_SET_ID.name} = ANY( ? )"
+    } else {
+        "${SRC_ENTITY_SET_ID.name} = ?" to "${DST_ENTITY_SET_ID.name} = ?"
     }
 
-    var srcSql = "$srcEntitySetSql AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    var srcSql = "$srcEntitySetSql AND ${SRC_ENTITY_KEY_ID.name} = ANY(?) "
     if (filter.dstEntitySetIds.isPresent) {
         if (filter.dstEntitySetIds.get().size  > 0 ) {
             srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(",") { "'$it'" }}))"
@@ -698,7 +717,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         }
     }
 
-    var dstSql = "$dstEntitySetSql AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))"
+    var dstSql = "$dstEntitySetSql AND ${DST_ENTITY_KEY_ID.name} = ANY(?)"
     if (filter.srcEntitySetIds.isPresent) {
         if (filter.srcEntitySetIds.get().size > 0) {
             dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(",") { "'$it'" }}))"

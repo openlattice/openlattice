@@ -7,10 +7,7 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.amazonaws.services.s3.model.DeleteObjectRequest
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
-import com.amazonaws.services.s3.model.ObjectMetadata
-import com.amazonaws.services.s3.model.PutObjectRequest
+import com.amazonaws.services.s3.model.*
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
 import org.slf4j.LoggerFactory
@@ -32,20 +29,26 @@ class AwsBlobDataService(
     val s3 = newS3Client(datastoreConfiguration)
 
     fun newS3Client(datastoreConfiguration: DatastoreConfiguration): AmazonS3 {
-        var builder = AmazonS3ClientBuilder.standard()
+        val builder = AmazonS3ClientBuilder.standard()
         builder.region = datastoreConfiguration.regionName
         builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
         return builder.build()
     }
 
     override fun putObject(s3Key: String, data: ByteArray) {
-        var metadata = ObjectMetadata()
-        var dataInputStream = data.inputStream()
+        val metadata = ObjectMetadata()
+        val dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = "image"
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         s3.putObject(putRequest)
 
+    }
+
+    override fun deleteObjects(s3Keys: List<String>) {
+        val keysToDelete = s3Keys.map { DeleteObjectsRequest.KeyVersion(it) }.toList()
+        val deleteRequest = DeleteObjectsRequest(datastoreConfiguration.bucketName).withKeys(keysToDelete)
+        s3.deleteObjects(deleteRequest)
     }
 
     override fun deleteObject(s3Key: String) {
@@ -57,7 +60,7 @@ class AwsBlobDataService(
         return getPresignedUrls(keys)
     }
 
-    fun getPresignedUrls(keys: List<Any>): List<URL> {
+    override fun getPresignedUrls(keys: List<Any>): List<URL> {
         val expirationTime = Date()
         val timeToLive = expirationTime.time + datastoreConfiguration.timeToLive
         expirationTime.time = timeToLive
@@ -67,10 +70,9 @@ class AwsBlobDataService(
                 .map { it.get() }
     }
 
-    fun getPresignedUrl(key: Any, expiration: Date): URL {
-        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
-                HttpMethod.GET
-        ).withExpiration(expiration)
+    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod): URL {
+        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString())
+                .withMethod(httpMethod).withExpiration(expiration)
         lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)

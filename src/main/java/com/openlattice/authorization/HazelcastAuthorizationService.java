@@ -263,8 +263,6 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Set<Principal> principals,
             EnumSet<Permission> requiredPermissions ) {
-        boolean returnVal = false;
-        Stopwatch s = Stopwatch.createStarted();
         final var permissionsMap = new EnumMap<Permission, Boolean>( Permission.class );
         final var authzMap = ImmutableMap.of( key, permissionsMap );
 

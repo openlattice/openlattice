@@ -193,6 +193,12 @@ public class SearchService {
 
     @Timed
     @Subscribe
+    public void entitySetDataCleared( EntitySetDataClearedEvent event ) {
+        elasticsearchApi.clearEntitySetData( event.getEntitySetId() );
+    }
+
+    @Timed
+    @Subscribe
     public void createOrganization( OrganizationCreatedEvent event ) {
         elasticsearchApi.createOrganization( event.getOrganization() );
     }
@@ -360,6 +366,10 @@ public class SearchService {
     public Map<UUID, List<NeighborEntityDetails>> executeLinkingEntityNeighborSearch(
             Set<UUID> linkedEntitySetIds,
             EntityNeighborsFilter filter ) {
+        if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
+            return ImmutableMap.of();
+        }
+        
         Set<UUID> linkingIds = filter.getEntityKeyIds();
 
         PostgresIterable<Pair<UUID, Set<UUID>>> entityKeyIdsByLinkingIds = getEntityKeyIdsByLinkingIds( linkingIds );
@@ -399,6 +409,10 @@ public class SearchService {
     public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearch(
             Set<UUID> entitySetIds,
             EntityNeighborsFilter filter ) {
+        if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
+            return ImmutableMap.of();
+        }
+
         Set<Principal> principals = Principals.getCurrentPrincipals();
 
         Set<UUID> entityKeyIds = filter.getEntityKeyIds();

@@ -68,8 +68,9 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
 
         Map<AclKey, EnumMap<Permission, Boolean>> authorizations = authorize( accessRequest );
         authorizations.entrySet().stream()
-                .filter( authz -> authz.getValue().values().stream().allMatch( v -> !v ) )
+                .filter( authz -> authz.getValue().values().stream().anyMatch( v -> !v ) )
                 .forEach( authz -> propertyTypes.remove( authz.getKey().get( 1 ) ) );
+
         return propertyTypes;
     }
 
