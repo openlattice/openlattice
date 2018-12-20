@@ -1,5 +1,6 @@
 package com.openlattice.data
 
+import com.amazonaws.HttpMethod
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3
@@ -31,6 +32,7 @@ class LocalAwsBlobDataServiceTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
+            //for testing on bamboo
             val awsTestConfig = ResourceConfigurationLoader
                     .loadConfigurationFromResource("awstest.yaml", AwsLaunchConfiguration::class.java)
             val s3 = newS3Client(awsTestConfig)
@@ -46,6 +48,11 @@ class LocalAwsBlobDataServiceTest {
             )
             )
             this.byteBlobDataManager = byteBlobDataManager
+
+/*            //for local testing
+            val config = ResourceConfigurationLoader.loadConfiguration(DatastoreConfiguration::class.java)
+            val byteBlobDataManager = AwsBlobDataService(config, MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(2)))
+            this.byteBlobDataManager = byteBlobDataManager*/
         }
 
         private fun newS3Client(awsConfig: AmazonLaunchConfiguration): AmazonS3 {
@@ -93,5 +100,35 @@ class LocalAwsBlobDataServiceTest {
         val returnedDataList = byteBlobDataManager.getObjects(listOf(key2))
         val returnedURL = returnedDataList[0] as URL
         val returnedData = returnedURL.readBytes()
+    }
+
+    @Ignore
+    @Test
+    fun testSpeedOfGetPresignedURL() {
+        val data = ByteArray(10)
+        Random().nextBytes(data)
+        var keys = mutableListOf<String>()
+        for (i in 1..10000) {
+            var key = ""
+            for (j in 1..3) {
+                key = key.plus(UUID.randomUUID().toString()).plus("/")
+            }
+            key = key.plus(data.hashCode())
+            keys.add(key)
+        }
+        val start = System.currentTimeMillis()
+        byteBlobDataManager.getPresignedUrls(keys)
+        val stop = System.currentTimeMillis()
+        val duration = stop - start
+    }
+
+    @Ignore
+    @Test
+    fun getSpecificUrl() {
+        var expirationTime = Date()
+        var timeToLive = expirationTime.time + 600000
+        expirationTime.time = timeToLive
+        val url = byteBlobDataManager.getPresignedUrl("110a585b-fba1-49ab-a839-c7075cada6eb/5fde0000-0000-0000-8000-0000000024f7/19aa5ba7-647a-4185-ae91-54c466106df3/0bdb10ab6c099fa77840cef28e5ad43e", expirationTime, HttpMethod.GET)
+        println(url)
     }
 }

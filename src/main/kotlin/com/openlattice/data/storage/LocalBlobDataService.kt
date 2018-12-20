@@ -1,14 +1,24 @@
 package com.openlattice.data.storage
 
+import com.amazonaws.HttpMethod
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.net.URL
+import java.util.*
 
 private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 
 
 @Service
 class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
+    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod): URL {
+        throw UnsupportedOperationException()
+    }
+
+    override fun getPresignedUrls(keys: List<Any>): List<URL> {
+        throw UnsupportedOperationException()
+    }
 
     override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
         insertEntity(s3Key, data)
@@ -16,6 +26,9 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
 
     override fun deleteObject(s3Key: String) {
         deleteEntity(s3Key)
+    }
+    override fun deleteObjects(s3Keys: List<String>) {
+        s3Keys.forEach{deleteEntity(it)}
     }
 
     override fun getObjects(keys: List<Any>): List<Any> {

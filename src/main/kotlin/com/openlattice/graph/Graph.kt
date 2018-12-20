@@ -27,6 +27,7 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredRanking
 import com.openlattice.analysis.requests.WeightedRankingAggregation
+import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.data.storage.entityKeyIdColumns
@@ -72,7 +73,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun createEdges(keys: MutableSet<EdgeKey>): Int {
+    override fun createEdges(keys: MutableSet<DataEdgeKey>): Int {
         hds.connection.use {
             val ps = it.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
@@ -127,7 +128,14 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun deleteVerticesInEntitySet(entitySetId: UUID?): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val connection = hds.connection
+        connection.use{
+            val ps = connection.prepareStatement(DELETE_BY_SET_SQL)
+            ps.setObject(1, entitySetId)
+            ps.setObject(2, entitySetId)
+            ps.setObject(3, entitySetId)
+            return ps.executeUpdate()
+        }
     }
 
     override fun deleteVertices(entitySetId: UUID?, vertices: MutableSet<UUID>?): Int {
@@ -616,6 +624,12 @@ private val INSERT_COLUMNS = setOf(
         VERSIONS
 ).map { it.name }.toSet()
 
+private val SET_ID_COLUMNS = setOf(
+        SRC_ENTITY_SET_ID,
+        DST_ENTITY_SET_ID,
+        EDGE_ENTITY_SET_ID
+).map{it.name}.toSet()
+
 /**
  * Builds the SQL query for top utilizers.
  *
@@ -667,6 +681,8 @@ private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToStri
 private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+
+private val DELETE_BY_SET_SQL = "DELETE FROM ${EDGES.name} WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +
