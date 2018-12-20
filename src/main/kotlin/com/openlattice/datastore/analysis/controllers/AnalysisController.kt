@@ -35,7 +35,7 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
 import com.openlattice.data.requests.FileType
-import com.openlattice.datastore.constants.CustomMediaType
+import com.openlattice.web.mediatypes.CustomMediaType
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.edm.EntitySet
 import com.openlattice.postgres.DataTables.COUNT_FQN
