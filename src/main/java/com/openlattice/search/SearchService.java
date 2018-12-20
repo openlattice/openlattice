@@ -273,7 +273,7 @@ public class SearchService {
     }
 
     @Subscribe
-    public void addLinkedEntitSetsToEntitySet( LinkedEntitySetAddedEvent event ) {
+    public void addLinkedEntitySetsToEntitySet( LinkedEntitySetAddedEvent event ) {
         elasticsearchApi.addLinkedEntitySetsToEntitySet(
                 event.getLinkingEntitySetId(),
                 event.getPropertyTypes(),
