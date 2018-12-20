@@ -798,7 +798,6 @@ public class EdmService implements EdmManager {
         } );
 
         forceRemovePropertyTypesFromEntityType( entityTypeId, propertyTypeIds );
-
     }
 
     @Override
