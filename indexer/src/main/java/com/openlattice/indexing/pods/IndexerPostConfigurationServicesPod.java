@@ -23,6 +23,7 @@ package com.openlattice.indexing.pods;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.ResourceConfigurationLoader;
+import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityKeyIdService;
@@ -42,11 +43,13 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.RealtimeLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
+import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -77,6 +80,9 @@ public class IndexerPostConfigurationServicesPod {
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
+
+    @Inject
+    private AuthorizationManager authz;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
@@ -146,5 +152,15 @@ public class IndexerPostConfigurationServicesPod {
                 lc.getBlacklist(),
                 lc.getWhitelist(),
                 lc.getBlockSize() );
+    }
+
+    @Bean
+    public RealtimeLinkingController realtimeLinkingController() {
+        var lc = linkingConfiguration();
+        return new RealtimeLinkingController(
+                lqs(),
+                authz,
+                edm,
+                lc);
     }
 }
