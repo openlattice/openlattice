@@ -40,35 +40,46 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.LinkingApi;
+import com.openlattice.linking.RealtimeLinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.rehearsal.SetupEnvironment;
 import com.openlattice.requests.RequestsApi;
 import com.openlattice.search.SearchApi;
 
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import kotlin.Pair;
+
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
 import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
-    protected static String PERSON_NAMESPACE = "general";
-    protected static String PERSON_NAME = "person";
+    protected final static Map<String, Retrofit> retrofitMap = new HashMap<>();
+    protected final static Map<String, Retrofit> indexerRetrofitMap = new HashMap<>();
 
-    protected static Map<String, Retrofit> retrofitMap = new HashMap<>();
-
-    protected static EdmApi            edmApi;
-    protected static PermissionsApi    permissionsApi;
+    protected static EdmApi edmApi;
+    protected static PermissionsApi permissionsApi;
     protected static AuthorizationsApi authorizationsApi;
-    protected static RequestsApi       requestsApi;
-    protected static DataApi           dataApi;
-    protected static SearchApi         searchApi;
-    protected static OrganizationsApi  organizationsApi;
-    protected static LinkingApi        linkingApi;
+    protected static RequestsApi requestsApi;
+    protected static DataApi dataApi;
+    protected static SearchApi searchApi;
+    protected static OrganizationsApi organizationsApi;
+    protected static LinkingApi linkingApi;
+    protected static RealtimeLinkingApi realtimeLinkingApi;
     protected static AnalysisApi       analysisApi;
 
     static {
@@ -76,6 +87,8 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         retrofitMap.put( "user1", retrofit1 );
         retrofitMap.put( "user2", retrofit2 );
         retrofitMap.put( "user3", retrofit3 );
+        retrofitMap.put( "prod", retrofitProd );
+        indexerRetrofitMap.put( "admin", retrofitIndexer );
     }
 
     /**
@@ -97,6 +110,11 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
         linkingApi = currentRetrofit.create( LinkingApi.class );
         analysisApi = currentRetrofit.create( AnalysisApi.class );
+
+        Retrofit indexerRetrofit = indexerRetrofitMap.get( user );
+        if ( indexerRetrofit != null ) {
+            realtimeLinkingApi = indexerRetrofit.create( RealtimeLinkingApi.class );
+        }
     }
 
     public static PropertyType getBinaryPropertyType() {
@@ -156,17 +174,23 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return pt;
     }
 
+    public static EntityType createEntityType( FullQualifiedName fqn ) {
+        return createEntityType( Optional.of( fqn ), SecurableObjectType.EntityType );
+    }
+
     public static EntityType createEntityType( UUID... propertyTypes ) {
-        return createEntityType(SecurableObjectType.EntityType, propertyTypes);
+        return createEntityType( Optional.empty(), SecurableObjectType.EntityType, propertyTypes );
     }
 
     public static EntityType createEdgeEntityType( UUID... propertyTypes ) {
-        return createEntityType( SecurableObjectType.AssociationType, propertyTypes );
+        return createEntityType( Optional.empty(), SecurableObjectType.AssociationType, propertyTypes );
     }
 
-    private static EntityType createEntityType( SecurableObjectType category,  UUID... propertyTypes ) {
+    private static EntityType createEntityType( Optional<FullQualifiedName> fqn,
+                                                SecurableObjectType category,
+                                                UUID... propertyTypes ) {
         PropertyType k = createPropertyType();
-        EntityType expected = TestDataFactory.entityType( category, k );
+        EntityType expected = TestDataFactory.entityType( fqn, category, k );
         expected.removePropertyTypes( expected.getProperties() );
 
         if ( propertyTypes == null || propertyTypes.length == 0 ) {
@@ -175,7 +199,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             expected.addPropertyTypes( ImmutableSet.of( k.getId(), p1.getId(), p2.getId() ) );
         } else {
             expected.addPropertyTypes( ImmutableSet.copyOf( propertyTypes ) );
-            expected.addPropertyTypes(ImmutableSet.of(k.getId()));
+            expected.addPropertyTypes( ImmutableSet.of( k.getId() ) );
         }
 
         UUID entityTypeId = edmApi.createEntityType( expected );
@@ -205,9 +229,16 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         return createEntitySet( entityType );
     }
 
-    public static EntitySet createEntitySet( EntityType entityType, boolean linking,  Set<UUID> linkedEntitySetIds ) {
+    public static EntitySet createEntitySet( EntityType entityType, boolean linking, Set<UUID> linkedEntitySetIds ) {
+        return createEntitySet( UUID.randomUUID(), entityType, linking, linkedEntitySetIds );
+    }
+
+    public static EntitySet createEntitySet( UUID entitySetId,
+                                             EntityType entityType,
+                                             boolean linking,
+                                             Set<UUID> linkedEntitySetIds ) {
         EntitySet newES = new EntitySet(
-                Optional.of( UUID.randomUUID() ),
+                Optional.of( entitySetId ),
                 entityType.getId(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
                 "foobar",
@@ -227,6 +258,10 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
 
     public static EntitySet createEntitySet( EntityType entityType ) {
         return createEntitySet( entityType, false, new HashSet<>() );
+    }
+
+    public static EntitySet createEntitySet( UUID entitySetId, EntityType entityType ) {
+        return createEntitySet( entitySetId, entityType, false, new HashSet<>() );
     }
 
     public static Pair<UUID, List<DataEdge>> createDataEdges(

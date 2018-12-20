@@ -21,7 +21,7 @@ private lateinit var rolePrincipal2: Principal
 class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
 
     companion object {
-        val logger = LoggerFactory.getLogger(PermissionsControllerTest.javaClass)
+        val logger = LoggerFactory.getLogger(PermissionsControllerTest::class.java)
 
         @JvmStatic
         @BeforeClass

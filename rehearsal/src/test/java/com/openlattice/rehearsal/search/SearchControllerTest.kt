@@ -12,7 +12,7 @@ import java.util.*
 
 class SearchControllerTest  : MultipleAuthenticatedUsersBase() {
     companion object {
-        val logger = LoggerFactory.getLogger(SearchControllerTest.javaClass)
+        val logger = LoggerFactory.getLogger(SearchControllerTest::class.java)
 
         @JvmStatic
         @BeforeClass

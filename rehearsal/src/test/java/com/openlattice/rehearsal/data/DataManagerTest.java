@@ -35,12 +35,11 @@ import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.rehearsal.SetupEnvironment;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+
+import java.io.*;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
@@ -183,8 +182,9 @@ public class DataManagerTest extends SetupEnvironment {
         Map<UUID, EdmPrimitiveTypeKind> propertiesWithDataType = propertyTypes.entrySet().stream()
                 .collect( Collectors.toMap( e -> e.getKey(), e -> e.getValue().getDatatype() ) );
 
-        try ( FileReader fr = new FileReader( "src/test/resources/employees.csv" );
-                BufferedReader br = new BufferedReader( fr ) ) {
+        try ( InputStreamReader fr = new InputStreamReader(
+                new FileInputStream("src/test/resources/employees.csv"), StandardCharsets.UTF_8 );
+              BufferedReader br = new BufferedReader( fr ) ) {
 
             String line;
             int count = 0;

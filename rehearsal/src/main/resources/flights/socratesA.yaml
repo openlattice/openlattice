@@ -1,5 +1,6 @@
 entityDefinitions:
   SocratesTestA:
+    id: "91551726-afa2-4aee-8579-46cdfc610b97"
     entitySetName: "SocratesTestA"
     fqn: general.person
     propertyDefinitions:
