@@ -49,6 +49,7 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.util.ModelSerializer;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
@@ -453,9 +454,53 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             return true;
         }
 
+        final Map<String, Object> securableObjectMapping = prepareSecurableObjectProperties(
+                typeName,
+                propertyTypes,
+                linkedEntitySetIds );
+
+        try {
+            client.admin().indices().prepareCreate( indexName )
+                    .setSettings( getMetaphoneSettings() )
+                    .addMapping( typeName, securableObjectMapping )
+                    .execute().actionGet();
+        } catch ( IOException e ) {
+            logger.debug( "unable to create securable object index" );
+        }
+        return true;
+    }
+
+    private boolean addMappingToSecurableObjectIndex(
+            UUID entitySetId,
+            List<PropertyType> propertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
+
+        String indexName = getIndexName( entitySetId );
+        String typeName = getTypeName( entitySetId );
+
+        final Map<String, Object> securableObjectMapping = prepareSecurableObjectProperties(
+                typeName,
+                propertyTypes,
+                linkedEntitySetIds );
+
+        PutMappingRequest request = new PutMappingRequest( indexName );
+        request.type( typeName );
+        request.source( securableObjectMapping );
+        try {
+            client.admin().indices().putMapping( request ).actionGet();
+        } catch ( IllegalStateException e ) {
+            logger.debug( "unable to add mapping to securable object index" );
+        }
+        return true;
+    }
+
+    private Map<String, Object> prepareSecurableObjectProperties(
+            String typeName,
+            List<PropertyType> propertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
         // securable_object_row type mapping
-        Map<String, Object> securableObjectData = Maps.newHashMap();
         Map<String, Object> securableObjectMapping = Maps.newHashMap();
+        Map<String, Object> securableObjectData = Maps.newHashMap();
         Map<String, Object> properties = Maps.newHashMap();
 
         if ( linkedEntitySetIds.isPresent() ) {
@@ -479,15 +524,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         securableObjectData.put( ES_PROPERTIES, properties );
         securableObjectMapping.put( typeName, securableObjectData );
 
-        try {
-            client.admin().indices().prepareCreate( indexName )
-                    .setSettings( getMetaphoneSettings() )
-                    .addMapping( typeName, securableObjectMapping )
-                    .execute().actionGet();
-        } catch ( IOException e ) {
-            logger.debug( "unable to create securable object index" );
-        }
-        return true;
+        return securableObjectMapping;
     }
 
     @Override
@@ -595,7 +632,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean addLinkedEntitySetsToEntitySet( UUID linkingEntitySetId,
                                                    List<PropertyType> propertyTypes,
                                                    Set<UUID> newLinkedEntitySets ) {
-        return createSecurableObjectIndex( linkingEntitySetId, propertyTypes, Optional.of( newLinkedEntitySets ) );
+        return addMappingToSecurableObjectIndex( linkingEntitySetId, propertyTypes, Optional.of( newLinkedEntitySets ) );
     }
 
     @Override
