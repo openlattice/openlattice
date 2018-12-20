@@ -500,6 +500,15 @@ public interface EdmApi {
     UUID getEntityTypeId( @Path( NAMESPACE ) String namespace, @Path( NAME ) String name );
 
     /**
+     * Get ID for entity type with given {@link org.apache.olingo.commons.api.edm.FullQualifiedName}.
+     *
+     * @param fullQualifiedName The fullqualified name for a entity type.
+     * @return ID for entity type.
+     */
+    @GET( BASE + IDS_PATH + ENTITY_TYPE_PATH + FULLQUALIFIED_NAME_PATH )
+    UUID getEntityTypeId( @Path( FULLQUALIFIED_NAME ) FullQualifiedName fullQualifiedName);
+
+    /**
      * Edit property type metadata for a given property type.
      *
      * @param propertyTypeId ID for property type.
