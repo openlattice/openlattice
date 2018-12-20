@@ -20,11 +20,7 @@ package com.openlattice.data;
 
 import com.openlattice.data.integration.*;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import retrofit2.http.*;
 
@@ -85,7 +81,7 @@ public interface DataIntegrationApi {
     List<String> generatePresignedUrls( @Body Collection<S3EntityData> data );
 
     @POST( BASE + "/" + ENTITY_KEY_IDS )
-    List<UUID> getEntityKeyIds( @Body List<EntityKey> entityKeys );
+    List<UUID> getEntityKeyIds( @Body Set<EntityKey> entityKeys );
 
     @PUT( BASE + "/" + EDGES )
     int createEdges( @Body Set<DataEdgeKey> edges );
