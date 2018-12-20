@@ -533,8 +533,10 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
                 .filter(String::isNotBlank)
                 .joinToString(",")
+        val nullCheck = if(linked) "WHERE ${LINKING_ID.name} IS NOT NULL" else ""
         return "SELECT $allColumns " +
-                "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
+                "FROM ($spineSql $nullCheck) as spine " +
+                "INNER JOIN ($dataSql) as data USING($joinColumns) " +
                 "GROUP BY ($groupingColumns)"
     }
 
@@ -592,8 +594,10 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
                 .filter(String::isNotBlank)
                 .joinToString(",")
+        val nullCheck = if(linked) "WHERE ${LINKING_ID.name} IS NOT NULL" else ""
         return "SELECT $allColumns " +
-                "FROM ($spineSql) as spine INNER JOIN ($dataSql) as data USING($joinColumns) " +
+                "FROM ($spineSql $nullCheck) as spine " +
+                "INNER JOIN ($dataSql) as data USING($joinColumns) " +
                 "GROUP BY ($groupingColumns)"
     }
 }
