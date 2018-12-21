@@ -4,5 +4,6 @@ public enum SearchType {
     simple,
     advanced,
     geoDistance,
-    geoPolygon
+    geoPolygon,
+    writeDateTimeFilter
 }
