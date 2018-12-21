@@ -100,6 +100,7 @@ public class PostgresDataManager {
 
     private static String reindexSql( UUID entitySetId ) {
         return "UPDATE entity_key_ids SET last_index = '-infinity' WHERE entity_set_id ='"
-                .concat( entitySetId.toString() ).concat( "'" );
+                + entitySetId.toString()
+                + "'";
     }
 }
