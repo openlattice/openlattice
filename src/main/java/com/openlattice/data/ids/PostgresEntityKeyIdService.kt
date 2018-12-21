@@ -61,9 +61,7 @@ class PostgresEntityKeyIdService(
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
         checkState(ids.size == entityIds.size, "Insufficient ids generated.")
-
-        val idIterator = ids.iterator()
-        return entityIds.map { it to idIterator.next() }.toMap()
+        return entityIds.zip(ids).toMap()
     }
 
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
@@ -85,9 +83,14 @@ class PostgresEntityKeyIdService(
     }
 
     override fun reserveEntityKeyIds( entityKeys: Set<EntityKey> ): Set<UUID> {
-        val ids = idGenerationService.getNextIds(entityKeys.size)
-        storeEntityKeyIds(entityKeys.zip( ids ).toMap())
-        return ids
+        val entityIdsByEntitySet = entityKeys.groupBy ({ it.entitySetId },{it.entityId}).mapValues { it.value.toSet() }
+        val existing = loadEntityKeyIds(entityIdsByEntitySet)
+        val missing = entityKeys - existing.keys
+
+        val ids = idGenerationService.getNextIds(missing.size)
+        val missingMap = missing.zip( ids ).toMap()
+        storeEntityKeyIds(missingMap)
+        return entityKeys.asSequence().map { existing[it] ?: missingMap[it]!! }.toSet()
     }
 
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
@@ -123,13 +126,12 @@ class PostgresEntityKeyIdService(
         }
     }
 
-    private fun loadEntityKeyIds(entityIds: SetMultimap<UUID, String>): MutableMap<EntityKey, UUID> {
+    private fun loadEntityKeyIds(entityIds: Map<UUID, Set<String>>): MutableMap<EntityKey, UUID> {
         return hds.connection.use {
             val connection = it
-            val ids = HashMap<EntityKey, UUID>(entityIds.size())
+            val ids = HashMap<EntityKey, UUID>(entityIds.values.sumBy { it.size })
 
-            Multimaps
-                    .asMap(entityIds)
+            entityIds
                     .forEach {
                         val ps = connection.prepareStatement(entityKeyIdsSql)
                         ps.setObject(1, it.key)
@@ -146,9 +148,8 @@ class PostgresEntityKeyIdService(
     override fun getEntityKeyIds(
             entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID> {
-        val entityIds: SetMultimap<UUID, String> = HashMultimap.create()
-        entityKeys.forEach { entityIds.put(it.entitySetId, it.entityId) }
-        entityKeyIds.putAll(loadEntityKeyIds(entityIds))
+        val entityIdsByEntitySet = entityKeys.groupBy ({ it.entitySetId },{it.entityId}).mapValues { it.value.toSet() }
+        entityKeyIds.putAll(loadEntityKeyIds(entityIdsByEntitySet))
 
         //Making this line O(n) is why we chose to just take a set instead of a sequence (thus allowing lazy views since copy is required anyway)
         val missing = entityKeys.minus(entityKeyIds.keys)
