@@ -71,6 +71,20 @@ class PostgresEntityDataQueryService(
         ).toMap()
     }
 
+    fun getEntitiesByIdWithVersion(
+            entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            entityKeyIds: Set<UUID>
+    ): Map<UUID, Map<Any, Set<Any>>> {
+        val adapter = Function<ResultSet, Pair<UUID, Map<Any, Set<Any>>>> {
+            ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesByIdWithVersion(it, authorizedPropertyTypes, byteBlobDataManager)
+        }
+        return streamableEntitySet(
+                mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
+                EnumSet.of(MetadataOption.LAST_WRITE), Optional.empty(), adapter
+        ).toMap()
+    }
+
     fun streamableEntitySet(
             entitySetIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,

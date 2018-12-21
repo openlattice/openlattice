@@ -54,7 +54,7 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
 
         try {
             output.writeInt( object.getEntitiesById().size() );
-            for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entry : object.getEntitiesById().entrySet() ) {
+            for ( Map.Entry<UUID, Map<Object, Set<Object>>> entry : object.getEntitiesById().entrySet() ) {
                 writeUUID( output, entry.getKey() );
                 byte[] bytes = mapper.writeValueAsBytes( entry.getValue() );
                 output.writeInt( bytes.length );
@@ -70,12 +70,12 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
         UUID entitySetId = readUUID( input );
 
         int mapSize = input.readInt();
-        Map<UUID, SetMultimap<UUID, Object>> entitiesById = new HashMap<>( mapSize );
+        Map<UUID, SetMultimap<Object, Object>> entitiesById = new HashMap<>( mapSize );
         for ( int i = 0; i < mapSize; i++ ) {
             UUID key = readUUID( input );
 
             int numBytes = input.readInt();
-            SetMultimap<UUID, Object> entityData = HashMultimap.create();
+            SetMultimap<Object, Object> entityData;
             try {
                 entityData = mapper.readValue( input.readBytes( numBytes ), ref );
                 entitiesById.put( key, entityData );

@@ -139,6 +139,8 @@ public interface ConductorElasticsearchApi {
     final String BIDIRECTIONAL  = "bidirectional";
     final String URL            = "url";
 
+    String VERSION = "version";
+
     boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes );
 
     Set<UUID> getEntitySetWithIndices();
@@ -175,13 +177,9 @@ public interface ConductorElasticsearchApi {
 
     boolean createEntityData(
             EntityDataKey edk,
-            Map<UUID, Set<Object>> propertyValues );
+            Map<Object, Set<Object>> propertyValues );
 
-    boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById );
-
-    boolean updateEntityData(
-            EntityDataKey edk,
-            Map<UUID, Set<Object>> propertyValues );
+    boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<Object, Set<Object>>> entitiesById );
 
     boolean deleteEntityData( EntityDataKey edk );
 
@@ -192,9 +190,10 @@ public interface ConductorElasticsearchApi {
 
     /**
      * Performs a capped size search across several entity sets.
-     * @param entitySetIds The entity sets to search.
+     *
+     * @param entitySetIds  The entity sets to search.
      * @param fieldSearches The values for each field that is being searched.
-     * @param size The size cap on the results per entity set.
+     * @param size          The size cap on the results per entity set.
      * @param explain
      * @return A map entity set ids to entity key ids of results for each entity set.
      */

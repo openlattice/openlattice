@@ -20,9 +20,7 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.DataTables.LAST_INDEX;
-import static com.openlattice.postgres.DataTables.LAST_LINK;
-import static com.openlattice.postgres.DataTables.LAST_WRITE;
+import static com.openlattice.postgres.DataTables.*;
 import static com.openlattice.postgres.PostgresColumn.*;
 
 import com.google.common.collect.ImmutableList;
@@ -121,7 +119,7 @@ public final class PostgresTable {
                             CONTACTS,
                             LINKING,
                             PostgresColumn.LINKED_ENTITY_SETS,
-                            EXTERNAL);
+                            EXTERNAL );
     //.setUnique( NAME );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
@@ -221,6 +219,10 @@ public final class PostgresTable {
                             PostgresColumn.PERMISSIONS,
                             PostgresColumn.EXPIRATION_DATE )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
+    public static final PostgresTableDefinition PERSISTENT_SEARCHES      =
+            new PostgresTableDefinition( "persistent_searches" )
+                    .addColumns( ID, ACL_KEY, LAST_READ, EXPIRATION_DATE, ALERT_TYPE, SEARCH_CONSTRAINTS, ALERT_METADATA )
+                    .setUnique( ID, ACL_KEY );
     public static final PostgresTableDefinition PRINCIPALS               =
             new PostgresTableDefinition( "principals" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )
