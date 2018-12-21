@@ -36,17 +36,9 @@ public class PersistentSearchController implements PersistentSearchApi {
     @RequestMapping(
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
-    public Iterable<PersistentSearch> loadCurrentPersistentSearches() {
-        return persistentSearchService.loadPersistentSearchesForUser( false );
-    }
-
-    @Override
-    @RequestMapping(
-            path = { ALL },
-            method = RequestMethod.GET,
-            produces = { MediaType.APPLICATION_JSON_VALUE } )
-    public Iterable<PersistentSearch> loadAllPersistentSearches() {
-        return persistentSearchService.loadPersistentSearchesForUser( true );
+    public Iterable<PersistentSearch> loadPersistentSearches(
+            @RequestParam( INCLUDE_EXPIRED ) boolean includeExpired ) {
+        return persistentSearchService.loadPersistentSearchesForUser( includeExpired );
     }
 
     @Override
