@@ -71,13 +71,13 @@ class PostgresEntityDataQueryService(
         ).toMap()
     }
 
-    fun getEntitiesByIdWithVersion(
+    fun getEntitiesByIdWithLastWrite(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             entityKeyIds: Set<UUID>
     ): Map<UUID, Map<UUID, Set<Any>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
-            ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesByIdWithVersion(it, authorizedPropertyTypes, byteBlobDataManager)
+            ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesByIdWithLastWrite(it, authorizedPropertyTypes, byteBlobDataManager)
         }
         return streamableEntitySet(
                 mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),

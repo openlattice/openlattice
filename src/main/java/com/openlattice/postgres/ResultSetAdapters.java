@@ -754,7 +754,7 @@ public final class ResultSetAdapters {
         return data;
     }
 
-    public static Map<UUID, Set<Object>> implicitEntityValuesByIdWithVersion(
+    public static Map<UUID, Set<Object>> implicitEntityValuesByIdWithLastWrite(
             ResultSet rs,
             Map<UUID, PropertyType> authorizedPropertyTypes,
             ByteBlobDataManager byteBlobDataManager ) throws SQLException {

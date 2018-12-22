@@ -109,7 +109,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService
-                        .getEntitiesByIdWithVersion( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
+                        .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
     }
 
@@ -122,7 +122,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService
-                        .getEntitiesByIdWithVersion( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
+                        .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
     }
 
@@ -134,7 +134,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var count = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService
-                        .getEntitiesByIdWithVersion( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
+                        .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
     }
 
@@ -146,7 +146,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var count = dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService
-                        .getEntitiesByIdWithVersion( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
+                        .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
         return count;
     }
 
@@ -184,7 +184,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var count = dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
-                dataQueryService.getEntitiesByIdWithVersion( entitySetId,
+                dataQueryService.getEntitiesByIdWithLastWrite( entitySetId,
                         authorizedPropertyTypes,
                         replacementProperties.keySet() ) );
         return count;
@@ -438,7 +438,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 ImmutableMap.of( id, Multimaps.asMap( normalizedPropertyValues ) ),
                 authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
-                dataQueryService.getEntitiesByIdWithVersion( entitySetId, authorizedPropertyTypes, ImmutableSet
+                dataQueryService.getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, ImmutableSet
                         .of( id ) ) );
         return id;
     }
