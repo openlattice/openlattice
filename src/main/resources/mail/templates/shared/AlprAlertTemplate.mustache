@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+  <head>
+    <title>New ALPR Read</title>
+    <style>
+
+      @import url("//fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800");
+
+      h1 {
+        font-family: 'Open Sans', sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        line-height: normal;
+        color: #555e6f;
+        text-transform: uppercase;
+      }
+
+      .header {
+        font-size: 16px;
+        text-transform: uppercase;
+        line-height: normal;
+        color: #8e929b;
+      }
+
+      body {
+        font-family: 'Open Sans', sans-serif;
+        line-height: 1.8em;
+        color: #333;
+      }
+
+      .expiration {
+        font-style: italic;
+        font-size: 14px;
+      }
+
+      .vehicle {
+        width: 100%;
+        margin: 20px 0;
+      }
+
+      .divider {
+        width: 100%;
+        background-color: #e1e1eb;
+        height: 1px;
+        margin-bottom: 20px;
+      }
+
+      .readDetail {
+        font-family: 'Open Sans', sans-serif;
+        padding-top: 5px;
+      }
+
+      .hit {
+        color: #ff3c5d;
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <div>
+      <h1>New read for vehicle: {{licensePlate}}</h1>
+      <div class="divider" />
+      <div class="header">Alert Details</div>
+      <div class="readDetail"><b>Case number:</b> {{caseNum}}</div>
+      <div class="readDetail"><b>Search reason:</b> {{searchReason}}</div>
+      <div class="readDetail expiration">Alert expires on {{expiration}}</div>
+
+      <div class="vehicle">
+        <div class="divider" />
+        <div class="header">Read Details</div>
+        {{#hit}}<div class="readDetail hit"><b>Hit type:</b> {{hit}}</div>{{/hit}}
+        <div class="readDetail"><b>Read date/time:</b> {{readDateTime}}</div>
+        {{#agencyId}}<div class="readDetail"><b>Agency:</b> {{agencyId}}</div>{{/agencyId}}
+        {{#cameraId}}<div class="readDetail"><b>Camera ID:</b> {{cameraId}}</div>{{/cameraId}}
+        {{#coordinates}}<div class="readDetail"><b>Coordinates:</b> {{coordinates}}</div>{{/coordinates}}
+      </div>
+
+    </div>
+  </body>
+</html>
