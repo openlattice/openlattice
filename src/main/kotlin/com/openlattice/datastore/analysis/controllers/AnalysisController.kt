@@ -150,6 +150,10 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
         return entitySetId to authorizedPropertyTypes.keys
     }
 
+    private fun entitySetIsAuthorized(entitySetId: UUID): Boolean {
+        return authorizations.checkIfHasPermissions(AclKey(entitySetId), Principals.getCurrentPrincipals(), EnumSet.of(Permission.READ))
+    }
+
     fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,
@@ -171,12 +175,13 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             val authorizedAssociations =
                     edm.getEntitySetsOfType(filteredRanking.associationTypeId)
                             .map(EntitySet::getId)
+                            .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.associationFilters, it) }
-
                             .toMap()
             val authorizedNeighbors =
                     edm.getEntitySetsOfType(filteredRanking.neighborTypeId)
                             .map(EntitySet::getId)
+                            .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.neighborFilters, it) }
                             .toMap()
             AuthorizedFilteredRanking(
