@@ -52,7 +52,6 @@ import org.deeplearning4j.util.ModelSerializer;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.Client;
@@ -74,7 +73,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -460,7 +458,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 properties.put( propertyType.getId().toString(), getFieldMapping( propertyType ) );
             }
         }
-        properties.put( VERSION, ImmutableMap.of( TYPE, DATE ) );
+        properties.put( LAST_WRITE.toString(), ImmutableMap.of( TYPE, DATE ) );
 
         securableObjectData.put( ES_PROPERTIES, properties );
         securableObjectMapping.put( typeName, securableObjectData );
@@ -678,7 +676,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean createEntityData( EntityDataKey edk, Map<Object, Set<Object>> propertyValues ) {
+    public boolean createEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         UUID entitySetId = edk.getEntitySetId();
@@ -699,7 +697,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<Object, Set<Object>>> entitiesById ) {
+    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         try {
@@ -707,7 +705,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             String indexType = getTypeName( entitySetId );
 
             BulkRequestBuilder requestBuilder = client.prepareBulk();
-            for ( Map.Entry<UUID, Map<Object, Set<Object>>> entry : entitiesById.entrySet() ) {
+            for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entry : entitiesById.entrySet() ) {
                 final UUID entityKeyId = entry.getKey();
                 final byte[] s = mapper.writeValueAsBytes( entry.getValue() );
                 requestBuilder.add(
@@ -816,7 +814,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .forEach( uuid -> {
                     fieldsMap.put( uuid.toString(), 1F );
                 } );
-        fieldsMap.put( VERSION, 1F );
+        fieldsMap.put( LAST_WRITE.toString(), 1F );
 
         return fieldsMap;
     }
@@ -894,7 +892,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private QueryBuilder getWriteDateTimeFilterQuery( Constraint constraint ) {
-        RangeQueryBuilder query = QueryBuilders.rangeQuery( VERSION );
+        RangeQueryBuilder query = QueryBuilders.rangeQuery( LAST_WRITE.toString() );
 
         if ( constraint.getStartDate().isPresent() ) {
             query.gt( constraint.getStartDate().get().toString() );
