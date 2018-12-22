@@ -79,10 +79,13 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.search.EsEdmService;
+import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
+
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -246,7 +249,6 @@ public class DatastoreServicesPod {
         return new SyncTicketService( hazelcastInstance );
     }
 
-
     @Bean
     public AnalysisService analysisService() {
         return new AnalysisService();
@@ -323,7 +325,12 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource,byteBlobDataManager  );
+        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
+    }
+
+    @Bean
+    public PersistentSearchService persistentSearchService() {
+        return new PersistentSearchService( hikariDataSource, principalService() );
     }
 
     @Bean PostgresDataSinkService postgresDataSinkService() {
