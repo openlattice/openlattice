@@ -44,6 +44,7 @@ public class PersistentSearchController implements PersistentSearchApi {
     @Override
     @RequestMapping(
             path = { ID_PATH + EXPIRATION },
+            consumes = { MediaType.TEXT_PLAIN_VALUE },
             method = RequestMethod.PATCH )
     public Void updatePersistentSearchExpiration(
             @PathVariable( ID ) UUID id,
@@ -55,6 +56,7 @@ public class PersistentSearchController implements PersistentSearchApi {
     @Override
     @RequestMapping(
             path = { ID_PATH },
+            consumes = { MediaType.APPLICATION_JSON_VALUE },
             method = RequestMethod.PATCH )
     public Void updatePersistentSearchConstraints(
             @PathVariable( ID ) UUID id,
