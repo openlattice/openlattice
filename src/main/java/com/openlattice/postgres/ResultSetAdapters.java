@@ -754,11 +754,11 @@ public final class ResultSetAdapters {
         return data;
     }
 
-    public static Map<Object, Set<Object>> implicitEntityValuesByIdWithVersion(
+    public static Map<UUID, Set<Object>> implicitEntityValuesByIdWithVersion(
             ResultSet rs,
             Map<UUID, PropertyType> authorizedPropertyTypes,
             ByteBlobDataManager byteBlobDataManager ) throws SQLException {
-        final Map<Object, Set<Object>> data = new HashMap<>();
+        final Map<UUID, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
             List<?> objects = propertyValue( rs, propertyType );
@@ -772,7 +772,7 @@ public final class ResultSetAdapters {
             }
         }
 
-        data.put( ConductorElasticsearchApi.VERSION, ImmutableSet.of( lastWrite( rs ) ) );
+        data.put( ConductorElasticsearchApi.LAST_WRITE, ImmutableSet.of( lastWrite( rs ) ) );
         return data;
     }
 

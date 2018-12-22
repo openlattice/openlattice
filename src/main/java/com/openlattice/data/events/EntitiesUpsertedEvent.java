@@ -31,11 +31,11 @@ import java.util.UUID;
 public class EntitiesUpsertedEvent {
 
     private UUID                                entitySetId;
-    private Map<UUID, Map<Object, Set<Object>>> entities;
+    private Map<UUID, Map<UUID, Set<Object>>> entities;
 
     public EntitiesUpsertedEvent(
             UUID entitySetId,
-            Map<UUID, Map<Object, Set<Object>>> entities ) {
+            Map<UUID, Map<UUID, Set<Object>>> entities ) {
         this.entitySetId = entitySetId;
         this.entities = entities;
     }
@@ -44,7 +44,7 @@ public class EntitiesUpsertedEvent {
         return entitySetId;
     }
 
-    public Map<UUID, Map<Object, Set<Object>>> getEntities() {
+    public Map<UUID, Map<UUID, Set<Object>>> getEntities() {
         return entities;
     }
 }

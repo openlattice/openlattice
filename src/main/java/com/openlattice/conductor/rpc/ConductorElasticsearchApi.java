@@ -139,7 +139,7 @@ public interface ConductorElasticsearchApi {
     final String BIDIRECTIONAL  = "bidirectional";
     final String URL            = "url";
 
-    String VERSION = "version";
+    UUID LAST_WRITE = new UUID( 0, 0 );
 
     boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes );
 
@@ -177,9 +177,9 @@ public interface ConductorElasticsearchApi {
 
     boolean createEntityData(
             EntityDataKey edk,
-            Map<Object, Set<Object>> propertyValues );
+            Map<UUID, Set<Object>> propertyValues );
 
-    boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<Object, Set<Object>>> entitiesById );
+    boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById );
 
     boolean deleteEntityData( EntityDataKey edk );
 

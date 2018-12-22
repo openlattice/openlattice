@@ -75,8 +75,8 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             entityKeyIds: Set<UUID>
-    ): Map<UUID, Map<Any, Set<Any>>> {
-        val adapter = Function<ResultSet, Pair<UUID, Map<Any, Set<Any>>>> {
+    ): Map<UUID, Map<UUID, Set<Any>>> {
+        val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to ResultSetAdapters.implicitEntityValuesByIdWithVersion(it, authorizedPropertyTypes, byteBlobDataManager)
         }
         return streamableEntitySet(

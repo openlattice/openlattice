@@ -156,7 +156,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return entity;
     }
 
-    private void signalCreatedEntities( UUID entitySetId, Map<UUID, Map<Object, Set<Object>>> entities ) {
+    private void signalCreatedEntities( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
         if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities ) );
         }

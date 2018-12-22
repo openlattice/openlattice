@@ -38,11 +38,11 @@ public class EntityDataLambdas implements Function<ConductorElasticsearchApi, Bo
 
     @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
     private EntityDataKey            edk;
-    private Map<Object, Set<Object>> propertyValues;
+    private Map<UUID, Set<Object>> propertyValues;
 
     public EntityDataLambdas(
             EntityDataKey edk,
-            Map<Object, Set<Object>> propertyValues ) {
+            Map<UUID, Set<Object>> propertyValues ) {
         this.edk = edk;
         this.propertyValues = propertyValues;
     }
@@ -56,7 +56,7 @@ public class EntityDataLambdas implements Function<ConductorElasticsearchApi, Bo
         return edk;
     }
 
-    public Map<Object, Set<Object>> getPropertyValues() {
+    public Map<UUID, Set<Object>> getPropertyValues() {
         return propertyValues;
     }
 }

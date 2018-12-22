@@ -64,7 +64,7 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
         EntityDataKey edk = new EntityDataKey( entitySetId, entityKeyId );
 
         int numBytes = input.readInt();
-        SetMultimap<Object, Object> propertyValues = HashMultimap.create();
+        SetMultimap<UUID, Object> propertyValues = HashMultimap.create();
         try {
             propertyValues = mapper.readValue( input.readBytes( numBytes ), ref );
         } catch ( IOException e ) {

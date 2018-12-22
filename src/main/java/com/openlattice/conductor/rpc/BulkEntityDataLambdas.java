@@ -13,9 +13,9 @@ import java.util.function.Function;
 public class BulkEntityDataLambdas implements Function<ConductorElasticsearchApi, Boolean>, Serializable {
 
     private UUID                              entitySetId;
-    private Map<UUID, Map<Object, Set<Object>>> entitiesById;
+    private Map<UUID, Map<UUID, Set<Object>>> entitiesById;
 
-    public BulkEntityDataLambdas( UUID entitySetId, Map<UUID, Map<Object, Set<Object>>> entitiesById ) {
+    public BulkEntityDataLambdas( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         this.entitySetId = entitySetId;
         this.entitiesById = entitiesById;
     }
@@ -31,7 +31,7 @@ public class BulkEntityDataLambdas implements Function<ConductorElasticsearchApi
         return entitySetId;
     }
 
-    public Map<UUID, Map<Object, Set<Object>>> getEntitiesById() {
+    public Map<UUID, Map<UUID, Set<Object>>> getEntitiesById() {
         return entitiesById;
     }
 }
