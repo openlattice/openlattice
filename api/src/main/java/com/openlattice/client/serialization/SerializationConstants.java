@@ -31,6 +31,7 @@ public final class SerializationConstants {
     public static final String ACTION                           = "action";
     public static final String AGGREGATIONS                     = "aggregations";
     public static final String AGGREGATION_TYPE                 = "aggregationType";
+    public static final String ALERT_METADATA                   = "alertMetadata";
     public static final String ANALYZER                         = "analyzer";
     public static final String APPS                             = "apps";
     public static final String APP_ID                           = "appId";
@@ -84,6 +85,7 @@ public final class SerializationConstants {
     public static final String EDM_TEMPLATES_FIELD              = "edmTemplates";
     public static final String ELAPSED_MILLIS                   = "elapsedMillis";
     public static final String EMAILS_FIELD                     = "emails";
+    public static final String END                              = "end";
     public static final String ENTITIES                         = "entities";
     public static final String ENTITY_COUNT                     = "entityCount";
     public static final String ENTITY_DEFINITIONS_FIELD         = "entityDefinitions";
@@ -127,6 +129,7 @@ public final class SerializationConstants {
     public static final String KEYWORD                          = "kw";
     public static final String KEY_FIELD                        = "key";
     public static final String LAST_INDEX                       = "lastIndex";
+    public static final String LAST_READ                        = "lastRead";
     public static final String LAST_WRITE                       = "lastWrite";
     public static final String LATITUDE                         = "latitude";
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";

@@ -40,6 +40,9 @@ import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import com.openlattice.search.PersistentSearchNotificationType;
+import com.openlattice.search.requests.PersistentSearch;
+import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -132,7 +135,7 @@ public final class TestDataFactory {
             propertyTags.put( id, "PRIMARY KEY TAG" );
         }
 
-        SecurableObjectType entityTypeCategory = (category == null) ? SecurableObjectType.EntityType : category;
+        SecurableObjectType entityTypeCategory = ( category == null ) ? SecurableObjectType.EntityType : category;
 
         return new EntityType(
                 UUID.randomUUID(),
@@ -149,7 +152,7 @@ public final class TestDataFactory {
     }
 
     public static AssociationType associationType( PropertyType... keys ) {
-        EntityType et = entityType( SecurableObjectType.AssociationType,  keys );
+        EntityType et = entityType( SecurableObjectType.AssociationType, keys );
         return new AssociationType(
                 Optional.of( et ),
                 Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
@@ -509,4 +512,21 @@ public final class TestDataFactory {
     public static SearchDetails searchDetails() {
         return new SearchDetails( RandomStringUtils.randomAlphanumeric( 10 ), UUID.randomUUID(), r.nextBoolean() );
     }
+
+    public static SearchConstraints simpleSearchConstraints() {
+        return SearchConstraints.simpleSearchConstraints( new UUID[] { UUID.randomUUID() },
+                r.nextInt( 1000 ),
+                r.nextInt( 1000 ),
+                RandomStringUtils.randomAlphanumeric( 10 ) );
+    }
+
+    public static PersistentSearch persistentSearch() {
+        return new PersistentSearch( Optional.empty(),
+                Optional.empty(),
+                OffsetDateTime.now(),
+                PersistentSearchNotificationType.ALPR_ALERT,
+                simpleSearchConstraints(),
+                ImmutableMap.of() );
+    }
+
 }

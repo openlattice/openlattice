@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.search.SearchApi;
 
+import java.time.OffsetDateTime;
 import java.util.*;
 
 public class SearchConstraints {
@@ -49,7 +50,9 @@ public class SearchConstraints {
             Optional<Double> longitude,
             Optional<Double> radius,
             Optional<DistanceUnit> distanceUnit,
-            Optional<List<List<List<Double>>>> zones ) {
+            Optional<List<List<List<Double>>>> zones,
+            Optional<OffsetDateTime> startDate,
+            Optional<OffsetDateTime> endDate ) {
         this( entitySetIds,
                 start,
                 maxHits,
@@ -63,7 +66,9 @@ public class SearchConstraints {
                         longitude,
                         radius,
                         distanceUnit,
-                        zones
+                        zones,
+                        startDate,
+                        endDate
                 ) ) ) ) );
     }
 
@@ -94,6 +99,8 @@ public class SearchConstraints {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
                         Optional.empty() ) ) ) ) );
     }
 
@@ -110,6 +117,8 @@ public class SearchConstraints {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of( searches ),
+                        Optional.empty(),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -140,6 +149,8 @@ public class SearchConstraints {
                         Optional.of( longitude ),
                         Optional.of( radius ),
                         Optional.of( distanceUnit ),
+                        Optional.empty(),
+                        Optional.empty(),
                         Optional.empty() ) ) ) ) );
     }
 
@@ -162,7 +173,35 @@ public class SearchConstraints {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.of( zones ) ) ) ) ) );
+                        Optional.of( zones ),
+                        Optional.empty(),
+                        Optional.empty() ) ) ) ) );
+    }
+
+    public static SearchConstraints writeDateTimeFilterConstraints(
+            UUID[] entitySetIds,
+            int start,
+            int maxHits,
+            Optional<OffsetDateTime> startDate,
+            Optional<OffsetDateTime> endDate
+    ) {
+        return new SearchConstraints( entitySetIds,
+                start,
+                maxHits,
+                ImmutableList.of( new ConstraintGroup( ImmutableList.of( new Constraint(
+                        Optional.of( SearchType.writeDateTimeFilter ),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        startDate,
+                        endDate
+                ) ) ) ) );
     }
 
     @JsonProperty( SerializationConstants.ENTITY_SET_IDS )
