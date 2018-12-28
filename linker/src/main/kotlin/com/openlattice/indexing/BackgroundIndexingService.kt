@@ -212,7 +212,7 @@ class BackgroundIndexingService(
         val entitySetId = entitySet.id
         var indexCount = 0
         updateExpiration(entitySetId)
-        val entitiesById = dataQueryService.getEntitiesById(
+        val entitiesById = dataQueryService.getEntitiesByIdWithLastWrite(
                 entitySetId,
                 propertyTypeMap,
                 batchToIndex
