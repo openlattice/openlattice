@@ -20,35 +20,27 @@
 
 package com.openlattice.datastore.search.controllers;
 
-import com.google.common.base.Predicates;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.collect.*;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.search.SearchService;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.search.SearchApi;
+import com.openlattice.search.SearchService;
 import com.openlattice.search.requests.*;
-
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.http.MediaType;
+import javax.inject.Inject;
+import java.util.*;
+import java.util.stream.Collectors;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -364,11 +356,13 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                     return Lists.newArrayList();
                 }
                 return searchService
-                        .executeLinkingEntityNeighborSearch( authorizedEntitySets, new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
+                        .executeLinkingEntityNeighborSearch( authorizedEntitySets,
+                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
                         .get( entityKeyId );
             } else {
                 return searchService
-                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
+                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
+                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
                         .get( entityKeyId );
             }
         }
@@ -465,7 +459,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         ensureAdminAccess();
         List<Organization> allOrganizations = Lists.newArrayList(
                 organizationService.getOrganizations(
-                        getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) ) // TODO: other access check??
+                        getAccessibleObjects( SecurableObjectType.Organization,
+                                EnumSet.of( Permission.READ ) ) // TODO: other access check??
                                 .parallel()
                                 .filter( Predicates.notNull()::apply )
                                 .map( AuthorizationUtils::getLastAclKeySafely ) ) );
