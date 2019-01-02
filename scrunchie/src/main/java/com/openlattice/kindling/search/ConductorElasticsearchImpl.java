@@ -25,6 +25,7 @@ import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -52,7 +53,6 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.MultiSearchRequest;
 import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -66,10 +66,7 @@ import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.search.SearchHit;
@@ -788,33 +785,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean updateEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {//TODO linking
-
-        if ( !verifyElasticsearchConnection() ) { return false; }
-
-        UUID entitySetId = edk.getEntitySetId();
-        UUID entityKeyId = edk.getEntityKeyId();
-
-        GetResponse result = client
-                .prepareGet( getIndexName( entitySetId ), getTypeName( entitySetId ), entityKeyId.toString() ).get();
-        if ( result.isExists() ) {
-            result.getSourceAsMap().entrySet().forEach( entry ->
-                    {
-                        UUID propertyTypeId = UUID.fromString( entry.getKey() );
-                        propertyValues.merge( propertyTypeId,
-                                new HashSet<>( ( Collection<Object> ) entry.getValue() ),
-                                ( first, second ) -> {
-                                    first.addAll( second );
-                                    return first;
-                                } );
-                    }
-            );
-        }
-
-        return createEntityData( edk, propertyValues );
-    }
-
-    @Override
     public boolean deleteEntityData( EntityDataKey edk ) { //TODO linking
         if ( !verifyElasticsearchConnection() ) { return false; }
 
@@ -1003,6 +973,20 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return query;
     }
 
+    private QueryBuilder getWriteDateTimeFilterQuery( Constraint constraint ) {
+        RangeQueryBuilder query = QueryBuilders.rangeQuery( LAST_WRITE.toString() );
+
+        if ( constraint.getStartDate().isPresent() ) {
+            query.gt( constraint.getStartDate().get().toString() );
+        }
+
+        if ( constraint.getEndDate().isPresent() ) {
+            query.lte( constraint.getEndDate().get().toString() );
+        }
+
+        return query;
+    }
+
     private QueryBuilder getQueryForSearch(
             SearchConstraints searchConstraints,
             Map<String, Float> fieldsMap,
@@ -1030,6 +1014,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
                     case simple:
                         subQuery.should( getSimpleSearchQuery( constraint, fieldsMap ) );
+                        break;
+
+                    case writeDateTimeFilter:
+                        subQuery.should( getWriteDateTimeFilterQuery( constraint ) );
                         break;
 
                 }
@@ -1268,14 +1256,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return executeSearch( PROPERTY_TYPE_INDEX, PROPERTY_TYPE, searchTerm, start, maxHits, fieldsMap );
     }
 
-    @Override
-    public SearchResult executeAppSearch( String searchTerm, int start, int maxHits ) {
+    @Override public SearchResult executeAppSearch( String searchTerm, int start, int maxHits ) {
         Map<String, Float> fieldsMap = getFieldsMap( SecurableObjectType.App );
         return executeSearch( APP_INDEX, APP, searchTerm, start, maxHits, fieldsMap );
     }
 
-    @Override
-    public SearchResult executeAppTypeSearch( String searchTerm, int start, int maxHits ) {
+    @Override public SearchResult executeAppTypeSearch( String searchTerm, int start, int maxHits ) {
         Map<String, Float> fieldsMap = getFieldsMap( SecurableObjectType.AppType );
         return executeSearch( APP_TYPE_INDEX, APP_TYPE, searchTerm, start, maxHits, fieldsMap );
     }
