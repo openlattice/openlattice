@@ -79,7 +79,8 @@ public enum HazelcastMap {
     APPS( Table.APPS ),
     APP_TYPES( Table.APP_TYPES ),
     APP_CONFIGS( Table.APP_CONFIGS ),
-    ORGANIZATION_APPS( Table.ORGANIZATIONS );
+    ORGANIZATION_APPS( Table.ORGANIZATIONS ),
+    PERSISTENT_SEARCHES( Table.PERSISTENT_SEARCHES );
 
     private final Table table;
 

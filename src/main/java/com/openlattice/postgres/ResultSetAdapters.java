@@ -30,6 +30,7 @@ import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.*;
 import com.openlattice.data.hazelcast.DataKey;
 import com.openlattice.data.storage.ByteBlobDataManager;
@@ -48,6 +49,9 @@ import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import com.openlattice.search.PersistentSearchNotificationType;
+import com.openlattice.search.requests.PersistentSearch;
+import com.openlattice.search.requests.SearchConstraints;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -73,9 +77,12 @@ import static com.openlattice.postgres.PostgresColumn.*;
  */
 public final class ResultSetAdapters {
 
-    private static final Logger           logger  = LoggerFactory.getLogger( ResultSetAdapters.class );
-    private static final Decoder          DECODER = Base64.getMimeDecoder();
-    private static final ObjectMapper     mapper  = ObjectMappers.newJsonMapper();
+    private static final Logger                             logger               = LoggerFactory
+            .getLogger( ResultSetAdapters.class );
+    private static final Decoder                            DECODER              = Base64.getMimeDecoder();
+    private static final ObjectMapper                       mapper               = ObjectMappers.newJsonMapper();
+    private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
+    };
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -715,7 +722,7 @@ public final class ResultSetAdapters {
                     objects = Arrays.asList( (Boolean[]) arr.getArray() );
                     break;
                 case Binary:
-                    objects = Arrays.asList( (String[]) arr.getArray());
+                    objects = Arrays.asList( (String[]) arr.getArray() );
                     break;
                 default:
                     objects = null;
@@ -750,10 +757,32 @@ public final class ResultSetAdapters {
         return data;
     }
 
+    public static Map<UUID, Set<Object>> implicitEntityValuesByIdWithLastWrite(
+            ResultSet rs,
+            Map<UUID, PropertyType> authorizedPropertyTypes,
+            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
+        final Map<UUID, Set<Object>> data = new HashMap<>();
+
+        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
+            List<?> objects = propertyValue( rs, propertyType );
+
+            if ( objects != null ) {
+                if ( propertyType.getDatatype() == EdmPrimitiveTypeKind.Binary ) {
+                    data.put( propertyType.getId(), new HashSet<>( byteBlobDataManager.getObjects( objects ) ) );
+                } else {
+                    data.put( propertyType.getId(), new HashSet<>( objects ) );
+                }
+            }
+        }
+
+        data.put( ConductorElasticsearchApi.LAST_WRITE, ImmutableSet.of( lastWrite( rs ) ) );
+        return data;
+    }
+
     public static Map<FullQualifiedName, Set<Object>> implicitEntityValuesByFqn(
             ResultSet rs,
             Map<UUID, PropertyType> authorizedPropertyTypes,
-            ByteBlobDataManager byteBlobDataManager) throws SQLException {
+            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
         final Map<FullQualifiedName, Set<Object>> data = new HashMap<>();
 
         for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
@@ -775,15 +804,15 @@ public final class ResultSetAdapters {
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Set<MetadataOption> metadataOptions,
-            ByteBlobDataManager byteBlobDataManager) throws SQLException {
-        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager,false );
+            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
+        return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager, false );
     }
 
     public static SetMultimap<FullQualifiedName, Object> implicitLinkedEntity(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             Set<MetadataOption> metadataOptions,
-            ByteBlobDataManager byteBlobDataManager) throws SQLException {
+            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
         return implicitEntity( rs, authorizedPropertyTypes, metadataOptions, byteBlobDataManager, true );
     }
 
@@ -879,6 +908,34 @@ public final class ResultSetAdapters {
 
     public static OffsetDateTime expirationDate( ResultSet rs ) throws SQLException {
         return rs.getObject( EXPIRATION_DATE_FIELD, OffsetDateTime.class );
+    }
+
+    public static OffsetDateTime lastRead( ResultSet rs ) throws SQLException {
+        return rs.getObject( LAST_READ_FIELD, OffsetDateTime.class );
+    }
+
+    public static PersistentSearchNotificationType alertType( ResultSet rs ) throws SQLException {
+        return PersistentSearchNotificationType.valueOf( rs.getString( ALERT_TYPE_FIELD ) );
+    }
+
+    public static SearchConstraints searchConstraints( ResultSet rs ) throws SQLException, IOException {
+        String searchConstraintsJson = rs.getString( SEARCH_CONSTRAINTS_FIELD );
+        return mapper.readValue( searchConstraintsJson, SearchConstraints.class );
+    }
+
+    public static Map<String, Object> alertMetadata( ResultSet rs ) throws SQLException, IOException {
+        return mapper.readValue( rs.getString( ALERT_METADATA_FIELD ), alertMetadataTypeRef );
+    }
+
+    public static PersistentSearch persistentSearch( ResultSet rs ) throws SQLException, IOException {
+        UUID id = id( rs );
+        OffsetDateTime lastRead = lastRead( rs );
+        OffsetDateTime expiration = expirationDate( rs );
+        PersistentSearchNotificationType alertType = alertType( rs );
+        SearchConstraints searchConstraints = searchConstraints( rs );
+        Map<String, Object> alertMetadata = alertMetadata( rs );
+
+        return new PersistentSearch( id, lastRead, expiration, alertType, searchConstraints, alertMetadata );
     }
 
     public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn( MetadataOption metadataOption ) {

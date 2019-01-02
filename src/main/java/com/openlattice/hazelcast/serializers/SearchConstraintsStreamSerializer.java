@@ -7,6 +7,9 @@ import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.ImmutableList;
 import com.openlattice.search.requests.*;
 
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -87,6 +90,16 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
                         }
                     }
                 } );
+
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getStartDate(), ( output, date ) -> {
+                    output.writeString( date.getOffset().getId() );
+                    output.writeString( date.toLocalDateTime().toString() );
+                } );
+
+                OptionalStreamSerializers.kryoSerialize( out, constraint.getEndDate(), ( output, date ) -> {
+                    output.writeString( date.getOffset().getId() );
+                    output.writeString( date.toLocalDateTime().toString() );
+                } );
             }
         }
     }
@@ -156,6 +169,22 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
                     return zoneList;
                 } );
 
+                Optional<OffsetDateTime> startDate = OptionalStreamSerializers
+                        .kryoDeserialize( in, ( input ) -> {
+                            ZoneOffset offset = ZoneOffset.of( input.readString() );
+                            LocalDateTime ldt = LocalDateTime.parse( input.readString() );
+
+                            return OffsetDateTime.of( ldt, offset );
+                        } );
+
+                Optional<OffsetDateTime> endDate = OptionalStreamSerializers
+                        .kryoDeserialize( in, ( input ) -> {
+                            ZoneOffset offset = ZoneOffset.of( input.readString() );
+                            LocalDateTime ldt = LocalDateTime.parse( input.readString() );
+
+                            return OffsetDateTime.of( ldt, offset );
+                        } );
+
                 constraints.add( new Constraint( searchType,
                         searchTerm,
                         fuzzy,
@@ -165,7 +194,9 @@ public class SearchConstraintsStreamSerializer extends Serializer<SearchConstrai
                         longitude,
                         radius,
                         distanceUnit,
-                        zones ) );
+                        zones,
+                        startDate,
+                        endDate ) );
             }
 
             constraintGroups.add( new ConstraintGroup( minimumMatches, constraints ) );

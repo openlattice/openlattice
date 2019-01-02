@@ -42,7 +42,6 @@ import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
-import com.openlattice.data.events.EntityDataCreatedEvent;
 import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.storage.PostgresDataManager;
@@ -233,27 +232,10 @@ public class SearchService {
     }
 
     @Subscribe
-    public void indexEntities( EntitiesUpsertedEvent event ) { //TODO
-        if ( event.isUpdate() ) {
-            event.getEntities()
-                    .forEach( ( entitKeyId, entity ) -> elasticsearchApi
-                            .updateEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
-        } else {
-            event.getEntities()
-                    .forEach( ( entitKeyId, entity ) -> elasticsearchApi
-                            .createEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
-        }
-    }
-
-    @Subscribe
-    public void createEntityData( EntityDataCreatedEvent event ) {
-        EntityDataKey edk = event.getEntityDataKey();
-        Map<UUID, Set<Object>> entity = event.getPropertyValues();
-        if ( event.getShouldUpdate() ) {
-            elasticsearchApi.updateEntityData( edk, entity );
-        } else {
-            elasticsearchApi.createEntityData( edk, entity );
-        }
+    public void indexEntities( EntitiesUpsertedEvent event ) {
+        event.getEntities()
+                .forEach( ( entitKeyId, entity ) -> elasticsearchApi
+                        .createEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
     }
 
     @Subscribe
@@ -369,7 +351,7 @@ public class SearchService {
         if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
             return ImmutableMap.of();
         }
-        
+
         Set<UUID> linkingIds = filter.getEntityKeyIds();
 
         PostgresIterable<Pair<UUID, Set<UUID>>> entityKeyIdsByLinkingIds = getEntityKeyIdsByLinkingIds( linkingIds );
@@ -399,7 +381,8 @@ public class SearchService {
                             ImmutableList.Builder<NeighborEntityDetails> linkedNeighbours = ImmutableList.builder();
                             entityKeyIdsOfLinkingId.getRight().stream()
                                     .filter( entityKeyId -> entityNeighbors.containsKey( entityKeyId ) )
-                                    .forEach( entityKeyId -> linkedNeighbours.addAll( entityNeighbors.get( entityKeyId ) ) );
+                                    .forEach( entityKeyId -> linkedNeighbours
+                                            .addAll( entityNeighbors.get( entityKeyId ) ) );
                             return linkedNeighbours.build();
                         }
                 ) );
@@ -580,8 +563,7 @@ public class SearchService {
     private List<SetMultimap<FullQualifiedName, Object>> getResults(
             UUID entitySetId,
             Set<UUID> entityKeyIds,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            boolean linking ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
         if ( entityKeyIds.size() == 0 ) { return ImmutableList.of(); }
         if ( linking ) {
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetIds = authorizedPropertyTypes.keySet().stream()
@@ -636,17 +618,7 @@ public class SearchService {
                 dataModelService.getEntitySet( entitySetId ),
                 propertyTypeList );
 
-        Set<PropertyType> propertyTypesToLoad = propertyTypeList.stream()
-                .filter( pt -> !pt.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ).collect(
-                        Collectors.toSet() );
-
-        postgresDataManager.getEntitiesInEntitySet( entitySetId, propertyTypesToLoad )
-                .parallel()
-                .forEach( entity -> {
-                    EntityDataKey edk = new EntityDataKey( entitySetId, entity.getEntityKeyId() );
-                    Map<UUID, Set<Object>> values = entity.getProperties();
-                    elasticsearchApi.createEntityData( edk, values ); //TODO
-                } );
+        postgresDataManager.markEntitySetAsNeedingIndexing( entitySetId );
     }
 
     public void triggerAllEntitySetDataIndex() {
