@@ -75,7 +75,7 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
             UUID key = readUUID( input );
 
             int numBytes = input.readInt();
-            SetMultimap<UUID, Object> entityData = HashMultimap.create();
+            SetMultimap<UUID, Object> entityData;
             try {
                 entityData = mapper.readValue( input.readBytes( numBytes ), ref );
                 entitiesById.put( key, entityData );

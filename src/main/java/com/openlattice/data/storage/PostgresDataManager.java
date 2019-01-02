@@ -8,14 +8,13 @@ import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+
+import java.sql.*;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,5 +82,25 @@ public class PostgresDataManager {
                 throw new IllegalStateException( "Unable to load entity information.", e );
             }
         } ).stream();
+    }
+
+    public void markEntitySetAsNeedingIndexing( UUID entitySetId ) {
+        final String reindexSql = reindexSql( entitySetId );
+
+        try (
+                Connection connection = hds.getConnection();
+                Statement stmt = connection.createStatement()
+        ) {
+            stmt.execute( reindexSql );
+        } catch ( SQLException e ) {
+            logger.error( "Unable to mark entity set {} as needing indexing", entitySetId, e );
+        }
+
+    }
+
+    private static String reindexSql( UUID entitySetId ) {
+        return "UPDATE entity_key_ids SET last_index = '-infinity' WHERE entity_set_id ='"
+                + entitySetId.toString()
+                + "'";
     }
 }

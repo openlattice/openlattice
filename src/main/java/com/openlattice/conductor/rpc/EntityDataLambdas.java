@@ -37,24 +37,19 @@ public class EntityDataLambdas implements Function<ConductorElasticsearchApi, Bo
     private static final long serialVersionUID = -1071651645473672891L;
 
     @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
-    private EntityDataKey          edk;
+    private EntityDataKey            edk;
     private Map<UUID, Set<Object>> propertyValues;
-    private boolean                shouldUpdate;
 
     public EntityDataLambdas(
             EntityDataKey edk,
-            Map<UUID, Set<Object>> propertyValues,
-            boolean shouldUpdate ) {
+            Map<UUID, Set<Object>> propertyValues ) {
         this.edk = edk;
         this.propertyValues = propertyValues;
-        this.shouldUpdate = shouldUpdate;
     }
 
     @Override
     public Boolean apply( ConductorElasticsearchApi api ) {
-        return shouldUpdate ?
-                api.updateEntityData( edk, propertyValues ) :
-                api.createEntityData( edk, propertyValues );
+        return api.createEntityData( edk, propertyValues );
     }
 
     public EntityDataKey getEntityDataKey() {
@@ -63,9 +58,5 @@ public class EntityDataLambdas implements Function<ConductorElasticsearchApi, Bo
 
     public Map<UUID, Set<Object>> getPropertyValues() {
         return propertyValues;
-    }
-
-    public boolean getShouldUpdate() {
-        return shouldUpdate;
     }
 }

@@ -119,17 +119,21 @@ dependencies {
         logger.quiet(project.name + " using project dependencies.")
         compile project(":api")
         compile project(":rhizome")
+        compile project(":scribe")
         testCompile( project(path: ":api", configuration: "tests"))
         testCompile( project(path: ":rhizome", configuration: "tests"))
         testCompile( project(path: ":rhizome-client", configuration: "tests"))
+        testCompile( project(path: ":scribe", configuration: "tests"))
     } else {
         logger.quiet(project.name + " using jar dependencies.")
         compile "com.openlattice:api:${api_version}"
         compile "com.openlattice:rhizome:${rhizome_version}"
+        compile "com.openlattice:scribe:${scribe_version}"
 
         testCompile "com.openlattice:api:0.0.10-SNAPSHOT:tests"
         testCompile "com.openlattice:rhizome:${rhizome_version}:tests"
         testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
+        testCompile "com.openlattice:scribe:${scribe_version}:tests"
     }
 
     /*

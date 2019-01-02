@@ -46,6 +46,12 @@ public final class PostgresColumn {
     public static final String                   ACL_KEY_SET_FIELD           = "acl_key_set";
     public static final PostgresColumnDefinition ACL_KEY_SET                 =
             new PostgresColumnDefinition( ACL_KEY_SET_FIELD, UUID_ARRAY_ARRAY );
+    public static final String                   ALERT_METADATA_FIELD        = "alert_metadata";
+    public static final PostgresColumnDefinition ALERT_METADATA              =
+            new PostgresColumnDefinition( ALERT_METADATA_FIELD, JSONB ).notNull();
+    public static final String                   ALERT_TYPE_FIELD            = "alert_type";
+    public static final PostgresColumnDefinition ALERT_TYPE                  =
+            new PostgresColumnDefinition( ALERT_TYPE_FIELD, TEXT ).notNull();
     public static final String                   ALLOWED_EMAIL_DOMAINS_FIELD = "allowed_email_domains";
     public static final PostgresColumnDefinition ALLOWED_EMAIL_DOMAINS       =
             new PostgresColumnDefinition( ALLOWED_EMAIL_DOMAINS_FIELD, TEXT_ARRAY );
@@ -153,8 +159,8 @@ public final class PostgresColumn {
     public static final String                   ENTITY_SET_ID_FIELD         = "entity_set_id";
     public static final PostgresColumnDefinition ENTITY_SET_ID               =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
-    public static final String                   ENTITY_SET_NAME_FIELD         = "entity_set_name";
-    public static final PostgresColumnDefinition ENTITY_SET_Name               =
+    public static final String                   ENTITY_SET_NAME_FIELD       = "entity_set_name";
+    public static final PostgresColumnDefinition ENTITY_SET_Name             =
             new PostgresColumnDefinition( ENTITY_SET_NAME_FIELD, UUID ).notNull();
     public static final String                   ENTITY_TYPE_IDS_FIELD       = "entity_type_ids";
     public static final PostgresColumnDefinition ENTITY_TYPE_IDS             =
@@ -168,8 +174,8 @@ public final class PostgresColumn {
     public static final String                   EXPIRATION_DATE_FIELD       = "expiration_date";
     public static final PostgresColumnDefinition EXPIRATION_DATE             =
             new PostgresColumnDefinition( EXPIRATION_DATE_FIELD, TIMESTAMPTZ )
-            .withDefault( "'infinity'" )
-            .notNull();
+                    .withDefault( "'infinity'" )
+                    .notNull();
     public static final String                   FLAGS_FIELD                 = "flags";
     public static final PostgresColumnDefinition FLAGS                       =
             new PostgresColumnDefinition( FLAGS_FIELD, BOOLEAN ).notNull();
@@ -195,6 +201,12 @@ public final class PostgresColumn {
     public static final String                   LAST_PROPAGATE_FIELD        = "last_propagate";
     public static final PostgresColumnDefinition LAST_PROPAGATE              = new PostgresColumnDefinition(
             LAST_PROPAGATE_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
+    public static final String                   LAST_READ_FIELD             = "last_read";
+    public static final PostgresColumnDefinition LAST_READ                   = new PostgresColumnDefinition(
+            LAST_READ_FIELD,
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
@@ -283,6 +295,10 @@ public final class PostgresColumn {
     public static final String                   SCORE_FIELD                 = "score";
     public static final PostgresColumnDefinition SCORE                       =
             new PostgresColumnDefinition( SCORE_FIELD, PostgresDatatype.DOUBLE );
+    public static final String                   SEARCH_CONSTRAINTS_FIELD    = "search_constraints";
+    public static final PostgresColumnDefinition SEARCH_CONSTRAINTS          = new PostgresColumnDefinition(
+            SEARCH_CONSTRAINTS_FIELD,
+            PostgresDatatype.JSONB ).notNull();
     public static final String                   SECURABLE_OBJECTID_FIELD    = "securable_objectid";
     public static final PostgresColumnDefinition SECURABLE_OBJECTID          =
             new PostgresColumnDefinition( SECURABLE_OBJECTID_FIELD, UUID ).notNull();
