@@ -1042,6 +1042,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 executeNormalSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
     }
 
+    /**
+     * Executes entity data search on multiple entity sets
+     * @param searchConstraints
+     * @param authorizedPropertyTypesByEntitySet authorized properties for each entity set individually
+     * @return
+     */
     private EntityDataKeySearchResult executeNormalSearch(
             SearchConstraints searchConstraints,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
@@ -1068,6 +1074,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return getEntityDataKeySearchResult( response );
     }
 
+    /**
+     * Executes entity data search on multiple linking entity sets containing 1 or more linked entity sets
+     * @param searchConstraints SearchConstraints containing the linking entity set ids (NOT linked)
+     * @param authorizedPropertyTypesByEntitySet authorized properties for each linked entity set individually
+     * @return
+     */
     private EntityDataKeySearchResult executeLinkingSearch(
             SearchConstraints searchConstraints,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
