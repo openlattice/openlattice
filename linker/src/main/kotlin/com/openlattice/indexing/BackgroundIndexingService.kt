@@ -28,8 +28,8 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
+import com.openlattice.data.storage.PostgresDataManager
 import com.openlattice.data.storage.PostgresEntityDataQueryService
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
@@ -68,7 +68,7 @@ class BackgroundIndexingService(
         hazelcastInstance: HazelcastInstance,
         private val dataQueryService: PostgresEntityDataQueryService,
         private val elasticsearchApi: ConductorElasticsearchApi,
-        private val edm: EdmManager
+        private val dataManager: PostgresDataManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
@@ -300,7 +300,7 @@ class BackgroundIndexingService(
         }
 
         if (elasticsearchApi.createBulkEntityData(entitySet.id, mapOf(entitySetId to entitiesById), linked)) {
-            indexCount += dataQueryService.markAsIndexed(entitySetId, batchToIndex, linked)
+            indexCount += dataManager.markAsIndexed(mapOf(entitySetId to Optional.of(batchToIndex)), linked)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
