@@ -630,7 +630,12 @@ public class SearchService {
                 dataModelService.getEntitySet( entitySetId ),
                 propertyTypeList );
 
-        postgresDataManager.markEntitySetAsNeedingIndexing( entitySetId );
+        EntitySet entitySet = dataModelService.getEntitySet( entitySetId );
+        Set<UUID> entitySetIds = ( entitySet.isLinking() ) ? entitySet.getLinkedEntitySets() : Set.of( entitySetId );
+        postgresDataManager.markAsNeedsToBeIndexed(
+                entitySetIds.stream().collect( Collectors.toMap( Function.identity(), esId -> Optional.empty() ) ),
+                entitySet.isLinking()
+        );
     }
 
     public void triggerAllEntitySetDataIndex() {

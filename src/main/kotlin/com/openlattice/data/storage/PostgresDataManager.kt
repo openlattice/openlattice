@@ -76,21 +76,6 @@ class PostgresDataManager(private val hds: HikariDataSource) {
         }).stream()
     }
 
-    fun markEntitySetAsNeedingIndexing(entitySetId: UUID) {
-        val reindexSql = reindexSql(entitySetId);
-        try {
-            hds.connection.createStatement().use {
-                it.execute(reindexSql)
-            }
-        } catch (e: SQLException) {
-            logger.error("Unable to mark entity set {} as needing indexing", entitySetId, e);
-        }
-    }
-
-    private fun reindexSql(entitySetId: UUID): String {
-        return "UPDATE entity_key_ids SET last_index = '-infinity' WHERE entity_set_id ='" + entitySetId.toString() + "'"
-    }
-
     fun markAsIndexed(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): Int {
         return updateLastIndex(entityKeyIds, linking, OffsetDateTime.now())
     }
