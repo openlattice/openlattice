@@ -613,68 +613,6 @@ class PostgresEntityDataQueryService(
             return ps.executeBatch().sum()
         }
     }
-
-    fun markAsIndexed(entitySetId: UUID, batchToIndex: Set<UUID>, linking: Boolean): Int {
-        hds.connection.use {
-            val updateSql =
-                    if (linking) updateLastLinkIndexSql(mapOf(entitySetId to Optional.of(batchToIndex)))
-                    else updateLastIndexSql(entitySetId, batchToIndex)
-            it.prepareStatement(updateSql)
-                    .use {
-                        it.setObject(1, OffsetDateTime.now())
-                        return it.executeUpdate()
-                    }
-        }
-    }
-
-    fun markAsLinked(entitySetId: UUID, processedEntities: Set<UUID>): Int {
-        hds.connection.use {
-            it.prepareStatement(updateLastLinkSql(entitySetId)).use {
-                val arr = PostgresArrays.createUuidArray(it.connection, processedEntities)
-                it.setObject(1, OffsetDateTime.now())
-                it.setArray(2, arr)
-                return it.executeUpdate()
-            }
-
-        }
-    }
-
-    fun markAsProcessed(entitySetId: UUID, processedEntities: Set<UUID>, processedTime: OffsetDateTime): Int {
-        hds.connection.use {
-            it.prepareStatement(updateLastPropagateSql(entitySetId)).use {
-                val arr = PostgresArrays.createUuidArray(it.connection, processedEntities)
-                it.setObject(1, processedTime)
-                it.setArray(2, arr)
-                return it.executeUpdate()
-            }
-
-        }
-    }
-}
-
-fun updateLastIndexSql(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
-    val idsClause = if(!entityKeyIds.isEmpty()) {
-        " AND ${ID.name} IN ('" + entityKeyIds.joinToString("','") { it.toString() } + "')"
-    } else ""
-
-    return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' $idsClause"
-}
-
-fun updateLastLinkIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
-    val entitiesClause = buildEntitiesClause(idsByEntitySetId, true)
-
-    return "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? WHERE TRUE $entitiesClause"
-}
-
-fun updateLastLinkSql(entitySetId: UUID): String {
-    return "UPDATE ${IDS.name} SET ${LAST_LINK.name} = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
-}
-
-fun updateLastPropagateSql(entitySetId: UUID): String {
-    return "UPDATE ${IDS.name} SET ${LAST_PROPAGATE.name} = ? " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID.name} IN (SELECT UNNEST( (?)::uuid[] ))"
 }
 
 /**
