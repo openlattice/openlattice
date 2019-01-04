@@ -24,6 +24,7 @@ plugins {
     id 'eclipse'
     id 'idea'
     id 'jacoco'
+    id 'checkstyle'
     id 'com.github.spotbugs' version '1.6.3'
     id 'org.jetbrains.kotlin.jvm' version '1.3.10'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.3.10'
@@ -76,6 +77,28 @@ println "Using java args for running ${projectName}: Xms=" + DS_XMS + ",Xmx=" + 
 applicationDefaultJvmArgs = [DS_XMS, DS_XMX, "-server", GC, PARALLEL]
 sourceCompatibility = JavaVersion.VERSION_1_10
 targetCompatibility = JavaVersion.VERSION_1_10
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+spotbugs {
+    toolVersion = '3.1.5'
+}
+
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+tasks.withType(Javadoc) {
+    enabled = false
+}
 
 run {
     if (DS_ARGS != null) {
