@@ -128,13 +128,15 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 .getAuthorizedPropertiesOnEntitySets(
                         entitySets.values().stream()
                                 .filter( entitySet -> !entitySet.isLinking() )
-                                .map( EntitySet::getId ).collect( Collectors.toSet() ),
+                                .map( EntitySet::getId )
+                                .collect( Collectors.toSet() ),
                         EnumSet.of( Permission.READ ) );
         Map<UUID, Map<UUID, PropertyType>> linkedAuthorizedProperties = authorizationsHelper
                 .getAuthorizedPropertiesOnEntitySets(
                         entitySets.values().stream()
                                 .filter( EntitySet::isLinking )
-                                .map( EntitySet::getId ).collect( Collectors.toSet() ),
+                                .flatMap( entitySet -> entitySet.getLinkedEntitySets().stream() )
+                                .collect( Collectors.toSet() ),
                         EnumSet.of( Permission.READ ) );
 
         DataSearchResult results = searchService.executeSearch( searchConstraints, authorizedProperties, false );

@@ -53,7 +53,6 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.AwsDataSinkService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
-import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.apps.services.AppService;
