@@ -55,6 +55,7 @@ import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
