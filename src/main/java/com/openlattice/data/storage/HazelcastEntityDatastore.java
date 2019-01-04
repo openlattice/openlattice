@@ -304,13 +304,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                                 dataQueryService.streamableEntitySet(
                                         entitySetId,
                                         entityKeyIds,
-                                        Map.of( entitySetId, authorizedPropertyTypesByEntitySet.get( entitySetId ) ), //TODO
-                                        EnumSet.noneOf( MetadataOption.class ),// TODO: do we need linked entity sets here??
-                                        Optional.empty())
                                         Map.of( entitySetId, authorizedPropertyTypesByEntitySet.get( entitySetId ) ),
-                                        //TODO
                                         EnumSet.noneOf( MetadataOption.class ),
-                                        // TODO: do we need linked entity sets here??
                                         Optional.empty(),
                                         false )
                         )
