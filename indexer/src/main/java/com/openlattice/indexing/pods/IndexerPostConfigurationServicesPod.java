@@ -54,8 +54,6 @@ import org.springframework.context.annotation.Import;
 import javax.inject.Inject;
 import java.io.IOException;
 
-import org.springframework.context.annotation.Import;
-
 @Configuration
 @Import( { ByteBlobServicePod.class } )
 public class IndexerPostConfigurationServicesPod {
@@ -105,12 +103,17 @@ public class IndexerPostConfigurationServicesPod {
     }
 
     @Bean
+    public PostgresDataManager postgresDataManager() {
+        return new PostgresDataManager( hikariDataSource );
+    }
+
+    @Bean
     public BackgroundIndexingService backgroundIndexingService() throws IOException {
         return new BackgroundIndexingService( hikariDataSource,
                 hazelcastInstance,
                 dataQueryService(),
                 elasticsearchApi(),
-                edm );
+                postgresDataManager() );
     }
 
     @Bean
