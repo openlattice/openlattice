@@ -436,9 +436,10 @@ public class EdmService implements EdmManager {
     public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        entitySets.executeOnKey( linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
+        entitySets.executeOnKey( linkingEntitySetId,
+                new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
         eventBus.post( new LinkedEntitySetAddedEvent(
-                linkingEntitySet.getId(),
+                linkingEntitySetId,
                 Lists.newArrayList( getPropertyTypesForEntitySet( linkingEntitySetId ).values() ),
                 newLinkedEntitySets ) );
         return linkingEntitySet.getLinkedEntitySets().size() - startSize;
@@ -446,11 +447,12 @@ public class EdmService implements EdmManager {
 
     @Override
     public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
-        final EntitySet entitySet = Util.getSafely( entitySets, linkingEntitySetId );
-        final int startSize = entitySet.getLinkedEntitySets().size();
+        final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
+        final int startSize = linkingEntitySet.getLinkedEntitySets().size();
         entitySets.executeOnKey( linkingEntitySetId,
                 new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
-        return startSize - entitySet.getLinkedEntitySets().size();
+        eventBus.post( new LinkedEntitySetRemovedEvent( linkingEntitySetId, linkingEntitySet.getLinkedEntitySets() ) );
+        return startSize - linkingEntitySet.getLinkedEntitySets().size();
     }
 
     @Override

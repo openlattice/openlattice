@@ -59,24 +59,18 @@ import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.postgres.streams.PostgresIterable;
-import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.openlattice.postgres.DataTables.ID_FQN;
 
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
@@ -260,6 +254,23 @@ public class SearchService {
                 event.getLinkingEntitySetId(),
                 event.getPropertyTypes(),
                 event.getNewLinkedEntitySets() );
+    }
+
+    /**
+     * Handles indexing when 1 or more entity set(s) are unlinked/removed from linking entity set.
+     * If there are no linked entity sets remaining the index needs to be deleted,
+     * otherwise indexing needs to be triggered on the remaining entity sets.
+     */
+    @Subscribe
+    public void removeLinkedEntitySetsFromEntitySet( LinkedEntitySetRemovedEvent event ) {
+        if( event.getRemainingLinkedEntitySets().isEmpty() ) {
+            elasticsearchApi.deleteEntitySet( event.getLinkingEntitySetId() );
+        } else {
+            postgresDataManager.markAsNeedsToBeIndexed(
+                    event.getRemainingLinkedEntitySets().stream().collect(
+                            Collectors.toMap( Function.identity(), linkedEntitySetId -> Optional.empty()) ),
+                    true );
+        }
     }
 
     @Subscribe
@@ -563,7 +574,8 @@ public class SearchService {
     private List<SetMultimap<FullQualifiedName, Object>> getResults(
             UUID entitySetId,
             Set<UUID> entityKeyIds,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            boolean linking ) {
         if ( entityKeyIds.size() == 0 ) { return ImmutableList.of(); }
         if ( linking ) {
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetIds = authorizedPropertyTypes.keySet().stream()
