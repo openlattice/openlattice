@@ -121,6 +121,14 @@ public class ElasticsearchLambdas implements Serializable {
                 .updatePropertyTypesInEntitySet( entitySetId, newPropertyTypes );
     }
 
+    public static Function<ConductorElasticsearchApi, Boolean> addPropertyTypesToEntitySet(
+            UUID entitySetId,
+            List<PropertyType> newPropertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
+        return ( Function<ConductorElasticsearchApi, Boolean> & Serializable ) ( api ) -> api
+                .addPropertyTypesToEntitySet( entitySetId, newPropertyTypes, linkedEntitySetIds );
+    }
+
     public static Function<ConductorElasticsearchApi, Boolean> addLinkedEntitySetsToEntitySet(
             UUID linkingEntitySetId,
             List<PropertyType> propertyTypes,
