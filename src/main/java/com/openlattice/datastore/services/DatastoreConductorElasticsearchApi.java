@@ -164,11 +164,11 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> newPropertyTypes ) {
+    public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.updatePropertyTypesInEntitySet( entitySetId,
-                            newPropertyTypes ) ) )
+                            updatedPropertyTypes ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to update property types in entity set in elasticsearch" );
