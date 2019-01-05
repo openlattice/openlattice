@@ -32,7 +32,6 @@ import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
-import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
 import com.openlattice.edm.events.EntitySetDataClearedEvent;
 import com.openlattice.edm.events.EntitySetDeletedEvent;
@@ -460,14 +459,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override
     public int deleteEntities(
             UUID entitySetId,
-            Set<UUID> entityKeyId,
+            Set<UUID> entityKeyIds,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
-        int deleteCount = dataQueryService.deleteEntities( entitySetId, entityKeyId, authorizedPropertyTypes );
+        int deleteCount = dataQueryService.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
+        signalDeletedEntities( entitySetId, entityKeyIds );
 
-        entityKeyId.forEach( id -> {
-            eventBus.post( new EntityDataDeletedEvent( new EntityDataKey( entitySetId, id ) ) );
-        } );
         return deleteCount;
     }
 

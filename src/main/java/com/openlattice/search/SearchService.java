@@ -42,7 +42,6 @@ import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
-import com.openlattice.data.events.EntityDataDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.datastore.services.EdmManager;
@@ -230,12 +229,6 @@ public class SearchService {
         event.getEntities()
                 .forEach( ( entitKeyId, entity ) -> elasticsearchApi
                         .createEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
-    }
-
-    @Subscribe
-    public void deleteEntityData( EntityDataDeletedEvent event ) {
-        EntityDataKey edk = event.getEntityDataKey();
-        elasticsearchApi.deleteEntityData( edk );
     }
 
     @Subscribe
