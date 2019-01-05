@@ -80,6 +80,10 @@ class PostgresDataManager(private val hds: HikariDataSource) {
         return updateLastIndex(entityKeyIds, linking, OffsetDateTime.now())
     }
 
+    fun markEntitySetsAsNeedsToBeIndexed(entitySetIds: Set<UUID>, linking: Boolean): Int {
+        return markAsNeedsToBeIndexed(entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(), linking)
+    }
+
     fun markAsNeedsToBeIndexed(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): Int {
         return updateLastIndex(entityKeyIds, linking, OffsetDateTime.MIN)
     }

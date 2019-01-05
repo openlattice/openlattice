@@ -254,6 +254,12 @@ public class SearchService {
                 event.getEntitySetId(),
                 event.getNewPropertyTypes(),
                 event.getLinkedEntitySetIds() );
+
+        Set<UUID> entitiesNeedingIndexing = event.getLinkedEntitySetIds()
+                .orElseGet( () -> Set.of( event.getEntitySetId() ) );
+        postgresDataManager.markEntitySetsAsNeedsToBeIndexed(
+                entitiesNeedingIndexing,
+                event.getLinkedEntitySetIds().isPresent() );
     }
 
     @Subscribe
@@ -262,6 +268,7 @@ public class SearchService {
                 event.getLinkingEntitySetId(),
                 event.getPropertyTypes(),
                 event.getNewLinkedEntitySets() );
+        postgresDataManager.markEntitySetsAsNeedsToBeIndexed( event.getNewLinkedEntitySets(), true );
     }
 
     /**
@@ -274,10 +281,7 @@ public class SearchService {
         if( event.getRemainingLinkedEntitySets().isEmpty() ) {
             elasticsearchApi.deleteEntitySet( event.getLinkingEntitySetId() );
         } else {
-            postgresDataManager.markAsNeedsToBeIndexed(
-                    event.getRemainingLinkedEntitySets().stream().collect(
-                            Collectors.toMap( Function.identity(), linkedEntitySetId -> Optional.empty()) ),
-                    true );
+            postgresDataManager.markEntitySetsAsNeedsToBeIndexed( event.getRemainingLinkedEntitySets(), true );
         }
     }
 
