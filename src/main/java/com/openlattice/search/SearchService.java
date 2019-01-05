@@ -245,7 +245,15 @@ public class SearchService {
 
     @Subscribe
     public void updatePropertyTypesInEntitySet( PropertyTypesInEntitySetUpdatedEvent event ) {
-        elasticsearchApi.updatePropertyTypesInEntitySet( event.getEntitySetId(), event.getNewPropertyTypes() );
+        elasticsearchApi.updatePropertyTypesInEntitySet( event.getEntitySetId(), event.getUpdatedPropertyTypes() );
+    }
+
+    @Subscribe
+    public void addPropertyTypesToEntitySet( PropertyTypesAddedToEntitySetEvent event ) {
+        elasticsearchApi.addPropertyTypesToEntitySet(
+                event.getEntitySetId(),
+                event.getNewPropertyTypes(),
+                event.getLinkedEntitySetIds() );
     }
 
     @Subscribe
@@ -309,6 +317,11 @@ public class SearchService {
         elasticsearchApi.deleteAssociationType( associationTypeId );
     }
 
+    /**
+     * Handle deleting the index for that property type.
+     * At this point, none of the entity sets should contain this property type anymore, so the entity set data mappings
+     * are not affected.
+     */
     @Subscribe
     public void deletePropertyType( PropertyTypeDeletedEvent event ) {
         UUID propertyTypeId = event.getPropertyTypeId();

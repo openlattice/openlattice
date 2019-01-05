@@ -344,6 +344,8 @@ public class EdmService implements EdmManager {
             schemaManager.upsertSchemas( entityType.getSchemas() );
             if ( !entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
                 eventBus.post( new EntityTypeCreatedEvent( entityType ) );
+            } else {
+                eventBus.post( new AssociationTypeCreatedEvent( getAssociationType( entityType.getId() ) ) );
             }
         } else {
             /*
@@ -777,6 +779,8 @@ public class EdmService implements EdmManager {
         final var propertyTags = entityTypes.get( entityTypeId ).getPropertyTags();
         childrenIdsToLocks.keySet().forEach( id -> {
             entityTypes.executeOnKey( id, new AddPropertyTypesToEntityTypeProcessor( propertyTypeIds ) );
+            List<PropertyType> allPropertyTypes = Lists.newArrayList(
+                    propertyTypes.getAll( getEntityType( id ).getProperties() ).values() );
 
             for ( EntitySet entitySet : edmManager.getAllEntitySetsForType( id ) ) {
                 UUID esId = entitySet.getId();
@@ -806,12 +810,13 @@ public class EdmService implements EdmManager {
                                         new EntitySetPropertyKey( aclKey.get( 0 ), aclKey.get( 1 ) ), defaultMetadata );
                             } );
                 }
-            }
-            EntityType entityType = getEntityType( id );
-            if ( !entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
-                eventBus.post( new EntityTypeCreatedEvent( entityType ) );
-            } else {
-                eventBus.post( new AssociationTypeCreatedEvent( getAssociationType( id ) ) );
+
+                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes ) );
+                eventBus.post( new PropertyTypesAddedToEntitySetEvent(
+                        entitySet.getId(),
+                        Lists.newArrayList( propertyTypes.values() ),
+                        ( entitySet.isLinking() )
+                                ? Optional.of( entitySet.getLinkedEntitySets() ) : Optional.empty() ) );
             }
         } );
         childrenIdsToLocks.entrySet().forEach( entry -> {

@@ -168,7 +168,11 @@ public interface ConductorElasticsearchApi {
 
     boolean updateEntitySetMetadata( EntitySet entitySet );
 
-    boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> newPropertyTypes );
+    boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes );
+
+    boolean addPropertyTypesToEntitySet( UUID entitySetId,
+                                         List<PropertyType> newPropertyTypes,
+                                         Optional<Set<UUID>> linkedEntitySetIds );
 
     boolean addLinkedEntitySetsToEntitySet( UUID linkingEntitySetId,
                                             List<PropertyType> propertyTypes,
