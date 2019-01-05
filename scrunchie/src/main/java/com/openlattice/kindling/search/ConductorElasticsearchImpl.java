@@ -606,11 +606,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> newPropertyTypes ) {
+    public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         Map<String, Object> propertyTypes = Maps.newHashMap();
-        propertyTypes.put( PROPERTY_TYPES, newPropertyTypes );
+        propertyTypes.put( PROPERTY_TYPES, updatedPropertyTypes );
         try {
             String s = ObjectMappers.getJsonMapper().writeValueAsString( propertyTypes );
             UpdateRequest updateRequest = new UpdateRequest(
@@ -623,6 +623,21 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             logger.debug( "error updating property types of entity set in elasticsearch" );
         }
         return false;
+    }
+
+    /**
+     * Add new mappings to existing index.
+     * Updating the entity set model is handled in {@link #updatePropertyTypesInEntitySet(UUID, List)}
+     * @param entitySetId the id of the entity set to which the new proprties are added
+     * @param newPropertyTypes the ids of the new properties
+     * @param linkedEntitySetIds if it's a linking entity set, the ids of the linked entity sets, otherwise empty
+     */
+    @Override
+    public boolean addPropertyTypesToEntitySet(
+            UUID entitySetId,
+            List<PropertyType> newPropertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
+        return addMappingToSecurableObjectIndex( entitySetId, newPropertyTypes, linkedEntitySetIds );
     }
 
     @Override
