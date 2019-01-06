@@ -28,9 +28,9 @@ import com.google.common.collect.HashMultimap
 import com.google.common.collect.ImmutableSetMultimap
 import com.openlattice.analysis.AnalysisApi
 import com.openlattice.analysis.AnalysisService
-import com.openlattice.analysis.AuthorizedFilteredRanking
+import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.NeighborType
-import com.openlattice.analysis.requests.NeighborsRankingAggregation
+import com.openlattice.analysis.requests.RankingAggregation
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
@@ -81,12 +81,12 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     fun getTopUtilizers(
             @PathVariable(AnalysisApi.ENTITY_SET_ID) entitySetId: UUID,
             @PathVariable(AnalysisApi.NUM_RESULTS) numResults: Int,
-            @RequestBody filteredRankings: NeighborsRankingAggregation,
+            @RequestBody filteredRankings: RankingAggregation,
             @RequestParam(value = AnalysisApi.FILE_TYPE, required = false)
             fileType: FileType?,
             response: HttpServletResponse
     ): Iterable<Map<String, Any>> {
-        if (filteredRankings.neighbors.isEmpty() && filteredRankings.self.isEmpty()) {
+        if (filteredRankings.neighbors.isEmpty() && filteredRankings.self.aggregations.isEmpty() ) {
             return listOf()
         }
         ensureReadAccess(AclKey(entitySetId))
@@ -99,7 +99,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     override fun getTopUtilizers(
             entitySetId: UUID,
             numResults: Int,
-            filteredRankings: NeighborsRankingAggregation,
+            filteredRankings: RankingAggregation,
             fileType: FileType?
     ): Iterable<Map<String, Any>> {
         val entitySet = edm.getEntitySet(entitySetId)
@@ -157,7 +157,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,
-            filteredRankings: NeighborsRankingAggregation,
+            filteredRankings: RankingAggregation,
             columnTitles: LinkedHashSet<String>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
@@ -184,7 +184,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
                             .filter { entitySetIsAuthorized(it) }
                             .map { accessCheckAndReturnAuthorizedPropetyTypes(filteredRanking.neighborFilters, it) }
                             .toMap()
-            AuthorizedFilteredRanking(
+            AuthorizedFilteredNeighborsRanking(
                     filteredRanking,
                     authorizedAssociations,
                     authorizedAssociationPropertyTypes,

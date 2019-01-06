@@ -21,19 +21,14 @@
 
 package com.openlattice.analysis
 
-import com.google.common.collect.SetMultimap
 import com.google.common.collect.Sets
 import com.openlattice.analysis.requests.NeighborType
-import com.openlattice.analysis.requests.FilteredRankingAggregation
 import com.openlattice.authorization.*
 import com.openlattice.data.DataGraphManager
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.edm.type.PropertyType
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Collectors
-import java.util.stream.Stream
 import javax.inject.Inject
 
 /**
