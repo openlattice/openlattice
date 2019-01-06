@@ -488,33 +488,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         return neighbors
     }
 
-    /**
-     * The approach here is to push down filters to the pg entity data query service
-     * and perform a group by on the property types that are being aggregated. The challenge is avoid duplication of data
-     * when performing joins against the self table.
-     */
-    private fun buildSelfTable(selfRankingAggregation: AuthorizedFilteredAggregation) : String {
-        val esEntityKeyIds = mapOf(selfRankingAggregation.entitySetId to Optional.empty<Set<UUID>>())
-        val authorizedPropertyTypes = mapOf(
-                selfRankingAggregation.entitySetId to selfRankingAggregation.authorizedPropertyTypes.keys
-        )
-        val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                esEntityKeyIds,
-                selfRankingAggregation.authorizedPropertyTypes.mapValues {  quote(it.value.type.fullQualifiedNameAsString ) },
-                selfRankingAggregation.authorizedPropertyTypes.keys,
-                authorizedPropertyTypes,
-                selfRankingAggregation.filteredAggregation.filters,
-                setOf(),
-                selfRankingAggregation.linking,
-                selfRankingAggregation.authorizedPropertyTypes.mapValues {  it.value.datatype == EdmPrimitiveTypeKind.Binary  }
-        )
-
-        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
-        val baseEntityColumnsSql = "${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID"
-        val joinColumns = entityKeyIdColumns
-
-    }
-
     private fun buildAssociationTable(
             index: Int,
             selfEntitySetIds: Set<UUID>,
