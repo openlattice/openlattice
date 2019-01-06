@@ -96,10 +96,6 @@ tasks.withType(com.github.spotbugs.SpotBugsTask) {
     }
 }
 
-tasks.withType(Javadoc) {
-    enabled = false
-}
-
 run {
     if (DS_ARGS != null) {
         args DS_ARGS.split();
