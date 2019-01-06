@@ -72,12 +72,12 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     @Inject
     private lateinit var authorizations: AuthorizationManager
 
+    @Timed
     @RequestMapping(
             path = [(AnalysisApi.ENTITY_SET_ID_PATH + AnalysisApi.NUM_RESULTS_PATH)],
             method = [(RequestMethod.POST)],
             produces = [(MediaType.APPLICATION_JSON_VALUE), (CustomMediaType.TEXT_CSV_VALUE)]
     )
-    @Timed
     fun getTopUtilizers(
             @PathVariable(AnalysisApi.ENTITY_SET_ID) entitySetId: UUID,
             @PathVariable(AnalysisApi.NUM_RESULTS) numResults: Int,
@@ -86,7 +86,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             fileType: FileType?,
             response: HttpServletResponse
     ): Iterable<Map<String, Any>> {
-        if (filteredRankings.neighbors.isEmpty() && filteredRankings.self.aggregations.isEmpty() ) {
+        if (filteredRankings.neighbors.isEmpty()) {
             return listOf()
         }
         ensureReadAccess(AclKey(entitySetId))
@@ -151,7 +151,9 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     }
 
     private fun entitySetIsAuthorized(entitySetId: UUID): Boolean {
-        return authorizations.checkIfHasPermissions(AclKey(entitySetId), Principals.getCurrentPrincipals(), EnumSet.of(Permission.READ))
+        return authorizations.checkIfHasPermissions(
+                AclKey(entitySetId), Principals.getCurrentPrincipals(), EnumSet.of(Permission.READ)
+        )
     }
 
     fun getFilteredRankings(
@@ -210,25 +212,27 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
     )
     @Timed
     override fun getNeighborTypes(@PathVariable(AnalysisApi.ENTITY_SET_ID) entitySetId: UUID): Iterable<NeighborType> {
-        ensureReadAccess( AclKey( entitySetId ) )
+        ensureReadAccess(AclKey(entitySetId))
 
-        val entitySet = edm.getEntitySet( entitySetId )
+        val entitySet = edm.getEntitySet(entitySetId)
 
-        val allEntitySetIds = if( entitySet.isLinking ) {
-            val linkedEntitySetIds = HashSet( entitySet.linkedEntitySets )
-            checkState(!linkedEntitySetIds.isEmpty(),
+        val allEntitySetIds = if (entitySet.isLinking) {
+            val linkedEntitySetIds = HashSet(entitySet.linkedEntitySets)
+            checkState(
+                    !linkedEntitySetIds.isEmpty(),
                     "Linked entity sets are empty for linking entity set %s, id %s",
                     entitySet.name,
-                    entitySet.id )
+                    entitySet.id
+            )
             val authorizedLinkedEntitySetIds = entitySet.linkedEntitySets
-                    .filter { isAuthorized( Permission.READ ).test( AclKey( entitySetId ) ) }.toSet()
+                    .filter { isAuthorized(Permission.READ).test(AclKey(entitySetId)) }.toSet()
 
             authorizedLinkedEntitySetIds
         } else {
-            setOf( entitySetId )
+            setOf(entitySetId)
         }
 
-        return analysisService!!.getNeighborTypes( allEntitySetIds )
+        return analysisService!!.getNeighborTypes(allEntitySetIds)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager? {
