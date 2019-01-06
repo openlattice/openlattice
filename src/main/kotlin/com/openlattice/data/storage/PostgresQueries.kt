@@ -92,7 +92,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                         val subQuerySql = selectCurrentVersionOfPropertyTypeSql(
                                 propertyTypeEntitiesClause,
                                 it.key,
-                                propertyTypeFilters[it.key] ?: setOf<Filter>(),
+                                propertyTypeFilters[it.key] ?: setOf(),
                                 it.value,
                                 linking,
                                 binaryPropertyTypes[it.key]!!,

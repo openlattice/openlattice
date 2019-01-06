@@ -30,8 +30,8 @@ import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListenableFuture
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
-import com.openlattice.analysis.AuthorizedFilteredRanking
-import com.openlattice.analysis.requests.FilteredRankingAggregation
+import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
+import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.datastore.services.EdmManager
@@ -381,7 +381,7 @@ open class DataGraphService(
     override fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,
-            filteredRankings: List<AuthorizedFilteredRanking>,
+            filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
@@ -424,18 +424,18 @@ open class DataGraphService(
 
     override fun getTopUtilizers(
             entitySetId: UUID,
-            filteredRankingList: List<FilteredRankingAggregation>,
+            filteredNeighborsRankingList: List<FilteredNeighborsRankingAggregation>,
             numResults: Int,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>> {
 //        val maybeUtilizers = queryCache
-//                .getIfPresent(MultiKey(entitySetId, filteredRankingList))
+//                .getIfPresent(MultiKey(entitySetId, filteredNeighborsRankingList))
 //        val utilizers: Array<IncrementableWeightId>
 //
 //
 //        if (maybeUtilizers == null) {
 //            utilizers = graphService.computeTopEntities(
-//                    numResults, entitySetId, authorizedPropertyTypes, filteredRankingList
+//                    numResults, entitySetId, authorizedPropertyTypes, filteredNeighborsRankingList
 //            )
 //            //            utilizers = new TopUtilizers( numResults );
 //            val srcFilters = HashMultimap.create<UUID, UUID>()
@@ -444,7 +444,7 @@ open class DataGraphService(
 //            val associationPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
 //            val srcPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
 //            val dstPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
-//            filteredRankingList.forEach { details ->
+//            filteredNeighborsRankingList.forEach { details ->
 //                val associationSets = edm.getEntitySetsOfType(details.associationTypeId).map { it.id }
 //                val neighborSets = edm.getEntitySetsOfType(details.neighborTypeId).map { it.id }
 //
@@ -459,7 +459,7 @@ open class DataGraphService(
 //
 //            utilizers = graphService.computeGraphAggregation(numResults, entitySetId, srcFilters, dstFilters)
 //
-//            queryCache.put(MultiKey(entitySetId, filteredRankingList), utilizers)
+//            queryCache.put(MultiKey(entitySetId, filteredNeighborsRankingList), utilizers)
 //        } else {
 //            utilizers = maybeUtilizers
 //        }

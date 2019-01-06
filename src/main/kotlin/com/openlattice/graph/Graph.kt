@@ -25,7 +25,8 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
-import com.openlattice.analysis.AuthorizedFilteredRanking
+import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
+import com.openlattice.analysis.AuthorizedFilteredAggregation
 import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
@@ -63,7 +64,7 @@ import kotlin.streams.toList
 
 const val SELF_ENTITY_SET_ID = "self_entity_set_id"
 const val SELF_ENTITY_KEY_ID = "self_entity_key_id"
-private val BATCH_SIZE = 10000
+private const val BATCH_SIZE = 10000
 
 private val logger = LoggerFactory.getLogger(Graph::class.java)
 
@@ -129,7 +130,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     override fun deleteVerticesInEntitySet(entitySetId: UUID?): Int {
         val connection = hds.connection
-        connection.use{
+        connection.use {
             val ps = connection.prepareStatement(DELETE_BY_SET_SQL)
             ps.setObject(1, entitySetId)
             ps.setObject(2, entitySetId)
@@ -175,7 +176,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
-    override fun getEntitiesForDestination(srcEntitySetIds: List<UUID>, edgeEntitySetIds: List<UUID>, dstEntityKeyIds: Set<UUID>): PostgresIterable<EdgeKey> {
+    override fun getEntitiesForDestination(
+            srcEntitySetIds: List<UUID>, edgeEntitySetIds: List<UUID>, dstEntityKeyIds: Set<UUID>
+    ): PostgresIterable<EdgeKey> {
         val query = "SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name}, ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name}, ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} " +
                 "FROM ${EDGES.name} WHERE " +
                 "${SRC_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) AND " +
@@ -250,7 +253,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
 
-    override fun getEdgesAndNeighborsForVerticesBulk(entitySetIds: Set<UUID>, filter: EntityNeighborsFilter): Stream<Edge> {
+    override fun getEdgesAndNeighborsForVerticesBulk(
+            entitySetIds: Set<UUID>, filter: EntityNeighborsFilter
+    ): Stream<Edge> {
         if (entitySetIds.size == 1) {
             return getEdgesAndNeighborsForVertices(entitySetIds.first(), filter)
         }
@@ -282,7 +287,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             limit: Int,
             entitySetIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            filteredRankings: List<AuthorizedFilteredRanking>,
+            filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
     ): PostgresIterable<Map<String, Any>> {
@@ -314,19 +319,20 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
         val idColumns = listOf(
                 SELF_ENTITY_SET_ID to EdmPrimitiveTypeKind.Guid,
-                SELF_ENTITY_KEY_ID to EdmPrimitiveTypeKind.Guid)
+                SELF_ENTITY_KEY_ID to EdmPrimitiveTypeKind.Guid
+        )
 
         val aggregationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
             buildAggregationColumnMap(
                     index,
                     authorizedFilteredRanking.associationPropertyTypes,
-                    authorizedFilteredRanking.filteredRanking.associationAggregations,
+                    authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations,
                     ASSOC
             ).map { it.value to authorizedFilteredRanking.associationPropertyTypes[it.key]!!.datatype } +
                     buildAggregationColumnMap(
                             index,
                             authorizedFilteredRanking.entitySetPropertyTypes,
-                            authorizedFilteredRanking.filteredRanking.neighborTypeAggregations,
+                            authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations,
                             ENTITY
                     ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!.datatype } +
                     (associationCountColumnName(index) to EdmPrimitiveTypeKind.Int64) +
@@ -352,22 +358,24 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     @VisibleForTesting
-    fun buildTopEntitiesQuery(limit: Int,
-                              entitySetIds: Set<UUID>,
-                              filteredRankings: List<AuthorizedFilteredRanking>,
-                              linked: Boolean,
-                              linkingEntitySetId: Optional<UUID>): String {
+    fun buildTopEntitiesQuery(
+            limit: Int,
+            entitySetIds: Set<UUID>,
+            filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
+            linked: Boolean,
+            linkingEntitySetId: Optional<UUID>
+    ): String {
         val joinColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
 
         val associationColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
-            authorizedFilteredRanking.filteredRanking.associationAggregations.map {
+            authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations.map {
                 val column = aggregationAssociationColumnName(index, it.key)
                 "${it.value.weight}*COALESCE($column,0)"
             }
         }.flatten()
 
         val entityColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
-            authorizedFilteredRanking.filteredRanking.neighborTypeAggregations.map {
+            authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations.map {
                 val column = aggregationEntityColumnName(index, it.key)
                 "${it.value.weight}*COALESCE($column,0)"
             }
@@ -375,7 +383,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
 
         val countColumns = filteredRankings.mapIndexed { index, authorizedFilteredRanking ->
-            authorizedFilteredRanking.filteredRanking.countWeight.map {
+            authorizedFilteredRanking.filteredNeighborsRanking.countWeight.map {
                 "$it*COALESCE(${associationCountColumnName(
                         index
                 )},0)"
@@ -480,15 +488,41 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         return neighbors
     }
 
+    /**
+     * The approach here is to push down filters to the pg entity data query service
+     * and perform a group by on the property types that are being aggregated. The challenge is avoid duplication of data
+     * when performing joins against the self table.
+     */
+    private fun buildSelfTable(selfRankingAggregation: AuthorizedFilteredAggregation) : String {
+        val esEntityKeyIds = mapOf(selfRankingAggregation.entitySetId to Optional.empty<Set<UUID>>())
+        val authorizedPropertyTypes = mapOf(
+                selfRankingAggregation.entitySetId to selfRankingAggregation.authorizedPropertyTypes.keys
+        )
+        val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
+                esEntityKeyIds,
+                selfRankingAggregation.authorizedPropertyTypes.mapValues {  quote(it.value.type.fullQualifiedNameAsString ) },
+                selfRankingAggregation.authorizedPropertyTypes.keys,
+                authorizedPropertyTypes,
+                selfRankingAggregation.filteredAggregation.filters,
+                setOf(),
+                selfRankingAggregation.linking,
+                selfRankingAggregation.authorizedPropertyTypes.mapValues {  it.value.datatype == EdmPrimitiveTypeKind.Binary  }
+        )
+
+        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
+        val baseEntityColumnsSql = "${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID"
+        val joinColumns = entityKeyIdColumns
+
+    }
 
     private fun buildAssociationTable(
             index: Int,
             selfEntitySetIds: Set<UUID>,
-            authorizedFilteredRanking: AuthorizedFilteredRanking,
+            authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking,
             linked: Boolean
     ): String {
         val esEntityKeyIds = edm
-                .getEntitySetsOfType(authorizedFilteredRanking.filteredRanking.associationTypeId)
+                .getEntitySetsOfType(authorizedFilteredRanking.filteredNeighborsRanking.associationTypeId)
                 .map { it.id to Optional.empty<Set<UUID>>() }
                 .toMap()
         val associationPropertyTypes = authorizedFilteredRanking.associationPropertyTypes
@@ -496,15 +530,15 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
                 esEntityKeyIds,
                 associationPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
-                authorizedFilteredRanking.filteredRanking.associationAggregations.keys,
+                authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations.keys,
                 authorizedFilteredRanking.associationSets,
-                authorizedFilteredRanking.filteredRanking.associationFilters,
+                authorizedFilteredRanking.filteredNeighborsRanking.associationFilters,
                 setOf(),
                 false,
                 associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
         )
 
-        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.dst) {
+        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
             "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
                     "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
@@ -524,7 +558,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
 
         val aggregationColumns =
-                authorizedFilteredRanking.filteredRanking.associationAggregations
+                authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations
                         .mapValues {
                             val fqn = quote(associationPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
                             val alias = aggregationAssociationColumnName(index, it.key)
@@ -534,7 +568,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
                 .filter(String::isNotBlank)
                 .joinToString(",")
-        val nullCheck = if(linked) "WHERE ${LINKING_ID.name} IS NOT NULL" else ""
+        val nullCheck = if (linked) "WHERE ${LINKING_ID.name} IS NOT NULL" else ""
         return "SELECT $allColumns " +
                 "FROM ($spineSql $nullCheck) as spine " +
                 "INNER JOIN ($dataSql) as data USING($joinColumns) " +
@@ -545,11 +579,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     private fun buildEntityTable(
             index: Int,
             selfEntitySetIds: Set<UUID>,
-            authorizedFilteredRanking: AuthorizedFilteredRanking,
+            authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking,
             linked: Boolean
     ): String {
         val esEntityKeyIds = edm
-                .getEntitySetsOfType(authorizedFilteredRanking.filteredRanking.neighborTypeId)
+                .getEntitySetsOfType(authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeId)
                 .map { it.id to Optional.empty<Set<UUID>>() }
                 .toMap()
         val entitySetPropertyTypes = authorizedFilteredRanking.entitySetPropertyTypes
@@ -557,15 +591,15 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
                 esEntityKeyIds,
                 entitySetPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
-                authorizedFilteredRanking.filteredRanking.neighborTypeAggregations.keys,
+                authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations.keys,
                 authorizedFilteredRanking.entitySets,
-                authorizedFilteredRanking.filteredRanking.neighborFilters,
+                authorizedFilteredRanking.filteredNeighborsRanking.neighborFilters,
                 setOf(),
                 false,
                 entitySetPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
         )
 
-        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredRanking.dst) {
+        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
             "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
                     "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
         } else {
@@ -585,7 +619,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
 
         val aggregationColumns =
-                authorizedFilteredRanking.filteredRanking.neighborTypeAggregations
+                authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations
                         .mapValues {
                             val fqn = quote(entitySetPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
                             val alias = aggregationEntityColumnName(index, it.key)
@@ -595,7 +629,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val allColumns = listOf(groupingColumns, aggregationColumns, "count(*) as $countAlias")
                 .filter(String::isNotBlank)
                 .joinToString(",")
-        val nullCheck = if(linked) "WHERE ${LINKING_ID.name} IS NOT NULL" else ""
+        val nullCheck = if (linked) "WHERE ${LINKING_ID.name} IS NOT NULL" else ""
         return "SELECT $allColumns " +
                 "FROM ($spineSql $nullCheck) as spine " +
                 "INNER JOIN ($dataSql) as data USING($joinColumns) " +
@@ -633,7 +667,7 @@ private val SET_ID_COLUMNS = setOf(
         SRC_ENTITY_SET_ID,
         DST_ENTITY_SET_ID,
         EDGE_ENTITY_SET_ID
-).map{it.name}.toSet()
+).map { it.name }.toSet()
 
 /**
  * Builds the SQL query for top utilizers.
@@ -710,8 +744,10 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
 
     var srcSql = "$srcEntitySetSql AND ${SRC_ENTITY_KEY_ID.name} = ANY(?) "
     if (filter.dstEntitySetIds.isPresent) {
-        if (filter.dstEntitySetIds.get().size  > 0 ) {
-            srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(",") { "'$it'" }}))"
+        if (filter.dstEntitySetIds.get().size > 0) {
+            srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(
+                    ","
+            ) { "'$it'" }}))"
         } else {
             srcSql = "false AND $srcSql "
         }
@@ -720,15 +756,21 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
     var dstSql = "$dstEntitySetSql AND ${DST_ENTITY_KEY_ID.name} = ANY(?)"
     if (filter.srcEntitySetIds.isPresent) {
         if (filter.srcEntitySetIds.get().size > 0) {
-            dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(",") { "'$it'" }}))"
+            dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(
+                    ","
+            ) { "'$it'" }}))"
         } else {
             dstSql = "false AND $dstSql "
         }
     }
 
     if (filter.associationEntitySetIds.isPresent) {
-        srcSql += " AND ( ${EDGE_ENTITY_SET_ID.name} IN (${filter.associationEntitySetIds.get().joinToString(",") { "'$it'" }}))"
-        dstSql += " AND ( ${EDGE_ENTITY_SET_ID.name} IN (${filter.associationEntitySetIds.get().joinToString(",") { "'$it'" }}))"
+        srcSql += " AND ( ${EDGE_ENTITY_SET_ID.name} IN (${filter.associationEntitySetIds.get().joinToString(
+                ","
+        ) { "'$it'" }}))"
+        dstSql += " AND ( ${EDGE_ENTITY_SET_ID.name} IN (${filter.associationEntitySetIds.get().joinToString(
+                ","
+        ) { "'$it'" }}))"
     }
 
     return "SELECT * FROM ${EDGES.name} WHERE ( " + srcSql + " ) OR ( " + dstSql + " )"
@@ -757,7 +799,7 @@ private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, 
 
 private fun buildEdgeFilteringClause(
         selfEntitySetIds: Set<UUID>,
-        authorizedFilteredRanking: AuthorizedFilteredRanking
+        authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking
 ): String {
     val authorizedAssociationEntitySets = authorizedFilteredRanking.associationSets.keys
     val authorizedEntitySets = authorizedFilteredRanking.entitySets.keys
@@ -765,13 +807,13 @@ private fun buildEdgeFilteringClause(
     val associationsClause =
             "${EDGE_ENTITY_SET_ID.name} IN (${authorizedAssociationEntitySets.joinToString(",") { "'$it'" }})"
 
-    val entitySetColumn = if (authorizedFilteredRanking.filteredRanking.dst) {
+    val entitySetColumn = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
         DST_ENTITY_SET_ID.name
     } else {
         SRC_ENTITY_SET_ID.name
     }
 
-    val selfEntitySetColumn = if (authorizedFilteredRanking.filteredRanking.dst) {
+    val selfEntitySetColumn = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
         SRC_ENTITY_SET_ID.name
     } else {
         DST_ENTITY_SET_ID.name
