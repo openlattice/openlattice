@@ -74,7 +74,9 @@ public interface EntityDatastore {
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
 
-    PostgresIterable<Pair<UUID, UUID>> getLinkingIds( Set<UUID> entityKeyIds );
+    PostgresIterable<Pair<UUID, Set<UUID>>> getLinkingIds( Set<UUID> entityKeyIds );
+
+    PostgresIterable<UUID> getLinkingIds( UUID entitySetId );
 
     PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds );
 

@@ -49,6 +49,7 @@ import javax.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.Maps.transformValues;
@@ -158,17 +159,64 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private void signalCreatedEntities( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
         if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities ) );
+            signalLinkedEntitiesUpserted( entities.keySet() );
+        }
+    }
+
+    private void signalLinkedEntitiesUpserted( Set<UUID> entityKeyIds ) {
+        // Handle linking entity sets: if there are any entities, that have linking ids, reindex them
+        Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySet = dataQueryService
+                .getLinkingIds( entityKeyIds ).stream()
+                .filter( linkingIds -> linkingIds.getRight().isEmpty() )
+                .collect( Collectors.toMap( Pair::getLeft, linkingIds -> Optional.of( linkingIds.getRight() ) ) );
+        if ( !linkingIdsByEntitySet.isEmpty() ) {
+            pdm.markAsNeedsToBeIndexed( linkingIdsByEntitySet, true );
         }
     }
 
     private void signalEntitySetDataCleared( UUID entitySetId ) {
         eventBus.post( new EntitySetDataClearedEvent( entitySetId ) );
+        signalLinkedEntitiesDeleted( entitySetId, getLinkingIds( entitySetId ).stream().collect( Collectors.toSet() ) );
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesDeletedEvent( entitySetId, entityKeyIds ) );
+            signalLinkedEntitiesDeleted( entitySetId, entityKeyIds );
         }
+    }
+
+    private void signalLinkedEntitiesDeleted( UUID entitySetId, Set<UUID> entityKeyIds ) {
+        // Handle linking entity sets
+        Set<UUID> linkingIdsOfDeletedEntities = dataQueryService.getLinkingIds( entityKeyIds ).stream()
+                .flatMap( linkingIds -> linkingIds.getRight().stream() )
+                .collect( Collectors.toSet() );
+        Map<UUID, Set<UUID>> entityKeyIdsOfLinkingIds = dataQueryService
+                .getEntityKeyIdsOfLinkingIds( linkingIdsOfDeletedEntities )
+                .stream().collect( Collectors.toMap(
+                        Pair::getLeft,
+                        Pair::getRight
+                ) );
+
+        // if there is no entity left with that linking id, we delete that document, otherwise we re-index
+        Map<Boolean, List<Map.Entry<UUID, Set<UUID>>>> groupedEntityKeyIdsOfLinkingIds = entityKeyIdsOfLinkingIds
+                .entrySet().stream()
+                .collect( Collectors.groupingBy( idsOfLinkingId -> idsOfLinkingId.getValue().isEmpty() ) );
+
+        Set<UUID> deletedLinkedEntities = groupedEntityKeyIdsOfLinkingIds.get(true).stream()
+                .flatMap( it -> it.getValue().stream() )
+                .collect( Collectors.toSet() );
+        if(!deletedLinkedEntities.isEmpty()) {
+            UUID linkingEntitySetId = dataQueryService.getLinkingEntitySetId( entitySetId );
+            eventBus.post( new EntitiesDeletedEvent( linkingEntitySetId, deletedLinkedEntities ) );
+        }
+
+        pdm.markAsNeedsToBeIndexed(
+                Map.of( entitySetId,
+                        Optional.of( groupedEntityKeyIdsOfLinkingIds.get(false).stream()
+                                .flatMap( it -> it.getValue().stream() )
+                                .collect( Collectors.toSet() ) ) ),
+                true );
     }
 
     private void signalEntitySetDeleted( UUID entitySetId ) {
@@ -315,8 +363,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Override
     @Timed
-    public PostgresIterable<Pair<UUID, UUID>> getLinkingIds( Set<UUID> entityKeyIds ) {
+    public PostgresIterable<Pair<UUID, Set<UUID>>> getLinkingIds( Set<UUID> entityKeyIds ) {
         return dataQueryService.getLinkingIds( entityKeyIds );
+    }
+
+    @Override
+    @Timed
+    public PostgresIterable<UUID> getLinkingIds( UUID entitySetId ) {
+        return dataQueryService.getLinkingIds( entitySetId );
     }
 
     @Override

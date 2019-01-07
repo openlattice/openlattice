@@ -224,6 +224,10 @@ public class SearchService {
         elasticsearchApi.deleteOrganization( event.getOrganizationId() );
     }
 
+    /**
+     * Handles when entities are created or updated.
+     * In both cases it is enough to re-index the document, ElasticSearch will mark the old document as deleted.
+     */
     @Subscribe
     public void indexEntities( EntitiesUpsertedEvent event ) {
         event.getEntities()

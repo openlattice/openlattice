@@ -29,6 +29,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -254,9 +255,13 @@ class PostgresEntityDataQueryService(
         )
     }
 
-    fun getLinkingIds(entityKeyIds: Set<UUID>): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, UUID>> {
-        val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, UUID>> {
-            org.apache.commons.lang3.tuple.Pair.of(ResultSetAdapters.id(it), ResultSetAdapters.linkingId(it))
+    /**
+     * Selects linking ids by their entity set ids with filtering on entity key ids.
+     */
+    fun getLinkingIds(
+            entityKeyIds: Set<UUID>): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>> {
+        val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>> {
+            org.apache.commons.lang3.tuple.Pair.of(ResultSetAdapters.entitySetId(it), ResultSetAdapters.linkingIds(it))
         }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
@@ -264,6 +269,18 @@ class PostgresEntityDataQueryService(
             statement.fetchSize = FETCH_SIZE
 
             val rs = statement.executeQuery(selectLinkingIdsOfEntities(entityKeyIds))
+            StatementHolder(connection, statement, rs)
+        }, adapter)
+    }
+
+    fun getLinkingIds(entitySetId: UUID): PostgresIterable<UUID> {
+        val adapter = Function<ResultSet, UUID> { ResultSetAdapters.linkingId(it) }
+        return PostgresIterable(Supplier<StatementHolder> {
+            val connection = hds.connection
+            val statement = connection.createStatement()
+            statement.fetchSize = FETCH_SIZE
+
+            val rs = statement.executeQuery(selectLinkingIdsOfEntitySet(entitySetId))
             StatementHolder(connection, statement, rs)
         }, adapter)
     }
@@ -282,6 +299,13 @@ class PostgresEntityDataQueryService(
             val rs = statement.executeQuery(selectEntityKeyIdsByLinkingIds(linkingIds))
             StatementHolder(connection, statement, rs)
         }, adapter)
+    }
+
+    fun getLinkingEntitySetId(linkedEntitySetId: UUID): UUID {
+        val connection = hds.connection
+        val statement = connection.createStatement()
+        val rs = statement.executeQuery(getLinkingEntitySetIdQuery(linkedEntitySetId))
+        return ResultSetAdapters.id(rs)
     }
 
     fun upsertEntities(
@@ -823,8 +847,19 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
 
 internal fun selectLinkingIdsOfEntities(entityKeyIds: Set<UUID>): String {
     val entitiesClause = " AND ${entityKeyIdsClause(entityKeyIds)} "
-    return "SELECT ${ID_VALUE.name}, ${LINKING_ID.name} " +
+    return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) " +
             "FROM ${selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, setOf(), true)} " +
             "WHERE ${LINKING_ID.name} IS NOT NULL  "
 }
 
+internal fun selectLinkingIdsOfEntitySet(entitySetId: UUID): String {
+    return "SELECT ${LINKING_ID.name} " +
+            "FROM FROM ${IDS.name} " +
+            "WHERE ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND ${ENTITY_SET_ID.name} = '$entitySetId'"
+}
+
+internal fun getLinkingEntitySetIdQuery(linkedEntitySetId: UUID): String {
+    return "SELECT ${ID.name} " +
+            "FROM FROM ${ENTITY_SETS.name} " +
+            "WHERE '$linkedEntitySetId' = ANY(${LINKED_ENTITY_SETS.name})"
+}

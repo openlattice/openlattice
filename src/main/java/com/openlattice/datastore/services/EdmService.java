@@ -818,6 +818,13 @@ public class EdmService implements EdmManager {
                         ( entitySet.isLinking() )
                                 ? Optional.of( entitySet.getLinkedEntitySets() ) : Optional.empty() ) );
             }
+
+            EntityType entityType = getEntityType( id );
+            if ( !entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
+                eventBus.post( new EntityTypeCreatedEvent( entityType ) );
+            } else {
+                eventBus.post( new AssociationTypeCreatedEvent( getAssociationType( id ) ) );
+            }
         } );
         childrenIdsToLocks.entrySet().forEach( entry -> {
             if ( entry.getValue() ) { propertyTypes.unlock( entry.getKey() ); }

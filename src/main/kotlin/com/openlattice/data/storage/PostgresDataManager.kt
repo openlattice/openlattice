@@ -120,7 +120,6 @@ class PostgresDataManager(private val hds: HikariDataSource) {
                 it.setArray(2, arr)
                 return it.executeUpdate()
             }
-
         }
     }
 
@@ -131,10 +130,11 @@ class PostgresDataManager(private val hds: HikariDataSource) {
                 "WHERE $entitiesClause "
     }
 
-    fun updateLastLinkIndexSql(idsByEntitySetId: Map<UUID, Optional<kotlin.collections.Set<UUID>>>): String {
-        val entitiesClause = buildEntitiesClause(idsByEntitySetId, true)
+    fun updateLastLinkIndexSql(linkingIdsByEntitySetId: Map<UUID, Optional<kotlin.collections.Set<UUID>>>): String {
+        val entitiesClause = buildEntitiesClause(linkingIdsByEntitySetId, true)
 
-        return "UPDATE ${PostgresTable.IDS.name} SET ${PostgresColumn.LAST_LINK_INDEX.name} = ? WHERE TRUE $entitiesClause"
+        return "UPDATE ${PostgresTable.IDS.name} SET ${PostgresColumn.LAST_LINK_INDEX.name} = ? " +
+                "WHERE TRUE $entitiesClause"
     }
 
     fun updateLastLinkSql(entitySetId: UUID): String {
