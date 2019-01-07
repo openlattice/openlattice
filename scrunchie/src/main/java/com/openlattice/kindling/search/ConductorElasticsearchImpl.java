@@ -800,13 +800,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean deleteEntityData( EntityDataKey edk ) { //TODO linking
+    public boolean deleteEntityData( EntityDataKey edk ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         UUID entitySetId = edk.getEntitySetId();
-        UUID entityKeyId = edk.getEntityKeyId();
+        UUID entityId = edk.getEntityKeyId(); // either entityKeyId or linkingId
 
-        client.prepareDelete( getIndexName( entitySetId ), getTypeName( entitySetId ), entityKeyId.toString() )
+        client.prepareDelete( getIndexName( entitySetId ), getTypeName( entitySetId ), entityId.toString() )
                 .execute()
                 .actionGet();
         return true;
