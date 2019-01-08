@@ -29,11 +29,8 @@ import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -98,7 +95,9 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions ) {
-        return getAuthorizedPropertyTypes(
+        return ( entitySetIds.isEmpty() )
+                ? new HashMap<>()
+                : getAuthorizedPropertyTypes(
                 entitySetIds,
                 getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
                 requiredPermissions );
