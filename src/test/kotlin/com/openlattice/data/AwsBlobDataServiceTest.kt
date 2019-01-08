@@ -32,8 +32,8 @@ class AwsBlobDataServiceTest {
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            //val config  = setUpBamboo()
-            val config = setUpLocal()
+            val config = setUpBamboo()
+            //val config = setUpLocal()
 
             val byteBlobDataManager = AwsBlobDataService(
                     config,
