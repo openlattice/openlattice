@@ -38,8 +38,8 @@ class AwsBlobDataService(
     }
     
     override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
-        var metadata = ObjectMetadata()
-        var dataInputStream = data.inputStream()
+        val metadata = ObjectMetadata()
+        val dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
         metadata.contentType = contentType
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
@@ -68,7 +68,7 @@ class AwsBlobDataService(
         expirationTime.time = timeToLive
 
         return keys
-                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime, Optional.empty()) }) }
+                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime, HttpMethod.GET, Optional.empty()) }) }
                 .map { it.get() }
     }
 

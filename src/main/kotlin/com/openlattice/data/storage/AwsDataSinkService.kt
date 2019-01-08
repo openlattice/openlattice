@@ -32,7 +32,7 @@ class AwsDataSinkService {
         expirationTime.time = timeToLive
         entities.forEach {
             val key = it.entitySetId.toString() + "/" + it.entityKeyId.toString() + "/" + it.propertyTypeId.toString() + "/" + it.propertyHash
-            val url = byteBlobDataManager.getPresignedUrl(key, expirationTime, HttpMethod.PUT)
+            val url = byteBlobDataManager.getPresignedUrl(key, expirationTime, HttpMethod.PUT, Optional.empty())
             postgresData[it] = key
             urls.add(url.toString())
         }
