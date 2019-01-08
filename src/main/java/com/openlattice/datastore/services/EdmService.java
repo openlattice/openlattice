@@ -478,13 +478,18 @@ public class EdmService implements EdmManager {
     @Override
     public void createEntitySet( Principal principal, EntitySet entitySet ) {
         EntityType entityType = entityTypes.get( entitySet.getEntityTypeId() );
+        ensureValidEntitySet( entitySet );
         createEntitySet( principal, entitySet, entityType.getProperties() );
     }
 
-    private SecurableObjectType getSecurableObjectType(
-            IMap<UUID, ? extends AbstractSecurableObject> objects,
-            UUID objectId ) {
-        return Util.getSafely( objects, objectId ).getCategory();
+    private void ensureValidEntitySet( EntitySet entitySet ) {
+        if ( entitySet.isLinking() ) {
+            entitySet.getLinkedEntitySets().forEach( linkedEntitySetId -> {
+                Preconditions.checkArgument(
+                        entityTypes.get( linkedEntitySetId ).getId().equals( entitySet.getEntityTypeId() ),
+                        "Entity type of linked entity sets must be the same as of the linking entity set" );
+            } );
+        }
     }
 
     @Override
