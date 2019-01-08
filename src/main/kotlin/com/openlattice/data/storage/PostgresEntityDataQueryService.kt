@@ -849,7 +849,8 @@ internal fun selectLinkingIdsOfEntities(entityKeyIds: Set<UUID>): String {
     val entitiesClause = " AND ${entityKeyIdsClause(entityKeyIds)} "
     return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) " +
             "FROM ${selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, setOf(), true)} " +
-            "WHERE ${LINKING_ID.name} IS NOT NULL  "
+            "WHERE ${LINKING_ID.name} IS NOT NULL " +
+            "GROUP BY ${ENTITY_SET_ID.name} "
 }
 
 internal fun selectLinkingIdsOfEntitySet(entitySetId: UUID): String {
