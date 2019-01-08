@@ -23,13 +23,11 @@ package com.openlattice.graph
 
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.SetMultimap
-import com.hazelcast.core.HazelcastInstance
-import com.openlattice.analysis.AuthorizedFilteredRanking
+import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.AggregationType
-import com.openlattice.analysis.requests.FilteredRankingAggregation
+import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.datastore.services.EdmService
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.mapstores.TestDataFactory
 import com.zaxxer.hikari.HikariDataSource
@@ -99,15 +97,19 @@ class TopUtilizersTests {
                 "d4e29d9c-df8c-4c30-a405-2e6941601fbc",
                 "d724d8f2-da4c-46e0-b5d8-5db8c3367b50")
                 .map(UUID::fromString).toSet()
-        val filteredRanking = FilteredRankingAggregation(
+        val filteredRanking = FilteredNeighborsRankingAggregation(
                 UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202"),
                 UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a"),
                 Optional.empty(),
                 Optional.empty(),
-                mapOf(UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to //
-                        WeightedRankingAggregation(AggregationType.MAX, 3.1)),
-                mapOf(UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to
-                        WeightedRankingAggregation(AggregationType.MAX, 3.1)),
+                mapOf(
+                        UUID.fromString("0a48710c-3899-4743-b1f7-28c6f99aa202") to //
+                                WeightedRankingAggregation(AggregationType.MAX, 3.1)
+                ),
+                mapOf(
+                        UUID.fromString("c5da7a05-24a4-480e-9573-f5a118daec1a") to
+                                WeightedRankingAggregation(AggregationType.MAX, 3.1)
+                ),
                 true,
                 Optional.empty()
         )
@@ -132,7 +134,7 @@ class TopUtilizersTests {
 
 
         val filteredRankings = listOf(
-                AuthorizedFilteredRanking(
+                AuthorizedFilteredNeighborsRanking(
                         filteredRanking,
                         associationSets,
                         associationPropertyTypes,

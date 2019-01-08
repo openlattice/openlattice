@@ -21,7 +21,7 @@
 package com.openlattice.graph.core;
 
 import com.google.common.collect.SetMultimap;
-import com.openlattice.analysis.AuthorizedFilteredRanking;
+import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking;
 import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
@@ -29,9 +29,6 @@ import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
-import kotlin.Pair;
-
-import com.openlattice.postgres.streams.PostgresIterable;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -79,7 +76,7 @@ public interface GraphService {
             int limit,
             Set<UUID> entitySetIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            List<AuthorizedFilteredRanking> details,
+            List<AuthorizedFilteredNeighborsRanking> details,
             boolean linked,
             Optional<UUID> linkingEntitySetId);
 
