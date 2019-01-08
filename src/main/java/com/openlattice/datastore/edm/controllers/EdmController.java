@@ -875,7 +875,8 @@ public class EdmController implements EdmApi, AuthorizingComponent {
         if ( entitySet.isLinking() ) {
             entitySet.getLinkedEntitySets().forEach( linkedEntitySetId -> {
                 Preconditions.checkArgument(
-                        modelService.getEntityType( linkedEntitySetId ).getId().equals( entitySet.getEntityTypeId() ),
+                        modelService.getEntityTypeByEntitySetId( linkedEntitySetId ).getId()
+                                .equals( entitySet.getEntityTypeId() ),
                         "Entity type of linked entity sets must be the same as of the linking entity set" );
             } );
         }
