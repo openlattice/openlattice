@@ -23,8 +23,8 @@ package com.openlattice.data
 
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
-import com.openlattice.analysis.AuthorizedFilteredRanking
-import com.openlattice.analysis.requests.FilteredRankingAggregation
+import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
+import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.edm.type.PropertyType
@@ -149,7 +149,7 @@ interface DataGraphManager {
 
     fun getTopUtilizers(
             entitySetId: UUID,
-            topUtilizerDetails: List<FilteredRankingAggregation>,
+            topUtilizerDetails: List<FilteredNeighborsRankingAggregation>,
             numResults: Int,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>>
@@ -157,7 +157,7 @@ interface DataGraphManager {
     fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,
-            filteredRankings: List<AuthorizedFilteredRanking>,
+            filteredRankings: List<AuthorizedFilteredNeighborsRanking>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             linked: Boolean,
             linkingEntitySetId: Optional<UUID>
