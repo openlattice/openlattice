@@ -127,7 +127,7 @@ class PostgresDataManager(private val hds: HikariDataSource) {
         val entitiesClause = buildEntitiesClause(idsByEntitySetId, false)
 
         return "UPDATE ${PostgresTable.IDS.name} SET ${DataTables.LAST_INDEX.name} = ? " +
-                "WHERE $entitiesClause "
+                "WHERE TRUE $entitiesClause "
     }
 
     fun updateLastLinkIndexSql(linkingIdsByEntitySetId: Map<UUID, Optional<kotlin.collections.Set<UUID>>>): String {
