@@ -20,39 +20,31 @@
 
 package com.openlattice.datastore.search.controllers;
 
-import com.google.common.base.Predicates;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principals;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.search.SearchService;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.search.SearchApi;
+import com.openlattice.search.SearchService;
 import com.openlattice.search.requests.*;
-
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
-
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.inject.Inject;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
@@ -161,17 +153,17 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
             EntitySet es = edm.getEntitySet( entitySetId );
-            if( es.isLinking() && !es.getLinkedEntitySets().isEmpty() ) {
+            if ( es.isLinking() && !es.getLinkedEntitySets().isEmpty() ) {
                 Map<UUID, Map<UUID, PropertyType>> authorizedProperties = authorizationsHelper
                         .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of( Permission.READ ) );
                 if ( !authorizedProperties.isEmpty() && !es.getLinkedEntitySets().isEmpty() ) {
                     return searchService.executeLinkingSearch( SearchConstraints
-                            .simpleSearchConstraints(
-                                    es.getLinkedEntitySets().toArray(new UUID[es.getLinkedEntitySets().size()]),
-                                    searchTerm.getStart(),
-                                    searchTerm.getMaxHits(),
-                                    searchTerm.getSearchTerm(),
-                                    searchTerm.getFuzzy() ),
+                                    .simpleSearchConstraints(
+                                            es.getLinkedEntitySets().toArray( new UUID[ es.getLinkedEntitySets().size() ] ),
+                                            searchTerm.getStart(),
+                                            searchTerm.getMaxHits(),
+                                            searchTerm.getSearchTerm(),
+                                            searchTerm.getFuzzy() ),
                             authorizedProperties );
                 }
             } else {
@@ -180,12 +172,12 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                                 EnumSet.of( Permission.READ ) );
                 if ( !authorizedProperties.values().isEmpty() ) {
                     return searchService.executeSearch( SearchConstraints
-                            .simpleSearchConstraints( new UUID[] { entitySetId },
-                                    searchTerm.getStart(),
-                                    searchTerm.getMaxHits(),
-                                    searchTerm.getSearchTerm(),
-                                    searchTerm.getFuzzy() ),
-                            authorizedProperties);
+                                    .simpleSearchConstraints( new UUID[] { entitySetId },
+                                            searchTerm.getStart(),
+                                            searchTerm.getMaxHits(),
+                                            searchTerm.getSearchTerm(),
+                                            searchTerm.getFuzzy() ),
+                            authorizedProperties );
                 }
             }
         }
@@ -205,15 +197,15 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 EnumSet.of( Permission.READ ) ) ) {
 
             EntitySet es = edm.getEntitySet( entitySetId );
-            if( es.isLinking() ) {
+            if ( es.isLinking() ) {
                 Preconditions.checkArgument(
                         !es.getLinkedEntitySets().isEmpty(),
                         "Linked entity sets does not consist of any entity sets." );
                 Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = authorizationsHelper
-                        .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of(Permission.READ) );
+                        .getAuthorizedPropertiesOnEntitySets( es.getLinkedEntitySets(), EnumSet.of( Permission.READ ) );
 
                 Set<UUID> propertyTypeIds = authorizedPropertyTypes.values().stream().map( pt -> pt.keySet() )
-                        .reduce( (s1, s2) -> Sets.intersection(s1, s2) ).get();
+                        .reduce( ( s1, s2 ) -> Sets.intersection( s1, s2 ) ).get();
 
                 // only those are authorized, where propertytype is authorized for every entity set
                 List<SearchDetails> authorizedSearches = search.getSearches().stream()
@@ -222,7 +214,7 @@ public class SearchController implements SearchApi, AuthorizingComponent {
 
                 return searchService.executeLinkingSearch(
                         SearchConstraints.advancedSearchConstraints(
-                                es.getLinkedEntitySets().toArray(new UUID[es.getLinkedEntitySets().size()]),
+                                es.getLinkedEntitySets().toArray( new UUID[ es.getLinkedEntitySets().size() ] ),
                                 search.getStart(),
                                 search.getMaxHits(),
                                 authorizedSearches ),
@@ -238,11 +230,12 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                         .filter( searchDetails -> propertyTypeIds.contains( searchDetails.getPropertyType() ) )
                         .collect( Collectors.toList() );
 
-                return searchService.executeSearch( SearchConstraints.advancedSearchConstraints( new UUID[] { entitySetId },
-                        search.getStart(),
-                        search.getMaxHits(),
-                        authorizedSearches ),
-                        authorizedProperties );
+                return searchService
+                        .executeSearch( SearchConstraints.advancedSearchConstraints( new UUID[] { entitySetId },
+                                search.getStart(),
+                                search.getMaxHits(),
+                                authorizedSearches ),
+                                authorizedProperties );
             }
         }
         return new DataSearchResult( 0, Lists.newArrayList() );
@@ -353,11 +346,13 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                     return Lists.newArrayList();
                 }
                 return searchService
-                        .executeLinkingEntityNeighborSearch( authorizedEntitySets, new EntityNeighborsFilter(  ImmutableSet.of( entityKeyId ) ) )
+                        .executeLinkingEntityNeighborSearch( authorizedEntitySets,
+                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
                         .get( entityKeyId );
             } else {
                 return searchService
-                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
+                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
+                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
                         .get( entityKeyId );
             }
         }
@@ -454,7 +449,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         ensureAdminAccess();
         List<Organization> allOrganizations = Lists.newArrayList(
                 organizationService.getOrganizations(
-                        getAccessibleObjects( SecurableObjectType.Organization, EnumSet.of( Permission.READ ) ) // TODO: other access check??
+                        getAccessibleObjects( SecurableObjectType.Organization,
+                                EnumSet.of( Permission.READ ) ) // TODO: other access check??
                                 .parallel()
                                 .filter( Predicates.notNull()::apply )
                                 .map( AuthorizationUtils::getLastAclKeySafely ) ) );

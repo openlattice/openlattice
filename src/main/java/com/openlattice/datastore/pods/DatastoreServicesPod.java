@@ -29,7 +29,6 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
-import com.kryptnostic.rhizome.pods.CassandraPod;
 import com.openlattice.analysis.AnalysisService;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -51,9 +50,11 @@ import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
+import com.openlattice.data.storage.AwsDataSinkService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresDataManager;
+import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
@@ -72,19 +73,19 @@ import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.neuron.Neuron;
 import com.openlattice.neuron.pods.NeuronPod;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
-import com.openlattice.requests.HazelcastRequestsManager;
-import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.EsEdmService;
+import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
+
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -95,7 +96,6 @@ import org.springframework.context.annotation.Import;
 @Import( {
         Auth0Pod.class,
         ByteBlobServicePod.class,
-        CassandraPod.class,
         NeuronPod.class,
 } )
 public class DatastoreServicesPod {
@@ -249,7 +249,6 @@ public class DatastoreServicesPod {
         return new SyncTicketService( hazelcastInstance );
     }
 
-
     @Bean
     public AnalysisService analysisService() {
         return new AnalysisService();
@@ -326,7 +325,20 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEntityDataQueryService dataQueryService() {
-        return new PostgresEntityDataQueryService( hikariDataSource,byteBlobDataManager  );
+        return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
+    }
+
+    @Bean
+    public PersistentSearchService persistentSearchService() {
+        return new PersistentSearchService( hikariDataSource, principalService() );
+    }
+
+    @Bean PostgresDataSinkService postgresDataSinkService() {
+        return new PostgresDataSinkService();
+    }
+
+    @Bean AwsDataSinkService awsDataSinkService() {
+        return new AwsDataSinkService();
     }
 
     @PostConstruct

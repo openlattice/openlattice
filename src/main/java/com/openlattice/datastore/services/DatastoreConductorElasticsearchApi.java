@@ -111,6 +111,16 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
+    public boolean clearEntitySetData( UUID entitySetId ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall
+                    .wrap( ElasticsearchLambdas.clearEntitySetData( entitySetId ) ) ).get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "unable to clear entity set data from elasticsearch" );
+            return false;
+        }    }
+
+    @Override
     public SearchResult executeEntitySetMetadataSearch(
             Optional<String> optionalSearchTerm,
             Optional<UUID> optionalEntityType,
@@ -230,7 +240,7 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             Map<UUID, Set<Object>> propertyValues ) {
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
-                    new EntityDataLambdas( edk, propertyValues, false ) ) ).get();
+                    new EntityDataLambdas( edk, propertyValues ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity data to elasticsearch" );
             return false;
@@ -244,19 +254,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
                     new BulkEntityDataLambdas( entitySetId, entitiesById ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity data to elasticsearch" );
-            return false;
-        }
-    }
-
-    @Override
-    public boolean updateEntityData(
-            EntityDataKey edk,
-            Map<UUID, Set<Object>> propertyValues ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall.wrap(
-                    new EntityDataLambdas( edk, propertyValues, true ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to update entity data in elasticsearch" );
             return false;
         }
     }
