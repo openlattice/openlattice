@@ -344,8 +344,6 @@ public class EdmService implements EdmManager {
             schemaManager.upsertSchemas( entityType.getSchemas() );
             if ( !entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
                 eventBus.post( new EntityTypeCreatedEvent( entityType ) );
-            } else {
-                eventBus.post( new AssociationTypeCreatedEvent( getAssociationType( entityType.getId() ) ) );
             }
         } else {
             /*
