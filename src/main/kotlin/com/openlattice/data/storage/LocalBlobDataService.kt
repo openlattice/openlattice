@@ -12,7 +12,7 @@ private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 
 @Service
 class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
-    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod): URL {
+    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod, contentType: Optional<String>): URL {
         throw UnsupportedOperationException()
     }
 
@@ -20,7 +20,7 @@ class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataMana
         throw UnsupportedOperationException()
     }
 
-    override fun putObject(s3Key: String, data: ByteArray) {
+    override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
         insertEntity(s3Key, data)
     }
 

@@ -12,6 +12,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.*;
 
+import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Type;
@@ -68,12 +69,19 @@ public class JsonDeserializer {
              * Jackson binds to String
              */
             case Binary:
-                checkState( value instanceof String,
-                        "Expected string for property type %s with data %s, received %s",
+                checkState( value instanceof Pair<?, ?>,
+                        "Expected pair for property type %s with data %s, received %s",
                         dataType,
                         propertyTypeId,
                         value.getClass() );
-                return decoder.decode( (String) value );
+                Pair<?, ?> valuePair = (Pair<?, ?>) value;
+                checkState( valuePair.component1() instanceof String,
+                        "Expected string for content type, received %s",
+                        ( valuePair.component1() ).getClass() );
+                checkState( valuePair.component2() instanceof String,
+                        "Expected string for binary data, received %s",
+                        ( valuePair.component2() ).getClass() );
+                return new Pair( (String) valuePair.component1(), decoder.decode( (String) valuePair.component2() ) );
             case Date:
                 checkState( value instanceof String,
                         "Expected string for property type %s with data %s,  received %s",

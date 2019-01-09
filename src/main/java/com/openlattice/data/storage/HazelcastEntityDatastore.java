@@ -384,49 +384,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return new EntityDataKey( entityKey.getEntitySetId(), entityKeyId );
     }
 
-    public SetMultimap<FullQualifiedName, Object> fromEntityBytes(
-            UUID id,
-            SetMultimap<UUID, ByteBuffer> properties,
-            Map<UUID, PropertyType> propertyType ) {
-        SetMultimap<FullQualifiedName, Object> entityData = HashMultimap.create();
-        if ( properties == null ) {
-            logger.error( "Properties retreived from aggregator for id {} are null.", id );
-            return HashMultimap.create();
-        }
-        properties.entries().forEach( prop -> {
-            PropertyType pt = propertyType.get( prop.getKey() );
-            if ( pt != null ) {
-                entityData.put( pt.getType(), CassandraSerDesFactory.deserializeValue( mapper,
-                        prop.getValue(),
-                        pt.getDatatype(),
-                        id::toString ) );
-            }
-        } );
-        return entityData;
-    }
-
-    public SetMultimap<Object, Object> untypedFromEntityBytes(
-            UUID id,
-            SetMultimap<UUID, ByteBuffer> properties,
-            Map<UUID, PropertyType> propertyType ) {
-        if ( properties == null ) {
-            logger.error( "Data for id {} was null", id );
-            return HashMultimap.create();
-        }
-        SetMultimap<Object, Object> entityData = HashMultimap.create();
-
-        properties.entries().forEach( prop -> {
-            PropertyType pt = propertyType.get( prop.getKey() );
-            if ( pt != null ) {
-                entityData.put( pt.getType(), CassandraSerDesFactory.deserializeValue( mapper,
-                        prop.getValue(),
-                        pt.getDatatype(),
-                        id::toString ) );
-            }
-        } );
-        return entityData;
-    }
-
     @Deprecated
     @Timed
     public Stream<UUID> createEntityData(
