@@ -359,6 +359,10 @@ public final class ResultSetAdapters {
         return rs.getObject( ENTITY_SET_ID.getName(), UUID.class );
     }
 
+    public static Set<UUID> entitySetIds( ResultSet rs ) throws SQLException {
+        return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_SET_ID.getName() ).getArray() );
+    }
+
     public static UUID propertyTypeId( ResultSet rs ) throws SQLException {
         return rs.getObject( PROPERTY_TYPE_ID.getName(), UUID.class );
     }
