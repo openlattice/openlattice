@@ -232,15 +232,10 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 Pair(UUID.fromString("f950d05a-f4f2-451b-8c6d-56e78bba8b42"), DataTables.quote("nc.PersonRace")),
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), DataTables.quote("housing.updatedat")),
                 Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), DataTables.quote("nc.PersonEthnicity"))
-        );
-        val entityKeyIds = sequenceOf(
-                "73170000-0000-0000-8000-0000000004a9",
-                "4d9b0000-0000-0000-8000-00000000005d"
         )
-                .map(UUID::fromString)
-                .toSet()
+
         logger.info(
-                "Entity set query: {}",
+                "Entity set query:\n {}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
                         mapOf(entitySetId to Optional.empty()),
                         propertyTypeMap,
