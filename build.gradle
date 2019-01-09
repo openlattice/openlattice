@@ -24,7 +24,7 @@ plugins {
     id 'idea'
     id 'jacoco'
     id 'checkstyle'
-    id 'com.github.spotbugs' version '1.6.3'
+    id 'com.github.spotbugs' version '1.6.6'
     id 'org.jetbrains.kotlin.jvm' version '1.3.10'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.3.10'
     id 'org.jetbrains.dokka' version '0.9.17'
@@ -60,7 +60,7 @@ tasks.withType(Checkstyle) {
 }
 
 spotbugs {
-    toolVersion = '3.1.5'
+    toolVersion = '3.1.9'
 }
 
 tasks.withType(com.github.spotbugs.SpotBugsTask) {
@@ -81,11 +81,11 @@ dokka {
 
 
 dependencies {
-    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.8.0'
     compileOnly 'net.jcip:jcip-annotations:1.0'
-    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.9'
     testCompileOnly 'net.jcip:jcip-annotations:1.0'
-    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.9'
     /*
      * SL4J
      */
@@ -108,6 +108,7 @@ dependencies {
     compile "org.apache.olingo:odata-commons-core:${odata_version}"
     compile "org.apache.olingo:odata-server-api:${odata_version}"
     compile "org.apache.olingo:odata-server-core:${odata_version}"
+    //compile "org.apache.tika:tika-core:1.19.1"
 
     compile "org.xerial.snappy:snappy-java:${snappy_version}"
     compile "net.jpountz.lz4:lz4:${lz4_version}"

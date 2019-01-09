@@ -10,6 +10,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.*
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.openlattice.datastore.configuration.DatastoreConfiguration
+import okhttp3.MediaType
+//import org.apache.tika.Tika
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.net.URL
@@ -34,12 +36,12 @@ class AwsBlobDataService(
         builder.credentials = AWSStaticCredentialsProvider(s3Credentials)
         return builder.build()
     }
-
-    override fun putObject(s3Key: String, data: ByteArray) {
+    
+    override fun putObject(s3Key: String, data: ByteArray, contentType: String) {
         val metadata = ObjectMetadata()
         val dataInputStream = data.inputStream()
         metadata.contentLength = dataInputStream.available().toLong()
-        metadata.contentType = "image"
+        metadata.contentType = contentType
         val putRequest = PutObjectRequest(datastoreConfiguration.bucketName, s3Key, dataInputStream, metadata)
         s3.putObject(putRequest)
 
@@ -66,13 +68,15 @@ class AwsBlobDataService(
         expirationTime.time = timeToLive
 
         return keys
-                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime) }) }
+                .map { executorService.submit(Callable<URL> { getPresignedUrl(it as String, expirationTime, HttpMethod.GET, Optional.empty()) }) }
                 .map { it.get() }
     }
 
-    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod): URL {
-        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString())
-                .withMethod(httpMethod).withExpiration(expiration)
+    override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod, contentType: Optional<String>): URL {
+        val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
+                HttpMethod.GET
+        ).withExpiration(expiration)
+        contentType.ifPresent { urlRequest.contentType = contentType.get() }
         lateinit var url: URL
         try {
             url = s3.generatePresignedUrl(urlRequest)

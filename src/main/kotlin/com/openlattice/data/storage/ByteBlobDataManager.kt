@@ -7,13 +7,13 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest
 
 
 interface ByteBlobDataManager {
-    fun putObject(s3Key: String, data: ByteArray)
+    fun putObject(s3Key: String, data: ByteArray, contentType: String)
 
     fun deleteObject(s3Key: String)
 
-    fun getObjects(objects: List<Any>): List<Any>
+    fun getObjects(keys: List<Any>): List<Any>
 
-    fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod = HttpMethod.GET): URL
+    fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod = HttpMethod.GET, contentType: Optional<String>): URL
   
     fun getPresignedUrls(keys: List<Any>): List<URL>
   
