@@ -181,7 +181,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
-            eventBus.post( new EntitiesDeletedEvent( entitySetId, entityKeyIds ) );
+            eventBus.post( new EntitiesDeletedEvent( Set.of(entitySetId), entityKeyIds ) );
             signalLinkedEntitiesDeleted( entitySetId, entityKeyIds );
         }
     }
@@ -207,8 +207,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .flatMap( it -> it.getValue().stream() )
                 .collect( Collectors.toSet() );
         if(!deletedLinkedEntities.isEmpty()) {
-            UUID linkingEntitySetId = dataQueryService.getLinkingEntitySetId( entitySetId );
-            eventBus.post( new EntitiesDeletedEvent( linkingEntitySetId, deletedLinkedEntities ) );
+            Set<UUID> linkingEntitySetIds = dataQueryService.getLinkingEntitySetIds( entitySetId )
+                    .stream().collect( Collectors.toSet());
+            eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkedEntities ) );
         }
 
         pdm.markAsNeedsToBeIndexed(

@@ -177,10 +177,12 @@ public class SearchService {
     @Timed
     @Subscribe
     public void deleteEntities( EntitiesDeletedEvent event ) {
-        event.getEntityKeyIds()
-                .stream()
-                .map( id -> new EntityDataKey( event.getEntitySetId(), id ) )
-                .forEach( elasticsearchApi::deleteEntityData );
+        event.getEntitySetIds().forEach(
+                entitySetId -> event.getEntityKeyIds()
+                        .stream()
+                        .map( id -> new EntityDataKey( entitySetId, id ) )
+                        .forEach( elasticsearchApi::deleteEntityData )
+        );
     }
 
     @Timed

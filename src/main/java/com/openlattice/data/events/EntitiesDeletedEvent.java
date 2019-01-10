@@ -25,16 +25,16 @@ import java.util.UUID;
 
 public class EntitiesDeletedEvent {
 
-    private final UUID      entitySetId;
+    private final Set<UUID> entitySetIds;
     private final Set<UUID> entityKeyIds;
 
-    public EntitiesDeletedEvent( UUID entitySetId, Set<UUID> entityKeyIds ) {
-        this.entitySetId = entitySetId;
+    public EntitiesDeletedEvent( Set<UUID> entitySetId, Set<UUID> entityKeyIds ) {
+        this.entitySetIds = entitySetId;
         this.entityKeyIds = entityKeyIds;
     }
 
-    public UUID getEntitySetId() {
-        return entitySetId;
+    public Set<UUID> getEntitySetIds() {
+        return entitySetIds;
     }
 
     public Set<UUID> getEntityKeyIds() {

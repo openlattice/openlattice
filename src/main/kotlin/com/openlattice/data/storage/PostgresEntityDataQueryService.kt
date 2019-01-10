@@ -87,6 +87,20 @@ class PostgresEntityDataQueryService(
         ).toMap()
     }
 
+    fun getLinkedEntityData(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+    ): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
+        val adapter = Function<ResultSet, Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
+            Pair(ResultSetAdapters.linkingId(it), ResultSetAdapters.entitySetId(it)) to
+                    ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypesByEntitySetId, byteBlobDataManager)
+        }
+        return streamableEntitySet(
+                linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId,
+                EnumSet.noneOf(MetadataOption::class.java), Optional.empty(), adapter, true
+        )
+    }
+
     fun getEntitiesByIdWithLastWrite(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
@@ -301,11 +315,16 @@ class PostgresEntityDataQueryService(
         }, adapter)
     }
 
-    fun getLinkingEntitySetId(linkedEntitySetId: UUID): UUID {
-        val connection = hds.connection
-        val statement = connection.createStatement()
-        val rs = statement.executeQuery(getLinkingEntitySetIdQuery(linkedEntitySetId))
-        return ResultSetAdapters.id(rs)
+    fun getLinkingEntitySetIds(linkedEntitySetId: UUID): PostgresIterable<UUID> {
+        val adapter = Function<ResultSet, UUID> {
+            ResultSetAdapters.id(it)
+        }
+        return PostgresIterable(Supplier<StatementHolder> {
+            val connection = hds.connection
+            val statement = connection.createStatement()
+            val rs = statement.executeQuery(getLinkingEntitySetIdQuery(linkedEntitySetId))
+            StatementHolder(connection, statement, rs)
+        }, adapter)
     }
 
     fun upsertEntities(
@@ -865,6 +884,6 @@ internal fun selectLinkingIdsOfEntitySet(entitySetId: UUID): String {
 
 internal fun getLinkingEntitySetIdQuery(linkedEntitySetId: UUID): String {
     return "SELECT ${ID.name} " +
-            "FROM FROM ${ENTITY_SETS.name} " +
+            "FROM ${ENTITY_SETS.name} " +
             "WHERE '$linkedEntitySetId' = ANY(${LINKED_ENTITY_SETS.name})"
 }
