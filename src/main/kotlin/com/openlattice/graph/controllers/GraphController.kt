@@ -50,7 +50,7 @@ class GraphController
 constructor(
         private val graphQueryService: GraphQueryService,
         private val authorizationManager: AuthorizationManager
-//        private val filtered
+//        private val filteredAggregation
 ) : GraphApi, AuthorizingComponent {
 
 
