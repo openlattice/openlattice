@@ -96,7 +96,7 @@ public interface DataApi {
     @POST( BASE + "/" + ENTITY_SET + "/" )
     List<UUID> createEntities(
             @Query( ENTITY_SET_ID ) UUID entitySetId,
-            @Body List<SetMultimap<UUID, Object>> entities );
+            @Body List<Map<UUID, Set<Object>>> entities );
 
     /**
      * Replaces a single entity from an entity set.
