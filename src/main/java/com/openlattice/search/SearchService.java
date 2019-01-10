@@ -324,6 +324,12 @@ public class SearchService {
     }
 
     @Subscribe
+    public void createPropertyType( PropertyTypeCreatedEvent event ) {
+        PropertyType propertyType = event.getPropertyType();
+        elasticsearchApi.savePropertyTypeToElasticsearch( propertyType );
+    }
+
+    @Subscribe
     public void createApp( AppCreatedEvent event ) {
         App app = event.getApp();
         elasticsearchApi.saveAppToElasticsearch( app );

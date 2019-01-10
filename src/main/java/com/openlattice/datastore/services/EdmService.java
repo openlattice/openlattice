@@ -87,7 +87,6 @@ import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySet
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
-import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -106,7 +105,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -141,9 +139,6 @@ public class EdmService implements EdmManager {
 
     @Inject
     private EventBus eventBus;
-
-    @Inject
-    private EsEdmService esEdmService;
 
     public EdmService(
             HikariDataSource hds,
@@ -236,9 +231,7 @@ public class EdmService implements EdmManager {
 
         if ( dbRecord == null ) {
             propertyType.getSchemas().forEach( schemaManager.propertyTypesSchemaAdder( propertyType.getId() ) );
-
             edmManager.createPropertyTypeIfNotExist( propertyType );
-            esEdmService.createPropertyType( propertyType );
 
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         } else {
@@ -974,7 +967,8 @@ public class EdmService implements EdmManager {
         if ( update.getType().isPresent() ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
             edmManager.updatePropertyTypeFqn( propertyType, update.getType().get() );
-            esEdmService.createPropertyType( propertyType );
+
+            eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
         // get all entity sets containing the property type, and re-index them.
@@ -988,7 +982,7 @@ public class EdmService implements EdmManager {
                                     .post( new PropertyTypesInEntitySetUpdatedEvent( es.getId(), properties ) ) );
                 } );
 
-        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) );
+        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) ); // currently not picked up by anything
     }
 
     @Override
