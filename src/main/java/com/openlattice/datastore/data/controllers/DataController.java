@@ -316,7 +316,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public List<UUID> createEntities(
             @RequestParam( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody List<SetMultimap<UUID, Object>> entities ) {
+            @RequestBody List<Map<UUID, Set<Object>>> entities ) {
         //Ensure that we have read access to entity set metadata.
         ensureReadAccess( new AclKey( entitySetId ) );
         //Load authorized property types
