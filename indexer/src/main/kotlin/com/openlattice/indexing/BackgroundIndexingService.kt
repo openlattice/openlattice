@@ -60,8 +60,9 @@ import kotlin.system.exitProcess
  *
  */
 
-private const val EXPIRATION_MILLIS = 60000L
-private const val INDEX_RATE = 30000L
+const val EXPIRATION_MILLIS = 60000L
+const val INDEX_RATE = 30000L
+const val FETCH_SIZE = 128000
 
 class BackgroundIndexingService(
         private val hds: HikariDataSource,
@@ -73,7 +74,6 @@ class BackgroundIndexingService(
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
         const val INDEX_SIZE = 32000
-        const val FETCH_SIZE = 128000
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
@@ -113,10 +113,8 @@ class BackgroundIndexingService(
 
                 val totalIndexed = lockedEntitySets
                         .parallelStream()
-                        .mapToInt {
-                            if (it.isLinking) indexLinkingEntitySet(it)
-                            else indexEntitySet(it)
-                        }
+                        .filter { it -> !it.isLinking }
+                        .mapToInt { indexEntitySet(it) }
                         .sum()
 
                 lockedEntitySets.forEach(this::deleteIndexingLock)
@@ -164,43 +162,10 @@ class BackgroundIndexingService(
         }, Function<ResultSet, UUID> { ResultSetAdapters.id(it) })
     }
 
-    private fun getDirtyLinkingIdsQuery(): String {
-        return "SELECT ${ENTITY_SET_ID.name}, ARRAY_AGG(${LINKING_ID.name}) as ${LINKING_ID.name} FROM ${IDS.name} " +
-                "WHERE ${LINKING_ID.name} IS NOT NULL " +
-                "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
-                "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
-                "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
-                "AND ${ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) " +
-                "GROUP BY ${ENTITY_SET_ID.name} " +
-                "LIMIT $FETCH_SIZE"
-    }
-
-    private fun getDirtyLinkingIds(linkedEntitySetIds: Set<UUID>): PostgresIterable<Pair<UUID, Set<UUID>>> {
-        return PostgresIterable(Supplier<StatementHolder> {
-            val connection = hds.connection
-            val stmt = connection.prepareStatement(getDirtyLinkingIdsQuery())
-            val linkingIdArr = PostgresArrays.createUuidArray(connection, linkedEntitySetIds)
-            stmt.setArray(1, linkingIdArr)
-            val rs = stmt.executeQuery()
-            StatementHolder(connection, stmt, rs)
-        }, Function<ResultSet, Pair<UUID, Set<UUID>>> {
-            ResultSetAdapters.entitySetId(it) to ResultSetAdapters.linkingIds(it)
-        })
-    }
-
     private fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
         return propertyTypes
                 .getAll(entityTypes[entityTypeId]?.properties ?: setOf())
                 .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
-    }
-
-    private fun getPropertyTypesByEntityTypesById(): Map<UUID, Map<UUID, PropertyType>> {
-        return entityTypes.entries.map {
-            it.key to propertyTypes
-                    .getAll(it.value.properties)
-                    .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
-                    .toMap()
-        }.toMap()
     }
 
     private fun indexEntitySet(entitySet: EntitySet): Int {
@@ -221,7 +186,7 @@ class BackgroundIndexingService(
             updateExpiration(entitySet)
             while (entityKeyIdsIterator.hasNext()) {
                 val batch = getBatch(entityKeyIdsIterator)
-                indexCount += indexEntities(entitySet, batch, propertyTypes, Optional.empty())
+                indexCount += indexEntities(entitySet, batch, propertyTypes)
             }
             entityKeyIdsIterator = entityKeyIds.iterator()
         }
@@ -236,71 +201,17 @@ class BackgroundIndexingService(
         return indexCount
     }
 
-    private fun indexLinkingEntitySet(entitySet: EntitySet): Int {
-        logger.info(
-                "Starting indexing for linking entity set {} with id {}",
-                entitySet.name,
-                entitySet.id
-        )
-
-        if (entitySet.linkedEntitySets.isEmpty()) {
-            logger.warn("Linking entity set has no linked entity sets")
-            return 0
-        }
-
-        val esw = Stopwatch.createStarted()
-        val linkingIdsByEntitySetIds = getDirtyLinkingIds(entitySet.linkedEntitySets)
-
-        // in linking entity sets, all linked entity sets must have the same entity type
-        val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
-        var indexCount = 0
-
-        linkingIdsByEntitySetIds.forEach {
-            val linkingIdsIterator = it.second.iterator()
-
-            while (linkingIdsIterator.hasNext()) {
-                updateExpiration(entitySet)
-                while (linkingIdsIterator.hasNext()) {
-                    val batch = getBatch(linkingIdsIterator)
-                    updateExpiration(entitySet)
-                    indexCount += indexEntities(entitySet, batch, propertyTypes, Optional.of(it.first))
-                    updateExpiration(entitySet)
-                }
-            }
-        }
-
-        logger.info(
-                "Finished indexing {} elements from linking entity set {} in {} ms",
-                indexCount,
-                entitySet.name,
-                esw.elapsed(TimeUnit.MILLISECONDS)
-        )
-
-        return indexCount
-    }
-
     private fun indexEntities(
             entitySet: EntitySet,
             batchToIndex: Set<UUID>,
-            propertyTypeMap: Map<UUID, PropertyType>,
-            linkedEntitySetId: Optional<UUID>
+            propertyTypeMap: Map<UUID, PropertyType>
     ): Int {
         val esb = Stopwatch.createStarted()
         var indexCount = 0
-        val linked = entitySet.isLinking
-        val entitySetId = if (linked) linkedEntitySetId.get() else entitySet.id
+        val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
 
-        val entitiesById = if (linked) {
-            dataQueryService.getLinkedEntitiesByLinkingId(
-                    mapOf(entitySetId to Optional.of(batchToIndex)),
-                    mapOf(entitySetId to propertyTypeMap)
-            )
-        } else {
-            dataQueryService.getEntitiesById(entitySetId, propertyTypeMap, batchToIndex)
-        }
-
-        if (elasticsearchApi.createBulkEntityData(entitySet.id, mapOf(entitySetId to entitiesById), linked)) {
-            indexCount += dataManager.markAsIndexed(mapOf(entitySetId to Optional.of(batchToIndex)), linked)
+        if (elasticsearchApi.createBulkEntityData(entitySet.id, mapOf(entitySet.id to entitiesById), false)) {
+            indexCount += dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
