@@ -232,11 +232,11 @@ open class DataGraphService(
 
     override fun createEntities(
             entitySetId: UUID,
-            entities: List<SetMultimap<UUID, Any>>,
+            entities: List<Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): List<UUID> {
         val ids = idService.reserveIds(entitySetId, entities.size)
-        val entityMap = ids.mapIndexed { i, id -> id to Multimaps.asMap(entities[i]) }.toMap()
+        val entityMap = ids.mapIndexed { i, id -> id to entities[i] }.toMap()
         eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
         return ids
     }
@@ -283,7 +283,7 @@ open class DataGraphService(
                 .asMap(associations)
                 .forEach {
                     val entitySetId = it.key
-                    val entities = it.value.map { it.data }
+                    val entities = it.value.map { Multimaps.asMap(it.data) }
                     val ids = createEntities(entitySetId, entities, authorizedPropertiesByEntitySetId[entitySetId]!!)
 
                     entityKeyIds.putAll(entitySetId, ids)
@@ -353,9 +353,9 @@ open class DataGraphService(
         for (entity in entities) {
             val entitiesToCreate = entitiesByEntitySet.getOrPut(entity.entitySetId) { mutableMapOf() }
             val entityDetails = entitiesToCreate.getOrPut(entity.entityId) { entity.details }
-            if(entityDetails !== entity.details) {
+            if (entityDetails !== entity.details) {
                 entity.details.forEach { propertyTypeId, values ->
-                    entityDetails.getOrPut(propertyTypeId){ mutableSetOf() }.addAll( values )
+                    entityDetails.getOrPut(propertyTypeId) { mutableSetOf() }.addAll(values)
 
                 }
             }
