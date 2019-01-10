@@ -453,10 +453,10 @@ class PostgresEntityDataQueryService(
         }
     }
 
-    fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
+    fun deleteEntitySetData(entitySetId: UUID, propertyTypes: Map<UUID, PropertyType>): Int {
         val connection = hds.connection
         return connection.use {
-            authorizedPropertyTypes
+            propertyTypes
                     .map {
                         val s = connection.createStatement()
                         if (it.value.datatype == EdmPrimitiveTypeKind.Binary) {
@@ -497,6 +497,13 @@ class PostgresEntityDataQueryService(
                 Function<ResultSet, String> {
                     it.getString(fqn)
                 }).asSequence().chunked(1000).forEach { byteBlobDataManager.deleteObjects(it) }
+    }
+
+    fun deleteEntitySet(entitySetId: UUID): Int {
+        return hds.connection.use {
+            val s = it.prepareStatement(deleteEntitiesOfEntitySet(entitySetId))
+            s.executeUpdate()
+        }
     }
 
 
@@ -714,10 +721,10 @@ fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID): String 
 }
 
 fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
-    return deleteEntitySet(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    return deleteEntitiesOfEntitySet(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
 }
 
-fun deleteEntitySet(entitySetId: UUID): String {
+fun deleteEntitiesOfEntitySet(entitySetId: UUID): String {
     return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 

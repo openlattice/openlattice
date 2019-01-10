@@ -469,10 +469,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @SuppressFBWarnings(
             value = "UC_USELESS_OBJECT",
             justification = "results Object is used to execute deletes in batches" )
-    public int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
+    public int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> propertyTypes ) {
         logger.info( "Deleting data of entity set: {}", entitySetId );
-        int deleteCount = dataQueryService.deleteEntitySet( entitySetId, authorizedPropertyTypes );
-        logger.info( "Finished deletion of entity set {}. Deleted {} rows.", entitySetId, deleteCount );
+        int deletePropertyCount = dataQueryService.deleteEntitySetData( entitySetId, propertyTypes );
+        int deleteCount = dataQueryService.deleteEntitySet( entitySetId );
+        logger.info( "Finished deletion of entity set {}. Deleted {} rows and {} property data",
+                entitySetId, deleteCount, deletePropertyCount );
         return deleteCount;
     }
 
