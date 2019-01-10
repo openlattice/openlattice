@@ -78,7 +78,6 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
-import com.openlattice.search.EsEdmService;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
@@ -311,11 +310,6 @@ public class DatastoreServicesPod {
     @Bean
     public ConductorElasticsearchApi conductorElasticsearchApi() {
         return new DatastoreConductorElasticsearchApi( hazelcastInstance );
-    }
-
-    @Bean
-    public EsEdmService esEdmService() {
-        return new EsEdmService( conductorElasticsearchApi() );
     }
 
     @Bean
