@@ -32,7 +32,6 @@ import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
-import com.openlattice.datastore.cassandra.CassandraSerDesFactory;
 import com.openlattice.edm.events.EntitySetDataClearedEvent;
 import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
@@ -331,6 +330,15 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 authorizedPropertyTypes,
                 EnumSet.noneOf( MetadataOption.class ),
                 Optional.empty() ).stream();
+    }
+
+    @Override
+    @Timed
+    public Map<UUID, Map<UUID, Set<Object>>> getLinkedEntitiesByLinkingId(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId ) {
+        return dataQueryService
+                .getLinkedEntitiesByLinkingId( linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId );
     }
 
     @Override

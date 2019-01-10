@@ -61,6 +61,7 @@ import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
 
+import java.security.Permissions;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -166,6 +167,32 @@ public class SearchService {
                 .collect( Collectors.toList() );
 
         return new DataSearchResult( result.getNumHits(), results );
+    }
+
+    @Timed
+    @Subscribe
+    public void createEntitySet( EntitySetCreatedEvent event ) {
+        elasticsearchApi.saveEntitySetToElasticsearch( event.getEntitySet(), event.getPropertyTypes() );
+
+        // If a linking entity set is created (and it has linked entity sets, so linked data),
+        // we have to explicitly create the index and mappings for each linking id,
+        // because it won't get picked up by indexer
+        if ( event.getEntitySet().isLinking() && !event.getEntitySet().getLinkedEntitySets().isEmpty() ) {
+            event.getEntitySet().getLinkedEntitySets().forEach(
+                    entitySetId -> {
+                        Set<UUID> linkingIds = dataManager.getLinkingIds( entitySetId )
+                                .stream().collect( Collectors.toSet() );
+                        Map<UUID, Map<UUID, Set<Object>>> linkedData = dataManager.getLinkedEntitiesByLinkingId(
+                                Map.of( entitySetId, Optional.of( linkingIds ) ),
+                                Map.of( entitySetId, event.getPropertyTypes().stream()
+                                        .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) ) ) );
+                        elasticsearchApi.createBulkEntityData(
+                                event.getEntitySet().getId(),
+                                Map.of( entitySetId, linkedData ),
+                                true );
+                    }
+            );
+        }
     }
 
     @Timed

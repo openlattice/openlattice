@@ -518,9 +518,7 @@ public class EdmService implements EdmManager {
             List<PropertyType> ownablePropertyTypes = Lists
                     .newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
             edmManager.createEntitySet( entitySet, ownablePropertyTypes );
-            esEdmService.createEntitySet( entitySet, ownablePropertyTypes );
 
-            // No subscribers currently
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
 
         } catch ( Exception e ) {

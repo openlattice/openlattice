@@ -877,8 +877,8 @@ internal fun selectLinkingIdsOfEntities(entityKeyIds: Set<UUID>): String {
 }
 
 internal fun selectLinkingIdsOfEntitySet(entitySetId: UUID): String {
-    return "SELECT ${LINKING_ID.name} " +
-            "FROM FROM ${IDS.name} " +
+    return "SELECT DISTINCT ${LINKING_ID.name} " +
+            "FROM ${IDS.name} " +
             "WHERE ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND ${ENTITY_SET_ID.name} = '$entitySetId'"
 }
 
