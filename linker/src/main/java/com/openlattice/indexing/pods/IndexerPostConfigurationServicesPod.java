@@ -35,6 +35,7 @@ import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundIndexingService;
+import com.openlattice.indexing.BackgroundLinkingIndexingService;
 import com.openlattice.indexing.configuration.LinkingConfiguration;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Blocker;
@@ -115,6 +116,16 @@ public class IndexerPostConfigurationServicesPod {
                 dataQueryService(),
                 elasticsearchApi(),
                 postgresDataManager() );
+    }
+
+    @Bean
+    public BackgroundLinkingIndexingService backgroundLinkingIndexingService() throws IOException {
+        return new BackgroundLinkingIndexingService(
+                hikariDataSource,
+                dataQueryService(),
+                elasticsearchApi(),
+                postgresDataManager(),
+                hazelcastInstance );
     }
 
     @Bean
