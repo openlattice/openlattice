@@ -47,7 +47,6 @@ import com.openlattice.linking.RealtimeLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
-import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -126,11 +125,6 @@ public class IndexerPostConfigurationServicesPod {
                 elasticsearchApi(),
                 postgresDataManager(),
                 hazelcastInstance );
-    }
-
-    @Bean
-    public EsEdmService esEdmService() throws IOException {
-        return new EsEdmService( elasticsearchApi() );
     }
 
     @Bean
