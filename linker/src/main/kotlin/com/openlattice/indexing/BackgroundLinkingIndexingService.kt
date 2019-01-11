@@ -4,6 +4,7 @@ import com.google.common.base.Stopwatch
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
+import com.openlattice.data.EntityDatastore
 import com.openlattice.data.storage.PostgresDataManager
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
@@ -26,13 +27,13 @@ import kotlin.collections.HashMap
 
 class BackgroundLinkingIndexingService(
         private val hds: HikariDataSource,
-        private val dataQueryService: PostgresEntityDataQueryService,
+        private val dataStore: EntityDatastore,
         private val elasticsearchApi: ConductorElasticsearchApi,
         private val dataManager: PostgresDataManager,
         hazelcastInstance: HazelcastInstance) {
 
     companion object {
-        val logger = LoggerFactory.getLogger(BackgroundLinkingIndexingService::class.java)
+        private val logger = LoggerFactory.getLogger(BackgroundLinkingIndexingService::class.java)!!
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
@@ -55,7 +56,7 @@ class BackgroundLinkingIndexingService(
             val linkingEntitySetIdsByLinkingIds = HashMap<UUID, HashSet<UUID>>() //linking_id/linking_entity_set_ids
             dirtyLinkingIdsByEntitySetId.forEach { (entitySetId, linkingIds) ->
                 linkingIds.forEach {
-                    val linkingEntitySetIds = dataQueryService.getLinkingEntitySetIds(entitySetId).toHashSet()
+                    val linkingEntitySetIds = dataStore.getLinkingEntitySetIds(entitySetId).toHashSet()
                     if (!linkingEntitySetIds.isEmpty()) {
                         linkingEntitySetIdsByLinkingIds.putIfAbsent(it, linkingEntitySetIds)?.addAll(linkingEntitySetIds)
                     }
@@ -68,15 +69,9 @@ class BackgroundLinkingIndexingService(
             // Linking ids are not filtered here, whether they need to be indexed or not
             val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId
                     .map { it.key to getPropertyTypeForEntitySet(it.key) }.toMap()
-            val linkedEntityDataStream = dataQueryService.getLinkedEntityData(
+            val linkedEntityData = dataStore.getLinkedEntityData(
                     dirtyLinkingIdsByEntitySetId.map { it.key to Optional.of(it.value) }.toMap(),
-                    propertyTypesOfEntitySets) // map of: pair<linking_id, entity_set_id> to property_data
-            val linkedEntityData = HashMap<UUID, HashMap<UUID, Map<UUID, Set<Any>>>>() // linking_id/entity_set_id/property_type_id
-            linkedEntityDataStream.forEach {
-                linkedEntityData.putIfAbsent(it.first.first, hashMapOf(it.first.second to it.second))
-                        ?.put(it.first.second, it.second)
-            }
-
+                    propertyTypesOfEntitySets) // linking_id/entity_set_id/property_type_id
 
             // it is important to iterate over linking ids which have an associated linking entity set id!
             val indexCount = linkingEntitySetIdsByLinkingIds.map {
