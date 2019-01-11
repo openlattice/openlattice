@@ -208,12 +208,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore(
-                hazelcastInstance,
-                executor,
-                defaultObjectMapper(),
-                idService(),
-                postgresDataManager(), dataQueryService() );
+        return new HazelcastEntityDatastore( idService(), postgresDataManager(), dataQueryService() );
     }
 
     @Bean
