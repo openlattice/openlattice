@@ -22,6 +22,7 @@
 package com.openlattice.graph
 
 import com.google.common.annotations.VisibleForTesting
+import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
@@ -341,6 +342,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
         val sql = buildTopEntitiesQuery(limit, entitySetIds, filteredRankings, linked, linkingEntitySetId)
 
+        logger.info("Running top utilizers query")
+        logger.info(sql)
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
