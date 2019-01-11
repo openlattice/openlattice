@@ -296,7 +296,7 @@ class PostgresEntityDataQueryService(
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
-            val rs = statement.executeQuery(selectLinkingIdsOfEntities( entityKeyIds ))
+            val rs = statement.executeQuery(selectLinkingIdsOfEntities(entityKeyIds))
             StatementHolder(connection, statement, rs)
         }, adapter).toMap()
     }
@@ -890,10 +890,10 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
 }
 
 internal fun selectLinkingIdsOfEntities(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
-    val entitiesClause = buildEntitiesClause(entityKeyIds, true)
+    val entitiesClause = buildEntitiesClause(entityKeyIds, false)
     return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) " +
-            "FROM ${IDS.name}" +
-            "WHERE $entitiesClause " +
+            "FROM ${IDS.name} " +
+            "WHERE ${LINKING_ID.name} IS NOT NULL $entitiesClause " +
             "GROUP BY ${ENTITY_SET_ID.name} "
 }
 
