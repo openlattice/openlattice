@@ -43,11 +43,9 @@ import com.datastax.driver.core.DataType.Name;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.TypeCodec;
 import com.google.common.base.Function;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.conductor.codecs.TimestampDateTimeTypeCodec;
-import com.openlattice.datastore.cassandra.CassandraEdmMapping;
 
 public final class ResultSetAdapterFactory {
 
@@ -94,19 +92,6 @@ public final class ResultSetAdapterFactory {
                     value ) );
         } );
         return entity;
-    }
-
-    public static SetMultimap<FullQualifiedName, Object> mapRowToObject(
-            Row row,
-            Collection<PropertyType> properties ) {
-        SetMultimap<FullQualifiedName, Object> map = HashMultimap.create();
-        properties.forEach( property -> {
-            Object value = getObject( row,
-                    CassandraEdmMapping.getCassandraType( property.getDatatype() ),
-                    "value_" + property.getType().getFullQualifiedNameAsString() );
-            map.put( property.getType(), value );
-        } );
-        return map;
     }
 
     private static Object getObject( Row row, DataType dt, String colName ) {

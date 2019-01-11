@@ -95,121 +95,6 @@ public final class RowAdapters {
         return m;
     }
 
-    public static SetMultimap<UUID, Object> entityIndexedById(
-            ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            ObjectMapper mapper ) {
-        final SetMultimap<UUID, Object> m = HashMultimap.create();
-        for ( Row row : rs ) {
-            UUID propertyTypeId = row.getUUID( CommonColumns.PROPERTY_TYPE_ID.cql() );
-            String entityId = row.getString( CommonColumns.ENTITYID.cql() );
-            if ( propertyTypeId != null ) {
-                PropertyType pt = authorizedPropertyTypes.get( propertyTypeId );
-                m.put( propertyTypeId,
-                        CassandraSerDesFactory.deserializeValue( mapper,
-                                row.getBytes( CommonColumns.PROPERTY_BUFFER.cql() ),
-                                pt.getDatatype(),
-                                entityId ) );
-            }
-        }
-        return m;
-    }
-
-    public static SetMultimap<UUID, Object> entityIndexedById(
-            EntityBytes eb,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            ObjectMapper mapper ) {
-        final SetMultimap<UUID, Object> m = HashMultimap.create();
-        eb.getRaw().entries().stream().forEach( e -> {
-            UUID propertyTypeId = e.getKey();
-            byte[] property = e.getValue();
-            PropertyType pt = authorizedPropertyTypes.get( propertyTypeId );
-            if ( pt != null ) {
-                m.put( propertyTypeId,
-                        CassandraSerDesFactory.deserializeValue( mapper,
-                                ByteBuffer.wrap( property ),
-                                pt.getDatatype(),
-                                eb.getEntityId() ) );
-            }
-
-        } );
-
-        return m;
-    }
-
-    public static SetMultimap<UUID, Object> entityIndexedById(
-            String entityId,
-            SetMultimap<UUID, ByteBuffer> eb,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            ObjectMapper mapper ) {
-        final SetMultimap<UUID, Object> m = HashMultimap.create();
-        eb.entries().stream().forEach( e -> {
-            UUID propertyTypeId = e.getKey();
-            byte[] property = e.getValue().array();
-            PropertyType pt = authorizedPropertyTypes.get( propertyTypeId );
-            if ( pt != null ) {
-                m.put( propertyTypeId,
-                        CassandraSerDesFactory.deserializeValue( mapper,
-                                ByteBuffer.wrap( property ),
-                                pt.getDatatype(),
-                                entityId ) );
-            }
-
-        } );
-
-        return m;
-    }
-
-    public static SetMultimap<UUID, Object> entityIndexedById(
-            String entityId,
-            SetMultimap<UUID, ByteBuffer> eb,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            Set<UUID> propertyTypesToPopulate,
-            ObjectMapper mapper ) {
-        final SetMultimap<UUID, Object> m = HashMultimap.create();
-        eb.entries().stream().forEach( e -> {
-            UUID propertyTypeId = e.getKey();
-            if ( propertyTypesToPopulate.contains( propertyTypeId ) ) {
-                byte[] property = e.getValue().array();
-                PropertyType pt = authorizedPropertyTypes.get( propertyTypeId );
-                if ( pt != null ) {
-                    m.put( propertyTypeId,
-                            CassandraSerDesFactory.deserializeValue( mapper,
-                                    ByteBuffer.wrap( property ),
-                                    pt.getDatatype(),
-                                    entityId ) );
-                }
-            }
-
-        } );
-
-        return m;
-    }
-
-    public static Pair<SetMultimap<UUID, Object>, SetMultimap<FullQualifiedName, Object>> entityIdFQNPair(
-            ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            ObjectMapper mapper ) {
-        final SetMultimap<UUID, Object> mByUUID = HashMultimap.create();
-        final SetMultimap<FullQualifiedName, Object> mByKey = HashMultimap.create();
-
-        for ( Row row : rs ) {
-            UUID propertyTypeId = row.getUUID( CommonColumns.PROPERTY_TYPE_ID.cql() );
-            String entityId = row.getString( CommonColumns.ENTITYID.cql() );
-            if ( propertyTypeId != null ) {
-                PropertyType pt = authorizedPropertyTypes.get( propertyTypeId );
-                Object value = CassandraSerDesFactory.deserializeValue( mapper,
-                        row.getBytes( CommonColumns.PROPERTY_BUFFER.cql() ),
-                        pt.getDatatype(),
-                        entityId );
-                mByUUID.put( propertyTypeId,
-                        value );
-                mByKey.put( authorizedPropertyTypes.get( propertyTypeId ).getType(), value );
-            }
-        }
-        return Pair.of( mByUUID, mByKey );
-    }
-
     public static String entityId( Row row ) {
         return row.getString( CommonColumns.ENTITYID.cql() );
     }
@@ -308,21 +193,10 @@ public final class RowAdapters {
         return row.getString( CommonColumns.PRINCIPAL_ID.cql() );
     }
 
-    public static UUID requestId( Row row ) {
-        return row.getUUID( CommonColumns.REQUESTID.cql() );
-    }
-
-    public static Set<EntityKey> entityKeys( Row row ) {
-        return row.getSet( CommonColumns.ENTITY_KEYS.cql(), EntityKey.class );
-    }
-
     public static Set<UUID> uuids( Row row ) {
         return row.getSet( CommonColumns.ENTITY_KEY_IDS.cql(), UUID.class );
     }
 
-    public static Pair<UUID, Set<UUID>> linkedEntity( Row row ) {
-        return Pair.of( row.getUUID( CommonColumns.VERTEX_ID.cql() ), uuids( row ) );
-    }
 
     public static UUID syncId( Row row ) {
         return row.getUUID( CommonColumns.SYNCID.cql() );
@@ -376,42 +250,13 @@ public final class RowAdapters {
         return row.getBool( CommonColumns.BIDIRECTIONAL.cql() );
     }
 
-    private static boolean flags( Row row ) {
-        return row.getBool( CommonColumns.FLAGS.cql() );
-    }
-
-    public static VertexKey loomVertex( Row row ) {
-        UUID key = row.getUUID( CommonColumns.VERTEX_ID.cql() );
-        EntityKey reference = row.get( CommonColumns.ENTITY_KEY.cql(), EntityKey.class );
-        return new VertexKey( key, reference );
-    }
-
-    public static UUID vertexId( Row row ) {
-        return row.getUUID( CommonColumns.VERTEX_ID.cql() );
-    }
 
     public static EntityKey entityKey( Row row ) {
         return row.get( CommonColumns.ENTITY_KEY.cql(), EntityKey.class );
     }
 
-    public static EntityKey entityKeyFromData( Row row ) {
-        UUID entitySetId = row.getUUID( CommonColumns.ENTITY_SET_ID.cql() );
-        String entityId = row.getString( CommonColumns.ENTITYID.cql() );
-        return new EntityKey( entitySetId, entityId );
-    }
-
     public static UUID propertyTypeId( Row row ) {
         return row.getUUID( CommonColumns.PROPERTY_TYPE_ID.cql() );
-    }
-
-    public static UUID currentSyncId( Row row ) {
-        return row.getUUID( CommonColumns.CURRENT_SYNC_ID.cql() );
-    }
-
-    public static EntitySetPropertyKey entitySetPropertyKey( Row row ) {
-        UUID entitySetId = row.getUUID( CommonColumns.ENTITY_SET_ID.cql() );
-        UUID propertyTypeId = row.getUUID( CommonColumns.PROPERTY_TYPE_ID.cql() );
-        return new EntitySetPropertyKey( entitySetId, propertyTypeId );
     }
 
 }
