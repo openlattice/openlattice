@@ -273,18 +273,19 @@ class PostgresEntityDataQueryService(
      * Selects linking ids by their entity set ids with filtering on entity key ids.
      */
     fun getLinkingIds(
-            entityKeyIds: Set<UUID>): PostgresIterable<org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>> {
-        val adapter = Function<ResultSet, org.apache.commons.lang3.tuple.Pair<UUID, Set<UUID>>> {
-            org.apache.commons.lang3.tuple.Pair.of(ResultSetAdapters.entitySetId(it), ResultSetAdapters.linkingIds(it))
+            entitySetIds: Set<UUID>): Map<UUID, Set<UUID>> {
+        val adapter = Function<ResultSet, Pair<UUID, Set<UUID>>> {
+            Pair(ResultSetAdapters.entitySetId(it), ResultSetAdapters.linkingIds(it))
         }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
-            val rs = statement.executeQuery(selectLinkingIdsOfEntities(entityKeyIds))
+            val rs = statement.executeQuery(
+                    selectLinkingIdsOfEntities(entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap()))
             StatementHolder(connection, statement, rs)
-        }, adapter)
+        }, adapter).toMap()
     }
 
     fun getLinkingIds(entitySetId: UUID): PostgresIterable<UUID> {
@@ -875,11 +876,11 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     }
 }
 
-internal fun selectLinkingIdsOfEntities(entityKeyIds: Set<UUID>): String {
-    val entitiesClause = " AND ${entityKeyIdsClause(entityKeyIds)} "
+internal fun selectLinkingIdsOfEntities(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
+    val entitiesClause = buildEntitiesClause(entityKeyIds, true)
     return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) " +
-            "FROM ${selectEntityKeyIdsWithCurrentVersionSubquerySql(entitiesClause, setOf(), true)} " +
-            "WHERE ${LINKING_ID.name} IS NOT NULL " +
+            "FROM ${IDS.name}" +
+            "WHERE $entitiesClause " +
             "GROUP BY ${ENTITY_SET_ID.name} "
 }
 

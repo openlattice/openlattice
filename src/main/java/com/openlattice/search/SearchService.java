@@ -178,15 +178,9 @@ public class SearchService {
         // we have to explicitly create the index and mappings for each linking id,
         // because it won't get picked up by indexer
         if ( event.getEntitySet().isLinking() && !event.getEntitySet().getLinkedEntitySets().isEmpty() ) {
-            Map<UUID, Set<UUID>> linkingIdsOfEntitySets = event.getEntitySet().getLinkedEntitySets().stream().collect(
-                    Collectors.toMap(
-                            Function.identity(),
-                            entitySetId -> dataManager
-                                    .getLinkingIds( entitySetId ).stream().collect( Collectors.toSet() ) )
-            );
             indexLinkedEntities(
                     event.getEntitySet().getId(),
-                    linkingIdsOfEntitySets,
+                    dataManager.getLinkingIds( event.getEntitySet().getLinkedEntitySets() ),
                     event.getPropertyTypes().stream()
                             .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) ) );
         }
@@ -282,6 +276,10 @@ public class SearchService {
         elasticsearchApi.updatePropertyTypesInEntitySet( event.getEntitySetId(), event.getUpdatedPropertyTypes() );
     }
 
+    /**
+     * If 1 or more property types are added to an entity set, all the corresponding ids/linking ids need to be
+     * re-indexed.
+     */
     @Subscribe
     public void addPropertyTypesToEntitySet( PropertyTypesAddedToEntitySetEvent event ) {
         elasticsearchApi.addPropertyTypesToEntitySet(
@@ -290,23 +288,32 @@ public class SearchService {
                 event.getLinkedEntitySetIds() );
 
         Set<UUID> entitiesNeedingIndexing = event.getLinkedEntitySetIds()
-                .orElseGet( () -> Set.of( event.getEntitySetId() ) );
+                .orElseGet( () -> Set.of( event.getEntitySetId() ) ); // TODO change to re-index
         postgresDataManager.markEntitySetsAsNeedsToBeIndexed(
                 entitiesNeedingIndexing,
                 event.getLinkedEntitySetIds().isPresent() );
     }
 
+    /**
+     * Handles indexing when 1 or more entity sets are linked/added to a linking entity set.
+     * All documents/linking ids need to be (re-)indexed, which are contained by these added entity sets.
+     */
     @Subscribe
     public void addLinkedEntitySetsToEntitySet( LinkedEntitySetAddedEvent event ) {
         elasticsearchApi.addLinkedEntitySetsToEntitySet(
                 event.getLinkingEntitySetId(),
                 event.getPropertyTypes(),
                 event.getNewLinkedEntitySets() );
-        postgresDataManager.markEntitySetsAsNeedsToBeIndexed( event.getNewLinkedEntitySets(), true );
+
+        indexLinkedEntities(
+                event.getLinkingEntitySetId(),
+                dataManager.getLinkingIds( event.getNewLinkedEntitySets() ),
+                event.getPropertyTypes().stream().collect(
+                        Collectors.toMap( PropertyType::getId, Function.identity() ) ) );
     }
 
     /**
-     * Handles indexing when 1 or more entity set(s) are unlinked/removed from linking entity set.
+     * Handles indexing when 1 or more entity sets are unlinked/removed from linking entity set.
      * If there are no linked entity sets remaining the index needs to be deleted,
      * otherwise indexing needs to be triggered on the remaining linking ids and documents with removed linking ids need to be deleted.
      */
@@ -317,9 +324,8 @@ public class SearchService {
         } else {
             UUID linkingEntitySetId = event.getLinkingEntitySetId();
 
-            Set<UUID> removedLinkingIds = event.getRemovedLinkedEntitySets().stream()
-                    .flatMap( entitySetId -> dataManager.getLinkingIds( entitySetId ).stream() )
-                    .collect( Collectors.toSet() );
+            Set<UUID> removedLinkingIds = dataManager.getLinkingIds( event.getRemovedLinkedEntitySets() )
+                    .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
             Set<UUID> interSection = new HashSet<>(  );
             Map<UUID, Set<UUID>> sharedLinkingIdsByEntitySets = event.getRemainingLinkedEntitySets().stream().collect(
                     Collectors.toMap(
