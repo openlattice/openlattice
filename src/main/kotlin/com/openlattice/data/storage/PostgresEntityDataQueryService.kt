@@ -891,7 +891,7 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
 
 internal fun selectLinkingIdsOfEntities(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds, false)
-    return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) " +
+    return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${LINKING_ID.name} " +
             "FROM ${IDS.name} " +
             "WHERE ${LINKING_ID.name} IS NOT NULL $entitiesClause " +
             "GROUP BY ${ENTITY_SET_ID.name} "
