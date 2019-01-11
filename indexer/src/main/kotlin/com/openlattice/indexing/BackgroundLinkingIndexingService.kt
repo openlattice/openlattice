@@ -87,7 +87,7 @@ class BackgroundLinkingIndexingService(
     private fun indexLinkedEntity(
             linkingId: UUID,
             linkingEntitySetIds: Set<UUID>,
-            dataByEntitySetId: HashMap<UUID, Map<UUID, Set<Any>>>,
+            dataByEntitySetId: Map<UUID, Map<UUID, Set<Any>>>,
             linkedEntitySetIdsLookup: Map<UUID, Set<UUID>>
     ): Int {
         logger.info(
