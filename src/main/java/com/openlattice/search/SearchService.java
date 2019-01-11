@@ -22,6 +22,7 @@ package com.openlattice.search;
 
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
@@ -64,6 +65,7 @@ import com.openlattice.search.requests.*;
 import java.security.Permissions;
 import java.util.*;
 import java.util.function.Function;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 
@@ -502,7 +504,12 @@ public class SearchService {
     public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearch(
             Set<UUID> entitySetIds,
             EntityNeighborsFilter filter ) {
+        final Stopwatch sw1 = Stopwatch.createStarted();
+        final Stopwatch sw2 = Stopwatch.createStarted();
+
+        logger.info( "Starting Entity Neighbor Search..." );
         if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
+            logger.info( "Missing association entity set ids.. returning empty result" );
             return ImmutableMap.of();
         }
 
@@ -522,6 +529,9 @@ public class SearchService {
             allEntitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
                     edge.getDst().getEntitySetId() : edge.getSrc().getEntitySetId() );
         } );
+        logger.info( "Get edges and neighbors for vertices query finished in {} ms",
+                sw1.elapsed( TimeUnit.MILLISECONDS ) );
+        sw1.reset().start();
 
         Set<UUID> authorizedEntitySetIds = authorizations.accessChecksForPrincipals( allEntitySetIds.stream()
                 .map( esId -> new AccessCheck( new AclKey( esId ), EnumSet.of( Permission.READ ) ) )
@@ -556,6 +566,9 @@ public class SearchService {
                         .put( propertyTypeId, propertyTypesById.get( propertyTypeId ) );
             }
         } );
+        logger.info( "Access checks for entity sets and their properties finished in {} ms",
+                sw1.elapsed( TimeUnit.MILLISECONDS ) );
+        sw1.reset().start();
 
         edges.forEach( edge -> {
             UUID edgeEntityKeyId = edge.getEdge().getEntityKeyId();
@@ -577,9 +590,13 @@ public class SearchService {
             }
 
         } );
+        logger.info( "Edge and neighbor entity key ids collected in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
+        sw1.reset().start();
 
         ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> entitiesByEntitySetId = dataManager
                 .getEntitiesAcrossEntitySets( entitySetIdToEntityKeyId, entitySetsIdsToAuthorizedProps );
+        logger.info( "Get entities across entity sets query finished in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
+        sw1.reset().start();
 
         Map<UUID, SetMultimap<FullQualifiedName, Object>> entities = Maps.newHashMap();
         entitiesByEntitySetId.entries().forEach( entry -> entities
@@ -607,9 +624,10 @@ public class SearchService {
                 entityNeighbors.get( entityId ).add( neighbor );
             }
         } );
+        logger.info( "Neighbor entity details collected in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
 
+        logger.info( "Finished entity neighbor search in {} ms", sw2.elapsed( TimeUnit.MILLISECONDS ) );
         return entityNeighbors;
-
     }
 
     private boolean getAuthorization( UUID entitySetId, Set<Principal> principals ) {

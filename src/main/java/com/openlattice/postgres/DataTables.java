@@ -138,7 +138,7 @@ public class DataTables {
                 .ifNotExists();
 
         //Byte arrays are generally too large to be indexed by postgres
-        if ( unindexedProperties.contains( propertyType.getDatatype().getFullQualifiedName() ) ) {
+        if ( !unindexedProperties.contains( propertyType.getDatatype().getFullQualifiedName() ) ) {
             PostgresIndexDefinition valueIndex = new PostgresColumnsIndexDefinition( ptd, valueColumn )
                     .name( quote( idxPrefix + "_value_idx" ) )
                     .ifNotExists();
