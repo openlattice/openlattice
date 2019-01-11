@@ -755,7 +755,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         UUID entityKeyId = edk.getEntityKeyId();
 
         try {
-            String s = mapper.writeValueAsString( propertyValues );
+            final byte[] s = getFieldMappings( entitySetId, propertyValues, false );
 
             client.prepareIndex( getIndexName( entitySetId ), getTypeName( entitySetId ), entityKeyId.toString() )
                     .setSource( s, XContentType.JSON )
