@@ -150,6 +150,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalLinkedEntitiesUpserted( Set<UUID> entityKeyIds ) {
         // Handle linking entity sets: if there are any entities, that have linking ids, reindex them
+        // It makes more sense to mark them, instead of explicitly calling re-index, since an update/create event
+        // affects all the linking entity sets, where that linking id is present
         Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySet = dataQueryService
                 .getLinkingIds( entityKeyIds ).entrySet().stream()
                 .filter( linkingIds -> linkingIds.getValue().isEmpty() )
@@ -166,13 +168,16 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
-            eventBus.post( new EntitiesDeletedEvent( Set.of(entitySetId), entityKeyIds ) );
+            eventBus.post( new EntitiesDeletedEvent( Set.of( entitySetId ), entityKeyIds ) );
             signalLinkedEntitiesDeleted( entitySetId, entityKeyIds );
         }
     }
 
     private void signalLinkedEntitiesDeleted( UUID entitySetId, Set<UUID> entityKeyIds ) {
-        // Handle linking entity sets
+        // Handle linking entity sets: if there is no entity left with that linking id, we delete that document,
+        // otherwise we re-index
+        // It makes more sense to mark them, instead of explicitly calling re-index, since an update event
+        // affects all the linking entity sets, where that linking id is present
         Set<UUID> linkingIdsOfDeletedEntities = dataQueryService.getLinkingIds( entityKeyIds ).values().stream()
                 .flatMap( Set::stream )
                 .collect( Collectors.toSet() );
@@ -183,25 +188,22 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                         Pair::getRight
                 ) );
 
-        // if there is no entity left with that linking id, we delete that document, otherwise we re-index
         Map<Boolean, List<Map.Entry<UUID, Set<UUID>>>> groupedEntityKeyIdsOfLinkingIds = entityKeyIdsOfLinkingIds
                 .entrySet().stream()
                 .collect( Collectors.groupingBy( idsOfLinkingId -> idsOfLinkingId.getValue().isEmpty() ) );
 
-        Set<UUID> deletedLinkedEntities = groupedEntityKeyIdsOfLinkingIds.get(true).stream()
-                .flatMap( it -> it.getValue().stream() )
-                .collect( Collectors.toSet() );
-        if(!deletedLinkedEntities.isEmpty()) {
+        Set<UUID> deletedLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( true ).stream()
+                .map( Map.Entry::getKey ).collect( Collectors.toSet() );
+        if ( !deletedLinkingIds.isEmpty() ) {
             Set<UUID> linkingEntitySetIds = dataQueryService.getLinkingEntitySetIds( entitySetId )
-                    .stream().collect( Collectors.toSet());
-            eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkedEntities ) );
+                    .stream().collect( Collectors.toSet() );
+            eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
         }
 
         pdm.markAsNeedsToBeIndexed(
                 Map.of( entitySetId,
-                        Optional.of( groupedEntityKeyIdsOfLinkingIds.get(false).stream()
-                                .flatMap( it -> it.getValue().stream() )
-                                .collect( Collectors.toSet() ) ) ),
+                        Optional.of( groupedEntityKeyIdsOfLinkingIds.get( false ).stream()
+                                .map( Map.Entry::getKey ).collect( Collectors.toSet() ) ) ),
                 true );
     }
 
