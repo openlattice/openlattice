@@ -45,6 +45,7 @@ import javax.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -144,7 +145,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private void signalCreatedEntities( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
         if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities ) );
-            signalLinkedEntitiesUpserted( Map.of( entitySetId, Optional.of( entities.keySet() ) );
+            signalLinkedEntitiesUpserted( Map.of( entitySetId, Optional.of( entities.keySet() ) ) );
         }
     }
 
@@ -384,7 +385,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override
     @Timed
     public Map<UUID, Set<UUID>> getLinkingIds( Set<UUID> entitySetIds ) {
-        return dataQueryService.getLinkingIds( entitySetIds );
+        return dataQueryService.getLinkingIds( entitySetIds.stream().collect(
+                Collectors.toMap( Function.identity(), it ->  Optional.empty() ) ) );
     }
 
     @Override
