@@ -123,9 +123,6 @@ public class NeuronPod {
     @Bean
     public HazelcastEntityDatastore entityDatastore() {
         return new HazelcastEntityDatastore(
-                hazelcastInstance,
-                executor,
-                defaultObjectMapper(),
                 idService(),
                 postgresDataManager(),
                 dataQueryService()

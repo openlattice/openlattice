@@ -178,20 +178,17 @@ public class SearchService {
         // we have to explicitly create the index and mappings for each linking id,
         // because it won't get picked up by indexer
         if ( event.getEntitySet().isLinking() && !event.getEntitySet().getLinkedEntitySets().isEmpty() ) {
-            event.getEntitySet().getLinkedEntitySets().forEach(
-                    entitySetId -> {
-                        Set<UUID> linkingIds = dataManager.getLinkingIds( entitySetId )
-                                .stream().collect( Collectors.toSet() );
-                        Map<UUID, Map<UUID, Set<Object>>> linkedData = dataManager.getLinkedEntitiesByLinkingId(
-                                Map.of( entitySetId, Optional.of( linkingIds ) ),
-                                Map.of( entitySetId, event.getPropertyTypes().stream()
-                                        .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) ) ) );
-                        elasticsearchApi.createBulkEntityData(
-                                event.getEntitySet().getId(),
-                                Map.of( entitySetId, linkedData ),
-                                true );
-                    }
+            Map<UUID, Set<UUID>> linkingIdsOfEntitySets = event.getEntitySet().getLinkedEntitySets().stream().collect(
+                    Collectors.toMap(
+                            Function.identity(),
+                            entitySetId -> dataManager
+                                    .getLinkingIds( entitySetId ).stream().collect( Collectors.toSet() ) )
             );
+            indexLinkedEntities(
+                    event.getEntitySet().getId(),
+                    linkingIdsOfEntitySets,
+                    event.getPropertyTypes().stream()
+                            .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) ) );
         }
     }
 
@@ -264,6 +261,17 @@ public class SearchService {
                         .createEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
     }
 
+    private void indexLinkedEntities(
+            UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
+        Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityData(
+                linkingIds.entrySet().stream().collect(
+                        Collectors.toMap(Map.Entry::getKey, entry -> Optional.of(entry.getValue())) ),
+                linkingIds.keySet().stream().collect(
+                        Collectors.toMap(Function.identity(), entitySetId -> propertyTypes) ));
+
+        elasticsearchApi.createBulkEntityData( linkingEntitySetId, linkedData, true );
+    }
+
     @Subscribe
     public void updateEntitySetMetadata( EntitySetMetadataUpdatedEvent event ) {
         elasticsearchApi.updateEntitySetMetadata( event.getEntitySet() );
@@ -300,14 +308,38 @@ public class SearchService {
     /**
      * Handles indexing when 1 or more entity set(s) are unlinked/removed from linking entity set.
      * If there are no linked entity sets remaining the index needs to be deleted,
-     * otherwise indexing needs to be triggered on the remaining entity sets.
+     * otherwise indexing needs to be triggered on the remaining linking ids and documents with removed linking ids need to be deleted.
      */
     @Subscribe
     public void removeLinkedEntitySetsFromEntitySet( LinkedEntitySetRemovedEvent event ) {
-        if( event.getRemainingLinkedEntitySets().isEmpty() ) {
+        if ( event.getRemainingLinkedEntitySets().isEmpty() ) {
             elasticsearchApi.deleteEntitySet( event.getLinkingEntitySetId() );
         } else {
-            postgresDataManager.markEntitySetsAsNeedsToBeIndexed( event.getRemainingLinkedEntitySets(), true );
+            UUID linkingEntitySetId = event.getLinkingEntitySetId();
+
+            Set<UUID> removedLinkingIds = event.getRemovedLinkedEntitySets().stream()
+                    .flatMap( entitySetId -> dataManager.getLinkingIds( entitySetId ).stream() )
+                    .collect( Collectors.toSet() );
+            Set<UUID> interSection = new HashSet<>(  );
+            Map<UUID, Set<UUID>> sharedLinkingIdsByEntitySets = event.getRemainingLinkedEntitySets().stream().collect(
+                    Collectors.toMap(
+                            Function.identity(),
+                            entitySetId -> {
+                                Set<UUID> sharedLinkingIds = Sets.intersection(
+                                        dataManager.getLinkingIds( entitySetId ).stream().collect( Collectors.toSet() ),
+                                        removedLinkingIds ) ;
+                                interSection.addAll( sharedLinkingIds );
+                                return sharedLinkingIds;
+                            } ) );
+            Map<UUID, PropertyType> propertyTypes = dataModelService.getPropertyTypesForEntitySet( linkingEntitySetId );
+
+            // Reindex documents(linking id) which are partially removed
+            indexLinkedEntities( linkingEntitySetId, sharedLinkingIdsByEntitySets, propertyTypes );
+
+            // Delete documents(linking id) which are fully removed
+            Sets.difference( removedLinkingIds, interSection).forEach( linkingId ->
+                            elasticsearchApi.deleteEntityData( new EntityDataKey( linkingEntitySetId, linkingId ) ) );
+
         }
     }
 

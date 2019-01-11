@@ -23,11 +23,8 @@
 package com.openlattice.data.storage;
 
 import com.codahale.metrics.annotation.Timed;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
@@ -51,6 +48,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Maps.transformValues;
 
 public class HazelcastEntityDatastore implements EntityDatastore {
@@ -58,10 +56,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private static final Logger logger                = LoggerFactory
             .getLogger( HazelcastEntityDatastore.class );
 
-    private final ObjectMapper                   mapper;
-    private final HazelcastInstance              hazelcastInstance;
     private final EntityKeyIdService             idService;
-    private final ListeningExecutorService       executor;
     private final PostgresDataManager            pdm;
     private final PostgresEntityDataQueryService dataQueryService;
 
@@ -69,18 +64,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private EventBus eventBus;
 
     public HazelcastEntityDatastore(
-            HazelcastInstance hazelastInstance,
-            ListeningExecutorService executor,
-            ObjectMapper mapper,
             EntityKeyIdService idService,
             PostgresDataManager pdm,
             PostgresEntityDataQueryService dataQueryService ) {
         this.dataQueryService = dataQueryService;
         this.pdm = pdm;
-        this.mapper = mapper;
         this.idService = idService;
-        this.hazelcastInstance = hazelastInstance;
-        this.executor = executor;
     }
 
     @Override
@@ -343,6 +332,28 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Override
     @Timed
+    public Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityData(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId) {
+        // map of: pair<linking_id, entity_set_id> to property_data
+        PostgresIterable<kotlin.Pair<kotlin.Pair<UUID, UUID>, Map<UUID, Set<Object>>>> linkedEntityDataStream =
+                dataQueryService.getLinkedEntityData( linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId);
+        // linking_id/entity_set_id/property_type_id
+        Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedEntityData = new HashMap<>();
+        linkedEntityDataStream.stream().forEach( it -> {
+            Map<UUID, Map<UUID, Set<Object>>> data = linkedEntityData.putIfAbsent(
+                    it.getFirst().getFirst(),
+                    newHashMap( Map.of(it.getFirst().getSecond(), it.getSecond())) );
+            if(data != null) {
+                data.put(it.getFirst().getSecond(), it.getSecond());
+            }
+        });
+
+        return linkedEntityData;
+    }
+
+    @Override
+    @Timed
     public ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
@@ -386,6 +397,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     public PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds ) {
         return dataQueryService.getEntityKeyIdsOfLinkingIds( linkingIds );
+    }
+
+    @Override
+    @Timed
+    public PostgresIterable<UUID> getLinkingEntitySetIds( UUID linkedEntitySetId ) {
+        return dataQueryService.getLinkingEntitySetIds( linkedEntitySetId );
     }
 
     private EntityDataKey fromEntityKey( EntityKey entityKey ) {

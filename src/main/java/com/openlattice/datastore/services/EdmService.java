@@ -444,7 +444,7 @@ public class EdmService implements EdmManager {
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
         entitySets.executeOnKey( linkingEntitySetId,
                 new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
-        eventBus.post( new LinkedEntitySetRemovedEvent( linkingEntitySetId, linkingEntitySet.getLinkedEntitySets() ) );
+        eventBus.post( new LinkedEntitySetRemovedEvent( linkingEntitySetId, linkingEntitySet.getLinkedEntitySets(), linkedEntitySets ) );
         return startSize - linkingEntitySet.getLinkedEntitySets().size();
     }
 

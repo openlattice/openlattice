@@ -68,6 +68,10 @@ public interface EntityDatastore {
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId );
 
+    Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityData(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId);
+
     EntitySetData<FullQualifiedName> getEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             LinkedHashSet<String> orderedPropertyTypes,
@@ -83,6 +87,8 @@ public interface EntityDatastore {
     PostgresIterable<UUID> getLinkingIds( UUID entitySetId );
 
     PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds );
+
+    PostgresIterable<UUID> getLinkingEntitySetIds( UUID linkedEntitySetId );
 
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.
