@@ -112,13 +112,45 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         edmApi.deleteEntitySet(socratesBId)
         val numHitsA = searchApi.searchEntitySetData(simpleSearchConstraints).numHits
 
-        Assert.assertTrue(numHitsAB > numHitsA)
-
         //redo import
         importDataSet(importedEntitySets.values.last().first, importedEntitySets.values.last().second)
         Thread.sleep(10000L)
-        while (!checkLinkingFinished(importedEntitySets.keys.last())) {
+        while (!checkLinkingFinished(importedEntitySets.keys)) {
             Thread.sleep(5000L)
         }
+
+        edmApi.deleteEntitySet(esLinked.id)
+
+        Assert.assertTrue(numHitsAB > numHitsA)
+    }
+
+    @Test
+    fun testAddAndRemoveLinkedEntitySet() {
+        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
+        val personEt = edmApi.getEntityType(personEntityTypeId)
+
+        val socratesAId = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val socratesBId = edmApi.getEntitySetId(importedEntitySets.keys.last())
+        val esLinked = createEntitySet(personEt, true, setOf(socratesAId))
+
+        Thread.sleep(30000L) // wait for indexing to finish
+
+        val simpleSearchConstraints = SearchConstraints
+                .simpleSearchConstraints(arrayOf(esLinked.id), 0, 100, "*")
+        val resultsA1 = searchApi.searchEntitySetData(simpleSearchConstraints)
+
+        linkingApi.addEntitySetsToLinkingEntitySet(esLinked.id, setOf(socratesBId))
+        Thread.sleep(30000L) // wait for indexing
+        val resultsAB = searchApi.searchEntitySetData(simpleSearchConstraints)
+
+        Assert.assertTrue(resultsAB.hits.toSet().containsAll(resultsA1.hits))
+
+        linkingApi.removeEntitySetsFromLinkingEntitySet(esLinked.id, setOf(socratesBId))
+        Thread.sleep(30000L) // wait for indexing
+
+        val resultsA2 = searchApi.searchEntitySetData(simpleSearchConstraints)
+        edmApi.deleteEntitySet(esLinked.id)
+
+        Assert.assertEquals(resultsA1, resultsA2)
     }
 }
