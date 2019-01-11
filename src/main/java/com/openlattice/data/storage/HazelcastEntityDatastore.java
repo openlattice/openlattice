@@ -144,11 +144,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private void signalCreatedEntities( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
         if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities ) );
-            signalLinkedEntitiesUpserted( entities.keySet() );
+            signalLinkedEntitiesUpserted( Map.of( entitySetId, Optional.of( entities.keySet() ) );
         }
     }
 
-    private void signalLinkedEntitiesUpserted( Set<UUID> entityKeyIds ) {
+    private void signalLinkedEntitiesUpserted( Map<UUID, Optional<Set<UUID>>> entityKeyIds ) {
         // Handle linking entity sets: if there are any entities, that have linking ids, reindex them
         // It makes more sense to mark them, instead of explicitly calling re-index, since an update/create event
         // affects all the linking entity sets, where that linking id is present
@@ -163,22 +163,23 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalEntitySetDataCleared( UUID entitySetId ) {
         eventBus.post( new EntitySetDataClearedEvent( entitySetId ) );
-        signalLinkedEntitiesDeleted( entitySetId, getLinkingIds( entitySetId ).stream().collect( Collectors.toSet() ) );
+        signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesDeletedEvent( Set.of( entitySetId ), entityKeyIds ) );
-            signalLinkedEntitiesDeleted( entitySetId, entityKeyIds );
+            signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         }
     }
 
-    private void signalLinkedEntitiesDeleted( UUID entitySetId, Set<UUID> entityKeyIds ) {
+    private void signalLinkedEntitiesDeleted( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
         // Handle linking entity sets: if there is no entity left with that linking id, we delete that document,
         // otherwise we re-index
         // It makes more sense to mark them, instead of explicitly calling re-index, since an update event
         // affects all the linking entity sets, where that linking id is present
-        Set<UUID> linkingIdsOfDeletedEntities = dataQueryService.getLinkingIds( entityKeyIds ).values().stream()
+        Set<UUID> linkingIdsOfDeletedEntities = dataQueryService.getLinkingIds( Map.of( entitySetId, entityKeyIds ) )
+                .values().stream()
                 .flatMap( Set::stream )
                 .collect( Collectors.toSet() );
         Map<UUID, Set<UUID>> entityKeyIdsOfLinkingIds = dataQueryService

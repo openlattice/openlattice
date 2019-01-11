@@ -287,7 +287,7 @@ class PostgresEntityDataQueryService(
      * Selects linking ids by their entity set ids with filtering on entity key ids.
      */
     fun getLinkingIds(
-            entitySetIds: Set<UUID>): Map<UUID, Set<UUID>> {
+            entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>> {
         val adapter = Function<ResultSet, Pair<UUID, Set<UUID>>> {
             Pair(ResultSetAdapters.entitySetId(it), ResultSetAdapters.linkingIds(it))
         }
@@ -296,8 +296,7 @@ class PostgresEntityDataQueryService(
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
-            val rs = statement.executeQuery(
-                    selectLinkingIdsOfEntities(entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap()))
+            val rs = statement.executeQuery(selectLinkingIdsOfEntities( entityKeyIds ))
             StatementHolder(connection, statement, rs)
         }, adapter).toMap()
     }
