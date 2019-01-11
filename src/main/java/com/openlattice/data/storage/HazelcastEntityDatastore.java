@@ -74,18 +74,15 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Override
     @Timed
-    public EntitySetData<FullQualifiedName> getEntitySetData(
-            Set<UUID> entitySetIds,
-            LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Boolean linking ) {
-        return new EntitySetData<>(
-                orderedPropertyNames,
-                dataQueryService.streamableEntitySet( entitySetIds,
-                        authorizedPropertyTypes,
-                        EnumSet.of( MetadataOption.VERSION, MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX ),
-                        Optional.empty(),
-                        linking ) );
+    public Map<UUID, Map<UUID, Set<Object>>> getEntitySetData(
+            UUID entitySetId,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        return dataQueryService.entitySetDataWithEntityKeyIdsAndPropertyTypeIds(
+                entitySetId,
+                Optional.empty(),
+                authorizedPropertyTypes,
+                EnumSet.noneOf( MetadataOption.class ),
+                Optional.empty() );
     }
 
     @Timed

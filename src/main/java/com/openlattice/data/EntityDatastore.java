@@ -39,11 +39,9 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  */
 public interface EntityDatastore {
 
-    EntitySetData<FullQualifiedName> getEntitySetData(
-            Set<UUID> entitySetIds,
-            LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Boolean linking );
+    Map<UUID, Map<UUID, Set<Object>>> getEntitySetData(
+            UUID entitySetId,
+            Map<UUID, PropertyType> authorizedPropertyTypes);
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,

@@ -277,8 +277,8 @@ public class SearchService {
     }
 
     /**
-     * If 1 or more property types are added to an entity set, all the corresponding ids/linking ids need to be
-     * re-indexed.
+     * If 1 or more property types are added to an entity set, all the corresponding mapping need to be updated and
+     * ids/linking ids need to be re-indexed.
      */
     @Subscribe
     public void addPropertyTypesToEntitySet( PropertyTypesAddedToEntitySetEvent event ) {
@@ -287,11 +287,23 @@ public class SearchService {
                 event.getNewPropertyTypes(),
                 event.getLinkedEntitySetIds() );
 
-        Set<UUID> entitiesNeedingIndexing = event.getLinkedEntitySetIds()
-                .orElseGet( () -> Set.of( event.getEntitySetId() ) ); // TODO change to re-index
-        postgresDataManager.markEntitySetsAsNeedsToBeIndexed(
-                entitiesNeedingIndexing,
-                event.getLinkedEntitySetIds().isPresent() );
+        // re-index
+        Map<UUID, PropertyType> propertyTypes = event.getAllPropertTypes().stream().collect(
+                Collectors.toMap( PropertyType::getId, Function.identity() ) );
+
+        if(event.getLinkedEntitySetIds().isPresent()) {
+            indexLinkedEntities(
+                    event.getEntitySetId(),
+                    dataManager.getLinkingIds( event.getLinkedEntitySetIds().get() ),
+                    propertyTypes);
+        } else {
+            elasticsearchApi.createBulkEntityData(
+                    event.getEntitySetId(),
+                    Map.of( event.getEntitySetId(),
+                            dataManager.getEntitySetData( event.getEntitySetId(), propertyTypes  ) ),
+                    false );
+        }
+
     }
 
     /**

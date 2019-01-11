@@ -161,6 +161,20 @@ class PostgresEntityDataQueryService(
         }
     }
 
+    fun entitySetDataWithEntityKeyIdsAndPropertyTypeIds(
+            entitySetId: UUID,
+            entityKeyIds: Optional<Set<UUID>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            metadataOptions: Set<MetadataOption>,
+            version: Optional<Long> = Optional.empty()): Map<UUID, Map<UUID, Set<Any>>> {
+        return streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
+                entitySetId,
+                entityKeyIds,
+                authorizedPropertyTypes,
+                metadataOptions,
+                version).toMap()
+    }
+
     fun streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
             entitySetId: UUID,
             entityKeyIds: Optional<Set<UUID>>,

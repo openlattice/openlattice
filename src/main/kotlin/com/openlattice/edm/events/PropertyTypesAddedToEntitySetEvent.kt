@@ -7,4 +7,5 @@ import java.util.Optional
 data class PropertyTypesAddedToEntitySetEvent(
         val entitySetId: UUID,
         val newPropertyTypes: List<PropertyType>,
+        val allPropertTypes: List<PropertyType>,
         val linkedEntitySetIds: Optional<Set<UUID>>)
