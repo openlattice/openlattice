@@ -21,25 +21,52 @@
 
 package com.openlattice.auditing
 
-import com.openlattice.audting.AuditEvent
 import com.openlattice.data.DataGraphService
-import com.openlattice.data.storage.PostgresEntityDataQueryService
 import java.util.*
 
 /**
  *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * This class makes it easy for other classes to implement auditing by passing a instance of the auditable event class
+ * with the appropriate data configured.
  */
 interface AuditingComponent {
 
-    fun getDataGraphService() : DataGraphService
-    fun recordEvent(event: AuditEvent): UUID
-    fun recordEvents(events: List<AuditEvent>): List<UUID>
+    fun getAuditConfiguration(): AuditingConfiguration
+    fun getDataGraphService(): DataGraphService
+    fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
 
-    private fun renderEvents(events: List<AuditEvent>): List<Map<UUID, Set<Any>>> {
-        getDataGraphService().createEntities(toMap(events))
+    fun recordEvent(event: AuditableEvent): Int {
+        return recordEvents(listOf(event))
     }
 
-    private fun toMap( events: List<AuditEvent>) : List<Map<UUID,Set<Any>>>
+    fun recordEvents(events: List<AuditableEvent>): Int {
+        val auditingConfiguration = getAuditConfiguration()
+        val aresMgr = getAuditRecordEntitySetsManager()
+        return events
+                .groupBy { aresMgr.getRecordEntitySet(it.entitySet) }
+                .map { (auditEntitySet, entities) ->
+                    getDataGraphService().createEntities(
+                            auditEntitySet,
+                            toMap(entities),
+                            auditingConfiguration.propertyTypes
+                    ).size
+                }.sum()
+
+    }
+
+    private fun toMap(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
+        val auditingConfiguration = getAuditConfiguration()
+        return events.map {
+            val eventEntity = mutableMapOf<UUID, Set<Any>>()
+
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ENTITIES)] = it.entities.toSet()
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(it.principal)
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(it.eventType)
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DESCRIPTION)] = setOf(it.description)
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DATA)] = setOf(it.data)
+
+            return@map eventEntity
+        }
+    }
 
 }

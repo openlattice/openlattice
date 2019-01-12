@@ -19,11 +19,16 @@
  *
  */
 
-package com.openlattice.audting
+package com.openlattice.auditing
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-enum class AuditEventType {
+enum class AuditProperty {
+    DATA,
+    DESCRIPTION,
+    ENTITIES,
+    EVENT_TYPE,
+    PRINCIPAL
 }

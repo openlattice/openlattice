@@ -1061,8 +1061,17 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Set<UUID> getPropertyTypeUuidsOfEntityTypeWithPIIField( UUID entityTypeId ) {
-        return getEntityType( entityTypeId ).getProperties().stream()
+    public Set<UUID> getPropertyTypeIdsOfEntityType( UUID entityTypeId ) {
+        return getEntityType( entityTypeId ).getProperties();
+    }
+
+    @Override public Map<UUID, PropertyType> getPropertyTypesOfEntityType( UUID entityTypeId ) {
+        return propertyTypes.getAll( getEntityType( entityTypeId ).getProperties() );
+    }
+
+    @Override
+    public Set<UUID> getPropertyTypeIdsOfEntityTypeWithPIIField( UUID entityTypeId ) {
+        return getPropertyTypeIdsOfEntityType( entityTypeId ).stream()
                 .filter( ptId -> getPropertyType( ptId ).isPIIfield() ).collect( Collectors.toSet() );
     }
 
