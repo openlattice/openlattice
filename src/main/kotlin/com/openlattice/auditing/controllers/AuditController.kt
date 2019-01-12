@@ -21,8 +21,8 @@
 
 package com.openlattice.auditing.controllers
 
-import com.openlattice.audting.AuditApi
-import com.openlattice.audting.CONTROLLER
+import com.openlattice.auditing.AuditApi
+import com.openlattice.auditing.CONTROLLER
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
