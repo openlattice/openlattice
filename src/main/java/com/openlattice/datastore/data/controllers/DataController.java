@@ -382,12 +382,12 @@ public class DataController implements DataApi, AuthorizingComponent {
             final UUID entitySetId = association.getKey();
             if ( partial ) {
                 return dgm.partialReplaceEntities( entitySetId,
-                        transformValues( association.getValue(), dataEdge -> Multimaps.asMap( dataEdge.getData() ) ),
+                        transformValues( association.getValue(), dataEdge -> dataEdge.getData() ),
                         authorizedPropertyTypes );
             } else {
 
                 return dgm.replaceEntities( entitySetId,
-                        transformValues( association.getValue(), assoc -> Multimaps.asMap( assoc.getData() ) ),
+                        transformValues( association.getValue(), assoc -> assoc.getData() ),
                         authorizedPropertyTypes );
             }
         } ).sum();

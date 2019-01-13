@@ -30,6 +30,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -111,6 +113,8 @@ public class DatastoreServicesPod {
     @Inject
     private Auth0Configuration        auth0Configuration;
     @Inject
+    private AuditingConfiguration     auditingConfiguration;
+    @Inject
     private ListeningExecutorService  executor;
     @Inject
     private EventBus                  eventBus;
@@ -187,7 +191,13 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 pgEdmManager(),
                 entityTypeManager(),
-                schemaManager() );
+                schemaManager(),
+                aresManager() );
+    }
+
+    @Bean
+    public AuditRecordEntitySetsManager aresManager() {
+        return new AuditRecordEntitySetsManager( auditingConfiguration, authorizationManager(), hazelcastInstance );
     }
 
     @Bean
