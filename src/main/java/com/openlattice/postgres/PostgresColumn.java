@@ -73,6 +73,10 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition AUDIT_RECORD_ENTITY_SET_ID       = new PostgresColumnDefinition(
             AUDIT_RECORD_ENTITY_SET_ID_FIELD,
             PostgresDatatype.UUID );
+    public static final String                   AUDIT_RECORD_ENTITY_SET_IDS_FIELD = "audit_record_entity_set_ids";
+    public static final PostgresColumnDefinition AUDIT_RECORD_ENTITY_SET_IDS      = new PostgresColumnDefinition(
+            AUDIT_RECORD_ENTITY_SET_IDS_FIELD,
+            PostgresDatatype.UUID );
     public static final String                   BASE_FIELD                       = "base";
     public static final PostgresColumnDefinition BASE                             =
             new PostgresColumnDefinition( BASE_FIELD, BIGINT ).notNull();
