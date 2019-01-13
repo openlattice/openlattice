@@ -63,13 +63,13 @@ class AuditRecordEntitySetsManager(
 
         /*
          * This sequence of steps is safe to execute as a failure on any of the steps can be retried from scratch
-         * with the only side0-effect being that eventually we will have to clean-up audit record entity sets that were
+         * with the only side-effect being that eventually we will have to clean-up audit record entity sets that were
          * never used.
          */
 
         edm.createEntitySet(principal, entitySet)
         val auditRecordEntitySetId = entitySet.id
-        entitySets.executeOnKey( entitySetId, UpdateEntitySetAuditRecordEntitySetIdProcessor( auditRecordEntitySetId))
+        entitySets.executeOnKey(entitySetId, UpdateEntitySetAuditRecordEntitySetIdProcessor(auditRecordEntitySetId))
     }
 
     fun getAuditRecordEntitySets(entitySetId: UUID): PostgresIterable<UUID> {
@@ -84,10 +84,4 @@ class AuditRecordEntitySetsManager(
         val odt = OffsetDateTime.now()
         return "$entitySetId-${odt.year}-${odt.monthValue}-${odt.dayOfMonth}-${System.currentTimeMillis()}"
     }
-
-    fun getRecordEntitySet(entitySet: UUID): UUID {
-        TODO("Implement retrieving the audit record entity set.")
-    }
-
-
 }

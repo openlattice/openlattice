@@ -41,6 +41,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
@@ -134,6 +135,7 @@ public class EdmService implements EdmManager {
     private final PostgresEdmManager                edmManager;
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
+    private final AuditRecordEntitySetsManager      aresManager;
 
     private final HazelcastInstance hazelcastInstance;
     private final HikariDataSource  hds;
@@ -151,12 +153,14 @@ public class EdmService implements EdmManager {
             AuthorizationManager authorizations,
             PostgresEdmManager edmManager,
             PostgresTypeManager entityTypeManager,
-            HazelcastSchemaManager schemaManager ) {
+            HazelcastSchemaManager schemaManager,
+            AuditRecordEntitySetsManager aresManager ) {
 
         this.authorizations = authorizations;
         this.edmManager = edmManager;
         this.entityTypeManager = entityTypeManager;
         this.schemaManager = schemaManager;
+        this.aresManager = aresManager;
         this.hazelcastInstance = hazelcastInstance;
         this.hds = hds;
         this.edmVersions = hazelcastInstance.getMap( HazelcastMap.EDM_VERSIONS.name() );
@@ -482,6 +486,7 @@ public class EdmService implements EdmManager {
 
             // No subscribers currently
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
+            aresManager.createAuditEntitySet( this, principal, entitySet.getId() );
 
         } catch ( Exception e ) {
             logger.error( "Unable to create entity set {} for principal {}", entitySet, principal, e );

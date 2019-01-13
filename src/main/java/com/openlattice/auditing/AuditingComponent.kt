@@ -22,6 +22,7 @@
 package com.openlattice.auditing
 
 import com.openlattice.data.DataGraphService
+import com.openlattice.datastore.services.EdmManager
 import java.util.*
 
 /**
@@ -33,7 +34,7 @@ interface AuditingComponent {
 
     fun getAuditConfiguration(): AuditingConfiguration
     fun getDataGraphService(): DataGraphService
-    fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
+    fun getEdmManager() : EdmManager
 
     fun recordEvent(event: AuditableEvent): Int {
         return recordEvents(listOf(event))
@@ -41,9 +42,9 @@ interface AuditingComponent {
 
     fun recordEvents(events: List<AuditableEvent>): Int {
         val auditingConfiguration = getAuditConfiguration()
-        val aresMgr = getAuditRecordEntitySetsManager()
+        val edm = getEdmManager()
         return events
-                .groupBy { aresMgr.getRecordEntitySet(it.entitySet) }
+                .groupBy { edm.getEntitySet(it.entitySet).activeAuditRecordEntitySetId }
                 .map { (auditEntitySet, entities) ->
                     getDataGraphService().createEntities(
                             auditEntitySet,

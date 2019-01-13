@@ -43,7 +43,8 @@ class UpdateEntitySetAuditRecordEntitySetIdProcessor(
                     entry.key
             )
         } else {
-            es.auditRecordEntitySetId = es.id
+            es.activeAuditRecordEntitySetId = auditRecordEntitySetId
+            es.auditRecordEntitySetIds.add(auditRecordEntitySetId)
         }
         return null
     }

@@ -283,7 +283,7 @@ open class DataGraphService(
                 .asMap(associations)
                 .forEach {
                     val entitySetId = it.key
-                    val entities = it.value.map { Multimaps.asMap(it.data) }
+                    val entities = it.value.map { it.data }
                     val ids = createEntities(entitySetId, entities, authorizedPropertiesByEntitySetId[entitySetId]!!)
 
                     entityKeyIds.putAll(entitySetId, ids)
