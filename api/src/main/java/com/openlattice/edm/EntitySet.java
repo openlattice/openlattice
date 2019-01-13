@@ -36,14 +36,19 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Describes an entity set and associated metadata, including the active audit record entity set.
+ *
+ * TODO: Ensure that we are being consistent around how internal sets are accessed and modified. i.e is it okay
+ * to return modifiable versions of linked entity sets or should we expose add/remove/update methods. The latter seems
+ * like the most explicitly safe thing to do.
  */
 public class EntitySet extends AbstractSecurableObject {
     private final UUID        entityTypeId;
     private final boolean     linking;
     private final Set<UUID>   linkedEntitySets;
     private final boolean     external;
-    private       UUID        auditRecordEntitySetId; //This field is never set in a constructor.
+    private       UUID        activeAuditRecordEntitySetId; //This field is never set in a constructor.
+    private final Set<UUID>   auditRecordEntitySetIds = new HashSet<>(  );
     private       String      name;
     private       Set<String> contacts;
 
@@ -155,13 +160,18 @@ public class EntitySet extends AbstractSecurableObject {
     }
 
     @JsonProperty( SerializationConstants.AUDIT_RECORD_ENTITY_SET_ID )
-    public UUID getAuditRecordEntitySetId() {
-        return auditRecordEntitySetId;
+    public UUID getActiveAuditRecordEntitySetId() {
+        return activeAuditRecordEntitySetId;
     }
 
     @JsonIgnore
-    public void setAuditRecordEntitySetId( UUID auditRecordEntitySetId ) {
-        this.auditRecordEntitySetId = auditRecordEntitySetId;
+    public void setActiveAuditRecordEntitySetId( UUID activeAuditRecordEntitySetId ) {
+        this.activeAuditRecordEntitySetId = activeAuditRecordEntitySetId;
+    }
+
+    @JsonProperty(SerializationConstants.AUDIT_RECORD_ENTITY_SET_IDS)
+    public Set<UUID> getAuditRecordEntitySetIds() {
+        return auditRecordEntitySetIds;
     }
 
     @Override public boolean equals( Object o ) {

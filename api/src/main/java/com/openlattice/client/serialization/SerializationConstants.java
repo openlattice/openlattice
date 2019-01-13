@@ -53,6 +53,7 @@ public final class SerializationConstants {
     public static final String ASSOCIATION_TYPE_ID              = "associationTypeId";
     public static final String AUDIT_ID                         = "auditId";
     public static final String AUDIT_RECORD_ENTITY_SET_ID       = "auditRecordEntitySetId";
+    public static final String AUDIT_RECORD_ENTITY_SET_IDS      = "auditRecordEntitySetIds";
     public static final String AUTHORIZED_OBJECTS               = "authorizedObjects";
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
