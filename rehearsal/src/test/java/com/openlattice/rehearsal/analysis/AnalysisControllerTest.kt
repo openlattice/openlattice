@@ -3,6 +3,7 @@ package com.openlattice.rehearsal.analysis
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ListMultimap
+import com.google.common.collect.Multimaps
 import com.openlattice.data.DataEdge
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
@@ -59,9 +60,9 @@ class AnalysisControllerTest : MultipleAuthenticatedUsersBase() {
                         .toSet() )
 
 
-        val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val entriesSrc = testDataSrc.values.toList()
         val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
-        val entriesDst = ImmutableList.copyOf(testDataDst.values)
+        val entriesDst = testDataDst.values.toList()
         val idsDst = dataApi.createEntities(personEs.id, entriesDst)
 
         val edgesToBeCreated: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()

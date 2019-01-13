@@ -94,7 +94,9 @@ class DataControllerTest : SetupTestData() {
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
         //added transformValues()
-        val testData = ImmutableList.copyOf(TestDataFactory.randomStringEntityData(numberOfEntries, et.properties).values)
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
+                .values
+                .toList()
         dataApi.createEntities(es.id, testData)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
@@ -110,7 +112,8 @@ class DataControllerTest : SetupTestData() {
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
         val testData = ImmutableList.copyOf(
-                TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(), pt.id).values)
+                TestDataFactory.randomBinaryData(numberOfEntries, et.key.iterator().next(), pt.id).values
+        )
         MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
 
         val ess = EntitySetSelection(Optional.of(et.properties))
@@ -152,8 +155,8 @@ class DataControllerTest : SetupTestData() {
 
         val propertySrc = entries[0];
         val replacement: SetMultimap<UUID, Any> = HashMultimap.create()
-        val replacementProperty = propertySrc.keySet().first();
-        replacement.put(replacementProperty, RandomStringUtils.random(10) as Object)
+        val replacementProperty = propertySrc.keys.first()
+        replacement.put(replacementProperty, RandomStringUtils.random(10) as Any)
 
         //added transformValues()
         val replacementMap = transformValues(mapOf(ids[0]!! to replacement), Multimaps::asMap)
@@ -220,7 +223,9 @@ class DataControllerTest : SetupTestData() {
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
         val edgesCreatedData = Multimaps.asMap(edgesToBeCreated).entries.first().value
         actualEdgeData.mapIndexed { index, de ->
-            val edgeDataLookup = lookupEdgeDataByFqn(edgesCreatedData[numberOfEntries - index - 1].data.asMap())
+            val edgeDataLookup = lookupEdgeDataByFqn(
+                    edgesCreatedData[numberOfEntries - index - 1].data.mapValues { it.value.toMutableSet() }.toMutableMap()
+            )
             de.asMap()
                     .filter { it.key.name != "@id" }
                     .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
@@ -250,10 +255,9 @@ class DataControllerTest : SetupTestData() {
         return entitySetId to edges
     }
 
-    private fun keyByFqn(data: SetMultimap<UUID, Any>): SetMultimap<FullQualifiedName, Any> {
+    private fun keyByFqn(data: Map<UUID, Set<Any>>): SetMultimap<FullQualifiedName, Any> {
         val rekeyed: SetMultimap<FullQualifiedName, Any> = HashMultimap.create()
-        Multimaps.asMap(data)
-                .forEach { rekeyed.putAll(fqnCache[it.key], it.value) }
+        data.forEach { rekeyed.putAll(fqnCache[it.key], it.value) }
         return rekeyed
     }
 
@@ -283,8 +287,14 @@ class DataControllerTest : SetupTestData() {
 
         val d = LocalDate.now()
         val odt = OffsetDateTime.ofInstant(Instant.now(), ZoneId.of("UTC"))
-        val testData = Arrays.asList(HashMultimap.create(ImmutableSetMultimap
-                .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))) as SetMultimap<UUID, Any>)
+        val testData = Arrays.asList(
+                Multimaps.asMap(
+                        HashMultimap.create(
+                                ImmutableSetMultimap
+                                        .of(p1.id, odt, p2.id, d, k.id, RandomStringUtils.randomAlphanumeric(5))
+                        ) as SetMultimap<UUID, Any>
+                )
+        )
 
         //added transformValues()
         val ids = MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
@@ -313,7 +323,8 @@ class DataControllerTest : SetupTestData() {
 
         //added transformValues()
         val entities = ImmutableList.copyOf(
-                TestDataFactory.randomStringEntityData(numberOfEntries, et.properties).values)
+                TestDataFactory.randomStringEntityData(numberOfEntries, et.properties).values
+        )
         dataApi.createEntities(es.id, entities)
 
         // load selected data
@@ -340,7 +351,7 @@ class DataControllerTest : SetupTestData() {
         for (entity in entities) {
             expectedValues
                     .add(
-                            entity.asMap().entries
+                            entity.entries
                                     .asSequence()
                                     // filter the entries with key (propertyId) in the selected set
                                     .filter { e ->
@@ -365,16 +376,19 @@ class DataControllerTest : SetupTestData() {
 
         // add test data
         val testData = ImmutableList.copyOf(
-                TestDataFactory.randomStringEntityData(1, et.properties).values)
+                TestDataFactory.randomStringEntityData(1, et.properties).values
+        )
         MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
 
         val oldNameSpace = pt.type.namespace
         val newNameSpace = oldNameSpace + "extrachars"
 
         // Update propertytype type
-        val update = MetadataUpdate(Optional.of(pt.title), Optional.empty(), Optional.of(es.name),
+        val update = MetadataUpdate(
+                Optional.of(pt.title), Optional.empty(), Optional.of(es.name),
                 Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty())
+                Optional.empty(), Optional.empty(), Optional.empty()
+        )
         edmApi.updatePropertyTypeMetadata(pt.id, update)
 
         val ess = EntitySetSelection(Optional.of(et.properties))
@@ -418,8 +432,8 @@ class DataControllerTest : SetupTestData() {
         (1..numberOfEntries)
                 .forEach { givenNames.put(personGivenNamePropertyId, RandomStringUtils.randomAscii(5)) }
 
-        val entries1 = listOf(givenNames)
-        val entries2 = listOf(givenNames)
+        val entries1 = listOf(Multimaps.asMap(givenNames))
+        val entries2 = listOf(Multimaps.asMap(givenNames))
 
         dataApi.createEntities(esId1, entries1)
         dataApi.createEntities(esId2, entries2)
@@ -443,7 +457,8 @@ class DataControllerTest : SetupTestData() {
 
         Assert.assertEquals(
                 givenNames[personGivenNamePropertyId],
-                data.first()[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)])
+                data.first()[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)]
+        )
     }
 
     @Test
@@ -479,8 +494,8 @@ class DataControllerTest : SetupTestData() {
         (1..numberOfEntries)
                 .forEach { givenNames.put(personGivenNamePropertyId, RandomStringUtils.randomAscii(5)) }
 
-        val entries1 = listOf(givenNames)
-        val entries2 = listOf(givenNames)
+        val entries1 = listOf(Multimaps.asMap(givenNames))
+        val entries2 = listOf(Multimaps.asMap(givenNames))
 
         dataApi.createEntities(esId1, entries1)
         dataApi.createEntities(esId2, entries2)
@@ -491,10 +506,13 @@ class DataControllerTest : SetupTestData() {
             Thread.sleep(3000)
         }
 
-        val data = ImmutableList.copyOf(dataApi.loadEntitySetData(
-                esLinked.id,
-                EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.empty()),
-                FileType.json))
+        val data = ImmutableList.copyOf(
+                dataApi.loadEntitySetData(
+                        esLinked.id,
+                        EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.empty()),
+                        FileType.json
+                )
+        )
         val linkingIds = data.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }
         val indexedData = index(data)
 
@@ -505,7 +523,8 @@ class DataControllerTest : SetupTestData() {
 
             Assert.assertArrayEquals(
                     arrayOf(indexedData[it]?.get(personGivenNameFqn)),
-                    arrayOf(linkedEntity.first().get(personGivenNameFqn)))
+                    arrayOf(linkedEntity.first().get(personGivenNameFqn))
+            )
         }
 
     }
