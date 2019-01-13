@@ -21,24 +21,34 @@
 
 package com.openlattice.auditing
 
+import com.hazelcast.core.HazelcastInstance
+import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.Principal
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.processors.UpdateEntitySetAuditRecordEntitySetIdProcessor
+import com.openlattice.edm.type.EntityType
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.streams.PostgresIterable
 import java.time.OffsetDateTime
 import java.util.*
 
 /**
+ * This class keeps track of auditing entity sets for each entity set.
  *
  *
  */
 class AuditRecordEntitySetsManager(
         val auditingConfiguration: AuditingConfiguration,
-        val edm: EdmManager
+        val authorizationManager: AuthorizationManager,
+        val hazelcastInstance: HazelcastInstance
 ) {
 
-    fun createAuditEntitySet(principal: Principal, entitySetId: UUID) {
+    val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
+    val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
+
+    fun createAuditEntitySet(edm: EdmManager, principal: Principal, entitySetId: UUID) {
         val auditedEntitySet = edm.getEntitySet(entitySetId)
         val entitySetName = buildName(entitySetId)
         val auditingEntityTypeId = auditingConfiguration.getAuditingEntityTypeId()
@@ -50,10 +60,19 @@ class AuditRecordEntitySetsManager(
                 Optional.of("This is an automatically generated auditing entity set."),
                 auditedEntitySet.contacts
         )
+
+        /*
+         * This sequence of steps is safe to execute as a failure on any of the steps can be retried from scratch
+         * with the only side0-effect being that eventually we will have to clean-up audit record entity sets that were
+         * never used.
+         */
+
         edm.createEntitySet(principal, entitySet)
+        val auditRecordEntitySetId = entitySet.id
+        entitySets.executeOnKey( entitySetId, UpdateEntitySetAuditRecordEntitySetIdProcessor( auditRecordEntitySetId))
     }
 
-    fun getRecordEntitySets(entitySetId: UUID): PostgresIterable<UUID> {
+    fun getAuditRecordEntitySets(entitySetId: UUID): PostgresIterable<UUID> {
         TODO("Implement retrieving all the audit record entity sets for a given entity set.")
     }
 
@@ -69,4 +88,6 @@ class AuditRecordEntitySetsManager(
     fun getRecordEntitySet(entitySet: UUID): UUID {
         TODO("Implement retrieving the audit record entity set.")
     }
+
+
 }
