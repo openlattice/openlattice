@@ -135,7 +135,6 @@ public class EdmService implements EdmManager {
     private final PostgresEdmManager                edmManager;
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
-    private final AuditRecordEntitySetsManager      aresManager;
 
     private final HazelcastInstance hazelcastInstance;
     private final HikariDataSource  hds;
@@ -146,6 +145,9 @@ public class EdmService implements EdmManager {
     @Inject
     private EsEdmService esEdmService;
 
+    @Inject
+    private AuditRecordEntitySetsManager aresManager;
+
     public EdmService(
             HikariDataSource hds,
             HazelcastInstance hazelcastInstance,
@@ -153,14 +155,12 @@ public class EdmService implements EdmManager {
             AuthorizationManager authorizations,
             PostgresEdmManager edmManager,
             PostgresTypeManager entityTypeManager,
-            HazelcastSchemaManager schemaManager,
-            AuditRecordEntitySetsManager aresManager ) {
+            HazelcastSchemaManager schemaManager ) {
 
         this.authorizations = authorizations;
         this.edmManager = edmManager;
         this.entityTypeManager = entityTypeManager;
         this.schemaManager = schemaManager;
-        this.aresManager = aresManager;
         this.hazelcastInstance = hazelcastInstance;
         this.hds = hds;
         this.edmVersions = hazelcastInstance.getMap( HazelcastMap.EDM_VERSIONS.name() );
@@ -486,7 +486,7 @@ public class EdmService implements EdmManager {
 
             // No subscribers currently
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
-            aresManager.createAuditEntitySet( this, principal, entitySet.getId() );
+            aresManager.createAuditEntitySetForEntitySet(  principal, entitySet.getId() );
 
         } catch ( Exception e ) {
             logger.error( "Unable to create entity set {} for principal {}", entitySet, principal, e );

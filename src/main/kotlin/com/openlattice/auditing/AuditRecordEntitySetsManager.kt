@@ -39,7 +39,7 @@ import java.util.*
 /**
  * This class keeps track of auditing entity sets for each entity set.
  *
- *
+ * This class should probably be merged into EdmService as there is an unbreakable circular dependency there.
  */
 class AuditRecordEntitySetsManager(
         val auditingConfiguration: AuditingConfiguration,
