@@ -21,18 +21,14 @@
 
 package com.openlattice.auditing
 
+import com.openlattice.hazelcast.StreamSerializerTypeIds
+import java.util.*
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-enum class AuditProperty {
-    ACL_KEY,
-    DATA,
-    DESCRIPTION,
-    ENTITY_SETS,
-    ENTITIES,
-    EVENT_TYPE,
-    ID,
-    PRINCIPAL,
-    OPERATION_ID
-}
+data class AuditRecordEntitySetConfiguration(
+        var activeAuditRecordEntitySetId: UUID,
+        val auditRecordEntitySetIds: MutableSet<UUID> = mutableSetOf(activeAuditRecordEntitySetId)
+)

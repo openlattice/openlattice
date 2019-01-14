@@ -24,10 +24,12 @@ package com.openlattice.auditing
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.Principal
+import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.securable.AbstractSecurableObject
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.processors.UpdateEntitySetAuditRecordEntitySetIdProcessor
+import com.openlattice.edm.processors.UpdateAuditRecordEntitySetIdProcessor
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.streams.PostgresIterable
@@ -41,24 +43,40 @@ import java.util.*
  */
 class AuditRecordEntitySetsManager(
         val auditingConfiguration: AuditingConfiguration,
-        val authorizationManager: AuthorizationManager,
-        val hazelcastInstance: HazelcastInstance
+        private val authorizationManager: AuthorizationManager,
+        private val hazelcastInstance: HazelcastInstance,
+        private val edm: EdmManager
 ) {
 
-    val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
-    val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
+    private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<UUID, AuditRecordEntitySetConfiguration>(
+            HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name
+    )
 
-    fun createAuditEntitySet(edm: EdmManager, principal: Principal, entitySetId: UUID) {
+    fun createAuditEntitySetForEntitySet(principal: Principal, entitySetId: UUID) {
         val auditedEntitySet = edm.getEntitySet(entitySetId)
-        val entitySetName = buildName(entitySetId)
+        val name = auditedEntitySet.name
+        createAuditEntitySet( principal, name, entitySetId, auditedEntitySet.contacts)
+
+    }
+
+    fun createAuditEntitySetForSecurablePrincipal(principal: Principal, securableObject: AbstractSecurableObject) {
+        val name = securableObject.title
+        val id = securableObject.id
+        val contacts = setOf<String>()
+        createAuditEntitySet( principal, name, id, contacts)
+    }
+
+    fun createAuditEntitySet(principal: Principal, name: String, id: UUID, contacts: Set<String>) {
+
+        val entitySetName = buildName(id)
         val auditingEntityTypeId = auditingConfiguration.getAuditingEntityTypeId()
 
         val entitySet = EntitySet(
                 auditingEntityTypeId,
                 entitySetName,
-                "Audit entity set for ${auditedEntitySet.name} (${auditedEntitySet.id})",
+                "Audit entity set for $name ($id)",
                 Optional.of("This is an automatically generated auditing entity set."),
-                auditedEntitySet.contacts
+                contacts
         )
 
         /*
@@ -68,12 +86,19 @@ class AuditRecordEntitySetsManager(
          */
 
         edm.createEntitySet(principal, entitySet)
-        val auditRecordEntitySetId = entitySet.id
-        entitySets.executeOnKey(entitySetId, UpdateEntitySetAuditRecordEntitySetIdProcessor(auditRecordEntitySetId))
+        auditRecordEntitySetConfigurations
+                .executeOnKey(id, UpdateAuditRecordEntitySetIdProcessor(entitySet.id))
+
     }
 
-    fun getAuditRecordEntitySets(entitySetId: UUID): PostgresIterable<UUID> {
-        TODO("Implement retrieving all the audit record entity sets for a given entity set.")
+    fun getAuditRecordEntitySets(entitySetId: UUID): Set<UUID> {
+        return auditRecordEntitySetConfigurations[entitySetId]?.auditRecordEntitySetIds ?: setOf()
+    }
+
+    fun getActiveAuditRecordEntitySetId(entitySetId: UUID): UUID {
+        //TODO: Don't load the entire object
+        //This should never NPE as (almost) every securable object should have an entity set.
+        return auditRecordEntitySetConfigurations[entitySetId]!!.activeAuditRecordEntitySetId
     }
 
     fun rollAuditEntitySets() {

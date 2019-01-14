@@ -22,30 +22,32 @@
 package com.openlattice.edm.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.edm.EntitySet
+import com.openlattice.auditing.AuditRecordEntitySetConfiguration
 import org.slf4j.LoggerFactory
 import java.util.*
 
 
-private val logger = LoggerFactory.getLogger(UpdateEntitySetAuditRecordEntitySetIdProcessor::class.java)
+private val logger = LoggerFactory.getLogger(UpdateAuditRecordEntitySetIdProcessor::class.java)
 
 /**
  * Entry processor for updating the audit entity set.
  */
-class UpdateEntitySetAuditRecordEntitySetIdProcessor(
+class UpdateAuditRecordEntitySetIdProcessor(
         val auditRecordEntitySetId: UUID
-) : AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>() {
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet?>): Void? {
-        val es = entry.value
-        if (es == null) {
+) : AbstractRhizomeEntryProcessor<UUID, AuditRecordEntitySetConfiguration, Void?>() {
+    override fun process(entry: MutableMap.MutableEntry<UUID, AuditRecordEntitySetConfiguration?>): Void? {
+        val config = entry.value
+        if (config == null) {
             logger.error(
-                    "Encountered unexpected null value when updating audit record entity set id for entity set id {}.",
+                    "Encountered unexpected null value when updating audit record entity set id for securable object id {}.",
                     entry.key
             )
         } else {
-            es.activeAuditRecordEntitySetId = auditRecordEntitySetId
-            es.auditRecordEntitySetIds.add(auditRecordEntitySetId)
+            config.activeAuditRecordEntitySetId = auditRecordEntitySetId
+            config.auditRecordEntitySetIds.add(auditRecordEntitySetId)
+            entry.setValue(config)
         }
+
         return null
     }
 }

@@ -24,14 +24,14 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractUUIDStreamSerializer;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
-import com.openlattice.edm.processors.UpdateEntitySetAuditRecordEntitySetIdProcessor;
+import com.openlattice.edm.processors.UpdateAuditRecordEntitySetIdProcessor;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UpdateEntitySetAuditRecordEntitySetIdProcessorStreamSerializer
-        implements SelfRegisteringStreamSerializer<UpdateEntitySetAuditRecordEntitySetIdProcessor> {
+public class UpdateAuditRecordEntitySetIdProcessorStreamSerializer
+        implements SelfRegisteringStreamSerializer<UpdateAuditRecordEntitySetIdProcessor> {
 
     @Override
     public int getTypeId() {
@@ -43,17 +43,17 @@ public class UpdateEntitySetAuditRecordEntitySetIdProcessorStreamSerializer
     }
 
     @Override
-    public Class<UpdateEntitySetAuditRecordEntitySetIdProcessor> getClazz() {
-        return UpdateEntitySetAuditRecordEntitySetIdProcessor.class;
+    public Class<UpdateAuditRecordEntitySetIdProcessor> getClazz() {
+        return UpdateAuditRecordEntitySetIdProcessor.class;
     }
 
     @Override public void write(
-            ObjectDataOutput out, UpdateEntitySetAuditRecordEntitySetIdProcessor object ) throws IOException {
+            ObjectDataOutput out, UpdateAuditRecordEntitySetIdProcessor object ) throws IOException {
         AbstractUUIDStreamSerializer.serialize( out, object.getAuditRecordEntitySetId() );
 
     }
 
-    @Override public UpdateEntitySetAuditRecordEntitySetIdProcessor read( ObjectDataInput in ) throws IOException {
-        return new UpdateEntitySetAuditRecordEntitySetIdProcessor( AbstractUUIDStreamSerializer.deserialize( in ) );
+    @Override public UpdateAuditRecordEntitySetIdProcessor read( ObjectDataInput in ) throws IOException {
+        return new UpdateAuditRecordEntitySetIdProcessor( AbstractUUIDStreamSerializer.deserialize( in ) );
     }
 }

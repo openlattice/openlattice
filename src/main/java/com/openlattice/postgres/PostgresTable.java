@@ -50,7 +50,6 @@ public final class PostgresTable {
     public static final PostgresTableDefinition ASSOCIATION_TYPES =
             new PostgresTableDefinition( "association_types" )
                     .addColumns( ID, SRC, DST, BIDIRECTIONAL );
-
     public static final PostgresTableDefinition AUDIT_LOG =
             new PostgresTableDefinition( "audit_log" )
                     .addColumns( ACL_KEY,
@@ -63,7 +62,9 @@ public final class PostgresTable {
                             BLOCK_ID )
                     .primaryKey( ACL_KEY, EVENT_TYPE, PRINCIPAL_TYPE, PRINCIPAL_ID, TIME_UUID )
                     .setUnique( ACL_KEY, EVENT_TYPE, PRINCIPAL_TYPE, PRINCIPAL_ID, TIME_UUID );
-
+    public static final PostgresTableDefinition AUDIT_RECORD_ENTITY_SET_IDS =
+            new PostgresTableDefinition( "audit_record_entity_set_ids" )
+                    .addColumns( ID, AUDIT_RECORD_ENTITY_SET_ID, PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS );
     public static final PostgresTableDefinition COMPLEX_TYPES =
             new PostgresTableDefinition( "complex_types" )
                     .addColumns( ID,
@@ -119,9 +120,7 @@ public final class PostgresTable {
                             CONTACTS,
                             LINKING,
                             PostgresColumn.LINKED_ENTITY_SETS,
-                            EXTERNAL,
-                            AUDIT_RECORD_ENTITY_SET_ID,
-                            AUDIT_RECORD_ENTITY_SET_IDS);
+                            EXTERNAL );
     //.setUnique( NAME );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
@@ -223,7 +222,13 @@ public final class PostgresTable {
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
     public static final PostgresTableDefinition PERSISTENT_SEARCHES      =
             new PostgresTableDefinition( "persistent_searches" )
-                    .addColumns( ID, ACL_KEY, LAST_READ, EXPIRATION_DATE, ALERT_TYPE, SEARCH_CONSTRAINTS, ALERT_METADATA )
+                    .addColumns( ID,
+                            ACL_KEY,
+                            LAST_READ,
+                            EXPIRATION_DATE,
+                            ALERT_TYPE,
+                            SEARCH_CONSTRAINTS,
+                            ALERT_METADATA )
                     .setUnique( ID, ACL_KEY );
     public static final PostgresTableDefinition PRINCIPALS               =
             new PostgresTableDefinition( "principals" )

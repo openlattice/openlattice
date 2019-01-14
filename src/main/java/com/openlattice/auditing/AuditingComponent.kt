@@ -32,19 +32,19 @@ import java.util.*
  */
 interface AuditingComponent {
 
-    fun getAuditConfiguration(): AuditingConfiguration
+    fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
     fun getDataGraphService(): DataGraphService
-    fun getEdmManager() : EdmManager
 
     fun recordEvent(event: AuditableEvent): Int {
         return recordEvents(listOf(event))
     }
 
     fun recordEvents(events: List<AuditableEvent>): Int {
-        val auditingConfiguration = getAuditConfiguration()
-        val edm = getEdmManager()
+        val ares = getAuditRecordEntitySetsManager()
+        val auditingConfiguration = ares.auditingConfiguration
+
         return events
-                .groupBy { edm.getEntitySet(it.entitySet).activeAuditRecordEntitySetId }
+                .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKeys.last()) }
                 .map { (auditEntitySet, entities) ->
                     getDataGraphService().createEntities(
                             auditEntitySet,
@@ -56,15 +56,27 @@ interface AuditingComponent {
     }
 
     private fun toMap(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
-        val auditingConfiguration = getAuditConfiguration()
-        return events.map {
+        val auditingConfiguration = getAuditRecordEntitySetsManager().auditingConfiguration
+        return events.map { event ->
             val eventEntity = mutableMapOf<UUID, Set<Any>>()
 
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ENTITIES)] = it.entities.toSet()
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(it.principal)
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(it.eventType)
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DESCRIPTION)] = setOf(it.description)
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DATA)] = setOf(it.data)
+            eventEntity[auditingConfiguration.getPropertyTypeId(
+                    AuditProperty.ACL_KEY
+            )] = event.aclKeys.map { it }.toSet()
+
+            event.entities.ifPresent {
+                eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ENTITIES)] = it
+            }
+
+            event.operationId.ifPresent {
+                eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.OPERATION_ID)] = setOf(it)
+            }
+
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(event.aclKeys.last())
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(event.principal)
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(event.eventType)
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DESCRIPTION)] = setOf(event.description)
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DATA)] = setOf(event.data)
 
             return@map eventEntity
         }

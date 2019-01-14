@@ -43,8 +43,6 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setBoolean( 15, value.isLinking() );
         ps.setArray( 16, linkedEntitySets );
         ps.setBoolean( 17, value.isExternal() );
-        ps.setObject( 18, value.getActiveAuditRecordEntitySetId() );
-        ps.setObject( 19, value.getAuditRecordEntitySetIds() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
