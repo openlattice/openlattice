@@ -21,9 +21,7 @@
 
 package com.openlattice.auditing.controllers
 
-import com.openlattice.auditing.AuditApi
-import com.openlattice.auditing.AuditEntitySet
-import com.openlattice.auditing.CONTROLLER
+import com.openlattice.auditing.*
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.*
@@ -35,6 +33,18 @@ import java.util.*
 @RestController
 @RequestMapping(CONTROLLER)
 class AuditController : AuditApi {
+    override fun audit(audit: Audit): List<Map<UUID, Set<Any>>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun record(events: List<AuditableEvent>): Int {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun auditPrincipal(auditPrincipal: AuditPrincipal): List<Map<UUID, Set<Any>>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     override fun auditEntitySet(auditEntitySet: AuditEntitySet): List<Map<UUID, Set<Any>>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
