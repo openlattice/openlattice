@@ -21,9 +21,36 @@
 
 package com.openlattice.auditing
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import java.time.OffsetDateTime
+import java.util.*
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class AuditUser {
+data class AuditPrincipal(
+        val principals: Set<UUID>,
+        val eventTypes: Set<AuditEventType>,
+        val start: OffsetDateTime,
+        val end: OffsetDateTime
+) {
+    companion object {
+        @JsonCreator
+        @JvmStatic
+        fun fromJson(
+                //TODO: Add serialization field constants.
+                principals: Set<UUID>,
+                eventTypes: Set<AuditEventType>,
+                start: Optional<OffsetDateTime>,
+                end: Optional<OffsetDateTime>
+        ): AuditPrincipal {
+            return AuditPrincipal(
+                    principals,
+                    eventTypes,
+                    start.orElse(OffsetDateTime.MIN),
+                    end.orElse(OffsetDateTime.MAX)
+            )
+        }
+    }
 }

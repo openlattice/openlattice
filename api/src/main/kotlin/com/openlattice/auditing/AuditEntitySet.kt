@@ -31,8 +31,8 @@ import java.util.*
  */
 
 data class AuditEntitySet(
-        val principals: Set<UUID>,
-        val events: Set<AuditEntitySet>,
+        val entitySets: Set<UUID>,
+        val eventTypes: Set<AuditEventType>,
         val start: OffsetDateTime,
         val end: OffsetDateTime
 ) {
@@ -42,13 +42,13 @@ data class AuditEntitySet(
         @JvmStatic
         fun fromJson(
                 //TODO: Add serialization field constants.
-                principals: Set<UUID>,
-                events: Set<AuditEntitySet>,
+                entitySets: Set<UUID>,
+                eventTypes: Set<AuditEventType>,
                 start: Optional<OffsetDateTime>,
                 end: Optional<OffsetDateTime>
         ): AuditEntitySet {
             return AuditEntitySet(
-                    principals, events, start.orElse(OffsetDateTime.MIN), end.orElse(OffsetDateTime.MAX)
+                    entitySets, eventTypes, start.orElse(OffsetDateTime.MIN), end.orElse(OffsetDateTime.MAX)
             )
         }
     }

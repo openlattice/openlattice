@@ -47,8 +47,6 @@ public class EntitySet extends AbstractSecurableObject {
     private final boolean     linking;
     private final Set<UUID>   linkedEntitySets;
     private final boolean     external;
-    private       UUID        activeAuditRecordEntitySetId; //This field is never set in a constructor.
-    private final Set<UUID>   auditRecordEntitySetIds = new HashSet<>(  );
     private       String      name;
     private       Set<String> contacts;
 
@@ -157,21 +155,6 @@ public class EntitySet extends AbstractSecurableObject {
     @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS )
     public Set<UUID> getLinkedEntitySets() {
         return linkedEntitySets;
-    }
-
-    @JsonProperty( SerializationConstants.AUDIT_RECORD_ENTITY_SET_ID )
-    public UUID getActiveAuditRecordEntitySetId() {
-        return activeAuditRecordEntitySetId;
-    }
-
-    @JsonIgnore
-    public void setActiveAuditRecordEntitySetId( UUID activeAuditRecordEntitySetId ) {
-        this.activeAuditRecordEntitySetId = activeAuditRecordEntitySetId;
-    }
-
-    @JsonProperty(SerializationConstants.AUDIT_RECORD_ENTITY_SET_IDS)
-    public Set<UUID> getAuditRecordEntitySetIds() {
-        return auditRecordEntitySetIds;
     }
 
     @Override public boolean equals( Object o ) {

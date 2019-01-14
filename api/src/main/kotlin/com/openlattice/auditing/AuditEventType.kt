@@ -26,4 +26,17 @@ package com.openlattice.auditing
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 enum class AuditEventType {
+    READ_ENTITIES,
+    CREATE_ENTITIES,
+    REPLACE_ENTITIES,
+    PARTIAL_REPLACE_ENTITIES,
+    MERGE_ENTITIES,
+    CLEAR_ENTITIES,
+    DELETE_ENTITIES,
+    READ_ENTITY_SET,
+    CLEAR_ENTITY_SET,
+    DELETE_ENTITY_SET,
+    ADD_PERMISSION,
+    REMOVE_PERMISSON,
+
 }

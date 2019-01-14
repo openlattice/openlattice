@@ -21,6 +21,8 @@
 
 package com.openlattice.auditing
 
+import retrofit2.http.POST
+import retrofit2.http.PUT
 import java.util.*
 
 /**
@@ -34,12 +36,26 @@ const val CONTROLLER = "/audit"
 const val BASE = SERVICE + CONTROLLER
 // @formatter:on
 
+const val ENTITY_SET = "/entity-set"
+const val ID = "id"
+const val ID_PATH = "/{$ID}"
+const val PRINCIPAL = "principal"
+
 interface AuditApi {
 
-    //Audit by entity set
-    fun auditEntitySet( auditEntitySet : AuditEntitySet) : List<Map<UUID, Set<Any>>>
+    /**
+     * Retrieve all the events record for a particular entity set in a given time window.
+     * @param auditEntitySet The
+     */
+    @POST(BASE + ENTITY_SET)
+    fun auditEntitySet(auditEntitySet: AuditEntitySet): List<Map<UUID, Set<Any>>>
 
-    //Audit by user
+    @POST(BASE + PRINCIPAL)
+    fun auditPrincipal(auditPrincipal: AuditPrincipal): List<Map<UUID, Set<Any>>>
 
-    //Audit Multipler Users and Entity Sets at once
+    @POST(BASE)
+    fun audit(audit: Audit): List<Map<UUID, Set<Any>>>
+
+    @PUT(BASE)
+    fun record(events: List<AuditableEvent>): Int
 }

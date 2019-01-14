@@ -21,6 +21,7 @@
 
 package com.openlattice.auditing
 
+import com.openlattice.authorization.AclKey
 import com.openlattice.data.EntityDataKey
 import java.time.OffsetDateTime
 import java.util.*
@@ -30,20 +31,23 @@ import java.util.*
  * front end.
  *
  * @param principal The user or securable principal that took the action.
- * @param entitySet The entity set to which this event applies.
- * @param entities The entity key id of the entities to which this event applies.
+ * @param aclKeys The acl keys of the securable objects involved.
+ * @param entities The entities involvedin this auditable event.
  * @param eventType The [AuditEventType] of this event.
  * @param description A description of the event.
  * @param data Represents additional data relevant to the event. Maybe properly indexed by ES in the future.
  * @param timestamp Represents the instant in time at which an auditable event occured. The current time is assumed if
+ * @param operationId Sometimes complex operations will interact with multiple entity sets. This field allow makes it
+ * possible to tie those operations together.
  * none is provided.
  */
 data class AuditableEvent(
         val principal: UUID,
-        val entitySet: UUID,
-        val entities: Set<UUID>,
+        val aclKeys:AclKey,
         val eventType: AuditEventType,
         val description: String,
+        val entities: Optional<Set<UUID>>,
         val data: Map<String, Any>,
-        val timestamp: OffsetDateTime = OffsetDateTime.now()
+        val timestamp: OffsetDateTime = OffsetDateTime.now(),
+        val operationId: Optional<Int> = Optional.empty()
 )
