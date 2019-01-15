@@ -236,13 +236,15 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager(),
-                aresManager() );
+                schemaManager() );
     }
 
     @Bean
     public AuditRecordEntitySetsManager aresManager() {
-        return new AuditRecordEntitySetsManager( auditingConfiguration, authorizationManager(), hazelcastInstance );
+        return new AuditRecordEntitySetsManager( auditingConfiguration,
+                authorizationManager(),
+                hazelcastInstance,
+                dataModelService() );
     }
 
     @Bean
