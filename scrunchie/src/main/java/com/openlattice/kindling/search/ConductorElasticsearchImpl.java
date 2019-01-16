@@ -913,7 +913,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                         propertyTypeIds.forEach( propertyId -> {
                             String field = entitySetId.toString() + "." + propertyId.toString();
                             Map<String, Float> fieldsMap = authorizedFieldsMap
-                                    .putIfAbsent( propertyId, Map.of( field, 1F ) );
+                                    .putIfAbsent( propertyId, Maps.newHashMap( Map.of( field, 1F ) ) );
                             if ( !( fieldsMap == null ) ) {
                                 authorizedFieldsMap.get( propertyId ).put( field, 1F );
                             }
