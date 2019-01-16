@@ -259,6 +259,7 @@ public class SearchService {
 
     private void indexLinkedEntities(
             UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
+        // (normal)entity_set_id/linking_id/property_type_id
         Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityData(
                 linkingIds.entrySet().stream().collect(
                         Collectors.toMap(Map.Entry::getKey, entry -> Optional.of(entry.getValue())) ),

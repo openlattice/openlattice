@@ -335,24 +335,55 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     public Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityData(
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId ) {
+        // entity_set_id / linking_id / property_type_id
+        return getLinkedEntityData( linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId, false );
+    }
+
+    @Override
+    @Timed
+    public Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityDataByLinkingId(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId ) {
+        // linking_id/entity_set_id/property_type_id
+        return getLinkedEntityData( linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId, true );
+    }
+
+    /**
+     * Retrieves the authorized, linked property data for the given linking ids of entity sets.
+     * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
+     * @param authorizedPropertyTypesByEntitySetId map of authorized property types
+     * @param byId if true, the returned map of data will be by first linking id and then entity set id,
+     *            otherwise the other way around
+     */
+    private Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityData(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId,
+            boolean byId ) {
         // map of: pair<linking_id, entity_set_id> to property_data
         PostgresIterable<kotlin.Pair<kotlin.Pair<UUID, UUID>, Map<UUID, Set<Object>>>> linkedEntityDataStream =
-                dataQueryService.getLinkedEntityData( linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId);
-        // linking_id/entity_set_id/property_type_id
+                dataQueryService.getLinkedEntityData( linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId );
+
         Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedEntityData = new HashMap<>();
         linkedEntityDataStream.stream().forEach( it -> {
-            Map<UUID, Map<UUID, Set<Object>>> data = linkedEntityData.putIfAbsent(
-                    it.getFirst().getFirst(),
-                    newHashMap( Map.of(it.getFirst().getSecond(), it.getSecond())) );
-            if(data != null) {
-                data.put(it.getFirst().getSecond(), it.getSecond());
+            UUID primaryId = (byId) ? it.getFirst().getFirst() : it.getFirst().getSecond(); //linking_id/entity_set_id
+            UUID secondaryId = (byId) ? it.getFirst().getSecond() : it.getFirst().getFirst(); //entity_set_id/linking_id
+            Map<UUID, Map<UUID, Set<Object>>> data =
+                    linkedEntityData.putIfAbsent( primaryId, newHashMap( Map.of( secondaryId, it.getSecond() ) ) );
+            if ( data != null ) {
+                data.put( secondaryId, it.getSecond() );
             }
-        });
+        } );
 
         return linkedEntityData;
     }
 
+    /**
+     * Loads data from multiple entity sets. Note: not implemented for linking entity sets!
+     * @param entitySetIdsToEntityKeyIds map of entity sets to entity keys for which the data should be loaded
+     * @param authorizedPropertyTypesByEntitySet map of entity sets and the property types for which the user is authorized
+     * @return map of entity set ids to list of entity data
+     */
     @Override
     @Timed
     public ListMultimap<UUID, SetMultimap<FullQualifiedName, Object>> getEntitiesAcrossEntitySets(
