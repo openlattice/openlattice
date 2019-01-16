@@ -69,7 +69,7 @@ class BackgroundLinkingIndexingService(
             // Linking ids are not filtered here, whether they need to be indexed or not
             val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId
                     .map { it.key to getPropertyTypeForEntitySet(it.key) }.toMap()
-            val linkedEntityData = dataStore.getLinkedEntityData(
+            val linkedEntityData = dataStore.getLinkedEntityDataByLinkingId(
                     dirtyLinkingIdsByEntitySetId.map { it.key to Optional.of(it.value) }.toMap(),
                     propertyTypesOfEntitySets) // linking_id/entity_set_id/property_type_id
 
