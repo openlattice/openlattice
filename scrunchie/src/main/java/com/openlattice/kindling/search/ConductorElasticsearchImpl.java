@@ -893,41 +893,46 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     /**
-     * Creates a map with keys of all the property type ids puts 1 weights as value.
+     * Creates for each authorized property type a map with key of that property type id and puts 1 weights as value.
      */
-    private static Map<String, Float> getFieldsMap( DelegatedUUIDSet authorizedPropertyTypes ) {
-        Map<String, Float> fieldsMap = Maps.newHashMap();
-        authorizedPropertyTypes.forEach( id -> fieldsMap.put( id.toString(), 1F ) );
+    private static Map<UUID, Map<String, Float>> getFieldsMap( DelegatedUUIDSet authorizedPropertyTypes ) {
+        Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
+        authorizedPropertyTypes.forEach( id -> fieldsMap.put( id, Map.of( id.toString(), 1F ) ) );
         return fieldsMap;
     }
 
     /**
-     * Creates a map with keys, that are the combinations of all the entity set ids and property type ids across the
-     * input and values of 1 for weights.
+     * Creates for each authorized property type id a map with keys, that are the combinations of all the entity set ids
+     * and that property type id across the input and values of 1 for weights.
      */
-    private static Map<String, Float> getLinkingFieldsMap(
+    private static Map<UUID, Map<String, Float>> getLinkingFieldsMap(
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
-        Map<String, Float> fieldsMap = Maps.newHashMap();
-        authorizedPropertyTypesByEntitySet.entrySet().stream()
-                .forEach( authorizedPropertiesOfEntitySet -> authorizedPropertiesOfEntitySet.getValue().stream()
-                        .forEach( propertyId ->
-                                fieldsMap.put(
-                                        authorizedPropertiesOfEntitySet.getKey().toString() + "." + propertyId.toString(),
-                                        1F )
-                        )
+        Map<UUID, Map<String, Float>> authorizedFieldsMap = Maps.newHashMap();
+        authorizedPropertyTypesByEntitySet
+                .forEach( ( entitySetId, propertyTypeIds ) ->
+                        propertyTypeIds.forEach( propertyId -> {
+                            String field = entitySetId.toString() + "." + propertyId.toString();
+                            Map<String, Float> fieldsMap = authorizedFieldsMap
+                                    .putIfAbsent( propertyId, Map.of( field, 1F ) );
+                            if ( !( fieldsMap == null ) ) {
+                                authorizedFieldsMap.get( propertyId ).put( field, 1F );
+                            }
+                        } )
                 );
 
-        return fieldsMap;
+        return authorizedFieldsMap;
     }
 
-    private QueryBuilder getAdvancedSearchQuery( Constraint constraints, Set<UUID> authorizedProperties ) {
+    private QueryBuilder getAdvancedSearchQuery(
+            Constraint constraints,
+            Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
         constraints.getSearches().get().forEach( search -> {
-            if ( authorizedProperties.contains( search.getPropertyType() ) ) {
+            if ( authorizedFieldsMap.keySet().contains( search.getPropertyType() ) ) {
                 QueryStringQueryBuilder queryString = QueryBuilders
                         .queryStringQuery( search.getSearchTerm() )
-                        .field( search.getPropertyType().toString(), 1F ).lenient( true );
+                        .fields( authorizedFieldsMap.get( search.getPropertyType() ) ).lenient( true );
                 if ( search.getExactMatch() ) {
                     query.must( queryString );
                     query.minimumShouldMatch( 0 );
@@ -936,12 +941,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         } );
 
         return query;
-
     }
 
     private QueryBuilder getSimpleSearchQuery(
             Constraint constraints,
-            Map<String, Float> fieldsMap ) {
+            Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
         String searchTerm = constraints.getSearchTerm().get();
         boolean fuzzy = constraints.getFuzzy().get();
@@ -949,7 +953,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         String formattedSearchTerm = fuzzy ? getFormattedFuzzyString( searchTerm ) : searchTerm;
 
         return QueryBuilders.queryStringQuery( formattedSearchTerm )
-                .fields( fieldsMap )
+                .fields( authorizedFieldsMap.values().stream()
+                        .flatMap( fieldsMap -> fieldsMap.entrySet().stream() )
+                        .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) ) )
                 .lenient( true );
     }
 
@@ -1004,8 +1010,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     private QueryBuilder getQueryForSearch(
             SearchConstraints searchConstraints,
-            Map<String, Float> fieldsMap,
-            Set<UUID> authorizedProperties ) {
+            Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
         BoolQueryBuilder query = QueryBuilders.boolQuery();
 
         for ( ConstraintGroup constraintGroup : searchConstraints.getConstraintGroups() ) {
@@ -1016,19 +1021,19 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
                 switch ( constraint.getSearchType() ) {
                     case advanced:
-                        subQuery.should( getAdvancedSearchQuery( constraint, authorizedProperties ) );
+                        subQuery.should( getAdvancedSearchQuery( constraint, authorizedFieldsMap ) );
                         break;
 
                     case geoDistance:
-                        subQuery.should( getGeoDistanceSearchQuery( constraint, authorizedProperties ) );
+                        subQuery.should( getGeoDistanceSearchQuery( constraint, authorizedFieldsMap.keySet() ) );
                         break;
 
                     case geoPolygon:
-                        subQuery.should( getGeoPolygonSearchQuery( constraint, authorizedProperties ) );
+                        subQuery.should( getGeoPolygonSearchQuery( constraint, authorizedFieldsMap.keySet() ) );
                         break;
 
                     case simple:
-                        subQuery.should( getSimpleSearchQuery( constraint, fieldsMap ) );
+                        subQuery.should( getSimpleSearchQuery( constraint, authorizedFieldsMap ) );
                         break;
 
                     case writeDateTimeFilter:
@@ -1059,9 +1064,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     /**
      * Executes entity data search on multiple entity sets
+     *
      * @param searchConstraints
      * @param authorizedPropertyTypesByEntitySet authorized properties for each entity set individually
-     * @return
      */
     private EntityDataKeySearchResult executeNormalSearch(
             SearchConstraints searchConstraints,
@@ -1070,11 +1075,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         MultiSearchRequest requests = new MultiSearchRequest().maxConcurrentSearchRequests( MAX_CONCURRENT_SEARCHES );
         authorizedPropertyTypesByEntitySet.keySet().forEach(
                 ( entitySetId ) -> {
-                    Map<String, Float> fieldsMap = getFieldsMap( authorizedPropertyTypesByEntitySet.get( entitySetId ) );
-                    QueryBuilder query = getQueryForSearch(
-                            searchConstraints,
-                            fieldsMap,
-                            authorizedPropertyTypesByEntitySet.get( entitySetId ).unwrap() );
+                    Map<UUID, Map<String, Float>> authorizedFieldsMap =
+                            getFieldsMap( authorizedPropertyTypesByEntitySet.get( entitySetId ) );
+                    QueryBuilder query = getQueryForSearch( searchConstraints, authorizedFieldsMap );
 
                     SearchRequestBuilder request = client
                             .prepareSearch( getIndexName( entitySetId ) )
@@ -1091,20 +1094,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     /**
      * Executes entity data search on multiple linking entity sets containing 1 or more linked entity sets
-     * @param searchConstraints SearchConstraints containing the linking entity set ids (NOT linked)
+     *
+     * @param searchConstraints                  SearchConstraints containing the linking entity set ids (NOT linked)
      * @param authorizedPropertyTypesByEntitySet authorized properties for each linked entity set individually
-     * @return
      */
     private EntityDataKeySearchResult executeLinkingSearch(
             SearchConstraints searchConstraints,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
-        Map<String, Float> fieldsMap = getLinkingFieldsMap( authorizedPropertyTypesByEntitySet );
-        QueryBuilder query = getQueryForSearch(
-                searchConstraints,
-                fieldsMap,
-                authorizedPropertyTypesByEntitySet.values().stream()
-                        .flatMap( propertyIds -> propertyIds.unwrap().stream() )
-                        .collect( Collectors.toSet() ) );
+        Map<UUID, Map<String, Float>> authorizedFieldsMap = getLinkingFieldsMap( authorizedPropertyTypesByEntitySet );
+        QueryBuilder query = getQueryForSearch( searchConstraints, authorizedFieldsMap );
         if ( query == null ) {
             return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
