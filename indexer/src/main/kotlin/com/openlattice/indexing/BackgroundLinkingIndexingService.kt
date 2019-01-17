@@ -104,7 +104,8 @@ class BackgroundLinkingIndexingService(
                     val linkedEntitySetIds = linkedEntitySetIdsLookup[it]!!
                     val filteredData = dataByEntitySetId
                             .filterKeys { entitySetId -> linkedEntitySetIds.contains(entitySetId) }
-                    elasticsearchApi.createBulkEntityData(it,  filteredData.mapValues { mapOf(linkingId to it.value) }, true)
+                    // TODO: change entity_set - linking id order in map
+                    elasticsearchApi.createBulkLinkedData(it,  filteredData.mapValues { mapOf(linkingId to it.value) })
                 }) {
             indexCount += dataManager.markAsIndexed(
                     linkingEntitySetIds.flatMap{ linkedEntitySetIdsLookup[it]!! }
@@ -140,7 +141,7 @@ class BackgroundLinkingIndexingService(
 
     private fun getDirtyLinkingIdsQuery(): String {
         val selectDirtyLinkingIds = selectDirtyLinkingIds()
-        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) FROM ${IDS.name} " +
+        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${LINKING_ID.name} FROM ${IDS.name} " +
                 "INNER JOIN " +
                 "($selectDirtyLinkingIds) as dirty_ids " +
                 "USING(${LINKING_ID.name}) " +
