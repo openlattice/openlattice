@@ -292,15 +292,25 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean createBulkEntityData(
-            UUID entitySetId,
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByIdByEntitySetId,
-            boolean linking ) {
+    public boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
-                    new BulkEntityDataLambdas( entitySetId, entitiesByIdByEntitySetId, linking ) ) ).get();
+                    new BulkEntityDataLambdas( entitySetId, entitiesById ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity data to elasticsearch" );
+            return false;
+        }
+    }
+
+    @Override
+    public boolean createBulkLinkedData(
+            UUID entitySetId,
+            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall.wrap(
+                    new BulkLinkedDataLambdas( entitySetId, entitiesByLinkingId ) ) ).get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "unable to save linked entity data to elasticsearch" );
             return false;
         }
     }
