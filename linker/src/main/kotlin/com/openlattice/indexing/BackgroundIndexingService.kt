@@ -207,7 +207,7 @@ class BackgroundIndexingService(
         var indexCount = 0
         val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
 
-        if (elasticsearchApi.createBulkEntityData(entitySet.id, mapOf(entitySet.id to entitiesById), false)) {
+        if (elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
             indexCount += dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
