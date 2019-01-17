@@ -720,31 +720,24 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     /**
-     * Return a byte array of values with formatting the property ids(keys) to either {@literal <}propertyTypeId>
-     * or {@literal <}entitySetId.propertyTypeId> depending on if it's a linking entity or not.
+     * Return a byte array of values with formatting the property ids(keys)
+     * to {@literal <}entitySetId.propertyTypeId> for linked indices.
      *
-     * @param entitySetIdOfEntities the entity set id for which the values belong
-     * @param entityValues          map of values for an entity with property type id as key
-     * @param linking               whether it is a linking entity or not
+     * @param entityValuesByEntitySet map of values for each entity set for a linking id
      * @return byte array of values
      * @throws JsonProcessingException
      */
-    private byte[] getFieldMappings(
-            UUID entitySetIdOfEntities,
-            Map<UUID, Set<Object>> entityValues,
-            boolean linking ) throws JsonProcessingException {
-        if ( linking ) {
-            String entitySetId = entitySetIdOfEntities.toString();
-            Map<String, Set<Object>> formattedEntityValues = entityValues.entrySet().stream()
-                    .collect( Collectors.toMap(
-                            ( entry ) -> entitySetId + "." + entry.getKey().toString(),
-                            Map.Entry::getValue
-                    ) );
+    private byte[] getFieldMappings( Map<UUID, Map<UUID, Set<Object>>> entityValuesByEntitySet )
+            throws JsonProcessingException {
+        Map<String, Set<Object>> formattedEntityValues = Maps.newHashMap();
+        entityValuesByEntitySet.forEach(
+                (entitySetId, propertyData) ->
+                    propertyData.forEach( (propertyTypeId, data) ->
+                            formattedEntityValues.put( entitySetId + "." + propertyTypeId, data ) )
+        );
 
-            return mapper.writeValueAsBytes( formattedEntityValues );
-        } else {
-            return mapper.writeValueAsBytes( entityValues );
-        }
+        return mapper.writeValueAsBytes( formattedEntityValues );
+
     }
 
     @Override
@@ -755,7 +748,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         UUID entityKeyId = edk.getEntityKeyId();
 
         try {
-            final byte[] s = getFieldMappings( entitySetId, propertyValues, false );
+            final byte[] s = mapper.writeValueAsBytes( propertyValues );
 
             client.prepareIndex( getIndexName( entitySetId ), getTypeName( entitySetId ), entityKeyId.toString() )
                     .setSource( s, XContentType.JSON )
@@ -771,29 +764,51 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     @Override
     public boolean createBulkEntityData(
             UUID entitySetId,
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByIdByEntitySetId,
-            boolean linking ) {
+            Map<UUID, Map<UUID, Set<Object>>> entitiesById) {
         if ( !verifyElasticsearchConnection() ) { return false; }
         try {
             String indexName = getIndexName( entitySetId );
             String indexType = getTypeName( entitySetId );
 
             BulkRequestBuilder requestBuilder = client.prepareBulk();
-            for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByIdByEntitySetIdEntry : entitiesByIdByEntitySetId.entrySet() ) {
-                final UUID entitySetIdOfEntities = entitiesByIdByEntitySetIdEntry.getKey();
-                for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entitiesByIdEntry : entitiesByIdByEntitySetIdEntry.getValue().entrySet() ) {
-                    final UUID entityId = entitiesByIdEntry.getKey(); // either entityKeyId or linkingId
-                    final byte[] s = getFieldMappings( entitySetIdOfEntities, entitiesByIdEntry.getValue(), linking );
+                for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entitiesByIdEntry : entitiesById.entrySet() ) {
+                    final UUID entityId = entitiesByIdEntry.getKey();
+                    final byte[] s = mapper.writeValueAsBytes( entitiesByIdEntry.getValue() );
                     requestBuilder.add(
                             client.prepareIndex( indexName, indexType, entityId.toString() )
                                     .setSource( s, XContentType.JSON ) );
                     //                requestBuilder.add( new IndexRequest( indexName, indexType, entityKeyId.toString() )
                     //                        .source( s, XContentType.JSON ) );
                 }
-            }
+
             requestBuilder.execute().actionGet();
         } catch ( JsonProcessingException e ) {
             logger.debug( "Error creating bulk entity data in elasticsearch for entity set {}", entitySetId, e );
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean createBulkLinkedData(
+            UUID linkingEntitySetId,
+            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) { // linking_id/entity_set_id/property_id
+        if ( !verifyElasticsearchConnection() ) { return false; }
+        try {
+            String indexName = getIndexName( linkingEntitySetId );
+            String indexType = getTypeName( linkingEntitySetId );
+
+            BulkRequestBuilder requestBuilder = client.prepareBulk();
+            for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingIdEntry : entitiesByLinkingId.entrySet() ) {
+                final UUID linkingId = entitiesByLinkingIdEntry.getKey();
+                final byte[] s = getFieldMappings( entitiesByLinkingIdEntry.getValue() );
+                requestBuilder.add(
+                        client.prepareIndex( indexName, indexType, linkingId.toString() )
+                                .setSource( s, XContentType.JSON ) );
+            }
+            requestBuilder.execute().actionGet();
+        } catch ( JsonProcessingException e ) {
+            logger.debug( "Error creating bulk linked data in elasticsearch for entity set {}", linkingEntitySetId, e );
             return false;
         }
         return true;
