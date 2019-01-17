@@ -6,12 +6,13 @@ import com.hazelcast.core.IMap
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDatastore
 import com.openlattice.data.storage.PostgresDataManager
-import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.*
+import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -24,6 +25,7 @@ import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 import kotlin.collections.HashMap
+import com.openlattice.postgres.PostgresTable.IDS
 
 class BackgroundLinkingIndexingService(
         private val hds: HikariDataSource,
@@ -120,6 +122,11 @@ class BackgroundLinkingIndexingService(
         return indexCount
     }
 
+    /**
+     * Returns the linking id, which need to be indexed by mapped by their entity set ids.
+     * Note: the query itself has duplicate linking ids within 1 entity set id, but the
+     * [com.openlattice.postgres.ResultSetAdapters.linkingIds] function copies that array into a set.
+     */
     private fun getDirtyLinkingIds(): PostgresIterable<Pair<UUID, Set<UUID>>> {
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
@@ -132,13 +139,21 @@ class BackgroundLinkingIndexingService(
     }
 
     private fun getDirtyLinkingIdsQuery(): String {
-        return "SELECT ${PostgresColumn.ENTITY_SET_ID.name}, ARRAY_AGG(${PostgresColumn.LINKING_ID.name}) as ${PostgresColumn.LINKING_ID.name} " +
-                "FROM ${PostgresTable.IDS.name} " +
-                "WHERE ${PostgresColumn.LINKING_ID.name} IS NOT NULL " +
-                "AND ${DataTables.LAST_INDEX.name} >= ${DataTables.LAST_WRITE.name} " +
-                "AND ${DataTables.LAST_LINK.name} >= ${DataTables.LAST_WRITE.name} " +
-                "AND ${PostgresColumn.LAST_LINK_INDEX.name} < ${DataTables.LAST_WRITE.name} " +
-                "GROUP BY ${PostgresColumn.ENTITY_SET_ID.name} " +
+        val selectDirtyLinkingIds = selectDirtyLinkingIds()
+        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) FROM ${IDS.name} " +
+                "INNER JOIN " +
+                "($selectDirtyLinkingIds) as dirty_ids " +
+                "USING(${LINKING_ID.name}) " +
+                "GROUP BY ${ENTITY_SET_ID.name}"
+    }
+
+    private fun selectDirtyLinkingIds(): String {
+        return "SELECT DISTINCT ${LINKING_ID.name} " +
+                "FROM ${IDS.name} " +
+                "WHERE ${LINKING_ID.name} IS NOT NULL " +
+                "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
+                "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
+                "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
                 "LIMIT $FETCH_SIZE"
     }
 

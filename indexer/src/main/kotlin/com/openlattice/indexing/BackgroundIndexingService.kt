@@ -36,10 +36,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.neuron.audit.AuditEntitySetUtils
 import com.openlattice.postgres.DataTables.*
-import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn.LAST_LINK_INDEX
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
-import com.openlattice.postgres.PostgresColumn.LINKING_ID
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
