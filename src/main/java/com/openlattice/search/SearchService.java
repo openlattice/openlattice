@@ -266,7 +266,8 @@ public class SearchService {
                 linkingIds.keySet().stream().collect(
                         Collectors.toMap(Function.identity(), entitySetId -> propertyTypes) ));
 
-        elasticsearchApi.createBulkEntityData( linkingEntitySetId, linkedData, true );
+        elasticsearchApi.createBulkLinkedData( linkingEntitySetId, linkedData );
+        // TODO: change entity_set - linking id order in map
     }
 
     @Subscribe
@@ -294,7 +295,7 @@ public class SearchService {
         Map<UUID, PropertyType> propertyTypes = event.getAllPropertTypes().stream().collect(
                 Collectors.toMap( PropertyType::getId, Function.identity() ) );
 
-        if(event.getLinkedEntitySetIds().isPresent()) {
+        if(event.getLinkedEntitySetIds().isPresent()) { // if it is a linking entity set
             indexLinkedEntities(
                     event.getEntitySetId(),
                     dataManager.getLinkingIds( event.getLinkedEntitySetIds().get() ),
@@ -302,9 +303,7 @@ public class SearchService {
         } else {
             elasticsearchApi.createBulkEntityData(
                     event.getEntitySetId(),
-                    Map.of( event.getEntitySetId(),
-                            dataManager.getEntitySetData( event.getEntitySetId(), propertyTypes  ) ),
-                    false );
+                    dataManager.getEntitySetData( event.getEntitySetId(), propertyTypes  ) );
         }
 
     }
