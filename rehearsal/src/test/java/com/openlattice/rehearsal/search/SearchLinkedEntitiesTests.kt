@@ -223,6 +223,8 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val resultsAB = searchApi.searchEntitySetData(simpleSearchConstraint)
 
         Assert.assertTrue(resultsAB.hits.toSet().containsAll(resultsA1.hits))
+        Assert.assertTrue(resultsAB.hits.flatMap { it[FullQualifiedName("nc.PersonSurName")] }
+                .contains("Qwe"))
 
         linkingApi.removeEntitySetsFromLinkingEntitySet(esLinked.id, setOf(socratesBId))
         Thread.sleep(60000L) // wait for indexing
@@ -240,12 +242,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         Thread.sleep(60000L) // wait for indexing to finish
 
-        val search = Search(Optional.of(
-                importedEntitySets.keys.first()),
-                Optional.of(personEt.id),
-                Optional.empty(),
-                0,
-                1)
+        val search = Search(Optional.of(esLinked.name), Optional.of(personEt.id), Optional.empty(), 0, 1)
         val properties1 = searchApi.executeEntitySetKeywordQuery(search).hits[0]["propertyTypes"] as ArrayList<LinkedHashMap<String, Any>>
 
         val newPropertyType = createPropertyType()
@@ -274,6 +271,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val simpleSearchConstraint = SearchConstraints
                 .simpleSearchConstraints(arrayOf(esLinked.id), 0, 100, "*")
         val result1 = searchApi.searchEntitySetData(simpleSearchConstraint)
+        logger.info(result1.hits.toString())
 
         // Create
         val entityData: SetMultimap<UUID, Any> = HashMultimap.create<UUID, Any>()
@@ -283,67 +281,104 @@ class SearchLinkedEntitiesTests : SetupTestData() {
                 UUID.fromString("7b038634-a0b4-4ce1-a04f-85d1775937aa")) // surname
         testDataProperties.forEach { entityData.put(it, "test") }
         val newAEntityIds = dataApi.createEntities(socratesAId, listOf(entityData))
-        Thread.sleep(60000L) // wait for indexing and linking to finish
+
+        Thread.sleep(10000L) // wait for linking to finish
+        while (!checkLinkingFinished(importedEntitySets.keys)) {
+            Thread.sleep(5000L)
+        }
+        Thread.sleep(60000L) // wait for indexing to finish
 
         val result2 = searchApi.searchEntitySetData(simpleSearchConstraint)
+        logger.info(result2.hits.toString())
 
-        if (result1.numHits == result2.numHits) { // data got linked
-            Assert.assertTrue(result2.hits
-                    .map { it[FullQualifiedName("nc.PersonGivenName")] }
-                    .any { it.contains("test") })
-        } else {
-            Assert.assertTrue(result2.hits
-                    .any { it[FullQualifiedName("nc.PersonGivenName")].first() == "test" })
-        }
+        Assert.assertTrue(result2.hits
+                .map { it[FullQualifiedName("nc.PersonGivenName")] }
+                .any { it.contains("test") })
+
 
         // Update
         dataApi.updateEntitiesInEntitySet(
                 socratesAId,
                 mapOf(newAEntityIds.first() to entityData.asMap().mapValues { it.value.map { "new$it" }.toSet() }),
                 UpdateType.Replace)
-        Thread.sleep(60000L) // wait for indexing and linking to finish
+
+        Thread.sleep(10000L) // wait for linking to finish
+        while (!checkLinkingFinished(importedEntitySets.keys)) {
+            Thread.sleep(5000L)
+        }
+        Thread.sleep(60000L) // wait for indexing to finish
 
         val result3 = searchApi.searchEntitySetData(simpleSearchConstraint)
+        logger.info(result3.hits.toString())
 
-        if (result1.numHits == result3.numHits) { // data got linked
-            Assert.assertTrue(result2.hits
-                    .map { it[FullQualifiedName("nc.PersonGivenName")] }
-                    .any { it.contains("newtest") })
-        } else {
-            Assert.assertTrue(result3.hits
-                    .any { it[FullQualifiedName("nc.PersonGivenName")].first() == "newtest" })
-        }
+        Assert.assertEquals(result2.numHits, result3.numHits)
+        Assert.assertTrue(result3.hits
+                .map { it[FullQualifiedName("nc.PersonGivenName")] }
+                .any { it.contains("newtest") })
+        Assert.assertTrue(result3.hits
+                .map { it[FullQualifiedName("nc.PersonGivenName")] }
+                .none { it.contains("test") })
 
-        // Delete: test when deleting entity, but there are still entities with that linking_id and when there is no left
+        // Delete:
+        // when deleting entity, but there are still entities with that linking_id
+        // when deleting entity, and there is no left entity left with that linking_id
         val entityData2: SetMultimap<UUID, Any> = HashMultimap.create<UUID, Any>()
-        testDataProperties.forEach { entityData.put(it, "newtest") }
+        testDataProperties.forEach { entityData2.put(it, "newtestt") }
+        // Note: we assume, when creating 2 entities with same values, that they get linked in this tests
         val newBEntityIds = dataApi.createEntities(socratesBId, listOf(entityData2, entityData2))
-        Thread.sleep(60000L) // wait for indexing and linking to finish
+
+        Thread.sleep(10000L) // wait for linking to finish
+        while (!checkLinkingFinished(importedEntitySets.keys)) {
+            Thread.sleep(5000L)
+        }
+        Thread.sleep(60000L) // wait for indexing to finish
+
         val result4 = searchApi.searchEntitySetData(simpleSearchConstraint)
-        val testDataGotLinked = (result4.numHits - result3.numHits) < 2 // 2 entities got created
+        logger.info(result4.hits.toString())
+        val testDataGotLinked = (result4.numHits == result3.numHits) // 1 entity got created
 
         if (testDataGotLinked) {
             Assert.assertTrue(result4.hits.any {
-                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest", "newtest")
+                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest", "newtestt")
             })
         } else {
             Assert.assertTrue(result4.hits.any {
                 it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest")
             })
+            Assert.assertTrue(result4.hits.any {
+                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtestt")
+            })
         }
 
-        dataApi.clearEntityFromEntitySet(socratesBId, newBEntityIds.first())
-        Thread.sleep(60000L) // wait for indexing to finish
-        val result5 = searchApi.searchEntitySetData(simpleSearchConstraint)
-        Assert.assertTrue(result5.hits.any {
-            it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest")
-        })
+        dataApi.clearEntityFromEntitySet(socratesBId, newBEntityIds.first()) // delete first entity with value newtestt
 
-        dataApi.clearEntityFromEntitySet(socratesBId, newBEntityIds.last())
-        Thread.sleep(60000L) // wait for indexing to finish
+        Thread.sleep(10000L) // wait for linking to finish
+        while (!checkLinkingFinished(importedEntitySets.keys)) {
+            Thread.sleep(5000L)
+        }
+        Thread.sleep(60000L) // wait for indexing and linking to finish
+
+        val result5 = searchApi.searchEntitySetData(simpleSearchConstraint)
+        logger.info(result5.hits.toString())
+        if (testDataGotLinked) {
+            Assert.assertTrue(result5.hits.any {
+                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest", "newtestt")
+            })
+        } else {
+            Assert.assertTrue(result5.hits.any {
+                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest")
+            })
+            Assert.assertTrue(result5.hits.any {
+                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtestt")
+            })
+        }
+
+        dataApi.clearEntityFromEntitySet(socratesBId, newBEntityIds.last()) // delete last entity with value newtestt
+        Thread.sleep(60000L) // wait for indexing to finish, we don't need to wait for linking here
         val result6 = searchApi.searchEntitySetData(simpleSearchConstraint)
+        logger.info(result6.hits.toString())
         Assert.assertTrue(result6.hits.none {
-            it[FullQualifiedName("nc.PersonGivenName")].contains("newtest")
+            it[FullQualifiedName("nc.PersonGivenName")].contains("newtestt")
         })
 
         edmApi.deleteEntitySet(esLinked.id)
