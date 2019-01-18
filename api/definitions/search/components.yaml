@@ -1,0 +1,20 @@
+neighborDetails:
+  type: object
+  properties:
+    openlattice.@id:
+      type: string
+    ol.id:
+      type: string
+neighborEntityDetails:
+  type: object
+  properties:
+    associationEntitySet:
+        $ref: "../EDM/components.yaml#/entitySet"
+    associationDetails:
+        $ref: "./components.yaml#/neighborDetails"
+    neighborEntitySet:
+        $ref: "../EDM/components.yaml#/entitySet"
+    neighborId:
+      type: string
+    neighbourDetails:
+        $ref: "./components.yaml#/neighborDetails"
