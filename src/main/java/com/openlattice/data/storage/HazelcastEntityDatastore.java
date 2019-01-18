@@ -194,18 +194,20 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .collect( Collectors.groupingBy( idsOfLinkingId -> idsOfLinkingId.getValue().isEmpty() ) );
 
         // delete
-        Set<UUID> deletedLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( true ).stream()
-                .map( Map.Entry::getKey ).collect( Collectors.toSet() );
-        if ( !deletedLinkingIds.isEmpty() ) {
+        if ( groupedEntityKeyIdsOfLinkingIds.get( true ) != null ) {
+            Set<UUID> deletedLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( true ).stream()
+                    .map( Map.Entry::getKey ).collect( Collectors.toSet() );
             Set<UUID> linkingEntitySetIds = dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
                     .stream().collect( Collectors.toSet() );
             eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
         }
 
         // reindex
-        Set<UUID> dirtyLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( false ).stream()
-                .map( Map.Entry::getKey ).collect( Collectors.toSet() );
-        pdm.markLinkingIdsAsNeedToBeIndexed( dirtyLinkingIds );
+        if ( groupedEntityKeyIdsOfLinkingIds.get( false ) != null ) {
+            Set<UUID> dirtyLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( false ).stream()
+                    .map( Map.Entry::getKey ).collect( Collectors.toSet() );
+            pdm.markLinkingIdsAsNeedToBeIndexed( dirtyLinkingIds );
+        }
     }
 
     private void signalEntitySetDeleted( UUID entitySetId ) {
