@@ -139,12 +139,13 @@ class BackgroundLinkingIndexingService(
     }
 
     private fun selectDirtyLinkingIds(): String {
-        return "SELECT DISTINCT ${LINKING_ID.name} " +
+        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) AS ${LINKING_ID.name} " +
                 "FROM ${IDS.name} " +
                 "WHERE ${LINKING_ID.name} IS NOT NULL " +
                 "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
+                "GROUP BY ${ENTITY_SET_ID.name} " +
                 "LIMIT $FETCH_SIZE"
     }
 
