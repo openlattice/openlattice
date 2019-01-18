@@ -5,10 +5,12 @@ import com.google.common.collect.Lists
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.UpdateType
 import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.PERSON_NAME
 import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
 import com.openlattice.search.requests.DataSearchResult
+import com.openlattice.search.requests.Search
 import com.openlattice.search.requests.SearchConstraints
 import com.openlattice.search.requests.SearchDetails
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -238,17 +240,26 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         Thread.sleep(60000L) // wait for indexing to finish
 
-        val simpleSearchConstraint = SearchConstraints
-                .simpleSearchConstraints(arrayOf(esLinked.id), 0, 100, "*")
-        val result1 = searchApi.searchEntitySetData(simpleSearchConstraint)
+        val search = Search(Optional.of(
+                importedEntitySets.keys.first()),
+                Optional.of(personEt.id),
+                Optional.empty(),
+                0,
+                1)
+        val properties1 = searchApi.executeEntitySetKeywordQuery(search).hits[0]["propertyTypes"] as ArrayList<LinkedHashMap<String, Any>>
 
         val newPropertyType = createPropertyType()
         edmApi.addPropertyTypeToEntityType(personEt.id, newPropertyType.id)
-        Thread.sleep(60000L) // wait for indexing to finish
-        val result2 = searchApi.searchEntitySetData(simpleSearchConstraint)
 
-        Assert.assertEquals(result1.hits.first().keySet().size + 1, result2.hits.first().keySet().size)
-        Assert.assertNull(result2.hits.first()[newPropertyType.type])
+        Thread.sleep(60000L) // wait for indexing to finish
+
+        val properties2 = searchApi.executeEntitySetKeywordQuery(search).hits[0]["propertyTypes"] as ArrayList<LinkedHashMap<String, Any>>
+
+        Assert.assertEquals(properties1.size + 1, properties2.size)
+        Assert.assertTrue(properties2.containsAll(properties1))
+        val newPropertyHit = properties2.find { it["id"] == newPropertyType.id.toString() }!!
+        Assert.assertEquals(newPropertyType.title, newPropertyHit["title"])
+        Assert.assertEquals(newPropertyType.description, newPropertyHit["description"])
 
         edmApi.deleteEntitySet(esLinked.id)
     }
