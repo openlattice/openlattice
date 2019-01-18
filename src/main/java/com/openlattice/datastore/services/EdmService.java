@@ -432,34 +432,34 @@ public class EdmService implements EdmManager {
     public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        entitySets.executeOnKey( linkingEntitySetId,
-                new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
+        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+                linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
+
         eventBus.post( new LinkedEntitySetAddedEvent(
-                linkingEntitySet,
+                updatedLinkingEntitySet,
                 newLinkedEntitySets,
                 Lists.newArrayList( getPropertyTypesForEntitySet( linkingEntitySetId ).values() ) ) );
-        return linkingEntitySet.getLinkedEntitySets().size() - startSize;
+        return updatedLinkingEntitySet.getLinkedEntitySets().size() - startSize;
     }
 
     @Override
     public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        entitySets.executeOnKey(
-                linkingEntitySetId,
-                new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
+        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+                linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
 
         Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )
                 .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
         Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = edmManager
-                .getLinkingIdsByEntitySetIds( linkingEntitySet.getLinkedEntitySets() );
+                .getLinkingIdsByEntitySetIds( updatedLinkingEntitySet.getLinkedEntitySets() );
 
         eventBus.post( new LinkedEntitySetRemovedEvent(
                 linkingEntitySetId,
                 remainingLinkingIdsByEntitySetId,
                 removedLinkingIds ) );
 
-        return startSize - linkingEntitySet.getLinkedEntitySets().size();
+        return startSize - updatedLinkingEntitySet.getLinkedEntitySets().size();
     }
 
     @Override
