@@ -115,8 +115,15 @@ paths:
     $ref: ./definitions/data/data.yaml#/entitySetId
   /datastore/data/set/{entitySetId}/entities:
     $ref: ./definitions/data/data.yaml#/entities
-  /datastore/data/set/{entitySetId}/count:
+  /datastore/data/{entitySetId}/count:
     $ref: ./definitions/data/data.yaml#/count
+
+  ##################
+  ## SEARCH API"s ##
+  ##################
+
+  /datastore/search/{entitySetId}/{entityKeyId}:
+    $ref: ./definitions/search/search.yaml#/entityKey
 
   #####################
   ## DIRECTORY API"s ##
