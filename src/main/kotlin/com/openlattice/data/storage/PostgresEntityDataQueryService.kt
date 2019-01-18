@@ -286,8 +286,7 @@ class PostgresEntityDataQueryService(
     /**
      * Selects linking ids by their entity set ids with filtering on entity key ids.
      */
-    fun getLinkingIds(
-            entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>> {
+    fun getLinkingIds(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): Map<UUID, Set<UUID>> {
         val adapter = Function<ResultSet, Pair<UUID, Set<UUID>>> {
             Pair(ResultSetAdapters.entitySetId(it), ResultSetAdapters.linkingIds(it))
         }
@@ -329,14 +328,26 @@ class PostgresEntityDataQueryService(
         }, adapter)
     }
 
-    fun getLinkingEntitySetIds(linkedEntitySetId: UUID): PostgresIterable<UUID> {
+    fun getLinkingEntitySetIds(linkingId: UUID): PostgresIterable<UUID> {
         val adapter = Function<ResultSet, UUID> {
             ResultSetAdapters.id(it)
         }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
             val statement = connection.createStatement()
-            val rs = statement.executeQuery(getLinkingEntitySetIdQuery(linkedEntitySetId))
+            val rs = statement.executeQuery(getLinkingEntitySetIdsOfLinkingIdQuery(linkingId))
+            StatementHolder(connection, statement, rs)
+        }, adapter)
+    }
+
+    fun getLinkingEntitySetIdsOfEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
+        val adapter = Function<ResultSet, UUID> {
+            ResultSetAdapters.id(it)
+        }
+        return PostgresIterable(Supplier<StatementHolder> {
+            val connection = hds.connection
+            val statement = connection.createStatement()
+            val rs = statement.executeQuery(getLinkingEntitySetIdsOfEntitySetIdQuery(entitySetId))
             StatementHolder(connection, statement, rs)
         }, adapter)
     }
@@ -903,8 +914,19 @@ internal fun selectLinkingIdsOfEntitySet(entitySetId: UUID): String {
             "WHERE ${VERSION.name} > 0 AND ${LINKING_ID.name} IS NOT NULL AND ${ENTITY_SET_ID.name} = '$entitySetId'"
 }
 
-internal fun getLinkingEntitySetIdQuery(linkedEntitySetId: UUID): String {
+internal fun getLinkingEntitySetIdsOfLinkingIdQuery(linkingId: UUID): String {
+    val selectEntitySetIdOfLinkingId =
+            "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
+                    "FROM ${IDS.name} " +
+                    "WHERE ${LINKING_ID.name} = '$linkingId'"
     return "SELECT ${ID.name} " +
             "FROM ${ENTITY_SETS.name} " +
-            "WHERE '$linkedEntitySetId' = ANY(${LINKED_ENTITY_SETS.name})"
+            "INNER JOIN ( $selectEntitySetIdOfLinkingId ) as linked_es " +
+            "ON ( ${ENTITY_SET_ID.name}= ANY( ${LINKED_ENTITY_SETS.name} ) )"
+}
+
+internal fun getLinkingEntitySetIdsOfEntitySetIdQuery(entitySetId: UUID): String {
+    return "SELECT ${ID.name} " +
+            "FROM ${ENTITY_SETS.name} " +
+            "WHERE '$entitySetId' = ANY(${LINKED_ENTITY_SETS.name})"
 }

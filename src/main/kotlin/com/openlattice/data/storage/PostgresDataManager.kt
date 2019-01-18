@@ -80,8 +80,15 @@ class PostgresDataManager(private val hds: HikariDataSource) {
         return updateLastIndex(entityKeyIds, linking, OffsetDateTime.now())
     }
 
-    fun markEntitySetsAsNeedsToBeIndexed(entitySetIds: Set<UUID>, linking: Boolean): Int {
-        return markAsNeedsToBeIndexed(entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(), linking)
+    fun markLinkingIdsAsNeedToBeIndexed(linkingIds: Set<UUID>): Int {
+        hds.connection.use {
+            it.prepareStatement(markLinkingIdsAsNeedToBeIndexedSql()).use {
+                val arr = PostgresArrays.createUuidArray(it.connection, linkingIds)
+                it.setArray(1, arr)
+                return it.executeUpdate()
+            }
+
+        }
     }
 
     fun markAsNeedsToBeIndexed(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): Int {
@@ -135,6 +142,11 @@ class PostgresDataManager(private val hds: HikariDataSource) {
 
         return "UPDATE ${PostgresTable.IDS.name} SET ${PostgresColumn.LAST_LINK_INDEX.name} = ? " +
                 "WHERE TRUE $entitiesClause"
+    }
+
+    fun markLinkingIdsAsNeedToBeIndexedSql(): String {
+        return "UPDATE ${PostgresTable.IDS.name} SET ${PostgresColumn.LAST_LINK_INDEX.name} = '-infinity()' " +
+                "WHERE ${PostgresColumn.LINKING_ID.name} IN (SELECT UNNEST( (?)::uuid[] )) "
     }
 
     fun updateLastLinkSql(entitySetId: UUID): String {

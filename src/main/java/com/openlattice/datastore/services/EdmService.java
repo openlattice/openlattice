@@ -432,9 +432,9 @@ public class EdmService implements EdmManager {
         entitySets.executeOnKey( linkingEntitySetId,
                 new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
         eventBus.post( new LinkedEntitySetAddedEvent(
-                linkingEntitySetId,
-                Lists.newArrayList( getPropertyTypesForEntitySet( linkingEntitySetId ).values() ),
-                newLinkedEntitySets ) );
+                linkingEntitySet,
+                newLinkedEntitySets,
+                Lists.newArrayList( getPropertyTypesForEntitySet( linkingEntitySetId ).values() ) ) );
         return linkingEntitySet.getLinkedEntitySets().size() - startSize;
     }
 
