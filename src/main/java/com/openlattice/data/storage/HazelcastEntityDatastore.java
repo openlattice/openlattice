@@ -101,9 +101,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         signalCreatedEntities( entitySetId,
                 dataQueryService
                         .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
-        signalLinkedEntitiesUpserted(
-                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
-                oldLinkingIds );
+        if ( !oldLinkingIds.isEmpty() ) {
+            signalLinkedEntitiesUpserted(
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    oldLinkingIds );
+        }
         return count;
     }
 
@@ -122,9 +124,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         signalCreatedEntities( entitySetId,
                 dataQueryService
                         .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
-        signalLinkedEntitiesUpserted(
-                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
-                oldLinkingIds );
+        if ( !oldLinkingIds.isEmpty() ) {
+            signalLinkedEntitiesUpserted(
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    oldLinkingIds );
+        }
         return count;
     }
 
@@ -142,9 +146,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         signalCreatedEntities( entitySetId,
                 dataQueryService
                         .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
-        signalLinkedEntitiesUpserted(
-                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
-                oldLinkingIds );
+        if ( !oldLinkingIds.isEmpty() ) {
+            signalLinkedEntitiesUpserted(
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    oldLinkingIds );
+        }
         return count;
     }
 
@@ -162,9 +168,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         signalCreatedEntities( entitySetId,
                 dataQueryService
                         .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
-        signalLinkedEntitiesUpserted(
-                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
-                oldLinkingIds );
+        if ( !oldLinkingIds.isEmpty() ) {
+            signalLinkedEntitiesUpserted(
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    oldLinkingIds );
+        }
         return count;
     }
 
@@ -262,9 +270,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 dataQueryService.getEntitiesByIdWithLastWrite( entitySetId,
                         authorizedPropertyTypes,
                         replacementProperties.keySet() ) );
-        signalLinkedEntitiesUpserted(
-                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
-                oldLinkingIds );
+        if ( !oldLinkingIds.isEmpty() ) {
+            signalLinkedEntitiesUpserted(
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    oldLinkingIds );
+        }
         return count;
     }
 
