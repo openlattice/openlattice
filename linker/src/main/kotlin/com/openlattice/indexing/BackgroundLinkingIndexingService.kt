@@ -1,6 +1,7 @@
 package com.openlattice.indexing
 
 import com.google.common.base.Stopwatch
+import com.google.common.collect.Maps
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
@@ -50,30 +51,30 @@ class BackgroundLinkingIndexingService(
     fun indexUpdatedLinkedEntities() {
         logger.info("Starting background linking indexing task.")
 
-        val dirtyLinkingIdsByEntitySetId = getDirtyLinkingIds().toMap() // entity_setId/linkingId
+        val linkedEntitySetIdsLookup = entitySets.values // linking_entity_set_id/linked_entity_set_ids
+                .filter(EntitySet::isLinking).map { it.id to it.linkedEntitySets }.toMap()
+        val linkedEntitySetIds = linkedEntitySetIdsLookup.values.flatten().toSet()
 
-        if (!dirtyLinkingIdsByEntitySetId.isEmpty()) {
+        // filter which entity set ids have linking entity set ids and only keep those linking ids
+        val dirtyLinkingIds = getDirtyLinkingIds().toMap().filterKeys {
+            linkedEntitySetIds.contains(it)
+        }.values.flatten().toSet()
+
+        if (!dirtyLinkingIds.isEmpty()) {
             val watch = Stopwatch.createStarted()
 
-            val linkingEntitySetIdsByLinkingIds = HashMap<UUID, HashSet<UUID>>() //linking_id/linking_entity_set_ids
-            dirtyLinkingIdsByEntitySetId.forEach { (entitySetId, linkingIds) ->
-                linkingIds.forEach {
-                    val linkingEntitySetIds = dataStore.getLinkingEntitySetIds(entitySetId).toHashSet()
-                    if (!linkingEntitySetIds.isEmpty()) {
-                        linkingEntitySetIdsByLinkingIds.putIfAbsent(it, linkingEntitySetIds)?.addAll(linkingEntitySetIds)
-                    }
-                }
-            }
+            val linkingEntitySetIdsByLinkingIds = dirtyLinkingIds.map {
+                //linking_id/linking_entity_set_ids
+                it to dataStore.getLinkingEntitySetIds(it).toHashSet()
+            }.toMap()
 
-            val linkedEntitySetIdsLookup = entitySets.getAll(linkingEntitySetIdsByLinkingIds.values.flatten().toSet())
-                    .mapValues { it.value.linkedEntitySets } // linking_entity_set_id/linked_entity_set_ids
-
-            // Linking ids are not filtered here, whether they need to be indexed or not
-            val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId
+            // get data for each linking id by entity set ids and property ids
+            val dirtyLinkingIdsByEntitySetId = getLinkingIdsByEntitySetIds(dirtyLinkingIds).toMap() // entity_set_id/linking_id
+            val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId // entity_set_id/property_type_id
                     .map { it.key to getPropertyTypeForEntitySet(it.key) }.toMap()
-            val linkedEntityData = dataStore.getLinkedEntityDataByLinkingId(
-                    dirtyLinkingIdsByEntitySetId.map { it.key to Optional.of(it.value) }.toMap(),
-                    propertyTypesOfEntitySets) // linking_id/entity_set_id/property_type_id
+            val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_id
+                    .getLinkedEntityDataByLinkingId(dirtyLinkingIdsByEntitySetId, propertyTypesOfEntitySets)
+
 
             // it is important to iterate over linking ids which have an associated linking entity set id!
             val indexCount = linkingEntitySetIdsByLinkingIds.map {
@@ -104,12 +105,11 @@ class BackgroundLinkingIndexingService(
                     val linkedEntitySetIds = linkedEntitySetIdsLookup[it]!!
                     val filteredData = dataByEntitySetId
                             .filterKeys { entitySetId -> linkedEntitySetIds.contains(entitySetId) }
-                    // TODO: change entity_set - linking id order in map
-                    elasticsearchApi.createBulkLinkedData(it,  filteredData.mapValues { mapOf(linkingId to it.value) })
+                    elasticsearchApi.createBulkLinkedData(it, mapOf(linkingId to filteredData))
                 }) {
             indexCount += dataManager.markAsIndexed(
-                    linkingEntitySetIds.flatMap{ linkedEntitySetIdsLookup[it]!! }
-                            .map{ it to Optional.of(setOf(linkingId)) }.toMap(),
+                    linkingEntitySetIds.flatMap { linkedEntitySetIdsLookup[it]!! }
+                            .map { it to Optional.of(setOf(linkingId)) }.toMap(),
                     true)
         }
 
@@ -124,28 +124,18 @@ class BackgroundLinkingIndexingService(
     }
 
     /**
-     * Returns the linking id, which need to be indexed by mapped by their entity set ids.
-     * Note: the query itself has duplicate linking ids within 1 entity set id, but the
-     * [com.openlattice.postgres.ResultSetAdapters.linkingIds] function copies that array into a set.
+     * Returns the linking id, which need to be indexed mapped by their entity set ids.
+     * Note: it only returns those entity set ids, where a dirty linking id is present
      */
     private fun getDirtyLinkingIds(): PostgresIterable<Pair<UUID, Set<UUID>>> {
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
-            val stmt = connection.prepareStatement(getDirtyLinkingIdsQuery())
+            val stmt = connection.prepareStatement(selectDirtyLinkingIds())
             val rs = stmt.executeQuery()
             StatementHolder(connection, stmt, rs)
         }, Function<ResultSet, Pair<UUID, Set<UUID>>> {
             ResultSetAdapters.entitySetId(it) to ResultSetAdapters.linkingIds(it)
         })
-    }
-
-    private fun getDirtyLinkingIdsQuery(): String {
-        val selectDirtyLinkingIds = selectDirtyLinkingIds()
-        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${LINKING_ID.name} FROM ${IDS.name} " +
-                "INNER JOIN " +
-                "($selectDirtyLinkingIds) as dirty_ids " +
-                "USING(${LINKING_ID.name}) " +
-                "GROUP BY ${ENTITY_SET_ID.name}"
     }
 
     private fun selectDirtyLinkingIds(): String {
@@ -156,6 +146,25 @@ class BackgroundLinkingIndexingService(
                 "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
                 "LIMIT $FETCH_SIZE"
+    }
+
+    private fun getLinkingIdsByEntitySetIds(linkingIds: Set<UUID>): PostgresIterable<Pair<UUID, Optional<Set<UUID>>>> {
+        return PostgresIterable(Supplier<StatementHolder> {
+            val connection = hds.connection
+            val stmt = connection.prepareStatement(selectLinkingIdsByEntitySetIds())
+            val arr = PostgresArrays.createUuidArray(connection, linkingIds)
+            stmt.setArray(1, arr)
+            val rs = stmt.executeQuery()
+            StatementHolder(connection, stmt, rs)
+        }, Function<ResultSet, Pair<UUID, Optional<Set<UUID>>>> {
+            ResultSetAdapters.entitySetId(it) to Optional.of(ResultSetAdapters.linkingIds(it))
+        })
+    }
+
+    private fun selectLinkingIdsByEntitySetIds(): String {
+        return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) AS ${LINKING_ID.name} FROM ${IDS.name} " +
+                "WHERE ${LINKING_ID.name} in (SELECT UNNEST( (?)::uuid[] )) " +
+                "GROUP BY ${ENTITY_SET_ID.name}"
     }
 
     private fun getPropertyTypeForEntitySet(entitySetId: UUID): Map<UUID, PropertyType> {
