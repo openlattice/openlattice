@@ -73,12 +73,12 @@ public class JsonDeserializer {
              * Jackson binds to String
              */
             case Binary:
-                checkState( value instanceof Pair<?, ?>,
+                checkState( value instanceof Map,
                         "Expected pair for property type %s with data %s, received %s",
                         dataType,
                         propertyTypeId,
                         value.getClass() );
-                if( value instanceof Map ) {
+
                 Map<String, Object> valuePair = (Map<String, Object>) value;
                 Object contentType = valuePair.get("content-type");
                 Object data = valuePair.get("data");
@@ -88,10 +88,8 @@ public class JsonDeserializer {
                 checkState( data instanceof String,
                         "Expected string for binary data, received %s",
                        data.getClass() );
-                return new Pair<>( (String) contentType, decoder.decode( (String) data ) ); }
-                else {
-                    logger.error("Received single value for binary data type, when expecting content type");
-                }
+                return new Pair<>( (String) contentType, decoder.decode( (String) data ) );
+//                    logger.error("Received single value for binary data type, when expecting content type");
             case Date:
                 checkState( value instanceof String,
                         "Expected string for property type %s with data %s,  received %s",
