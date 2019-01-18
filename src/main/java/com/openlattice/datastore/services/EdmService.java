@@ -809,7 +809,6 @@ public class EdmService implements EdmManager {
                 eventBus.post( new PropertyTypesAddedToEntitySetEvent(
                         entitySet.getId(),
                         Lists.newArrayList( propertyTypes.values() ),
-                        allPropertyTypes,
                         ( entitySet.isLinking() )
                                 ? Optional.of( entitySet.getLinkedEntitySets() ) : Optional.empty() ) );
             }
