@@ -416,6 +416,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 fieldMapping.put( TYPE, KEYWORD );
             }
         }
+
+        if ( propertyType.getAnalyzer().equals( NOT_ANALYZED ) ) {
+            fieldMapping.put( ANALYZER, KEYWORD );
+        }
         return fieldMapping;
     }
 
