@@ -741,7 +741,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean createEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) { //TODO linking
+    public boolean createEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         UUID entitySetId = edk.getEntitySetId();
