@@ -109,7 +109,7 @@ public class LinkingController implements LinkingApi, AuthorizingComponent {
         ensureOwnerAccess( new AclKey( linkingEntitySetId ) );
         checkState(
                 edmManager.getEntitySet( linkingEntitySetId ).isLinking(),
-                "Can't add linked entity sets to a not linking entity set");
+                "Can't remove linked entity sets from a not linking entity set");
         checkLinkedEntitySets( entitySetIds );
 
         return edmManager.removeLinkedEntitySets( linkingEntitySetId, entitySetIds );
