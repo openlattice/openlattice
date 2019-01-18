@@ -15,6 +15,12 @@ schemaFqn:
         required: true
         schema:
           type: string
+      - name: fileType
+        in: query
+        schema:
+          type: string
+          enum: [csv, json, yaml]
+          default: yaml
     security:
       - openlattice_auth: []
     responses:
@@ -23,9 +29,7 @@ schemaFqn:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "./definitions/EDM/components.yaml#/schema"
+              $ref: "./definitions/EDM/components.yaml#/schema"
   put:
     summary: Creates an empty schema, if it doesn't exist. If schema exists then no action is taken.
     operationId: createEmptySchema
