@@ -47,8 +47,8 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
@@ -379,6 +379,12 @@ public class EdmService implements EdmManager {
         final EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
         final EntityType entityType = getEntityType( entitySet.getEntityTypeId() );
 
+        // If this entity set is linked to a linking entity set, we need to collect all the linking ids of the entity
+        // set first in order to be able to reindex those, before entity data is unavailable
+        if( !entitySet.isLinking() ) {
+            checkAndRemoveEntitySetLinkings( entitySetId );
+        }
+
         /*
          * We cleanup permissions first as this will make entity set unavailable, even if delete fails.
          */
@@ -393,9 +399,6 @@ public class EdmService implements EdmManager {
         Util.deleteSafely( entitySets, entitySetId );
         aclKeyReservations.release( entitySetId );
         syncIds.remove( entitySetId );
-        if( !entitySet.isLinking() ) {
-            checkAndRemoveEntitySetLinkings( entitySetId );
-        }
         eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
         logger.info( "Entity set {}({}) deleted successfully", entitySet.getName(), entitySetId );
     }
@@ -406,7 +409,7 @@ public class EdmService implements EdmManager {
      * @param entitySetId the id of the deleted entity set
      */
     private void checkAndRemoveEntitySetLinkings( UUID entitySetId ) {
-        edmManager.getAllLinkingEntitySets().forEach(
+        edmManager.getAllLinkingEntitySetsForEntitySet(entitySetId).forEach(
                 linkingEntitySet -> {
                     if ( linkingEntitySet.getLinkedEntitySets().contains( entitySetId ) ) {
                         removeLinkedEntitySets( linkingEntitySet.getId(), Set.of( entitySetId ) );
@@ -442,9 +445,20 @@ public class EdmService implements EdmManager {
     public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        entitySets.executeOnKey( linkingEntitySetId,
+        entitySets.executeOnKey(
+                linkingEntitySetId,
                 new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
-        eventBus.post( new LinkedEntitySetRemovedEvent( linkingEntitySetId, linkingEntitySet.getLinkedEntitySets(), linkedEntitySets ) );
+
+        Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )
+                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+        Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = edmManager
+                .getLinkingIdsByEntitySetIds( linkingEntitySet.getLinkedEntitySets() );
+
+        eventBus.post( new LinkedEntitySetRemovedEvent(
+                linkingEntitySetId,
+                remainingLinkingIdsByEntitySetId,
+                removedLinkingIds ) );
+
         return startSize - linkingEntitySet.getLinkedEntitySets().size();
     }
 

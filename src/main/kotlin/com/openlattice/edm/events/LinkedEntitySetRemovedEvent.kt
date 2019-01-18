@@ -4,5 +4,5 @@ import java.util.UUID
 
 data class LinkedEntitySetRemovedEvent(
         val linkingEntitySetId: UUID,
-        val remainingLinkedEntitySets: Set<UUID>,
-        val removedLinkedEntitySets: Set<UUID>)
+        val remainingLinkingIdsByEntitySetId: Map<UUID, Set<UUID>>,
+        val removedLinkingIds: Set<UUID>)

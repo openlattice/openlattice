@@ -310,21 +310,19 @@ public class SearchService {
 
     /**
      * Handles indexing when 1 or more entity sets are unlinked/removed from linking entity set.
-     * If there are no linked entity sets remaining the index for that linking entity set needs to be deleted,
-     * otherwise indexing needs to be triggered on the remaining linking ids and documents with removed linking ids
+     * If there are no linked entity sets remaining, the index for that linking entity set needs to be deleted,
+     * otherwise indexing needs to be triggered on the remaining linking ids, and documents with removed linking ids
      * need to be deleted.
      */
     @Subscribe
     public void removeLinkedEntitySetsFromEntitySet( LinkedEntitySetRemovedEvent event ) {
-        if ( event.getRemainingLinkedEntitySets().isEmpty() ) {
+        if ( event.getRemainingLinkingIdsByEntitySetId().isEmpty() ) {
             elasticsearchApi.deleteEntitySet( event.getLinkingEntitySetId() );
         } else {
             UUID linkingEntitySetId = event.getLinkingEntitySetId();
 
-            Set<UUID> removedLinkingIds = dataManager.getLinkingIdsByEntitySetIds( event.getRemovedLinkedEntitySets() )
-                    .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
-            Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = dataManager
-                    .getLinkingIdsByEntitySetIds( event.getRemainingLinkedEntitySets() );
+            Set<UUID> removedLinkingIds =  event.getRemovedLinkingIds();
+            Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = event.getRemainingLinkingIdsByEntitySetId();
             Set<UUID> interSection = Sets.intersection(
                     removedLinkingIds,
                     remainingLinkingIdsByEntitySetId.values().stream()

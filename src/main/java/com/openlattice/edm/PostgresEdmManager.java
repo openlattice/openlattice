@@ -28,7 +28,7 @@ import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.PropertyUsageSummary;
@@ -37,6 +37,8 @@ import com.openlattice.postgres.*;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
+
+import static com.openlattice.postgres.PostgresColumn.*;
 
 import java.sql.*;
 import java.util.*;
@@ -186,9 +188,14 @@ public class PostgresEdmManager implements DbEdmManager {
         }
     }
 
-    public Iterable<EntitySet> getAllLinkingEntitySets() {
-        String getLinkingEntitySets = String.format( "SELECT * FROM %1$s WHERE %2$s = true", ENTITY_SETS,
-                PostgresColumn.LINKING.getName() );
+    /**
+     * Duplicate of
+     * {@link com.openlattice.data.storage.PostgresEntityDataQueryService#getLinkingEntitySetIdsOfEntitySet(UUID)}
+     */
+    public Iterable<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
+        String getLinkingEntitySets =
+                "SELECT * FROM " + ENTITY_SETS +
+                        " WHERE  '" + entitySetId + "' = ANY(" + LINKED_ENTITY_SETS.getName() + ")";
         try ( Connection connection = hds.getConnection();
               PreparedStatement ps = connection.prepareStatement( getLinkingEntitySets ) ) {
             List<EntitySet> result = Lists.newArrayList();
@@ -199,25 +206,36 @@ public class PostgresEdmManager implements DbEdmManager {
 
             return result;
         } catch ( SQLException e ) {
-            logger.debug( "Unable to load all linking entity sets", e );
+            logger.debug( "Unable to load linking entity sets for entity set {}", entitySetId, e );
             return ImmutableList.of();
         }
     }
 
-    public Set<UUID> getAllPropertyTypeIds() {
-        String getAllPropertyTypeIds = String.format("SELECT id from %1$s", PROPERTY_TYPES);
+    /**
+     * Duplicate of
+     * {@link  com.openlattice.data.EntityDatastore#getLinkingIdsByEntitySetIds(Set)}
+     */
+    public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
+        String query =
+                "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID.getName() +
+                " FROM " + PostgresTable.IDS.getName() +
+                " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName() + " IN (SELECT UNNEST( (?)::uuid[] )) " +
+                " GROUP BY " + ENTITY_SET_ID.getName();
+
         try ( Connection connection = hds.getConnection();
-              PreparedStatement ps = connection.prepareStatement( getAllPropertyTypeIds ) ) {
-            Set<UUID> result = Sets.newHashSet();
+              PreparedStatement ps = connection.prepareStatement( query ) ) {
+            Map<UUID, Set<UUID>> result = Maps.newHashMap();
+            Array arr = PostgresArrays.createUuidArray(connection, entitySetIds);
+            ps.setArray(1, arr);
             ResultSet rs = ps.executeQuery();
             while ( rs.next() ) {
-                result.add( ResultSetAdapters.id( rs ) );
+                result.put( ResultSetAdapters.entitySetId( rs ), ResultSetAdapters.linkingIds( rs ) );
             }
 
             return result;
         } catch ( SQLException e ) {
-            logger.error( "Unable to load property type ids", e );
-            throw new IllegalStateException( "Unable to load property type ids.", e );
+            logger.debug( "Unable to load linking ids by entity sets ids for entity sets {}", entitySetIds, e );
+            return Map.of();
         }
     }
 
