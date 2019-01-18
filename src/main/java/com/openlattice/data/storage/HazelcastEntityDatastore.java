@@ -423,12 +423,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         Multimaps
                 .asMap( entitySetIdsToEntityKeyIds )
-                .forEach( ( entitySetId, entityKeyIds ) -> entities
-                        .putAll( entitySetId,
+                .entrySet()
+                .parallelStream()
+                .forEach( e -> entities //
+                        .putAll( e.getKey(),
                                 dataQueryService.streamableEntitySet(
-                                        entitySetId,
-                                        entityKeyIds,
-                                        Map.of( entitySetId, authorizedPropertyTypesByEntitySet.get( entitySetId ) ),
+                                        e.getKey(),
+                                        e.getValue(),
+                                        Map.of( e.getKey(), authorizedPropertyTypesByEntitySet.get( e.getKey() ) ),
                                         EnumSet.noneOf( MetadataOption.class ),
                                         Optional.empty(),
                                         false )

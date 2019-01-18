@@ -45,6 +45,7 @@ public class EntitySetData<T> implements Iterable<SetMultimap<T, Object>> {
             LinkedHashSet<String> columnTitles,
             Iterable<SetMultimap<T, Object>> entities ) {
         this.columnTitles = columnTitles;
+        this.columnTitles.add( "openlattice.@id" );
         this.entities = entities;
     }
 
