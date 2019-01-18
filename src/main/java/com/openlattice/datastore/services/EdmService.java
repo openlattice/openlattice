@@ -409,16 +409,14 @@ public class EdmService implements EdmManager {
      * @param entitySetId the id of the deleted entity set
      */
     private void checkAndRemoveEntitySetLinkings( UUID entitySetId ) {
-        edmManager.getAllLinkingEntitySetsForEntitySet(entitySetId).forEach(
+        edmManager.getAllLinkingEntitySetsForEntitySet( entitySetId ).forEach(
                 linkingEntitySet -> {
-                    if ( linkingEntitySet.getLinkedEntitySets().contains( entitySetId ) ) {
-                        removeLinkedEntitySets( linkingEntitySet.getId(), Set.of( entitySetId ) );
-                        logger.info(
-                                "Removed link between linking entity set {}({}) and deleted entity set ({})",
-                                linkingEntitySet.getName(),
-                                linkingEntitySet.getId(),
-                                entitySetId );
-                    }
+                    removeLinkedEntitySets( linkingEntitySet.getId(), Set.of( entitySetId ) );
+                    logger.info(
+                            "Removed link between linking entity set {}({}) and deleted entity set ({})",
+                            linkingEntitySet.getName(),
+                            linkingEntitySet.getId(),
+                            entitySetId );
                 }
         );
     }

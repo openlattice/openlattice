@@ -92,10 +92,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        // need to collect linking ids before writes to the entities
+        Set<UUID> oldLinkingIds = dataQueryService
+                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
+                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService
                         .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
+        signalLinkedEntitiesUpserted(
+                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                oldLinkingIds );
         return count;
     }
 
@@ -105,10 +113,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        // need to collect linking ids before writes to the entities
+        Set<UUID> oldLinkingIds = dataQueryService
+                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
+                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+
         int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService
                         .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
+        signalLinkedEntitiesUpserted(
+                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                oldLinkingIds );
         return count;
     }
 
@@ -117,10 +133,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        // need to collect linking ids before writes to the entities
+        Set<UUID> oldLinkingIds = dataQueryService
+                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
+                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+
         final var count = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService
                         .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
+        signalLinkedEntitiesUpserted(
+                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                oldLinkingIds );
         return count;
     }
 
@@ -129,10 +153,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        // need to collect linking ids before writes to the entities
+        Set<UUID> oldLinkingIds = dataQueryService
+                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
+                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+
         final var count = dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService
                         .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entities.keySet() ) );
+        signalLinkedEntitiesUpserted(
+                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                oldLinkingIds );
         return count;
     }
 
@@ -145,22 +177,22 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private void signalCreatedEntities( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entities ) {
         if ( entities.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, entities ) );
-            signalLinkedEntitiesUpserted( Map.of( entitySetId, Optional.of( entities.keySet() ) ) );
         }
     }
 
-    private void signalLinkedEntitiesUpserted( Map<UUID, Optional<Set<UUID>>> entityKeyIds ) {
-        // Handle linking entity sets: if there are any entities, that have linking ids, reindex them
-        // It makes more sense to mark them, instead of explicitly calling re-index, since an update/create event
-        // affects all the linking entity sets, where that linking id is present
-        Set<UUID> upsertedLinkingIds = dataQueryService
-                .getLinkingIds( entityKeyIds ).entrySet().stream()
-                .filter( linkingIds -> linkingIds.getValue().isEmpty() )
-                .flatMap( it -> it.getValue().stream() )
+    private void signalLinkedEntitiesUpserted( Set<UUID> linkingEntitySetIds, Set<UUID> oldLinkingIds ) {
+        // Handle linking entity sets
+        // When creating entity -> background indexing job will pick up created entity
+        // When updating entity -> if no entity left with old linking id: delete old index.
+        //                      -> background indexing job will pick up updated entity with new linking id
+        // It makes more sense to let background task (re-)index, instead of explicitly calling re-index, since an
+        // update/create event affects all the linking entity sets, where that linking id is present
+        Set<UUID> deletedLinkingIds = dataQueryService
+                .getEntityKeyIdsOfLinkingIds( oldLinkingIds ).stream()
+                .filter( linkingIds -> linkingIds.getRight().isEmpty() )
+                .map( Pair::getLeft )
                 .collect( Collectors.toSet() );
-        if ( !upsertedLinkingIds.isEmpty() ) {
-            pdm.markLinkingIdsAsNeedToBeIndexed( upsertedLinkingIds );
-        }
+        eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
     }
 
     private void signalEntitySetDataCleared( UUID entitySetId ) {
@@ -219,12 +251,20 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        // need to collect linking ids before writes to the entities
+        Set<UUID> oldLinkingIds = dataQueryService
+                .getLinkingIds( Map.of( entitySetId, Optional.of( replacementProperties.keySet() ) ) )
+                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+
         final var count = dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService.getEntitiesByIdWithLastWrite( entitySetId,
                         authorizedPropertyTypes,
                         replacementProperties.keySet() ) );
+        signalLinkedEntitiesUpserted(
+                dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                oldLinkingIds );
         return count;
     }
 
