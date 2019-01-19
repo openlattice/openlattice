@@ -28,8 +28,8 @@ public class EntitiesDeletedEvent {
     private final Set<UUID> entitySetIds;
     private final Set<UUID> entityKeyIds;
 
-    public EntitiesDeletedEvent( Set<UUID> entitySetId, Set<UUID> entityKeyIds ) {
-        this.entitySetIds = entitySetId;
+    public EntitiesDeletedEvent( Set<UUID> entitySetIds, Set<UUID> entityKeyIds ) {
+        this.entitySetIds = entitySetIds;
         this.entityKeyIds = entityKeyIds;
     }
 
