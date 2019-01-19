@@ -62,10 +62,6 @@ public interface EntityDatastore {
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
-    Map<UUID, Map<UUID, Set<Object>>> getLinkedEntitiesByLinkingId(
-            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId );
-
     Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityDataByLinkingId(
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId);

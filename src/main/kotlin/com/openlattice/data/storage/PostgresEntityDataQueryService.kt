@@ -73,20 +73,9 @@ class PostgresEntityDataQueryService(
         ).toMap()
     }
 
-    fun getLinkedEntitiesByLinkingId(
-            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
-            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<UUID, Set<Any>>> {
-        val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
-            ResultSetAdapters.linkingId(it) to
-                    ResultSetAdapters.implicitEntityValuesById(it, authorizedPropertyTypesByEntitySetId, byteBlobDataManager)
-        }
-        return streamableEntitySet(
-                linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId,
-                EnumSet.noneOf(MetadataOption::class.java), Optional.empty(), adapter, true
-        ).toMap()
-    }
-
+    /**
+     * Returns linked entity data for (entity_set_id, linking_id) pairs
+     */
     fun getLinkedEntityData(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
@@ -204,7 +193,7 @@ class PostgresEntityDataQueryService(
         }
         return streamableEntitySet(
                 mapOf(entitySetId to Optional.of(entityKeyIds)), mapOf(entitySetId to authorizedPropertyTypes),
-                EnumSet.noneOf(MetadataOption::class.java), Optional.empty<Long>(), adapter, false)
+                EnumSet.noneOf(MetadataOption::class.java), Optional.empty<Long>(), adapter)
     }
 
     fun streamableEntitySet(
@@ -216,9 +205,12 @@ class PostgresEntityDataQueryService(
         val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
             ResultSetAdapters.implicitNormalEntity(it, authorizedPropertyTypes, metadataOptions, byteBlobDataManager)
         }
-        return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, version, adapter, false)
+        return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, version, adapter)
     }
 
+    /**
+     * Returns linked entity data for each linking id, omitting entity set id from selected columns
+     */
     fun streamableLinkingEntitySet(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
@@ -228,16 +220,20 @@ class PostgresEntityDataQueryService(
         val adapter = Function<ResultSet, SetMultimap<FullQualifiedName, Any>> {
             ResultSetAdapters.implicitLinkedEntity(it, authorizedPropertyTypes, metadataOptions, byteBlobDataManager)
         }
-        return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, version, adapter, true)
+        return streamableEntitySet(entityKeyIds, authorizedPropertyTypes, metadataOptions, version,  adapter, true, true)
     }
 
+    /*
+    Note: for linking queries, linking id and entity set id will be returned, thus data won't be merged by linking id
+     */
     private fun <T> streamableEntitySet(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
             version: Optional<Long>,
             adapter: Function<ResultSet, T>,
-            linking: Boolean = false
+            linking: Boolean = false,
+            omitEntitySetId: Boolean = false
     ): PostgresIterable<T> {
         return PostgresIterable(
                 Supplier<StatementHolder> {
@@ -261,8 +257,10 @@ class PostgresEntityDataQueryService(
                                         mapOf(),
                                         metadataOptions,
                                         version.get(),
+                                        binaryPropertyTypes,
                                         linking,
-                                        binaryPropertyTypes
+                                        omitEntitySetId
+
                                 )
                             } else {
                                 selectEntitySetWithCurrentVersionOfPropertyTypes(
@@ -272,8 +270,9 @@ class PostgresEntityDataQueryService(
                                         authorizedPropertyTypes.mapValues { it.value.map { it.key }.toSet() },
                                         mapOf(),
                                         metadataOptions,
+                                        binaryPropertyTypes,
                                         linking,
-                                        binaryPropertyTypes
+                                        omitEntitySetId
                                 )
                             }
                     )

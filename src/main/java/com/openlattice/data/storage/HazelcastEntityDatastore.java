@@ -373,15 +373,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 Optional.empty() ).stream();
     }
 
-    @Override
-    @Timed
-    public Map<UUID, Map<UUID, Set<Object>>> getLinkedEntitiesByLinkingId(
-            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId ) {
-        return dataQueryService
-                .getLinkedEntitiesByLinkingId( linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId );
-    }
-
     /**
      * Retrieves the authorized, linked property data for the given linking ids of entity sets.
      * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
