@@ -193,9 +193,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     private void signalLinkedEntitiesUpserted(
-            Set<UUID> deletedEntitKeyIds,
             Set<UUID> linkingEntitySetIds,
-            Set<UUID> oldLinkingIds ) {
+            Set<UUID> oldLinkingIds,
+            Set<UUID> deletedEntityKeyIds ) {
         // Handle linking entity sets
         // When creating entity -> background indexing job will pick up created entity
         // When updating entity -> if no entity left with old linking id: delete old index.
@@ -205,7 +205,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         Set<UUID> remainingLinkingIds = dataQueryService
                 .getEntityKeyIdsOfLinkingIds( oldLinkingIds ).stream()
                 // we cannot know, whether the old entity was already updated with a new linking id or is still there
-                .filter( linkingIds -> !Sets.difference( linkingIds.getRight(), deletedEntitKeyIds ).isEmpty() )
+                .filter( linkingIds -> !Sets.difference( linkingIds.getRight(), deletedEntityKeyIds ).isEmpty() )
                 .map( Pair::getLeft )
                 .collect( Collectors.toSet() );
         Set<UUID> deletedLinkingIds = Sets.difference( oldLinkingIds, remainingLinkingIds );
