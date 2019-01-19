@@ -198,9 +198,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Set<UUID> deletedEntityKeyIds ) {
         // Handle linking entity sets
         // When creating entity -> background indexing job will pick up created entity
-        // When updating entity -> if no entity left with old linking id: delete old index.
+        // When updating entity -> if no entity left with old linking id: delete old index. if left -> mark it as dirty
         //                      -> background indexing job will pick up updated entity with new linking id
         // It makes more sense to let background task (re-)index, instead of explicitly calling re-index, since an
+
         // update/create event affects all the linking entity sets, where that linking id is present
         Set<UUID> remainingLinkingIds = dataQueryService
                 .getEntityKeyIdsOfLinkingIds( oldLinkingIds ).stream()
@@ -208,6 +209,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .filter( linkingIds -> !Sets.difference( linkingIds.getRight(), deletedEntityKeyIds ).isEmpty() )
                 .map( Pair::getLeft )
                 .collect( Collectors.toSet() );
+
+        // re-index
+        if ( !remainingLinkingIds.isEmpty() ) {
+            pdm.markLinkingIdsAsNeedToBeIndexed( remainingLinkingIds );
+        }
+        // delete
         Set<UUID> deletedLinkingIds = Sets.difference( oldLinkingIds, remainingLinkingIds );
         eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
     }
