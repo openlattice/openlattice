@@ -124,6 +124,8 @@ paths:
 
   /datastore/search/{entitySetId}/{entityKeyId}:
     $ref: ./definitions/search/search.yaml#/entityKey
+  /datastore/search/{entitySetId}/neighbors/advanced:
+    $ref: ./definitions/search/search.yaml#/filteredSearch
 
   #####################
   ## DIRECTORY API"s ##
