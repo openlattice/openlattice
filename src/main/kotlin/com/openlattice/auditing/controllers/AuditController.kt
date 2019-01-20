@@ -22,9 +22,11 @@
 package com.openlattice.auditing.controllers
 
 import com.openlattice.auditing.*
+import com.openlattice.data.DataGraphService
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.*
+import javax.inject.Inject
 
 /**
  *
@@ -32,13 +34,28 @@ import java.util.*
  */
 @RestController
 @RequestMapping(CONTROLLER)
-class AuditController : AuditApi {
+class AuditController : AuditApi, AuditingComponent {
+
+    @Inject
+    private lateinit var auditRecordEntitySetsManager: AuditRecordEntitySetsManager
+
+    @Inject
+    private lateinit var dataGraphService: DataGraphService
+
+    override fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager {
+    return auditRecordEntitySetsManager
+    }
+
+    override fun getDataGraphService(): DataGraphService {
+        return dataGraphService
+    }
+
     override fun audit(audit: Audit): List<Map<UUID, Set<Any>>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     override fun record(events: List<AuditableEvent>): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return recordEvents(events)
     }
 
     override fun auditPrincipal(auditPrincipal: AuditPrincipal): List<Map<UUID, Set<Any>>> {
