@@ -218,7 +218,7 @@ class BackgroundIndexingService(
                 batchToIndex
         )
 
-        if (elasticsearchApi.createBulkEntityData(entitySetId, entitiesById)) {
+        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySetId, entitiesById)) {
             indexCount += dataQueryService.markAsIndexed(entitySetId, batchToIndex)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
