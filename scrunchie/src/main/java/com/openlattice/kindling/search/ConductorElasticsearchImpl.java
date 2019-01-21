@@ -766,11 +766,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entitiesById) {
         if ( !verifyElasticsearchConnection() ) { return false; }
-        try {
-            String indexName = getIndexName( entitySetId );
-            String indexType = getTypeName( entitySetId );
 
-            BulkRequestBuilder requestBuilder = client.prepareBulk();
+        if( !entitiesById.isEmpty() ) {
+            try {
+                String indexName = getIndexName( entitySetId );
+                String indexType = getTypeName( entitySetId );
+
+                BulkRequestBuilder requestBuilder = client.prepareBulk();
                 for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entitiesByIdEntry : entitiesById.entrySet() ) {
                     final UUID entityId = entitiesByIdEntry.getKey();
                     final byte[] s = mapper.writeValueAsBytes( entitiesByIdEntry.getValue() );
@@ -781,10 +783,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                     //                        .source( s, XContentType.JSON ) );
                 }
 
-            requestBuilder.execute().actionGet();
-        } catch ( JsonProcessingException e ) {
-            logger.debug( "Error creating bulk entity data in elasticsearch for entity set {}", entitySetId, e );
-            return false;
+                requestBuilder.execute().actionGet();
+            } catch ( JsonProcessingException e ) {
+                logger.debug( "Error creating bulk entity data in elasticsearch for entity set {}", entitySetId, e );
+                return false;
+            }
         }
         return true;
     }
@@ -794,22 +797,25 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             UUID linkingEntitySetId,
             Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) { // linking_id/entity_set_id/property_id
         if ( !verifyElasticsearchConnection() ) { return false; }
-        try {
-            String indexName = getIndexName( linkingEntitySetId );
-            String indexType = getTypeName( linkingEntitySetId );
 
-            BulkRequestBuilder requestBuilder = client.prepareBulk();
-            for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingIdEntry : entitiesByLinkingId.entrySet() ) {
-                final UUID linkingId = entitiesByLinkingIdEntry.getKey();
-                final byte[] s = getFieldMappings( entitiesByLinkingIdEntry.getValue() );
-                requestBuilder.add(
-                        client.prepareIndex( indexName, indexType, linkingId.toString() )
-                                .setSource( s, XContentType.JSON ) );
+        if( !entitiesByLinkingId.isEmpty() ) {
+            try {
+                String indexName = getIndexName( linkingEntitySetId );
+                String indexType = getTypeName( linkingEntitySetId );
+
+                BulkRequestBuilder requestBuilder = client.prepareBulk();
+                for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingIdEntry : entitiesByLinkingId.entrySet() ) {
+                    final UUID linkingId = entitiesByLinkingIdEntry.getKey();
+                    final byte[] s = getFieldMappings( entitiesByLinkingIdEntry.getValue() );
+                    requestBuilder.add(
+                            client.prepareIndex( indexName, indexType, linkingId.toString() )
+                                    .setSource( s, XContentType.JSON ) );
+                }
+                requestBuilder.execute().actionGet();
+            } catch ( JsonProcessingException e ) {
+                logger.debug( "Error creating bulk linked data in elasticsearch for entity set {}", linkingEntitySetId, e );
+                return false;
             }
-            requestBuilder.execute().actionGet();
-        } catch ( JsonProcessingException e ) {
-            logger.debug( "Error creating bulk linked data in elasticsearch for entity set {}", linkingEntitySetId, e );
-            return false;
         }
         return true;
     }
