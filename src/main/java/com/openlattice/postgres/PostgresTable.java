@@ -389,6 +389,11 @@ public final class PostgresTable {
                         .name( "dst_entity_set_id_propagation_idx" )
                         .ifNotExists() );
 
+        ENTITY_SETS.addIndexes(
+                new PostgresColumnsIndexDefinition( ENTITY_SETS, LINKED_ENTITY_SETS )
+                        .method( IndexMethod.GIN )
+                        .ifNotExists() );
+
     }
 
     private PostgresTable() {
