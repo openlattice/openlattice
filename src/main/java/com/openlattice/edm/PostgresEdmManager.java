@@ -29,10 +29,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.*;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
@@ -42,10 +45,13 @@ import static com.openlattice.postgres.PostgresColumn.*;
 
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -56,6 +62,8 @@ public class PostgresEdmManager implements DbEdmManager {
     private final PostgresTableManager ptm;
     private final HikariDataSource     hds;
 
+    private final IMap<UUID, EntitySet> entitySets;
+
     private final String ENTITY_SETS;
     private final String PROPERTY_TYPES;
     private final String ENTITY_TYPE_ID_FIELD;
@@ -63,9 +71,11 @@ public class PostgresEdmManager implements DbEdmManager {
     private final String ENTITY_SET_NAME_FIELD;
     private final String NAME_FIELD;
 
-    public PostgresEdmManager( HikariDataSource hds, PostgresTableManager ptm ) {
+    public PostgresEdmManager( HikariDataSource hds, PostgresTableManager ptm, HazelcastInstance hazelcastInstance ) {
         this.ptm = ptm;//new PostgresTableManager( hds );
         this.hds = hds;
+
+        this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
 
         // Tables
         this.ENTITY_SETS = PostgresTable.ENTITY_SETS.getName(); // "entity_sets"
@@ -192,23 +202,9 @@ public class PostgresEdmManager implements DbEdmManager {
      * Duplicate of
      * {@link com.openlattice.data.storage.PostgresEntityDataQueryService#getLinkingEntitySetIdsOfEntitySet(UUID)}
      */
-    public Iterable<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
-        String getLinkingEntitySets =
-                "SELECT * FROM " + ENTITY_SETS +
-                        " WHERE  '" + entitySetId + "' = ANY(" + LINKED_ENTITY_SETS.getName() + ")";
-        try ( Connection connection = hds.getConnection();
-              PreparedStatement ps = connection.prepareStatement( getLinkingEntitySets ) ) {
-            List<EntitySet> result = Lists.newArrayList();
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.entitySet( rs ) );
-            }
-
-            return result;
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to load linking entity sets for entity set {}", entitySetId, e );
-            return ImmutableList.of();
-        }
+    public Set<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
+        return entitySets.values().stream()
+                .filter( es -> es.getLinkedEntitySets().contains( entitySetId ) ).collect( Collectors.toSet() );
     }
 
     /**

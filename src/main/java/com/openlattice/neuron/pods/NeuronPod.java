@@ -131,7 +131,7 @@ public class NeuronPod {
 
     @Bean
     public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource, tableManager );
+        return new PostgresEdmManager( hikariDataSource, tableManager, hazelcastInstance );
     }
 
     @Bean
