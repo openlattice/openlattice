@@ -23,6 +23,7 @@ package com.openlattice.linking
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
+import com.google.common.collect.MapMaker
 import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
@@ -70,7 +72,11 @@ class RealtimeLinkingService
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
-        private val clusterLocks: MutableMap<UUID, ReentrantLock> = mutableMapOf()
+        private val clusterLocks: MutableMap<UUID, ReentrantLock> =
+                MapMaker()
+                        .concurrencyLevel(Runtime.getRuntime().availableProcessors() - 1)
+                        .initialCapacity(1000)
+                        .makeMap()
         private val clusterUpdateLock = ReentrantLock()
     }
 
