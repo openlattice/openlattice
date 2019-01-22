@@ -1,0 +1,55 @@
+entityKey:
+  get:
+    summary: Executes a search for all neighbors of an entity that are connected by an association
+    operationId: executeEntityNeighborSearch
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+      - name: entityKeyId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entityKeyId"
+    tags:
+      - search
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: "A list of objects containing information about the neighbor and association."
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./definitions/search/components.yaml#/neighborEntityDetails"
+filteredSearch:
+  post:
+    summary: Executes a search for all neighbors of multiple entities of the same entity set that are connected by an association
+    operationId: executeFilteredEntityNeighborSearch
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "./definitions/search/components.yaml#/neighborSearchFilter"
+    tags:
+      - search
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: "A list of objects containing information about the neighbor and association."
+        content:
+          application/json:
+            schema:
+              $ref: "./definitions/search/components.yaml#/neighborEntityDetailsDictionary"
