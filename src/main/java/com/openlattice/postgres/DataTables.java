@@ -77,7 +77,7 @@ public class DataTables {
             PostgresDatatype.UUID );
     private static final Encoder                            encoder        = Base64.getEncoder();
 
-    private static Set<FullQualifiedName> unindexedProperties = Sets
+    public static final Set<FullQualifiedName> unindexedProperties = Sets
             .newConcurrentHashSet( Arrays
                     .asList(
                             new FullQualifiedName( "incident.narrative" ),
