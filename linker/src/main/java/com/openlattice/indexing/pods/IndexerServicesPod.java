@@ -25,44 +25,48 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
 import static com.openlattice.linking.MatcherKt.DL4J;
 import static com.openlattice.linking.MatcherKt.KERAS;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
-import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;
-import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
-import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
-import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizationQueryService;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.HazelcastAbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.PostgresUserApi;
+import com.openlattice.authorization.Principals;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
+import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
+import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
-import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
-
 import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
@@ -71,12 +75,13 @@ import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.io.ClassPathResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
+@Import( { IndexerConfigurationPod.class } )
 public class IndexerServicesPod {
     private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
@@ -85,9 +90,6 @@ public class IndexerServicesPod {
 
     @Inject
     private HazelcastInstance hazelcastInstance;
-
-    @Inject
-    private ConfigurationService configurationService;
 
     @Inject
     private Auth0Configuration auth0Configuration;
@@ -101,35 +103,17 @@ public class IndexerServicesPod {
     @Inject
     private EventBus eventBus;
 
-    @Autowired( required = false )
-    private AmazonS3 s3;
+    @Inject
+    private ConductorConfiguration conductorConfiguration;
 
-    @Autowired( required = false )
-    private AmazonLaunchConfiguration awsLaunchConfig;
+    @Bean
+    public ConductorElasticsearchApi elasticsearchApi() throws IOException {
+        return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
+    }
 
     @Bean
     public ObjectMapper defaultObjectMapper() {
         return ObjectMappers.getJsonMapper();
-    }
-
-    @Bean( name = "conductorConfiguration" )
-    @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
-    public ConductorConfiguration getLocalConductorConfiguration() throws IOException {
-        ConductorConfiguration config = configurationService.getConfiguration( ConductorConfiguration.class );
-        logger.info( "Using local conductor configuration: {}", config );
-        return config;
-    }
-
-    @Bean( name = "conductorConfiguration" )
-    @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public ConductorConfiguration getAwsConductorConfiguration() throws IOException {
-        ConductorConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
-                awsLaunchConfig.getBucket(),
-                awsLaunchConfig.getFolder(),
-                ConductorConfiguration.class );
-
-        logger.info( "Using aws conductor configuration: {}", config );
-        return config;
     }
 
     @Bean
@@ -220,6 +204,11 @@ public class IndexerServicesPod {
     @Bean
     public MailServiceRequirements mailServiceRequirements() {
         return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
+    }
+
+    @Bean
+    public EsEdmService esEdmService() throws IOException {
+        return new EsEdmService( elasticsearchApi() );
     }
 
     @Bean
