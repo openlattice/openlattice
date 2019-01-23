@@ -19,7 +19,7 @@ whitelist:
 #   - a6d7d333-4905-4562-bcda-34fe773775eb # MS-Ar
 #   - 46c83978-a50c-4cff-939a-7b1a8c0ad52c # MS-Bu
 #   - c5a9e6b5-822e-44ca-b19d-e10628618574 
-  - d189f747-fa39-4b41-b86e-a056100ed2fa # JC3
+#   - d189f747-fa39-4b41-b86e-a056100ed2fa # JC3
   - e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec #BerksInmates
   - 87707f36-14f4-44c2-a3cb-f140389f7067 #BerksParolees
   - dab43bcf-901f-4b45-92c1-45459c351809 #BerksHC
