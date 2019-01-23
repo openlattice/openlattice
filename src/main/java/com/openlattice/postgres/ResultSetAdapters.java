@@ -360,7 +360,7 @@ public final class ResultSetAdapters {
     }
 
     public static Set<UUID> entitySetIds( ResultSet rs ) throws SQLException {
-        return Sets.newHashSet( (UUID[]) rs.getArray( ENTITY_SET_ID.getName() ).getArray() );
+        return Sets.newHashSet( PostgresArrays.getUuidArray( rs, ENTITY_SET_ID.getName() ) );
     }
 
     public static UUID propertyTypeId( ResultSet rs ) throws SQLException {
