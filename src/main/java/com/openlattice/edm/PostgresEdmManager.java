@@ -27,10 +27,13 @@ import com.codahale.metrics.annotation.ExceptionMetered;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.query.Predicate;
+import com.hazelcast.query.PredicateBuilder;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.PropertyUsageSummary;
@@ -202,9 +205,12 @@ public class PostgresEdmManager implements DbEdmManager {
      * Duplicate of
      * {@link com.openlattice.data.storage.PostgresEntityDataQueryService#getLinkingEntitySetIdsOfEntitySet(UUID)}
      */
+    @SuppressWarnings( "unchecked" )
     public Set<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
-        return entitySets.values().stream()
-                .filter( es -> es.getLinkedEntitySets().contains( entitySetId ) ).collect( Collectors.toSet() );
+        return ImmutableSet.copyOf(
+                entitySets.values(
+                        entitySetEntry -> ( ( Map.Entry<UUID, EntitySet> ) entitySetEntry ).getValue()
+                                .getLinkedEntitySets().contains( entitySetId ) ) );
     }
 
     /**
