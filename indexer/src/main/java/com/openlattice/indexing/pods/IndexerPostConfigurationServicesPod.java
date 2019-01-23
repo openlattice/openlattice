@@ -54,7 +54,6 @@ import org.springframework.context.annotation.Import;
 import javax.inject.Inject;
 import java.io.IOException;
 
-
 @Configuration
 @Import( { ByteBlobServicePod.class } )
 public class IndexerPostConfigurationServicesPod {
@@ -83,10 +82,8 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private AuthorizationManager authz;
 
-    @Bean
-    public ConductorElasticsearchApi elasticsearchApi() throws IOException {
-        return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
-    }
+    @Inject
+    private ConductorElasticsearchApi elasticsearchApi;
 
     @Bean
     public HazelcastIdGenerationService idGeneration() {
@@ -108,12 +105,7 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundIndexingService( hikariDataSource,
                 hazelcastInstance,
                 dataQueryService(),
-                elasticsearchApi() );
-    }
-
-    @Bean
-    public EsEdmService esEdmService() throws IOException {
-        return new EsEdmService( elasticsearchApi() );
+                elasticsearchApi );
     }
 
     @Bean
@@ -123,7 +115,7 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public Blocker blocker() throws IOException {
-        return new ElasticsearchBlocker( elasticsearchApi(), dataQueryService(), dataLoader(), hazelcastInstance );
+        return new ElasticsearchBlocker( elasticsearchApi, dataQueryService(), dataLoader(), hazelcastInstance );
     }
 
     @Bean
@@ -159,6 +151,6 @@ public class IndexerPostConfigurationServicesPod {
                 lqs(),
                 authz,
                 edm,
-                lc);
+                lc );
     }
 }
