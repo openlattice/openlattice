@@ -34,12 +34,14 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
+import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.postgres.*;
+import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
@@ -96,11 +98,11 @@ public class PostgresEdmManager implements DbEdmManager {
     @Timed
     public void createEntitySet( EntitySet entitySet, Collection<PropertyType> propertyTypes ) {
         try {
-            for (PropertyType pt : propertyTypes) {
+            for ( PropertyType pt : propertyTypes ) {
                 createPropertyTypeTableIfNotExist( pt );
             }
-        } catch( SQLException e) {
-            logger.error("Unable to create entity set {}", entitySet );
+        } catch ( SQLException e ) {
+            logger.error( "Unable to create entity set {}", entitySet );
         }
         //Method is idempotent and should be re-executable in case of a failure.
     }
@@ -168,8 +170,8 @@ public class PostgresEdmManager implements DbEdmManager {
     public Iterable<EntitySet> getAllEntitySets() {
         String getAllEntitySets = String.format( "SELECT * FROM %1$s", ENTITY_SETS );
         try ( Connection connection = hds.getConnection();
-              PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
-              ResultSet rs = ps.executeQuery() ) {
+                PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
+                ResultSet rs = ps.executeQuery() ) {
             List<EntitySet> result = Lists.newArrayList();
             while ( rs.next() ) {
                 result.add( ResultSetAdapters.entitySet( rs ) );
@@ -186,7 +188,7 @@ public class PostgresEdmManager implements DbEdmManager {
         String getEntitySetsByType = String.format( "SELECT * FROM %1$s WHERE %2$s = ?", ENTITY_SETS,
                 ENTITY_TYPE_ID_FIELD );
         try ( Connection connection = hds.getConnection();
-              PreparedStatement ps = connection.prepareStatement( getEntitySetsByType ) ) {
+                PreparedStatement ps = connection.prepareStatement( getEntitySetsByType ) ) {
             List<EntitySet> result = Lists.newArrayList();
             ps.setObject( 1, entityTypeId );
             ResultSet rs = ps.executeQuery();
@@ -202,49 +204,32 @@ public class PostgresEdmManager implements DbEdmManager {
     }
 
     /**
-     * Duplicate of
+     * In-memory version of
      * {@link com.openlattice.data.storage.PostgresEntityDataQueryService#getLinkingEntitySetIdsOfEntitySet(UUID)}
      */
-    @SuppressWarnings( "unchecked" )
     public Set<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
-        return ImmutableSet.copyOf(
-                entitySets.values(
-                        entitySetEntry -> ( ( Map.Entry<UUID, EntitySet> ) entitySetEntry ).getValue()
-                                .getLinkedEntitySets().contains( entitySetId ) ) );
+        return ImmutableSet.copyOf( entitySets
+                .values( Predicates.equal( EntitySetMapstore.LINKING_ENTITY_SET_INDEX, entitySetId ) ) );
     }
 
     /**
-     * Duplicate of
+     * In-memory version of
      * {@link  com.openlattice.data.EntityDatastore#getLinkingIdsByEntitySetIds(Set)}
      */
     public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
-        String query =
-                "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID.getName() +
-                " FROM " + PostgresTable.IDS.getName() +
-                " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName() + " IN (SELECT UNNEST( (?)::uuid[] )) " +
-                " GROUP BY " + ENTITY_SET_ID.getName();
-
-        try ( Connection connection = hds.getConnection();
-              PreparedStatement ps = connection.prepareStatement( query ) ) {
-            Map<UUID, Set<UUID>> result = Maps.newHashMap();
-            Array arr = PostgresArrays.createUuidArray(connection, entitySetIds);
-            ps.setArray(1, arr);
-            ResultSet rs = ps.executeQuery();
-            while ( rs.next() ) {
-                result.put( ResultSetAdapters.entitySetId( rs ), ResultSetAdapters.linkingIds( rs ) );
-            }
-
-            return result;
-        } catch ( SQLException e ) {
-            logger.debug( "Unable to load linking ids by entity sets ids for entity sets {}", entitySetIds, e );
-            return Map.of();
-        }
+        return Maps.transformValues( entitySets.getAll( entitySetIds ), EntitySet::getLinkedEntitySets );
     }
 
-    public Iterable<PropertyUsageSummary> getPropertyUsageSummary(String propertyTableName ) {
+    public Iterable<PropertyUsageSummary> getPropertyUsageSummary( String propertyTableName ) {
         String getPropertyTypeSummary =
-                String.format("SELECT %1$s , %6$s AS %2$s , %3$s, COUNT(*) FROM %4$s LEFT JOIN %5$s ON %3$s = %5$s.id AND %4$s.version > 0 GROUP BY ( %1$s , %2$s, %3$s )",
-                ENTITY_TYPE_ID_FIELD, ENTITY_SET_NAME_FIELD, ENTITY_SET_ID_FIELD, propertyTableName, ENTITY_SETS, NAME_FIELD);
+                String.format(
+                        "SELECT %1$s , %6$s AS %2$s , %3$s, COUNT(*) FROM %4$s LEFT JOIN %5$s ON %3$s = %5$s.id AND %4$s.version > 0 GROUP BY ( %1$s , %2$s, %3$s )",
+                        ENTITY_TYPE_ID_FIELD,
+                        ENTITY_SET_NAME_FIELD,
+                        ENTITY_SET_ID_FIELD,
+                        propertyTableName,
+                        ENTITY_SETS,
+                        NAME_FIELD );
         return new PostgresIterable<>( () -> {
             try {
                 Connection connection = hds.getConnection();
@@ -286,18 +271,18 @@ public class PostgresEdmManager implements DbEdmManager {
         ptm.registerTables( ptd );
     }
 
-    public void updatePropertyTypeFqn(PropertyType propertyType, FullQualifiedName newFqn) {
-        String propertyTableName = DataTables.quote(DataTables.propertyTableName(propertyType.getId()));
-        String oldType = DataTables.quote(propertyType.getType().getFullQualifiedNameAsString());
-        String newType = DataTables.quote(newFqn.getFullQualifiedNameAsString());
-        String updatePropertyTypeFqn = String.format("ALTER TABLE %1$s RENAME COLUMN %2$s TO %3$s",
-                propertyTableName, oldType, newType);
+    public void updatePropertyTypeFqn( PropertyType propertyType, FullQualifiedName newFqn ) {
+        String propertyTableName = DataTables.quote( DataTables.propertyTableName( propertyType.getId() ) );
+        String oldType = DataTables.quote( propertyType.getType().getFullQualifiedNameAsString() );
+        String newType = DataTables.quote( newFqn.getFullQualifiedNameAsString() );
+        String updatePropertyTypeFqn = String.format( "ALTER TABLE %1$s RENAME COLUMN %2$s TO %3$s",
+                propertyTableName, oldType, newType );
 
-        try(Connection connection = hds.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(updatePropertyTypeFqn)) {
+        try ( Connection connection = hds.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement( updatePropertyTypeFqn ) ) {
             preparedStatement.executeUpdate();
-        } catch(SQLException e) {
-            logger.error("Unable to update column full qualified name in propertytype", e);
+        } catch ( SQLException e ) {
+            logger.error( "Unable to update column full qualified name in propertytype", e );
         }
     }
 
