@@ -67,20 +67,29 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
         authorizedPropertyTypes.add( salaryPropertyId );
         authorizedPropertyTypes.add( employeeIdPropertyId );
         elasticsearchApi
-                .executeSearch( SearchConstraints.simpleSearchConstraints( new UUID[] { chicagoEmployeesEntitySetId },
+                .executeSearch( SearchConstraints.simpleSearchConstraints( new UUID[]{ chicagoEmployeesEntitySetId },
                         0,
                         50,
                         "police",
                         false ),
-                        ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes ) );
+                        ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes ),
+                        false );
     }
 
     @Test
-    public void testSearchAcrossIndices() {
-        Set<UUID> entitySetIds = ImmutableSet.of( chicagoEmployeesEntitySetId, entitySet2Id );
-        Map<UUID, DelegatedStringSet> fieldSearches = Maps.newHashMap();
-        fieldSearches.put( employeeIdPropertyId, DelegatedStringSet.wrap( Sets.newHashSet( "12347" ) ) );
-        elasticsearchApi.executeEntitySetDataSearchAcrossIndices( entitySetIds, fieldSearches, 50, true );
+    public void testSearchMultipleEntityData() {
+        UUID[] entitySetIds = new UUID[]{ chicagoEmployeesEntitySetId, entitySet2Id };
+        DelegatedUUIDSet authorizedPropertyTypes = DelegatedUUIDSet.wrap( Sets.newHashSet() );
+        authorizedPropertyTypes.add( employeeIdPropertyId );
+        elasticsearchApi
+                .executeSearch( SearchConstraints.simpleSearchConstraints(
+                        entitySetIds,
+                        0,
+                        50,
+                        "12347",
+                        false ),
+                        ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes, entitySet2Id, authorizedPropertyTypes ),
+                        false );
     }
 
     @Test
