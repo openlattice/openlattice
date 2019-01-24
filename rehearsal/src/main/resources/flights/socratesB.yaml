@@ -1,7 +1,7 @@
 entityDefinitions:
-  SocratesTestA:
-    id: "91551726-afa2-4aee-8579-46cdfc610b97"
-    entitySetName: "SocratesTestA"
+  SocratesTest:
+    id: "14b10482-31de-42ed-b5c8-6260d9f25e24"
+    entitySetName: "SocratesTestB"
     fqn: "general.person"
     propertyDefinitions:
       nc.PersonGivenName:

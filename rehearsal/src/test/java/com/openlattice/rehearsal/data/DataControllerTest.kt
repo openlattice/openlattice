@@ -78,7 +78,7 @@ class DataControllerTest : SetupTestData() {
         @JvmStatic
         @BeforeClass
         fun init() {
-            importDataSet("socratesA.yaml", "testdata1_trunc.csv")
+            importDataSet("socratesA.yaml", "test_linked_ppl_1.csv")
             importDataSet("associationTestFlight.yaml", "emptyTestData.csv")
 
             Thread.sleep(5000)
@@ -470,9 +470,7 @@ class DataControllerTest : SetupTestData() {
         dataApi.clearAllEntitiesFromEntitySet(esId1)
         dataApi.clearAllEntitiesFromEntitySet(esId2)
 
-        val pt = createPropertyType()
-        val et = createEntityType(pt.id)
-        val esLinked = createEntitySet(et, true, setOf(esId1, esId2))
+        val esLinked = createEntitySet(personEt, true, setOf(esId1, esId2))
 
         val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
         val givenNames = HashMultimap.create<UUID, Any>()
