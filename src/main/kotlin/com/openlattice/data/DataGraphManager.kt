@@ -103,7 +103,7 @@ interface DataGraphManager {
 
     fun createEntities(
             entitySetId: UUID,
-            entities: List<Map<UUID,Set<Any>>>,
+            entities: List<Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): List<UUID>
 
