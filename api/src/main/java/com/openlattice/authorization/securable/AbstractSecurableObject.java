@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.UUID;
@@ -36,11 +38,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @JsonInclude(value= Include.NON_ABSENT) //This means empty collections will not be included in generated JSON.
 public abstract class AbstractSecurableObject {
+
     protected final UUID    id;
     //This is only a descriptive property so relax finality.
     protected String  title;
     protected String  description;
-    
+
     private final   boolean idPresent;
 
     /**
@@ -115,12 +118,12 @@ public abstract class AbstractSecurableObject {
     public void setTitle( String title ){
         this.title = title;
     }
-    
-    @JsonIgnore    
+
+    @JsonIgnore
     public void setDescription( String description ){
         this.description = description;
     }
-    
+
     @JsonIgnore
     public boolean wasIdPresent() {
         return idPresent;

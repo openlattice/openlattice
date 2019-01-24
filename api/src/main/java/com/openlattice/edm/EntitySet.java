@@ -36,7 +36,11 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Describes an entity set and associated metadata, including the active audit record entity set.
+ *
+ * TODO: Ensure that we are being consistent around how internal sets are accessed and modified. i.e is it okay
+ * to return modifiable versions of linked entity sets or should we expose add/remove/update methods. The latter seems
+ * like the most explicitly safe thing to do.
  */
 public class EntitySet extends AbstractSecurableObject {
     private final UUID        entityTypeId;
