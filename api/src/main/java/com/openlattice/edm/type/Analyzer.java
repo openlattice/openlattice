@@ -20,5 +20,6 @@ package com.openlattice.edm.type;
 
 public enum Analyzer {
     METAPHONE,
-    STANDARD
+    STANDARD,
+    NOT_ANALYZED
 }
