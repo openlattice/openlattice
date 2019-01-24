@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import com.hazelcast.com.eclipsesource.json.Json;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.time.Duration;
@@ -17,11 +18,14 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Type;
 import org.apache.olingo.commons.api.edm.geo.Point;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class JsonDeserializer {
+    private static final Logger logger = LoggerFactory.getLogger( JsonDeserializer.class );
     private static final Base64.Decoder decoder             = Base64.getDecoder();
     private static final String         geographyPointRegex = "(\\-)?[0-9]+(\\.){1}[0-9]+(\\,){1}(\\-)?[0-9]+(\\.){1}[0-9]+";
 
@@ -69,19 +73,23 @@ public class JsonDeserializer {
              * Jackson binds to String
              */
             case Binary:
-                checkState( value instanceof Pair<?, ?>,
+                checkState( value instanceof Map,
                         "Expected pair for property type %s with data %s, received %s",
                         dataType,
                         propertyTypeId,
                         value.getClass() );
-                Pair<?, ?> valuePair = (Pair<?, ?>) value;
-                checkState( valuePair.component1() instanceof String,
+
+                Map<String, Object> valuePair = (Map<String, Object>) value;
+                Object contentType = valuePair.get("content-type");
+                Object data = valuePair.get("data");
+                checkState( contentType instanceof String,
                         "Expected string for content type, received %s",
-                        ( valuePair.component1() ).getClass() );
-                checkState( valuePair.component2() instanceof String,
+                        contentType.getClass() );
+                checkState( data instanceof String,
                         "Expected string for binary data, received %s",
-                        ( valuePair.component2() ).getClass() );
-                return new Pair( (String) valuePair.component1(), decoder.decode( (String) valuePair.component2() ) );
+                       data.getClass() );
+                return new Pair<>( (String) contentType, decoder.decode( (String) data ) );
+//                    logger.error("Received single value for binary data type, when expecting content type");
             case Date:
                 checkState( value instanceof String,
                         "Expected string for property type %s with data %s,  received %s",

@@ -130,9 +130,6 @@ public class NeuronPod {
     @Bean
     public HazelcastEntityDatastore entityDatastore() {
         return new HazelcastEntityDatastore(
-                hazelcastInstance,
-                executor,
-                defaultObjectMapper(),
                 idService(),
                 postgresDataManager(),
                 dataQueryService()
@@ -141,7 +138,7 @@ public class NeuronPod {
 
     @Bean
     public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource, tableManager );
+        return new PostgresEdmManager( hikariDataSource, tableManager, hazelcastInstance );
     }
 
     @Bean

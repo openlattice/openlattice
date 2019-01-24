@@ -50,9 +50,10 @@ public class ElasticsearchLambdas implements Serializable {
 
     public static Function<ConductorElasticsearchApi, Boolean> createSecurableObjectIndex(
             UUID entitySetId,
-            List<PropertyType> propertyTypes ) {
+            List<PropertyType> propertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .createSecurableObjectIndex( entitySetId, propertyTypes );
+                .createSecurableObjectIndex( entitySetId, propertyTypes, linkedEntitySetIds );
     }
 
     public static Function<ConductorElasticsearchApi, SearchResult> executeEntitySetMetadataQuery(
@@ -118,6 +119,22 @@ public class ElasticsearchLambdas implements Serializable {
             List<PropertyType> newPropertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .updatePropertyTypesInEntitySet( entitySetId, newPropertyTypes );
+    }
+
+    public static Function<ConductorElasticsearchApi, Boolean> addPropertyTypesToEntitySet(
+            UUID entitySetId,
+            List<PropertyType> newPropertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
+        return ( Function<ConductorElasticsearchApi, Boolean> & Serializable ) ( api ) -> api
+                .addPropertyTypesToEntitySet( entitySetId, newPropertyTypes, linkedEntitySetIds );
+    }
+
+    public static Function<ConductorElasticsearchApi, Boolean> addLinkedEntitySetsToEntitySet(
+            UUID linkingEntitySetId,
+            List<PropertyType> propertyTypes,
+            Set<UUID> newLinkedEntitySets ) {
+        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
+                .addLinkedEntitySetsToEntitySet( linkingEntitySetId, propertyTypes, newLinkedEntitySets );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> saveEntityTypeToElasticsearch( EntityType entityType ) {

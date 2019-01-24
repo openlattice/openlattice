@@ -184,7 +184,8 @@ public final class PostgresTable {
                             LAST_WRITE,
                             LAST_INDEX,
                             LAST_LINK,
-                            LAST_PROPAGATE )
+                            LAST_PROPAGATE,
+                            LAST_LINK_INDEX )
                     .distributionColumn( ID );
     public static final PostgresTableDefinition        ID_GENERATION                =
             new PostgresTableDefinition( "id_gen" )
@@ -338,6 +339,9 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( IDS, LAST_PROPAGATE )
                         .name( "entity_key_ids_last_propagate_idx" )
                         .ifNotExists(),
+                new PostgresColumnsIndexDefinition( IDS, LAST_LINK_INDEX )
+                        .name( "entity_key_ids_last_link_index_idx" )
+                        .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName() + ",(" + LAST_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
                         .name( "entity_key_ids_needing_indexing_idx" )
@@ -346,6 +350,14 @@ public final class PostgresTable {
                         ENTITY_SET_ID.getName() + ",(" + LAST_LINK.getName() + " < " + LAST_WRITE.getName() + ")"
                                 + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")" )
                         .name( "entity_key_ids_needing_linking_idx" )
+                        .ifNotExists(),
+                new PostgresExpressionIndexDefinition( IDS,
+                        ENTITY_SET_ID.getName()
+                                + ",(" + LINKING_ID.getName() + " IS NOT NULL" + ")"
+                                + ",(" + LAST_LINK.getName() + " >= " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_INDEX.getName() + " >= " + LAST_WRITE.getName() + ")"
+                                + ",(" + LAST_LINK_INDEX.getName() + " < " + LAST_WRITE.getName() + ")" )
+                        .name( "entity_key_ids_needing_linking_indexing_idx" )
                         .ifNotExists(),
                 new PostgresExpressionIndexDefinition( IDS,
                         ENTITY_SET_ID.getName() + ",(" + LAST_PROPAGATE.getName() + " < " + LAST_WRITE.getName() + ")" )
@@ -382,6 +394,11 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( PROPAGATION_GRAPH, DST_ENTITY_SET_ID )
                         .name( "dst_entity_set_id_propagation_idx" )
+                        .ifNotExists() );
+
+        ENTITY_SETS.addIndexes(
+                new PostgresColumnsIndexDefinition( ENTITY_SETS, LINKED_ENTITY_SETS )
+                        .method( IndexMethod.GIN )
                         .ifNotExists() );
 
     }
