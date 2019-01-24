@@ -36,6 +36,7 @@ import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -139,13 +140,19 @@ public interface ConductorElasticsearchApi {
     final String BIDIRECTIONAL  = "bidirectional";
     final String URL            = "url";
 
+
     UUID LAST_WRITE = new UUID( 0, 0 );
 
-    boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes );
+    boolean saveEntitySetToElasticsearch(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes );
 
     Set<UUID> getEntitySetWithIndices();
 
-    boolean createSecurableObjectIndex( UUID entitySetId, List<PropertyType> propertyTypes );
+    boolean createSecurableObjectIndex(
+            UUID entitySetId,
+            List<PropertyType> propertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds );
 
     boolean deleteEntitySet( UUID entitySetId );
 
@@ -161,7 +168,15 @@ public interface ConductorElasticsearchApi {
 
     boolean updateEntitySetMetadata( EntitySet entitySet );
 
-    boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> newPropertyTypes );
+    boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes );
+
+    boolean addPropertyTypesToEntitySet( UUID entitySetId,
+                                         List<PropertyType> newPropertyTypes,
+                                         Optional<Set<UUID>> linkedEntitySetIds );
+
+    boolean addLinkedEntitySetsToEntitySet( UUID linkingEntitySetId,
+                                            List<PropertyType> propertyTypes,
+                                            Set<UUID> newLinkedEntitySets );
 
     boolean createOrganization( Organization organization );
 
@@ -181,11 +196,14 @@ public interface ConductorElasticsearchApi {
 
     boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById );
 
+    boolean createBulkLinkedData( UUID entitySetId, Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId);
+
     boolean deleteEntityData( EntityDataKey edk );
 
     EntityDataKeySearchResult executeSearch(
             SearchConstraints searchConstraints,
-            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
+            boolean linking
     );
 
     /**
@@ -198,12 +216,6 @@ public interface ConductorElasticsearchApi {
      * @return A map entity set ids to entity key ids of results for each entity set.
      */
     Map<UUID, Set<UUID>> searchEntitySets(
-            Iterable<UUID> entitySetIds,
-            Map<UUID, DelegatedStringSet> fieldSearches,
-            int size,
-            boolean explain );
-
-    List<UUID> executeEntitySetDataSearchAcrossIndices(
             Iterable<UUID> entitySetIds,
             Map<UUID, DelegatedStringSet> fieldSearches,
             int size,

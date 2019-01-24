@@ -30,19 +30,19 @@ import com.openlattice.edm.type.PropertyType;
 public class PropertyTypesInEntitySetUpdatedEvent {
     
     private UUID entitySetId;
-    private List<PropertyType> newPropertyTypes;
+    private List<PropertyType> updatedPropertyTypes;
     
-    public PropertyTypesInEntitySetUpdatedEvent( UUID entitySetId, List<PropertyType> newPropertyTypes ) {
+    public PropertyTypesInEntitySetUpdatedEvent( UUID entitySetId, List<PropertyType> updatedPropertyTypes ) {
         this.entitySetId = entitySetId;
-        this.newPropertyTypes = newPropertyTypes;
+        this.updatedPropertyTypes = updatedPropertyTypes;
     }
     
     public UUID getEntitySetId() {
         return entitySetId;
     }
     
-    public List<PropertyType> getNewPropertyTypes() {
-        return newPropertyTypes;
+    public List<PropertyType> getUpdatedPropertyTypes() {
+        return updatedPropertyTypes;
     }
 
 }

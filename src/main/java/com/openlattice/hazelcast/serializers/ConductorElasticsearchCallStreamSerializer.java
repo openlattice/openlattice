@@ -75,6 +75,7 @@ public class ConductorElasticsearchCallStreamSerializer
             kryo.register( ElasticsearchLambdas.class );
             kryo.register( EntityDataLambdas.class, new EntityDataLambdasStreamSerializer() );
             kryo.register( BulkEntityDataLambdas.class, new BulkEntityDataLambdasStreamSerializer() );
+            kryo.register( BulkLinkedDataLambdas.class, new BulkLinkedDataLambdasStreamSerializer() );
             kryo.register( SearchConstraints.class, new SearchConstraintsStreamSerializer() );
             kryo.register( SearchWithConstraintsLambda.class, new SearchWithConstraintsLambdaStreamSerializer() );
             kryo.register( SerializedLambda.class );

@@ -39,11 +39,9 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  */
 public interface EntityDatastore {
 
-    EntitySetData<FullQualifiedName> getEntitySetData(
-            Set<UUID> entitySetIds,
-            LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Boolean linking );
+    Map<UUID, Map<UUID, Set<Object>>> getEntitySetData(
+            UUID entitySetId,
+            Map<UUID, PropertyType> authorizedPropertyTypes);
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
@@ -64,6 +62,10 @@ public interface EntityDatastore {
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
+    Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityDataByLinkingId(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId);
+
     EntitySetData<FullQualifiedName> getEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             LinkedHashSet<String> orderedPropertyTypes,
@@ -74,9 +76,11 @@ public interface EntityDatastore {
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
 
-    PostgresIterable<Pair<UUID, UUID>> getLinkingIds( Set<UUID> entityKeyIds );
+    Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds );
 
     PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds );
+
+    PostgresIterable<UUID> getLinkingEntitySetIds( UUID linkingId );
 
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.
