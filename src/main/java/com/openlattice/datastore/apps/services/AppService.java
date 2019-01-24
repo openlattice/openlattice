@@ -327,7 +327,7 @@ public class AppService {
             UUID appId,
             UUID appTypeId,
             EnumSet<Permission> permissions ) {
-        AppConfigKey key = new AppConfigKey( organizationId, appId, appTypeId );
+        AppConfigKey key = new AppConfigKey( appId, organizationId, appTypeId );
         appConfigs.executeOnKey( key, new UpdateAppConfigPermissionsProcessor( permissions ) );
 
         Principal appPrincipal = new Principal( PrincipalType.APP,

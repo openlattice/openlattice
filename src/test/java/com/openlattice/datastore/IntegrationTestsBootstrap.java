@@ -42,7 +42,7 @@ import retrofit2.Retrofit;
 public class IntegrationTestsBootstrap {
     protected static final Datastore     ds       = new Datastore();
     protected static final Set<Class<?>> PODS     = Sets.newHashSet();
-    protected static final Set<String>   PROFILES = Sets.newHashSet( "local", "postgres" );
+    protected static final Set<String>   PROFILES = Sets.newHashSet( "local", "postgres", "medialocal" );
     protected static final Principal admin;
     protected static final Principal user1;
     protected static final Principal user2;

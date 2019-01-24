@@ -63,10 +63,14 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean saveEntitySetToElasticsearch( EntitySet entitySet, List<PropertyType> propertyTypes ) {
+    public boolean saveEntitySetToElasticsearch(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.submitEntitySetToElasticsearch( entitySet, propertyTypes ) ) )
+                    .wrap( ElasticsearchLambdas.submitEntitySetToElasticsearch(
+                            entitySet,
+                            propertyTypes ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity set to elasticsearch" );
@@ -86,12 +90,16 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean createSecurableObjectIndex( UUID entitySetId, List<PropertyType> propertyTypes ) {
+    public boolean createSecurableObjectIndex(
+            UUID entitySetId,
+            List<PropertyType> propertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
         try {
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.createSecurableObjectIndex(
                             entitySetId,
-                            propertyTypes ) ) )
+                            propertyTypes,
+                            linkedEntitySetIds ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save entity set to elasticsearch" );
@@ -156,11 +164,47 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> newPropertyTypes ) {
+    public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.updatePropertyTypesInEntitySet( entitySetId,
-                            newPropertyTypes ) ) )
+                            updatedPropertyTypes ) ) )
+                    .get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "unable to update property types in entity set in elasticsearch" );
+            return false;
+        }
+    }
+
+    @Override
+    public boolean addPropertyTypesToEntitySet(
+            UUID entitySetId,
+            List<PropertyType> newPropertyTypes,
+            Optional<Set<UUID>> linkedEntitySetIds ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall
+                    .wrap( ElasticsearchLambdas.addPropertyTypesToEntitySet(
+                            entitySetId,
+                            newPropertyTypes,
+                            linkedEntitySetIds ) ) )
+                    .get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "unable to add property types to entity set in elasticsearch" );
+            return false;
+        }
+    }
+
+    @Override
+    public boolean addLinkedEntitySetsToEntitySet(
+            UUID linkingEntitySetId,
+            List<PropertyType> propertyTypes,
+            Set<UUID> newLinkedEntitySets ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall
+                    .wrap( ElasticsearchLambdas.addLinkedEntitySetsToEntitySet(
+                            linkingEntitySetId,
+                            propertyTypes,
+                            newLinkedEntitySets ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to update property types in entity set in elasticsearch" );
@@ -259,6 +303,19 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
+    public boolean createBulkLinkedData(
+            UUID entitySetId,
+            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall.wrap(
+                    new BulkLinkedDataLambdas( entitySetId, entitiesByLinkingId ) ) ).get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "unable to save linked entity data to elasticsearch" );
+            return false;
+        }
+    }
+
+    @Override
     public boolean deleteEntityData( EntityDataKey edk ) {
         try {
             return executor.submit( ConductorElasticsearchCall
@@ -270,10 +327,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override public EntityDataKeySearchResult executeSearch(
-            SearchConstraints searchConstraints, Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
+            SearchConstraints searchConstraints,
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
+            boolean linking ) {
         try {
             EntityDataKeySearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    new SearchWithConstraintsLambda( searchConstraints, authorizedPropertyTypesByEntitySet ) ) ).get();
+                    new SearchWithConstraintsLambda( searchConstraints, authorizedPropertyTypesByEntitySet, linking ) ) )
+                    .get();
             return queryResults;
 
         } catch ( InterruptedException | ExecutionException e ) {
@@ -285,24 +345,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     @Override public Map<UUID, Set<UUID>> searchEntitySets(
             Iterable<UUID> entitySetIds, Map<UUID, DelegatedStringSet> fieldSearches, int size, boolean explain ) {
         throw new NotImplementedException( "BLAME MTR. This is for linking only." );
-    }
-
-    @Override
-    public List<UUID> executeEntitySetDataSearchAcrossIndices(
-            Iterable<UUID> entitySetIds,
-            Map<UUID, DelegatedStringSet> fieldSearches,
-            int size,
-            boolean explain ) {
-        try {
-            List<UUID> queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    new SearchEntitySetDataAcrossIndicesLambda( entitySetIds, fieldSearches, size, explain ) ) )
-                    .get();
-            return queryResults;
-
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.error( "Failed to execute search for entity set data search across indices: " + fieldSearches );
-            return Lists.newArrayList();
-        }
     }
 
     @Override
