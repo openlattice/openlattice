@@ -47,11 +47,11 @@ class AuditingConfigurationPod {
     @Autowired(required = false)
     private val awsLaunchConfig: AmazonLaunchConfiguration? = null
 
-    @Bean(name = ["datastoreConfiguration"])
+    @Bean(name = ["auditingConfiguration"])
     @Profile(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE)
     fun getLocalAuditingConfiguration(): AuditingConfiguration {
         val config = ResourceConfigurationLoader.loadConfiguration(AuditingConfiguration::class.java)
-        logger.info("Using local aws datastore configuration: {}", config)
+        logger.info("Using local aws auditing configuration: {}", config)
         return config
     }
 
@@ -67,7 +67,7 @@ class AuditingConfigurationPod {
                 awsLaunchConfig.folder,
                 AuditingConfiguration::class.java
         )
-        logger.info("Using aws datastore configuration: {}", config)
+        logger.info("Using aws auditing configuration: {}", config)
         return config
     }
 }

@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.AuditingTypes;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
@@ -167,15 +168,8 @@ public class NeuronPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager() );
-    }
-
-    @Bean
-    public AuditRecordEntitySetsManager aresManager() {
-        return new AuditRecordEntitySetsManager( auditingConfiguration,
-                authorizationManager(),
-                hazelcastInstance,
-                dataModelService() );
+                schemaManager(),
+                auditingConfiguration );
     }
 
     @Bean

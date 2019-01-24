@@ -35,6 +35,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.streams.PostgresIterable
 import java.time.OffsetDateTime
 import java.util.*
+import javax.inject.Inject
 
 /**
  * This class keeps track of auditing entity sets for each entity set.
@@ -42,12 +43,12 @@ import java.util.*
  * This class should probably be merged into EdmService as there is an unbreakable circular dependency there.
  */
 class AuditRecordEntitySetsManager(
-        val auditingConfiguration: AuditingConfiguration,
+        val auditingTypes: AuditingTypes,
+        val edm:EdmManager,
         private val authorizationManager: AuthorizationManager,
-        private val hazelcastInstance: HazelcastInstance,
-        private val edm: EdmManager
-) {
+        private val hazelcastInstance: HazelcastInstance
 
+) {
     private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<UUID, AuditRecordEntitySetConfiguration>(
             HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name
     )
@@ -55,7 +56,7 @@ class AuditRecordEntitySetsManager(
     fun createAuditEntitySetForEntitySet(principal: Principal, entitySetId: UUID) {
         val auditedEntitySet = edm.getEntitySet(entitySetId)
         val name = auditedEntitySet.name
-        createAuditEntitySet( principal, name, entitySetId, auditedEntitySet.contacts)
+        createAuditEntitySet(principal, name, entitySetId, auditedEntitySet.contacts)
 
     }
 
@@ -63,13 +64,13 @@ class AuditRecordEntitySetsManager(
         val name = securableObject.title
         val id = securableObject.id
         val contacts = setOf<String>()
-        createAuditEntitySet( principal, name, id, contacts)
+        createAuditEntitySet(principal, name, id, contacts)
     }
 
     fun createAuditEntitySet(principal: Principal, name: String, id: UUID, contacts: Set<String>) {
 
         val entitySetName = buildName(id)
-        val auditingEntityTypeId = auditingConfiguration.getAuditingEntityTypeId()
+        val auditingEntityTypeId = auditingTypes.auditingEntityTypeId
 
         val entitySet = EntitySet(
                 auditingEntityTypeId,

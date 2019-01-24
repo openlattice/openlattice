@@ -42,40 +42,4 @@ private val logger = LoggerFactory.getLogger(AuditingConfiguration::class.java)
 data class AuditingConfiguration(
         val entityTypeFqn: FullQualifiedName,
         val fqns: Map<AuditProperty, FullQualifiedName>
-) {
-    private lateinit var auditingEntityTypeId: UUID
-    val propertyTypes: MutableMap<UUID, PropertyType> = mutableMapOf()
-    val propertyTypeIds: MutableMap<AuditProperty, UUID> = mutableMapOf()
-
-    fun getAuditingEntityTypeId(): UUID {
-        return auditingEntityTypeId
-    }
-
-    @Inject
-    fun initPropertyTypes(edm: EdmManager) {
-        val entityType = edm.getEntityType(entityTypeFqn)
-        val allPropertyTypes = edm.getPropertyTypesAsMap(entityType.properties)
-
-        auditingEntityTypeId = entityType.id
-
-        fqns.forEach {
-            val propertyType = edm.getPropertyType(it.value) //NPE if property type does not exist.
-            propertyTypes[propertyType.id] = propertyType
-            propertyTypeIds[it.key] = propertyType.id
-        }
-        check(allPropertyTypes.keys.containsAll(propertyTypes.keys)) {
-            val msg = "Auditing configuration specified the following property types not present in entity set: " +
-                    (propertyTypes - allPropertyTypes)
-            logger.error(msg)
-            return@check msg
-        }
-    }
-
-    fun getPropertyTypeId(auditProperty: AuditProperty): UUID {
-        return if (fqns.keys.contains(auditProperty)) {
-            return propertyTypeIds[auditProperty]!!
-        } else {
-            throw ResourceNotFoundException("Audit property $auditProperty is not configured.")
-        }
-    }
-}
+)

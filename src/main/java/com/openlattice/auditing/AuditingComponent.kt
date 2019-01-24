@@ -41,7 +41,7 @@ interface AuditingComponent {
 
     fun recordEvents(events: List<AuditableEvent>): Int {
         val ares = getAuditRecordEntitySetsManager()
-        val auditingConfiguration = ares.auditingConfiguration
+        val auditingConfiguration = ares.auditingTypes
 
         return events
                 .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKeys.last()) }
@@ -56,7 +56,7 @@ interface AuditingComponent {
     }
 
     private fun toMap(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
-        val auditingConfiguration = getAuditRecordEntitySetsManager().auditingConfiguration
+        val auditingConfiguration = getAuditRecordEntitySetsManager().auditingTypes
         return events.map { event ->
             val eventEntity = mutableMapOf<UUID, Set<Any>>()
 

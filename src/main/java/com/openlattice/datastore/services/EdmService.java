@@ -42,6 +42,8 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.AuditingTypes;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
@@ -141,7 +143,6 @@ public class EdmService implements EdmManager {
     @Inject
     private EventBus eventBus;
 
-
     @Inject
     private AuditRecordEntitySetsManager aresManager;
 
@@ -152,7 +153,8 @@ public class EdmService implements EdmManager {
             AuthorizationManager authorizations,
             PostgresEdmManager edmManager,
             PostgresTypeManager entityTypeManager,
-            HazelcastSchemaManager schemaManager ) {
+            HazelcastSchemaManager schemaManager,
+            AuditingConfiguration auditingConfiguration ) {
 
         this.authorizations = authorizations;
         this.edmManager = edmManager;
@@ -175,6 +177,10 @@ public class EdmService implements EdmManager {
         this.aclKeyReservations = aclKeyReservations;
         propertyTypes.values().forEach( propertyType -> logger.debug( "Property type read: {}", propertyType ) );
         entityTypes.values().forEach( entityType -> logger.debug( "Object type read: {}", entityType ) );
+        this.aresManager = new AuditRecordEntitySetsManager( new AuditingTypes( this, auditingConfiguration ),
+                this,
+                authorizations,
+                hazelcastInstance );
     }
 
     @Override
@@ -192,8 +198,6 @@ public class EdmService implements EdmManager {
                     logger.debug( "Unable to truncate table {}", table.getName(), e );
                 }
             } );
-            connection.close();
-
         } catch ( SQLException e ) {
             logger.debug( "Unable to clear all data.", e );
         }
@@ -386,7 +390,7 @@ public class EdmService implements EdmManager {
 
         // If this entity set is linked to a linking entity set, we need to collect all the linking ids of the entity
         // set first in order to be able to reindex those, before entity data is unavailable
-        if( !entitySet.isLinking() ) {
+        if ( !entitySet.isLinking() ) {
             checkAndRemoveEntitySetLinkings( entitySetId );
         }
 
@@ -435,7 +439,7 @@ public class EdmService implements EdmManager {
     public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
 
         eventBus.post( new LinkedEntitySetAddedEvent(
@@ -449,7 +453,7 @@ public class EdmService implements EdmManager {
     public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
 
         Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )
@@ -530,7 +534,7 @@ public class EdmService implements EdmManager {
             edmManager.createEntitySet( entitySet, ownablePropertyTypes );
 
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
-            aresManager.createAuditEntitySetForEntitySet(  principal, entitySet.getId() );
+            aresManager.createAuditEntitySetForEntitySet( principal, entitySet.getId() );
 
         } catch ( Exception e ) {
             logger.error( "Unable to create entity set {} for principal {}", entitySet, principal, e );
@@ -1000,7 +1004,8 @@ public class EdmService implements EdmManager {
                                     .post( new PropertyTypesInEntitySetUpdatedEvent( es.getId(), properties ) ) );
                 } );
 
-        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) ); // currently not picked up by anything
+        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType,
+                update ) ); // currently not picked up by anything
     }
 
     @Override
