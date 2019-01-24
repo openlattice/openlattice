@@ -155,8 +155,8 @@ public final class ResultSetAdapters {
         return new EntityDataMetadata( version, lastWrite, lastIndex );
     }
 
-    public static Set<UUID> entityTypeIds( ResultSet rs ) throws SQLException {
-        return ImmutableSet.copyOf( PostgresArrays.getUuidArray( rs, PostgresColumn.ENTITY_TYPE_IDS_FIELD ) );
+    public static Set<UUID> linkingIds( ResultSet rs ) throws SQLException {
+        return ImmutableSet.copyOf( PostgresArrays.getUuidArray( rs, LINKING_ID.getName() ) );
     }
 
     public static Edge edge( ResultSet rs ) throws SQLException {
@@ -357,6 +357,10 @@ public final class ResultSetAdapters {
 
     public static UUID entitySetId( ResultSet rs ) throws SQLException {
         return rs.getObject( ENTITY_SET_ID.getName(), UUID.class );
+    }
+
+    public static Set<UUID> entitySetIds( ResultSet rs ) throws SQLException {
+        return Sets.newHashSet( PostgresArrays.getUuidArray( rs, ENTITY_SET_ID.getName() ) );
     }
 
     public static UUID propertyTypeId( ResultSet rs ) throws SQLException {
@@ -736,11 +740,14 @@ public final class ResultSetAdapters {
 
     public static Map<UUID, Set<Object>> implicitEntityValuesById(
             ResultSet rs,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            ByteBlobDataManager byteBlobDataManager) throws SQLException {
         final Map<UUID, Set<Object>> data = new HashMap<>();
 
-        for ( PropertyType propertyType : authorizedPropertyTypes.values() ) {
+        final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
+                .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
+                .collect( Collectors.toSet() );
+        for ( PropertyType propertyType : allPropertyTypes ) {
             List<?> objects = propertyValue( rs, propertyType );
 
             if ( objects != null ) {

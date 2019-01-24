@@ -14,7 +14,9 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.serializers.EntityDataLambdasStreamSerializer;
 import com.openlattice.conductor.rpc.BulkEntityDataLambdas;
+
 import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -26,8 +28,8 @@ import java.util.UUID;
 
 @Component
 public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntityDataLambdas> {
-    private static final Logger        logger = LoggerFactory.getLogger( EntityDataLambdasStreamSerializer.class );
-    private              TypeReference ref    = new TypeReference<SetMultimap<UUID, Object>>() {
+    private static final Logger logger = LoggerFactory.getLogger( EntityDataLambdasStreamSerializer.class );
+    private TypeReference ref = new TypeReference<SetMultimap<UUID, Object>>() {
     };
 
     private ObjectMapper mapper;
@@ -48,12 +50,12 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
     }
 
     @Override
-    public void write(
-            Kryo kryo, Output output, BulkEntityDataLambdas object ) {
+    public void write( Kryo kryo, Output output, BulkEntityDataLambdas object ) {
         writeUUID( output, object.getEntitySetId() );
 
         try {
             output.writeInt( object.getEntitiesById().size() );
+
             for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entry : object.getEntitiesById().entrySet() ) {
                 writeUUID( output, entry.getKey() );
                 byte[] bytes = mapper.writeValueAsBytes( entry.getValue() );
@@ -65,24 +67,26 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
         }
     }
 
-    @Override public BulkEntityDataLambdas read(
+    @Override
+    public BulkEntityDataLambdas read(
             Kryo kryo, Input input, Class<BulkEntityDataLambdas> type ) {
         UUID entitySetId = readUUID( input );
 
-        int mapSize = input.readInt();
-        Map<UUID, SetMultimap<UUID, Object>> entitiesById = new HashMap<>( mapSize );
-        for ( int i = 0; i < mapSize; i++ ) {
-            UUID key = readUUID( input );
+        int entitiesSize = input.readInt();
+        Map<UUID, SetMultimap<UUID, Object>> entitiesById = new HashMap<>( entitiesSize );
+        for ( int j = 0; j < entitiesSize; j++ ) {
+            UUID entityId = readUUID( input );
 
             int numBytes = input.readInt();
-            SetMultimap<UUID, Object> entityData;
+            HashMultimap<UUID, Object> entityData;
             try {
                 entityData = mapper.readValue( input.readBytes( numBytes ), ref );
-                entitiesById.put( key, entityData );
+                entitiesById.put( entityId, entityData );
             } catch ( IOException e ) {
                 logger.debug( "Unable to deserialize entities for entity set: {}", entitySetId );
             }
         }
+
         return new BulkEntityDataLambdas( entitySetId, Maps.transformValues( entitiesById, Multimaps::asMap ) );
     }
 }

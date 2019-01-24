@@ -510,8 +510,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 authorizedFilteredRanking.associationSets,
                 authorizedFilteredRanking.filteredNeighborsRanking.associationFilters,
                 setOf(),
+                associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 false,
-                associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                false
         )
 
         val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
@@ -571,8 +572,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 authorizedFilteredRanking.entitySets,
                 authorizedFilteredRanking.filteredNeighborsRanking.neighborFilters,
                 setOf(),
+                entitySetPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 false,
-                entitySetPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                false
         )
 
         val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {

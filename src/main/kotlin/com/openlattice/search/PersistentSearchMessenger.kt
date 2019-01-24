@@ -57,12 +57,12 @@ class PersistentSearchMessenger : Runnable {
                 .collect(Collectors.toSet()))
     }
 
-    private fun getAuthorizedPropertyTypeMap(securablePrincipal: SecurablePrincipal, persistentSearch: PersistentSearch): Map<UUID, Map<UUID, PropertyType>> {
+    private fun getAuthorizedPropertyTypeMap(securablePrincipal: SecurablePrincipal, entitySetIds: List<UUID>): Map<UUID, Map<UUID, PropertyType>> {
         var principals = PersistentSearchMessengerHelpers.principalsManager.getAllPrincipals(securablePrincipal)
                 .plus(securablePrincipal)
                 .map { it.principal }
                 .toSet()
-        return persistentSearch.searchConstraints.entitySetIds.map { it to getAuthorizedPropertyMap(principals, it) }.toMap()
+        return entitySetIds.map { it to getAuthorizedPropertyMap(principals, it) }.toMap()
     }
 
     private fun getUpdatedConstraints(persistentSearch: PersistentSearch): SearchConstraints {
@@ -98,11 +98,23 @@ class PersistentSearchMessenger : Runnable {
 
     private fun findNewWritesForAlert(userAclKey: AclKey, persistentSearch: PersistentSearch): OffsetDateTime? {
         val userSecurablePrincipal = PersistentSearchMessengerHelpers.principalsManager.getSecurablePrincipal(userAclKey)
-        val authorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal, persistentSearch)
+        val entitySets = entitySets.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
+                .groupBy { it.isLinking }
+
+        val authorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
+                entitySets[false]!!.map { it.id })
+        val linkedAuthorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
+                entitySets[false]!!.map { it.id })
         val constraints = getUpdatedConstraints(persistentSearch)
-        val newResults = PersistentSearchMessengerHelpers.searchService.executeSearch(constraints, authorizedPropertyTypeMap)
+
+        val results = PersistentSearchMessengerHelpers.searchService.executeSearch(constraints,
+                authorizedPropertyTypeMap, false)
+        val linkedResults = PersistentSearchMessengerHelpers.searchService.executeSearch(constraints,
+                linkedAuthorizedPropertyTypeMap, true)
+        val newResults = DataSearchResult(results.numHits + linkedResults.numHits,
+                results.hits + linkedResults.hits )
+
         if (newResults.numHits > 0) {
-            newResults.hits.forEach { }
             sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, newResults)
             return getLatestRead(newResults.hits)
         }

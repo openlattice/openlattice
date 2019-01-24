@@ -487,8 +487,9 @@ internal fun buildGetActivePropertiesSql(
             entitySetIds.map { it to propertyTypes.keys }.toMap(),
             propertyTypeFiltersWithNullCheck,
             setOf(),
-            false,
             propertyTypes.mapValues{ it.value.datatype == EdmPrimitiveTypeKind.Binary }.toMap(),
+            false,
+            false,
             " AND last_propagate >= last_write ")
 
     return " SELECT $columns FROM ($selectEntities) as entities "
@@ -513,8 +514,9 @@ internal fun buildGetBlockedPropertiesSql(
             entitySetIds.map { it to propertyTypeIds.keys }.toMap(),
             propertyTypeFilters,
             setOf(),
-            false,
             propertyTypeIds.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
+            false,
+            false,
             " AND last_propagate < last_write "
     )
 }
