@@ -19,7 +19,7 @@ import java.util.UUID;
 
 public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, EntitySet> {
 
-    public static final String LINKING_ENTITY_SET_INDEX = "linkedEntitySets[any]";
+    public static final String LINKED_ENTITY_SET_INDEX = "linkedEntitySets[any]";
 
     public EntitySetMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ENTITY_SETS.name(), ENTITY_SETS, hds );
@@ -75,6 +75,6 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         return super
                 .getMapConfig()
                 .setInMemoryFormat( InMemoryFormat.OBJECT )
-                .addMapIndexConfig( new MapIndexConfig( LINKING_ENTITY_SET_INDEX, false ) );
+                .addMapIndexConfig( new MapIndexConfig( LINKED_ENTITY_SET_INDEX, false ) );
     }
 }

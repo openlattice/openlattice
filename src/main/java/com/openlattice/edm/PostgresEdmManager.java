@@ -22,6 +22,7 @@ package com.openlattice.edm;
 
 import static com.openlattice.postgres.DataTables.propertyTableName;
 import static com.openlattice.postgres.DataTables.quote;
+import static com.openlattice.postgres.PostgresTable.IDS;
 
 import com.codahale.metrics.annotation.ExceptionMetered;
 import com.codahale.metrics.annotation.Timed;
@@ -32,8 +33,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.query.Predicate;
-import com.hazelcast.query.PredicateBuilder;
 import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
@@ -50,13 +49,10 @@ import static com.openlattice.postgres.PostgresColumn.*;
 
 import java.sql.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -209,15 +205,35 @@ public class PostgresEdmManager implements DbEdmManager {
      */
     public Set<EntitySet> getAllLinkingEntitySetsForEntitySet( UUID entitySetId ) {
         return ImmutableSet.copyOf( entitySets
-                .values( Predicates.equal( EntitySetMapstore.LINKING_ENTITY_SET_INDEX, entitySetId ) ) );
+                .values( Predicates.equal( EntitySetMapstore.LINKED_ENTITY_SET_INDEX, entitySetId ) ) );
     }
 
     /**
-     * In-memory version of
+     * Duplicate of
      * {@link  com.openlattice.data.EntityDatastore#getLinkingIdsByEntitySetIds(Set)}
      */
     public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
-        return Maps.transformValues( entitySets.getAll( entitySetIds ), EntitySet::getLinkedEntitySets );
+        String query =
+                "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID.getName() +
+                        " FROM " + IDS.getName() +
+                        " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName() + " IN (SELECT UNNEST( (?)::uuid[] )) " +
+                        " GROUP BY " + ENTITY_SET_ID.getName();
+
+        try ( Connection connection = hds.getConnection();
+              PreparedStatement ps = connection.prepareStatement( query ) ) {
+            Map<UUID, Set<UUID>> result = Maps.newHashMap();
+            Array arr = PostgresArrays.createUuidArray( connection, entitySetIds );
+            ps.setArray( 1, arr );
+            ResultSet rs = ps.executeQuery();
+            while ( rs.next() ) {
+                result.put( ResultSetAdapters.entitySetId( rs ), ResultSetAdapters.linkingIds( rs ) );
+            }
+
+            return result;
+        } catch ( SQLException e ) {
+            logger.debug( "Unable to load linking ids by entity sets ids for entity sets {}", entitySetIds, e );
+            return Map.of();
+        }
     }
 
     public Iterable<PropertyUsageSummary> getPropertyUsageSummary( String propertyTableName ) {
