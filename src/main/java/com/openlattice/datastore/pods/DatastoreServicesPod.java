@@ -53,9 +53,9 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.AwsDataSinkService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
-import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
+import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
@@ -78,7 +78,6 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
-import com.openlattice.search.EsEdmService;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
@@ -209,12 +208,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore(
-                hazelcastInstance,
-                executor,
-                defaultObjectMapper(),
-                idService(),
-                postgresDataManager(), dataQueryService() );
+        return new HazelcastEntityDatastore( idService(), postgresDataManager(), dataQueryService() );
     }
 
     @Bean
@@ -298,7 +292,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public PostgresEdmManager pgEdmManager() {
-        PostgresEdmManager pgEdmManager = new PostgresEdmManager( hikariDataSource, tableManager );
+        PostgresEdmManager pgEdmManager = new PostgresEdmManager( hikariDataSource, tableManager, hazelcastInstance );
         eventBus.register( pgEdmManager );
         return pgEdmManager;
     }
@@ -311,11 +305,6 @@ public class DatastoreServicesPod {
     @Bean
     public ConductorElasticsearchApi conductorElasticsearchApi() {
         return new DatastoreConductorElasticsearchApi( hazelcastInstance );
-    }
-
-    @Bean
-    public EsEdmService esEdmService() {
-        return new EsEdmService( conductorElasticsearchApi() );
     }
 
     @Bean
