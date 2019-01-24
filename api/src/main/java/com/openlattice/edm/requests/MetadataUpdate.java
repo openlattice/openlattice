@@ -18,6 +18,7 @@
 
 package com.openlattice.edm.requests;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -54,7 +55,7 @@ public class MetadataUpdate {
     private Optional<String>                           url;
     private Optional<LinkedHashMultimap<UUID, String>> propertyTags;
 
-    @JsonCreator
+        @JsonCreator
     public MetadataUpdate(
             @JsonProperty( SerializationConstants.TITLE_FIELD ) Optional<String> title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
@@ -165,6 +166,7 @@ public class MetadataUpdate {
         return Objects.hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags );
     }
 
+    //TODO: Delete the code below as it doesn't seem to be used.
     // Trimming happens before initializing update processors so that irrelevant fields won't get ser/deserialized when
     // processors are serialized.
     public static MetadataUpdate trimToPropertyTypeUpdate( MetadataUpdate update ) {

@@ -376,10 +376,10 @@ public final class TestDataFactory {
                 TestDataFactory.requestStatus() );
     }
 
-    public static Map<UUID, SetMultimap<UUID, Object>> randomStringEntityData(
+    public static Map<UUID, Map<UUID, Set<Object>>> randomStringEntityData(
             int numberOfEntries,
             Set<UUID> propertyIds ) {
-        Map<UUID, SetMultimap<UUID, Object>> data = new HashMap<>();
+        Map<UUID, Map<UUID, Set<Object>>> data = new HashMap<>();
         for ( int i = 0; i < numberOfEntries; i++ ) {
             UUID entityId = UUID.randomUUID();
             SetMultimap<UUID, Object> entity = HashMultimap.create();
@@ -387,7 +387,7 @@ public final class TestDataFactory {
                 entity.put( propertyId, RandomStringUtils.randomAlphanumeric( 5 ) );
             }
 
-            data.put( entityId, entity );
+            data.put( entityId, Multimaps.asMap( entity ) );
         }
         return data;
     }
@@ -473,11 +473,11 @@ public final class TestDataFactory {
                 Optional.empty() );
     }
 
-    public static Map<UUID, SetMultimap<UUID, Object>> randomBinaryData(
+    public static Map<UUID, Map<UUID, Set<Object>>> randomBinaryData(
             int numberOfEntries,
             UUID keyType,
             UUID binaryType ) {
-        Map<UUID, SetMultimap<UUID, Object>> data = new HashMap<>();
+        Map<UUID, Map<UUID, Set<Object>>> data = new HashMap<>();
         for ( int i = 0; i < numberOfEntries; i++ ) {
             data.put( UUID.randomUUID(), randomElement( keyType, binaryType ) );
         }
@@ -485,13 +485,13 @@ public final class TestDataFactory {
         return data;
     }
 
-    public static SetMultimap<UUID, Object> randomElement( UUID keyType, UUID binaryType ) {
+    public static Map<UUID, Set<Object>> randomElement( UUID keyType, UUID binaryType ) {
         SetMultimap<UUID, Object> element = HashMultimap.create();
         element.put( keyType, RandomStringUtils.random( 5 ) );
         element.put( binaryType, RandomUtils.nextBytes( 128 ) );
         element.put( binaryType, RandomUtils.nextBytes( 128 ) );
         element.put( binaryType, RandomUtils.nextBytes( 128 ) );
-        return element;
+        return Multimaps.asMap( element );
     }
 
     public static MetadataUpdate metadataUpdate() {

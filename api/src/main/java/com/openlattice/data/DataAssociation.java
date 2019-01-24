@@ -29,8 +29,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.client.serialization.SerializationConstants;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -45,7 +47,7 @@ public class DataAssociation {
     private final Optional<Integer> dstEntityIndex;
     private final Optional<UUID>    dstEntityKeyId;
 
-    private final SetMultimap<UUID, Object> data;
+    private final Map<UUID, Set<Object>> data;
 
     @JsonCreator
     public DataAssociation(
@@ -55,7 +57,7 @@ public class DataAssociation {
             @JsonProperty( SerializationConstants.DST_ENTITY_SET_ID ) UUID dstEntitySetId,
             @JsonProperty( SerializationConstants.DST_ENTITY_INDEX ) Optional<Integer> dstEntityIndex,
             @JsonProperty( SerializationConstants.DST_ENTITY_KEY_ID ) Optional<UUID> dstEntityKeyId,
-            @JsonProperty( SerializationConstants.DATA ) SetMultimap<UUID, Object> data ) {
+            @JsonProperty( SerializationConstants.DATA ) Map<UUID, Set<Object>> data ) {
         checkArgument( srcEntityIndex.isPresent() ^ srcEntityKeyId.isPresent(),
                 "Only one of index or entity key id must be present for source" );
         checkArgument( dstEntityIndex.isPresent() ^ dstEntityKeyId.isPresent(),
@@ -113,7 +115,7 @@ public class DataAssociation {
     }
 
     @JsonProperty( SerializationConstants.DATA )
-    public SetMultimap<UUID, Object> getData() {
+    public Map<UUID, Set<Object>> getData() {
         return data;
     }
 
