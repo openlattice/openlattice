@@ -20,6 +20,8 @@
 
 package com.openlattice.datastore.edm.controllers;
 
+import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
+
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -65,6 +67,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -112,11 +115,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     @Inject
     private DataGraphManager dgm;
 
+    @Inject
+    private Environment env;
+
     @RequestMapping(
             path = CLEAR_PATH,
             method = RequestMethod.DELETE )
     @ResponseStatus( HttpStatus.OK )
     public void clearAllData() {
+        if ( !env.acceptsProfiles( TEST_PROFILE ) ) {
+            throw new ForbiddenException(
+                    "Clearing all entity set tables is only allowed in " + TEST_PROFILE + " environment" );
+        }
         ensureAdminAccess();
         modelService.clearTables();
     }

@@ -316,7 +316,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public List<UUID> createEntities(
             @RequestParam( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody List<SetMultimap<UUID, Object>> entities ) {
+            @RequestBody List<Map<UUID, Set<Object>>> entities ) {
         //Ensure that we have read access to entity set metadata.
         ensureReadAccess( new AclKey( entitySetId ) );
         //Load authorized property types
@@ -382,12 +382,12 @@ public class DataController implements DataApi, AuthorizingComponent {
             final UUID entitySetId = association.getKey();
             if ( partial ) {
                 return dgm.partialReplaceEntities( entitySetId,
-                        transformValues( association.getValue(), dataEdge -> Multimaps.asMap( dataEdge.getData() ) ),
+                        transformValues( association.getValue(), DataEdge::getData ),
                         authorizedPropertyTypes );
             } else {
 
                 return dgm.replaceEntities( entitySetId,
-                        transformValues( association.getValue(), assoc -> Multimaps.asMap( assoc.getData() ) ),
+                        transformValues( association.getValue(), DataEdge::getData ),
                         authorizedPropertyTypes );
             }
         } ).sum();
