@@ -51,6 +51,9 @@ schema:
         $ref: "./components.yaml#/propertyType"
     fqn:
       $ref: "./components.yaml#/fullQualifiedName"
+entityKeyId:
+  type: string
+  format: uuid
 # entity sets
 entitySetId:
   type: string
