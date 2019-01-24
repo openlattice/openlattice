@@ -22,6 +22,7 @@
 
 package com.openlattice.authorization;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.util.Preconditions;
@@ -29,11 +30,8 @@ import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -98,7 +96,9 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions ) {
-        return getAuthorizedPropertyTypes(
+        return ( entitySetIds.isEmpty() )
+                ? ImmutableMap.of()
+                : getAuthorizedPropertyTypes(
                 entitySetIds,
                 getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
                 requiredPermissions );

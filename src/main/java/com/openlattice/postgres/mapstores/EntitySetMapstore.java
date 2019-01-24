@@ -2,6 +2,9 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.ENTITY_SETS;
 
+import com.hazelcast.config.InMemoryFormat;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
@@ -15,6 +18,8 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, EntitySet> {
+
+    public static final String LINKED_ENTITY_SET_INDEX = "linkedEntitySets[any]";
 
     public EntitySetMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ENTITY_SETS.name(), ENTITY_SETS, hds );
@@ -64,5 +69,12 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
 
     @Override public EntitySet generateTestValue() {
         return TestDataFactory.entitySet();
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super
+                .getMapConfig()
+                .setInMemoryFormat( InMemoryFormat.OBJECT )
+                .addMapIndexConfig( new MapIndexConfig( LINKED_ENTITY_SET_INDEX, false ) );
     }
 }
