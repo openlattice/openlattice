@@ -3,7 +3,7 @@ plugins {
     id "eclipse"
     id "idea"
     id "jacoco"
-    id 'com.github.spotbugs' version '1.6.3'
+    id 'com.github.spotbugs' version '1.6.6'
     id 'org.jetbrains.kotlin.jvm' version '1.3.10'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.3.10'
     id 'com.github.johnrengelman.shadow' version '2.0.0'
@@ -24,7 +24,7 @@ ext.sourceCompatibility = JavaVersion.VERSION_1_10
 ext.targetCompatibility = JavaVersion.VERSION_1_10
 
 spotbugs {
-    toolVersion = '3.1.5'
+    toolVersion = '3.1.9'
 }
 
 tasks.withType(com.github.spotbugs.SpotBugsTask) {
@@ -32,6 +32,10 @@ tasks.withType(com.github.spotbugs.SpotBugsTask) {
         xml.enabled = false
         html.enabled = true
     }
+}
+
+jacoco {
+    toolVersion = "0.8.2"
 }
 
 configurations {
@@ -79,7 +83,7 @@ dependencies {
         testCompile("com.openlattice:rhizome:${rhizome_version}:tests")
         testCompile "com.openlattice:rhizome-client:${rhizome_client_version}:tests"
     }
-    compile("org.projectlombok:lombok:1.16.22")
+    
     /*
      * ELASTICSEARCH
      */
