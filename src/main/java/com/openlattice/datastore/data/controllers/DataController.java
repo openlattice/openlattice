@@ -20,11 +20,26 @@
 
 package com.openlattice.datastore.data.controllers;
 
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Maps.transformValues;
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
+
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -44,12 +59,27 @@ import com.openlattice.data.EntitySetData;
 import com.openlattice.data.UpdateType;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
-import com.openlattice.web.mediatypes.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.web.mediatypes.CustomMediaType;
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -69,28 +99,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
-import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
@@ -382,12 +390,12 @@ public class DataController implements DataApi, AuthorizingComponent {
             final UUID entitySetId = association.getKey();
             if ( partial ) {
                 return dgm.partialReplaceEntities( entitySetId,
-                        transformValues( association.getValue(), dataEdge -> dataEdge.getData() ),
+                        transformValues( association.getValue(), DataEdge::getData ),
                         authorizedPropertyTypes );
             } else {
 
                 return dgm.replaceEntities( entitySetId,
-                        transformValues( association.getValue(), assoc -> assoc.getData() ),
+                        transformValues( association.getValue(), DataEdge::getData ),
                         authorizedPropertyTypes );
             }
         } ).sum();
