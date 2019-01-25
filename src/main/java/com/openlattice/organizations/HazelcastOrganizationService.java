@@ -22,27 +22,19 @@
 
 package com.openlattice.organizations;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.apps.AppConfigKey;
+import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.datastore.util.Util;
@@ -54,59 +46,54 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
-import com.openlattice.organizations.processors.EmailDomainsMerger;
-import com.openlattice.organizations.processors.EmailDomainsRemover;
-import com.openlattice.organizations.processors.OrganizationAppMerger;
-import com.openlattice.organizations.processors.OrganizationAppRemover;
-import com.openlattice.organizations.processors.OrganizationMemberMerger;
-import com.openlattice.organizations.processors.OrganizationMemberRemover;
+import com.openlattice.organizations.processors.*;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.mapstores.AppConfigMapstore;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * This class manages organizations.
- *
+ * <p>
  * An organization is a collection of principals and applications.
- *
+ * <p>
  * Access to organizations is handled by the organization manager.
- *
+ * <p>
  * Membership in an organization is stored in the membersOf field whcih is accessed via an IMAP. Only principals of type
  * {@link PrincipalType#USER}. This is mainly because we don't store the principal type field along with the principal id.
  * This may change in the future.
- *
+ * <p>
  * While roles may create organizations they cannot be members. That is an organization created by a role will have no members
  * but principals with that role will have the relevant level of access to that role. In addition, roles that create an
  * organization will not inherit the organization role (as they are not members).
  */
 public class HazelcastOrganizationService {
 
-    private static final Logger                            logger = LoggerFactory
+    private static final Logger                             logger = LoggerFactory
             .getLogger( HazelcastOrganizationService.class );
-    private final        AuthorizationManager              authorizations;
-    private final        HazelcastAclKeyReservationService reservations;
-    private final        UserDirectoryService              principals;
-    private final        SecurePrincipalsManager           securePrincipalsManager;
-    private final        IMap<UUID, String>                titles;
-    private final        IMap<UUID, String>                descriptions;
-    private final        IMap<UUID, DelegatedStringSet>    autoApprovedEmailDomainsOf;
-    private final        IMap<UUID, PrincipalSet>          membersOf;
-    private final        IMap<UUID, DelegatedUUIDSet>      apps;
-    private final        List<IMap<UUID, ?>>               allMaps;
+    private final        AuthorizationManager               authorizations;
+    private final        HazelcastAclKeyReservationService  reservations;
+    private final        UserDirectoryService               principals;
+    private final        SecurePrincipalsManager            securePrincipalsManager;
+    private final        IMap<UUID, String>                 titles;
+    private final        IMap<UUID, String>                 descriptions;
+    private final        IMap<UUID, DelegatedStringSet>     autoApprovedEmailDomainsOf;
+    private final        IMap<UUID, PrincipalSet>           membersOf;
+    private final        IMap<UUID, DelegatedUUIDSet>       apps;
+    private final        IMap<AppConfigKey, AppTypeSetting> appConfigs;
+    private final        List<IMap<UUID, ?>>                allMaps;
 
     @Inject
     private EventBus eventBus;
@@ -122,6 +109,7 @@ public class HazelcastOrganizationService {
         this.autoApprovedEmailDomainsOf = hazelcastInstance.getMap( HazelcastMap.ALLOWED_EMAIL_DOMAINS.name() );
         this.membersOf = hazelcastInstance.getMap( HazelcastMap.ORGANIZATIONS_MEMBERS.name() );
         this.apps = hazelcastInstance.getMap( HazelcastMap.ORGANIZATION_APPS.name() );
+        this.appConfigs = hazelcastInstance.getMap( HazelcastMap.APP_CONFIGS.name() );
         this.authorizations = authorizations;
         this.reservations = reservations;
         this.allMaps = ImmutableList.of( titles,
@@ -252,6 +240,7 @@ public class HazelcastOrganizationService {
         securePrincipalsManager.deletePrincipal( aclKey );
         allMaps.stream().forEach( m -> m.delete( organizationId ) );
         reservations.release( organizationId );
+        appConfigs.removeAll( Predicates.equal( AppConfigMapstore.ORGANIZATION_ID, organizationId ) );
         eventBus.post( new OrganizationDeletedEvent( organizationId ) );
     }
 
