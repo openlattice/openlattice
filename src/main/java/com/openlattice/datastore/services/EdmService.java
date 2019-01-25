@@ -51,12 +51,29 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.edm.*;
-import com.openlattice.edm.events.*;
+import com.openlattice.edm.EntityDataModel;
+import com.openlattice.edm.EntityDataModelDiff;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.PostgresEdmManager;
+import com.openlattice.edm.Schema;
+import com.openlattice.edm.events.AssociationTypeCreatedEvent;
+import com.openlattice.edm.events.AssociationTypeDeletedEvent;
+import com.openlattice.edm.events.ClearAllDataEvent;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
+import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
+import com.openlattice.edm.events.EntityTypeCreatedEvent;
+import com.openlattice.edm.events.EntityTypeDeletedEvent;
+import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
+import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypeMetaDataUpdatedEvent;
+import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.exceptions.TypeExistsException;
 import com.openlattice.edm.exceptions.TypeNotFoundException;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -1039,6 +1056,16 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public boolean checkPropertyTypeExists( FullQualifiedName fqn ) {
+        final var typeId = getTypeAclKey( fqn );
+        if ( typeId == null ) {
+            return false;
+        } else {
+            return propertyTypes.containsKey( typeId );
+        }
+    }
+
+    @Override
     public boolean checkPropertyTypeExists( UUID propertyTypeId ) {
         return propertyTypes.containsKey( propertyTypeId );
     }
@@ -1046,6 +1073,16 @@ public class EdmService implements EdmManager {
     @Override
     public boolean checkEntityTypesExist( Set<UUID> entityTypeIds ) {
         return entityTypeIds.stream().allMatch( entityTypes::containsKey );
+    }
+
+    @Override
+    public boolean checkEntityTypeExists( FullQualifiedName fqn ) {
+        final var typeId = getTypeAclKey( fqn );
+        if ( typeId == null ) {
+            return false;
+        } else {
+            return entityTypes.containsKey( typeId );
+        }
     }
 
     @Override

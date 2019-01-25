@@ -144,9 +144,13 @@ public interface EdmManager {
     // Helper methods to check existence
     boolean checkPropertyTypesExist( Set<UUID> properties );
 
+    boolean checkPropertyTypeExists( FullQualifiedName fqn );
+
     boolean checkPropertyTypeExists( UUID propertyTypeId );
 
     boolean checkEntityTypesExist( Set<UUID> entityTypeIds );
+
+    boolean checkEntityTypeExists( FullQualifiedName fqn );
 
     boolean checkEntityTypeExists( UUID entityTypeId );
 
