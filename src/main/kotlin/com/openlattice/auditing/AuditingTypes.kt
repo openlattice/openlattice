@@ -7,6 +7,7 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -28,31 +29,32 @@ class AuditingTypes(
     val propertyTypeIds: MutableMap<AuditProperty, UUID> = mutableMapOf()
 
     init {
-        val maybeEntityTypeId = Optional.ofNullable(edm.getTypeAclKey(auditingConfiguration.entityTypeFqn))
-
+        val entityTypeFqn = FullQualifiedName(auditingConfiguration.entityTypeFqn)
+        val maybeEntityTypeId = Optional.ofNullable(edm.getTypeAclKey(entityTypeFqn))
+        val properties = linkedSetOf(getKeyProperties(auditingConfiguration, edm))
 
 
         entityType = maybeEntityTypeId
                 .map { edm.getEntityType(it) }
                 .orElseGet {
                     val newEntityType = EntityType(
-                            auditingConfiguration.entityTypeFqn, "Audit Entity Type",
+                            entityTypeFqn, "Audit Entity Type",
                             "This the default created audit entity type.",
                             mutableSetOf(),
-                            linkedSetOf(getKeyProperties(auditingConfiguration,edm)),
-                            linkedSetOf(getKeyProperties(auditingConfiguration,edm)),
+                            properties,
+                            properties,
                             LinkedHashMultimap.create(),
                             Optional.empty(),
                             Optional.of(SecurableObjectType.EntityType)
                     )
                     edm.createEntityType(newEntityType)
-                    edm.getEntityType(auditingConfiguration.entityTypeFqn)
+                    edm.getEntityType(entityTypeFqn)
                 }
 
         auditingEntityTypeId = entityType.id
 
         auditingConfiguration.fqns.forEach {
-            val propertyType = edm.getPropertyType(it.value) //NPE if property type does not exist.
+            val propertyType = edm.getPropertyType(FullQualifiedName(it.value)) //NPE if property type does not exist.
             propertyTypes[propertyType.id] = propertyType
             propertyTypeIds[it.key] = propertyType.id
         }
@@ -68,9 +70,15 @@ class AuditingTypes(
         }
     }
 
-    private fun getKeyProperties( auditingConfiguration: AuditingConfiguration,edm: EdmManager) : UUID {
-        val idProperty = auditingConfiguration.fqns[AuditProperty.ID]!!
-        val idPropertyType = PropertyType(idProperty, "The default id property", Optional.empty(), setOf(), EdmPrimitiveTypeKind.Guid )
+    private fun getKeyProperties(auditingConfiguration: AuditingConfiguration, edm: EdmManager): UUID {
+        val idProperty = FullQualifiedName(auditingConfiguration.fqns[AuditProperty.ID]!!)
+        val idPropertyType = PropertyType(
+                idProperty,
+                "The default id property",
+                Optional.empty(),
+                setOf(),
+                EdmPrimitiveTypeKind.Guid
+        )
         edm.createPropertyTypeIfNotExists(idPropertyType)
         return idPropertyType.id
     }

@@ -21,6 +21,8 @@
 
 package com.openlattice.auditing
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 import com.openlattice.datastore.exceptions.ResourceNotFoundException
 import com.openlattice.datastore.services.EdmManager
@@ -32,14 +34,10 @@ import java.util.*
 import javax.inject.Inject
 
 /**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Configuration class for auditing.
  */
-
-private val logger = LoggerFactory.getLogger(AuditingConfiguration::class.java)
-
 @ReloadableConfiguration(uri = "auditing.yaml")
 data class AuditingConfiguration(
-        val entityTypeFqn: FullQualifiedName,
-        val fqns: Map<AuditProperty, FullQualifiedName>
+        @JsonProperty("entity-type") val entityTypeFqn: String,
+        @JsonProperty("fqns") val fqns: Map<AuditProperty, String>
 )
