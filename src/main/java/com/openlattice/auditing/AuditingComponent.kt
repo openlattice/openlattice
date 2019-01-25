@@ -40,19 +40,23 @@ interface AuditingComponent {
     }
 
     fun recordEvents(events: List<AuditableEvent>): Int {
+
         val ares = getAuditRecordEntitySetsManager()
         val auditingConfiguration = ares.auditingTypes
 
-        return events
-                .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKeys.last()) }
-                .map { (auditEntitySet, entities) ->
-                    getDataGraphService().createEntities(
-                            auditEntitySet,
-                            toMap(entities),
-                            auditingConfiguration.propertyTypes
-                    ).size
-                }.sum()
-
+        return if( auditingConfiguration.initialized ) {
+            events
+                    .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKeys.last()) }
+                    .map { (auditEntitySet, entities) ->
+                        getDataGraphService().createEntities(
+                                auditEntitySet,
+                                toMap(entities),
+                                auditingConfiguration.propertyTypes
+                        ).size
+                    }.sum()
+        } else {
+            0
+        }
     }
 
     private fun toMap(events: List<AuditableEvent>): List<Map<UUID, Set<Any>>> {
@@ -72,7 +76,7 @@ interface AuditingComponent {
                 eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.OPERATION_ID)] = setOf(it)
             }
 
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(event.aclKeys.last())
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(event.aclKeys.last()) //ID of securable object
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(event.principal)
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(event.eventType)
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DESCRIPTION)] = setOf(event.description)

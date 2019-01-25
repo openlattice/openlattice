@@ -156,12 +156,11 @@ public class EdmService implements EdmManager {
 
     private final HazelcastInstance hazelcastInstance;
     private final HikariDataSource  hds;
+    privateConductor  final AuditRecordEntitySetsManager aresManager;
 
     @Inject
     private EventBus eventBus;
 
-    @Inject
-    private AuditRecordEntitySetsManager aresManager;
 
     public EdmService(
             HikariDataSource hds,
