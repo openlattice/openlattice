@@ -135,8 +135,9 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         mapOf(),
                         setOf(),
                         version,
+                        propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap(),
                         false,
-                        propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
+                        false
                 )
 //                selectEntitySetWithPropertyTypesAndVersion(
 //                        entitySetId,
@@ -186,7 +187,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 .toSet()
         val version = Instant.now().minusMillis(1382400000).toEpochMilli()
         logger.info(
-                "Entity set query: {}",
+                "Linking entity set query with entity set id: {}",
                 selectEntitySetWithPropertyTypesAndVersionSql(
                         mapOf(entitySetId to Optional.of(entityKeyIds)),
                         propertyTypeMap,
@@ -195,15 +196,32 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         mapOf(),
                         setOf(),
                         version,
+                        propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap(),
                         true,
-                        propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
+                        false
+                )
+        )
+
+        logger.info(
+                "Linking entity set query without entity set id: {}",
+                selectEntitySetWithPropertyTypesAndVersionSql(
+                        mapOf(entitySetId to Optional.of(entityKeyIds)),
+                        propertyTypeMap,
+                        propertyTypeMap.keys,
+                        mapOf(entitySetId to propertyTypeMap.keys),
+                        mapOf(),
+                        setOf(),
+                        version,
+                        propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap(),
+                        true,
+                        true
                 )
         )
     }
 
     @Test
     fun testEmptySelectEntitySets() {
-        logger.info(selectEntitySetWithCurrentVersionOfPropertyTypes(mapOf(), mapOf(), listOf(), mapOf(), mapOf(), setOf(), false, mapOf()))
+        logger.info(selectEntitySetWithCurrentVersionOfPropertyTypes(mapOf(), mapOf(), listOf(), mapOf(), mapOf(), setOf(), mapOf(), false, false))
     }
 
 
@@ -242,7 +260,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 .map(UUID::fromString)
                 .toSet()
         logger.info(
-                "Entity set query: {}",
+                "Entity set query:\n {}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
                         mapOf(entitySetId to Optional.empty()),
                         propertyTypeMap,
@@ -250,8 +268,9 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         mapOf(entitySetId to propertyTypeMap.keys),
                         mapOf(),
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
+                        propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap(),
                         false,
-                        propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
+                        false
                 )
         )
 //        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
@@ -298,8 +317,9 @@ class PostgresLinkedEntityDataQueryServiceTest {
                                 Optional.of(LocalDate.of(2000, 12, 31)),
                                 Optional.of(true)))),
                 setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
+                propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap(),
                 false,
-                propertyTypeMap.keys.map { it to (it == UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
+                false
         )
 
         logger.info(query)
@@ -350,7 +370,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 .map(UUID::fromString)
                 .toSet()
         logger.info(
-                "Entity set query: \n{}",
+                "Linking entity set query with entity set id: \n{}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
                         mapOf(entitySetId to Optional.of(entityKeyIds)),
                         propertyTypeMap,
@@ -358,8 +378,24 @@ class PostgresLinkedEntityDataQueryServiceTest {
                         mapOf(entitySetId to propertyTypeMap.keys),
                         mapOf(),
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
+                        propertyTypeMap.map { it.key to false }.toMap(),
                         true,
-                        propertyTypeMap.map { it.key to false }.toMap()
+                        false
+                )
+        )
+
+        logger.info(
+                "Linking entity set query without entity set id: \n{}",
+                selectEntitySetWithCurrentVersionOfPropertyTypes(
+                        mapOf(entitySetId to Optional.of(entityKeyIds)),
+                        propertyTypeMap,
+                        propertyTypeMap.keys,
+                        mapOf(entitySetId to propertyTypeMap.keys),
+                        mapOf(),
+                        setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
+                        propertyTypeMap.map { it.key to false }.toMap(),
+                        true,
+                        true
                 )
         )
     }

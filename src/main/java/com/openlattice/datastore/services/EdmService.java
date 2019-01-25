@@ -47,8 +47,8 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
@@ -87,7 +87,6 @@ import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySet
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
-import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -140,9 +139,6 @@ public class EdmService implements EdmManager {
 
     @Inject
     private EventBus eventBus;
-
-    @Inject
-    private EsEdmService esEdmService;
 
     public EdmService(
             HikariDataSource hds,
@@ -235,9 +231,7 @@ public class EdmService implements EdmManager {
 
         if ( dbRecord == null ) {
             propertyType.getSchemas().forEach( schemaManager.propertyTypesSchemaAdder( propertyType.getId() ) );
-
             edmManager.createPropertyTypeIfNotExist( propertyType );
-            esEdmService.createPropertyType( propertyType );
 
             eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         } else {
@@ -385,6 +379,12 @@ public class EdmService implements EdmManager {
         final EntitySet entitySet = Util.getSafely( entitySets, entitySetId );
         final EntityType entityType = getEntityType( entitySet.getEntityTypeId() );
 
+        // If this entity set is linked to a linking entity set, we need to collect all the linking ids of the entity
+        // set first in order to be able to reindex those, before entity data is unavailable
+        if( !entitySet.isLinking() ) {
+            checkAndRemoveEntitySetLinkings( entitySetId );
+        }
+
         /*
          * We cleanup permissions first as this will make entity set unavailable, even if delete fails.
          */
@@ -400,6 +400,25 @@ public class EdmService implements EdmManager {
         aclKeyReservations.release( entitySetId );
         syncIds.remove( entitySetId );
         eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
+        logger.info( "Entity set {}({}) deleted successfully", entitySet.getName(), entitySetId );
+    }
+
+    /**
+     * Checks and removes links if deleted entity set is linked to a linking entity set
+     *
+     * @param entitySetId the id of the deleted entity set
+     */
+    private void checkAndRemoveEntitySetLinkings( UUID entitySetId ) {
+        edmManager.getAllLinkingEntitySetsForEntitySet( entitySetId ).forEach(
+                linkingEntitySet -> {
+                    removeLinkedEntitySets( linkingEntitySet.getId(), Set.of( entitySetId ) );
+                    logger.info(
+                            "Removed link between linking entity set {}({}) and deleted entity set ({})",
+                            linkingEntitySet.getName(),
+                            linkingEntitySet.getId(),
+                            entitySetId );
+                }
+        );
     }
 
     @Override
@@ -407,29 +426,50 @@ public class EdmService implements EdmManager {
         return propertyTypes.keySet();
     }
 
-    @Override public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
-        final EntitySet entitySet = Util.getSafely( entitySets, linkingEntitySetId );
-        final int startSize = entitySet.getLinkedEntitySets().size();
-        entitySets.executeOnKey( linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( linkedEntitySets ) );
-        return entitySet.getLinkedEntitySets().size() - startSize;
+    @Override
+    public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
+        final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
+        final int startSize = linkingEntitySet.getLinkedEntitySets().size();
+        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+                linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
+
+        eventBus.post( new LinkedEntitySetAddedEvent(
+                updatedLinkingEntitySet,
+                newLinkedEntitySets,
+                Lists.newArrayList( getPropertyTypesForEntitySet( linkingEntitySetId ).values() ) ) );
+        return updatedLinkingEntitySet.getLinkedEntitySets().size() - startSize;
     }
 
-    @Override public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
-        final EntitySet entitySet = Util.getSafely( entitySets, linkingEntitySetId );
-        final int startSize = entitySet.getLinkedEntitySets().size();
-        entitySets.executeOnKey( linkingEntitySetId,
-                new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
-        return startSize - entitySet.getLinkedEntitySets().size();
+    @Override
+    public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
+        final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
+        final int startSize = linkingEntitySet.getLinkedEntitySets().size();
+        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+                linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
+
+        Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )
+                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+        Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = edmManager
+                .getLinkingIdsByEntitySetIds( updatedLinkingEntitySet.getLinkedEntitySets() );
+
+        eventBus.post( new LinkedEntitySetRemovedEvent(
+                linkingEntitySetId,
+                remainingLinkingIdsByEntitySetId,
+                removedLinkingIds ) );
+
+        return startSize - updatedLinkingEntitySet.getLinkedEntitySets().size();
     }
 
-    @Override public Set<EntitySet> getLinkedEntitySets( UUID entitySetId ) {
+    @Override
+    public Set<EntitySet> getLinkedEntitySets( UUID entitySetId ) {
         final EntitySet es = Util.getSafely( entitySets, entitySetId );
         return es == null
                 ? ImmutableSet.of()
                 : ImmutableSet.copyOf( entitySets.getAll( es.getLinkedEntitySets() ).values() );
     }
 
-    @Override public Set<UUID> getLinkedEntitySetIds( UUID entitySetId ) {
+    @Override
+    public Set<UUID> getLinkedEntitySetIds( UUID entitySetId ) {
         final EntitySet es = Util.getSafely( entitySets, entitySetId );
         return es == null ? ImmutableSet.of() : es.getLinkedEntitySets();
     }
@@ -443,13 +483,18 @@ public class EdmService implements EdmManager {
     @Override
     public void createEntitySet( Principal principal, EntitySet entitySet ) {
         EntityType entityType = entityTypes.get( entitySet.getEntityTypeId() );
+        ensureValidEntitySet( entitySet );
         createEntitySet( principal, entitySet, entityType.getProperties() );
     }
 
-    private SecurableObjectType getSecurableObjectType(
-            IMap<UUID, ? extends AbstractSecurableObject> objects,
-            UUID objectId ) {
-        return Util.getSafely( objects, objectId ).getCategory();
+    private void ensureValidEntitySet( EntitySet entitySet ) {
+        if ( entitySet.isLinking() ) {
+            entitySet.getLinkedEntitySets().forEach( linkedEntitySetId -> {
+                Preconditions.checkArgument(
+                        getEntityTypeByEntitySetId( linkedEntitySetId ).getId().equals( entitySet.getEntityTypeId() ),
+                        "Entity type of linked entity sets must be the same as of the linking entity set" );
+            } );
+        }
     }
 
     @Override
@@ -478,9 +523,7 @@ public class EdmService implements EdmManager {
             List<PropertyType> ownablePropertyTypes = Lists
                     .newArrayList( propertyTypes.getAll( ownablePropertyTypeIDs ).values() );
             edmManager.createEntitySet( entitySet, ownablePropertyTypes );
-            esEdmService.createEntitySet( entitySet, ownablePropertyTypes );
 
-            // No subscribers currently
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
 
         } catch ( Exception e ) {
@@ -742,6 +785,8 @@ public class EdmService implements EdmManager {
         final var propertyTags = entityTypes.get( entityTypeId ).getPropertyTags();
         childrenIdsToLocks.keySet().forEach( id -> {
             entityTypes.executeOnKey( id, new AddPropertyTypesToEntityTypeProcessor( propertyTypeIds ) );
+            List<PropertyType> allPropertyTypes = Lists.newArrayList(
+                    propertyTypes.getAll( getEntityType( id ).getProperties() ).values() );
 
             for ( EntitySet entitySet : edmManager.getAllEntitySetsForType( id ) ) {
                 UUID esId = entitySet.getId();
@@ -771,7 +816,15 @@ public class EdmService implements EdmManager {
                                         new EntitySetPropertyKey( aclKey.get( 0 ), aclKey.get( 1 ) ), defaultMetadata );
                             } );
                 }
+
+                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes ) );
+                eventBus.post( new PropertyTypesAddedToEntitySetEvent(
+                        entitySet.getId(),
+                        Lists.newArrayList( propertyTypes.values() ),
+                        ( entitySet.isLinking() )
+                                ? Optional.of( entitySet.getLinkedEntitySets() ) : Optional.empty() ) );
             }
+
             EntityType entityType = getEntityType( id );
             if ( !entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
                 eventBus.post( new EntityTypeCreatedEvent( entityType ) );
@@ -926,7 +979,8 @@ public class EdmService implements EdmManager {
         if ( update.getType().isPresent() ) {
             aclKeyReservations.renameReservation( propertyTypeId, update.getType().get() );
             edmManager.updatePropertyTypeFqn( propertyType, update.getType().get() );
-            esEdmService.createPropertyType( propertyType );
+
+            eventBus.post( new PropertyTypeCreatedEvent( propertyType ) );
         }
         propertyTypes.executeOnKey( propertyTypeId, new UpdatePropertyTypeMetadataProcessor( update ) );
         // get all entity sets containing the property type, and re-index them.
@@ -940,7 +994,7 @@ public class EdmService implements EdmManager {
                                     .post( new PropertyTypesInEntitySetUpdatedEvent( es.getId(), properties ) ) );
                 } );
 
-        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) );
+        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) ); // currently not picked up by anything
     }
 
     @Override

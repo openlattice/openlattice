@@ -21,8 +21,6 @@
 
 package com.openlattice.data.storage;
 
-import org.jetbrains.annotations.NotNull;
-
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */

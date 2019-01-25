@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.conductor.codecs.pods.TypeCodecsPod;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.openlattice.auth0.Auth0Pod;
@@ -41,7 +40,6 @@ import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.PostgresTablesPod;
-import com.openlattice.search.pods.ElasticSearchPod;
 import com.zaxxer.hikari.HikariDataSource;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -76,8 +74,7 @@ public class HzAuthzTest {
                 PostgresPod.class,
                 SharedStreamSerializersPod.class,
                 PostgresTablesPod.class,
-                NeuronPod.class,
-                ElasticSearchPod.class
+                NeuronPod.class
         );
 
         testServer.sprout( ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,
@@ -94,7 +91,8 @@ public class HzAuthzTest {
                 testServer.getContext().getBean( EventBus.class )
         );
         final var tableManager = testServer.getContext().getBean( PostgresTableManager.class );
-        testServer.getContext().getBean( EventBus.class ).register( new PostgresEdmManager( hds, tableManager ) );
+        testServer.getContext().getBean( EventBus.class )
+                .register( new PostgresEdmManager( hds, tableManager, hazelcastInstance ) );
     }
 
     @Test
