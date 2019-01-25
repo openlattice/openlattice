@@ -59,16 +59,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
@@ -316,7 +307,7 @@ public class DataController implements DataApi, AuthorizingComponent {
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public List<UUID> createEntities(
             @RequestParam( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestBody List<SetMultimap<UUID, Object>> entities ) {
+            @RequestBody List<Map<UUID, Set<Object>>> entities ) {
         //Ensure that we have read access to entity set metadata.
         ensureReadAccess( new AclKey( entitySetId ) );
         //Load authorized property types
@@ -382,12 +373,12 @@ public class DataController implements DataApi, AuthorizingComponent {
             final UUID entitySetId = association.getKey();
             if ( partial ) {
                 return dgm.partialReplaceEntities( entitySetId,
-                        transformValues( association.getValue(), dataEdge -> Multimaps.asMap( dataEdge.getData() ) ),
+                        transformValues( association.getValue(), DataEdge::getData ),
                         authorizedPropertyTypes );
             } else {
 
                 return dgm.replaceEntities( entitySetId,
-                        transformValues( association.getValue(), assoc -> Multimaps.asMap( assoc.getData() ) ),
+                        transformValues( association.getValue(), DataEdge::getData ),
                         authorizedPropertyTypes );
             }
         } ).sum();
@@ -455,26 +446,39 @@ public class DataController implements DataApi, AuthorizingComponent {
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITIES },
             method = RequestMethod.DELETE )
     public Integer clearAllEntitiesFromEntitySet( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
-        ensureOwnerAccess( new AclKey( entitySetId ) );
-        final EntitySet entitySet = edmService.getEntitySet( entitySetId );
-        if ( entitySet.isLinking() ) {
-            throw new ForbiddenException( "You cannot clear all data from a linked entity set." );
-        }
-
-        final EntityType entityType = edmService.getEntityType( entitySet.getEntityTypeId() );
-        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.OWNER ) );
-        if ( !authorizedPropertyTypes.keySet().containsAll( entityType.getProperties() ) ) {
-            throw new ForbiddenException(
-                    "You must be an owner of all entity set properties to clear the entity set data." );
-        }
-
+        final Map<UUID, PropertyType> authorizedPropertyTypes =
+                getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
         return dgm.clearEntitySet( entitySetId, authorizedPropertyTypes );
     }
 
-    @Override public Integer deleteEntityProperties(
-            UUID entitySetId, Map<UUID, Map<UUID, Set<ByteBuffer>>> entityProperties ) {
-        return null;
+    @Override
+    @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH } )
+    public Integer deleteEntity(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
+        final Map<UUID, PropertyType> authorizedPropertyTypes =
+                getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
+        return dgm.deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes );
+    }
+
+    @Override
+    @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH } )
+    public Integer deleteEntities(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @RequestBody Set<UUID> entityKeyIds ) {
+        final Map<UUID, PropertyType> authorizedPropertyTypes =
+                getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
+        return dgm.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
+    }
+
+    @Override
+    public Integer deleteEntityProperties(
+            @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
+            @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
+            @RequestBody Set<UUID> propertyTypeIds ) {
+        final Map<UUID, PropertyType> authorizedPropertyTypes =
+                getAuthorizedPropertyTypesForDelete( entitySetId, Optional.of( propertyTypeIds ) );
+        return dgm.deleteEntityProperties( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes );
     }
 
     @Override
@@ -670,6 +674,28 @@ public class DataController implements DataApi, AuthorizingComponent {
             return dgm.getEntity( entitySetId, entitySetId, authorizedPropertyTypes )
                     .get( propertyTypeFqn );
         }
+    }
+
+
+    private Map<UUID, PropertyType> getAuthorizedPropertyTypesForDelete(
+            UUID entitySetId,
+            Optional<Set<UUID>> properties ) {
+        ensureOwnerAccess( new AclKey( entitySetId ) );
+        final EntitySet entitySet = edmService.getEntitySet( entitySetId );
+        if ( entitySet.isLinking() ) {
+            throw new IllegalArgumentException( "You cannot delete entities from a linking entity set." );
+        }
+
+        final EntityType entityType = edmService.getEntityType( entitySet.getEntityTypeId() );
+        final Set<UUID> requiredProperties = properties.orElse( entityType.getProperties() );
+        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.OWNER ) );
+        if ( !authorizedPropertyTypes.keySet().containsAll( requiredProperties ) ) {
+            throw new ForbiddenException(
+                    "You must be an owner of all required entity set properties to delete entities from it." );
+        }
+
+        return authorizedPropertyTypes;
     }
 
     /**
