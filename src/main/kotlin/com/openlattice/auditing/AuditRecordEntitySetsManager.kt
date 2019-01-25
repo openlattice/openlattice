@@ -54,9 +54,11 @@ class AuditRecordEntitySetsManager(
     )
 
     fun createAuditEntitySetForEntitySet(principal: Principal, entitySetId: UUID) {
-        val auditedEntitySet = edm.getEntitySet(entitySetId)
-        val name = auditedEntitySet.name
-        createAuditEntitySet(principal, name, entitySetId, auditedEntitySet.contacts)
+        if( auditingTypes.initialized ) {
+            val auditedEntitySet = edm.getEntitySet(entitySetId)
+            val name = auditedEntitySet.name
+            createAuditEntitySet(principal, name, entitySetId, auditedEntitySet.contacts)
+        }
 
     }
 
