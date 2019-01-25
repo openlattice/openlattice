@@ -400,6 +400,10 @@ public interface EdmApi {
     @GET( ENTITY_SETS_BASE_PATH + ID_PATH )
     EntitySet getEntitySet( @Path( ID ) UUID entitySetId );
 
+    /**
+     * Hard deletes the entity set
+     * @param entitySetId the ID for the entity set
+     */
     @DELETE( ENTITY_SETS_BASE_PATH + ID_PATH )
     Void deleteEntitySet( @Path( ID ) UUID entitySetId );
 

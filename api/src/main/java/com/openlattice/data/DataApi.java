@@ -32,13 +32,11 @@ import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 public interface DataApi {
     // @formatter:off
@@ -213,11 +211,36 @@ public interface DataApi {
             @Path( ENTITY_KEY_ID ) UUID vertexEntityKeyId
     );
 
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Integer deleteEntityProperties(
+    /**
+     * Hard deletes a single entity from an entity set.
+     *
+     * @param entitySetId The id of the entity set to delete from.
+     * @param entityKeyId The id of the entity to delete.
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    Integer deleteEntity( @Path( ENTITY_SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
 
+    /**
+     * Hard deletes multiple entities from an entity set.
+     *
+     * @param entitySetId  The id of the entity set to delete from.
+     * @param entityKeyIds The ids of the entities to delete.
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    Integer deleteEntities( @Path( ENTITY_SET_ID ) UUID entitySetId, @Body Set<UUID> entityKeyIds );
+
+    /**
+     * Hard deletes properties from an entity.
+     * @param entitySetId The id of the entitySet to delete from.
+     * @param entityKeyId The id of the entity to delete from.
+     * @param propertyTypeIds The property type ids to be deleted.
+     * @return the number of deleted property values
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH  )
+    Integer deleteEntityProperties(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<UUID, Map<UUID, Set<ByteBuffer>>> entityProperties );
+            @Path( ENTITY_KEY_ID ) UUID entityKeyId,
+            @Body Set<UUID> propertyTypeIds );
 
     /**
      * Replaces a single entity from an entity set.
