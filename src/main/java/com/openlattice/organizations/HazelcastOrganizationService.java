@@ -48,6 +48,7 @@ import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.organizations.processors.*;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.mapstores.AppConfigMapstore;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import org.slf4j.Logger;
@@ -239,7 +240,7 @@ public class HazelcastOrganizationService {
         securePrincipalsManager.deletePrincipal( aclKey );
         allMaps.stream().forEach( m -> m.delete( organizationId ) );
         reservations.release( organizationId );
-        appConfigs.removeAll( Predicates.equal( "__key#organizationId", organizationId ) );
+        appConfigs.removeAll( Predicates.equal( AppConfigMapstore.ORGANIZATION_ID, organizationId ) );
         eventBus.post( new OrganizationDeletedEvent( organizationId ) );
     }
 
