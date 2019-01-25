@@ -89,6 +89,10 @@ interface DataGraphManager {
 
     fun deleteAssociation(key: Set<EdgeKey>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
 
+    fun deleteEntityProperties(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int
+
     /*
      * Bulk endpoints for entities/associations
      */

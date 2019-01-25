@@ -46,6 +46,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -485,23 +486,23 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
         return entities.entrySet().stream().map(
-                entity ->
-                        createData(
-                                entitySetId,
-                                authorizedPropertyTypes,
-                                entity.getKey(),
-                                entity.getValue() ) );
-
+                entity -> {
+                    // Get an id for this object
+                    final UUID id = idService.getEntityKeyId( entitySetId, entity.getKey() );
+                    return createData(
+                            entitySetId,
+                            authorizedPropertyTypes,
+                            id,
+                            entity.getValue() );
+                } );
     }
 
-    /*creating
-
-     */
+    /* creating */
     @Timed
     public UUID createData(
             UUID entitySetId,
             Map<UUID, PropertyType> authorizedPropertyTypes,
-            String entityId,
+            UUID entityKeyId,
             SetMultimap<UUID, Object> entityDetails ) {
         //TODO: Keep full local copy of PropertyTypes EDM
         Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType = transformValues( authorizedPropertyTypes,
@@ -513,7 +514,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         if ( !authorizedProperties.containsAll( entityDetails.keySet() ) ) {
             String msg = String
                     .format( "Entity %s not written because the following properties are not authorized: %s",
-                            entityId,
+                            entityKeyId,
                             Sets.difference( entityDetails.keySet(), authorizedProperties ) );
             logger.error( msg );
             throw new ForbiddenException( msg );
@@ -525,22 +526,19 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                     authorizedPropertiesWithDataType );
         } catch ( Exception e ) {
             logger.error( "Entity {} not written because some property values are of invalid format.",
-                    entityId,
+                    entityKeyId,
                     e );
             return null;
         }
 
-        //Get an id for this object and write that data.
-        //TODO: Push the getting id layer up.
-        final UUID id = idService.getEntityKeyId( entitySetId, entityId );
-        final EntityDataKey edk = new EntityDataKey( entitySetId, id );
+        // write the data
         dataQueryService.upsertEntities( entitySetId,
-                ImmutableMap.of( id, Multimaps.asMap( normalizedPropertyValues ) ),
+                ImmutableMap.of( entityKeyId, Multimaps.asMap( normalizedPropertyValues ) ),
                 authorizedPropertyTypes );
         signalCreatedEntities( entitySetId,
                 dataQueryService.getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, ImmutableSet
-                        .of( id ) ) );
-        return id;
+                        .of( entityKeyId ) ) );
+        return entityKeyId;
     }
 
     /**
@@ -568,10 +566,33 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Set<UUID> entityKeyIds,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
-        int deleteCount = dataQueryService.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
+        int deletePropertyCount = dataQueryService
+                .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
+        int deleteCount = dataQueryService.deleteEntities( entitySetId, entityKeyIds );
         signalDeletedEntities( entitySetId, entityKeyIds );
 
+        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows and {} property data",
+                entityKeyIds, entitySetId, deleteCount, deletePropertyCount );
+
         return deleteCount;
+    }
+
+    public int deleteEntityProperties(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        int deletePropertyCount = dataQueryService
+                .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
+        // same as if we updated the entities
+        signalCreatedEntities( entitySetId, dataQueryService
+                .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entityKeyIds )  );
+
+        logger.info( "Finished deletion of properties ( {} ) from entity set {} and ( {} ) entities. Deleted {} rows " +
+                        "of property data",
+                authorizedPropertyTypes.values().stream().map( PropertyType::getType ).collect( Collectors.toSet() ),
+                entitySetId, entityKeyIds, deletePropertyCount );
+
+        return deletePropertyCount;
     }
 
     public static SetMultimap<Object, Object> fromEntityDataValue(

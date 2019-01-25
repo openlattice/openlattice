@@ -450,7 +450,7 @@ class PostgresEntityDataQueryService(
         return tombstone(entitySetId, entityKeyIds)
     }
 
-    fun deleteEntities(
+    fun deleteEntityData(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         val connection = hds.connection
@@ -525,7 +525,16 @@ class PostgresEntityDataQueryService(
 
     fun deleteEntitySet(entitySetId: UUID): Int {
         return hds.connection.use {
-            val s = it.prepareStatement(deleteEntitiesOfEntitySet(entitySetId))
+            val s = it.prepareStatement(deleteEntityKeys(entitySetId))
+            s.executeUpdate()
+        }
+    }
+
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
+        return hds.connection.use {
+            val s = it.prepareStatement(deleteEntityKeys(entitySetId, entityKeyIds))
+            val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
+            s.setArray(1, arr)
             s.executeUpdate()
         }
     }
@@ -744,11 +753,11 @@ fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID): String 
     ) + " WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
 }
 
-fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
-    return deleteEntitiesOfEntitySet(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+fun deleteEntityKeys(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
+    return deleteEntityKeys(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
 }
 
-fun deleteEntitiesOfEntitySet(entitySetId: UUID): String {
+fun deleteEntityKeys(entitySetId: UUID): String {
     return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
