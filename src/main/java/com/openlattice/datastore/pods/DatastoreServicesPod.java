@@ -123,8 +123,7 @@ public class DatastoreServicesPod {
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
 
-    @Inject
-    private AuditRecordEntitySetsManager aresManager;
+
 
     @Bean
     public PostgresUserApi pgUserApi() {
