@@ -23,14 +23,7 @@ import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import retrofit2.http.Body;
-import retrofit2.http.DELETE;
-import retrofit2.http.GET;
-import retrofit2.http.PATCH;
-import retrofit2.http.POST;
-import retrofit2.http.PUT;
-import retrofit2.http.Path;
-import retrofit2.http.Query;
+import retrofit2.http.*;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -219,7 +212,7 @@ public interface DataApi {
      * @param entitySetId  The id of the entity set to delete from.
      * @param entityKeyIds The ids of the entities to delete.
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + HARD )
+    @HTTP( method = "DELETE", path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + HARD, hasBody = true )
     Integer deleteEntities( @Path( ENTITY_SET_ID ) UUID entitySetId, @Body Set<UUID> entityKeyIds );
 
     /**
@@ -230,7 +223,11 @@ public interface DataApi {
      * @param propertyTypeIds The property type ids to be deleted.
      * @return the number of deleted property values
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES + "/" + HARD )
+    @HTTP(
+            method = "DELETE",
+            path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES + "/" + HARD,
+            hasBody = true
+    )
     Integer deleteEntityProperties(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
