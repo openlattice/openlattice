@@ -681,7 +681,8 @@ public class DataController implements DataApi, AuthorizingComponent {
         final EntityType entityType = edmService.getEntityType( entitySet.getEntityTypeId() );
         final Set<UUID> requiredProperties = properties.orElse( entityType.getProperties() );
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.OWNER ) );
+                .getAuthorizedPropertyTypes( ImmutableSet.of(entitySetId), requiredProperties, EnumSet.of( Permission.OWNER ) )
+                .get(entitySetId);
         if ( !authorizedPropertyTypes.keySet().containsAll( requiredProperties ) ) {
             throw new ForbiddenException(
                     "You must be an owner of all required entity set properties to delete entities from it." );
