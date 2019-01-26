@@ -238,32 +238,35 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         // It makes more sense to mark them, instead of explicitly calling re-index, since an update event
         // affects all the linking entity sets, where that linking id is present
         Map<UUID, Set<UUID>> linkingIds = dataQueryService.getLinkingIds( Map.of( entitySetId, entityKeyIds ) );
-        Map<UUID, Set<UUID>> entityKeyIdsOfLinkingIds = dataQueryService
-                .getEntityKeyIdsOfLinkingIds(
-                        linkingIds.values().stream().flatMap( Set::stream ).collect( Collectors.toSet( ) ) )
-                .stream().collect( Collectors.toMap(
-                        Pair::getLeft,
-                        Pair::getRight
-                ) );
 
-        Map<Boolean, List<Map.Entry<UUID, Set<UUID>>>> groupedEntityKeyIdsOfLinkingIds = entityKeyIdsOfLinkingIds
-                .entrySet().stream()
-                .collect( Collectors.groupingBy( idsOfLinkingId -> idsOfLinkingId.getValue().isEmpty() ) );
+        if(!linkingIds.isEmpty()) {
+            Map<UUID, Set<UUID>> entityKeyIdsOfLinkingIds = dataQueryService
+                    .getEntityKeyIdsOfLinkingIds(
+                            linkingIds.values().stream().flatMap( Set::stream ).collect( Collectors.toSet() ) )
+                    .stream().collect( Collectors.toMap(
+                            Pair::getLeft,
+                            Pair::getRight
+                    ) );
 
-        // delete
-        if ( groupedEntityKeyIdsOfLinkingIds.get( true ) != null ) {
-            Set<UUID> deletedLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( true ).stream()
-                    .map( Map.Entry::getKey ).collect( Collectors.toSet() );
-            Set<UUID> linkingEntitySetIds = dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
-                    .stream().collect( Collectors.toSet() );
-            eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
-        }
+            Map<Boolean, List<Map.Entry<UUID, Set<UUID>>>> groupedEntityKeyIdsOfLinkingIds = entityKeyIdsOfLinkingIds
+                    .entrySet().stream()
+                    .collect( Collectors.groupingBy( idsOfLinkingId -> idsOfLinkingId.getValue().isEmpty() ) );
 
-        // reindex
-        if ( groupedEntityKeyIdsOfLinkingIds.get( false ) != null ) {
-            Set<UUID> dirtyLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( false ).stream()
-                    .map( Map.Entry::getKey ).collect( Collectors.toSet() );
-            pdm.markLinkingIdsAsNeedToBeIndexed( dirtyLinkingIds );
+            // delete
+            if ( groupedEntityKeyIdsOfLinkingIds.get( true ) != null ) {
+                Set<UUID> deletedLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( true ).stream()
+                        .map( Map.Entry::getKey ).collect( Collectors.toSet() );
+                Set<UUID> linkingEntitySetIds = dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+                        .stream().collect( Collectors.toSet() );
+                eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
+            }
+
+            // reindex
+            if ( groupedEntityKeyIdsOfLinkingIds.get( false ) != null ) {
+                Set<UUID> dirtyLinkingIds = groupedEntityKeyIdsOfLinkingIds.get( false ).stream()
+                        .map( Map.Entry::getKey ).collect( Collectors.toSet() );
+                pdm.markLinkingIdsAsNeedToBeIndexed( dirtyLinkingIds );
+            }
         }
     }
 
