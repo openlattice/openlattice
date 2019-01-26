@@ -443,7 +443,7 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Override
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITIES },
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
             method = RequestMethod.DELETE )
     public Integer clearAllEntitiesFromEntitySet( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
         final Map<UUID, PropertyType> authorizedPropertyTypes =
@@ -452,7 +452,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
-    @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH } )
+    @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + HARD } )
     public Integer deleteEntity(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId ) {
@@ -462,7 +462,7 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
-    @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH } )
+    @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + HARD } )
     public Integer deleteEntities(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds ) {
@@ -472,6 +472,8 @@ public class DataController implements DataApi, AuthorizingComponent {
     }
 
     @Override
+    @DeleteMapping(
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES + "/" + HARD } )
     public Integer deleteEntityProperties(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
