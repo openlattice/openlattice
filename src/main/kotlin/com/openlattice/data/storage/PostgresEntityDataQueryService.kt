@@ -542,7 +542,7 @@ class PostgresEntityDataQueryService(
 
 
     fun selectPropertyOfEntityInS3(propertyTable: String, fqnColumn: String, entitySetId: UUID): String {
-        return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+        return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid AND id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
     }
 
     fun selectPropertiesInEntitySetInS3(propertyTable: String, fqnColumn: String, entitySetId: UUID): String {
