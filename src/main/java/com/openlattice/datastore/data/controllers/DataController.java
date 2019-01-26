@@ -481,16 +481,6 @@ public class DataController implements DataApi, AuthorizingComponent {
         return dgm.deleteEntityProperties( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes );
     }
 
-    @Override
-    @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
-            method = RequestMethod.DELETE )
-    public Integer clearEntitySet( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
-        ensureOwnerAccess( new AclKey( entitySetId ) );
-        return dgm
-                .clearEntitySet( entitySetId, authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
-    }
-
     @Timed
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS },
