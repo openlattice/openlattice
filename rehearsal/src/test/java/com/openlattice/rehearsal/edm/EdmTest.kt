@@ -21,24 +21,16 @@
 
 package com.openlattice.rehearsal.edm
 
-import com.google.common.collect.LinkedHashMultimap
-import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.client.RetrofitFactory
-import com.openlattice.edm.EdmApi
 import com.openlattice.edm.type.AssociationType
-import com.openlattice.edm.type.EntityType
-import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.rehearsal.GeneralException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
 import java.util.UUID
-import org.junit.Rule
 import java.util.*
 import kotlin.collections.LinkedHashSet
-import org.junit.rules.ExpectedException
 import java.lang.reflect.UndeclaredThrowableException
 
 
@@ -53,15 +45,18 @@ const val PERSON_NAME = "person"
 const val PERSON_GIVEN_NAME_NAMESPACE = "nc"
 const val PERSON_GIVEN_NAME_NAME = "PersonGivenName"
 
-class EdmTest : MultipleAuthenticatedUsersBase() {
-    private val PERSON_NAMESPACE = "general"
-    private val PERSON_NAME = "person"
+const val PERSON_MIDDLE_NAME_NAMESPACE = "nc"
+const val PERSON_MIDDLE_NAME_NAME = "PersonMiddleName"
 
+
+class EdmTest : MultipleAuthenticatedUsersBase() {
     companion object {
         @JvmStatic @BeforeClass fun init() {
             loginAs("admin")
         }
     }
+
+    private val numberOfEntries = 10
 
     @Test
     fun testAddAndRemoveLinkedEntitySets() {
@@ -147,5 +142,34 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
             val actualId = edmApi.getEntityTypeId(FullQualifiedName( it ))
             Assert.assertEquals( expectedId, actualId )
         }
+    }
+
+    @Test
+    fun testDeleteEntitySet() {
+        val personEntityTypeId = edmApi.getEntityTypeId(com.openlattice.rehearsal.edm.PERSON_NAMESPACE, com.openlattice.rehearsal.edm.PERSON_NAME)
+        val personEt = edmApi.getEntityType(personEntityTypeId)
+
+        val es1 = createEntitySet(personEt)
+        val linkedEs = createEntitySet(personEt, true, setOf(es1.id))
+
+        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
+        val entries = (1..numberOfEntries)
+                .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
+        dataApi.createEntities(es1.id, entries)
+
+        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es1.id))
+
+        edmApi.deleteEntitySet(es1.id)
+
+        try {
+            edmApi.getEntitySet(es1.id)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch( e: UndeclaredThrowableException ) {
+            Assert.assertTrue( e.undeclaredThrowable.message!!
+                    .contains("Object [${es1.id}] is not accessible.", true ) )
+        }
+
+        val updatedLinkedEs = edmApi.getEntitySet(linkedEs.id)
+        Assert.assertTrue(updatedLinkedEs.linkedEntitySets.isEmpty())
     }
 }
