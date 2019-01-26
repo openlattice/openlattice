@@ -146,12 +146,13 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(DELETE_BY_VERTICES_SQL)
+            val arr = PostgresArrays.createUuidArray(it, vertices)
             ps.setObject(1, entitySetId)
-            ps.setObject(2, vertices)
+            ps.setObject(2, arr)
             ps.setObject(3, entitySetId)
-            ps.setObject(4, vertices)
+            ps.setObject(4, arr)
             ps.setObject(5, entitySetId)
-            ps.setObject(6, vertices)
+            ps.setObject(6, arr)
             return ps.executeUpdate()
         }
     }
