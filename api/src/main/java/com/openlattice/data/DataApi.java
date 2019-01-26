@@ -54,7 +54,8 @@ public interface DataApi {
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
-    String ENTITIES              = "entities";
+    String HARD                  = "hard";
+    String PROPERTIES            = "properties";
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
     String S3_URL                = "s3Url";
@@ -175,14 +176,6 @@ public interface DataApi {
     DataGraphIds createEntityAndAssociationData( @Body DataGraph data );
 
     /**
-     * Clears the data from a single entity set.
-     *
-     * @param entitySetId The id of the entity set to delete from.
-     */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Integer clearEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId );
-
-    /**
      * Clears a single entity from an entity set.
      *
      * @param entitySetId The id of the entity set to delete from.
@@ -196,7 +189,7 @@ public interface DataApi {
      *
      * @param entitySetId The id of the entity set to delete from.
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITIES )
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
     Integer clearAllEntitiesFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId );
 
     /**
@@ -217,7 +210,7 @@ public interface DataApi {
      * @param entitySetId The id of the entity set to delete from.
      * @param entityKeyId The id of the entity to delete.
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + HARD )
     Integer deleteEntity( @Path( ENTITY_SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
 
     /**
@@ -226,17 +219,18 @@ public interface DataApi {
      * @param entitySetId  The id of the entity set to delete from.
      * @param entityKeyIds The ids of the entities to delete.
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + HARD )
     Integer deleteEntities( @Path( ENTITY_SET_ID ) UUID entitySetId, @Body Set<UUID> entityKeyIds );
 
     /**
      * Hard deletes properties from an entity.
-     * @param entitySetId The id of the entitySet to delete from.
-     * @param entityKeyId The id of the entity to delete from.
+     *
+     * @param entitySetId     The id of the entitySet to delete from.
+     * @param entityKeyId     The id of the entity to delete from.
      * @param propertyTypeIds The property type ids to be deleted.
      * @return the number of deleted property values
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH  )
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES + "/" + HARD )
     Integer deleteEntityProperties(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
