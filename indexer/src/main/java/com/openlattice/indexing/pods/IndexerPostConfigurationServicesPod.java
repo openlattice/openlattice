@@ -85,10 +85,8 @@ public class IndexerPostConfigurationServicesPod {
     @Inject
     private AuthorizationManager authz;
 
-    @Bean
-    public ConductorElasticsearchApi elasticsearchApi() throws IOException {
-        return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
-    }
+    @Inject
+    private ConductorElasticsearchApi elasticsearchApi;
 
     @Bean
     public HazelcastIdGenerationService idGeneration() {
@@ -120,7 +118,7 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundIndexingService( hikariDataSource,
                 hazelcastInstance,
                 dataQueryService(),
-                elasticsearchApi(),
+                elasticsearchApi,
                 postgresDataManager() );
     }
 
@@ -129,7 +127,7 @@ public class IndexerPostConfigurationServicesPod {
         return new BackgroundLinkingIndexingService(
                 hikariDataSource,
                 entityDatastore(),
-                elasticsearchApi(),
+                elasticsearchApi,
                 postgresDataManager(),
                 hazelcastInstance );
     }
@@ -141,7 +139,7 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public Blocker blocker() throws IOException {
-        return new ElasticsearchBlocker( elasticsearchApi(), dataQueryService(), dataLoader(), hazelcastInstance );
+        return new ElasticsearchBlocker( elasticsearchApi, dataQueryService(), dataLoader(), hazelcastInstance );
     }
 
     @Bean
@@ -177,6 +175,6 @@ public class IndexerPostConfigurationServicesPod {
                 lqs(),
                 authz,
                 edm,
-                lc);
+                lc );
     }
 }
