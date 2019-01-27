@@ -419,7 +419,7 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Override
     @RequestMapping(
-            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
+            path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL },
             method = RequestMethod.DELETE )
     public Integer deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
