@@ -435,7 +435,7 @@ class PostgresEntityDataQueryService(
         return tombstone(entitySetId) + tombstone(entitySetId, authorizedPropertyTypes.values)
     }
 
-    /**int
+    /**
      * Tombstones (writes a negative version) for the provided entities.
      * @param entitySetId The entity set to operate on.
      * @param entityKeyIds The entity key ids to tombstone.
@@ -450,26 +450,39 @@ class PostgresEntityDataQueryService(
         return tombstone(entitySetId, entityKeyIds)
     }
 
-    fun deleteEntities(
+    /**int
+     * Tombstones (writes a negative version) for the provided entity properties.
+     * @param entitySetId The entity set to operate on.
+     * @param entityKeyIds The entity key ids to tombstone.
+     * @param authorizedPropertyTypes The property types the user is requested and is allowed to tombstone. We assume
+     * that authorization checks are enforced at a higher level and that this just streamlines issuing the necessary
+     * queries.
+     */
+    fun clearEntityData(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int {
+        return tombstone(entitySetId, entityKeyIds, authorizedPropertyTypes.values)
+    }
+
+    fun deleteEntityData(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         val connection = hds.connection
         return connection.use {
-            return authorizedPropertyTypes
-                    .map {
-                        val ps = connection.prepareStatement(deletePropertiesOfEntities(entitySetId, it.key))
-                        var propertyEntry = it
-                        entityKeyIds.forEach {
-                            ps.setObject(1, it)
-                            ps.addBatch()
-                            if (propertyEntry.value.datatype == EdmPrimitiveTypeKind.Binary) {
-                                val propertyTable = quote(propertyTableName(propertyEntry.key))
-                                val fqn = propertyEntry.value.type.toString()
-                                val fqnColumn = quote(fqn)
-                                deletePropertyOfEntityFromS3(propertyTable, fqn, fqnColumn, entitySetId, it)
-                            }
+            authorizedPropertyTypes
+                    .map { property ->
+                        if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
+                            val propertyTable = quote(propertyTableName(property.key))
+                            val fqn = property.value.type.toString()
+                            val fqnColumn = quote(fqn)
+                            deletePropertyOfEntityFromS3(propertyTable, fqn, fqnColumn, entitySetId, entityKeyIds)
                         }
-                        val count: Int = ps.executeBatch().sum()
+
+                        val ps = it.prepareStatement(deletePropertiesOfEntities(entitySetId, property.key))
+                        val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
+                        ps.setArray(1, arr)
+
+                        val count = ps.executeUpdate()
                         ps.close()
                         count
                     }
@@ -496,10 +509,12 @@ class PostgresEntityDataQueryService(
         }
     }
 
-    fun deletePropertyOfEntityFromS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID) {
+    fun deletePropertyOfEntityFromS3(
+            propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyIds: Set<UUID>) {
         val connection = hds.connection
-        val ps = connection.prepareStatement(selectPropertyOfEntityInS3(propertyTable, fqn, fqnColumn, entitySetId, entityKeyId))
-        ps.setObject(1, entityKeyId)
+        val ps = connection.prepareStatement(selectPropertyOfEntityInS3(propertyTable, fqnColumn, entitySetId))
+        val arr = PostgresArrays.createUuidArray(connection, entityKeyIds)
+        ps.setObject(1, arr)
         val rs = ps.executeQuery()
         while (rs.next()) {
             byteBlobDataManager.deleteObject(rs.getString(fqn))
@@ -525,14 +540,23 @@ class PostgresEntityDataQueryService(
 
     fun deleteEntitySet(entitySetId: UUID): Int {
         return hds.connection.use {
-            val s = it.prepareStatement(deleteEntitiesOfEntitySet(entitySetId))
+            val s = it.prepareStatement(deleteEntitySetEntityKeys(entitySetId))
+            s.executeUpdate()
+        }
+    }
+
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
+        return hds.connection.use {
+            val s = it.prepareStatement(deleteEntityKeys(entitySetId))
+            val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
+            s.setArray(1, arr)
             s.executeUpdate()
         }
     }
 
 
-    fun selectPropertyOfEntityInS3(propertyTable: String, fqn: String, fqnColumn: String, entitySetId: UUID, entityKeyId: UUID): String {
-        return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    fun selectPropertyOfEntityInS3(propertyTable: String, fqnColumn: String, entitySetId: UUID): String {
+        return "SELECT $fqnColumn FROM $propertyTable WHERE ${PostgresColumn.ENTITY_SET_ID.name} = '$entitySetId'::uuid AND id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
     }
 
     fun selectPropertiesInEntitySetInS3(propertyTable: String, fqnColumn: String, entitySetId: UUID): String {
@@ -668,7 +692,7 @@ class PostgresEntityDataQueryService(
                             }
                         }
             }
-            return propertyTypePreparedStatements.values.map(PreparedStatement::executeBatch).map(IntArray::sum).sum()
+            propertyTypePreparedStatements.values.map(PreparedStatement::executeBatch).map(IntArray::sum).sum()
         }
     }
 
@@ -676,7 +700,7 @@ class PostgresEntityDataQueryService(
         val connection = hds.connection
         return connection.use {
             val ps = it.prepareStatement(updateAllEntityVersions(entitySetId, -System.currentTimeMillis()))
-            return ps.executeUpdate()
+            ps.executeUpdate()
         }
     }
 
@@ -688,7 +712,7 @@ class PostgresEntityDataQueryService(
                 ps.setObject(1, it)
                 ps.addBatch()
             }
-            return ps.executeBatch().sum()
+            ps.executeBatch().sum()
         }
     }
 }
@@ -735,20 +759,19 @@ fun updatePropertyValueVersion(entitySetId: UUID, propertyTypeId: UUID, version:
 
 fun deletePropertiesInEntitySet(entitySetId: UUID, propertyTypeId: UUID): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    return "DELETE FROM $propertyTable WHERE ${ENTITY_SET_ID.name} = '$entitySetId'::uuid "
+    return "DELETE FROM $propertyTable WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
 fun deletePropertiesOfEntities(entitySetId: UUID, propertyTypeId: UUID): String {
-    return deletePropertiesInEntitySet(
-            entitySetId, propertyTypeId
-    ) + " WHERE id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+    return deletePropertiesInEntitySet(entitySetId, propertyTypeId) +
+            " AND id in (SELECT * FROM UNNEST( (?)::uuid[] )) "
 }
 
-fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): String {
-    return deleteEntitiesOfEntitySet(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
+fun deleteEntityKeys(entitySetId: UUID): String {
+    return deleteEntitySetEntityKeys(entitySetId) + "AND ${ID.name} in (SELECT * FROM UNNEST( (?)::uuid[] )) "
 }
 
-fun deleteEntitiesOfEntitySet(entitySetId: UUID): String {
+fun deleteEntitySetEntityKeys(entitySetId: UUID): String {
     return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
