@@ -36,6 +36,8 @@ whitelist:
 #   - 51992ab5-c315-4696-be93-7780c29d490f #BerksRelcust
 
   # Only for rehearsal tests
-  - 91551726-afa2-4aee-8579-46cdfc610b97
+  - 91551726-afa2-4aee-8579-46cdfc610b97 #SocratesTestA
+  - 14b10482-31de-42ed-b5c8-6260d9f25e24 #SocratesTestB
   - 65847f7b-c939-414f-bb45-863cd594e412
   - 8c97bf63-ca7a-4f37-ba1c-40338b1032d4
+
