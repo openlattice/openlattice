@@ -133,24 +133,51 @@ public interface EntityDatastore {
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
      *
      * @param entitySetId The id of the entity set to clear.
-     * @param entityKeyId The entity key id for the entity set to clear.
-     * @return The number of properties cleared.
+     * @param entityKeyIds The entity key ids for the entity set to clear.
+     * @param authorizedPropertyTypes The property types the user is allowed to clear.
+     * @return The number of entities cleared.
      */
-    int clearEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
+    int clearEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
-     * Deletes an entity set and removes the historical contents. This causes loss of historical data
+     * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
+     *
+     * @param entitySetId The id of the entity set to clear.
+     * @param entityKeyIds The entity key ids for the entity set to clear.
+     * @param authorizedPropertyTypes The property types the user is requested and is allowed to clear.
+     * @return The number of properties cleared.
+     */
+    int clearEntityData( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Hard deletes an entity set and removes the historical contents. This causes loss of historical data
      * and should only be used for scrubbing customer data.
      *
-     * @param entitySetId The entity set id to be hard deleted.
+     * @param entitySetId             The id of the entity set to delete.
+     * @param authorizedPropertyTypes The authorized property types on this entity set. In this case all the property
+     *                                types for its entity type
      */
     int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
-     * Deletes an entity and removes the historical contents.
+     * Hard deletes entities and removes the historical contents.
      *
-     * @param entityKeyId The entity key id to be hard deleted.
+     * @param entitySetId             The id of the entity set from which to delete.
+     * @param entityKeyIds            The ids of entities to hard delete.
+     * @param authorizedPropertyTypes The authorized property types on this entity set. In this case all the property
+     *                                types for its entity type
+     * @return count of deletes
      */
-    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
+    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Hard deletes properties of entit and removes the historical contents.
+     *
+     * @param entitySetId             The id of the entity set from which to delete.
+     * @param entityKeyIds            The ids of entities to delete the data from.
+     * @param authorizedPropertyTypes The authorized property types to delete the data from.
+     */
+    int deleteEntityProperties(
+            UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
 }
