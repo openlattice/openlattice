@@ -168,22 +168,6 @@ public interface DataApi {
     @POST( BASE )
     DataGraphIds createEntityAndAssociationData( @Body DataGraph data );
 
-    /**
-     * Clears a single entity from an entity set.
-     *
-     * @param entitySetId The id of the entity set to delete from.
-     * @param entityKeyId The id of the entity to delete.
-     */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    Void clearEntityFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
-
-    /**
-     * Clears all entities from an entity set.
-     *
-     * @param entitySetId The id of the entity set to delete from.
-     */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Integer clearAllEntitiesFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId );
 
     /**
      * Clears the Entity matching the given Entity id and all of its neighbor Entities
@@ -198,40 +182,61 @@ public interface DataApi {
     );
 
     /**
-     * Hard deletes a single entity from an entity set.
+     * Deletes all entities from an entity set.
+     *
+     * @param entitySetId The id of the entity set to delete from.
+     * @param deleteType  The delete type to perform (soft or hard delete).
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    Integer deleteAllEntitiesFromEntitySet(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Query( TYPE ) DeleteType deleteType );
+
+    /**
+     * Deletes a single entity from an entity set.
      *
      * @param entitySetId The id of the entity set to delete from.
      * @param entityKeyId The id of the entity to delete.
+     * @param deleteType  The delete type to perform (soft or hard delete).
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + HARD )
-    Integer deleteEntity( @Path( ENTITY_SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    Integer deleteEntity(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Path( ENTITY_KEY_ID ) UUID entityKeyId,
+            @Query( TYPE ) DeleteType deleteType );
 
     /**
-     * Hard deletes multiple entities from an entity set.
+     * Deletes multiple entities from an entity set.
      *
      * @param entitySetId  The id of the entity set to delete from.
      * @param entityKeyIds The ids of the entities to delete.
+     * @param deleteType   The delete type to perform (soft or hard delete).
      */
-    @HTTP( method = "DELETE", path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + HARD, hasBody = true )
-    Integer deleteEntities( @Path( ENTITY_SET_ID ) UUID entitySetId, @Body Set<UUID> entityKeyIds );
+    @HTTP( method = "DELETE", path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH, hasBody = true )
+    Integer deleteEntities(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body Set<UUID> entityKeyIds,
+            @Query( TYPE ) DeleteType deleteType );
 
     /**
-     * Hard deletes properties from an entity.
+     * Deletes properties from an entity.
      *
      * @param entitySetId     The id of the entitySet to delete from.
      * @param entityKeyId     The id of the entity to delete from.
      * @param propertyTypeIds The property type ids to be deleted.
+     * @param deleteType      The delete type to perform (soft or hard delete).
      * @return the number of deleted property values
      */
     @HTTP(
             method = "DELETE",
-            path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES + "/" + HARD,
+            path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES,
             hasBody = true
     )
     Integer deleteEntityProperties(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
-            @Body Set<UUID> propertyTypeIds );
+            @Body Set<UUID> propertyTypeIds,
+            @Query( TYPE ) DeleteType deleteType );
 
     /**
      * Replaces a single entity from an entity set.
