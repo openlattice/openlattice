@@ -22,6 +22,7 @@
 package com.openlattice.rehearsal.data
 
 import com.google.common.collect.*
+import com.openlattice.data.DeleteType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.postgres.DataTables
@@ -80,8 +81,8 @@ class DataControllerLinkingTest : SetupTestData() {
             edmApi.getEntitySet(esId2)
         }
 
-        dataApi.clearAllEntitiesFromEntitySet(esId1)
-        dataApi.clearAllEntitiesFromEntitySet(esId2)
+        dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
+        dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
 
         val pt = createPropertyType()
         val et = createEntityType(pt.id)
@@ -141,8 +142,8 @@ class DataControllerLinkingTest : SetupTestData() {
             edmApi.getEntitySet(esId2)
         }
 
-        dataApi.clearAllEntitiesFromEntitySet(esId1)
-        dataApi.clearAllEntitiesFromEntitySet(esId2)
+        dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
+        dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
 
         val esLinked = createEntitySet(personEt, true, setOf(esId1, esId2))
 

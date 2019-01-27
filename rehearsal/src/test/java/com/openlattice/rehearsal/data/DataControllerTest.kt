@@ -27,6 +27,7 @@ import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
 import com.google.common.collect.Maps.transformValues
 import com.openlattice.data.DataEdge
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
@@ -403,7 +404,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
 
-        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]))
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
 
         val ess = EntitySetSelection(Optional.of(personEt.properties))
         val loadedEntries = dataApi.loadEntitySetData(es.id, ess, FileType.json).toList()
@@ -436,7 +437,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
 
         val entityId = newEntityIds[0]
-        dataApi.deleteEntityProperties(es.id, entityId, setOf(personGivenNamePropertyId))
+        dataApi.deleteEntityProperties(es.id, entityId, setOf(personGivenNamePropertyId), DeleteType.Hard)
 
         val loadedEntity = dataApi.getEntity(es.id, entityId)
 

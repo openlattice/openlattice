@@ -3,6 +3,7 @@ package com.openlattice.rehearsal.search
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Lists
 import com.google.common.collect.SetMultimap
+import com.openlattice.data.DeleteType
 import com.openlattice.data.UpdateType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
@@ -354,7 +355,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             })
         }
 
-        dataApi.clearEntityFromEntitySet(socratesBId, newBEntityIds.first()) // delete first entity with value newtestt
+        dataApi.deleteEntity(socratesBId, newBEntityIds.first(), DeleteType.Soft) // delete first entity with value newtestt
 
         Thread.sleep(10000L) // wait for linking to finish
         while (!checkLinkingFinished(importedEntitySets.keys)) {
@@ -377,7 +378,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             })
         }
 
-        dataApi.clearEntityFromEntitySet(socratesBId, newBEntityIds.last()) // delete last entity with value newtestt
+        dataApi.deleteEntity(socratesBId, newBEntityIds.last(), DeleteType.Soft) // delete last entity with value newtestt
         Thread.sleep(60000L) // wait for indexing to finish, we don't need to wait for linking here
 
         val result6 = searchApi.searchEntitySetData(simpleSearchConstraint)
