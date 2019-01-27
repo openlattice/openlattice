@@ -47,7 +47,7 @@ public interface DataApi {
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
-    String HARD                  = "hard";
+    String ALL                   = "all";
     String PROPERTIES            = "properties";
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
@@ -187,7 +187,7 @@ public interface DataApi {
      * @param entitySetId The id of the entity set to delete from.
      * @param deleteType  The delete type to perform (soft or hard delete).
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL )
     Integer deleteAllEntitiesFromEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Query( TYPE ) DeleteType deleteType );
