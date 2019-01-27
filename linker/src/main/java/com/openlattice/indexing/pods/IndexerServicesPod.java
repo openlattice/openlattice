@@ -62,7 +62,6 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
-import com.openlattice.search.EsEdmService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import javax.annotation.PostConstruct;
@@ -188,7 +187,7 @@ public class IndexerServicesPod {
 
     @Bean
     public PostgresEdmManager edmManager() {
-        return new PostgresEdmManager( hikariDataSource, tableManager );
+        return new PostgresEdmManager( hikariDataSource, tableManager, hazelcastInstance );
     }
 
     @Bean
@@ -204,11 +203,6 @@ public class IndexerServicesPod {
     @Bean
     public MailServiceRequirements mailServiceRequirements() {
         return () -> hazelcastInstance.getQueue( HazelcastQueue.EMAIL_SPOOL.name() );
-    }
-
-    @Bean
-    public EsEdmService esEdmService() throws IOException {
-        return new EsEdmService( elasticsearchApi() );
     }
 
     @Bean
