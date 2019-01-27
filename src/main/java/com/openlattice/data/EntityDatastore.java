@@ -133,10 +133,21 @@ public interface EntityDatastore {
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
      *
      * @param entitySetId The id of the entity set to clear.
-     * @param entityKeyId The entity key id for the entity set to clear.
+     * @param entityKeyIds The entity key ids for the entity set to clear.
+     * @param authorizedPropertyTypes The property types the user is allowed to clear.
+     * @return The number of entities cleared.
+     */
+    int clearEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
+     *
+     * @param entitySetId The id of the entity set to clear.
+     * @param entityKeyIds The entity key ids for the entity set to clear.
+     * @param authorizedPropertyTypes The property types the user is requested and is allowed to clear.
      * @return The number of properties cleared.
      */
-    int clearEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
+    int clearEntityData( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Hard deletes an entity set and removes the historical contents. This causes loss of historical data

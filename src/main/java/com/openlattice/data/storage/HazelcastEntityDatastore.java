@@ -315,6 +315,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return count;
     }
 
+    @Timed
+    @Override public int clearEntityData(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        final var count = dataQueryService.clearEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
+        // same as if we updated the entities
+        signalCreatedEntities( entitySetId, dataQueryService
+                .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entityKeyIds ) );
+        return count;
+    }
+
     @Override
     @Timed public EntitySetData<FullQualifiedName> getEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
@@ -588,7 +600,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         // same as if we updated the entities
         signalCreatedEntities( entitySetId, dataQueryService
-                .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entityKeyIds )  );
+                .getEntitiesByIdWithLastWrite( entitySetId, authorizedPropertyTypes, entityKeyIds ) );
 
         logger.info( "Finished deletion of properties ( {} ) from entity set {} and ( {} ) entities. Deleted {} rows " +
                         "of property data",

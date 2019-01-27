@@ -172,9 +172,7 @@ open class DataGraphService(
 
     /* Delete */
 
-    override fun clearEntitySet(
-            entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    override fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         return eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
     }
 
@@ -194,6 +192,15 @@ open class DataGraphService(
 
     override fun clearAssociations(key: Set<EdgeKey>): Int {
         return 0 // TODO
+    }
+
+    override fun clearEntityProperties(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int {
+        val propertyCount =  eds.clearEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        logger.info("Cleared properties {} of {} entities.",
+                authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount)
+        return propertyCount
     }
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
@@ -234,10 +241,10 @@ open class DataGraphService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        val entityCount = eds.deleteEntityProperties(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        val propertyCount = eds.deleteEntityProperties(entitySetId, entityKeyIds, authorizedPropertyTypes)
         logger.info("Deleted properties {} of {} entities.",
-                authorizedPropertyTypes.values.map(PropertyType::getType), entityCount)
-        return entityCount
+                authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount)
+        return propertyCount
     }
 
 

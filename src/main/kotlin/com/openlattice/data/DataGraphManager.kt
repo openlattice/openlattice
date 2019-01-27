@@ -80,6 +80,10 @@ interface DataGraphManager {
 
     fun clearAssociations(key: Set<EdgeKey>): Int
 
+    fun clearEntityProperties(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int
+
     //Hard deletes
     fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
 

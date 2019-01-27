@@ -435,7 +435,7 @@ class PostgresEntityDataQueryService(
         return tombstone(entitySetId) + tombstone(entitySetId, authorizedPropertyTypes.values)
     }
 
-    /**int
+    /**
      * Tombstones (writes a negative version) for the provided entities.
      * @param entitySetId The entity set to operate on.
      * @param entityKeyIds The entity key ids to tombstone.
@@ -448,6 +448,20 @@ class PostgresEntityDataQueryService(
         //TODO: Make these a single transaction.
         tombstone(entitySetId, entityKeyIds, authorizedPropertyTypes.values)
         return tombstone(entitySetId, entityKeyIds)
+    }
+
+    /**int
+     * Tombstones (writes a negative version) for the provided entity properties.
+     * @param entitySetId The entity set to operate on.
+     * @param entityKeyIds The entity key ids to tombstone.
+     * @param authorizedPropertyTypes The property types the user is requested and is allowed to tombstone. We assume
+     * that authorization checks are enforced at a higher level and that this just streamlines issuing the necessary
+     * queries.
+     */
+    fun clearEntityData(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int {
+        return tombstone(entitySetId, entityKeyIds, authorizedPropertyTypes.values)
     }
 
     fun deleteEntityData(
