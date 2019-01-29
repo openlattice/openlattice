@@ -1,6 +1,5 @@
-package com.openlattice.linking.feedback
+package com.openlattice.linking
 
-import com.openlattice.data.DataEdge
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PUT
@@ -26,5 +25,5 @@ interface LinkingFeedbackApi {
     fun getLinkingFeedbacks(): Iterable<EntityLinkingFeedback>
 
     @GET(BASE + FEEDBACK + ALL + FEATURES)
-    fun getLinkingFeedbacksWithFeatures(): Map<DataEdge, Boolean>
+    fun getLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures>
 }

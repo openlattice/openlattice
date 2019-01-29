@@ -115,6 +115,7 @@ public final class SerializationConstants {
     public static final String EXPIRATION                       = "expiration";
     public static final String EXPLANATION                      = "explanation";
     public static final String EXTERNAL                         = "external";
+    public static final String FEATURES                         = "features";
     public static final String FILTERS                          = "filters";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
@@ -137,7 +138,7 @@ public final class SerializationConstants {
     public static final String LINKED                           = "linked";
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
-    public static final String LINKING_ENTITY_SET_FIELD         = "linkingEntitySet";
+    public static final String LINKING_FEEDBACK                 = "linkingFeedback";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
