@@ -22,7 +22,6 @@
 package com.openlattice.auditing
 
 import com.openlattice.authorization.AclKey
-import com.openlattice.data.EntityDataKey
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -31,8 +30,8 @@ import java.util.*
  * front end.
  *
  * @param principal The user or securable principal that took the action.
- * @param aclKeys The acl keys of the securable objects involved.
- * @param entities The entities involvedin this auditable event.
+ * @param aclKey The acl key of the securable object involved in the event.
+ * @param entities The entities involved in this auditable event.
  * @param eventType The [AuditEventType] of this event.
  * @param description A description of the event.
  * @param data Represents additional data relevant to the event. Maybe properly indexed by ES in the future.
@@ -43,7 +42,7 @@ import java.util.*
  */
 data class AuditableEvent(
         val principal: UUID,
-        val aclKeys:AclKey,
+        val aclKey:AclKey,
         val eventType: AuditEventType,
         val description: String,
         val entities: Optional<Set<UUID>>,
