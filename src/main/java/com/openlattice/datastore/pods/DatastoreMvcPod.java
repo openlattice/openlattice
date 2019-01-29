@@ -23,7 +23,6 @@ package com.openlattice.datastore.pods;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.controllers.OrganizationsController;
 import com.openlattice.data.DataApi;
-import com.openlattice.data.controllers.EntitySetsController;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
 import com.openlattice.datastore.apps.controllers.AppController;
 import com.openlattice.datastore.authorization.controllers.AuthorizationsController;
@@ -37,6 +36,7 @@ import com.openlattice.datastore.search.controllers.PersistentSearchController;
 import com.openlattice.datastore.search.controllers.SearchController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.graph.controllers.GraphController;
+import com.openlattice.linking.feedback.LinkingFeedbackController;
 import com.openlattice.web.converters.CsvHttpMessageConverter;
 import com.openlattice.web.converters.YamlHttpMessageConverter;
 import com.openlattice.web.mediatypes.CustomMediaType;
@@ -64,8 +64,9 @@ import java.util.List;
                 PrincipalDirectoryController.class,
                 EdmController.class, OrganizationsController.class,
                 DataStoreExceptionHandler.class, LinkingController.class, AnalysisController.class,
-                RequestsController.class, AppController.class, GraphController.class, EntitySetsController.class,
-                PersistentSearchController.class },
+                RequestsController.class, AppController.class, GraphController.class, PersistentSearchController.class,
+                LinkingFeedbackController.class
+        },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,
                         org.springframework.web.bind.annotation.RestControllerAdvice.class },
