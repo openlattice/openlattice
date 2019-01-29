@@ -22,7 +22,6 @@
 package com.openlattice.auditing
 
 import com.openlattice.data.DataGraphService
-import com.openlattice.datastore.services.EdmManager
 import java.util.*
 
 /**
@@ -46,7 +45,7 @@ interface AuditingComponent {
 
         return if( auditingConfiguration.initialized ) {
             events
-                    .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKeys.last()) }
+                    .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey) }
                     .map { (auditEntitySet, entities) ->
                         getDataGraphService().createEntities(
                                 auditEntitySet,
@@ -66,7 +65,7 @@ interface AuditingComponent {
 
             eventEntity[auditingConfiguration.getPropertyTypeId(
                     AuditProperty.ACL_KEY
-            )] = event.aclKeys.map { it }.toSet()
+            )] = event.aclKey.map { it }.toSet()
 
             event.entities.ifPresent {
                 eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ENTITIES)] = it
@@ -76,7 +75,7 @@ interface AuditingComponent {
                 eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.OPERATION_ID)] = setOf(it)
             }
 
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(event.aclKeys.last()) //ID of securable object
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(event.aclKey.last()) //ID of securable object
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(event.principal)
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(event.eventType)
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DESCRIPTION)] = setOf(event.description)

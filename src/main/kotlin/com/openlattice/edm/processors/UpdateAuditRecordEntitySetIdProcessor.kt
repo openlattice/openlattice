@@ -23,6 +23,7 @@ package com.openlattice.edm.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration
+import com.openlattice.authorization.AclKey
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -34,8 +35,8 @@ private val logger = LoggerFactory.getLogger(UpdateAuditRecordEntitySetIdProcess
  */
 class UpdateAuditRecordEntitySetIdProcessor(
         val auditRecordEntitySetId: UUID
-) : AbstractRhizomeEntryProcessor<UUID, AuditRecordEntitySetConfiguration, Void?>() {
-    override fun process(entry: MutableMap.MutableEntry<UUID, AuditRecordEntitySetConfiguration?>): Void? {
+) : AbstractRhizomeEntryProcessor<AclKey, AuditRecordEntitySetConfiguration, Void?>() {
+    override fun process(entry: MutableMap.MutableEntry<AclKey, AuditRecordEntitySetConfiguration?>): Void? {
         val config = entry.value
         if (config == null) {
             logger.error(

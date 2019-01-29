@@ -22,20 +22,17 @@
 package com.openlattice.auditing
 
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.Principal
-import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.securable.AbstractSecurableObject
+import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.datastore.services.EdmService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.UpdateAuditRecordEntitySetIdProcessor
-import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.postgres.streams.PostgresIterable
 import java.time.OffsetDateTime
 import java.util.*
-import javax.inject.Inject
 
 /**
  * This class keeps track of auditing entity sets for each entity set.
@@ -44,43 +41,32 @@ import javax.inject.Inject
  */
 class AuditRecordEntitySetsManager(
         val auditingTypes: AuditingTypes,
-        val edm:EdmManager,
+        val edm: EdmManager,
         private val authorizationManager: AuthorizationManager,
         private val hazelcastInstance: HazelcastInstance
 
 ) {
-    private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<UUID, AuditRecordEntitySetConfiguration>(
+    private val securableObjectTypes = hazelcastInstance.getMap<AclKey, SecurableObjectType>(
+            HazelcastMap.SECURABLE_OBJECT_TYPES.name
+    )
+    private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<AclKey, AuditRecordEntitySetConfiguration>(
             HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name
     )
 
     fun createAuditEntitySetForEntitySet(principal: Principal, entitySetId: UUID) {
-        if( auditingTypes.initialized ) {
+        if (auditingTypes.initialized) {
             val auditedEntitySet = edm.getEntitySet(entitySetId)
             val name = auditedEntitySet.name
-            createAuditEntitySet(principal, name, entitySetId, auditedEntitySet.contacts)
+            createAuditEntitySet(principal, name, AclKey(entitySetId), auditedEntitySet.contacts)
         }
 
     }
 
-    fun createAuditEntitySetForSecurablePrincipal(principal: Principal, securableObject: AbstractSecurableObject) {
-        val name = securableObject.title
-        val id = securableObject.id
-        val contacts = setOf<String>()
-        createAuditEntitySet(principal, name, id, contacts)
+    fun createAuditEntitySet(principal: Principal, name: String, aclKey: AclKey, contacts: Set<String>) {
+        createAuditEntitySet(principal, aclKey, buildAuditEntitySet(name, aclKey, contacts))
     }
 
-    fun createAuditEntitySet(principal: Principal, name: String, id: UUID, contacts: Set<String>) {
-
-        val entitySetName = buildName(id)
-        val auditingEntityTypeId = auditingTypes.auditingEntityTypeId
-
-        val entitySet = EntitySet(
-                auditingEntityTypeId,
-                entitySetName,
-                "Audit entity set for $name ($id)",
-                Optional.of("This is an automatically generated auditing entity set."),
-                contacts
-        )
+    fun createAuditEntitySet(principal: Principal, aclKey: AclKey, entitySet: EntitySet) {
 
         /*
          * This sequence of steps is safe to execute as a failure on any of the steps can be retried from scratch
@@ -90,26 +76,72 @@ class AuditRecordEntitySetsManager(
 
         edm.createEntitySet(principal, entitySet)
         auditRecordEntitySetConfigurations
-                .executeOnKey(id, UpdateAuditRecordEntitySetIdProcessor(entitySet.id))
+                .executeOnKey(aclKey, UpdateAuditRecordEntitySetIdProcessor(entitySet.id))
 
     }
 
-    fun getAuditRecordEntitySets(entitySetId: UUID): Set<UUID> {
-        return auditRecordEntitySetConfigurations[entitySetId]?.auditRecordEntitySetIds ?: setOf()
+    fun getAuditRecordEntitySets(aclKey: AclKey): Set<UUID> {
+        return auditRecordEntitySetConfigurations[aclKey]?.auditRecordEntitySetIds ?: setOf()
     }
 
-    fun getActiveAuditRecordEntitySetId(entitySetId: UUID): UUID {
+    fun getActiveAuditRecordEntitySetId(aclKey: AclKey): UUID {
         //TODO: Don't load the entire object
         //This should never NPE as (almost) every securable object should have an entity set.
-        return auditRecordEntitySetConfigurations[entitySetId]!!.activeAuditRecordEntitySetId
+        return auditRecordEntitySetConfigurations[aclKey]!!.activeAuditRecordEntitySetId
     }
 
-    fun rollAuditEntitySets() {
-        TODO("Implement rolling of audit entity sets.")
+    fun rollAuditEntitySet(principal: Principal, aclKey: AclKey) {
+        val auditEntitySetId = auditRecordEntitySetConfigurations[aclKey]!!.activeAuditRecordEntitySetId
+        val auditEntitySet = edm.getEntitySet(auditEntitySetId)
+        var currentAuditEntitySetAclKey = AclKey(auditEntitySetId)
+        var currentAuditEntitySetPropertyTypeAclKeys = auditingTypes.propertyTypeIds.values
+                .map { it to AclKey(auditEntitySetId, it) }
+                .toMap()
+
+        val newAuditEntitySet = buildAuditEntitySet(
+                securableObjectTypes[aclKey]?.name ?: "Missing Type",
+                aclKey,
+                auditEntitySet.contacts
+        )
+
+        createAuditEntitySet(principal, aclKey, newAuditEntitySet)
+        val newAclKey = AclKey(newAuditEntitySet.id)
+        val propertyTypeAclKeys = auditingTypes.propertyTypeIds.values.map { AclKey(newAuditEntitySet.id, it) }
+
+        //Copy over existing permissions for entity set metadata
+        authorizationManager.getAllSecurableObjectPermissions(currentAuditEntitySetAclKey).aces.forEach { ace ->
+            authorizationManager.addPermission(newAclKey, ace.principal, ace.permissions, ace.expirationDate)
+        }
+
+        //Copy over existing permissions for entity property types
+        currentAuditEntitySetPropertyTypeAclKeys.mapValues { (propertyTypeId, currentPropertyTypeAclKey) ->
+            authorizationManager.getAllSecurableObjectPermissions(currentPropertyTypeAclKey).aces.forEach { ace ->
+                authorizationManager.addPermission(
+                        AclKey(newAuditEntitySet.id, propertyTypeId),
+                        principal,
+                        ace.permissions,
+                        ace.expirationDate
+                )
+            }
+        }
     }
 
-    private fun buildName(entitySetId: UUID): String {
+    private fun buildAuditEntitySet(name: String, aclKey: AclKey, contacts: Set<String>): EntitySet {
+        val entitySetName = buildName(aclKey)
+        val auditingEntityTypeId = auditingTypes.auditingEntityTypeId
+
+        return EntitySet(
+                auditingEntityTypeId,
+                entitySetName,
+                "Audit entity set for $name ($aclKey)",
+                Optional.of("This is an automatically generated auditing entity set."),
+                contacts
+        )
+    }
+
+    private fun buildName(aclKey: AclKey): String {
         val odt = OffsetDateTime.now()
-        return "$entitySetId-${odt.year}-${odt.monthValue}-${odt.dayOfMonth}-${System.currentTimeMillis()}"
+        val aclKeyString = aclKey.joinToString("-")
+        return "$aclKeyString-${odt.year}-${odt.monthValue}-${odt.dayOfMonth}-${System.currentTimeMillis()}"
     }
 }
