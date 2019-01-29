@@ -36,7 +36,6 @@ import com.openlattice.datastore.search.controllers.PersistentSearchController;
 import com.openlattice.datastore.search.controllers.SearchController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.graph.controllers.GraphController;
-import com.openlattice.linking.feedback.LinkingFeedbackController;
 import com.openlattice.web.converters.CsvHttpMessageConverter;
 import com.openlattice.web.converters.YamlHttpMessageConverter;
 import com.openlattice.web.mediatypes.CustomMediaType;
@@ -64,8 +63,7 @@ import java.util.List;
                 PrincipalDirectoryController.class,
                 EdmController.class, OrganizationsController.class,
                 DataStoreExceptionHandler.class, LinkingController.class, AnalysisController.class,
-                RequestsController.class, AppController.class, GraphController.class, PersistentSearchController.class,
-                LinkingFeedbackController.class
+                RequestsController.class, AppController.class, GraphController.class, PersistentSearchController.class
         },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,
