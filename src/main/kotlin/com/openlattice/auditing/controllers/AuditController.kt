@@ -23,6 +23,8 @@ package com.openlattice.auditing.controllers
 
 import com.openlattice.auditing.*
 import com.openlattice.data.DataGraphService
+import org.springframework.http.MediaType
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.*
@@ -43,7 +45,7 @@ class AuditController : AuditApi, AuditingComponent {
     private lateinit var dataGraphService: DataGraphService
 
     override fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager {
-    return auditRecordEntitySetsManager
+        return auditRecordEntitySetsManager
     }
 
     override fun getDataGraphService(): DataGraphService {
@@ -51,18 +53,19 @@ class AuditController : AuditApi, AuditingComponent {
     }
 
     override fun audit(audit: Audit): List<Map<UUID, Set<Any>>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        TODO("Audit entity sets can be searched using SearchApi directly")
     }
 
+    @PutMapping(value = ["", "/"], consumes = [MediaType.APPLICATION_JSON_VALUE])
     override fun record(events: List<AuditableEvent>): Int {
         return recordEvents(events)
     }
 
     override fun auditPrincipal(auditPrincipal: AuditPrincipal): List<Map<UUID, Set<Any>>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        TODO("Audit entity sets can be searched using SearchApi directly")
     }
 
     override fun auditEntitySet(auditEntitySet: AuditEntitySet): List<Map<UUID, Set<Any>>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        TODO("Audit entity sets can be searched using SearchApi directly")
     }
 }
