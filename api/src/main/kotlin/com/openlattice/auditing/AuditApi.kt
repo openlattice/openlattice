@@ -21,8 +21,10 @@
 
 package com.openlattice.auditing
 
+import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Path
 import java.util.*
 
 /**
@@ -42,7 +44,6 @@ const val ID_PATH = "/{$ID}"
 const val PRINCIPAL = "principal"
 
 interface AuditApi {
-
     /**
      * Retrieve all the events record for a particular entity set in a given time window.
      * @param auditEntitySet The
