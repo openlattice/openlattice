@@ -203,7 +203,21 @@ public final class PostgresTable {
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID )
-                    .distributionColumn( ID );
+                    .distributionColumn( LINKING_ID );
+
+    public static final PostgresTableDefinition LINKING_FEEDBACK         =
+            new PostgresTableDefinition( "linking_feedback" )
+                    .addColumns(
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID,
+                            LINKED )
+                    .primaryKey(
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID );
 
     public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )

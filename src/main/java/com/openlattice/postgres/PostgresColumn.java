@@ -217,6 +217,9 @@ public final class PostgresColumn {
             .withDefault( "'-infinity'" )
             .notNull();
     public static final String                   LAST_WRITE_FIELD            = "last_write";
+    public static final String                   LINKED_FIELD                = "linked";
+    public static final PostgresColumnDefinition LINKED                      =
+            new PostgresColumnDefinition( LINKED_FIELD, BOOLEAN ).notNull();
     public static final String                   LINKING_ID_FIELD            = "linking_id";
     public static final PostgresColumnDefinition LINKING_ID                  = new PostgresColumnDefinition(
             LINKING_ID_FIELD,
