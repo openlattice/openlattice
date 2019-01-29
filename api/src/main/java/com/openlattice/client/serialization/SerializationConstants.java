@@ -134,6 +134,7 @@ public final class SerializationConstants {
     public static final String LAST_READ                        = "lastRead";
     public static final String LAST_WRITE                       = "lastWrite";
     public static final String LATITUDE                         = "latitude";
+    public static final String LINKED                           = "linked";
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
     public static final String LINKING_ENTITY_SET_FIELD         = "linkingEntitySet";
