@@ -22,16 +22,16 @@ package com.openlattice.linking.util;
 
 import com.google.common.collect.Sets;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
+
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import com.google.common.io.Resources;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -98,25 +98,25 @@ public enum PersonMetric {
         return this.metric.extract( lhs, rhs, fqnToIdMap );
     }
 
-    public static Double[] distance(
+    public static Map<String, Double> distance(
             Map<UUID, DelegatedStringSet> lhs,
             Map<UUID, DelegatedStringSet> rhs,
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        Double[] result = new Double[ metrics.length ];
+        Map<String, Double> result = new HashMap<>( metrics.length );
         metricsList.parallelStream().forEach( m -> {
-            result[ m.ordinal() ] = m.extract( lhs, rhs, fqnToIdMap );
+            result.put( m.metric.toString(), m.extract( lhs, rhs, fqnToIdMap ) );
         } );
         return result;
     }
 
-    public static double[] pDistance(
+    public static Map<String, Double> pDistance(
             Map<UUID, DelegatedStringSet> lhs,
             Map<UUID, DelegatedStringSet> rhs,
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        double[] result = new double[ metrics.length ];
-        metricsList.parallelStream().forEach( m -> {
-            result[ m.ordinal() ] = m.extract( lhs, rhs, fqnToIdMap );
-        } );
+        Map<String, Double> result = new HashMap<>( metrics.length );
+        metricsList.parallelStream().forEach( m ->
+                result.put( m.metric.toString(), m.extract( lhs, rhs, fqnToIdMap ) )
+        );
         return result;
     }
 
