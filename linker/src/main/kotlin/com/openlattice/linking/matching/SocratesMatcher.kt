@@ -44,8 +44,6 @@ private val logger = LoggerFactory.getLogger(SocratesMatcher::class.java)
 @Component
 class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<FullQualifiedName, UUID>) : Matcher {
 
-    private var extractionMillis = 0L
-    private var matchingMillis = 0L
     private var localModel = ThreadLocal.withInitial { model }
 
     //            Thread.currentThread().contextClassLoader.getResourceAsStream("model.bin") }
@@ -77,7 +75,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
 
         // transform features to matrix and compute scores
         val featureKeys = extractedFeatures.map { it.key }.toTypedArray()
-        val featureMatrix = extractedFeatures.map { it.value[0] }.toTypedArray()
+        val featureMatrix = extractedFeatures.map { it.value.values.toDoubleArray() }.toTypedArray()
         val scores = computeScore(model, featureMatrix).toTypedArray()
         val matchedEntities = featureKeys.zip(scores).toMap().toMutableMap()
         val initializedBlock = entityDataKey to mutableMapOf(entityDataKey to matchedEntities)
@@ -113,11 +111,11 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         }
 
         // transform features to matrix and compute scores
-        val featureMatrix = extractedFeatures.flatMap { (entityDataKey1, features) ->
+        val featureMatrix = extractedFeatures.flatMap { (_, features) ->
             features.map {
-                it.value[0]
+                it.value.values.toDoubleArray()
             }
-        }
+        }.toTypedArray()
 
         // extract list of keys (instead of map)
         val featureKeys = extractedFeatures.flatMap { (entityDataKey1, features) ->
@@ -129,7 +127,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         val featureExtractionSW = sw.elapsed(TimeUnit.MILLISECONDS)
 
         // get scores from matrix
-        val scores = computeScore(model, featureMatrix.toTypedArray())
+        val scores = computeScore(model, featureMatrix)
 
         // collect and combine keys and scores
         val results = scores.zip(featureKeys).map {
@@ -158,25 +156,18 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
     ): DoubleArray {
         val sw = Stopwatch.createStarted()
         val scores = model.getModelScore(features)
-        val totalMillis = sw.elapsed(TimeUnit.MILLISECONDS)
-        val matchingMillis = totalMillis
+        logger.info("The model computed scores in {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
         return scores
     }
 
-    private fun extractFeatures(
+    override fun extractFeatures(
             lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
-    ): Array<DoubleArray> {
-        val features = arrayOf(
-                PersonMetric.pDistance(
-                        lhs, rhs, fqnToIdMap
-                ).map { it * 100.0 }.toDoubleArray()
-        )
-
-        return features;
+    ): Map<String, Double> {
+        return PersonMetric.pDistance(lhs, rhs, fqnToIdMap).map { it.key to (it.value * 100.0) }.toMap()
     }
 
-    private fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
-        return entity.map { it.key to DelegatedStringSet.wrap(it.value.map { it.toString() }.toSet()) }.toMap()
+    override fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {
+        return entity.map { it.key to DelegatedStringSet.wrap(it.value.map(Any::toString).toSet()) }.toMap()
     }
 
     @Timed
@@ -202,7 +193,6 @@ fun MultiLayerNetwork.getModelScore(features: Array<DoubleArray>): DoubleArray {
             Nd4j.ones(features.size).toDoubleVector()
         }
     }
-
 }
 
 data class ResultSet(val lhs: EntityDataKey, val rhs: EntityDataKey, val score: Double)
