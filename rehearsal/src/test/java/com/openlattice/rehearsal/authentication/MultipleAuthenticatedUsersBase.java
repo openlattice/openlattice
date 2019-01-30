@@ -22,7 +22,6 @@ package com.openlattice.rehearsal.authentication;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Streams;
 import com.openlattice.analysis.AnalysisApi;
 import com.openlattice.authorization.AccessCheck;

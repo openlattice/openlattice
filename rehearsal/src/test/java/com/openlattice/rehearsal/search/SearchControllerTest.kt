@@ -2,7 +2,6 @@ package com.openlattice.rehearsal.search
 
 import com.google.common.base.Strings
 import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.search.requests.SearchTerm
 import org.junit.Assert

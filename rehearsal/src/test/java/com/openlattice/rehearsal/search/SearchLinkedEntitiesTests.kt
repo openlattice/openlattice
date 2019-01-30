@@ -1,12 +1,9 @@
 package com.openlattice.rehearsal.search
 
-import com.google.common.collect.HashMultimap
 import com.google.common.collect.Lists
-import com.google.common.collect.SetMultimap
 import com.openlattice.data.DeleteType
 import com.openlattice.data.UpdateType
 import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.PERSON_NAME
 import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
