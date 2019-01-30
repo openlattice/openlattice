@@ -39,7 +39,7 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.linking.LinkingApi;
+import com.openlattice.entitysets.EntitySetsApi;
 import com.openlattice.linking.RealtimeLinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
@@ -78,7 +78,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static DataApi dataApi;
     protected static SearchApi searchApi;
     protected static OrganizationsApi organizationsApi;
-    protected static LinkingApi linkingApi;
+    protected static EntitySetsApi entitySetsApi;
     protected static RealtimeLinkingApi realtimeLinkingApi;
     protected static AnalysisApi       analysisApi;
 
@@ -108,7 +108,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         dataApi = currentRetrofit.create( DataApi.class );
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
-        linkingApi = currentRetrofit.create( LinkingApi.class );
+        entitySetsApi = currentRetrofit.create( EntitySetsApi.class );
         analysisApi = currentRetrofit.create( AnalysisApi.class );
 
         Retrofit indexerRetrofit = indexerRetrofitMap.get( user );

@@ -21,24 +21,16 @@
 
 package com.openlattice.rehearsal.edm
 
-import com.google.common.collect.LinkedHashMultimap
-import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.client.RetrofitFactory
-import com.openlattice.edm.EdmApi
+
 import com.openlattice.edm.type.AssociationType
-import com.openlattice.edm.type.EntityType
-import com.openlattice.mapstores.TestDataFactory
-import com.openlattice.rehearsal.GeneralException
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
 import java.util.UUID
-import org.junit.Rule
 import java.util.*
 import kotlin.collections.LinkedHashSet
-import org.junit.rules.ExpectedException
 import java.lang.reflect.UndeclaredThrowableException
 
 
@@ -73,10 +65,10 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         val personEt = edmApi.getEntityType( personEntityTypeId )
         val es = createEntitySet( personEt )
 
-        linkingApi.addEntitySetsToLinkingEntitySet( linkingEs.id, setOf<UUID>(es.id) )
+        entitySetsApi.addEntitySetsToLinkingEntitySet( linkingEs.id, setOf<UUID>(es.id) )
         Assert.assertEquals( es.id, edmApi.getEntitySet( linkingEs.id ).linkedEntitySets.single() )
 
-        linkingApi.removeEntitySetsFromLinkingEntitySet( linkingEs.id, setOf(es.id) )
+        entitySetsApi.removeEntitySetsFromLinkingEntitySet( linkingEs.id, setOf(es.id) )
         Assert.assertEquals( setOf<UUID>(), edmApi.getEntitySet( linkingEs.id ).linkedEntitySets )
     }
 
@@ -88,7 +80,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         val nonLinkingEs = createEntitySet( et, false, setOf() )
         val es = createEntitySet( et )
         try {
-            linkingApi.addEntitySetsToLinkingEntitySet( nonLinkingEs.id, setOf<UUID>(es.id) )
+            entitySetsApi.addEntitySetsToLinkingEntitySet( nonLinkingEs.id, setOf<UUID>(es.id) )
             Assert.fail("Should have thrown Exception but did not!")
         } catch( e: UndeclaredThrowableException ) {
             Assert.assertTrue( e.undeclaredThrowable.message!!
@@ -98,7 +90,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         // add non-person entity set
         val linkingEs = createEntitySet( et, true, setOf() )
         try {
-            linkingApi.addEntitySetsToLinkingEntitySet( linkingEs.id, setOf<UUID>(es.id) )
+            entitySetsApi.addEntitySetsToLinkingEntitySet( linkingEs.id, setOf<UUID>(es.id) )
             Assert.fail("Should have thrown Exception but did not!")
         } catch( e: UndeclaredThrowableException ) {
             Assert.assertTrue( e.undeclaredThrowable.message!!
@@ -109,7 +101,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
 
         // remove empty
         try {
-            linkingApi.removeEntitySetsFromLinkingEntitySet( linkingEs.id, setOf() )
+            entitySetsApi.removeEntitySetsFromLinkingEntitySet( linkingEs.id, setOf() )
             Assert.fail("Should have thrown Exception but did not!")
         } catch( e: UndeclaredThrowableException ) {
             Assert.assertTrue( e.undeclaredThrowable.message!!
