@@ -55,6 +55,7 @@ import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Matcher;
+import com.openlattice.linking.PostgresLinkingFeedbackQueryService;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
@@ -233,6 +234,11 @@ public class IndexerServicesPod {
         final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
         return new SocratesMatcher( model, fqnToIdMap );
+    }
+
+    @Bean
+    public PostgresLinkingFeedbackQueryService postgresLinkingFeedbackQueryService() {
+        return new PostgresLinkingFeedbackQueryService(hikariDataSource);
     }
 
     @PostConstruct
