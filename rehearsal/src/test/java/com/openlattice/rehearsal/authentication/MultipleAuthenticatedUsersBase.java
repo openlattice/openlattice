@@ -272,7 +272,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             List<UUID> srcIds,
             List<UUID> dstIds,
             int numberOfEntries) {
-        List<SetMultimap<UUID, Object>> edgeData = Lists.newArrayList(
+        List<Map<UUID, Set<Object>>> edgeData = Lists.newArrayList(
                 TestDataFactory.randomStringEntityData(numberOfEntries, properties).values() );
 
         List<DataEdge> edges = Streams
