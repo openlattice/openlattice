@@ -105,6 +105,9 @@ open class DataGraphService(
             .expireAfterWrite(30, TimeUnit.SECONDS)
             .build<MultiKey<*>, Map<String, Object>>()
 
+
+    /* Select */
+
     override fun getEntitySetData(
             entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
             orderedPropertyNames: LinkedHashSet<String>,
@@ -127,14 +130,6 @@ open class DataGraphService(
 
     override fun getEntitySetSize(entitySetId: UUID): Long {
         return eds.getEntities(entitySetId, setOf(), mapOf()).count()
-    }
-
-
-    override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
-        logger.info("Deleting edges of entity set: {}", entitySetId)
-        val edgesDeletedCount = graphService.deleteVerticesInEntitySet(entitySetId)
-        logger.info("Finished deleting {} edges.", edgesDeletedCount)
-        return eds.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
     }
 
     override fun getEntity(
@@ -160,9 +155,24 @@ open class DataGraphService(
         ).iterator().next()
     }
 
-    override fun clearEntitySet(
-            entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    override fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets> {
+        return graphService.getNeighborEntitySets(entitySetIds)
+    }
+
+    override fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID> {
+        return getNeighborEntitySets(entitySetIds)
+                .flatMap { listOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
+                .toSet()
+    }
+
+    override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge> {
+        return graphService.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
+    }
+
+
+    /* Delete */
+
+    override fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         return eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
     }
 
@@ -181,17 +191,34 @@ open class DataGraphService(
     }
 
     override fun clearAssociations(key: Set<EdgeKey>): Int {
-        return 0
+        return 0 // TODO
     }
 
-    //TODO: Return information about delete vertices.
+    override fun clearEntityProperties(
+            entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int {
+        val propertyCount =  eds.clearEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        logger.info("Cleared properties {} of {} entities.",
+                authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount)
+        return propertyCount
+    }
+
+    override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
+        logger.info("Deleting edges of entity set: {}.", entitySetId)
+        val edgesDeletedCount = graphService.deleteVerticesInEntitySet(entitySetId)
+        logger.info("Finished deleting {} edges.", edgesDeletedCount)
+        return eds.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
+    }
+
     override fun deleteEntities(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        graphService.deleteVertices(entitySetId, entityKeyIds)
-        return eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        val verticesCount = graphService.deleteVertices(entitySetId, entityKeyIds)
+        val entityCount = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        logger.info("Deleted {} entities and {} vertices.", entityCount, verticesCount)
+        return entityCount
     }
 
     @Timed
@@ -208,6 +235,20 @@ open class DataGraphService(
                 .mapToInt { e -> eds.deleteEntities(e.key, e.value, authorizedPropertyTypes) }
                 .sum()
     }
+
+    override fun deleteEntityProperties(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ): Int {
+        val propertyCount = eds.deleteEntityProperties(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        logger.info("Deleted properties {} of {} entities.",
+                authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount)
+        return propertyCount
+    }
+
+
+    /* Create */
 
     override fun integrateEntities(
             entitySetId: UUID,
@@ -232,11 +273,11 @@ open class DataGraphService(
 
     override fun createEntities(
             entitySetId: UUID,
-            entities: List<SetMultimap<UUID, Any>>,
+            entities: List<Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): List<UUID> {
         val ids = idService.reserveIds(entitySetId, entities.size)
-        val entityMap = ids.mapIndexed { i, id -> id to Multimaps.asMap(entities[i]) }.toMap()
+        val entityMap = ids.mapIndexed { i, id -> id to entities[i] }.toMap()
         eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
         return ids
     }
@@ -271,6 +312,10 @@ open class DataGraphService(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
+    }
+
+    override fun createAssociations(associations: Set<DataEdgeKey>): Int {
+        return graphService.createEdges(associations)
     }
 
     override fun createAssociations(
@@ -378,6 +423,9 @@ open class DataGraphService(
         return graphService.createEdges(edges);
     }
 
+
+    /* Top utilizers */
+
     override fun getFilteredRankings(
             entitySetIds: Set<UUID>,
             numResults: Int,
@@ -476,23 +524,5 @@ open class DataGraphService(
 //            entity
 //        }.stream()
         return Stream.empty()
-    }
-
-    override fun createAssociations(associations: Set<DataEdgeKey>): Int {
-        return graphService.createEdges(associations);
-    }
-
-    override fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets> {
-        return graphService.getNeighborEntitySets(entitySetIds)
-    }
-
-    override fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID> {
-        return getNeighborEntitySets(entitySetIds)
-                .flatMap { listOf(it.srcEntitySetId, it.edgeEntitySetId, it.dstEntitySetId) }
-                .toSet()
-    }
-
-    override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge> {
-        return graphService.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
     }
 }

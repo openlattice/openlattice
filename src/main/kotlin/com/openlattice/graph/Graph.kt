@@ -22,12 +22,10 @@
 package com.openlattice.graph
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
-import com.openlattice.analysis.AuthorizedFilteredAggregation
 import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
@@ -71,9 +69,7 @@ private val logger = LoggerFactory.getLogger(Graph::class.java)
 
 class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
 
-    override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    /* Create */
 
     override fun createEdges(keys: MutableSet<DataEdgeKey>): Int {
         hds.connection.use {
@@ -96,6 +92,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             }
         }
     }
+
+    /* Delete  */
 
     override fun clearEdges(keys: MutableSet<EdgeKey>): Int {
         val connection = hds.connection
@@ -125,8 +123,12 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun deleteEdges(keys: MutableSet<EdgeKey>?): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun deleteEdges(keys: Set<EdgeKey>): Int {
+        val connection = hds.connection
+        connection.use {
+            val ps = connection.prepareStatement(deleteEdgesSql(keys))
+            return ps.executeUpdate()
+        }
     }
 
     override fun deleteVerticesInEntitySet(entitySetId: UUID?): Int {
@@ -140,7 +142,36 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    override fun deleteVertices(entitySetId: UUID?, vertices: MutableSet<UUID>?): Int {
+    override fun deleteVertices(entitySetId: UUID, vertices: Set<UUID>): Int {
+        val connection = hds.connection
+        connection.use {
+            val ps = connection.prepareStatement(DELETE_BY_VERTICES_SQL)
+            val arr = PostgresArrays.createUuidArray(it, vertices)
+            ps.setObject(1, entitySetId)
+            ps.setObject(2, arr)
+            ps.setObject(3, entitySetId)
+            ps.setObject(4, arr)
+            ps.setObject(5, entitySetId)
+            ps.setObject(6, arr)
+            return ps.executeUpdate()
+        }
+    }
+
+    private fun deleteEdgesSql(keys: Set<EdgeKey>): String {
+        val sql = "DELETE FROM ${EDGES.name} WHERE " +
+                (keys.joinToString(" OR ") {
+                    " ( ${SRC_ENTITY_SET_ID.name} = '${it.src.entitySetId}' AND ${SRC_ENTITY_KEY_ID.name} = '${it.src.entityKeyId}' " +
+                            "${DST_ENTITY_SET_ID.name} = '${it.dst.entitySetId}' AND ${DST_ENTITY_KEY_ID.name} = '${it.dst.entityKeyId}' " +
+                            "${EDGE_ENTITY_SET_ID.name} = '${it.edge.entitySetId}' AND ${EDGE_ENTITY_KEY_ID.name} = '${it.edge.entityKeyId}' ) "
+                })
+
+        return sql
+    }
+
+
+    /* Select */
+
+    override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
@@ -277,6 +308,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ).stream()
     }
 
+
+    /* Top utilizers */
 
     /**
      * 1. Compute the table of all neighbors of all relevant neighbors to person entity sets.
@@ -510,8 +543,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 authorizedFilteredRanking.associationSets,
                 authorizedFilteredRanking.filteredNeighborsRanking.associationFilters,
                 setOf(),
+                associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 false,
-                associationPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                false
         )
 
         val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
@@ -571,8 +605,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 authorizedFilteredRanking.entitySets,
                 authorizedFilteredRanking.filteredNeighborsRanking.neighborFilters,
                 setOf(),
+                entitySetPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 false,
-                entitySetPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary }
+                false
         )
 
         val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
@@ -698,6 +733,11 @@ private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versio
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val DELETE_BY_SET_SQL = "DELETE FROM ${EDGES.name} WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
+
+private val DELETE_BY_VERTICES_SQL = "DELETE FROM ${EDGES.name} WHERE " +
+        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
+        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +

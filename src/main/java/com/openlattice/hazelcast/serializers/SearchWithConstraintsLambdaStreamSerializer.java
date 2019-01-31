@@ -39,7 +39,7 @@ public class SearchWithConstraintsLambdaStreamSerializer extends Serializer<Sear
                 writeUUID( output, propertyTypeId );
             }
         }
-
+        output.writeBoolean( object.isLinking() );
     }
 
     @Override
@@ -64,6 +64,8 @@ public class SearchWithConstraintsLambdaStreamSerializer extends Serializer<Sear
 
             authorizedProperties.put( entitySetId, DelegatedUUIDSet.wrap( propertyTypeIds ) );
         }
-        return new SearchWithConstraintsLambda( searchConstraints, authorizedProperties );
+        boolean linking = input.readBoolean();
+
+        return new SearchWithConstraintsLambda( searchConstraints, authorizedProperties, linking );
     }
 }

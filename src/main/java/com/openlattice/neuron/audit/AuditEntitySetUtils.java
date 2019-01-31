@@ -23,6 +23,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.openlattice.authorization.Principal;
@@ -36,6 +37,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -202,11 +204,11 @@ public class AuditEntitySetUtils {
                 );
     }
 
-    public static List<SetMultimap<UUID, Object>> prepareAuditEntityData( Signal signal, String entityId ) {
+    public static List<Map<UUID, Set<Object>>> prepareAuditEntityData( Signal signal, String entityId ) {
         SetMultimap<UUID, Object> propertyValuesMap = HashMultimap.create();
         propertyValuesMap.put( DETAILS_PROPERTY_TYPE.getId(), signal.getDetails() );
         propertyValuesMap.put( TYPE_PROPERTY_TYPE.getId(), signal.getType().name() );
 
-        return ImmutableList.of( propertyValuesMap );
+        return ImmutableList.of( Multimaps.asMap(propertyValuesMap ) );
     }
 }

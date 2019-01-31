@@ -39,11 +39,9 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  */
 public interface EntityDatastore {
 
-    EntitySetData<FullQualifiedName> getEntitySetData(
-            Set<UUID> entitySetIds,
-            LinkedHashSet<String> orderedPropertyNames,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            Boolean linking );
+    Map<UUID, Map<UUID, Set<Object>>> getEntitySetData(
+            UUID entitySetId,
+            Map<UUID, PropertyType> authorizedPropertyTypes);
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
@@ -64,6 +62,10 @@ public interface EntityDatastore {
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
+    Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityDataByLinkingId(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId);
+
     EntitySetData<FullQualifiedName> getEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             LinkedHashSet<String> orderedPropertyTypes,
@@ -74,9 +76,11 @@ public interface EntityDatastore {
             SetMultimap<UUID, UUID> entitySetIdsToEntityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet );
 
-    PostgresIterable<Pair<UUID, UUID>> getLinkingIds( Set<UUID> entityKeyIds );
+    Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds );
 
     PostgresIterable<Pair<UUID, Set<UUID>>> getEntityKeyIdsOfLinkingIds( Set<UUID> linkingIds );
+
+    PostgresIterable<UUID> getLinkingEntitySetIds( UUID linkingId );
 
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.
@@ -129,24 +133,51 @@ public interface EntityDatastore {
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
      *
      * @param entitySetId The id of the entity set to clear.
-     * @param entityKeyId The entity key id for the entity set to clear.
-     * @return The number of properties cleared.
+     * @param entityKeyIds The entity key ids for the entity set to clear.
+     * @param authorizedPropertyTypes The property types the user is allowed to clear.
+     * @return The number of entities cleared.
      */
-    int clearEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
+    int clearEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
-     * Deletes an entity set and removes the historical contents. This causes loss of historical data
+     * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
+     *
+     * @param entitySetId The id of the entity set to clear.
+     * @param entityKeyIds The entity key ids for the entity set to clear.
+     * @param authorizedPropertyTypes The property types the user is requested and is allowed to clear.
+     * @return The number of properties cleared.
+     */
+    int clearEntityData( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Hard deletes an entity set and removes the historical contents. This causes loss of historical data
      * and should only be used for scrubbing customer data.
      *
-     * @param entitySetId The entity set id to be hard deleted.
+     * @param entitySetId             The id of the entity set to delete.
+     * @param authorizedPropertyTypes The authorized property types on this entity set. In this case all the property
+     *                                types for its entity type
      */
     int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
-     * Deletes an entity and removes the historical contents.
+     * Hard deletes entities and removes the historical contents.
      *
-     * @param entityKeyId The entity key id to be hard deleted.
+     * @param entitySetId             The id of the entity set from which to delete.
+     * @param entityKeyIds            The ids of entities to hard delete.
+     * @param authorizedPropertyTypes The authorized property types on this entity set. In this case all the property
+     *                                types for its entity type
+     * @return count of deletes
      */
-    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyId, Map<UUID, PropertyType> authorizedPropertyTypes );
+    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+
+    /**
+     * Hard deletes properties of entit and removes the historical contents.
+     *
+     * @param entitySetId             The id of the entity set from which to delete.
+     * @param entityKeyIds            The ids of entities to delete the data from.
+     * @param authorizedPropertyTypes The authorized property types to delete the data from.
+     */
+    int deleteEntityProperties(
+            UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
 }

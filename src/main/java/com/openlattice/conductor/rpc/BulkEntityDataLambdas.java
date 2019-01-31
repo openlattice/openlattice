@@ -1,9 +1,5 @@
 package com.openlattice.conductor.rpc;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
-
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
@@ -15,16 +11,16 @@ public class BulkEntityDataLambdas implements Function<ConductorElasticsearchApi
     private UUID                              entitySetId;
     private Map<UUID, Map<UUID, Set<Object>>> entitiesById;
 
-    public BulkEntityDataLambdas( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
+    public BulkEntityDataLambdas(
+            UUID entitySetId,
+            Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         this.entitySetId = entitySetId;
         this.entitiesById = entitiesById;
     }
 
     @Override
     public Boolean apply( ConductorElasticsearchApi conductorElasticsearchApi ) {
-        return conductorElasticsearchApi.createBulkEntityData(
-                entitySetId,
-                entitiesById );
+        return conductorElasticsearchApi.createBulkEntityData( entitySetId, entitiesById );
     }
 
     public UUID getEntitySetId() {
