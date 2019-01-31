@@ -1,7 +1,9 @@
 package com.openlattice.linking
 
+import com.openlattice.data.EntityDataKey
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.PUT
 
 /**
@@ -22,8 +24,11 @@ interface LinkingFeedbackApi {
     fun addLinkingFeedback(@Body feedback: EntityLinkingFeedback): Boolean
 
     @GET(BASE + FEEDBACK + ALL)
-    fun getLinkingFeedbacks(): Iterable<EntityLinkingFeedback>
+    fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback>
 
     @GET(BASE + FEEDBACK + ALL + FEATURES)
-    fun getLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures>
+    fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures>
+
+    @POST(BASE + FEEDBACK + FEATURES)
+    fun getLinkingFeedbackWithFeatures(@Body entityPair: Pair<EntityDataKey, EntityDataKey>): EntityLinkingFeatures?
 }
