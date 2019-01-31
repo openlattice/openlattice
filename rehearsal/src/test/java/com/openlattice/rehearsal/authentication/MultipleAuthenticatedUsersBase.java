@@ -22,7 +22,6 @@ package com.openlattice.rehearsal.authentication;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Streams;
 import com.openlattice.analysis.AnalysisApi;
 import com.openlattice.authorization.AccessCheck;
@@ -272,7 +271,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
             List<UUID> srcIds,
             List<UUID> dstIds,
             int numberOfEntries) {
-        List<SetMultimap<UUID, Object>> edgeData = Lists.newArrayList(
+        List<Map<UUID, Set<Object>>> edgeData = Lists.newArrayList(
                 TestDataFactory.randomStringEntityData(numberOfEntries, properties).values() );
 
         List<DataEdge> edges = Streams
