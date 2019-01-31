@@ -1,8 +1,7 @@
 package com.openlattice.rehearsal.search
 
-import com.google.common.collect.HashMultimap
 import com.google.common.collect.Lists
-import com.google.common.collect.SetMultimap
+import com.openlattice.data.DeleteType
 import com.openlattice.data.UpdateType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.rehearsal.SetupTestData
@@ -279,12 +278,11 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         logger.info(result1.hits.toString())
 
         // Create
-        val entityData: SetMultimap<UUID, Any> = HashMultimap.create<UUID, Any>()
         val testDataProperties = setOf(
                 UUID.fromString("d0935a7e-efd3-4903-b673-0869ef527dea"), // middle name
                 UUID.fromString("e9a0b4dc-5298-47c1-8837-20af172379a5"), // given name
                 UUID.fromString("7b038634-a0b4-4ce1-a04f-85d1775937aa")) // surname
-        testDataProperties.forEach { entityData.put(it, "test") }
+        val entityData = testDataProperties.map { it to setOf("test") }.toMap()
         val newAEntityIds = dataApi.createEntities(socratesAId, listOf(entityData))
 
         Thread.sleep(10000L) // wait for linking to finish
@@ -304,7 +302,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         // Update
         dataApi.updateEntitiesInEntitySet(
                 socratesAId,
-                mapOf(newAEntityIds.first() to entityData.asMap().mapValues { it.value.map { "new$it" }.toSet() }),
+                mapOf(newAEntityIds.first() to entityData),
                 UpdateType.Replace)
 
         Thread.sleep(10000L) // wait for linking to finish
@@ -327,8 +325,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         // Delete:
         // when deleting entity, but there are still entities with that linking_id
         // when deleting entity, and there is no left entity left with that linking_id
-        val entityData2: SetMultimap<UUID, Any> = HashMultimap.create<UUID, Any>()
-        testDataProperties.forEach { entityData2.put(it, "newtestt") }
+        val entityData2 = testDataProperties.map { it to setOf("newtestt") }.toMap()
         // Note: we assume, when creating 2 entities with same values, that they get linked in this tests
         val newBEntityIds = dataApi.createEntities(socratesBId, listOf(entityData2, entityData2))
 
@@ -355,7 +352,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             })
         }
 
-        dataApi.clearEntityFromEntitySet(socratesBId, newBEntityIds.first()) // delete first entity with value newtestt
+        dataApi.deleteEntity(socratesBId, newBEntityIds.first(), DeleteType.Soft) // delete first entity with value newtestt
 
         Thread.sleep(10000L) // wait for linking to finish
         while (!checkLinkingFinished(importedEntitySets.keys)) {
@@ -378,7 +375,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             })
         }
 
-        dataApi.clearEntityFromEntitySet(socratesBId, newBEntityIds.last()) // delete last entity with value newtestt
+        dataApi.deleteEntity(socratesBId, newBEntityIds.last(), DeleteType.Soft) // delete last entity with value newtestt
         Thread.sleep(60000L) // wait for indexing to finish, we don't need to wait for linking here
 
         val result6 = searchApi.searchEntitySetData(simpleSearchConstraint)

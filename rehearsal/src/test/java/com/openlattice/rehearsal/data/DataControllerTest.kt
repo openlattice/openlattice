@@ -27,6 +27,7 @@ import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
 import com.google.common.collect.Maps.transformValues
 import com.openlattice.data.DataEdge
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
 import com.openlattice.data.requests.EntitySetSelection
@@ -34,18 +35,13 @@ import com.openlattice.data.requests.FileType
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
-import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import com.openlattice.rehearsal.edm.PERSON_GIVEN_NAME_NAME
-import com.openlattice.rehearsal.edm.PERSON_GIVEN_NAME_NAMESPACE
-import com.openlattice.rehearsal.edm.PERSON_NAME
-import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
+import com.openlattice.rehearsal.edm.*
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.slf4j.LoggerFactory
 import java.lang.Math.abs
 import java.time.Instant
 import java.time.LocalDate
@@ -61,10 +57,8 @@ import java.util.*
 private val numberOfEntries = 10
 private val random = Random()
 
-class DataControllerTest : SetupTestData() {
+class DataControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
-        val logger = LoggerFactory.getLogger(DataControllerTest::class.java)
-
         val fqnCache: LoadingCache<UUID, FullQualifiedName> = CacheBuilder.newBuilder()
                 .build(
                         object : CacheLoader<UUID, FullQualifiedName>() {
@@ -78,13 +72,7 @@ class DataControllerTest : SetupTestData() {
         @JvmStatic
         @BeforeClass
         fun init() {
-            importDataSet("socratesA.yaml", "test_linked_ppl_1.csv")
-            importDataSet("associationTestFlight.yaml", "emptyTestData.csv")
-
-            Thread.sleep(5000)
-            while (!checkLinkingFinished(setOf("SocratesTestA"))) {
-                Thread.sleep(3000)
-            }
+            loginAs("admin")
         }
     }
 
@@ -153,7 +141,7 @@ class DataControllerTest : SetupTestData() {
 
         Assert.assertEquals(indexExpected, indexActual)
 
-        val propertySrc = entries[0];
+        val propertySrc = entries[0]
         val replacement: SetMultimap<UUID, Any> = HashMultimap.create()
         val replacementProperty = propertySrc.keys.first()
         replacement.put(replacementProperty, RandomStringUtils.random(10) as Any)
@@ -329,7 +317,7 @@ class DataControllerTest : SetupTestData() {
 
         // load selected data
         val selectedProperties = et.properties.asSequence()
-                .filter { pid -> random.nextBoolean() }
+                .filter { random.nextBoolean() }
                 .toSet()
         val ess = EntitySetSelection(Optional.of(selectedProperties))
         val results = dataApi.loadEntitySetData(es.id, ess, null)
@@ -399,131 +387,62 @@ class DataControllerTest : SetupTestData() {
         Assert.assertEquals(0, fqns.asSequence().filter { it.namespace.equals(oldNameSpace) }.count())
     }
 
+
+    /* Deletes */
+
     @Test
-    fun testGetLinkedEntitySets() {
+    fun testDeleteEntities() {
         val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
         val personEt = edmApi.getEntityType(personEntityTypeId)
 
-        // these ids are put into the whitelist configuration in indexer > linking.yaml
-        // otherwise it will never get picked up by linking
-        val esId1 = UUID.fromString("65847f7b-c939-414f-bb45-863cd594e412")
-        val esId2 = UUID.fromString("8c97bf63-ca7a-4f37-ba1c-40338b1032d4")
-
-        val es1 = try {
-            createEntitySet(esId1, personEt)
-        } catch (e: Exception) {
-            edmApi.getEntitySet(esId1)
-        }
-        val es2 = try {
-            createEntitySet(esId2, personEt)
-        } catch (e: Exception) {
-            edmApi.getEntitySet(esId2)
-        }
-
-        dataApi.clearAllEntitiesFromEntitySet(esId1)
-        dataApi.clearAllEntitiesFromEntitySet(esId2)
-
-        val pt = createPropertyType()
-        val et = createEntityType(pt.id)
-        val esLinked = createEntitySet(et, true, setOf(esId1, esId2))
+        val es = createEntitySet(personEt)
 
         val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
-        val givenNames = HashMultimap.create<UUID, Any>()
-        (1..numberOfEntries)
-                .forEach { givenNames.put(personGivenNamePropertyId, RandomStringUtils.randomAscii(5)) }
+        val entries = (1..numberOfEntries)
+                .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
+        val newEntityIds = dataApi.createEntities(es.id, entries)
 
-        val entries1 = listOf(Multimaps.asMap(givenNames))
-        val entries2 = listOf(Multimaps.asMap(givenNames))
+        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
 
-        dataApi.createEntities(esId1, entries1)
-        dataApi.createEntities(esId2, entries2)
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
 
-        val ess = EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.empty())
+        val ess = EntitySetSelection(Optional.of(personEt.properties))
+        val loadedEntries = dataApi.loadEntitySetData(es.id, ess, FileType.json).toList()
 
-        // wait while linking finishes
-        Thread.sleep(5000)
-        while (!checkLinkingFinished(setOf(es1.name, es2.name))) {
-            Thread.sleep(2000)
-        }
-
-        val data = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinked.id, ess, FileType.json))
-
-        //Remove the extra properties for easier equals.
-        data.forEach {
-            it.removeAll(DataTables.ID_FQN)
-            it.removeAll(DataTables.LAST_INDEX_FQN)
-            it.removeAll(DataTables.LAST_WRITE_FQN)
-        }
-
-        Assert.assertEquals(
-                givenNames[personGivenNamePropertyId],
-                data.first()[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)]
-        )
+        Assert.assertEquals(numberOfEntries - 1, loadedEntries.size)
+        Assert.assertTrue(loadedEntries.none {
+            it[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)] == entries.first().values
+        })
     }
 
     @Test
-    fun testGetLinkedEntitySetsWithLinkingIds() {
+    fun testDeleteEntityProperties() {
         val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
         val personEt = edmApi.getEntityType(personEntityTypeId)
 
-        // these ids are put into the whitelist configuration in indexer > linking.yaml
-        // otherwise it will never get picked up by linking
-        val esId1 = UUID.fromString("65847f7b-c939-414f-bb45-863cd594e412")
-        val esId2 = UUID.fromString("8c97bf63-ca7a-4f37-ba1c-40338b1032d4")
-
-        val es1 = try {
-            createEntitySet(esId1, personEt)
-        } catch (e: Exception) {
-            edmApi.getEntitySet(esId1)
-        }
-        val es2 = try {
-            createEntitySet(esId2, personEt)
-        } catch (e: Exception) {
-            edmApi.getEntitySet(esId2)
-        }
-
-        dataApi.clearAllEntitiesFromEntitySet(esId1)
-        dataApi.clearAllEntitiesFromEntitySet(esId2)
-
-        val esLinked = createEntitySet(personEt, true, setOf(esId1, esId2))
+        val es = createEntitySet(personEt)
 
         val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
-        val givenNames = HashMultimap.create<UUID, Any>()
-        (1..numberOfEntries)
-                .forEach { givenNames.put(personGivenNamePropertyId, RandomStringUtils.randomAscii(5)) }
+        val personMiddleNamePropertyId = edmApi.getPropertyTypeId(PERSON_MIDDLE_NAME_NAMESPACE, PERSON_MIDDLE_NAME_NAME)
+        val people = (1..numberOfEntries)
+                .map {
+                    mapOf(
+                            personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5)),
+                            personMiddleNamePropertyId to setOf(RandomStringUtils.randomAscii(5))
+                    )
+                }.toList()
 
-        val entries1 = listOf(Multimaps.asMap(givenNames))
-        val entries2 = listOf(Multimaps.asMap(givenNames))
+        val newEntityIds = dataApi.createEntities(es.id, people)
 
-        dataApi.createEntities(esId1, entries1)
-        dataApi.createEntities(esId2, entries2)
+        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
 
-        // wait while linking finishes
-        Thread.sleep(5000)
-        while (!checkLinkingFinished(setOf(es1.name, es2.name))) {
-            Thread.sleep(3000)
-        }
+        val entityId = newEntityIds[0]
+        dataApi.deleteEntityProperties(es.id, entityId, setOf(personGivenNamePropertyId), DeleteType.Hard)
 
-        val data = ImmutableList.copyOf(
-                dataApi.loadEntitySetData(
-                        esLinked.id,
-                        EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.empty()),
-                        FileType.json
-                )
-        )
-        val linkingIds = data.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }
-        val indexedData = index(data)
+        val loadedEntity = dataApi.getEntity(es.id, entityId)
 
-        val personGivenNameFqn = FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
-        linkingIds.forEach {
-            val ess = EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.of(setOf(it)))
-            val linkedEntity = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinked.id, ess, FileType.json))
-
-            Assert.assertArrayEquals(
-                    arrayOf(indexedData[it]?.get(personGivenNameFqn)),
-                    arrayOf(linkedEntity.first().get(personGivenNameFqn))
-            )
-        }
-
+        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
+        Assert.assertFalse(loadedEntity.keySet()
+                .contains(FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)))
     }
 }
