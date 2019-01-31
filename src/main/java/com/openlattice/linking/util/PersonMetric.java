@@ -104,7 +104,7 @@ public enum PersonMetric {
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
         Map<String, Double> result = new HashMap<>( metrics.length );
         metricsList.parallelStream().forEach( m -> {
-            result.put( m.metric.toString(), m.extract( lhs, rhs, fqnToIdMap ) );
+            result.put( m.toString(), m.extract( lhs, rhs, fqnToIdMap ) );
         } );
         return result;
     }
@@ -115,7 +115,7 @@ public enum PersonMetric {
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
         Map<String, Double> result = new HashMap<>( metrics.length );
         metricsList.parallelStream().forEach( m ->
-                result.put( m.metric.toString(), m.extract( lhs, rhs, fqnToIdMap ) )
+                result.put( m.toString(), m.extract( lhs, rhs, fqnToIdMap ) )
         );
         return result;
     }
