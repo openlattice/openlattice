@@ -1,7 +1,9 @@
 package com.openlattice.linking.controllers
 
+import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
+import com.openlattice.data.EntityDataKey
 import com.openlattice.linking.LinkingFeedbackApi
 import com.openlattice.linking.PostgresLinkingFeedbackQueryService
 import com.openlattice.linking.Matcher
@@ -29,8 +31,11 @@ constructor(
 
     @PutMapping(path = [LinkingFeedbackApi.FEEDBACK])
     override fun addLinkingFeedback(@RequestBody feedback: EntityLinkingFeedback): Boolean {
-        if(feedback.src.entityKeyId == feedback.dst.entityKeyId) {
-            logger.error("You cannot ")
+        ensureReadAccess(AclKey(feedback.src.entitySetId))
+        ensureReadAccess(AclKey(feedback.dst.entitySetId))
+
+        if (feedback.src.entityKeyId == feedback.dst.entityKeyId) {
+            logger.error("You cannot add feedback on linking on the same entities")
             return false
         }
 
@@ -41,12 +46,12 @@ constructor(
     }
 
     @GetMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.ALL])
-    override fun getLinkingFeedbacks(): Iterable<EntityLinkingFeedback> {
+    override fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback> {
         return feedbackQueryService.getLinkingFeedbacks()
     }
 
     @GetMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.ALL + LinkingFeedbackApi.FEATURES])
-    override fun getLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures> {
+    override fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures> {
         return feedbackQueryService.getLinkingFeedbacks().map {
             val entities = dataLoader.getEntities(setOf(it.src, it.dst))
             EntityLinkingFeatures(
@@ -55,6 +60,20 @@ constructor(
                             matcher.extractProperties(entities.getValue(it.src)),
                             matcher.extractProperties(entities.getValue(it.dst))))
         }
+    }
+
+    @PostMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.FEATURES])
+    override fun getLinkingFeedbackWithFeatures(
+            @RequestBody entityPair: Pair<EntityDataKey, EntityDataKey>): EntityLinkingFeatures? {
+        val feedback = checkNotNull(feedbackQueryService.getLinkingFeedback(entityPair))
+        { "Linking feedback for entities ${entityPair.first} - ${entityPair.second} does not exist" }
+
+        val entities = dataLoader.getEntities(setOf(feedback.src, feedback.dst))
+        return EntityLinkingFeatures(
+                feedback,
+                matcher.extractFeatures(
+                        matcher.extractProperties(entities.getValue(feedback.src)),
+                        matcher.extractProperties(entities.getValue(feedback.dst))))
     }
 
 
