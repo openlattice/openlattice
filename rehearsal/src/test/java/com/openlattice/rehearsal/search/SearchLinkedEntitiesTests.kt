@@ -5,7 +5,6 @@ import com.google.common.collect.Lists
 import com.google.common.collect.SetMultimap
 import com.openlattice.data.UpdateType
 import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.PERSON_NAME
 import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
@@ -223,7 +222,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
                 .simpleSearchConstraints(arrayOf(esLinked.id), 0, 100, "*")
         val resultsA1 = searchApi.searchEntitySetData(simpleSearchConstraint)
 
-        linkingApi.addEntitySetsToLinkingEntitySet(esLinked.id, setOf(socratesBId))
+        entitySetsApi.addEntitySetsToLinkingEntitySet(esLinked.id, setOf(socratesBId))
         Thread.sleep(60000L) // wait for indexing
         val resultsAB = searchApi.searchEntitySetData(simpleSearchConstraint)
 
@@ -232,7 +231,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Assert.assertTrue(resultsAB.hits.flatMap { it[FullQualifiedName("nc.PersonSurName")] }
                 .contains("Qwe"))
 
-        linkingApi.removeEntitySetsFromLinkingEntitySet(esLinked.id, setOf(socratesBId))
+        entitySetsApi.removeEntitySetsFromLinkingEntitySet(esLinked.id, setOf(socratesBId))
         Thread.sleep(60000L) // wait for indexing
 
         val resultsA2 = searchApi.searchEntitySetData(simpleSearchConstraint)
