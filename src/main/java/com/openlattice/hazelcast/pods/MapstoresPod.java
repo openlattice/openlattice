@@ -162,7 +162,7 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<UUID, AuditRecordEntitySetConfiguration> auditRecordEntitySetConfigurationMapstore() {
+    public SelfRegisteringMapStore<AclKey, AuditRecordEntitySetConfiguration> auditRecordEntitySetConfigurationMapstore() {
         return new AuditRecordEntitySetConfigurationMapstore( hikariDataSource );
     }
 
