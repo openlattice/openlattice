@@ -25,8 +25,7 @@ package com.openlattice.hazelcast;
 /**
  * Simplifies management of type ids within Hazelcast for serialization. Can be re-ordered safely unless doing hot
  * upgrade. <b>NOTE: Leave first entry in place</b>
- *
- *  */
+ */
 public enum StreamSerializerTypeIds {
     /**
      * Move this one, break everything.
@@ -36,6 +35,7 @@ public enum StreamSerializerTypeIds {
     ACL_KEY,
     ACL_KEY_SET,
     AUDITABLE_SIGNAL,
+    AUDIT_RECORD_ENTITY_SET_CONFIGURATION,
     AUDIT_METRIC_INCREMENTER,
     AUTHORIZATION_AGGREGATOR,
     BYTE_BUFFER,
@@ -178,5 +178,6 @@ public enum StreamSerializerTypeIds {
     ADD_ENTITY_SETS_TO_LINKING_ENTITY_SET_PROCESSOR,
     REMOVE_ENTITY_SETS_FROM_LINKING_ENTITY_SET_PROCESSOR,
     RENDERABLE_EMAIL_REQUEST,
-    PERSISTENT_SEARCH_MESSENGER
+    PERSISTENT_SEARCH_MESSENGER,
+    UPDATE_ENTITY_SET_AUDIT_RECORD_ENTITY_SET_ID_PROCESSOR
 }

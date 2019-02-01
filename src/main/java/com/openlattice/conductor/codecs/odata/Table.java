@@ -37,8 +37,8 @@ import static com.openlattice.datastore.cassandra.CommonColumns.*;
 public enum Table implements TableDef {
     ACL_KEYS,
     AUDIT_LOG,
-    AUDIT_EVENTS, // TODO: this needs to be removed
     AUDIT_METRICS, // TODO: this needs to be removed
+    AUDIT_RECORD_ENTITY_SETS,
     BACK_EDGES,
     COMPLEX_TYPES,
     DATA,
@@ -143,14 +143,6 @@ public enum Table implements TableDef {
                                 TIME_UUID
                         );
 
-            // TODO: remove AUDIT_EVENTS, AUDIT_LOG replaces AUDIT_EVENTS
-            case AUDIT_EVENTS:
-                return new CassandraTableBuilder( AUDIT_EVENTS )
-                        .ifNotExists()
-                        .partitionKey( CommonColumns.ACL_KEYS )
-                        .clusteringColumns( TIME_ID, PRINCIPAL_TYPE, PRINCIPAL_ID )
-                        .columns( CommonColumns.PERMISSIONS, AUDIT_EVENT_DETAILS, BLOCK )
-                        .secondaryIndex( PRINCIPAL_TYPE, PRINCIPAL_ID );
             // TODO: remove AUDIT_METRICS
             case AUDIT_METRICS:
                 return new CassandraTableBuilder( AUDIT_METRICS )

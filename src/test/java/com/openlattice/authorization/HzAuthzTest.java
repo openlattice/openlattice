@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization;
 
+import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
@@ -74,7 +75,8 @@ public class HzAuthzTest {
                 PostgresPod.class,
                 SharedStreamSerializersPod.class,
                 PostgresTablesPod.class,
-                NeuronPod.class
+                NeuronPod.class,
+                AuditingConfigurationPod.class
         );
 
         testServer.sprout( ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,

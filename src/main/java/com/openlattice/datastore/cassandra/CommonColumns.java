@@ -38,7 +38,7 @@ public enum CommonColumns implements ColumnDef {
     FROZEN_PERMISSIONS( DataType.frozenSet( DataType.text() ) ),
     ACL_CHILDREN_PERMISSIONS( DataType.map( DataType.uuid(), FROZEN_PERMISSIONS.getType() ) ),
     ACL_KEY_VALUE( DataType.frozenList( DataType.uuid() ) ),
-    // TODO: ACL_KEYS should really be ACL_KEY
+    // TODO: ACL_KEY should really be ACL_KEY
     ACL_KEYS( DataType.frozenList( DataType.uuid() ) ), // partition index within a table for distribution purpose,
     ACL_ROOT( DataType.frozenList( DataType.uuid() ) ),
     ALLOWED_EMAIL_DOMAINS( DataType.set( DataType.text() ) ),
