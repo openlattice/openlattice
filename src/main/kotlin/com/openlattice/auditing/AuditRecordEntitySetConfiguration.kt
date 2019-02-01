@@ -21,6 +21,7 @@
 
 package com.openlattice.auditing
 
+import com.openlattice.authorization.AclKey
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import java.util.*
 
@@ -29,6 +30,6 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class AuditRecordEntitySetConfiguration(
-        var activeAuditRecordEntitySetId: UUID,
-        val auditRecordEntitySetIds: MutableSet<UUID> = mutableSetOf(activeAuditRecordEntitySetId)
+        var activeAuditRecordEntitySetId: AclKey,
+        val auditRecordEntitySetIds: MutableSet<UUID> = mutableSetOf(activeAuditRecordEntitySetId.first())
 )

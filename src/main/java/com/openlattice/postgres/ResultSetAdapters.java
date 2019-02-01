@@ -960,7 +960,7 @@ public final class ResultSetAdapters {
 
     public static AuditRecordEntitySetConfiguration auditRecordEntitySetConfiguration( ResultSet rs )
             throws SQLException {
-        return new AuditRecordEntitySetConfiguration( id( rs ),
+        return new AuditRecordEntitySetConfiguration( aclKey( rs ),
                 Sets.newHashSet( PostgresArrays.getUuidArray( rs, AUDIT_RECORD_ENTITY_SET_IDS_FIELD ) ) );
     }
 }

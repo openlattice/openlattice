@@ -48,14 +48,14 @@ class AuditRecordEntitySetsConfigurationStreamSerializer : SelfRegisteringStream
     }
 
     override fun write(out: ObjectDataOutput, obj: AuditRecordEntitySetConfiguration) {
-        UUIDStreamSerializer.serialize(out, obj.activeAuditRecordEntitySetId)
+        AclKeyStreamSerializer.serialize(out, obj.activeAuditRecordEntitySetId)
         SetStreamSerializers.fastUUIDSetSerialize(out, obj.auditRecordEntitySetIds)
     }
 
     override fun read(input: ObjectDataInput): AuditRecordEntitySetConfiguration {
-        val activeAuditRecordEntitySetId = UUIDStreamSerializer.deserialize(input)
-        val auditRecordEntitySetIds =         SetStreamSerializers.fastUUIDSetDeserialize(input)
+        val activeAuditRecordEntitySetId = AclKeyStreamSerializer.deserialize(input)
+        val auditRecordEntitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
 
-        return AuditRecordEntitySetConfiguration(activeAuditRecordEntitySetId,auditRecordEntitySetIds)
+        return AuditRecordEntitySetConfiguration(activeAuditRecordEntitySetId, auditRecordEntitySetIds)
     }
 }
