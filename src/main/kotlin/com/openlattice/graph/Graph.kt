@@ -299,7 +299,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, true))
                     stmt.setArray(1, entitySetIdsArr)
                     stmt.setArray(2, ids)
-                    stmt.setObject(3, entitySetIdsArr)
+                    stmt.setArray(3, entitySetIdsArr)
                     stmt.setArray(4, ids)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
