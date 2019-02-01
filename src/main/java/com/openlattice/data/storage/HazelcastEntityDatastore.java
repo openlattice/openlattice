@@ -30,8 +30,8 @@ import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.edm.events.EntitySetDataClearedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.linking.PostgresLinkingFeedbackQueryService;
 import com.openlattice.postgres.JsonDeserializer;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -46,7 +46,6 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Function;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -64,6 +63,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Inject
     private EventBus eventBus;
+
+    @Inject
+    private PostgresLinkingFeedbackQueryService feedbackQueryService;
 
     public HazelcastEntityDatastore(
             EntityKeyIdService idService,
@@ -268,10 +270,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 pdm.markLinkingIdsAsNeedToBeIndexed( dirtyLinkingIds );
             }
         }
-    }
-
-    private void signalEntitySetDeleted( UUID entitySetId ) {
-        eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
     }
 
     @Timed
@@ -586,8 +584,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         int deleteCount = dataQueryService.deleteEntities( entitySetId, entityKeyIds );
         signalDeletedEntities( entitySetId, entityKeyIds );
 
-        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows and {} property data",
-                entityKeyIds, entitySetId, deleteCount, deletePropertyCount );
+        // delete entities from linking feedbacks too
+        int deletedFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks( entitySetId, entityKeyIds );
+
+        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data and " +
+                        "{} feedbacks",
+                entityKeyIds, entitySetId, deleteCount, deletePropertyCount, deletedFeedbackCount );
 
         return deleteCount;
     }
