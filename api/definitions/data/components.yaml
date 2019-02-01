@@ -1,0 +1,13 @@
+entity:
+  type: object
+  additionalProperties:
+    type: array
+    items:
+      type: string
+entityWithId:
+  allOf:
+    - $ref: "./components.yaml#/entity"
+    - type: object
+      properties:
+        openlattice.@id:
+          type: string

@@ -21,37 +21,47 @@
 
 package com.openlattice.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+
+import java.io.Serializable;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataEdge {
-    private final EntityDataKey             src;
-    private final EntityDataKey             dst;
-    private final SetMultimap<UUID, Object> data;
+    private final EntityDataKey          src;
+    private final EntityDataKey          dst;
+    private final Map<UUID, Set<Object>> data;
 
+    @JsonCreator
     public DataEdge(
-            EntityDataKey src,
-            EntityDataKey dst,
-            SetMultimap<UUID, Object> data ) {
+            @JsonProperty( SerializationConstants.SRC ) EntityDataKey src,
+            @JsonProperty( SerializationConstants.DST ) EntityDataKey dst,
+            @JsonProperty( "data" ) Map<UUID, Set<Object>> data ) {
         this.src = src;
         this.dst = dst;
         this.data = data;
     }
 
+    @JsonProperty( SerializationConstants.SRC )
     public EntityDataKey getSrc() {
-
         return src;
     }
 
+    @JsonProperty( SerializationConstants.DST )
     public EntityDataKey getDst() {
         return dst;
     }
 
-    public SetMultimap<UUID, Object> getData() {
+    @JsonProperty( "data" )
+    public Map<UUID, Set<Object>> getData() {
         return data;
     }
 

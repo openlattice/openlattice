@@ -1,0 +1,191 @@
+entitySetId:
+  get:
+    summary: Get the EntitySet definition for the given EntitySet UUID.
+    operationId: getEntitySet
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: "An Entity Set definition"
+        content:
+          application/json:
+            schema:
+                $ref: "./definitions/EDM/components.yaml#/entitySet"
+  delete:
+    summary: Deletes the EntitySet definition for the given EntitySet UUID.
+    operationId: deleteEntitySet
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+  patch:
+    summary: Updates the EntityType definition for the given EntitySet UUID with the given metadata.
+    operationId: updateEntitySetMetaData
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/metaDataUpdate"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+entitySetName:
+  get:
+    summary: Gets the EntitySet UUID for the given EntitySet name.
+    operationId: getEntitySetId
+    parameters:
+      - name: entitySetName
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetName"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              $ref: "./definitions/EDM/components.yaml#/entitySetId"
+entitySet:
+  get:
+    summary: Get all EntitySet definitions.
+    operationId: getAllEntitySets
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./definitions/EDM/components.yaml#/entitySet"
+  post:
+    summary: Create new EntitySet definitions if they don"t exist.
+    operationId: createEntitySets
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "./definitions/EDM/components.yaml#/entitySet"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+entitySetPropertyTypes:
+  get:
+    summary: Get all property type metadata for an entity set.
+    operationId: getAllEntitySetPropertyMetadata
+    parameters:
+      - name: entitySetId
+        in: path
+        required: true
+        schema:
+          $ref: "./definitions/EDM/components.yaml#/entitySetId"
+    tags:
+      - edm
+    security:
+      - openlattice_auth: []
+    responses:
+      "200":
+        description: Success
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "./definitions/EDM/components.yaml#/propertyType"
+entitySetPropertyType:
+    get:
+      summary: Get specified property type metadata for an entity set.
+      operationId: getEntitySetPropertyMetadata
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/entitySetId"
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/propertyTypeId"
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ./definitions/EDM/components.yaml#/propertyType
+    post:
+      summary: Updates the property type metadata for the given entity set.
+      operationId: updateEntitySetPropertyMetadata
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/entitySetId"
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            $ref: "./definitions/EDM/components.yaml#/propertyTypeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./definitions/EDM/components.yaml#/propertyType"
+      responses:
+        200:
+          description: Success

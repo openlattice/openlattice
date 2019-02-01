@@ -22,20 +22,24 @@ import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.LinkedHashSet;
 
 public class EntitySetPropertyMetadata {
 
     private String  title;
     private String  description;
+    private LinkedHashSet<String> tags;
     private boolean defaultShow;
 
     @JsonCreator
     public EntitySetPropertyMetadata(
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) String description,
+            @JsonProperty( SerializationConstants.PROPERTY_TAGS) LinkedHashSet<String> tags,
             @JsonProperty( SerializationConstants.DEFAULT_SHOW ) boolean defaultShow ) {
         this.title = title;
         this.description = description;
+        this.tags = tags;
         this.defaultShow = defaultShow;
     }
 
@@ -53,22 +57,32 @@ public class EntitySetPropertyMetadata {
     public boolean getDefaultShow() {
         return defaultShow;
     }
-    
+
+    @JsonProperty( SerializationConstants.PROPERTY_TAGS )
+    public LinkedHashSet<String> getTags() {
+        return tags;
+    }
+
     @JsonIgnore
     public void setTitle( String title ) {
         this.title = title;
     }
-    
+
     @JsonIgnore
     public void setDescription( String description ) {
         this.description = description;
     }
-    
+
     @JsonIgnore
     public void setDefaultShow( boolean defaultShow ) {
         this.defaultShow = defaultShow;
     }
-    
+
+    @JsonIgnore
+    public void setTags( LinkedHashSet<String> tags ) {
+        this.tags = tags;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;

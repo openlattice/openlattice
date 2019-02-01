@@ -23,28 +23,32 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.client.RetrofitFactory.Environment;
 import com.openlattice.client.serialization.SerializableSupplier;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.DataIntegrationApi;
+import com.openlattice.data.S3Api;
+import com.openlattice.directory.PrincipalApi;
 import com.openlattice.edm.EdmApi;
+import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.search.SearchApi;
-import com.openlattice.sync.SyncApi;
-import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Retrofit;
+
+import java.util.concurrent.ExecutionException;
 
 public class ApiClient implements ApiFactoryFactory {
 
     private static final long serialVersionUID = -5757911484718872922L;
 
-    private static final Logger logger = LoggerFactory
+    private static final Logger                         logger      = LoggerFactory
             .getLogger( ApiClient.class );
-    private final ApiFactoryFactory retrofitSupplier;
-    private transient Supplier<ApiFactory>           restAdapter = null;
-    private transient LoadingCache<Class<?>, Object> apiCache    = null;
+    private final        ApiFactoryFactory              retrofitSupplier;
+    private transient    Supplier<ApiFactory>           restAdapter = null;
+    private transient    LoadingCache<Class<?>, Object> apiCache    = null;
 
     public ApiClient( Environment environment, SerializableSupplier<String> jwtToken ) {
         this( () -> {
@@ -65,27 +69,40 @@ public class ApiClient implements ApiFactoryFactory {
         logger.info( "API client ready!" );
     }
 
-    public DataIntegrationApi getDataIntegrationApi() {
-        return (DataIntegrationApi) get().create( DataIntegrationApi.class );
+    public AuthorizationsApi getAuthorizationsApi() throws ExecutionException {
+        return get().create( AuthorizationsApi.class );
     }
+
+    public DataIntegrationApi getDataIntegrationApi() {
+        return get().create( DataIntegrationApi.class );
+    }
+
     public DataApi getDataApi() throws ExecutionException {
-        return (DataApi) get().create( DataApi.class );
+        return get().create( DataApi.class );
     }
 
     public PermissionsApi getPermissionsApi() throws ExecutionException {
-        return (PermissionsApi) get().create( PermissionsApi.class );
+        return get().create( PermissionsApi.class );
+    }
+
+    public PrincipalApi getPrincipalApi() throws ExecutionException {
+        return get().create( PrincipalApi.class );
     }
 
     public EdmApi getEdmApi() throws ExecutionException {
-        return (EdmApi) get().create( EdmApi.class );
+        return get().create( EdmApi.class );
     }
 
-    public SyncApi getSyncApi() throws ExecutionException {
-        return (SyncApi) get().create( SyncApi.class );
+    public OrganizationsApi getOrganizationsApi() throws ExecutionException {
+        return get().create( OrganizationsApi.class );
     }
 
     public SearchApi getSearchApi() {
-        return (SearchApi) get().create( SearchApi.class );
+        return get().create( SearchApi.class );
+    }
+
+    public S3Api getS3Api() {
+        return get().create( S3Api.class );
     }
 
     public ApiFactory get() {

@@ -79,7 +79,7 @@ public interface AppApi {
     @GET( BASE + CONFIG_PATH + ID_PATH )
     List<AppConfig> getAvailableAppConfigs( @Path( ID ) UUID appId );
 
-    @GET( BASE + UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH )
+    @POST( BASE + UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH )
     void addAppTypeToApp( @Path( ID ) UUID appId, @Path( APP_TYPE_ID ) UUID appTypeId );
 
     @DELETE( BASE + UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH )

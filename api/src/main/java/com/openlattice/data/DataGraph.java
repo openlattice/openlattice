@@ -21,29 +21,39 @@
 
 package com.openlattice.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class DataGraph {
-    private final ListMultimap<UUID, SetMultimap<UUID, Object>> entities;
-    private final ListMultimap<UUID, DataAssociation>           associations;
+    private final ListMultimap<UUID, Map<UUID, Set<Object>>> entities;
+    private final ListMultimap<UUID, DataAssociation>        associations;
 
+    @JsonCreator
     public DataGraph(
-            ListMultimap<UUID, SetMultimap<UUID, Object>> entities,
-            ListMultimap<UUID, DataAssociation> associations ) {
+            @JsonProperty( SerializationConstants.ENTITIES ) ListMultimap<UUID, Map<UUID, Set<Object>>> entities,
+            @JsonProperty( SerializationConstants.ASSOCIATIONS ) ListMultimap<UUID, DataAssociation> associations ) {
         this.entities = entities;
         this.associations = associations;
     }
 
-    public ListMultimap<UUID, SetMultimap<UUID, Object>> getEntities() {
+    @JsonProperty( SerializationConstants.ENTITIES )
+    public ListMultimap<UUID, Map<UUID, Set<Object>>> getEntities() {
         return entities;
     }
 
+    @JsonProperty( SerializationConstants.ASSOCIATIONS )
     public ListMultimap<UUID, DataAssociation> getAssociations() {
         return associations;
     }
@@ -66,5 +76,17 @@ public class DataGraph {
     @Override public int hashCode() {
 
         return Objects.hash( entities, associations );
+    }
+
+    /**
+     * Compatibility method for building data graphs from set multimaps instead of maps of sets.
+     * @param entities The entities in the data graph.
+     * @param associations The associations in the data graph.
+     * @return A data graph object.
+     */
+    public static DataGraph fromMultimap(
+            @JsonProperty( SerializationConstants.ENTITIES ) ListMultimap<UUID, SetMultimap<UUID, Object>> entities,
+            @JsonProperty( SerializationConstants.ASSOCIATIONS ) ListMultimap<UUID, DataAssociation> associations ) {
+        return new DataGraph( Multimaps.transformValues( entities, Multimaps::asMap ), associations );
     }
 }

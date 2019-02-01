@@ -18,10 +18,8 @@
 
 package com.openlattice.search;
 
-import com.openlattice.search.requests.AdvancedSearch;
-import com.openlattice.search.requests.FQNSearchTerm;
-import com.openlattice.search.requests.Search;
-import com.openlattice.search.requests.SearchResult;
+import com.openlattice.search.requests.*;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,13 +27,8 @@ import java.util.UUID;
 
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.search.requests.DataSearchResult;
-import com.openlattice.search.requests.SearchTerm;
 
-import retrofit2.http.Body;
-import retrofit2.http.GET;
-import retrofit2.http.POST;
-import retrofit2.http.Path;
+import retrofit2.http.*;
 
 public interface SearchApi {
     /*
@@ -66,15 +59,17 @@ public interface SearchApi {
     String ENTITY_TYPE_ID    = "eid";
     String PROPERTY_TYPE_ID  = "pid";
 
-    String ENTITY_SET_ID = "entitySetId";
-    String NUM_RESULTS   = "numResults";
-    String ENTITY_ID     = "entityId";
-    String START         = "start";
+    String ENTITY_SET_ID    = "entitySetId";
+    String ORGANIZATION_ID  = "organizationId";
+    String NUM_RESULTS      = "numResults";
+    String ENTITY_ID        = "entityId";
+    String START            = "start";
 
-    String ENTITY_SET_ID_PATH = "/{" + ENTITY_SET_ID + "}";
-    String NUM_RESULTS_PATH   = "/{" + NUM_RESULTS + "}";
-    String ENTITY_ID_PATH     = "/{" + ENTITY_ID + "}";
-    String START_PATH         = "/{" + START + "}";
+    String ENTITY_SET_ID_PATH   = "/{" + ENTITY_SET_ID + "}";
+    String ORGANIZATION_ID_PATH = "/{" + ORGANIZATION_ID + "}";
+    String NUM_RESULTS_PATH     = "/{" + NUM_RESULTS + "}";
+    String ENTITY_ID_PATH       = "/{" + ENTITY_ID + "}";
+    String START_PATH           = "/{" + START + "}";
 
     int MAX_SEARCH_RESULTS = 10000;
 
@@ -110,6 +105,18 @@ public interface SearchApi {
     SearchResult getEntitySets(
             @Path( START ) int start,
             @Path( NUM_RESULTS ) int maxHits );
+
+    /**
+     * Executes a search over the data of a given entity set to find rows that match the search term
+     *
+     * @param searchConstraints A JSON object that contains the entity set id(s) to search, the search type, the hit number
+     *                          to start returning results on for paging, the max number of hits to return, and any additional
+     *                          constraints specific to the search type
+     * @return A data search result object, containing the total number of hits for the given query, and the hits
+     * themselves
+     */
+    @PATCH( BASE )
+    DataSearchResult searchEntitySetData( @Body SearchConstraints searchConstraints );
 
     /**
      * Executes a search over the data of a given entity set to find rows that match the search term
@@ -235,27 +242,41 @@ public interface SearchApi {
      * Executes a search for all neighbors of an entity that are connected by an association
      *
      * @param entitySetId the entity set id of the entity
-     * @param entityId    the entity key id of the entity
+     * @param entityKeyId    the entity key id of the entity
      * @return A list of objects containing information about the neighbor and association
      */
     @GET( BASE + ENTITY_SET_ID_PATH + ENTITY_ID_PATH )
     List<NeighborEntityDetails> executeEntityNeighborSearch(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Path( ENTITY_ID ) UUID entityId );
+            @Path( ENTITY_ID ) UUID entityKeyId );
 
     /**
      * Executes a search for all neighbors of multiple entities of the same entity set that are connected by an
      * association
      *
      * @param entitySetId the entity set id of the entities
-     * @param entityIds   the entity key ids of the entities
+     * @param entityKeyIds   the entity key ids of the entities
      * @return A map from each entity id to a list of objects containing information about the neighbors and
      * associations of that entity
      */
     @POST( BASE + ENTITY_SET_ID_PATH + NEIGHBORS )
     Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearchBulk(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Set<UUID> entityIds );
+            @Body Set<UUID> entityKeyIds );
+
+    /**
+     * Executes a search for all neighbors of multiple entities of the same entity set that are connected by an
+     * association
+     *
+     * @param entitySetId the entity set id of the entities
+     * @param filter   optional constraints on entityKeyIds to include and filters on src/dst/edge entity set ids
+     * @return A map from each entity id to a list of objects containing information about the neighbors and
+     * associations of that entity
+     */
+    @POST( BASE + ENTITY_SET_ID_PATH + NEIGHBORS + ADVANCED )
+    Map<UUID, List<NeighborEntityDetails>> executeFilteredEntityNeighborSearch(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body EntityNeighborsFilter filter );
 
     @GET( BASE + EDM + INDEX )
     Void triggerEdmIndex();
@@ -266,4 +287,9 @@ public interface SearchApi {
     @GET( BASE + ENTITY_SETS + INDEX )
     Void triggerAllEntitySetDataIndex();
 
+    @GET( BASE + ORGANIZATIONS + INDEX )
+    Void triggerAllOrganizationsIndex();
+
+    @GET( BASE + ORGANIZATIONS + INDEX + ORGANIZATION_ID_PATH )
+    Void triggerOrganizationIndex( @Path( ORGANIZATION_ID ) UUID organizationId );
 }

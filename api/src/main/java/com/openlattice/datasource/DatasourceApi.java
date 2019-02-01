@@ -23,7 +23,7 @@ import retrofit2.http.*;
 import java.util.UUID;
 
 /**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * This API used for managing
  */
 public interface DatasourceApi {
     /*
@@ -44,11 +44,5 @@ public interface DatasourceApi {
 
     @DELETE( BASE + "/{" + ID + "}" )
     Void deleteDatasource( @Path( ID ) UUID datasourceId );
-
-    @POST( BASE + "/{" + ID + "}" )
-    UUID startSync( @Path( ID ) UUID datasourceId );
-
-    @DELETE( BASE + "/{" + ID + "}/" + SYNC + "}" )
-    Void signalSyncCompleted( @Path( ID ) UUID datasourceId, @Path( SYNC ) UUID syncId );
 
 }

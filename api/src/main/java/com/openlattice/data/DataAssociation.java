@@ -24,9 +24,15 @@ package com.openlattice.data;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -41,16 +47,17 @@ public class DataAssociation {
     private final Optional<Integer> dstEntityIndex;
     private final Optional<UUID>    dstEntityKeyId;
 
-    private final SetMultimap<UUID, Object> data;
+    private final Map<UUID, Set<Object>> data;
 
+    @JsonCreator
     public DataAssociation(
-            UUID srcEntitySetId,
-            Optional<Integer> srcEntityIndex,
-            Optional<UUID> srcEntityKeyId,
-            UUID dstEntitySetId,
-            Optional<Integer> dstEntityIndex,
-            Optional<UUID> dstEntityKeyId,
-            SetMultimap<UUID, Object> data ) {
+            @JsonProperty( SerializationConstants.SRC_ENTITY_SET_ID ) UUID srcEntitySetId,
+            @JsonProperty( SerializationConstants.SRC_ENTITY_INDEX ) Optional<Integer> srcEntityIndex,
+            @JsonProperty( SerializationConstants.SRC_ENTITY_KEY_ID ) Optional<UUID> srcEntityKeyId,
+            @JsonProperty( SerializationConstants.DST_ENTITY_SET_ID ) UUID dstEntitySetId,
+            @JsonProperty( SerializationConstants.DST_ENTITY_INDEX ) Optional<Integer> dstEntityIndex,
+            @JsonProperty( SerializationConstants.DST_ENTITY_KEY_ID ) Optional<UUID> dstEntityKeyId,
+            @JsonProperty( SerializationConstants.DATA ) Map<UUID, Set<Object>> data ) {
         checkArgument( srcEntityIndex.isPresent() ^ srcEntityKeyId.isPresent(),
                 "Only one of index or entity key id must be present for source" );
         checkArgument( dstEntityIndex.isPresent() ^ dstEntityKeyId.isPresent(),
@@ -77,31 +84,38 @@ public class DataAssociation {
                 '}';
     }
 
+    @JsonProperty( SerializationConstants.SRC_ENTITY_SET_ID )
     public UUID getSrcEntitySetId() {
         return srcEntitySetId;
     }
 
+    @JsonProperty( SerializationConstants.SRC_ENTITY_INDEX )
     public Optional<Integer> getSrcEntityIndex() {
         return srcEntityIndex;
     }
 
+    @JsonProperty( SerializationConstants.DST_ENTITY_SET_ID )
     public UUID getDstEntitySetId() {
         return dstEntitySetId;
     }
 
+    @JsonProperty( SerializationConstants.DST_ENTITY_INDEX )
     public Optional<Integer> getDstEntityIndex() {
         return dstEntityIndex;
     }
 
+    @JsonProperty( SerializationConstants.SRC_ENTITY_KEY_ID )
     public Optional<UUID> getSrcEntityKeyId() {
         return srcEntityKeyId;
     }
 
+    @JsonProperty( SerializationConstants.DST_ENTITY_KEY_ID )
     public Optional<UUID> getDstEntityKeyId() {
         return dstEntityKeyId;
     }
 
-    public SetMultimap<UUID, Object> getData() {
+    @JsonProperty( SerializationConstants.DATA )
+    public Map<UUID, Set<Object>> getData() {
         return data;
     }
 

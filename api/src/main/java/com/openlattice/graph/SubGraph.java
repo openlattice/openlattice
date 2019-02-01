@@ -31,9 +31,9 @@ import java.util.UUID;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class SubGraph {
-    private final UUID                                                     queryId;
-    private final List<Iterable<SetMultimap<UUID, Property>>>              entities;
-    private final Iterable<AssociationIndexes>                             edges;
+    private final UUID                                        queryId;
+    private final List<Iterable<SetMultimap<UUID, Property>>> entities;
+    private final Iterable<AssociationIndexes>                edges;
 
     public SubGraph(
             UUID queryId,

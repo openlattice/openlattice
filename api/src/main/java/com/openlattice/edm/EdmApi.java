@@ -18,6 +18,7 @@
 
 package com.openlattice.edm;
 
+import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
@@ -33,6 +34,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
@@ -63,6 +66,7 @@ public interface EdmApi {
     String NAME                = "name";
     String NAMESPACE           = "namespace";
     String NAMESPACES          = "namespaces";
+    String FULLQUALIFIED_NAME  = "fullQualifiedName";
     String ENTITY_SETS         = "entitySets";
     String ENTITY_TYPES        = "entityTypes";
     String ASSOCIATION_TYPES   = "associationTypes";
@@ -85,6 +89,7 @@ public interface EdmApi {
     String ENTITY_SETS_PATH      = "/entity/set";
     String ENTITY_TYPE_PATH      = "/entity/type";
     String PROPERTY_TYPE_PATH    = "/property/type";
+    String PROPERTIES_PATH       = "/properties";
     String COMPLEX_TYPE_PATH     = "/complex/type";
     String ASSOCIATION_TYPE_PATH = "/association/type";
     String HIERARCHY_PATH        = "/hierarchy";
@@ -98,19 +103,23 @@ public interface EdmApi {
     String CLEAR_PATH            = "/clear";
     String FORCE_PATH            = "/force";
     String KEY_PATH              = "/key";
+    String SUMMARY_PATH          = "/summary";
 
-    String NAMESPACE_PATH           = "/{" + NAMESPACE + "}";
-    String NAME_PATH                = "/{" + NAME + "}";
-    String ID_PATH                  = "/{" + ID + "}";
-    String ENTITY_TYPE_ID_PATH      = "/{" + ENTITY_TYPE_ID + "}";
-    String ASSOCIATION_TYPE_ID_PATH = "/{" + ASSOCIATION_TYPE_ID + "}";
-    String PROPERTY_TYPE_ID_PATH    = "/{" + PROPERTY_TYPE_ID + "}";
+    String NAMESPACE_PATH                   = "/{" + NAMESPACE + "}";
+    String NAME_PATH                        = "/{" + NAME + "}";
+    String FULLQUALIFIED_NAME_PATH          = "/{" + FULLQUALIFIED_NAME + "}";
+    String FULLQUALIFIED_NAME_PATH_REGEX    = "/{" + FULLQUALIFIED_NAME + ":.+" + "}";
+    String ID_PATH                          = "/{" + ID + "}";
+    String ENTITY_TYPE_ID_PATH              = "/{" + ENTITY_TYPE_ID + "}";
+    String ASSOCIATION_TYPE_ID_PATH         = "/{" + ASSOCIATION_TYPE_ID + "}";
+    String PROPERTY_TYPE_ID_PATH            = "/{" + PROPERTY_TYPE_ID + "}";
 
     String SCHEMA_BASE_PATH           = BASE + SCHEMA_PATH;
     String ENTITY_SETS_BASE_PATH      = BASE + ENTITY_SETS_PATH;
     String ENTITY_TYPE_BASE_PATH      = BASE + ENTITY_TYPE_PATH;
     String PROPERTY_TYPE_BASE_PATH    = BASE + PROPERTY_TYPE_PATH;
     String ASSOCIATION_TYPE_BASE_PATH = BASE + ASSOCIATION_TYPE_PATH;
+    String SUMMARY_BASE_PATH          = BASE + SUMMARY_PATH;
 
     @DELETE( BASE + CLEAR_PATH )
     void clearAllData();
@@ -131,7 +140,7 @@ public interface EdmApi {
      * association types, and property types
      */
     @PATCH( BASE )
-    void updateEntityDataModel( EntityDataModel edm );
+    Void updateEntityDataModel( @Body EntityDataModel edm );
 
     /**
      * Gets the changes between the existing entity data model and the entity data model passed in, including schemas,
@@ -367,6 +376,13 @@ public interface EdmApi {
     @GET( ENTITY_SETS_BASE_PATH )
     Iterable<EntitySet> getEntitySets();
 
+    @GET( SUMMARY_BASE_PATH )
+    Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries();
+
+
+    @GET( SUMMARY_BASE_PATH + ID_PATH )
+    Iterable<PropertyUsageSummary> getPropertyUsageSummary( @Path( ID ) UUID propertyTypeId );
+
     /**
      * Creates multiple entity sets if they do not exist.
      *
@@ -384,6 +400,10 @@ public interface EdmApi {
     @GET( ENTITY_SETS_BASE_PATH + ID_PATH )
     EntitySet getEntitySet( @Path( ID ) UUID entitySetId );
 
+    /**
+     * Hard deletes the entity set
+     * @param entitySetId the ID for the entity set
+     */
     @DELETE( ENTITY_SETS_BASE_PATH + ID_PATH )
     Void deleteEntitySet( @Path( ID ) UUID entitySetId );
 
@@ -476,12 +496,21 @@ public interface EdmApi {
     /**
      * Get ID for entity type with given namespace and name.
      *
-     * @param namespace The namespace for a property.
-     * @param name The name for a property.
-     * @return ID for property type.
+     * @param namespace The namespace for an entity type.
+     * @param name The name for an entity type.
+     * @return ID for entity type.
      */
     @GET( BASE + IDS_PATH + ENTITY_TYPE_PATH + NAMESPACE_PATH + NAME_PATH )
     UUID getEntityTypeId( @Path( NAMESPACE ) String namespace, @Path( NAME ) String name );
+
+    /**
+     * Get ID for entity type with given {@link org.apache.olingo.commons.api.edm.FullQualifiedName}.
+     *
+     * @param fullQualifiedName The fullqualified name for a entity type.
+     * @return ID for entity type.
+     */
+    @GET( BASE + IDS_PATH + ENTITY_TYPE_PATH + FULLQUALIFIED_NAME_PATH )
+    UUID getEntityTypeId( @Path( FULLQUALIFIED_NAME ) FullQualifiedName fullQualifiedName);
 
     /**
      * Edit property type metadata for a given property type.
@@ -605,8 +634,14 @@ public interface EdmApi {
     @GET( ASSOCIATION_TYPE_BASE_PATH + ID_PATH + AVAILABLE_PATH )
     Iterable<EntityType> getAvailableAssociationTypesForEntityType( @Path( ID ) UUID entityTypeId );
 
+    @POST( ENTITY_SETS_BASE_PATH + PROPERTY_TYPE_PATH )
+    Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getPropertyMetadataForEntitySets( @Body Set<UUID> entitySetIds );
+
     @GET( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH )
     Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( @Path( ID ) UUID entitySetId );
+
+    @GET( ENTITY_SETS_BASE_PATH + ID_PATH + PROPERTIES_PATH )
+    Map<UUID, PropertyType> getPropertyTypesForEntitySet( @Path( ID ) UUID entitySetId );
 
     @GET( ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH )
     EntitySetPropertyMetadata getEntitySetPropertyMetadata(

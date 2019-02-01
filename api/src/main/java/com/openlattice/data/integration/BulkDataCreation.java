@@ -70,7 +70,7 @@ public class BulkDataCreation implements Serializable {
     @JsonCreator
     public BulkDataCreation(
             @JsonProperty( SerializationConstants.ENTITIES ) Set<Entity> entities,
-            @JsonProperty( SerializationConstants.ASSOCIATIONS ) Set<Association> associations ) {
+            @JsonProperty( SerializationConstants.ASSOCIATIONS ) Set<Association> associations) {
         this.entities = entities;
         this.associations = associations;
     }
@@ -83,6 +83,27 @@ public class BulkDataCreation implements Serializable {
     @JsonProperty( SerializationConstants.ASSOCIATIONS )
     public Set<Association> getAssociations() {
         return associations;
+    }
+
+    @Override public String toString() {
+        return "BulkDataCreation{" +
+                "entities=" + entities +
+                ", associations=" + associations +
+                '}';
+    }
+
+    @Override public boolean equals( Object o ) {
+        if ( this == o )
+            return true;
+        if ( o == null || getClass() != o.getClass() )
+            return false;
+        BulkDataCreation that = (BulkDataCreation) o;
+        return Objects.equals( entities, that.entities ) &&
+                Objects.equals( associations, that.associations );
+    }
+
+    @Override public int hashCode() {
+        return Objects.hash( entities, associations );
     }
 
     private void writeObject( ObjectOutputStream oos )
@@ -123,26 +144,7 @@ public class BulkDataCreation implements Serializable {
             Map<UUID, Set<Object>> details = deserializeEntityDetails( ois );
             associations.add( new Association( key, src, dst, details ) );
         }
-    }
 
-    @Override public boolean equals( Object o ) {
-        if ( this == o ) { return true; }
-        if ( !( o instanceof BulkDataCreation ) ) { return false; }
-        BulkDataCreation that = (BulkDataCreation) o;
-        return Objects.equals( entities, that.entities ) &&
-                Objects.equals( associations, that.associations );
-    }
-
-    @Override public int hashCode() {
-
-        return Objects.hash( entities, associations );
-    }
-
-    @Override public String toString() {
-        return "BulkDataCreation{" +
-                "entities=" + entities +
-                ", associations=" + associations +
-                '}';
     }
 
     private static void serialize( ObjectOutputStream oos, UUID id ) throws IOException {
