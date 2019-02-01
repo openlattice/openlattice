@@ -958,9 +958,13 @@ public final class ResultSetAdapters {
         }
     }
 
+    public static UUID auditRecordEntitySetId( ResultSet rs ) throws SQLException {
+        return rs.getObject( AUDIT_RECORD_ENTITY_SET_ID_FIELD, UUID.class );
+    }
+
     public static AuditRecordEntitySetConfiguration auditRecordEntitySetConfiguration( ResultSet rs )
             throws SQLException {
-        return new AuditRecordEntitySetConfiguration( aclKey( rs ),
+        return new AuditRecordEntitySetConfiguration( auditRecordEntitySetId( rs ),
                 Sets.newHashSet( PostgresArrays.getUuidArray( rs, AUDIT_RECORD_ENTITY_SET_IDS_FIELD ) ) );
     }
 }
