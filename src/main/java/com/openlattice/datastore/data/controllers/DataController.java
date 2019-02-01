@@ -35,6 +35,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.data.*;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.postgres.PostgresTable;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
@@ -55,7 +56,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -270,22 +270,22 @@ public class DataController implements DataApi, AuthorizingComponent {
     @Override
     @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
-        //TODO: This allows creating an edge even if you don't have access to key properties on association
-        //entity set. Consider requiring access to key properties on association in order to allow creating edge.
-        associations.stream()
-                .flatMap( dataEdgeKey -> Stream.of( dataEdgeKey.getSrc().getEntitySetId(),
-                        dataEdgeKey.getDst().getEntitySetId(),
-                        dataEdgeKey.getEdge().getEntitySetId() ) );
+        associations.forEach(
+                association -> {
+                    UUID associationEntitySetId = association.getEdge().getEntitySetId();
 
-        final Set<UUID> entitySetIds = associations.stream()
-                .flatMap( edgeKey -> Stream.of(
-                        edgeKey.getSrc().getEntitySetId(),
-                        edgeKey.getDst().getEntitySetId(),
-                        edgeKey.getEdge().getEntitySetId() ) )
-                .collect( Collectors.toSet() );
+                    //Ensure that we have read access to entity set metadata.
+                    ensureReadAccess( new AclKey( association.getSrc().getEntitySetId() ) );
+                    ensureReadAccess( new AclKey( association.getDst().getEntitySetId() ) );
+                    ensureReadAccess( new AclKey( associationEntitySetId ) );
 
-        //Ensure that we have read access to entity set metadata.
-        entitySetIds.forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+                    //Ensure that we can read key properties.
+                    Set<UUID> keyPropertyTypes = edmService
+                            .getEntityTypeByEntitySetId( associationEntitySetId ).getKey();
+                    keyPropertyTypes.forEach( propertyType ->
+                            accessCheck( new AclKey( associationEntitySetId, propertyType ), READ_PERMISSION ) );
+                }
+        );
 
         return dgm.createAssociations( associations );
     }
@@ -738,9 +738,5 @@ public class DataController implements DataApi, AuthorizingComponent {
     private static Set<UUID> requiredReplacementPropertyTypes( Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
         return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
-    }
-
-    private static Set<UUID> requiredPropertyAuthorizations( Collection<SetMultimap<UUID, Object>> entities ) {
-        return entities.stream().map( SetMultimap::keySet ).flatMap( Set::stream ).collect( Collectors.toSet() );
     }
 }
