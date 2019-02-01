@@ -30,6 +30,6 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class AuditRecordEntitySetConfiguration(
-        var activeAuditRecordEntitySetId: AclKey,
-        val auditRecordEntitySetIds: MutableSet<UUID> = mutableSetOf(activeAuditRecordEntitySetId.first())
+        var activeAuditRecordEntitySetId: UUID,
+        val auditRecordEntitySetIds: MutableSet<UUID> = mutableSetOf(activeAuditRecordEntitySetId)
 )
