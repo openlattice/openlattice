@@ -31,6 +31,10 @@ public class AuditRecordEntitySetConfigurationMapstore
         final Array arr = PostgresArrays.createUuidArray( ps.getConnection(), value.getAuditRecordEntitySetIds() );
         ps.setObject( offset++, value.getActiveAuditRecordEntitySetId() );
         ps.setObject( offset++, arr );
+
+        //Handle update clause.
+        ps.setObject( offset++, value.getActiveAuditRecordEntitySetId() );
+        ps.setObject( offset++, arr );
     }
 
     @Override protected int bind( PreparedStatement ps, AclKey key, int offset ) throws SQLException {
