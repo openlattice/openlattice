@@ -30,6 +30,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -53,9 +55,9 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.AwsDataSinkService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.DatastoreConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
@@ -83,10 +85,8 @@ import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
-
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -112,6 +112,8 @@ public class DatastoreServicesPod {
     @Inject
     private Auth0Configuration        auth0Configuration;
     @Inject
+    private AuditingConfiguration     auditingConfiguration;
+    @Inject
     private ListeningExecutorService  executor;
     @Inject
     private EventBus                  eventBus;
@@ -122,6 +124,8 @@ public class DatastoreServicesPod {
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
+
+
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -188,7 +192,8 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 pgEdmManager(),
                 entityTypeManager(),
-                schemaManager() );
+                schemaManager(),
+                auditingConfiguration );
     }
 
     @Bean

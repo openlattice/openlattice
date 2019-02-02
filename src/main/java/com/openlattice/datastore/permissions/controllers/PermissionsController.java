@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.permissions.controllers;
 
+import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
@@ -57,6 +58,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     private EventBus eventBus;
 
     @Override
+    @Timed
     @RequestMapping(
             path = { "", "/" },
             method = RequestMethod.PATCH,
@@ -121,6 +123,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     }
 
     @Override
+    @Timed
     @RequestMapping(
             path = { "", "/" },
             method = RequestMethod.POST,
@@ -135,6 +138,7 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
     }
 
     @Override
+    @Timed
     @RequestMapping(
             path = { EXPLAIN },
             method = RequestMethod.POST,
