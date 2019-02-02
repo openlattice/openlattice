@@ -29,6 +29,7 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -222,7 +223,7 @@ public class IndexerServicesPod {
                 schemaManager(),
                 auditingConfiguration );
     }
-
+    
     @Bean
     @Profile( DL4J )
     public Matcher dl4jMatcher() throws IOException {
