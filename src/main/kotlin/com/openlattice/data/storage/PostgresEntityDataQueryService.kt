@@ -377,9 +377,9 @@ class PostgresEntityDataQueryService(
         hds.connection.use { connection ->
             val version = System.currentTimeMillis()
             val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId, version))
-            val datatypes = authorizedPropertyTypes.map { (propertyTypeId, propertyType) ->
-                propertyTypeId to propertyType.datatype
-            }.toMap()
+            val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
+                propertyType.datatype
+            }
 
             val preparedStatements = authorizedPropertyTypes
                     .mapValues {
@@ -398,7 +398,7 @@ class PostgresEntityDataQueryService(
 
                 val entityKeyId = entity.key
                 val entityData = asMap(JsonDeserializer
-                                               .validateFormatAndNormalize(entity.value, datatypes)
+                                               .validateFormatAndNormalize(entity.value, dataTypes)
                                                { "Entity set $entitySetId with entity key id $entityKeyId" })
 
                 entityData.forEach { (propertyTypeId, values) ->
@@ -416,7 +416,7 @@ class PostgresEntityDataQueryService(
 
                             //Binary data types get stored in S3 bucket
                             val (propertyHash, insertValue) =
-                                    if (datatypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
+                                    if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
                                         //store data in S3 bucket
                                         val pair = value as Pair<String, ByteArray>
 
@@ -428,7 +428,7 @@ class PostgresEntityDataQueryService(
                                         byteBlobDataManager.putObject(s3Key, pair.second, pair.first)
                                         PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
                                     } else {
-                                        PostgresDataHasher.hashObject(value, datatypes[propertyTypeId]) to value
+                                        PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
                                     }
 
                             ps.setObject(1, entityKeyId)
