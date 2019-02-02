@@ -13,6 +13,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.*;
 
+import java.util.function.Supplier;
 import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
@@ -25,13 +26,23 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class JsonDeserializer {
-    private static final Logger logger = LoggerFactory.getLogger( JsonDeserializer.class );
+    private static final Logger         logger              = LoggerFactory.getLogger( JsonDeserializer.class );
     private static final Base64.Decoder decoder             = Base64.getDecoder();
     private static final String         geographyPointRegex = "(\\-)?[0-9]+(\\.){1}[0-9]+(\\,){1}(\\-)?[0-9]+(\\.){1}[0-9]+";
 
     public static SetMultimap<UUID, Object> validateFormatAndNormalize(
             Map<UUID, Set<Object>> propertyValues,
             Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
+        return validateFormatAndNormalize( propertyValues,
+                authorizedPropertiesWithDataType,
+                () -> "No additional info." );
+    }
+
+    public static SetMultimap<UUID, Object> validateFormatAndNormalize(
+            final Map<UUID, Set<Object>> propertyValues,
+            final Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
+            Supplier<String> lazyMessage ) {
+
         SetMultimap<UUID, Object> normalizedPropertyValues = HashMultimap.create();
 
         for ( Map.Entry<UUID, Set<Object>> entry : propertyValues.entrySet() ) {
@@ -40,8 +51,17 @@ public class JsonDeserializer {
             Set<Object> valueSet = entry.getValue();
             if ( valueSet != null ) {
                 for ( Object value : valueSet ) {
-                    normalizedPropertyValues
-                            .put( propertyTypeId, validateFormatAndNormalize( dataType, propertyTypeId, value ) );
+                    final var normalizedValue = validateFormatAndNormalize( dataType, propertyTypeId, value );
+                    if ( normalizedValue != null ) {
+                        normalizedPropertyValues.put( propertyTypeId, normalizedValue );
+                    } else {
+                        logger.error(
+                                "Skipping null value when normalizing data {} for property type {}: {}",
+                                valueSet,
+                                entry.getKey(),
+                                lazyMessage.get() );
+
+                    }
                 }
             }
         }
@@ -50,7 +70,7 @@ public class JsonDeserializer {
     }
 
     @SuppressFBWarnings( value = "SF_SWITCH_FALLTHROUGH", justification = "by design" )
-    public static Object validateFormatAndNormalize(
+    private static Object validateFormatAndNormalize(
             EdmPrimitiveTypeKind dataType,
             UUID propertyTypeId,
             Object value ) {
@@ -74,22 +94,22 @@ public class JsonDeserializer {
              */
             case Binary:
                 checkState( value instanceof Map,
-                        "Expected pair for property type %s with data %s, received %s",
+                        "Expected map for property type %s with data %s, received %s",
                         dataType,
                         propertyTypeId,
                         value.getClass() );
 
                 Map<String, Object> valuePair = (Map<String, Object>) value;
-                Object contentType = valuePair.get("content-type");
-                Object data = valuePair.get("data");
+                Object contentType = valuePair.get( "content-type" );
+                Object data = valuePair.get( "data" );
                 checkState( contentType instanceof String,
                         "Expected string for content type, received %s",
                         contentType.getClass() );
                 checkState( data instanceof String,
                         "Expected string for binary data, received %s",
-                       data.getClass() );
+                        data.getClass() );
                 return new Pair<>( (String) contentType, decoder.decode( (String) data ) );
-//                    logger.error("Received single value for binary data type, when expecting content type");
+            //                    logger.error("Received single value for binary data type, when expecting content type");
             case Date:
                 checkState( value instanceof String,
                         "Expected string for property type %s with data %s,  received %s",
