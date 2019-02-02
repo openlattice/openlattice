@@ -28,13 +28,13 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
+import com.openlattice.data.storage.PostgresDataManager
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.neuron.audit.AuditEntitySetUtils
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresTable.IDS
@@ -57,19 +57,20 @@ import kotlin.system.exitProcess
  *
  */
 
-private const val EXPIRATION_MILLIS = 60000L
-private const val INDEX_RATE = 30000L
+const val EXPIRATION_MILLIS = 60000L
+const val INDEX_RATE = 30000L
+const val FETCH_SIZE = 128000
 
 class BackgroundIndexingService(
         private val hds: HikariDataSource,
         hazelcastInstance: HazelcastInstance,
         private val dataQueryService: PostgresEntityDataQueryService,
-        private val elasticsearchApi: ConductorElasticsearchApi
+        private val elasticsearchApi: ConductorElasticsearchApi,
+        private val dataManager: PostgresDataManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
         const val INDEX_SIZE = 32000
-        const val FETCH_SIZE = 128000
     }
 
     private val propertyTypes: IMap<UUID, PropertyType> = hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
@@ -104,15 +105,16 @@ class BackgroundIndexingService(
                 //We shuffle entity sets to make sure we have a chance to work share and index everything
                 val lockedEntitySets = entitySets.values
                         .shuffled()
-                        .filter { tryLockEntitySet(it.id) }
+                        .filter { tryLockEntitySet(it) }
                         .filter { it.name != AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME }
 
                 val totalIndexed = lockedEntitySets
                         .parallelStream()
-                        .mapToInt(this::indexEntitySet)
+                        .filter { it -> !it.isLinking }
+                        .mapToInt { indexEntitySet(it) }
                         .sum()
 
-                lockedEntitySets.map(EntitySet::getId).forEach(indexingLocks::delete)
+                lockedEntitySets.forEach(this::deleteIndexingLock)
 
                 logger.info(
                         "Completed indexing {} elements in {} ms",
@@ -134,8 +136,10 @@ class BackgroundIndexingService(
             val missingEntitySets = entitySets.getAll(missingIndices)
             logger.info("The following entity sets where missing indices: {}", missingEntitySets)
             missingEntitySets.values.forEach { es ->
-                val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes.get(es.entityTypeId)!!.properties)
-                elasticsearchApi.saveEntitySetToElasticsearch(es, missingEntitySetPropertyTypes.values.toList())
+                val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes[es.entityTypeId]!!.properties)
+                elasticsearchApi.saveEntitySetToElasticsearch(
+                        es,
+                        missingEntitySetPropertyTypes.values.toList())
                 logger.info("Created missing index for entity set ${es.name} with id ${es.entityTypeId}")
             }
         }
@@ -161,15 +165,6 @@ class BackgroundIndexingService(
                 .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
     }
 
-    private fun getPropertyTypesByEntityTypesById(): Map<UUID, Map<UUID, PropertyType>> {
-        return entityTypes.entries.map {
-            it.key to propertyTypes
-                    .getAll(it.value.properties)
-                    .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
-                    .toMap()
-        }.toMap()
-    }
-
     private fun indexEntitySet(entitySet: EntitySet): Int {
         logger.info(
                 "Starting indexing for entity set {} with id {}",
@@ -185,7 +180,7 @@ class BackgroundIndexingService(
         var entityKeyIdsIterator = entityKeyIds.iterator()
 
         while (entityKeyIdsIterator.hasNext()) {
-            updateExpiration(entitySet.id)
+            updateExpiration(entitySet)
             while (entityKeyIdsIterator.hasNext()) {
                 val batch = getBatch(entityKeyIdsIterator)
                 indexCount += indexEntities(entitySet, batch, propertyTypes)
@@ -209,17 +204,11 @@ class BackgroundIndexingService(
             propertyTypeMap: Map<UUID, PropertyType>
     ): Int {
         val esb = Stopwatch.createStarted()
-        val entitySetId = entitySet.id
         var indexCount = 0
-        updateExpiration(entitySetId)
-        val entitiesById = dataQueryService.getEntitiesByIdWithLastWrite(
-                entitySetId,
-                propertyTypeMap,
-                batchToIndex
-        )
+        val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
 
-        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySetId, entitiesById)) {
-            indexCount += dataQueryService.markAsIndexed(entitySetId, batchToIndex)
+        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
+            indexCount += dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
@@ -227,21 +216,24 @@ class BackgroundIndexingService(
                     entitySet.id,
                     esb.elapsed(TimeUnit.MILLISECONDS)
             )
-            updateExpiration(entitySet.id)
         }
 
         return indexCount
     }
 
-    private fun tryLockEntitySet(entitySetId: UUID): Boolean {
-        return indexingLocks.putIfAbsent(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
+    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
+        return indexingLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
     }
 
-    private fun updateExpiration(entitySetId: UUID) {
-        indexingLocks.set(entitySetId, System.currentTimeMillis() + EXPIRATION_MILLIS)
+    private fun deleteIndexingLock(entitySet: EntitySet) {
+        indexingLocks.delete(entitySet.id)
     }
 
-    private fun getBatch(entityKeyIdStream: PostgresIterable.PostgresIterator<UUID>): MutableSet<UUID> {
+    private fun updateExpiration(entitySet: EntitySet) {
+        indexingLocks.set(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS)
+    }
+
+    private fun getBatch(entityKeyIdStream: Iterator<UUID>): Set<UUID> {
         val entityKeyIds = HashSet<UUID>(INDEX_SIZE)
 
         var i = 0
