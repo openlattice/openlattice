@@ -41,6 +41,9 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicates;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.AuditingTypes;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
@@ -48,12 +51,29 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.edm.*;
-import com.openlattice.edm.events.*;
+import com.openlattice.edm.EntityDataModel;
+import com.openlattice.edm.EntityDataModelDiff;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.PostgresEdmManager;
+import com.openlattice.edm.Schema;
+import com.openlattice.edm.events.AssociationTypeCreatedEvent;
+import com.openlattice.edm.events.AssociationTypeDeletedEvent;
+import com.openlattice.edm.events.ClearAllDataEvent;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
+import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
+import com.openlattice.edm.events.EntityTypeCreatedEvent;
+import com.openlattice.edm.events.EntityTypeDeletedEvent;
+import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
+import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypeMetaDataUpdatedEvent;
+import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.exceptions.TypeExistsException;
 import com.openlattice.edm.exceptions.TypeNotFoundException;
 import com.openlattice.edm.properties.PostgresTypeManager;
@@ -136,9 +156,11 @@ public class EdmService implements EdmManager {
 
     private final HazelcastInstance hazelcastInstance;
     private final HikariDataSource  hds;
+    private final AuditRecordEntitySetsManager aresManager;
 
     @Inject
     private EventBus eventBus;
+
 
     public EdmService(
             HikariDataSource hds,
@@ -147,7 +169,8 @@ public class EdmService implements EdmManager {
             AuthorizationManager authorizations,
             PostgresEdmManager edmManager,
             PostgresTypeManager entityTypeManager,
-            HazelcastSchemaManager schemaManager ) {
+            HazelcastSchemaManager schemaManager,
+            AuditingConfiguration auditingConfiguration ) {
 
         this.authorizations = authorizations;
         this.edmManager = edmManager;
@@ -170,6 +193,10 @@ public class EdmService implements EdmManager {
         this.aclKeyReservations = aclKeyReservations;
         propertyTypes.values().forEach( propertyType -> logger.debug( "Property type read: {}", propertyType ) );
         entityTypes.values().forEach( entityType -> logger.debug( "Object type read: {}", entityType ) );
+        this.aresManager = new AuditRecordEntitySetsManager( new AuditingTypes( this, auditingConfiguration ),
+                this,
+                authorizations,
+                hazelcastInstance );
     }
 
     @Override
@@ -187,8 +214,6 @@ public class EdmService implements EdmManager {
                     logger.debug( "Unable to truncate table {}", table.getName(), e );
                 }
             } );
-            connection.close();
-
         } catch ( SQLException e ) {
             logger.debug( "Unable to clear all data.", e );
         }
@@ -381,7 +406,7 @@ public class EdmService implements EdmManager {
 
         // If this entity set is linked to a linking entity set, we need to collect all the linking ids of the entity
         // set first in order to be able to reindex those, before entity data is unavailable
-        if( !entitySet.isLinking() ) {
+        if ( !entitySet.isLinking() ) {
             checkAndRemoveEntitySetLinkings( entitySetId );
         }
 
@@ -430,7 +455,7 @@ public class EdmService implements EdmManager {
     public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
 
         eventBus.post( new LinkedEntitySetAddedEvent(
@@ -444,7 +469,7 @@ public class EdmService implements EdmManager {
     public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
 
         Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )
@@ -525,6 +550,7 @@ public class EdmService implements EdmManager {
             edmManager.createEntitySet( entitySet, ownablePropertyTypes );
 
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
+            aresManager.createAuditEntitySetForEntitySet( principal, entitySet.getId() );
 
         } catch ( Exception e ) {
             logger.error( "Unable to create entity set {} for principal {}", entitySet, principal, e );
@@ -994,7 +1020,8 @@ public class EdmService implements EdmManager {
                                     .post( new PropertyTypesInEntitySetUpdatedEvent( es.getId(), properties ) ) );
                 } );
 
-        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType, update ) ); // currently not picked up by anything
+        eventBus.post( new PropertyTypeMetaDataUpdatedEvent( propertyType,
+                update ) ); // currently not picked up by anything
     }
 
     @Override
@@ -1028,6 +1055,16 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public boolean checkPropertyTypeExists( FullQualifiedName fqn ) {
+        final var typeId = getTypeAclKey( fqn );
+        if ( typeId == null ) {
+            return false;
+        } else {
+            return propertyTypes.containsKey( typeId );
+        }
+    }
+
+    @Override
     public boolean checkPropertyTypeExists( UUID propertyTypeId ) {
         return propertyTypes.containsKey( propertyTypeId );
     }
@@ -1035,6 +1072,16 @@ public class EdmService implements EdmManager {
     @Override
     public boolean checkEntityTypesExist( Set<UUID> entityTypeIds ) {
         return entityTypeIds.stream().allMatch( entityTypes::containsKey );
+    }
+
+    @Override
+    public boolean checkEntityTypeExists( FullQualifiedName fqn ) {
+        final var typeId = getTypeAclKey( fqn );
+        if ( typeId == null ) {
+            return false;
+        } else {
+            return entityTypes.containsKey( typeId );
+        }
     }
 
     @Override
@@ -1115,8 +1162,17 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Set<UUID> getPropertyTypeUuidsOfEntityTypeWithPIIField( UUID entityTypeId ) {
-        return getEntityType( entityTypeId ).getProperties().stream()
+    public Set<UUID> getPropertyTypeIdsOfEntityType( UUID entityTypeId ) {
+        return getEntityType( entityTypeId ).getProperties();
+    }
+
+    @Override public Map<UUID, PropertyType> getPropertyTypesOfEntityType( UUID entityTypeId ) {
+        return propertyTypes.getAll( getEntityType( entityTypeId ).getProperties() );
+    }
+
+    @Override
+    public Set<UUID> getPropertyTypeIdsOfEntityTypeWithPIIField( UUID entityTypeId ) {
+        return getPropertyTypeIdsOfEntityType( entityTypeId ).stream()
                 .filter( ptId -> getPropertyType( ptId ).isPIIfield() ).collect( Collectors.toSet() );
     }
 

@@ -30,6 +30,7 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
@@ -63,6 +64,7 @@ import com.openlattice.postgres.mapstores.AppConfigMapstore;
 import com.openlattice.postgres.mapstores.AppMapstore;
 import com.openlattice.postgres.mapstores.AppTypeMapstore;
 import com.openlattice.postgres.mapstores.AssociationTypeMapstore;
+import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore;
 import com.openlattice.postgres.mapstores.ComplexTypeMapstore;
 import com.openlattice.postgres.mapstores.EdmVersionsMapstore;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
@@ -157,6 +159,11 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, EnumType> enumTypeMapstore() {
         return new EnumTypesMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<AclKey, AuditRecordEntitySetConfiguration> auditRecordEntitySetConfigurationMapstore() {
+        return new AuditRecordEntitySetConfigurationMapstore( hikariDataSource );
     }
 
     @Bean
