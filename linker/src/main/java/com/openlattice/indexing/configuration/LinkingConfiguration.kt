@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
+import com.openlattice.graph.ENTITY
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
@@ -36,14 +37,14 @@ const val BLACKLIST = "blacklist"
 const val DEFAULT_BLOCK_SIZE = 10000
 const val ENTITY_TYPES_FIELD = "entity-types"
 const val WHITELIST = "whitelist"
-private val DEFAULT_ENTITY_TYPES = setOf(FullQualifiedName("general.person"))
+private val DEFAULT_ENTITY_TYPES = setOf("general.person")
 
 /**
  * Configuration class for linking.
  */
 @ReloadableConfiguration(uri = "linking.yaml")
 data class LinkingConfiguration(
-        @JsonProperty(ENTITY_TYPES_FIELD) val entityTypes: Set<FullQualifiedName> = DEFAULT_ENTITY_TYPES,
+        @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String>,
         @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
         @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
         @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf()
@@ -54,9 +55,9 @@ data class LinkingConfiguration(
         fun key(): ConfigurationKey {
             return key
         }
-
-
     }
+
+    val entityTypes: Set<FullQualifiedName> = entityTypesFqns.map { FullQualifiedName(it) }.toSet()
 
     @JsonIgnore
     override fun getKey(): ConfigurationKey {
