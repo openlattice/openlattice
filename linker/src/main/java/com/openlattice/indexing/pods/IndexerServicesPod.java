@@ -29,6 +29,8 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
+import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
@@ -81,7 +83,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-@Import( { IndexerConfigurationPod.class } )
+@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class } )
 public class IndexerServicesPod {
     private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
@@ -105,6 +107,9 @@ public class IndexerServicesPod {
 
     @Inject
     private ConductorConfiguration conductorConfiguration;
+
+    @Inject
+    private AuditingConfiguration auditingConfiguration;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
@@ -215,7 +220,8 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager() );
+                schemaManager(),
+                auditingConfiguration );
     }
 
     @Bean
