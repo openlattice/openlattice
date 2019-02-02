@@ -50,6 +50,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         out.writeBoolean( object.isLinking() );
         SetStreamSerializers.fastUUIDSetSerialize( out, object.getLinkedEntitySets() );
         out.writeBoolean( object.isExternal() );
+
     }
 
     @Override
@@ -74,6 +75,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 linking,
                 linkedEntitySets,
                 external );
+
         return es;
     }
 

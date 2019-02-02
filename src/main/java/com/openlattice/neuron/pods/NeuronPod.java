@@ -27,6 +27,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditingConfiguration;
+import com.openlattice.auditing.AuditingTypes;
+import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
@@ -61,7 +65,8 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @Import( {
         AuditEntitySetPod.class,
-        ByteBlobServicePod.class
+        ByteBlobServicePod.class,
+        AuditingConfigurationPod.class
 } )
 public class NeuronPod {
 
@@ -82,6 +87,9 @@ public class NeuronPod {
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
+
+    @Inject
+    private AuditingConfiguration auditingConfiguration;
 
     /*
      *
@@ -160,7 +168,8 @@ public class NeuronPod {
                 authorizationManager(),
                 edmManager(),
                 entityTypeManager(),
-                schemaManager() );
+                schemaManager(),
+                auditingConfiguration );
     }
 
     @Bean
