@@ -37,7 +37,7 @@ class LocalBlobDataServiceTest {
         }
 
         private fun addMockS3Bucket() {
-            val sql = "CREATE TABLE mock_s3_bucket (key text, object bytea)"
+            val sql = "CREATE TABLE IF NOT EXISTS mock_s3_bucket (key text, object bytea)"
             val connection = hds.connection
             val ps = connection.prepareStatement(sql)
             ps.executeUpdate()

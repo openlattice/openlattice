@@ -12,10 +12,11 @@ import java.util.*
 
 private val logger = LoggerFactory.getLogger(LocalBlobDataService::class.java)
 
-private val TABLE = PostgresTableDefinition("mock_s3_bucket").addColumns(
-        PostgresColumnDefinition("key", PostgresDatatype.TEXT),
-        PostgresColumnDefinition("object", PostgresDatatype.BYTEA)
-).primaryKey(PostgresColumnDefinition("key", PostgresDatatype.TEXT))
+private val TABLE = PostgresTableDefinition("mock_s3_bucket")
+        .addColumns(
+                PostgresColumnDefinition("key", PostgresDatatype.TEXT),
+                PostgresColumnDefinition("object", PostgresDatatype.BYTEA)
+        ).primaryKey(PostgresColumnDefinition("key", PostgresDatatype.TEXT))
 
 @Service
 class LocalBlobDataService(private val hds: HikariDataSource) : ByteBlobDataManager {
