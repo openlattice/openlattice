@@ -54,6 +54,7 @@ import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.graph.Graph;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.linking.PostgresLinkingFeedbackQueryService;
 import com.openlattice.neuron.Neuron;
 import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
@@ -207,5 +208,10 @@ public class NeuronPod {
     @Bean
     public SchemaQueryService schemaQueryService() {
         return new PostgresSchemaQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public PostgresLinkingFeedbackQueryService postgresLinkingFeedbackQueryService() {
+        return new PostgresLinkingFeedbackQueryService(hikariDataSource);
     }
 }
