@@ -32,6 +32,7 @@ import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.edm.events.EntitySetDataClearedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.PostgresLinkingFeedbackQueryService;
+import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.postgres.JsonDeserializer;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -66,6 +67,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Inject
     private PostgresLinkingFeedbackQueryService feedbackQueryService;
+
+    @Inject
+    private LinkingQueryService linkingQueryService;
 
     public HazelcastEntityDatastore(
             EntityKeyIdService idService,
@@ -587,9 +591,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         // delete entities from linking feedbacks too
         int deletedFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks( entitySetId, entityKeyIds );
 
-        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data and " +
-                        "{} feedbacks",
-                entityKeyIds, entitySetId, deleteCount, deletePropertyCount, deletedFeedbackCount );
+        // Delete all neighboring entries from matched entities
+        int deleteMatchCount = linkingQueryService.deleteNeighborhoods( entitySetId, entityKeyIds );
+
+        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data, " +
+                        "{} feedbacks and {} matched entries",
+                entityKeyIds, entitySetId, deleteCount, deletePropertyCount, deletedFeedbackCount, deleteMatchCount );
 
         return deleteCount;
     }
