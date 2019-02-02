@@ -27,8 +27,8 @@ import com.openlattice.conductor.codecs.odata.Table;
 public enum HazelcastMap {
     ACL_KEYS( Table.ACL_KEYS ),
     AUDIT_LOG( Table.AUDIT_LOG ),
-    AUDIT_EVENTS( Table.AUDIT_EVENTS ),
     AUDIT_METRICS( Table.AUDIT_METRICS ),
+    AUDIT_RECORD_ENTITY_SETS( Table.AUDIT_RECORD_ENTITY_SETS),
     COMPLEX_TYPES( Table.COMPLEX_TYPES ),
     DATA( Table.DATA ),
     DB_CREDS( null ),

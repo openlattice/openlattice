@@ -28,6 +28,7 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
@@ -742,7 +743,7 @@ public final class ResultSetAdapters {
     public static Map<UUID, Set<Object>> implicitEntityValuesById(
             ResultSet rs,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
-            ByteBlobDataManager byteBlobDataManager) throws SQLException {
+            ByteBlobDataManager byteBlobDataManager ) throws SQLException {
         final Map<UUID, Set<Object>> data = new HashMap<>();
 
         final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
@@ -964,5 +965,15 @@ public final class ResultSetAdapters {
             default:
                 return null;
         }
+    }
+
+    public static UUID auditRecordEntitySetId( ResultSet rs ) throws SQLException {
+        return rs.getObject( AUDIT_RECORD_ENTITY_SET_ID_FIELD, UUID.class );
+    }
+
+    public static AuditRecordEntitySetConfiguration auditRecordEntitySetConfiguration( ResultSet rs )
+            throws SQLException {
+        return new AuditRecordEntitySetConfiguration( auditRecordEntitySetId( rs ),
+                Sets.newHashSet( PostgresArrays.getUuidArray( rs, AUDIT_RECORD_ENTITY_SET_IDS_FIELD ) ) );
     }
 }
