@@ -75,6 +75,8 @@ import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.neuron.pods.NeuronPod;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
@@ -333,6 +335,11 @@ public class DatastoreServicesPod {
 
     @Bean AwsDataSinkService awsDataSinkService() {
         return new AwsDataSinkService();
+    }
+
+    @Bean
+    public LinkingQueryService lqs() {
+        return new PostgresLinkingQueryService( hikariDataSource );
     }
 
     @PostConstruct
