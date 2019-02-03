@@ -223,7 +223,7 @@ public class IndexerServicesPod {
                 schemaManager(),
                 auditingConfiguration );
     }
-    
+
     @Bean
     @Profile( DL4J )
     public Matcher dl4jMatcher() throws IOException {
