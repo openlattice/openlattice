@@ -12,27 +12,28 @@ blacklist:
   - 71ddddd6-3c5d-4a8b-8fe3-808d1eb13f19
 whitelist:
 #   - 2cade629-d165-4a9d-92e2-44d7836142e2 # MSO
-#   - 5722abca-5b64-4744-8eb9-26a74fb3013b # MS-Ac
-#   - 2ab42bf5-8d16-4f8d-a549-7b2de4a525cf # MS-Bi
-#   - c4689df7-54b0-47d8-8105-08def794da0a # MS-Re
-#   - 608f403c-8bd2-4411-aec8-6830762f0ca3 # MS-Ch
-#   - a6d7d333-4905-4562-bcda-34fe773775eb # MS-Ar
-#   - 46c83978-a50c-4cff-939a-7b1a8c0ad52c # MS-Bu
+   - 5722abca-5b64-4744-8eb9-26a74fb3013b # MS-Ac
+   - 2ab42bf5-8d16-4f8d-a549-7b2de4a525cf # MS-Bi
+   - c4689df7-54b0-47d8-8105-08def794da0a # MS-Re
+   - 608f403c-8bd2-4411-aec8-6830762f0ca3 # MS-Ch
+   - a6d7d333-4905-4562-bcda-34fe773775eb # MS-Ar
+   - 46c83978-a50c-4cff-939a-7b1a8c0ad52c # MS-Bu
 #   - c5a9e6b5-822e-44ca-b19d-e10628618574 
-#   - d189f747-fa39-4b41-b86e-a056100ed2fa # JC3
+  - d189f747-fa39-4b41-b86e-a056100ed2fa # JC3
   - e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec #BerksInmates
   - 87707f36-14f4-44c2-a3cb-f140389f7067 #BerksParolees
   - a3ee392f-3e4b-4185-917f-22800acc1d02 #BerksHC
+  - 4e369747-66aa-432f-8aa3-2591cee0fa8d #BerksCEH
 #   - 6b32e5a9-9858-449a-a228-8340486d84b7 # JC1
 #   - b278d952-3bad-420e-9e0d-f66352760f42 # JC2
-#   - c33c2561-d347-462c-9cce-6eb77e72a1da #MS-CamSuspects
-#   - daea22b7-96bb-4352-92d6-050093af1b3f #MS-CamOther
+   - c33c2561-d347-462c-9cce-6eb77e72a1da #MS-CamSuspects
+   - daea22b7-96bb-4352-92d6-050093af1b3f #MS-CamOther
 #   - c4451c09-4329-4c10-b445-3af890d4a311
-#   - 1776d96c-79ac-4e98-9f7c-5248383bc14d #MS-Low
+   - 1776d96c-79ac-4e98-9f7c-5248383bc14d #MS-Low
 #   - 1f87a73a-c8fa-4963-a33a-7737cb5060db
-#   - 06a7f19e-c7d5-4453-bfe9-6810d907cd7a # MS-NR
-#   - 30d476d8-de21-4157-a4da-91b46b5d4341 # DEMO1
-#   - a8328e14-5024-4595-b4da-a4a3ebb57b2a # DEMO2
+   - 06a7f19e-c7d5-4453-bfe9-6810d907cd7a # MS-NR
+   - 30d476d8-de21-4157-a4da-91b46b5d4341 # DEMO1
+   - a8328e14-5024-4595-b4da-a4a3ebb57b2a # DEMO2
 #   - 51992ab5-c315-4696-be93-7780c29d490f #BerksRelcust
 
   # Only for rehearsal tests
