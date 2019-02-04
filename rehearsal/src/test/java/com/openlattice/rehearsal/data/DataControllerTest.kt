@@ -26,10 +26,8 @@ import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
 import com.google.common.collect.Maps.transformValues
-import com.openlattice.data.DataEdge
-import com.openlattice.data.DeleteType
-import com.openlattice.data.EntityDataKey
-import com.openlattice.data.UpdateType
+import com.openlattice.authorization.*
+import com.openlattice.data.*
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.requests.MetadataUpdate
@@ -43,10 +41,8 @@ import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
 import java.lang.Math.abs
-import java.time.Instant
-import java.time.LocalDate
-import java.time.OffsetDateTime
-import java.time.ZoneId
+import java.lang.reflect.UndeclaredThrowableException
+import java.time.*
 import java.util.*
 
 /**
@@ -174,6 +170,63 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun createEdges() {
+        val src = MultipleAuthenticatedUsersBase.createEntityType()
+        val dst = MultipleAuthenticatedUsersBase.createEntityType()
+        val edge = MultipleAuthenticatedUsersBase.createEdgeEntityType()
+
+        val esSrc = MultipleAuthenticatedUsersBase.createEntitySet(src)
+        val esDst = MultipleAuthenticatedUsersBase.createEntitySet(dst)
+        val esEdge = MultipleAuthenticatedUsersBase.createEntitySet(edge)
+
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge.properties)
+
+        val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
+
+        val entriesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entriesDst)
+
+        val entriesEdge = ImmutableList.copyOf(testDataEdge.values)
+        val idsEdge = dataApi.createEntities(esEdge.id, entriesEdge)
+
+        val edges = idsSrc.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(esSrc.id, idsSrc[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdge.id, idsEdge[index]))
+        }.toSet()
+        val createdEdges = dataApi.createAssociations(edges)
+
+        Assert.assertNotNull(createdEdges)
+        Assert.assertEquals(edges.size, createdEdges)
+
+        // Test permissions on property types. First add read permission on entity sets
+        val add = EnumSet.of(Permission.READ)
+        val newAcl1 = Acl(AclKey(esSrc.id), setOf(Ace(user1, add, OffsetDateTime.now(ZoneOffset.UTC))))
+        val newAcl2 = Acl(AclKey(esDst.id), setOf(Ace(user1, add, OffsetDateTime.now(ZoneOffset.UTC))))
+        val newAcl3 = Acl(AclKey(esEdge.id), setOf(Ace(user1, add, OffsetDateTime.now(ZoneOffset.UTC))))
+        permissionsApi.updateAcl(AclData(newAcl1, Action.ADD))
+        permissionsApi.updateAcl(AclData(newAcl2, Action.ADD))
+        permissionsApi.updateAcl(AclData(newAcl3, Action.ADD))
+
+        try {
+            loginAs("user1")
+            dataApi.createAssociations(edges)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            val uuidRegex = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+            val forbiddenAclKey = uuidRegex.findAll(e.undeclaredThrowable.message!!)
+            Assert.assertEquals(esEdge.id, UUID.fromString(forbiddenAclKey.first().value))
+            Assert.assertTrue(edge.key.contains(UUID.fromString(forbiddenAclKey.last().value)))
+        } finally {
+            loginAs("admin")
+        }
+    }
+
+    @Test
+    fun createEdgesWithData() {
         val et = MultipleAuthenticatedUsersBase.createEdgeEntityType()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
         val src = MultipleAuthenticatedUsersBase.createEntityType()
