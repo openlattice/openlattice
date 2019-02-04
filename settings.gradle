@@ -16,4 +16,4 @@ include 'shuttle'
 include 'scribe'
 include 'socrates'
 include 'indexer'
-
+include 'transporter'
