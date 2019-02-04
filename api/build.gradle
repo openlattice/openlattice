@@ -77,7 +77,6 @@ swaggerSources {
             language = 'java'
             configFile = file('oas-java.json')
             outputDir = swaggerOutputDir
-            dependsOn validation
         }
     }
 }
