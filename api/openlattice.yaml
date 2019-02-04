@@ -1328,6 +1328,11 @@ paths:
           description: Success
 
 components:
+  securitySchemes:
+    openlattice_auth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     fullQualifiedName:
       type: object
