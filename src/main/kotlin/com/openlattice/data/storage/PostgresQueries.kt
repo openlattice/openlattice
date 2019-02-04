@@ -68,8 +68,11 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
             .union(returnedPropertyTypes.map { propertyTypes[it]!! })
             .joinToString(",")
 
+    // for performance, we place inner joins of filtered property tables at the end
+    val orderedPropertyTypesByJoin = propertyTypes.toList()
+            .sortedBy { propertyTypeFilters.containsKey(it.first) }.toMap()
     val propertyTableJoins =
-            propertyTypes
+            orderedPropertyTypesByJoin
                     //Exclude any property from the join where no property is authorized.
                     .filter { pt -> authorizedPropertyTypes.any { it.value.contains(pt.key) } }
                     .map {
@@ -129,8 +132,11 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
             .filter(String::isNotBlank)
             .joinToString(",")
 
+    // for performance, we place inner joins of filtered property tables at the end
+    val orderedPropertyTypesByJoin = propertyTypes.toList()
+            .sortedBy { propertyTypeFilters.containsKey(it.first) }.toMap()
     val propertyTableJoins =
-            propertyTypes
+            orderedPropertyTypesByJoin
                     //Exclude any property from the join where no property is authorized.
                     .filter { pt -> authorizedPropertyTypes.any { it.value.contains(pt.key) } }
                     .map {
