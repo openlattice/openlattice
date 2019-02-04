@@ -1705,13 +1705,15 @@ components:
 
 tags:
 - name: edm
-  description: Entity Data Model API"s
+  description: API endpoints to the entity data model.
 - name: permissions
-  description: Permissions API"s
+  description: API endpoints for permissions for organisations, roles and users.
 - name: directory
-  description: Directory API"s
+  description: API endpoints for searching users and their properties.
 - name: data
-  description: Data API's
+  description: API endpoints to reading and writing data.
+- name: search
+  description: API endpoints to search data.
 externalDocs:
   description: "Find out more about OpenLattice"
   url: "https://openlattice.com/"
