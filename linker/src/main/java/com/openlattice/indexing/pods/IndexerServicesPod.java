@@ -29,6 +29,7 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -236,7 +237,7 @@ public class IndexerServicesPod {
     @Bean
     public Matcher kerasMatcher() throws IOException, InvalidKerasConfigurationException,
             UnsupportedKerasConfigurationException {
-        final String simpleMlp = new ClassPathResource( "model_2018-01-14.h5" ).getFile().getPath();
+        final String simpleMlp = new ClassPathResource( "model_2019-01-30.h5" ).getFile().getPath();
         final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
         return new SocratesMatcher( model, fqnToIdMap );
