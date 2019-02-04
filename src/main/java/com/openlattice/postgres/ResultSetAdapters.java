@@ -509,6 +509,8 @@ public final class ResultSetAdapters {
         Optional<Boolean> linking = Optional.ofNullable( linking( rs ) );
         Optional<Set<UUID>> linkedEntitySets = Optional.of( linkedEntitySets( rs ) );
         Optional<Boolean> external = Optional.ofNullable( external( rs ) );
+        Optional<Principal> organization = Optional
+                .of( new Principal( PrincipalType.ORGANIZATION, rs.getString( ORGANIZATION_ID_FIELD ) ) );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -517,7 +519,8 @@ public final class ResultSetAdapters {
                 contacts,
                 linking,
                 linkedEntitySets,
-                external );
+                external,
+                organization );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {

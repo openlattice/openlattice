@@ -171,6 +171,7 @@ public class HazelcastOrganizationService {
         authorizations.addPermission( organization.getAclKey(), principal, EnumSet.allOf( Permission.class ) );
         //We add the user/role that created the organization to the admin role for the organization
         addRoleToPrincipalInOrganization( organization.getId(), adminRole.getId(), principal );
+        createOrganizationDatabase( )
         eventBus.post( new OrganizationCreatedEvent( organization ) );
     }
 

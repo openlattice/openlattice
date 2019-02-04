@@ -269,6 +269,8 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition NULLABLE_TITLE              =
             new PostgresColumnDefinition( NULLABLE_TITLE_FIELD, TEXT );
     public static final String                   ORGANIZATION_ID_FIELD       = "organization_id";
+    public static final PostgresColumnDefinition ORGANIZATION_PRINCIPAL_ID   =
+            new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, TEXT ).notNull();
     public static final PostgresColumnDefinition ORGANIZATION_ID             =
             new PostgresColumnDefinition( ORGANIZATION_ID_FIELD, UUID ).notNull();
     public static final String                   PARTITION_INDEX_FIELD       = "partition_index";

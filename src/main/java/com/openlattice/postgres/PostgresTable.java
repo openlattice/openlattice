@@ -121,7 +121,8 @@ public final class PostgresTable {
                             CONTACTS,
                             LINKING,
                             PostgresColumn.LINKED_ENTITY_SETS,
-                            EXTERNAL );
+                            EXTERNAL,
+                            ORGANIZATION_PRINCIPAL_ID );
     //.setUnique( NAME );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
