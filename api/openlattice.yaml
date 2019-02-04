@@ -27,126 +27,1680 @@ paths:
   # edm
 
   /datastore/edm/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDM
+    get:
+      summary: Gets the entity data model, including namespaces, schemas, entity types, association types, and property types.
+      operationId: getEntityDataModel
+      responses:
+        "200":
+          description: "An Entity Data Model"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/EDM"
+      tags:
+        - edm
+    patch:
+      summary: Updates the entity data model, including schemas, entity types, association types, and property types.
+      operationId: updateEntityDataModel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/EDM"
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
   /datastore/edm/diff/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDMdiff
+    post:
+      summary: Gets the changes between the existing entity data model and the entity data model passed in, including schemas, association types, entity types, and property types.
+      operationId: getEntityDataModelDiff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/EDMdiff"
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/EDMdiff"
   /datastore/edm/version/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDMversion
+    get:
+      summary: Returns the current entity data model version.
+      operationId: getEntityDataModelVersion
+      tags:
+        - edm
+      responses:
+        "200":
+          description: "Success"
 
   # entity sets
 
   /datastore/edm/entity/set/{entitySetId}:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySetId
+    get:
+      summary: Get the EntitySet definition for the given EntitySet UUID.
+      operationId: getEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: "An Entity Set definition"
+          content:
+            application/json:
+              schema:
+                  $ref: "#/components/entitySet"
+    delete:
+      summary: Deletes the EntitySet definition for the given EntitySet UUID.
+      operationId: deleteEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+    patch:
+      summary: Updates the EntityType definition for the given EntitySet UUID with the given metadata.
+      operationId: updateEntitySetMetaData
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/metaDataUpdate"
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
   /datastore/edm/ids/entity/set/{entitySetName}:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySetName
+    get:
+      summary: Gets the EntitySet UUID for the given EntitySet name.
+      operationId: getEntitySetId
+      parameters:
+        - name: entitySetName
+          in: path
+          required: true
+          schema:
+            type: string
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
   /datastore/edm/entity/set:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySet
+    get:
+      summary: Get all EntitySet definitions.
+      operationId: getAllEntitySets
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/entitySet"
+    post:
+      summary: Create new EntitySet definitions if they don"t exist.
+      operationId: createEntitySets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/entitySet"
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
   /datastore/edm/entity/set/{entitySetId}/property/type:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySetPropertyTypes
+    get:
+      summary: Get all property type metadata for an entity set.
+      operationId: getAllEntitySetPropertyMetadata
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/propertyType"
   /datastore/edm/entity/set/{entitySetId}/property/type/{propertyTypeId}/:
-    $ref: ./definitions/EDM/entityset.yaml#/entitySetPropertyType
+    get:
+      summary: Get specified property type metadata for an entity set.
+      operationId: getEntitySetPropertyMetadata
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/propertyType"
+    post:
+      summary: Updates the property type metadata for the given entity set.
+      operationId: updateEntitySetPropertyMetadata
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/propertyType"
+      responses:
+        200:
+          description: Success
 
   #entity types
 
   /datastore/edm/entity/type/{entityTypeId}:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypeId
+    get:
+      summary: Gets the EntityType definition for the given EntityType UUID.
+      operationId: getEntityType
+      tags:
+        - edm
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/entityType"
+    delete:
+      summary: Deletes the EntityType definition for the given EntityType UUID.
+      operationId: deleteEntityType
+      tags:
+        - edm
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+    patch:
+      summary: Updates the EntityType definition for the given EntityType UUID with the given metadata.
+      operationId: updateEntityTypeMetaData
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/entityType"
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
   /datastore/edm/ids/entity/type/{namespace}/{name}:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypeName
+    get:
+      summary: Gets the EntityType UUID for the given EntityType FQN.
+      operationId: getEntityTypeId
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+            example: openlattice
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            example: myentitytype
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
   /datastore/edm/entity/type/{entityTypeId}/{propertyTypeId}:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypePropertyType
+    put:
+      summary: Updates the EntityType definition for the given EntityType UUID by adding the given PropertyType UUID.
+      operationId: addPropertyTypeToEntityType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Updates the EntityType definition for the given EntityType UUID by removing the given PropertyType UUID.
+      operationId: removePropertyTypeFromEntityType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
   /datastore/edm/entity/type/{entityTypeId}/{propertyTypeId}/force:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypePropertyTypeForce
+    delete:
+      summary: Updates the EntityType definition for the given EntityType UUID by removing the given PropertyType UUID, regardless of whether or not there is data associated with the entity type.
+      operationId: forceRemovePropertyTypeFromEntityType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
   /datastore/edm/entity/type/:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypes
+    get:
+      summary: Gets all EntityType definitions.
+      operationId: getAllEntityTypes
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/entityType"
+    post:
+      summary: Creates a new EntityType definition, if it doesn't exist.
+      operationId: createEntityType
+      tags:
+        - edm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/entityType"
+      responses:
+        "200":
+          description: Success
   /datastore/edm/association/type/:
-    $ref: ./definitions/EDM/entitytype.yaml#/associationTypes
+    get:
+      summary: Gets all association EntityType definitions.
+      operationId: getAllAssociationEntityTypes
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/associationType"
+    post:
+      summary: Creates a new AssociationType definition, if it doesn"t exist.
+      operationId: createAssociationType
+      tags:
+        - edm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/associationType"
+      responses:
+        "200":
+          description: Success
   /datastore/edm/entity/type/{entityTypeId}/property/type:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypePropertyOrder
+    patch:
+      summary: Updates the EntityType definition for the given EntityType UUID by reordering its properties as specified by the provided list.
+      operationId: reorderPropertyTypesInEntityType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: propertyTypeIds
+          in: path
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+      responses:
+        "200":
+          description: Success
   /datastore/edm/entity/type/{entityTypeId}/hierarchy:
-    $ref: ./definitions/EDM/entitytype.yaml#/entityTypeHierarchy
+    patch:
+      summary: Get the EntityType hierarchy for the given EntityType UUID.
+      operationId: getEntityTypeHierarchy
+      parameters:
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
 
   # property Types
 
   /datastore/edm/property/type/{propertyTypeId}:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypeId
+    get:
+      summary: Gets the PropertyType definition for the given PropertyType UUID.
+      operationId: getPropertyType
+      tags:
+        - edm
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/propertyType"
+    delete:
+      summary: Deletes the PropertyType definition for the given PropertyType UUID.
+      operationId: deletePropertyType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+    patch:
+      summary: Updates the PropertyType definition for the given PropertyType UUID with the given metadata.
+      operationId: updatePropertyTypeMetaData
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/propertyType"
+      responses:
+        "200":
+          description: Success
   /datastore/edm/property/type/{propertyTypeId}/force:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypeForce
+    delete:
+      summary: Deletes the PropertyType definition for the given PropertyType UUID regardless of whether or not there is data associated with it.
+      operationId: forceDeletePropertyType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
   /datastore/edm/ids/property/type/{namespace}/{name}:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypeName
+    get:
+      summary: Gets the PropertyType UUID for the given PropertyType FQN.
+      operationId: getPropertyTypeId
+      tags:
+        - edm
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
   /datastore/edm/property/type/:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypes
+    get:
+      summary: Gets all PropertyType definitions.
+      operationId: getAllPropertyTypes
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/propertyType"
+    post:
+      summary: Creates a new PropertyType definition, if it doesn"t exist.
+      operationId: createPropertyType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/propertyType"
+      responses:
+        "200":
+          description: Success
   /datastore/edm/property/type/namespace/{namespace}:
-    $ref: ./definitions/EDM/propertytype.yaml#/propertyTypeNamespace
+    get:
+      summary: Gets all PropertyType definitions under the given namespace.
+      operationId: getAllPropertyTypesInNamespace
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/propertyType"
 
   # association types
 
   /datastore/edm/association/type/{associationTypeId}:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeId
+    get:
+      summary: Get the AssociationType definition for the given AssociationType UUID.
+      operationId: getAssociationType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/associationType"
+    delete:
+      summary: Delete the AssociationType definition for the given AssociationType UUID.
+      operationId: deleteAssociationType
+      tags:
+        - edm
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
   /datastore/edm/association/type/{associationTypeId}/detailed:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeDetails
+    get:
+      summary: Get details about the AssociationType for the given AssociationType UUID.
+      operationId: getAssociationTypeDetails
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/associationType"
   /datastore/edm/association/type/{associationTypeId}/available:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeAvailable
+    get:
+      summary: Get all available associations for the given AssociationType UUID.
+      operationId: getAllAvailableAssociationTypes
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/associationType"
   /datastore/edm/association/type/{associationTypeId}/dst/{entityTypeId}:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeDst
+    put:
+      summary: Update the AssociationType dst entity types for the given AssociationType UUID by adding the given EntityType UUID.
+      operationId: addDstEntityTypeToAssociationType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Updates the AssociationType dst entity types for the given AssociationType UUID by removing the given EntityType UUID.
+      operationId: removeDstEntityTypeFromAssociationType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
   /datastore/edm/association/type/{associationTypeId}/src/{entityTypeId}:
-    $ref: ./definitions/EDM/associationtype.yaml#/associationTypeSrc
+    put:
+      summary: Update the AssociationType src entity types for the given AssociationType UUID by adding the given EntityType UUID.
+      operationId: addSrcEntityTypeToAssociationType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Updates the AssociationType src entity types for the given AssociationType UUID by removing the given EntityType UUID.
+      operationId: removeSrcEntityTypeFromAssociationType
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: associationTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+            description: Success
 
   # summary
 
   /datastore/edm/summary:
-    $ref: ./definitions/EDM/summary.yaml#/summary
+    get:
+      summary: Get Property Usage Summary for all properties.
+      operationId: getAllPropertyUsageSummaries
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/allPropertyUsageSummary"
   /datastore/edm/summary/{propertyTypeId}:
-    $ref: ./definitions/EDM/summary.yaml#/summaryProperty
+    get:
+      summary: Get Property Usage Summary for property with given ID.
+      operationId: getPropertyUsageSummary
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: propertyTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/propertyUsageSummary"
 
   # schema
 
   /datastore/edm/schema/{namespace}/{name}:
-    $ref: ./definitions/EDM/schema.yaml#/schemaFqn
+    get:
+      summary: Gets the schema contents for a corresponding namespace and name.
+      operationId: getSchemaContents
+      tags:
+        - edm
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fileType
+          in: query
+          schema:
+            type: string
+            enum: [csv, json, yaml]
+            default: yaml
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schema"
+    put:
+      summary: Creates an empty schema, if it doesn't exist. If schema exists then no action is taken.
+      operationId: createEmptySchema
+      tags:
+        - edm
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+    patch:
+      summary: Edits the schema contents for a corresponding namespace and name.
+      operationId: updateSchema
+      tags:
+        - edm
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/EdmRequest"
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
   /datastore/edm/schema:
-    $ref: ./definitions/EDM/schema.yaml#/schema
+    get:
+      summary: Gets all schemas.
+      operationId: getSchemas
+      tags:
+        - edm
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schema"
+    post:
+      summary: Creates an empty schema, if it doesn't exist. If schema exists then no action is taken.
+      operationId: createSchemaIfNotExists
+      tags:
+        - edm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schema"
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
   /datastore/edm/schema/{namespace}:
-    $ref: ./definitions/EDM/schema.yaml#/schemaNamespace
+    get:
+      summary: Gets all schemas associated with a given namespace and accessible by the caller.
+      operationId: getSchemasInNamespace
+      tags:
+        - edm
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schema"
 
   ################
   ## DATA API"s ##
   ################
 
   /datastore/data/set/{entitySetId}:
-    $ref: ./definitions/data/data.yaml#/entitySetId
+    get:
+      summary: Gets an iterable containing the entity data, using property type FQNs as key
+      operationId: loadEntitySetData
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: "An Entity Set definition"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/entity"
+    post:
+      summary: Creates a list of new entities by UUID's
+      operationId: createEntities
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                  $ref: "#/components/entity"
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: "A list of entity keys that were generated"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+    delete:
+      summary: Clears the data from a single entity set.
+      operationId: clearEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: "Success"
   /datastore/data/set/{entitySetId}/entities:
-    $ref: ./definitions/data/data.yaml#/entities
+    delete:
+      summary: Clears the Entity matching the given Entity id and all of its neighbor Entities
+      operationId: clearAllEntitiesFromEntitySet
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: "Success"
   /datastore/data/{entitySetId}/count:
-    $ref: ./definitions/data/data.yaml#/count
+    get:
+      summary: Gets the number of entities in an entity set.
+      operationId: getEntitySetSize
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: The number of entities in an entity set.
+          content:
+            application/json:
+              schema:
+                type: integer
 
   ##################
   ## SEARCH API"s ##
   ##################
 
   /datastore/search/{entitySetId}/{entityKeyId}:
-    $ref: ./definitions/search/search.yaml#/entityKey
+    get:
+      summary: Executes a search for all neighbors of an entity that are connected by an association
+      operationId: executeEntityNeighborSearch
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entityKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: "A list of objects containing information about the neighbor and association."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/neighborEntityDetails"
   /datastore/search/{entitySetId}/neighbors/advanced:
-    $ref: ./definitions/search/search.yaml#/filteredSearch
+    post:
+      summary: Executes a search for all neighbors of multiple entities of the same entity set that are connected by an association
+      operationId: executeFilteredEntityNeighborSearch
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/neighborSearchFilter"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+      responses:
+        "200":
+          description: "A list of objects containing information about the neighbor and association."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/neighborEntityDetailsDictionary"
 
   #####################
   ## DIRECTORY API"s ##
   #####################
 
   /datastore/principals/users/search/email/"{emailAddress}":
-    $ref: ./definitions/directory/principal.yaml#/searchEmail
+    get:
+      summary: Get the user id for the given email address.
+      operationId: searchAllUsersByEmail
+      tags:
+        - directory
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: emailAddress
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/auth0userBasicMap"
 
   #########################
   ## AUTHORIZATION API"s ##
   #########################
 
   /datastore/permissions:
-    $ref: ./definitions/authorization/permissions.yaml#/permissions
+    post: #lattice-js l.29
+      summary: Get the ACL for the given ACL Key, only if the user is the owner of the ACL Key.
+      operationId: getAcl
+      tags:
+        - permissions
+      security:
+        - openlattice_auth: []
+      parameters:
+        - name: aclKey
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/aclKey"
+      responses:
+        "200":
+          description: Success
+    patch: #lattice-js l.29
+      summary: Updates the ACL for a particular ACL Key, only if the user is the owner of the ACL Key.
+      operationId: updateAcl
+      tags:
+        - permissions
+      security:
+        - openlattice_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/aclData"
+      responses:
+        "200":
+          description: Success
 
 components:
-  securitySchemes:
-    openlattice_auth:
-      type: apiKey
-      in: header
-      name: Authorization
+  schemas:
+    fullQualifiedName:
+      type: object
+      properties:
+        name:
+          type: string
+        namespace:
+          type: string
+    propertyType:
+      type: object
+      properties:
+        title:
+          type: string
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/fullQualifiedName"
+        description:
+          type: string
+        schemas:
+          type: array
+          items:
+            $ref: "#/components/fullQualifiedName"
+        datatype:
+          type: string
+        piiField:
+          type: boolean
+        multiValued:
+          type: boolean
+        analyzer:
+          type: string
+    propertyTags:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+    entityType:
+      title: An entity type
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        id:
+          type: string
+        type:
+          $ref: "#/components/fullQualifiedName"
+        schemas:
+          type: array
+          items:
+            $ref: "#/components/fullQualifiedName"
+        key:
+          type: array
+          items:
+            type: string
+        properties:
+          type: array
+          items:
+            type: string
+        propertyTags:
+          $ref: "#/components/propertyTags"
+        basetype:
+           type: string
+        category:
+          type: string
+          enum: [AssociationType, EntityType]
+      example:
+        id: ec6865e6-e60e-424b-a071-6a9c1603d735
+        type:
+          namespace: lattice
+          name: myentity
+        schemas:
+          namespace: lattice
+          name: myschema
+        key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
+        properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
+        category: EntityType
+    associationType:
+      type: object
+      properties:
+        entityType:
+          $ref: "#/components/entityType"
+        src:
+          type: array
+          items:
+            type: string
+        dst:
+          type: array
+          items:
+            type: string
+        bidirectional:
+          type: boolean
+      example:
+        entityType:
+          id: ec6865e6-e60e-424b-a071-6a9c1603d735
+          type:
+            namespace: lattice
+            name: myentity
+          schemas:
+            namespace: lattice
+            name: myschema
+          key: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085]
+          properties: [8f79e123-3411-4099-a41f-88e5d22d0e8d, e39dfdfa-a3e6-4f1f-b54b-646a723c3085, fae6af98-2675-45bd-9a5b-1619a87235a8]
+        src: [ec6865e6-e60e-424b-a071-6a9c1603d735]
+        dst: [4b08e1f9-4a00-4169-92ea-10e377070220]
+        description: AssociationType Description
+        bidirectional: true
+        category: AssociationType
+    schema:
+      type: object
+      properties:
+        entityTypes:
+          type: array
+          items:
+            $ref: "#/components/entityType"
+        propertyTypes:
+          type: array
+          items:
+            $ref: "#/components/propertyType"
+        fqn:
+          $ref: "#/components/fullQualifiedName"
+    EDM:
+      type: object
+      properties:
+        version:
+          type: string
+          format: uuid
+        namespaces:
+          type: array
+          items:
+            type: string
+        schemas:
+          type: array
+          items:
+            $ref: "#/components/schema"
+        propertyTypes:
+          type: array
+          items:
+            $ref: "#/components/propertyType"
+        entityTypes:
+          type: array
+          items:
+            $ref: "#/components/entityType"
+        associationTypes:
+          type: array
+          items:
+            $ref: "#/components/associationType"
+    EDMdiff:
+      type: object
+      properties:
+        conflicts:
+          $ref: "#/components/EDM"
+        diff:
+          $ref: "#/components/EDM"
+    metaDataUpdate:
+      title: An update for an entity sets
+      type: object
+      properties:
+        name:
+          type: string
+        title:
+          type: string
+        contacts:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        linking:
+          type: boolean
+        linked_entity_sets:
+          type: array
+          items:
+            type: string
+        external:
+          type: boolean
+        pii:
+          type: boolean
+        defaultShow:
+          type: boolean
+        propertyTags:
+          $ref: "#/components/propertyTags"
+    allPropertyUsageSummary:
+      type: object
+      additionalProperties:
+        $ref:  "#/components/propertyUsageSummary"
+    propertyUsageSummary:
+      type: object
+      properties:
+        entityTypeId:
+          type: string
+        entitySetId:
+          type: string
+        entitySetName:
+          type: string
+        count:
+          type: integer
+    EdmRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [ADD, REMOVE, REPLACE]
+        propertyTypes:
+          type: array
+          items:
+            type: string
+        entityTypes:
+          type: array
+          items:
+            type: string
+    entitySet:
+      title: An entity set
+      type: object
+      properties:
+        name:
+          type: string
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        contacts:
+          type: array
+          items:
+            type: string
+        entityTypeId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        linking:
+          type: boolean
+        linked_entity_sets:
+          type: array
+          items:
+            type: string
+        external:
+          type: boolean
+      example:
+        entityTypeId: 963b597b-b28d-4f59-b2e6-4d443499e464
+        id: 843b597b-b28d-4f59-b2e6-4d443499e323
+        name: NameOfMyEntitySet
+        title: This is the title of the entitySet
+        contacts: ["support@openlattice.com"]
+        description: This is a more elaborate description of the entity set.
+    entity:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+    entityWithId:
+      allOf:
+        - $ref: "#/components/entity"
+        - type: object
+          properties:
+            openlattice.@id:
+              type: string
+    neighborDetails:
+      type: object
+      properties:
+        openlattice.@id:
+          type: string
+        ol.id:
+          type: string
+    neighborEntityDetails:
+      type: object
+      properties:
+        associationEntitySet:
+            $ref: "#/components/entitySet"
+        associationDetails:
+            $ref: "#/components/neighborDetails"
+        neighborEntitySet:
+            $ref: "#/components/entitySet"
+        neighborId:
+          type: string
+        neighbourDetails:
+            $ref: "#/components/neighborDetails"
+    neighborEntityDetailsCollection:
+      type: array
+      items:
+        $ref: "#/components/neighborEntityDetails"
+    neighborEntityDetailsDictionary:
+      additionalProperties:
+        $ref: "#/components/neighborEntityDetailsCollection"
+    neighborSearchFilter:
+      type: object
+      properties:
+        entityKeyIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        src:
+          type: array
+          items:
+            type: string
+            format: uuid
+        dst:
+          type: array
+          items:
+            type: string
+            format: uuid
+        edge:
+          type: array
+          items:
+            type: string
+            format: uuid
+    auth0userBasic:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+        nickname:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        organization:
+          type: array
+          items:
+            type: string
+    auth0userBasicMap:
+      type: object
+      additionalProperties:
+        $ref: "#/components/auth0userBasic"
+    ace:
+      type: object
+      properties:
+        principal:
+          $ref: "#/components/principal"
+        permissions:
+          type: array
+          items:
+            type: string
+    acl:
+      type: object
+      properties:
+        aclKey:
+          type: array
+          items:
+            $ref: "#/components/aclKey"
+        aces:
+          type: array
+          items:
+            $ref: "#/components/ace"
+    aclData:
+      type: object
+      properties:
+        action:
+          type: string # this could be ADD, REMOVE, SET or REQUEST
+        acl:
+          $ref: "#/components/acl"
+    aclKey:
+      type: array
+      items:
+        type: string
+    principal:
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          type: array
+          items:
+            type: string
 
 
 tags:
