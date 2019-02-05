@@ -1,5 +1,6 @@
 package com.openlattice.linking
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.data.EntityDataKey
@@ -7,9 +8,17 @@ import com.openlattice.data.EntityDataKey
 /**
  * Represents an ordered pair of EntityDataKeys
  */
-class EntityKeyPair(
+class EntityKeyPair @JsonCreator constructor(
         @JsonProperty(SerializationConstants.FIRST) first: EntityDataKey,
         @JsonProperty(SerializationConstants.SECOND) second: EntityDataKey) {
+    @JsonProperty(SerializationConstants.FIRST) var first: EntityDataKey
+    @JsonProperty(SerializationConstants.SECOND) var second: EntityDataKey
+
+    init {
+        val entityPair = sortedSetOf(entityKeyComparator, first, second)
+        this.first = entityPair.first()
+        this.second = entityPair.last()
+    }
 
     companion object {
         val entityKeyComparator = Comparator<EntityDataKey> { key1, key2 ->
@@ -21,31 +30,20 @@ class EntityKeyPair(
         }
     }
 
-    private val entityPair: Set<EntityDataKey> = sortedSetOf(entityKeyComparator, first, second)
-
     override fun equals(other: Any?): Boolean {
         if (other == null) return false
         if (other !is EntityKeyPair) return false
-        if (other.entityPair != entityPair) return false
+        if (other.first != first) return false
+        if (other.second != second) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        return entityPair.hashCode()
+        return first.hashCode() * 31 + second.hashCode()
     }
 
     override fun toString(): String {
-        return "EntityPair(${getFirst()}, ${getSecond()})"
-    }
-
-    @JsonProperty(SerializationConstants.FIRST)
-    fun getFirst(): EntityDataKey {
-        return entityPair.first()
-    }
-
-    @JsonProperty(SerializationConstants.SECOND)
-    fun getSecond(): EntityDataKey {
-        return entityPair.last()
+        return "EntityKeyPair($first, $second)"
     }
 }
