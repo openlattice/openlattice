@@ -488,9 +488,9 @@ public final class TestDataFactory {
     public static Map<UUID, Set<Object>> randomElement( UUID keyType, UUID binaryType ) {
         SetMultimap<UUID, Object> element = HashMultimap.create();
         element.put( keyType, RandomStringUtils.random( 5 ) );
-        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
-        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
-        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
+        element.put( binaryType, ImmutableMap.of("content-type", "application/octet-stream" , "data", RandomUtils.nextBytes( 128 ) ) );
+        element.put( binaryType, ImmutableMap.of("content-type", "application/octet-stream" , "data", RandomUtils.nextBytes( 128 ) ) );
+        element.put( binaryType, ImmutableMap.of("content-type", "application/octet-stream" , "data", RandomUtils.nextBytes( 128 ) ) );
         return Multimaps.asMap( element );
     }
 
