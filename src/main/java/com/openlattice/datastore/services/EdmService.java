@@ -111,7 +111,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -125,7 +124,6 @@ import org.slf4j.LoggerFactory;
 public class EdmService implements EdmManager {
 
     private static final Logger             logger = LoggerFactory.getLogger( EdmService.class );
-    private final        IMap<String, UUID> edmVersions;
 
     private final IMap<UUID, PropertyType>                              propertyTypes;
     private final IMap<UUID, ComplexType>                               complexTypes;
@@ -169,7 +167,6 @@ public class EdmService implements EdmManager {
         this.schemaManager = schemaManager;
         this.hazelcastInstance = hazelcastInstance;
         this.hds = hds;
-        this.edmVersions = hazelcastInstance.getMap( HazelcastMap.EDM_VERSIONS.name() );
         this.propertyTypes = hazelcastInstance.getMap( HazelcastMap.PROPERTY_TYPES.name() );
         this.complexTypes = hazelcastInstance.getMap( HazelcastMap.COMPLEX_TYPES.name() );
         this.enumTypes = hazelcastInstance.getMap( HazelcastMap.ENUM_TYPES.name() );
@@ -208,21 +205,6 @@ public class EdmService implements EdmManager {
         } catch ( SQLException e ) {
             logger.debug( "Unable to clear all data.", e );
         }
-    }
-
-    @Override
-    public UUID getCurrentEntityDataModelVersion() {
-        if ( !edmVersions.containsKey( EntityDataModel.getEdmVersionKey() ) ) {
-            return generateNewEntityDataModelVersion();
-        }
-        return edmVersions.get( EntityDataModel.getEdmVersionKey() );
-    }
-
-    @Override
-    public UUID generateNewEntityDataModelVersion() {
-        UUID newVersion = new UUID( System.currentTimeMillis(), 0 );
-        edmVersions.put( EntityDataModel.getEdmVersionKey(), newVersion );
-        return newVersion;
     }
 
     /*
@@ -1374,14 +1356,6 @@ public class EdmService implements EdmManager {
     }
 
     private Pair<EntityDataModelDiff, Set<List<UUID>>> getEntityDataModelDiffAndFqnLists( EntityDataModel edm ) {
-        UUID currentVersion = getCurrentEntityDataModelVersion();
-        if ( !edm.getVersion().equals( currentVersion ) ) {
-            throw new IllegalArgumentException(
-                    "Unable to generate diff: version " + edm.getVersion().toString()
-                            + " does not match current version "
-                            + currentVersion.toString() );
-        }
-
         ConcurrentSkipListSet<PropertyType> conflictingPropertyTypes = new ConcurrentSkipListSet<>( Comparator
                 .comparing( propertyType -> propertyType.getType().toString() ) );
         ConcurrentSkipListSet<EntityType> conflictingEntityTypes = new ConcurrentSkipListSet<>( Comparator
@@ -1495,7 +1469,6 @@ public class EdmService implements EdmManager {
         } );
 
         EntityDataModel edmDiff = new EntityDataModel(
-                getCurrentEntityDataModelVersion(),
                 Sets.newHashSet(),
                 updatedSchemas,
                 updatedEntityTypes,
@@ -1507,7 +1480,6 @@ public class EdmService implements EdmManager {
         if ( !conflictingPropertyTypes.isEmpty() || !conflictingEntityTypes.isEmpty()
                 || !conflictingAssociationTypes.isEmpty() ) {
             conflicts = new EntityDataModel(
-                    getCurrentEntityDataModelVersion(),
                     Sets.newHashSet(),
                     Sets.newHashSet(),
                     conflictingEntityTypes,
@@ -1614,7 +1586,6 @@ public class EdmService implements EdmManager {
         propertyTypes.sort( Comparator.comparing( propertyType -> propertyType.getType().toString() ) );
 
         return new EntityDataModel(
-                getCurrentEntityDataModelVersion(),
                 namespaces,
                 schemas,
                 entityTypes,

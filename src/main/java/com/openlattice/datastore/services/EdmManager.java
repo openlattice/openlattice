@@ -52,10 +52,6 @@ import javax.annotation.Nullable;
 public interface EdmManager {
     void clearTables();
 
-    UUID getCurrentEntityDataModelVersion();
-
-    UUID generateNewEntityDataModelVersion();
-
     PropertyType getPropertyType( FullQualifiedName propertyTypeFqn );
 
     PropertyType getPropertyType( UUID propertyTypeId );

@@ -30,11 +30,7 @@ import com.openlattice.datastore.services.EdmManager
 class EdmDiffService(private val edm: EdmManager) {
     fun diff(otherDataModel: EntityDataModel): EdmDiff {
         val currentDataModel = edm.entityDataModel!!
-        return if (otherDataModel.version == currentDataModel.version) {
-            matchingVersionDiff(currentDataModel, otherDataModel)
-        } else {
-            differentVersionDiff(currentDataModel, otherDataModel)
-        }
+        return matchingVersionDiff(currentDataModel, otherDataModel)
     }
 
     private fun differentVersionDiff(currentDataModel: EntityDataModel, otherDataModel: EntityDataModel): EdmDiff {
@@ -94,7 +90,6 @@ class EdmDiffService(private val edm: EdmManager) {
         //Namespaces cannot conflict.
         return EdmDiff(
                 EntityDataModel(
-                        currentDataModel.version,
                         presentNamespaces,
                         presentSchemas,
                         presentEntityTypes,
@@ -102,7 +97,6 @@ class EdmDiffService(private val edm: EdmManager) {
                         presentPropertyTypes
                 ),
                 EntityDataModel(
-                        otherDataModel.version,
                         missingNamespaces,
                         missingSchemas,
                         missingEntityTypes,
@@ -110,7 +104,6 @@ class EdmDiffService(private val edm: EdmManager) {
                         missingPropertyTypes
                 ),
                 EntityDataModel(
-                        otherDataModel.version,
                         listOf(),
                         conflictingSchemas,
                         conflictingEntityTypes,
@@ -121,7 +114,7 @@ class EdmDiffService(private val edm: EdmManager) {
     }
 
     private fun matchingVersionDiff(currentDataModel: EntityDataModel, otherDataModel: EntityDataModel): EdmDiff {
-//Since the versions are different we will do our best using FQNs.
+        //Since the versions are same we use ids
         val currentPropertyTypes = currentDataModel.propertyTypes.asSequence().map { it.id to it }.toMap()
         val currentEntityTypes = currentDataModel.entityTypes.asSequence().map { it.id to it }.toMap()
         val currentAssociationTypes = currentDataModel.associationTypes.asSequence().map { it.associationEntityType.id to it }.toMap()
@@ -178,7 +171,6 @@ class EdmDiffService(private val edm: EdmManager) {
         //Namespaces cannot conflict.
         return EdmDiff(
                 EntityDataModel(
-                        currentDataModel.version,
                         presentNamespaces,
                         presentSchemas,
                         presentEntityTypes,
@@ -186,7 +178,6 @@ class EdmDiffService(private val edm: EdmManager) {
                         presentPropertyTypes
                 ),
                 EntityDataModel(
-                        otherDataModel.version,
                         missingNamespaces,
                         missingSchemas,
                         missingEntityTypes,
@@ -194,7 +185,6 @@ class EdmDiffService(private val edm: EdmManager) {
                         missingPropertyTypes
                 ),
                 EntityDataModel(
-                        otherDataModel.version,
                         listOf(),
                         conflictingSchemas,
                         conflictingEntityTypes,
