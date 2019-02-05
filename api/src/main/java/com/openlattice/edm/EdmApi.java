@@ -75,7 +75,6 @@ public interface EdmApi {
     String SCHEMAS             = "schemas";
     String FILE_TYPE           = "fileType";
     String TOKEN               = "token";
-    String VERSION             = "version";
 
     // {namespace}/{schema_name}/{class}/{FQN}/{FQN}
     /*
@@ -151,18 +150,6 @@ public interface EdmApi {
      */
     @POST( BASE + DIFF_PATH )
     EntityDataModelDiff getEntityDataModelDiff( EntityDataModel edm );
-
-    /**
-     * Returns the current entity data model version
-     */
-    @GET( BASE + VERSION_PATH )
-    UUID getEntityDataModelVersion();
-
-    /**
-     * Generates and returns a new entity data model version
-     */
-    @GET( BASE + VERSION_PATH + NEW_PATH )
-    UUID generateNewEntityDataModelVersion();
 
     /**
      * Gets information for any SecurableObjectType given its type and ID.

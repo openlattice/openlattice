@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class EntityDataModel {
-    private final UUID                      version;
     private final Iterable<String>          namespaces;
     private final Iterable<Schema>          schemas;
     private final Iterable<EntityType>      entityTypes;
@@ -36,23 +35,16 @@ public class EntityDataModel {
 
     @JsonCreator
     public EntityDataModel(
-            @JsonProperty( EdmApi.VERSION ) UUID version,
             @JsonProperty( EdmApi.NAMESPACES ) Iterable<String> namespaces,
             @JsonProperty( EdmApi.SCHEMAS ) Iterable<Schema> schemas,
             @JsonProperty( EdmApi.ENTITY_TYPES ) Iterable<EntityType> entityTypes,
             @JsonProperty( EdmApi.ASSOCIATION_TYPES ) Iterable<AssociationType> associationTypes,
             @JsonProperty( EdmApi.PROPERTY_TYPES ) Iterable<PropertyType> propertyTypes ) {
-        this.version = version;
         this.namespaces = namespaces;
         this.schemas = schemas;
         this.entityTypes = entityTypes;
         this.associationTypes = associationTypes;
         this.propertyTypes = propertyTypes;
-    }
-    
-    @JsonProperty( EdmApi.VERSION )
-    public UUID getVersion() {
-        return version;
     }
 
     @JsonProperty( EdmApi.NAMESPACES )
@@ -86,7 +78,7 @@ public class EntityDataModel {
     
     @Override
     public String toString() {
-        return "EntityDataModel [version=" + version + ", namespaces=" + namespaces + ", schemas=" + schemas
+        return "EntityDataModel [namespaces=" + namespaces + ", schemas=" + schemas
                 + ", entityType=" + entityTypes + ", associationTypes=" + associationTypes + ", propertyTypes="
                 + propertyTypes + "]";
     }
@@ -100,7 +92,6 @@ public class EntityDataModel {
         result = prime * result + ( ( namespaces == null ) ? 0 : namespaces.hashCode() );
         result = prime * result + ( ( propertyTypes == null ) ? 0 : propertyTypes.hashCode() );
         result = prime * result + ( ( schemas == null ) ? 0 : schemas.hashCode() );
-        result = prime * result + ( ( version == null ) ? 0 : version.hashCode() );
         return result;
     }
 
@@ -125,9 +116,6 @@ public class EntityDataModel {
         if ( schemas == null ) {
             if ( other.schemas != null ) return false;
         } else if ( !schemas.equals( other.schemas ) ) return false;
-        if ( version == null ) {
-            if ( other.version != null ) return false;
-        } else if ( !version.equals( other.version ) ) return false;
         return true;
     }
 
