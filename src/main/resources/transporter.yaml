@@ -1,0 +1,7 @@
+server:
+  jdbcUrl: jdbc:postgresql://localhost:5432
+  username: "bruh"
+  password: "nobruh"
+  maximumPoolSize: 5
+  connectionTimeout: 60000
+

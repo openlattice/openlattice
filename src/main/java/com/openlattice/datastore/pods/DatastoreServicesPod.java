@@ -84,6 +84,8 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
+import com.openlattice.transporter.TransporterConfiguration;
+import com.openlattice.transporter.pods.TransporterConfigurationPod;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -97,6 +99,7 @@ import org.springframework.context.annotation.Import;
 @Import( {
         Auth0Pod.class,
         ByteBlobServicePod.class,
+        TransporterConfigurationPod.class,
         NeuronPod.class,
 } )
 public class DatastoreServicesPod {
@@ -124,6 +127,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
+
+    @Inject
+    private TransporterConfiguration transporterConfiguration;
 
 
 
@@ -232,7 +238,10 @@ public class DatastoreServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 userDirectoryService(),
-                principalService() );
+                principalService(),
+                transporterConfiguration,
+                dcs(),
+                hikariDataSource);
     }
 
     @Bean
