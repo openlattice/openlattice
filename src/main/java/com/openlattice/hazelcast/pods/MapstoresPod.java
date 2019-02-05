@@ -59,28 +59,7 @@ import com.openlattice.ids.Range;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
-import com.openlattice.postgres.mapstores.AclKeysMapstore;
-import com.openlattice.postgres.mapstores.AppConfigMapstore;
-import com.openlattice.postgres.mapstores.AppMapstore;
-import com.openlattice.postgres.mapstores.AppTypeMapstore;
-import com.openlattice.postgres.mapstores.AssociationTypeMapstore;
-import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore;
-import com.openlattice.postgres.mapstores.ComplexTypeMapstore;
-import com.openlattice.postgres.mapstores.EdmVersionsMapstore;
-import com.openlattice.postgres.mapstores.EntitySetMapstore;
-import com.openlattice.postgres.mapstores.EntitySetPropertyMetadataMapstore;
-import com.openlattice.postgres.mapstores.EntityTypeMapstore;
-import com.openlattice.postgres.mapstores.EnumTypesMapstore;
-import com.openlattice.postgres.mapstores.NamesMapstore;
-import com.openlattice.postgres.mapstores.OrganizationAppsMapstore;
-import com.openlattice.postgres.mapstores.OrganizationDescriptionsMapstore;
-import com.openlattice.postgres.mapstores.OrganizationEmailDomainsMapstore;
-import com.openlattice.postgres.mapstores.OrganizationMembersMapstore;
-import com.openlattice.postgres.mapstores.OrganizationTitlesMapstore;
-import com.openlattice.postgres.mapstores.RequestsMapstore;
-import com.openlattice.postgres.mapstores.SchemasMapstore;
-import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
-import com.openlattice.postgres.mapstores.SyncIdsMapstore;
+import com.openlattice.postgres.mapstores.*;
 import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
@@ -288,5 +267,10 @@ public class MapstoresPod {
     @Bean
     public PrincipalTreesMapstore principalTreesMapstore() {
         return new PrincipalTreesMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public LinkingFeedbackMapstore linkingFeedbackMapstore() {
+        return new LinkingFeedbackMapstore( hikariDataSource );
     }
 }

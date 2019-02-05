@@ -45,6 +45,7 @@ import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.graph.query.GraphQueryState;
 import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
+import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
@@ -945,11 +946,16 @@ public final class ResultSetAdapters {
     }
 
     public static EntityLinkingFeedback entityLinkingFeedback( ResultSet rs ) throws SQLException {
+        boolean linked = rs.getBoolean( LINKED_FIELD );
+
+        return new EntityLinkingFeedback( entityKeyPair( rs ), linked );
+    }
+
+    public static EntityKeyPair entityKeyPair( ResultSet rs ) throws SQLException {
         EntityDataKey srcEntityDataKey = srcEntityDataKey( rs );
         EntityDataKey dstEntityDataKey = dstEntityDataKey( rs );
-        Boolean linked = rs.getBoolean( LINKED_FIELD );
 
-        return new EntityLinkingFeedback( srcEntityDataKey, dstEntityDataKey, linked );
+        return new EntityKeyPair(srcEntityDataKey, dstEntityDataKey);
     }
 
     public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn( MetadataOption metadataOption ) {

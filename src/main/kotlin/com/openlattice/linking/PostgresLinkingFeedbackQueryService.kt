@@ -21,25 +21,14 @@ const val FETCH_SIZE = 100000
 
 class PostgresLinkingFeedbackQueryService(private val hds: HikariDataSource) {
 
-    private val entityKeyComparator = Comparator<EntityDataKey> { key1, key2 ->
-        if (key1.entitySetId != key2.entitySetId) {
-            key1.entitySetId.compareTo(key2.entitySetId)
-        } else {
-            key1.entityKeyId.compareTo(key2.entityKeyId)
-        }
-    }
-
     fun addLinkingFeedback(entityLinkingFeedback: EntityLinkingFeedback): Int {
         return hds.connection.use {
             // Insert a feedback with always the same order to avoid conflicting values
-            val orderedEntityPair =
-                    sortedSetOf(entityKeyComparator, entityLinkingFeedback.src, entityLinkingFeedback.dst)
-
             val stmt = it.prepareStatement(INSERT_SQL)
-            stmt.setObject(1, orderedEntityPair.first().entitySetId)
-            stmt.setObject(2, orderedEntityPair.first().entityKeyId)
-            stmt.setObject(3, orderedEntityPair.last().entitySetId)
-            stmt.setObject(4, orderedEntityPair.last().entityKeyId)
+            stmt.setObject(1, entityLinkingFeedback.entityPair.getFirst().entitySetId)
+            stmt.setObject(2, entityLinkingFeedback.entityPair.getFirst().entityKeyId)
+            stmt.setObject(3, entityLinkingFeedback.entityPair.getSecond().entitySetId)
+            stmt.setObject(4, entityLinkingFeedback.entityPair.getSecond().entityKeyId)
             stmt.setObject(5, entityLinkingFeedback.linked)
             stmt.setObject(6, entityLinkingFeedback.linked)
 
@@ -63,15 +52,14 @@ class PostgresLinkingFeedbackQueryService(private val hds: HikariDataSource) {
         )
     }
 
-    fun getLinkingFeedback(entityPair: Pair<EntityDataKey, EntityDataKey>): EntityLinkingFeedback? {
+    fun getLinkingFeedback(entityPair: EntityKeyPair): EntityLinkingFeedback? {
         val connection = hds.connection
         val stmt = connection.prepareStatement(SELECT_SQL)
-        // We insert in order, so when selecting, we only have to check in order too
-        val orderedEntityPair = sortedSetOf(entityKeyComparator, entityPair.first, entityPair.second)
-        stmt.setObject(1, orderedEntityPair.first().entitySetId)
-        stmt.setObject(2, orderedEntityPair.first().entityKeyId)
-        stmt.setObject(3, orderedEntityPair.last().entitySetId)
-        stmt.setObject(4, orderedEntityPair.last().entityKeyId)
+
+        stmt.setObject(1, entityPair.getFirst().entitySetId)
+        stmt.setObject(2, entityPair.getFirst().entityKeyId)
+        stmt.setObject(3, entityPair.getSecond().entitySetId)
+        stmt.setObject(4, entityPair.getSecond().entityKeyId)
         val rs = stmt.executeQuery()
 
         return if (rs.next()) {
