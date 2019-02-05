@@ -1186,7 +1186,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: string
+                  $ref: "#/components/entity"
     delete:
       summary: Clears the data from a single entity set.
       operationId: clearEntitySet
