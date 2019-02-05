@@ -74,7 +74,7 @@ class AwsBlobDataService(
 
     override fun getPresignedUrl(key: Any, expiration: Date, httpMethod: HttpMethod, contentType: Optional<String>): URL {
         val urlRequest = GeneratePresignedUrlRequest(datastoreConfiguration.bucketName, key.toString()).withMethod(
-                HttpMethod.GET
+                httpMethod
         ).withExpiration(expiration)
         contentType.ifPresent { urlRequest.contentType = contentType.get() }
         lateinit var url: URL
