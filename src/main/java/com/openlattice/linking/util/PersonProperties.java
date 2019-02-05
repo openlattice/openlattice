@@ -58,7 +58,7 @@ public class PersonProperties {
     private static final FullQualifiedName ETHNICITY_FQN      = new FullQualifiedName( "nc.PersonEthnicity" );
     private static final FullQualifiedName DOB_FQN            = new FullQualifiedName( "nc.PersonBirthDate" );
     private static final FullQualifiedName IDENTIFICATION_FQN = new FullQualifiedName( "nc.SubjectIdentification" );
-    private static final FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.ssn" );
+    private static final FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.SSN" );
     private static final FullQualifiedName AGE_FQN            = new FullQualifiedName( "person.age" );
     private static final FullQualifiedName XREF_FQN           = new FullQualifiedName( "justice.xref" );
     public static final Set<FullQualifiedName> FQNS = ImmutableSet.of( FIRST_NAME_FQN,

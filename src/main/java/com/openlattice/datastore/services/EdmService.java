@@ -110,17 +110,8 @@ import com.openlattice.postgres.PostgresTablesPod;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -1137,7 +1128,16 @@ public class EdmService implements EdmManager {
     @Override
     public Map<FullQualifiedName, UUID> getFqnToIdMap( Set<FullQualifiedName> propertyTypeFqns ) {
         return aclKeys.getAll( Util.fqnToString( propertyTypeFqns ) ).entrySet().stream()
-                .collect( Collectors.toMap( e -> new FullQualifiedName( e.getKey() ), Entry::getValue ) );
+                .collect( Collectors.toMap(
+                        e -> new FullQualifiedName( e.getKey() ),
+                        e -> {
+                            if ( e.getValue() == null ) {
+                                throw new NullPointerException( "Property type " + e.getKey() + " does not exist" );
+                            } else {
+                                return e.getValue();
+                            }
+                        } )
+                );
     }
 
     @Override
