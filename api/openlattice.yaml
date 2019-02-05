@@ -27,11 +27,11 @@ paths:
   # edm
 
   /datastore/edm/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDM
+    $ref: './definitions/EDM/EDM.yaml#/EDM'
   /datastore/edm/diff/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDMdiff
+    $ref: './definitions/EDM/EDM.yaml#/EDMdiff'
   /datastore/edm/version/:
-    $ref: ./definitions/EDM/EDM.yaml#/EDMversion
+    $ref: './definitions/EDM/EDM.yaml#/EDMversion'
 
   # entity sets
 
