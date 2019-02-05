@@ -101,11 +101,6 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_SET_ID,
                             EDGE_ENTITY_KEY_ID );
-
-    public static final PostgresTableDefinition        EDM_VERSIONS                 =
-            new PostgresTableDefinition( "edm_versions" )
-                    .addColumns( EDM_VERSION_NAME, EDM_VERSION )
-                    .primaryKey( EDM_VERSION_NAME, EDM_VERSION );
     public static final PostgresTableDefinition        ENTITY_QUERIES               =
             new PostgresTableDefinition( "entity_graph_queries" )
                     .addColumns( QUERY_ID, ID_VALUE, CLAUSES )

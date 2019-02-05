@@ -150,12 +150,6 @@ public final class PostgresColumn {
     public static final String                   EDGE_VALUE_FIELD                  = "edge_value";
     public static final PostgresColumnDefinition EDGE_VALUE                        =
             new PostgresColumnDefinition( EDGE_VALUE_FIELD, DECIMAL );
-    public static final String                   EDM_VERSION_FIELD                 = "edm_version";
-    public static final PostgresColumnDefinition EDM_VERSION                       =
-            new PostgresColumnDefinition( EDM_VERSION_FIELD, UUID ).notNull();
-    public static final String                   EDM_VERSION_NAME_FIELD            = "edm_version_name";
-    public static final PostgresColumnDefinition EDM_VERSION_NAME                  =
-            new PostgresColumnDefinition( EDM_VERSION_NAME_FIELD, TEXT ).notNull();
     public static final String                   ENTITY_ID_FIELD                   = "entity_id";
     public static final PostgresColumnDefinition ENTITY_ID                         =
             new PostgresColumnDefinition( ENTITY_ID_FIELD, TEXT );
