@@ -72,10 +72,6 @@ public class EntityDataModel {
         return propertyTypes;
     }
     
-    public static String getEdmVersionKey() {
-        return "edm";
-    }
-    
     @Override
     public String toString() {
         return "EntityDataModel [namespaces=" + namespaces + ", schemas=" + schemas
