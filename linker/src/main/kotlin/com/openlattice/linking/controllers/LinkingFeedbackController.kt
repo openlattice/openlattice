@@ -78,17 +78,19 @@ constructor(
 
     private fun createLinkingFeedbackCombinations(
             entityDataKey: EntityDataKey, entityList: List<EntityDataKey>, offset: Int, linked: Boolean): Int {
-        return (offset until entityList.size).map{
+        return (offset until entityList.size).map {
             addLinkingFeedback(EntityLinkingFeedback(EntityKeyPair(entityDataKey, entityList[it]), linked))
         }.sum()
     }
 
     private fun addLinkingFeedback(entityLinkingFeedback: EntityLinkingFeedback): Int {
-        logger.info("Linking feedback submitted for entities: ${entityLinkingFeedback.entityPair.getFirst()} - " +
-                "${entityLinkingFeedback.entityPair.getSecond()}, linked = ${entityLinkingFeedback.linked}")
         linkingFeedbacks.set(entityLinkingFeedback.entityPair, entityLinkingFeedback)
+        val count =  feedbackQueryService.addLinkingFeedback(entityLinkingFeedback)
 
-        return feedbackQueryService.addLinkingFeedback(entityLinkingFeedback)
+        logger.info("Linking feedback submitted for entities: ${entityLinkingFeedback.entityPair.first} - " +
+                "${entityLinkingFeedback.entityPair.second}, linked = ${entityLinkingFeedback.linked}")
+
+        return count
     }
 
     @GetMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.ALL])
@@ -99,12 +101,12 @@ constructor(
     @GetMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.ALL + LinkingFeedbackApi.FEATURES])
     override fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures> {
         return feedbackQueryService.getLinkingFeedbacks().map {
-            val entities = dataLoader.getEntities(setOf(it.entityPair.getFirst(), it.entityPair.getSecond()))
+            val entities = dataLoader.getEntities(setOf(it.entityPair.first, it.entityPair.second))
             EntityLinkingFeatures(
                     it,
                     matcher.extractFeatures(
-                            matcher.extractProperties(entities.getValue(it.entityPair.getFirst())),
-                            matcher.extractProperties(entities.getValue(it.entityPair.getSecond()))))
+                            matcher.extractProperties(entities.getValue(it.entityPair.first)),
+                            matcher.extractProperties(entities.getValue(it.entityPair.second))))
         }
     }
 
@@ -112,14 +114,14 @@ constructor(
     override fun getLinkingFeedbackWithFeatures(
             @RequestBody entityPair: EntityKeyPair): EntityLinkingFeatures? {
         val feedback = checkNotNull(feedbackQueryService.getLinkingFeedback(entityPair))
-        { "Linking feedback for entities ${entityPair.getFirst()} - ${entityPair.getSecond()} does not exist" }
+        { "Linking feedback for entities ${entityPair.first} - ${entityPair.second} does not exist" }
 
-        val entities = dataLoader.getEntities(setOf(feedback.entityPair.getFirst(), feedback.entityPair.getSecond()))
+        val entities = dataLoader.getEntities(setOf(feedback.entityPair.first, feedback.entityPair.second))
         return EntityLinkingFeatures(
                 feedback,
                 matcher.extractFeatures(
-                        matcher.extractProperties(entities.getValue(feedback.entityPair.getFirst())),
-                        matcher.extractProperties(entities.getValue(feedback.entityPair.getSecond()))))
+                        matcher.extractProperties(entities.getValue(feedback.entityPair.first)),
+                        matcher.extractProperties(entities.getValue(feedback.entityPair.second))))
     }
 
 
