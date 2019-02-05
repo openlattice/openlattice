@@ -85,12 +85,14 @@ task generatePythonClient(type: org.openapitools.generator.gradle.plugin.tasks.G
     generatorName = "python"
     inputSpec = file("openlattice.yaml").getAbsolutePath()
     outputDir = file("build/openapi/python").getAbsolutePath()
+    configFile = file("oas-config.json").getAbsolutePath()
 }
 
 task generateRClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
     generatorName = "r"
     inputSpec = file("openlattice.yaml").getAbsolutePath()
     outputDir = file("build/openapi/r").getAbsolutePath()
+    configFile = file("oas-config.json").getAbsolutePath()
 }
 
 task generateKotlinClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
