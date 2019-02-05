@@ -563,14 +563,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             int maxHits ) {
         if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
-        BoolQueryBuilder authorizedFilterQuery = new BoolQueryBuilder();
-        for ( AclKey aclKey : authorizedAclKeys ) {
-            authorizedFilterQuery
-                    .should( QueryBuilders.matchQuery( ENTITY_SET + "." + ID, aclKey.get( 0 ).toString() ) );
-        }
-        authorizedFilterQuery.minimumShouldMatch( 1 );
-
-        BoolQueryBuilder query = new BoolQueryBuilder().must( authorizedFilterQuery );
+        BoolQueryBuilder query = new BoolQueryBuilder();
 
         if ( optionalSearchTerm.isPresent() ) {
             String searchTerm = optionalSearchTerm.get();
@@ -595,10 +588,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                         ScoreMode.Avg ) );
             }
         }
+
+        query.filter( QueryBuilders.idsQuery()
+                .addIds( authorizedAclKeys.stream().map( aclKey -> aclKey.get( 0 ).toString() ).toArray( String[]::new ) ) );
         SearchResponse response = client.prepareSearch( ENTITY_SET_DATA_MODEL )
                 .setTypes( ENTITY_SET_TYPE )
                 .setQuery( query )
-                .setFetchSource( new String[]{ ENTITY_SET, PROPERTY_TYPES }, null )
+                .setFetchSource( new String[] { ENTITY_SET, PROPERTY_TYPES }, null )
                 .setFrom( start )
                 .setSize( maxHits )
                 .execute()
@@ -632,8 +628,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     /**
      * Add new mappings to existing index.
      * Updating the entity set model is handled in {@link #updatePropertyTypesInEntitySet(UUID, List)}
-     * @param entitySetId the id of the entity set to which the new proprties are added
-     * @param newPropertyTypes the ids of the new properties
+     *
+     * @param entitySetId        the id of the entity set to which the new proprties are added
+     * @param newPropertyTypes   the ids of the new properties
      * @param linkedEntitySetIds if it's a linking entity set, the ids of the linked entity sets, otherwise empty
      */
     @Override
@@ -645,10 +642,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean addLinkedEntitySetsToEntitySet( UUID linkingEntitySetId,
-                                                   List<PropertyType> propertyTypes,
-                                                   Set<UUID> newLinkedEntitySets ) {
-        return addMappingToSecurableObjectIndex( linkingEntitySetId, propertyTypes, Optional.of( newLinkedEntitySets ) );
+    public boolean addLinkedEntitySetsToEntitySet(
+            UUID linkingEntitySetId,
+            List<PropertyType> propertyTypes,
+            Set<UUID> newLinkedEntitySets ) {
+        return addMappingToSecurableObjectIndex( linkingEntitySetId,
+                propertyTypes,
+                Optional.of( newLinkedEntitySets ) );
     }
 
     @Override
@@ -735,9 +735,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             throws JsonProcessingException {
         Map<String, Set<Object>> formattedEntityValues = Maps.newHashMap();
         entityValuesByEntitySet.forEach(
-                (entitySetId, propertyData) ->
-                    propertyData.forEach( (propertyTypeId, data) ->
-                            formattedEntityValues.put( entitySetId + "." + propertyTypeId, data ) )
+                ( entitySetId, propertyData ) ->
+                        propertyData.forEach( ( propertyTypeId, data ) ->
+                                formattedEntityValues.put( entitySetId + "." + propertyTypeId, data ) )
         );
 
         return mapper.writeValueAsBytes( formattedEntityValues );
@@ -768,10 +768,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     @Override
     public boolean createBulkEntityData(
             UUID entitySetId,
-            Map<UUID, Map<UUID, Set<Object>>> entitiesById) {
+            Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        if( !entitiesById.isEmpty() ) {
+        if ( !entitiesById.isEmpty() ) {
             try {
                 String indexName = getIndexName( entitySetId );
                 String indexType = getTypeName( entitySetId );
@@ -802,13 +802,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) { // linking_id/entity_set_id/property_id
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        if( !entitiesByLinkingId.isEmpty() ) {
+        if ( !entitiesByLinkingId.isEmpty() ) {
             try {
                 String indexName = getIndexName( linkingEntitySetId );
                 String indexType = getTypeName( linkingEntitySetId );
 
                 BulkRequestBuilder requestBuilder = client.prepareBulk();
-                for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingIdEntry : entitiesByLinkingId.entrySet() ) {
+                for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingIdEntry : entitiesByLinkingId
+                        .entrySet() ) {
                     final UUID linkingId = entitiesByLinkingIdEntry.getKey();
                     final byte[] s = getFieldMappings( entitiesByLinkingIdEntry.getValue() );
                     requestBuilder.add(
@@ -817,7 +818,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 }
                 requestBuilder.execute().actionGet();
             } catch ( JsonProcessingException e ) {
-                logger.debug( "Error creating bulk linked data in elasticsearch for entity set {}", linkingEntitySetId, e );
+                logger.debug( "Error creating bulk linked data in elasticsearch for entity set {}",
+                        linkingEntitySetId,
+                        e );
                 return false;
             }
         }
@@ -1013,7 +1016,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( List<List<Double>> zone : constraints.getZones().get() ) {
             List<GeoPoint> polygon = zone.stream().map( pair -> new GeoPoint( pair.get( 1 ), pair.get( 0 ) ) )
                     .collect( Collectors.toList() );
-            ( ( BoolQueryBuilder ) query ).should( QueryBuilders.geoPolygonQuery( propertyTypeId.toString(), polygon ) );
+            ( (BoolQueryBuilder) query ).should( QueryBuilders.geoPolygonQuery( propertyTypeId.toString(), polygon ) );
         }
 
         return query;
@@ -1154,16 +1157,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             int maxHits ) {
         if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
-        BoolQueryBuilder authorizedFilterQuery = new BoolQueryBuilder();
-        for ( AclKey aclKey : authorizedOrganizationIds ) {
-            authorizedFilterQuery.should( QueryBuilders.matchQuery( "_id", aclKey.get( 0 ).toString() ) );
-        }
-        authorizedFilterQuery.minimumShouldMatch( 1 );
-
-        BoolQueryBuilder query = new BoolQueryBuilder().must( authorizedFilterQuery )
+        BoolQueryBuilder query = new BoolQueryBuilder()
                 .should( QueryBuilders.matchQuery( TITLE, searchTerm ).fuzziness( Fuzziness.AUTO ) )
                 .should( QueryBuilders.matchQuery( DESCRIPTION, searchTerm ).fuzziness( Fuzziness.AUTO ) )
                 .minimumShouldMatch( 1 );
+
+        query.filter( QueryBuilders.idsQuery()
+                .addIds( authorizedOrganizationIds.stream().map( aclKey -> aclKey.get( 0 ).toString() ).toArray( String[]::new ) ) );
 
         SearchResponse response = client.prepareSearch( ORGANIZATIONS )
                 .setTypes( ORGANIZATION_TYPE )
@@ -1329,19 +1329,19 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean triggerPropertyTypeIndex( List<PropertyType> propertyTypes ) {
-        Function<Object, String> idFn = pt -> ( ( PropertyType ) pt ).getId().toString();
+        Function<Object, String> idFn = pt -> ( (PropertyType) pt ).getId().toString();
         return triggerIndex( PROPERTY_TYPE_INDEX, PROPERTY_TYPE, propertyTypes, idFn );
     }
 
     @Override
     public boolean triggerEntityTypeIndex( List<EntityType> entityTypes ) {
-        Function<Object, String> idFn = et -> ( ( EntityType ) et ).getId().toString();
+        Function<Object, String> idFn = et -> ( (EntityType) et ).getId().toString();
         return triggerIndex( ENTITY_TYPE_INDEX, ENTITY_TYPE, entityTypes, idFn );
     }
 
     @Override
     public boolean triggerAssociationTypeIndex( List<AssociationType> associationTypes ) {
-        Function<Object, String> idFn = at -> ( ( AssociationType ) at ).getAssociationEntityType().getId().toString();
+        Function<Object, String> idFn = at -> ( (AssociationType) at ).getAssociationEntityType().getId().toString();
         return triggerIndex( ASSOCIATION_TYPE_INDEX, ASSOCIATION_TYPE, associationTypes, idFn );
     }
 
@@ -1349,7 +1349,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean triggerEntitySetIndex(
             Map<EntitySet, Set<UUID>> entitySets,
             Map<UUID, PropertyType> propertyTypes ) {
-        Function<Object, String> idFn = map -> ( ( Map<String, EntitySet> ) map ).get( ENTITY_SET ).getId().toString();
+        Function<Object, String> idFn = map -> ( (Map<String, EntitySet>) map ).get( ENTITY_SET ).getId().toString();
 
         List<Map<String, Object>> entitySetMaps = entitySets.entrySet().stream().map( entry -> {
             Map<String, Object> entitySetMap = Maps.newHashMap();
@@ -1364,19 +1364,19 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean triggerAppIndex( List<App> apps ) {
-        Function<Object, String> idFn = app -> ( ( App ) app ).getId().toString();
+        Function<Object, String> idFn = app -> ( (App) app ).getId().toString();
         return triggerIndex( APP_INDEX, APP, apps, idFn );
     }
 
     @Override
     public boolean triggerAppTypeIndex( List<AppType> appTypes ) {
-        Function<Object, String> idFn = at -> ( ( AppType ) at ).getId().toString();
+        Function<Object, String> idFn = at -> ( (AppType) at ).getId().toString();
         return triggerIndex( APP_TYPE_INDEX, APP_TYPE, appTypes, idFn );
     }
 
     @Override
     public boolean triggerOrganizationIndex( List<Organization> organizations ) {
-        Function<Object, String> idFn = org -> ( ( Map<String, Object> ) org ).get( ID ).toString();
+        Function<Object, String> idFn = org -> ( (Map<String, Object>) org ).get( ID ).toString();
         List<Map<String, Object>> organizationObjects =
                 organizations.stream()
                         .map( organization -> {
@@ -1409,7 +1409,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public double getModelScore( double[][] features ) {
-        return ( ( MultiLayerNetwork ) modelThread.get() ).output( Nd4j.create( features ) ).getDouble( 1 );
+        return ( (MultiLayerNetwork) modelThread.get() ).output( Nd4j.create( features ) ).getDouble( 1 );
     }
 
 
