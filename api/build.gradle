@@ -81,11 +81,8 @@ swaggerSources {
             language = 'java'
             configFile = file('oas-java.json')
             outputDir = swaggerOutputDir
-<<<<<<< HEAD
-=======
             //Disabled due to https://github.com/int128/gradle-swagger-generator-plugin/issues/86
             //dependsOn validation
->>>>>>> develop
         }
     }
 }
