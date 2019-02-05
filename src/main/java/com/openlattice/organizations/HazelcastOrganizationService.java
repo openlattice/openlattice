@@ -171,7 +171,7 @@ public class HazelcastOrganizationService {
         authorizations.addPermission( organization.getAclKey(), principal, EnumSet.allOf( Permission.class ) );
         //We add the user/role that created the organization to the admin role for the organization
         addRoleToPrincipalInOrganization( organization.getId(), adminRole.getId(), principal );
-        createOrganizationDatabase( )
+
         eventBus.post( new OrganizationCreatedEvent( organization ) );
     }
 
@@ -340,14 +340,6 @@ public class HazelcastOrganizationService {
                 .forEach( target -> securePrincipalsManager.removePrincipalFromPrincipal( orgAclKey, target ) );
     }
 
-    private void addOrganizationToMembers( UUID organizationId, Set<Principal> members ) {
-        if ( members.stream().map( Principal::getType ).allMatch( PrincipalType.USER::equals ) ) {
-            members.forEach( member -> principals.addOrganizationToUser( member.getId(), organizationId ) );
-        } else {
-            throw new IllegalArgumentException( "Cannot add a non-user role as a member of an organization." );
-        }
-    }
-
     private void removeOrganizationFromMembers( UUID organizationId, Set<Principal> members ) {
         if ( members.stream().map( Principal::getType ).allMatch( PrincipalType.USER::equals ) ) {
             members.forEach( member -> principals.removeOrganizationFromUser( member.getId(), organizationId ) );
@@ -458,6 +450,10 @@ public class HazelcastOrganizationService {
                     .addPermission( organization.getAclKey(), admin, EnumSet.allOf( Permission.class ) ) );
 
         }
+    }
+
+    public void hailOrganization( UUID srcOrganizationId, UUID dstOrganizationId ) {
+
     }
 
     public static Role createOrganizationAdminRole( SecurablePrincipal organization ) {
