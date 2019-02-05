@@ -23,22 +23,13 @@ import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import retrofit2.http.Body;
-import retrofit2.http.DELETE;
-import retrofit2.http.GET;
-import retrofit2.http.PATCH;
-import retrofit2.http.POST;
-import retrofit2.http.PUT;
-import retrofit2.http.Path;
-import retrofit2.http.Query;
+import retrofit2.http.*;
 
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 public interface DataApi {
     // @formatter:off
@@ -56,7 +47,8 @@ public interface DataApi {
      * To discuss paths later; perhaps batch this with EdmApi paths
      */
 
-    String ENTITIES              = "entities";
+    String ALL                   = "all";
+    String PROPERTIES            = "properties";
     String ENTITY_SET            = "set";
     String ENTITY_SET_ID         = "setId";
     String S3_URL                = "s3Url";
@@ -96,7 +88,7 @@ public interface DataApi {
     @POST( BASE + "/" + ENTITY_SET + "/" )
     List<UUID> createEntities(
             @Query( ENTITY_SET_ID ) UUID entitySetId,
-            @Body List<SetMultimap<UUID, Object>> entities );
+            @Body List<Map<UUID, Set<Object>>> entities );
 
     /**
      * Replaces a single entity from an entity set.
@@ -176,30 +168,6 @@ public interface DataApi {
     @POST( BASE )
     DataGraphIds createEntityAndAssociationData( @Body DataGraph data );
 
-    /**
-     * Clears the data from a single entity set.
-     *
-     * @param entitySetId The id of the entity set to delete from.
-     */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Integer clearEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId );
-
-    /**
-     * Clears a single entity from an entity set.
-     *
-     * @param entitySetId The id of the entity set to delete from.
-     * @param entityKeyId The id of the entity to delete.
-     */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
-    Void clearEntityFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId, @Path( ENTITY_KEY_ID ) UUID entityKeyId );
-
-    /**
-     * Clears all entities from an entity set.
-     *
-     * @param entitySetId The id of the entity set to delete from.
-     */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITIES )
-    Integer clearAllEntitiesFromEntitySet( @Path( ENTITY_SET_ID ) UUID entitySetId );
 
     /**
      * Clears the Entity matching the given Entity id and all of its neighbor Entities
@@ -213,11 +181,62 @@ public interface DataApi {
             @Path( ENTITY_KEY_ID ) UUID vertexEntityKeyId
     );
 
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH )
-    Integer deleteEntityProperties(
-
+    /**
+     * Deletes all entities from an entity set.
+     *
+     * @param entitySetId The id of the entity set to delete from.
+     * @param deleteType  The delete type to perform (soft or hard delete).
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL )
+    Integer deleteAllEntitiesFromEntitySet(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
-            @Body Map<UUID, Map<UUID, Set<ByteBuffer>>> entityProperties );
+            @Query( TYPE ) DeleteType deleteType );
+
+    /**
+     * Deletes a single entity from an entity set.
+     *
+     * @param entitySetId The id of the entity set to delete from.
+     * @param entityKeyId The id of the entity to delete.
+     * @param deleteType  The delete type to perform (soft or hard delete).
+     */
+    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH )
+    Integer deleteEntity(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Path( ENTITY_KEY_ID ) UUID entityKeyId,
+            @Query( TYPE ) DeleteType deleteType );
+
+    /**
+     * Deletes multiple entities from an entity set.
+     *
+     * @param entitySetId  The id of the entity set to delete from.
+     * @param entityKeyIds The ids of the entities to delete.
+     * @param deleteType   The delete type to perform (soft or hard delete).
+     */
+    @HTTP( method = "DELETE", path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH, hasBody = true )
+    Integer deleteEntities(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body Set<UUID> entityKeyIds,
+            @Query( TYPE ) DeleteType deleteType );
+
+    /**
+     * Deletes properties from an entity.
+     *
+     * @param entitySetId     The id of the entitySet to delete from.
+     * @param entityKeyId     The id of the entity to delete from.
+     * @param propertyTypeIds The property type ids to be deleted.
+     * @param deleteType      The delete type to perform (soft or hard delete).
+     * @return the number of deleted property values
+     */
+    @HTTP(
+            method = "DELETE",
+            path = BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES,
+            hasBody = true
+    )
+    Integer deleteEntityProperties(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Path( ENTITY_KEY_ID ) UUID entityKeyId,
+            @Body Set<UUID> propertyTypeIds,
+            @Query( TYPE ) DeleteType deleteType );
 
     /**
      * Replaces a single entity from an entity set.
@@ -258,10 +277,4 @@ public interface DataApi {
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( ENTITY_KEY_ID ) UUID entityKeyId,
             @Path( PROPERTY_TYPE_ID ) UUID propertyTypeId );
-
-    @GET( BASE + "/" + S3_URL_PATH )
-    String getBase64EncodedString( @Path( S3_URL ) String url );
-
-    @GET( BASE + "/" + S3_URLS_PATH )
-    Map<String, String> getBase64EncodedStrings( @Path( S3_URLS ) Set<String> urls );
 }

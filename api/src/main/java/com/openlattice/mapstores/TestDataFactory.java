@@ -40,6 +40,9 @@ import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
+import com.openlattice.search.PersistentSearchNotificationType;
+import com.openlattice.search.requests.PersistentSearch;
+import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -132,7 +135,7 @@ public final class TestDataFactory {
             propertyTags.put( id, "PRIMARY KEY TAG" );
         }
 
-        SecurableObjectType entityTypeCategory = (category == null) ? SecurableObjectType.EntityType : category;
+        SecurableObjectType entityTypeCategory = ( category == null ) ? SecurableObjectType.EntityType : category;
 
         return new EntityType(
                 UUID.randomUUID(),
@@ -149,7 +152,7 @@ public final class TestDataFactory {
     }
 
     public static AssociationType associationType( PropertyType... keys ) {
-        EntityType et = entityType( SecurableObjectType.AssociationType,  keys );
+        EntityType et = entityType( SecurableObjectType.AssociationType, keys );
         return new AssociationType(
                 Optional.of( et ),
                 Sets.newLinkedHashSet( Arrays.asList( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
@@ -373,10 +376,10 @@ public final class TestDataFactory {
                 TestDataFactory.requestStatus() );
     }
 
-    public static Map<UUID, SetMultimap<UUID, Object>> randomStringEntityData(
+    public static Map<UUID, Map<UUID, Set<Object>>> randomStringEntityData(
             int numberOfEntries,
             Set<UUID> propertyIds ) {
-        Map<UUID, SetMultimap<UUID, Object>> data = new HashMap<>();
+        Map<UUID, Map<UUID, Set<Object>>> data = new HashMap<>();
         for ( int i = 0; i < numberOfEntries; i++ ) {
             UUID entityId = UUID.randomUUID();
             SetMultimap<UUID, Object> entity = HashMultimap.create();
@@ -384,7 +387,7 @@ public final class TestDataFactory {
                 entity.put( propertyId, RandomStringUtils.randomAlphanumeric( 5 ) );
             }
 
-            data.put( entityId, entity );
+            data.put( entityId, Multimaps.asMap( entity ) );
         }
         return data;
     }
@@ -470,11 +473,11 @@ public final class TestDataFactory {
                 Optional.empty() );
     }
 
-    public static Map<UUID, SetMultimap<UUID, Object>> randomBinaryData(
+    public static Map<UUID, Map<UUID, Set<Object>>> randomBinaryData(
             int numberOfEntries,
             UUID keyType,
             UUID binaryType ) {
-        Map<UUID, SetMultimap<UUID, Object>> data = new HashMap<>();
+        Map<UUID, Map<UUID, Set<Object>>> data = new HashMap<>();
         for ( int i = 0; i < numberOfEntries; i++ ) {
             data.put( UUID.randomUUID(), randomElement( keyType, binaryType ) );
         }
@@ -482,13 +485,13 @@ public final class TestDataFactory {
         return data;
     }
 
-    public static SetMultimap<UUID, Object> randomElement( UUID keyType, UUID binaryType ) {
+    public static Map<UUID, Set<Object>> randomElement( UUID keyType, UUID binaryType ) {
         SetMultimap<UUID, Object> element = HashMultimap.create();
         element.put( keyType, RandomStringUtils.random( 5 ) );
-        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
-        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
-        element.put( binaryType, RandomUtils.nextBytes( 128 ) );
-        return element;
+        element.put( binaryType, ImmutableMap.of("content-type", "application/octet-stream" , "data", RandomUtils.nextBytes( 128 ) ) );
+        element.put( binaryType, ImmutableMap.of("content-type", "application/octet-stream" , "data", RandomUtils.nextBytes( 128 ) ) );
+        element.put( binaryType, ImmutableMap.of("content-type", "application/octet-stream" , "data", RandomUtils.nextBytes( 128 ) ) );
+        return Multimaps.asMap( element );
     }
 
     public static MetadataUpdate metadataUpdate() {
@@ -509,4 +512,21 @@ public final class TestDataFactory {
     public static SearchDetails searchDetails() {
         return new SearchDetails( RandomStringUtils.randomAlphanumeric( 10 ), UUID.randomUUID(), r.nextBoolean() );
     }
+
+    public static SearchConstraints simpleSearchConstraints() {
+        return SearchConstraints.simpleSearchConstraints( new UUID[] { UUID.randomUUID() },
+                r.nextInt( 1000 ),
+                r.nextInt( 1000 ),
+                RandomStringUtils.randomAlphanumeric( 10 ) );
+    }
+
+    public static PersistentSearch persistentSearch() {
+        return new PersistentSearch( Optional.empty(),
+                Optional.empty(),
+                OffsetDateTime.now(),
+                PersistentSearchNotificationType.ALPR_ALERT,
+                simpleSearchConstraints(),
+                ImmutableMap.of() );
+    }
+
 }

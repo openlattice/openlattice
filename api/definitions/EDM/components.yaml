@@ -51,6 +51,9 @@ schema:
         $ref: "./components.yaml#/propertyType"
     fqn:
       $ref: "./components.yaml#/fullQualifiedName"
+entityKeyId:
+  type: string
+  format: uuid
 # entity sets
 entitySetId:
   type: string
@@ -92,6 +95,34 @@ entitySet:
     title: This is the title of the entitySet
     contacts: ["support@openlattice.com"]
     description: This is a more elaborate description of the entity set.
+metaDataUpdate:
+  title: An update for an entity sets
+  type: object
+  properties:
+    name:
+      $ref: "./components.yaml#/entitySetName"
+    title:
+      type: string
+    contacts:
+      type: array
+      items:
+        type: string
+    description:
+      type: string
+    linking:
+      type: boolean
+    linked_entity_sets:
+      type: array
+      items:
+        type: string
+    external:
+      type: boolean
+    pii:
+      type: boolean
+    defaultShow:
+      type: boolean
+    propertyTags:
+      $ref: "./components.yaml#/propertyTags"
 
 # property type
 propertyTypeId:
@@ -224,3 +255,17 @@ propertyUsageSummary:
       type: string
     count:
       type: integer
+EdmRequest:
+  type: object
+  properties:
+    action:
+      type: string
+      enum: [ADD, REMOVE, REPLACE]
+    propertyTypes:
+      type: array
+      items:
+        type: string
+    entityTypes:
+      type: array
+      items:
+        type: string

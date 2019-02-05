@@ -19,7 +19,7 @@
 package com.openlattice.analysis;
 
 import com.openlattice.analysis.requests.NeighborType;
-import com.openlattice.analysis.requests.NeighborsRankingAggregation;
+import com.openlattice.analysis.requests.RankingAggregation;
 import java.util.Map;
 import java.util.UUID;
 
@@ -48,14 +48,14 @@ public interface AnalysisApi {
      * 
      * @param entitySetId The id of the entity set to sort and return results for
      * @param numResults The number of results to return
-     * @param neighborsRankingAggregation
+     * @param rankingAggregation
      * @return
      */
     @POST( BASE + ENTITY_SET_ID_PATH + NUM_RESULTS_PATH )
     Iterable<Map<String, Object>> getTopUtilizers(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Path( NUM_RESULTS ) int numResults,
-            @Body NeighborsRankingAggregation neighborsRankingAggregation,
+            @Body RankingAggregation rankingAggregation,
             @Query( FILE_TYPE ) FileType fileType );
 
     @GET( BASE + ENTITY_SET_ID_PATH + TYPES_PATH )

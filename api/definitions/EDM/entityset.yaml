@@ -49,7 +49,7 @@ entitySetId:
       content:
         application/json:
           schema:
-            $ref: "./definitions/EDM/components.yaml#/entitySet"
+            $ref: "./definitions/EDM/components.yaml#/metaDataUpdate"
     tags:
       - edm
     security:

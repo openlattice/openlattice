@@ -31,7 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public class FilteredRankingAggregation {
+public class FilteredNeighborsRankingAggregation {
     private final UUID associationTypeId;
     private final UUID neighborTypeId;
 
@@ -44,7 +44,7 @@ public class FilteredRankingAggregation {
     private final Optional<Double>                      countWeight;
 
     @JsonCreator
-    public FilteredRankingAggregation(
+    public FilteredNeighborsRankingAggregation(
             @JsonProperty( SerializationConstants.ASSOCIATION_TYPE_ID ) UUID associationTypeId,
             @JsonProperty( SerializationConstants.NEIGHBOR_TYPE_ID ) UUID neighborTypeId,
             @JsonProperty( SerializationConstants.ASSOCIATION_FILTERS )
@@ -104,11 +104,10 @@ public class FilteredRankingAggregation {
         return neighborTypeAggregations;
     }
 
+    @JsonProperty( SerializationConstants.WEIGHT )
     public Optional<Double> getCountWeight() {
         return countWeight;
     }
-
-    @JsonProperty( SerializationConstants.WEIGHT )
 
     @JsonIgnore
     public boolean isCount() {
@@ -117,8 +116,8 @@ public class FilteredRankingAggregation {
 
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
-        if ( !( o instanceof FilteredRankingAggregation ) ) { return false; }
-        FilteredRankingAggregation that = (FilteredRankingAggregation) o;
+        if ( !( o instanceof FilteredNeighborsRankingAggregation ) ) { return false; }
+        FilteredNeighborsRankingAggregation that = (FilteredNeighborsRankingAggregation) o;
         return isDst == that.isDst &&
                 Objects.equals( associationTypeId, that.associationTypeId ) &&
                 Objects.equals( neighborTypeId, that.neighborTypeId ) &&
@@ -139,7 +138,7 @@ public class FilteredRankingAggregation {
     }
 
     @Override public String toString() {
-        return "FilteredRankingAggregation{" +
+        return "FilteredNeighborsRankingAggregation{" +
                 "associationTypeId=" + associationTypeId +
                 ", neighborTypeId=" + neighborTypeId +
                 ", associationFilters=" + associationFilters +

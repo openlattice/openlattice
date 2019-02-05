@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.openlattice.client.serialization.SerializationConstants;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -33,6 +34,10 @@ public class Constraint {
     // geo polygon search
     private final Optional<List<List<List<Double>>>> zones;
 
+    // last write datetime filter
+    private final Optional<OffsetDateTime> startDate;
+    private final Optional<OffsetDateTime> endDate;
+
     @JsonCreator
     public Constraint(
             @JsonProperty( SerializationConstants.TYPE_FIELD ) Optional<SearchType> searchType,
@@ -44,7 +49,9 @@ public class Constraint {
             @JsonProperty( SerializationConstants.LONGITUDE ) Optional<Double> longitude,
             @JsonProperty( SerializationConstants.RADIUS ) Optional<Double> radius,
             @JsonProperty( SerializationConstants.UNIT ) Optional<DistanceUnit> distanceUnit,
-            @JsonProperty( SerializationConstants.ZONES ) Optional<List<List<List<Double>>>> zones
+            @JsonProperty( SerializationConstants.ZONES ) Optional<List<List<List<Double>>>> zones,
+            @JsonProperty( SerializationConstants.START ) Optional<OffsetDateTime> startDate,
+            @JsonProperty( SerializationConstants.END ) Optional<OffsetDateTime> endDate
 
     ) {
 
@@ -62,6 +69,9 @@ public class Constraint {
         this.distanceUnit = distanceUnit;
 
         this.zones = zones;
+
+        this.startDate = startDate;
+        this.endDate = endDate;
 
         // validation
         switch ( this.searchType ) {
@@ -97,6 +107,11 @@ public class Constraint {
                         "Field fuzzy must be present for searches of type simple" );
                 break;
 
+            case writeDateTimeFilter:
+                Preconditions.checkArgument( this.startDate.isPresent() || this.endDate.isPresent(),
+                        "Write datetime filter searches must include a start date, an end date, or both" );
+                break;
+
         }
     }
 
@@ -110,7 +125,9 @@ public class Constraint {
             Optional<Double> longitude,
             Optional<Double> radius,
             Optional<DistanceUnit> distanceUnit,
-            Optional<List<List<List<Double>>>> zones ) {
+            Optional<List<List<List<Double>>>> zones,
+            Optional<OffsetDateTime> startDate,
+            Optional<OffsetDateTime> endDate ) {
         this( Optional.of( searchType ),
                 searchTerm,
                 fuzzy,
@@ -120,7 +137,9 @@ public class Constraint {
                 longitude,
                 radius,
                 distanceUnit,
-                zones );
+                zones,
+                startDate,
+                endDate );
     }
 
     @JsonProperty( SerializationConstants.TYPE_FIELD )
@@ -173,6 +192,16 @@ public class Constraint {
         return zones;
     }
 
+    @JsonProperty( SerializationConstants.START )
+    public Optional<OffsetDateTime> getStartDate() {
+        return startDate;
+    }
+
+    @JsonProperty( SerializationConstants.END )
+    public Optional<OffsetDateTime> getEndDate() {
+        return endDate;
+    }
+
     @Override public boolean equals( Object o ) {
         if ( this == o )
             return true;
@@ -188,11 +217,12 @@ public class Constraint {
                 Objects.equals( longitude, that.longitude ) &&
                 Objects.equals( radius, that.radius ) &&
                 Objects.equals( distanceUnit, that.distanceUnit ) &&
-                Objects.equals( zones, that.zones );
+                Objects.equals( zones, that.zones ) &&
+                Objects.equals( startDate, that.startDate ) &&
+                Objects.equals( endDate, that.endDate );
     }
 
     @Override public int hashCode() {
-
         return Objects.hash( searchType,
                 searchTerm,
                 fuzzy,
@@ -202,6 +232,8 @@ public class Constraint {
                 longitude,
                 radius,
                 distanceUnit,
-                zones );
+                zones,
+                startDate,
+                endDate );
     }
 }
