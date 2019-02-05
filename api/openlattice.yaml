@@ -52,6 +52,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -69,6 +70,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -103,6 +105,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: "An Entity Set definition"
@@ -124,6 +127,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -147,6 +151,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -164,6 +169,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -180,6 +186,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -204,6 +211,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -222,6 +230,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -252,6 +261,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -266,6 +276,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: entitySetId
           in: path
@@ -346,6 +357,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -357,6 +369,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: namespace
           in: path
@@ -386,6 +399,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: entityTypeId
           in: path
@@ -409,6 +423,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: entityTypeId
           in: path
@@ -433,6 +448,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: entityTypeId
           in: path
@@ -457,6 +473,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -488,6 +505,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -521,6 +539,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: entityTypeId
           in: path
@@ -554,6 +573,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -575,6 +595,7 @@ paths:
             format: uuid
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -589,6 +610,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: propertyTypeId
           in: path
@@ -606,6 +628,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: propertyTypeId
           in: path
@@ -630,6 +653,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: propertyTypeId
           in: path
@@ -659,6 +683,7 @@ paths:
             type: string
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -675,6 +700,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -691,6 +717,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       requestBody:
         required: true
         content:
@@ -708,6 +735,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: namespace
           in: path
@@ -734,6 +762,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: associationTypeId
           in: path
@@ -771,6 +800,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: associationTypeId
           in: path
@@ -793,6 +823,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: associationTypeId
           in: path
@@ -817,6 +848,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: associationTypeId
           in: path
@@ -840,6 +872,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: associationTypeId
           in: path
@@ -864,6 +897,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: associationTypeId
           in: path
@@ -887,6 +921,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: associationTypeId
           in: path
@@ -914,6 +949,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -929,6 +965,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: propertyTypeId
           in: path
@@ -971,6 +1008,7 @@ paths:
             default: yaml
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -996,6 +1034,7 @@ paths:
             type: string
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -1023,6 +1062,7 @@ paths:
               $ref: "#/components/EdmRequest"
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -1034,6 +1074,7 @@ paths:
         - edm
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -1056,6 +1097,7 @@ paths:
               $ref: "#/components/schema"
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -1073,6 +1115,7 @@ paths:
             type: string
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -1102,6 +1145,7 @@ paths:
         - data
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: "An Entity Set definition"
@@ -1112,8 +1156,8 @@ paths:
                 items:
                   $ref: "#/components/entity"
     post:
-      summary: Creates a list of new entities by UUID's
-      operationId: createEntities
+      summary: Gets a list of entities by UUID's
+      operationId: loadFilteredEntitySetData
       parameters:
         - name: entitySetId
           in: path
@@ -1128,11 +1172,12 @@ paths:
             schema:
               type: array
               items:
-                  $ref: "#/components/entity"
+                  $ref: "#/components/entitySetSelection"
       tags:
         - data
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: "A list of entity keys that were generated"
@@ -1156,6 +1201,7 @@ paths:
         - data
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: "Success"
@@ -1174,6 +1220,7 @@ paths:
         - data
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: "Success"
@@ -1192,6 +1239,7 @@ paths:
         - data
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: The number of entities in an entity set.
@@ -1225,6 +1273,7 @@ paths:
         - search
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: "A list of objects containing information about the neighbor and association."
@@ -1255,6 +1304,7 @@ paths:
         - search
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: "A list of objects containing information about the neighbor and association."
@@ -1275,6 +1325,7 @@ paths:
         - directory
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: emailAddress
           in: path
@@ -1301,6 +1352,7 @@ paths:
         - permissions
       security:
         - openlattice_auth: []
+        - http_auth: []
       parameters:
         - name: aclKey
           in: query
@@ -1317,6 +1369,7 @@ paths:
         - permissions
       security:
         - openlattice_auth: []
+        - http_auth: []
       requestBody:
         required: true
         content:
@@ -1339,6 +1392,7 @@ paths:
         - organizations
       security:
         - openlattice_auth: []
+        - http_auth: []
       responses:
         "200":
           description: Success
@@ -1353,10 +1407,16 @@ paths:
 
 components:
   securitySchemes:
-    openlattice_auth:
+    http_auth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      name: HttpAuthorization
+    openlattice_auth:
+      type: apiKey
+      in: header
+      name: Authorization
+
   schemas:
     fullQualifiedName:
       type: object
@@ -1773,6 +1833,19 @@ components:
           type: array
           items:
             type: string
+    entitySetSelection:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        properties:
+          type: array
+          items:
+            type: string
+            format: uuid
 
 
 tags:
