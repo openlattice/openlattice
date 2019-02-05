@@ -25,10 +25,10 @@ class PostgresLinkingFeedbackQueryService(private val hds: HikariDataSource) {
         return hds.connection.use {
             // Insert a feedback with always the same order to avoid conflicting values
             val stmt = it.prepareStatement(INSERT_SQL)
-            stmt.setObject(1, entityLinkingFeedback.entityPair.getFirst().entitySetId)
-            stmt.setObject(2, entityLinkingFeedback.entityPair.getFirst().entityKeyId)
-            stmt.setObject(3, entityLinkingFeedback.entityPair.getSecond().entitySetId)
-            stmt.setObject(4, entityLinkingFeedback.entityPair.getSecond().entityKeyId)
+            stmt.setObject(1, entityLinkingFeedback.entityPair.first.entitySetId)
+            stmt.setObject(2, entityLinkingFeedback.entityPair.first.entityKeyId)
+            stmt.setObject(3, entityLinkingFeedback.entityPair.second.entitySetId)
+            stmt.setObject(4, entityLinkingFeedback.entityPair.second.entityKeyId)
             stmt.setObject(5, entityLinkingFeedback.linked)
             stmt.setObject(6, entityLinkingFeedback.linked)
 
@@ -56,10 +56,10 @@ class PostgresLinkingFeedbackQueryService(private val hds: HikariDataSource) {
         val connection = hds.connection
         val stmt = connection.prepareStatement(SELECT_SQL)
 
-        stmt.setObject(1, entityPair.getFirst().entitySetId)
-        stmt.setObject(2, entityPair.getFirst().entityKeyId)
-        stmt.setObject(3, entityPair.getSecond().entitySetId)
-        stmt.setObject(4, entityPair.getSecond().entityKeyId)
+        stmt.setObject(1, entityPair.first.entitySetId)
+        stmt.setObject(2, entityPair.first.entityKeyId)
+        stmt.setObject(3, entityPair.second.entitySetId)
+        stmt.setObject(4, entityPair.second.entityKeyId)
         val rs = stmt.executeQuery()
 
         return if (rs.next()) {

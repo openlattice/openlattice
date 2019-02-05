@@ -26,10 +26,10 @@ open class LinkingFeedbackMapstore(
     }
 
     override fun bind(ps: PreparedStatement, key: EntityKeyPair, offset: Int): Int {
-        ps.setObject(offset, key.getFirst().entitySetId)
-        ps.setObject(offset + 1, key.getFirst().entityKeyId)
-        ps.setObject(offset + 2, key.getSecond().entitySetId)
-        ps.setObject(offset + 3, key.getSecond().entityKeyId)
+        ps.setObject(offset, key.first.entitySetId)
+        ps.setObject(offset + 1, key.first.entityKeyId)
+        ps.setObject(offset + 2, key.second.entitySetId)
+        ps.setObject(offset + 3, key.second.entityKeyId)
 
         return offset + 4
     }
@@ -42,17 +42,19 @@ open class LinkingFeedbackMapstore(
         return ResultSetAdapters.entityLinkingFeedback(rs)
     }
 
+    // Since value contains key, it needs to be the same when testing
+    private lateinit var testKey: EntityKeyPair
+
     override fun generateTestKey(): EntityKeyPair {
-        return EntityKeyPair(
+        testKey = EntityKeyPair(
                 EntityDataKey(UUID.randomUUID(), UUID.randomUUID()),
                 EntityDataKey(UUID.randomUUID(), UUID.randomUUID()))
+        return testKey
     }
 
     override fun generateTestValue(): EntityLinkingFeedback {
         return EntityLinkingFeedback(
-                EntityKeyPair(
-                        EntityDataKey(UUID.randomUUID(), UUID.randomUUID()),
-                        EntityDataKey(UUID.randomUUID(), UUID.randomUUID())),
+                testKey,
                 Random.nextBoolean())
     }
 }
