@@ -161,11 +161,6 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<String, UUID> edmVersionMapstore() {
-        return new EdmVersionsMapstore( hikariDataSource );
-    }
-
-    @Bean
     public SelfRegisteringMapStore<UUID, String> namesMapstore() {
         return new NamesMapstore( hikariDataSource );
     }
