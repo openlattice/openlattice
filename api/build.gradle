@@ -82,7 +82,7 @@ swaggerSources {
             configFile = file('oas-java.json')
             outputDir = swaggerOutputDir
             //Disabled due to https://github.com/int128/gradle-swagger-generator-plugin/issues/86
-            dependsOn validation
+            //dependsOn validation
         }
     }
 }
