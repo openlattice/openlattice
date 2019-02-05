@@ -8,7 +8,6 @@ import com.openlattice.data.EntityDataKey
  * Represents the manual feedback given between two entities, whether they are supposed to be linked or not
  */
 data class EntityLinkingFeedback(
-        @JsonProperty(SerializationConstants.SRC) val src: EntityDataKey,
-        @JsonProperty(SerializationConstants.DST) val dst: EntityDataKey,
+        @JsonProperty(SerializationConstants.ENTITY_KEY_IDS) val entityPair: EntityKeyPair,
         @JsonProperty(SerializationConstants.LINKED) val linked: Boolean
 )

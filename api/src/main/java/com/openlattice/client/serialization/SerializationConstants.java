@@ -117,6 +117,7 @@ public final class SerializationConstants {
     public static final String EXTERNAL                         = "external";
     public static final String FEATURES                         = "features";
     public static final String FILTERS                          = "filters";
+    public static final String FIRST                            = "first";
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
@@ -139,6 +140,8 @@ public final class SerializationConstants {
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
     public static final String LINKING_FEEDBACK                 = "linkingFeedback";
+    public static final String LINKING_ENTITIES                 = "linkingEntities";
+    public static final String LINKING_ENTITY                   = "linkingEntity";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
@@ -161,6 +164,7 @@ public final class SerializationConstants {
     public static final String NEIGHBOR_ID                      = "neighborId";
     public static final String NEIGHBOR_PROPERTY_TYPES          = "neighborPropertyTypes";
     public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeId";
+    public static final String NON_LINKING_ENTITIES             = "nonLinkingEntities";
     public static final String NUM_HITS                         = "numHits";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
@@ -195,6 +199,7 @@ public final class SerializationConstants {
     public static final String SCHEMAS                          = "schemas";
     public static final String SEARCH_FIELDS                    = "searchFields";
     public static final String SEARCH_TERM                      = "searchTerm";
+    public static final String SECOND                           = "second";
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
     public static final String SRC                              = "src";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";

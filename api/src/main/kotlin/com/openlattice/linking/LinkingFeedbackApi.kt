@@ -21,7 +21,7 @@ interface LinkingFeedbackApi {
     }
 
     @PUT(BASE + FEEDBACK)
-    fun addLinkingFeedback(@Body feedback: EntityLinkingFeedback): Boolean
+    fun addLinkingFeedback(@Body feedback: LinkingFeedback): Int
 
     @GET(BASE + FEEDBACK + ALL)
     fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback>
@@ -30,5 +30,5 @@ interface LinkingFeedbackApi {
     fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures>
 
     @POST(BASE + FEEDBACK + FEATURES)
-    fun getLinkingFeedbackWithFeatures(@Body entityPair: Pair<EntityDataKey, EntityDataKey>): EntityLinkingFeatures?
+    fun getLinkingFeedbackWithFeatures(@Body entityPair: EntityKeyPair): EntityLinkingFeatures?
 }
