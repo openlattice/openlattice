@@ -31,6 +31,7 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AclKeySet;
 import com.openlattice.authorization.AuthorizationManager;
@@ -51,11 +52,16 @@ import com.openlattice.organizations.processors.NestedPrincipalMerger;
 import com.openlattice.organizations.processors.NestedPrincipalRemover;
 import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdater;
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater;
-
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,11 +76,13 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private final IMap<AclKey, AclKeySet>               principalTrees; // RoleName -> Member RoleNames
     private final IMap<String, Auth0UserBasic>          users;
     private final IMap<List<UUID>, SecurableObjectType> securableObjectTypes;
+    private final Assembler                             assembler;
 
     public HazelcastPrincipalService(
             HazelcastInstance hazelcastInstance,
             HazelcastAclKeyReservationService reservations,
-            AuthorizationManager authorizations ) {
+            AuthorizationManager authorizations,
+            Assembler assembler ) {
 
         this.authorizations = authorizations;
         this.reservations = reservations;
@@ -82,9 +90,11 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         this.principalTrees = hazelcastInstance.getMap( HazelcastMap.PRINCIPAL_TREES.name() );
         this.users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
         this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
+        this.assembler = assembler;
     }
 
-    @Override public boolean createSecurablePrincipalIfNotExists(
+    @Override
+    public boolean createSecurablePrincipalIfNotExists(
             Principal owner, SecurablePrincipal principal ) {
         try {
             createSecurablePrincipal( owner, principal );
@@ -117,6 +127,12 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         reservations.reserveIdAndValidateType( principal, principal::getName );
         principals.set( principal.getAclKey(), principal );
         securableObjectTypes.putIfAbsent( principal.getAclKey(), principal.getCategory() );
+        switch ( principal.getPrincipalType() ) {
+            case USER:
+                assembler.createUnprivilegedUser( principal );
+            case ROLE:
+                assembler.createRole( (Role) principal );
+        }
     }
 
     @Override
