@@ -240,6 +240,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty() ) );
 
         PropertyType updatedPt = edm.getPropertyType( pt.getId() );
@@ -263,6 +264,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty() ) );
 
         PropertyType updatedPt = edm.getPropertyType( pt.getId() );
@@ -280,6 +282,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                 new MetadataUpdate(
                         Optional.of( newTitle ),
                         Optional.of( newDescription ),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -309,6 +312,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty() ) );
 
         EntityType updatedEt = edm.getEntityType( et.getId() );
@@ -334,6 +338,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         Optional.empty() ) );
 
         EntitySet updatedEs = edm.getEntitySet( es.getId() );
@@ -353,6 +358,7 @@ public class EdmControllerTests extends IntegrationTestsBootstrap {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.of( newEsName ),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
