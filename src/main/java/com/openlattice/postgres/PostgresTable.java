@@ -121,8 +121,8 @@ public final class PostgresTable {
                             CONTACTS,
                             LINKING,
                             PostgresColumn.LINKED_ENTITY_SETS,
-                            EXTERNAL );
-    //.setUnique( NAME );
+                            EXTERNAL,
+                            ORGANIZATION_PRINCIPAL_ID );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
                     .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
@@ -206,7 +206,11 @@ public final class PostgresTable {
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID )
                     .distributionColumn( ID );
-
+    //.setUnique( NAME );
+    public static final PostgresTableDefinition        MATERIALIZED_ENTITY_SETS     =
+            new PostgresTableDefinition( "materialized_entity_sets" )
+                    .addColumns( ORGANIZATION_PRINCIPAL_ID, ENTITY_SET_ID )
+                    .primaryKey( ORGANIZATION_PRINCIPAL_ID, ENTITY_SET_ID );
     public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )

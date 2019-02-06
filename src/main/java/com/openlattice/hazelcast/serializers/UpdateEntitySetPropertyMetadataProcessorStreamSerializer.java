@@ -39,33 +39,13 @@ public class UpdateEntitySetPropertyMetadataProcessorStreamSerializer
 
     @Override
     public void write( ObjectDataOutput out, UpdateEntitySetPropertyMetadataProcessor object ) throws IOException {
-        MetadataUpdate update = object.getUpdate();
-        OptionalStreamSerializers.serialize( out, update.getTitle(), ObjectDataOutput::writeUTF );
-        OptionalStreamSerializers.serialize( out, update.getDescription(), ObjectDataOutput::writeUTF );
-        OptionalStreamSerializers.serialize( out, update.getDefaultShow(), ObjectDataOutput::writeBoolean );
-        OptionalStreamSerializers
-                .serialize( out, update.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
+        MetadataUpdateStreamSerializer.serialize( out, object.getUpdate() );
     }
 
     @Override
     public UpdateEntitySetPropertyMetadataProcessor read( ObjectDataInput in ) throws IOException {
-        Optional<String> title = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<String> description = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<Boolean> defaultShow = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
-        Optional<LinkedHashMultimap<UUID, String>> tags = OptionalStreamSerializers
-                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
 
-        MetadataUpdate update = new MetadataUpdate(
-                title,
-                description,
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                defaultShow,
-                Optional.empty(),
-                tags );
-        return new UpdateEntitySetPropertyMetadataProcessor( update );
+        return new UpdateEntitySetPropertyMetadataProcessor( MetadataUpdateStreamSerializer.deserialize( in ) );
     }
 
     @Override

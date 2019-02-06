@@ -39,15 +39,12 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-
-import javax.annotation.Nullable;
 
 public interface EdmManager {
     void clearTables();
@@ -239,4 +236,6 @@ public interface EdmManager {
     void setEntityDataModel( EntityDataModel edm );
 
     Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId );
+
+    Set<UUID> getEntitySetsForOrganization( UUID organizationId );
 }

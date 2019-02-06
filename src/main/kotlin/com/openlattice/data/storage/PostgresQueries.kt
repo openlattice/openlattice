@@ -33,15 +33,13 @@ import java.util.*
 /**
  * Handles reading data from linked entity sets.
  */
-private val logger = LoggerFactory.getLogger(PostgresLinkedEntityDataQueryService::class.java)
+private val logger = LoggerFactory.getLogger(PostgresQueries::class.java)
 const val ENTITIES_TABLE_ALIAS = "entity_key_ids"
 const val LEFT_JOIN = "LEFT JOIN"
 const val INNER_JOIN = "INNER JOIN"
 val entityKeyIdColumns = listOf(ENTITY_SET_ID.name, ID_VALUE.name).joinToString(",")
 
-open class PostgresLinkedEntityDataQueryService(private val hds: HikariDataSource) {
-
-}
+internal class PostgresQueries
 
 /**
  *

@@ -25,6 +25,7 @@ import com.hazelcast.core.IMap;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.hazelcast.HazelcastMap;
 import java.security.SecureRandom;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +58,7 @@ public class DbCredentialService {
         return Util.getSafely( dbcreds, userId );
     }
 
-    public String createUserIfNotExists( String userId ) {
+    public @Nullable  String createUserIfNotExists( String userId ) {
         if ( !userExistsInMap( userId ) ) {
             if ( dcqs.exists( userId ) ) {
                 /*

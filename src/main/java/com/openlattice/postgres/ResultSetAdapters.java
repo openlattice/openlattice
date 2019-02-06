@@ -53,8 +53,10 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.assembler.MaterializedEntitySet;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,6 +86,12 @@ public final class ResultSetAdapters {
     private static final ObjectMapper                       mapper               = ObjectMappers.newJsonMapper();
     private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
+
+    @NotNull public static MaterializedEntitySet materializedEntitySet( @NotNull ResultSet rs ) throws SQLException {
+        final UUID organizationId = rs.getObject( ORGANIZATION_PRINCIPAL_ID.getName(), UUID.class );
+        final UUID entitySetId = entitySetId( rs );
+        return new MaterializedEntitySet( organizationId, entitySetId );
+    }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -509,6 +517,8 @@ public final class ResultSetAdapters {
         Optional<Boolean> linking = Optional.ofNullable( linking( rs ) );
         Optional<Set<UUID>> linkedEntitySets = Optional.of( linkedEntitySets( rs ) );
         Optional<Boolean> external = Optional.ofNullable( external( rs ) );
+        Optional<Principal> organization = Optional
+                .of( new Principal( PrincipalType.ORGANIZATION, rs.getString( ORGANIZATION_PRINCIPAL_ID_FIELD ) ) );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -517,7 +527,8 @@ public final class ResultSetAdapters {
                 contacts,
                 linking,
                 linkedEntitySets,
-                external );
+                external,
+                organization );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {

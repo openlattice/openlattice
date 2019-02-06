@@ -1,3 +1,11 @@
 entity-type: "ol.audit"
 fqns:
+  ACL_KEY: "ol.key"
+  DATA: "ol.details"
+  DESCRIPTION: "ol.description"
+  ENTITY_SETS: "ol.target"
+  ENTITIES: "ol.objectid"
+  EVENT_TYPE: "ol.type"
   ID: "ol.id"
+  PRINCIPAL: "ol.userid"
+  OPERATION_ID: "ol.id"

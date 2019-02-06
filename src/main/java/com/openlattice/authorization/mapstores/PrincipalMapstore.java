@@ -93,6 +93,7 @@ public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, Secu
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
                 .addMapIndexConfig( new MapIndexConfig( "principal", false ) )
-                .addMapIndexConfig( new MapIndexConfig( "aclKey[0]", false ) );
+                .addMapIndexConfig( new MapIndexConfig( "aclKey[0]", false ) )
+                .addMapIndexConfig( new MapIndexConfig( "principalType", false ) );
     }
 }

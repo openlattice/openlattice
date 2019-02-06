@@ -137,19 +137,6 @@ public class UserDirectoryService {
         }
     }
 
-    public void addOrganizationToUser( String userId, UUID organization ) {
-
-        Auth0UserBasic user = getUser( userId );
-
-        if ( user != null ) {
-            Set<String> organizations = new HashSet<>( user.getOrganizations() );
-            organizations.add( organization.toString() );
-            setOrganizationsOfUser( userId, organizations );
-        } else {
-            logger.warn( "Received null user from Auth0" );
-        }
-    }
-
     public void removeOrganizationFromUser( String userId, UUID organization ) {
 
         Auth0UserBasic user = getUser( userId );

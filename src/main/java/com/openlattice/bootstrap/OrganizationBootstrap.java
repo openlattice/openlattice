@@ -25,8 +25,7 @@ import static com.openlattice.bootstrap.AuthorizationBootstrap.GLOBAL_ADMIN_ROLE
 import static com.openlattice.bootstrap.AuthorizationBootstrap.OPENLATTICE_ROLE;
 
 import com.google.common.collect.ImmutableSet;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
+import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import java.util.Optional;
@@ -38,15 +37,12 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class OrganizationBootstrap {
-    public static final  Principal GLOBAL_ORG_PRINCIPAL      = new Principal( PrincipalType.ORGANIZATION, "globalOrg" );
-    public static final  Principal OPENLATTICE_ORG_PRINCIPAL = new Principal( PrincipalType.ORGANIZATION,
-            "openlatticeOrg" );
     private static final Logger    logger                    = LoggerFactory.getLogger( OrganizationBootstrap.class );
     private              boolean   initialized;
 
     public OrganizationBootstrap( HazelcastOrganizationService organizationService ) {
-        var globalOrg = organizationService.maybeGetOrganization( GLOBAL_ORG_PRINCIPAL );
-        var olOrg = organizationService.maybeGetOrganization( OPENLATTICE_ORG_PRINCIPAL );
+        var globalOrg = organizationService.maybeGetOrganization( SerializationConstants.GLOBAL_ORG_PRINCIPAL );
+        var olOrg = organizationService.maybeGetOrganization( SerializationConstants.OPENLATTICE_ORG_PRINCIPAL );
         if ( globalOrg.isPresent() ) {
             logger.info( "Expected id = {}, Actual id = {}",
                     BootstrapConstants.GLOBAL_ORGANIZATION_ID,
@@ -76,7 +72,7 @@ public class OrganizationBootstrap {
         UUID id = BootstrapConstants.GLOBAL_ORGANIZATION_ID;
         String title = "Global Organization";
         return new Organization( Optional.of( id ),
-                GLOBAL_ORG_PRINCIPAL,
+                SerializationConstants.GLOBAL_ORG_PRINCIPAL,
                 title,
                 Optional.empty(),
                 ImmutableSet.of(),
@@ -88,7 +84,7 @@ public class OrganizationBootstrap {
         UUID id = BootstrapConstants.OPENLATTICE_ORGANIZATION_ID;
         String title = "OpenLattice, Inc.";
         return new Organization( Optional.of( id ),
-                OPENLATTICE_ORG_PRINCIPAL,
+                SerializationConstants.OPENLATTICE_ORG_PRINCIPAL,
                 title,
                 Optional.empty(),
                 ImmutableSet.of(),

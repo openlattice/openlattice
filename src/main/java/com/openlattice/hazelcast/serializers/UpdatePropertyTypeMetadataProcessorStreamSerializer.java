@@ -40,36 +40,12 @@ public class UpdatePropertyTypeMetadataProcessorStreamSerializer
 
     @Override
     public void write( ObjectDataOutput out, UpdatePropertyTypeMetadataProcessor object ) throws IOException {
-        MetadataUpdate update = object.getUpdate();
-        OptionalStreamSerializers.serialize( out, update.getTitle(), ObjectDataOutput::writeUTF );
-        OptionalStreamSerializers.serialize( out, update.getDescription(), ObjectDataOutput::writeUTF );
-        OptionalStreamSerializers.serialize( out, update.getType(), FullQualifiedNameStreamSerializer::serialize );
-        OptionalStreamSerializers.serialize( out, update.getPii(), ObjectDataOutput::writeBoolean );
-        OptionalStreamSerializers
-                .serialize( out, update.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
+        MetadataUpdateStreamSerializer.serialize( out, object.getUpdate() );
     }
 
     @Override
     public UpdatePropertyTypeMetadataProcessor read( ObjectDataInput in ) throws IOException {
-        Optional<String> title = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<String> description = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
-        Optional<FullQualifiedName> type = OptionalStreamSerializers.deserialize( in,
-                FullQualifiedNameStreamSerializer::deserialize );
-        Optional<Boolean> pii = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readBoolean );
-        Optional<LinkedHashMultimap<UUID, String>> tags = OptionalStreamSerializers
-                .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
-
-        MetadataUpdate update = new MetadataUpdate(
-                title,
-                description,
-                Optional.empty(),
-                Optional.empty(),
-                type,
-                pii,
-                Optional.empty(),
-                Optional.empty(),
-                tags);
-        return new UpdatePropertyTypeMetadataProcessor( update );
+        return new UpdatePropertyTypeMetadataProcessor( MetadataUpdateStreamSerializer.deserialize( in ) );
     }
 
     @Override

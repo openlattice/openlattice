@@ -5,6 +5,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.authorization.Principal;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -34,6 +35,15 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         return StreamSerializerTypeIds.METADATA_UPDATE.ordinal();
     }
 
+    @Override
+    public void destroy() {
+    }
+
+    @Override
+    public Class<MetadataUpdate> getClazz() {
+        return MetadataUpdate.class;
+    }
+
     public static void serialize( ObjectDataOutput out, MetadataUpdate object ) throws IOException {
         OptionalStreamSerializers.serialize( out, object.getTitle(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers.serialize( out, object.getDescription(), ObjectDataOutput::writeUTF );
@@ -45,6 +55,7 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out, object.getUrl(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers
                 .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
+        OptionalStreamSerializers.serialize( out, object.getOrganization(), PrincipalStreamSerializer::serialize );
     }
 
     public static MetadataUpdate deserialize( ObjectDataInput in ) throws IOException {
@@ -59,15 +70,17 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         Optional<String> url = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<LinkedHashMultimap<UUID, String>> propertyTags = OptionalStreamSerializers
                 .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
-        return new MetadataUpdate( title, description, name, contacts, type, pii, defaultShow, url, propertyTags );
-    }
-
-    @Override
-    public void destroy() {
-    }
-
-    @Override
-    public Class<MetadataUpdate> getClazz() {
-        return MetadataUpdate.class;
+        Optional<Principal> organization = OptionalStreamSerializers
+                .deserialize( in, PrincipalStreamSerializer::deserialize );
+        return new MetadataUpdate( title,
+                description,
+                name,
+                contacts,
+                type,
+                pii,
+                defaultShow,
+                url,
+                propertyTags,
+                organization );
     }
 }
