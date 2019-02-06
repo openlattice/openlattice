@@ -205,7 +205,6 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             produces = MediaType.APPLICATION_JSON_VALUE )
     public String getDbAccessCredential() {
         final var principal = Principals.getCurrentUser();
-
         return dbCredService.getDbCredential( principal.getId() );
     }
 
