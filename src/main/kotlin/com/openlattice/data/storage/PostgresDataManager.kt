@@ -1,6 +1,14 @@
 package com.openlattice.data.storage
 
-import com.openlattice.postgres.*
+import com.openlattice.data.EntityDataKey
+import com.openlattice.postgres.DataTables.LAST_INDEX
+import com.openlattice.postgres.DataTables.LAST_LINK
+import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.LAST_LINK_INDEX
+import com.openlattice.postgres.PostgresColumn.LINKING_ID
+import com.openlattice.postgres.PostgresColumn.ID
+import com.openlattice.postgres.PostgresTable.IDS
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
@@ -43,22 +51,36 @@ class PostgresDataManager(private val hds: HikariDataSource) {
         }
     }
 
-    fun updateLastIndexSql(idsByEntitySetId: Map<UUID, Optional<kotlin.collections.Set<UUID>>>): String {
+    fun markAsNeedsToBeLinked(entityDataKeys: Set<EntityDataKey>): Int {
+        return hds.connection.use {
+            it.prepareStatement(markAsNeedsToBeLinkedSql(entityDataKeys)).executeUpdate()
+        }
+    }
+
+    fun updateLastIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
         val entitiesClause = buildEntitiesClause(idsByEntitySetId, false)
 
-        return "UPDATE ${PostgresTable.IDS.name} SET ${DataTables.LAST_INDEX.name} = ? " +
+        return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
                 "WHERE TRUE $entitiesClause "
     }
 
-    fun updateLastLinkIndexSql(linkingIdsByEntitySetId: Map<UUID, Optional<kotlin.collections.Set<UUID>>>): String {
+    fun updateLastLinkIndexSql(linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
         val entitiesClause = buildEntitiesClause(linkingIdsByEntitySetId, true)
 
-        return "UPDATE ${PostgresTable.IDS.name} SET ${PostgresColumn.LAST_LINK_INDEX.name} = ? " +
+        return "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = ? " +
                 "WHERE TRUE $entitiesClause"
     }
 
     fun markLinkingIdsAsNeedToBeIndexedSql(): String {
-        return "UPDATE ${PostgresTable.IDS.name} SET ${PostgresColumn.LAST_LINK_INDEX.name} = '-infinity()' " +
-                "WHERE ${PostgresColumn.LINKING_ID.name} IN (SELECT UNNEST( (?)::uuid[] )) "
+        return "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
+                "WHERE ${LINKING_ID.name} IN (SELECT UNNEST( (?)::uuid[] )) "
+    }
+
+    private fun markAsNeedsToBeLinkedSql(entityDataKeys: Set<EntityDataKey>): String {
+        val entitiesClause = entityDataKeys.joinToString("OR") {
+            "(${ENTITY_SET_ID.name} = '${it.entitySetId}' AND ${ID.name} = '${it.entityKeyId}')"
+        }
+        return "UPDATE ${IDS.name} SET ${LAST_LINK.name} = '-infinity()' " +
+                "WHERE $entitiesClause"
     }
 }
