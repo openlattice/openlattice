@@ -67,9 +67,11 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
+
 import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
@@ -230,7 +232,8 @@ public class IndexerServicesPod {
     public Matcher dl4jMatcher() throws IOException {
         final var modelStream = Thread.currentThread().getContextClassLoader().getResourceAsStream( "model.bin" );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
-        return new SocratesMatcher( ModelSerializer.restoreMultiLayerNetwork( modelStream ), fqnToIdMap );
+        return new SocratesMatcher(
+                ModelSerializer.restoreMultiLayerNetwork( modelStream ), hazelcastInstance, fqnToIdMap );
     }
 
     @Profile( KERAS )
@@ -240,12 +243,12 @@ public class IndexerServicesPod {
         final String simpleMlp = new ClassPathResource( "model_2019-01-30.h5" ).getFile().getPath();
         final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
-        return new SocratesMatcher( model, fqnToIdMap );
+        return new SocratesMatcher( model, hazelcastInstance, fqnToIdMap );
     }
 
     @Bean
     public PostgresLinkingFeedbackQueryService postgresLinkingFeedbackQueryService() {
-        return new PostgresLinkingFeedbackQueryService(hikariDataSource);
+        return new PostgresLinkingFeedbackQueryService( hikariDataSource );
     }
 
     @PostConstruct
