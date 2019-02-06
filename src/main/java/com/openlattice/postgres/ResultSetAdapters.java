@@ -938,16 +938,20 @@ public final class ResultSetAdapters {
     }
 
     public static EntityLinkingFeedback entityLinkingFeedback( ResultSet rs ) throws SQLException {
-        boolean linked = rs.getBoolean( LINKED_FIELD );
+        boolean linked = linked( rs );
 
         return new EntityLinkingFeedback( entityKeyPair( rs ), linked );
+    }
+
+    public static Boolean linked( ResultSet rs ) throws SQLException {
+        return rs.getBoolean( LINKED_FIELD );
     }
 
     public static EntityKeyPair entityKeyPair( ResultSet rs ) throws SQLException {
         EntityDataKey srcEntityDataKey = srcEntityDataKey( rs );
         EntityDataKey dstEntityDataKey = dstEntityDataKey( rs );
 
-        return new EntityKeyPair(srcEntityDataKey, dstEntityDataKey);
+        return new EntityKeyPair( srcEntityDataKey, dstEntityDataKey );
     }
 
     public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn( MetadataOption metadataOption ) {

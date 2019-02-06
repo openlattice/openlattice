@@ -14,15 +14,15 @@ import kotlin.random.Random
 
 open class LinkingFeedbackMapstore(
         hds: HikariDataSource
-) : AbstractBasePostgresMapstore<EntityKeyPair, EntityLinkingFeedback>
+) : AbstractBasePostgresMapstore<EntityKeyPair, Boolean>
 (HazelcastMap.LINKING_FEEDBACKS.name, PostgresTable.LINKING_FEEDBACK, hds) {
 
-    override fun bind(ps: PreparedStatement, key: EntityKeyPair, value: EntityLinkingFeedback) {
+    override fun bind(ps: PreparedStatement, key: EntityKeyPair, value: Boolean) {
         val offset = bind(ps, key, 1)
-        ps.setBoolean(offset, value.linked)
+        ps.setBoolean(offset, value)
 
         // UPDATE
-        ps.setBoolean(offset + 1, value.linked)
+        ps.setBoolean(offset + 1, value)
     }
 
     override fun bind(ps: PreparedStatement, key: EntityKeyPair, offset: Int): Int {
@@ -38,23 +38,17 @@ open class LinkingFeedbackMapstore(
         return ResultSetAdapters.entityKeyPair(rs)
     }
 
-    override fun mapToValue(rs: ResultSet?): EntityLinkingFeedback {
-        return ResultSetAdapters.entityLinkingFeedback(rs)
+    override fun mapToValue(rs: ResultSet?): Boolean {
+        return ResultSetAdapters.linked(rs)
     }
-
-    // Since value contains key, it needs to be the same when testing
-    private lateinit var testKey: EntityKeyPair
 
     override fun generateTestKey(): EntityKeyPair {
-        testKey = EntityKeyPair(
+        return EntityKeyPair(
                 EntityDataKey(UUID.randomUUID(), UUID.randomUUID()),
                 EntityDataKey(UUID.randomUUID(), UUID.randomUUID()))
-        return testKey
     }
 
-    override fun generateTestValue(): EntityLinkingFeedback {
-        return EntityLinkingFeedback(
-                testKey,
-                Random.nextBoolean())
+    override fun generateTestValue(): Boolean {
+        return Random.nextBoolean()
     }
 }

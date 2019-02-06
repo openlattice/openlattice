@@ -53,7 +53,6 @@ public enum Table implements TableDef {
     LINKING_VERTICES,
     LINKING_ENTITY_VERTICES,
     LINKING_ENTITIES,
-    LINKING_FEEDBACKS,
     NAMES,
     ORGANIZATIONS,
     ROLES,

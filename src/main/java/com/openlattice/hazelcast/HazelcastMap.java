@@ -80,7 +80,7 @@ public enum HazelcastMap {
     APP_CONFIGS( Table.APP_CONFIGS ),
     ORGANIZATION_APPS( Table.ORGANIZATIONS ),
     PERSISTENT_SEARCHES( Table.PERSISTENT_SEARCHES ),
-    LINKING_FEEDBACKS( Table.LINKING_FEEDBACKS );
+    LINKING_FEEDBACKS( null );
 
     private final Table table;
 
