@@ -1,0 +1,11 @@
+server:
+  jdbcUrl: jdbc:postgresql://localhost:5432
+  username: "bruh"
+  password: "nobruh"
+  maximumPoolSize: 5
+  connectionTimeout: 60000
+foreignHost: "bruh"
+foreignDbName: "nobruh"
+foreignPort: 5432
+foreignUsername: "fuhrealzbruh"
+foreignPassword: "comeonbruh"

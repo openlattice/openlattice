@@ -30,7 +30,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConfiguration;
+import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -97,6 +99,7 @@ import org.springframework.context.annotation.Import;
 @Import( {
         Auth0Pod.class,
         ByteBlobServicePod.class,
+        AssemblerConfigurationPod.class,
         NeuronPod.class,
 } )
 public class DatastoreServicesPod {
@@ -125,7 +128,8 @@ public class DatastoreServicesPod {
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
 
-
+    @Inject
+    private AssemblerConfiguration assemblerConfiguration;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -219,10 +223,20 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public Assembler assembler() {
+        return new Assembler( assemblerConfiguration,
+                authorizationManager(),
+                dcs(),
+                hikariDataSource,
+                hazelcastInstance );
+    }
+
+    @Bean
     public SecurePrincipalsManager principalService() {
         return new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
-                authorizationManager() );
+                authorizationManager(),
+                assembler() );
     }
 
     @Bean
@@ -232,7 +246,8 @@ public class DatastoreServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 userDirectoryService(),
-                principalService() );
+                principalService(),
+                assembler() );
     }
 
     @Bean
