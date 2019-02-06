@@ -217,7 +217,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ResourceNotFoundException( "Organization does not exist." );
         }
         return assembler
-                .materializeEntitySets( organizationPrincipal.getPrincipal(), authorizedPropertyTypesByEntitySet );
+                .materializeEntitySets( organizationPrincipal.getId(),
+                        organizationPrincipal.getPrincipal(),
+                        authorizedPropertyTypesByEntitySet );
     }
 
     @Override
