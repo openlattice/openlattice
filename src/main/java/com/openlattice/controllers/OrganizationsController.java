@@ -37,6 +37,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.Organization;
@@ -209,9 +210,14 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @RequestBody Set<UUID> entitySetIds ) {
         ensureOwner( organizationId );
         final var authorizedPropertyTypesByEntitySet =
-                authzHelper.getAuthorizedPropertiesOnEntitySets( entitySetIds, EnumSet.of(Permission.MATERIALIZE) );
-
-        return assembler.materializeEntitySets(organizationId, authorizedPropertyTypesByEntitySet);
+                authzHelper.getAuthorizedPropertiesOnEntitySets( entitySetIds, EnumSet.of( Permission.MATERIALIZE ) );
+        final var organizationPrincipal = organizations.getOrganizationPrincipal( organizationId );
+        if ( organizationPrincipal == null ) {
+            //This will be rare, since it is unlikely you have access to an organization that does not exist.
+            throw new ResourceNotFoundException( "Organization does not exist." );
+        }
+        return assembler
+                .materializeEntitySets( organizationPrincipal.getPrincipal(), authorizedPropertyTypesByEntitySet );
     }
 
     @Override

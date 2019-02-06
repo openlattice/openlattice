@@ -84,7 +84,7 @@ import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.pods.TransporterConfigurationPod;
+import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -98,7 +98,7 @@ import org.springframework.context.annotation.Import;
 @Import( {
         Auth0Pod.class,
         ByteBlobServicePod.class,
-        TransporterConfigurationPod.class,
+        AssemblerConfigurationPod.class,
         NeuronPod.class,
 } )
 public class DatastoreServicesPod {
