@@ -32,7 +32,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 
-private val logger = LoggerFactory.getLogger(TransporterConfigurationPod::class.java)
+private val logger = LoggerFactory.getLogger(AssemblerConfigurationPod::class.java)
 
 /**
  *
@@ -40,27 +40,27 @@ private val logger = LoggerFactory.getLogger(TransporterConfigurationPod::class.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Configuration
-class TransporterConfigurationPod {
+class AssemblerConfigurationPod {
     @Autowired(required = false)
     private lateinit var awsS3: AmazonS3
 
     @Autowired(required = false)
     private lateinit var awsLaunchConfig: AmazonLaunchConfiguration
 
-    @Bean(name = ["transporterConfiguration"])
+    @Bean(name = ["assemblerConfiguration"])
     @Profile(ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE)
-    fun localTransporterConfiguration(): AssemblerConfiguration {
+    fun localAssemblerConfiguration(): AssemblerConfiguration {
         val config = ResourceConfigurationLoader.loadConfiguration(AssemblerConfiguration::class.java)
         logger.info("Using local aws datastore configuration: {}", config)
         return config
     }
 
-    @Bean(name = ["transporterConfiguration"])
+    @Bean(name = ["assemblerConfiguration"])
     @Profile(
             ConfigurationConstants.Profiles.AWS_CONFIGURATION_PROFILE,
             ConfigurationConstants.Profiles.AWS_TESTING_PROFILE
     )
-    fun awsTransporterConfiguration() : AssemblerConfiguration {
+    fun awsAssemblerConfiguration() : AssemblerConfiguration {
         val config = ResourceConfigurationLoader.loadConfigurationFromS3(
                 awsS3!!,
                 awsLaunchConfig!!.bucket,

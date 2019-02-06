@@ -96,12 +96,12 @@ class Assembler(
     }
 
 
-    fun materializeEntityTypes( datasource: HikariDataSource ) {
-
+    fun materializeEntityTypes(datasource: HikariDataSource) {
+        TODO("Materialize entity types")
     }
 
     fun materializePropertyTypes(datasource: HikariDataSource) {
-
+        TODO("Materialize property types")
     }
 
     fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
@@ -109,20 +109,23 @@ class Assembler(
     }
 
     fun materializeEntitySets(
+            organizationId: UUID,
             organizationPrincipal: Principal,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
         connect(organizationPrincipal.id).use { datasource ->
-            materializeEntitySets(datasource , authorizedPropertyTypesByEntitySet )
+            materializeEntitySets(organizationId, datasource, authorizedPropertyTypesByEntitySet)
         }
-        return authorizedPropertyTypesByEntitySet.mapValues { EnumSet.of( OrganizationEntitySetFlag.MATERIALIZED ) }
+        return authorizedPropertyTypesByEntitySet.mapValues { EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED) }
     }
 
     fun materializeEntitySets(
-            datasource: HikariDataSource, authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
+            organizationId: UUID,
+            datasource: HikariDataSource,
+            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ) {
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
-            materialize(datasource, entitySetId, authorizedPropertyTypes)
+            materialize(organizationId, datasource, entitySetId, authorizedPropertyTypes)
         }
 
         materializeEdges(datasource, authorizedPropertyTypesByEntitySet.keys)
@@ -131,7 +134,10 @@ class Assembler(
     /**
      * Materializes an entity set on atlas.
      */
-    fun materialize(datasource: HikariDataSource, entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>) {
+    fun materialize(
+            organizationId: UUID, datasource: HikariDataSource, entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>
+    ) {
         val entitySet = entitySets[entitySetId]!!
         val propertyFqns = authorizedPropertyTypes.mapValues { it.value.type.fullQualifiedNameAsString }
         val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
@@ -151,6 +157,14 @@ class Assembler(
             }
             //Next we need to grant select on materialize view to everyone who has permission.
         }
+        hds.connection.use { conn ->
+            conn.prepareStatement(INSERT_MATERIALIZED_ENTITY_SET).use { ps ->
+                ps.setObject(2, organizationId)
+                ps.setObject(2, entitySetId)
+                ps.executeUpdate()
+            }
+
+        }
     }
 
 
@@ -165,7 +179,7 @@ class Assembler(
         return PostgresIterable(
                 Supplier {
                     val conn = hds.connection
-                    val ps = conn.prepareStatement(MATERIALIZED_ENTITIES_SQL)
+                    val ps = conn.prepareStatement(SELECT_MATERIALIZED_ENTITY_SETS)
                     ps.setObject(1, organizationId)
                     StatementHolder(conn, ps, ps.executeQuery())
                 },
@@ -281,7 +295,7 @@ class Assembler(
     private fun configureUserInDatabase(datasource: HikariDataSource, userId: String) {
         val dbUser = quote(userId)
 
-        target.connection.use { connection ->
+        datasource.connection.use { connection ->
             connection.createStatement().use { statement ->
 
                 statement.execute("GRANT USAGE ON SCHEMA $SCHEMA TO $dbUser")
@@ -403,5 +417,6 @@ private fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): St
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
 
-private val MATERIALIZED_ENTITIES_SQL = "SELECT * FROM ${PostgresTable.MATERIALIZED_ENTITY_SETS.name} " +
+private val INSERT_MATERIALIZED_ENTITY_SET = "INSERT INTO ${PostgresTable.MATERIALIZED_ENTITY_SETS.name} (?,?) ON CONFLICT DO NOTHING"
+private val SELECT_MATERIALIZED_ENTITY_SETS = "SELECT * FROM ${PostgresTable.MATERIALIZED_ENTITY_SETS.name} " +
         "WHERE ${PostgresColumn.ORGANIZATION_PRINCIPAL_ID.name} = ?"
