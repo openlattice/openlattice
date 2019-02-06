@@ -175,12 +175,12 @@ class Assembler(
         TODO("Drop the materialize view for the specified entity sets.")
     }
 
-    fun getMaterializedEntitySets(organizationId: UUID): PostgresIterable<MaterializedEntitySet> {
+    fun getMaterializedEntitySets(organizationPrincipal: Principal): PostgresIterable<MaterializedEntitySet> {
         return PostgresIterable(
                 Supplier {
                     val conn = hds.connection
                     val ps = conn.prepareStatement(SELECT_MATERIALIZED_ENTITY_SETS)
-                    ps.setObject(1, organizationId)
+                    ps.setObject(1, organizationPrincipal.id)
                     StatementHolder(conn, ps, ps.executeQuery())
                 },
                 Function<ResultSet, MaterializedEntitySet> { rs ->

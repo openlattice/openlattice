@@ -156,7 +156,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     @Override
     public SecurablePrincipal getPrincipal( String principalId ) {
-        final UUID id = checkNotNull( reservations.getId( principalId ), "AclKey not found for Principal" );
+        final UUID id = checkNotNull( reservations.getId( principalId ), "AclKey not found for Principal %s", principalId );
         return Util.getSafely( principals, new AclKey( id ) );
     }
 
