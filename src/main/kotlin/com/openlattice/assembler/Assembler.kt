@@ -344,19 +344,19 @@ class Assembler(
         logger.info("Setting up foreign server for datasource: {}", datasource.jdbcUrl)
         datasource.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute("CREATE EXTENSION postgres_fdw")
+                statement.execute("CREATE EXTENSION IF NOT EXISTS postgres_fdw")
 
                 logger.info("Installed postgres_fdw extension.")
 
                 statement.execute(
-                        "CREATE SERVER $PRODUCTION FOREIGN DATA WRAPPER postgres_fdw " +
+                        "CREATE SERVER IF NOT EXISTS $PRODUCTION FOREIGN DATA WRAPPER postgres_fdw " +
                                 "OPTIONS (host '${assemblerConfiguration.foreignHost}', " +
                                 "dbname '${assemblerConfiguration.foreignDbName}', " +
                                 "port '${assemblerConfiguration.foreignPort}')"
                 )
                 logger.info("Created foreign server definition. ")
                 statement.execute(
-                        "CREATE USER MAPPING FOR CURRENT_USER SERVER $PRODUCTION " +
+                        "CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER SERVER $PRODUCTION " +
                                 "OPTIONS ( user '${assemblerConfiguration.foreignUsername}', " +
                                 "password '${assemblerConfiguration.foreignPassword}')"
                 )
