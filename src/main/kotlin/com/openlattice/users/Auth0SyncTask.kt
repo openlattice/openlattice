@@ -108,7 +108,7 @@ class Auth0SyncTask(
             users.removeAll(
                     Predicates.lessThan(
                             UserMapstore.LOAD_TIME_INDEX,
-                            OffsetDateTime.now().minus(REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
+                            OffsetDateTime.now().minus(6*REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
                     ) as Predicate<String, Auth0UserBasic>?
             )
         }
@@ -119,7 +119,7 @@ class Auth0SyncTask(
             openlatticeOrganizationAclKey: AclKey, adminRoleAclKey: AclKey
     ) {
         val principal = Principal(PrincipalType.USER, userId)
-        val title = if (user.nickname != null && user.nickname.length > 0)
+        val title = if (user.nickname != null && user.nickname.isNotEmpty())
             user.nickname
         else
             user.email
