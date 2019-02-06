@@ -21,6 +21,7 @@ package com.openlattice.edm.requests;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.authorization.Principal;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -54,6 +55,7 @@ public class MetadataUpdate {
     private Optional<Boolean>                          defaultShow;
     private Optional<String>                           url;
     private Optional<LinkedHashMultimap<UUID, String>> propertyTags;
+    private Optional<Principal>                        organization;
 
         @JsonCreator
     public MetadataUpdate(
@@ -65,7 +67,8 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> pii,
             @JsonProperty( SerializationConstants.DEFAULT_SHOW ) Optional<Boolean> defaultShow,
             @JsonProperty( SerializationConstants.URL ) Optional<String> url,
-            @JsonProperty( SerializationConstants.PROPERTY_TAGS ) Optional<LinkedHashMultimap<UUID, String>> propertyTags ) {
+            @JsonProperty( SerializationConstants.PROPERTY_TAGS ) Optional<LinkedHashMultimap<UUID, String>> propertyTags,
+            @JsonProperty(SerializationConstants.ORGANIZATION) Optional<Principal> organization ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
@@ -86,6 +89,7 @@ public class MetadataUpdate {
         this.defaultShow = defaultShow;
         this.url = url;
         this.propertyTags = propertyTags;
+        this.organization = organization;
     }
 
     @JsonProperty( SerializationConstants.TITLE_FIELD )
@@ -133,6 +137,11 @@ public class MetadataUpdate {
         return propertyTags;
     }
 
+    @JsonProperty(SerializationConstants.ORGANIZATION)
+    public Optional<Principal> getOrganization() {
+        return organization;
+    }
+
     @Override public String toString() {
         return "MetadataUpdate{" +
                 "title=" + title +
@@ -144,6 +153,7 @@ public class MetadataUpdate {
                 ", defaultShow=" + defaultShow +
                 ", url=" + url +
                 ", propertyTags=" + propertyTags +
+                ", organization=" + organization +
                 '}';
     }
 
@@ -159,11 +169,13 @@ public class MetadataUpdate {
                 Objects.equals( pii, that.pii ) &&
                 Objects.equals( defaultShow, that.defaultShow ) &&
                 Objects.equals( url, that.url ) &&
-                Objects.equals( propertyTags, that.propertyTags );
+                Objects.equals( propertyTags, that.propertyTags ) &&
+                Objects.equals( organization, that.organization );
     }
 
     @Override public int hashCode() {
-        return Objects.hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags );
+        return Objects
+                .hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags, organization );
     }
 
     //TODO: Delete the code below as it doesn't seem to be used.
@@ -179,6 +191,7 @@ public class MetadataUpdate {
                 update.getPii(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -192,6 +205,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -201,6 +215,7 @@ public class MetadataUpdate {
                 update.getDescription(),
                 update.getName(),
                 update.getContacts(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
@@ -218,6 +233,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 update.getDefaultShow(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -231,6 +247,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 update.getUrl(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -241,6 +258,7 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty(),
                 update.getType(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
