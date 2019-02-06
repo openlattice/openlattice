@@ -371,6 +371,7 @@ class Assembler(
         target.connection.use { connection ->
             connection.createStatement().use { stmt ->
                   stmt.executeQuery("select count(*) from pg_database where datname = '$dbname'").use {rs ->
+                      rs.next()
                       return rs.getInt("count") > 0
                   }
             }
