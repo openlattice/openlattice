@@ -38,6 +38,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.Blocker
 import com.openlattice.linking.DataLoader
+import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.PERSON_FQN
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.slf4j.LoggerFactory
@@ -62,7 +63,7 @@ class ElasticsearchBlocker(
 
     private val entitySets: IMap<UUID, EntitySet> = hazelcast.getMap(HazelcastMap.ENTITY_SETS.name)
     private val entityTypes: IMap<UUID, EntityType> = hazelcast.getMap(HazelcastMap.ENTITY_TYPES.name)
-    private val propertyTypes: IMap<UUID, PropertyType> = hazelcast.getMap(HazelcastMap.PROPERTY_TYPES.name)
+    private val linkingFeedbacks = hazelcast.getMap<EntityKeyPair, Boolean>(HazelcastMap.LINKING_FEEDBACKS.name)
 
     private val personEntityType = entityTypes.values(
             Predicates.equal("type.fullQualifiedNameAsString", PERSON_FQN)
@@ -123,6 +124,14 @@ class ElasticsearchBlocker(
 
         val loadedData = entityDataKey to blockedEntitySetSearchResults
                 .filter { it.value.isNotEmpty() }
+                .mapValues {
+                    it.value.filter {
+                        // remove pairs which have feedbacks for not matching this entity
+                        entityKeyId ->
+                        linkingFeedbacks.getOrDefault(
+                                EntityKeyPair(entityDataKey, EntityDataKey(it.key, entityKeyId)), true)
+                    }.toSet()
+                }
                 .entries
                 .parallelStream()
                 .flatMap { entry ->
