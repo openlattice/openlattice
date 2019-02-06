@@ -30,6 +30,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
+import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConfiguration;
+import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -83,8 +86,6 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
-import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -129,8 +130,6 @@ public class DatastoreServicesPod {
 
     @Inject
     private AssemblerConfiguration assemblerConfiguration;
-
-
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -224,10 +223,20 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public Assembler assembler() {
+        return new Assembler( assemblerConfiguration,
+                authorizationManager(),
+                dcs(),
+                hikariDataSource,
+                hazelcastInstance );
+    }
+
+    @Bean
     public SecurePrincipalsManager principalService() {
         return new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
-                authorizationManager() );
+                authorizationManager(),
+                assembler() );
     }
 
     @Bean
@@ -238,9 +247,7 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 userDirectoryService(),
                 principalService(),
-                assemblerConfiguration,
-                dcs(),
-                hikariDataSource);
+                assembler() );
     }
 
     @Bean
