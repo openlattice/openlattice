@@ -41,7 +41,7 @@ interface Matcher {
     /**
      * Computes an approximation of the discrete metric of every pair of blocked entities.
      *
-     * A computed match of 0.0 is 'close' and a match of 1.0 is 'far'.
+     * A computed match of 1.0 is 'close' and a match of 0.0 is 'far'.
      *
      * @param block An entity paired to a set of entities from across zero or more entity sets mapped by data key.
      * @return The computed match between all unique entities pairs in the block.

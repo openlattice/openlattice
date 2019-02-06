@@ -21,7 +21,6 @@
 
 package com.openlattice.linking.clustering
 
-import com.openlattice.data.Entity
 import com.openlattice.data.EntityDataKey
 import java.util.*
 
@@ -33,6 +32,4 @@ class ClusterUpdate(
         val clusterId: UUID,
         val newMember: EntityDataKey,
         val scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
-        ) {
-
-}
+        )
