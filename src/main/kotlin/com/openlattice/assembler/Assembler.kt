@@ -199,7 +199,7 @@ class Assembler(
         val createDbRole = createRoleIfNotExistsSql(dbRole)
         val createDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
         val grantRole = "GRANT ${quote(dbRole)} TO $dbAdminUser"
-        val createDb = " CREATE DATABASE IF NOT EXISTS $db WITH OWNER=$dbAdminUser"
+        val createDb = " CREATE DATABASE $db WITH OWNER=$dbAdminUser"
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM public"
 
         //We connect to default db in order to do initial db setup
@@ -209,7 +209,9 @@ class Assembler(
                 statement.execute(createDbRole)
                 statement.execute(createDbUser)
                 statement.execute(grantRole)
-                statement.execute(createDb)
+                if( !exists(dbname) ) {
+                    statement.execute(createDb)
+                }
                 statement.execute(revokeAll)
                 return@use
             }
@@ -365,6 +367,15 @@ class Assembler(
         }
     }
 
+    private fun exists( dbname: String ) : Boolean {
+        target.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                  stmt.executeQuery("select count(*) from pg_database where datname = '$dbname'").use {rs ->
+                      return rs.getInt("count") > 0
+                  }
+            }
+        }
+    }
 
     private fun connect(dbname: String): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
