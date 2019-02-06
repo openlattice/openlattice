@@ -4,4 +4,8 @@ server:
   password: "nobruh"
   maximumPoolSize: 5
   connectionTimeout: 60000
-
+foreignHost: "bruh"
+foreignDbName: "nobruh"
+foreignPort: 5432
+foreignUsername: "fuhrealzbruh"
+foreignPassword: "comeonbruh"

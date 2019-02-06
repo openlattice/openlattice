@@ -23,10 +23,12 @@ package com.openlattice.controllers;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
+import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
@@ -35,6 +37,7 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.OrganizationMember;
@@ -44,6 +47,8 @@ import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -59,6 +64,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import organization.OrganizationEntitySetFlag;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -71,10 +77,19 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     private HazelcastOrganizationService organizations;
 
     @Inject
+    private Assembler assembler;
+
+    @Inject
     private AbstractSecurableObjectResolveTypeService securableObjectTypes;
 
     @Inject
     private SecurePrincipalsManager principalService;
+
+    @Inject
+    private EdmManager edm;
+
+    @Inject
+    private EdmAuthorizationHelper authzHelper;
 
     @Override
     @GetMapping(
@@ -129,6 +144,74 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         authorizations.deletePermissions( aclKey );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( organizationId ) );
         return null;
+    }
+
+    @Override
+    @GetMapping(
+            value = ID_PATH + ENTITY_SETS,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
+            @PathVariable( ID ) UUID organizationId ) {
+        return getOrganizationEntitySets( organizationId, EnumSet.allOf( OrganizationEntitySetFlag.class ) );
+    }
+
+    @Override
+    @PostMapping(
+            value = ID_PATH + ENTITY_SETS,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
+            @PathVariable( ID ) UUID organizationId,
+            @RequestBody EnumSet<OrganizationEntitySetFlag> flagFilter ) {
+        final var orgPrincipal = organizations.getOrganizationPrincipal( organizationId );
+        final var internal = edm.getEntitySetsForOrganization( organizationId );
+        final var external = authorizations.getAuthorizedObjectsOfType(
+                orgPrincipal.getPrincipal(),
+                SecurableObjectType.EntitySet,
+                EnumSet.of( Permission.MATERIALIZE ) );
+        final var materialized = assembler.getMaterializedEntitySets( organizationId );
+
+        final Map<UUID, Set<OrganizationEntitySetFlag>> entitySets = new HashMap<>( 2 * internal.size() );
+
+        if ( flagFilter.contains( OrganizationEntitySetFlag.INTERNAL ) ) {
+            internal.forEach( entitySetId -> entitySets
+                    .merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.INTERNAL ), ( lhs, rhs ) -> {
+                        lhs.addAll( rhs );
+                        return lhs;
+                    } ) );
+
+        }
+        if ( flagFilter.contains( OrganizationEntitySetFlag.EXTERNAL ) ) {
+            external.map( aclKey -> aclKey.get( 0 ) ).forEach( entitySetId -> entitySets
+                    .merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.EXTERNAL ), ( lhs, rhs ) -> {
+                        lhs.addAll( rhs );
+                        return lhs;
+                    } ) );
+
+        }
+
+        if ( flagFilter.contains( OrganizationEntitySetFlag.MATERIALIZED ) ) {
+            materialized.stream().map( mes -> mes.getEntitySetId() ).forEach( entitySetId -> entitySets
+                    .merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.MATERIALIZED ), ( lhs, rhs ) -> {
+                        lhs.addAll( rhs );
+                        return lhs;
+                    } ) );
+
+        }
+        return entitySets;
+    }
+
+    @Override
+    @PostMapping(
+            value = ID_PATH + ENTITY_SETS + ASSEMBLE,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
+            @PathVariable( ID ) UUID organizationId,
+            @RequestBody Set<UUID> entitySetIds ) {
+        ensureOwner( organizationId );
+        final var authorizedPropertyTypesByEntitySet =
+                authzHelper.getAuthorizedPropertiesOnEntitySets( entitySetIds, EnumSet.of(Permission.MATERIALIZE) );
+
+        return assembler.materializeEntitySets(organizationId, authorizedPropertyTypesByEntitySet);
     }
 
     @Override
@@ -353,7 +436,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( USER_ID ) String userId ) {
         ensureWriteAccess( new AclKey( organizationId ) );
         organizations
-                .addRoleToPrincipalInOrganization( organizationId, roleId, new Principal( PrincipalType.USER, userId ) );
+                .addRoleToPrincipalInOrganization( organizationId,
+                        roleId,
+                        new Principal( PrincipalType.USER, userId ) );
         return null;
     }
 
