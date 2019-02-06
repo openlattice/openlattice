@@ -75,7 +75,7 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
 
         // transform features to matrix and compute scores
         val featureKeys = extractedFeatures.map { it.key }.toTypedArray()
-        val featureMatrix = extractedFeatures.map { it.value.values.toDoubleArray() }.toTypedArray()
+        val featureMatrix = extractedFeatures.map { it.value }.toTypedArray()
         val scores = computeScore(model, featureMatrix).toTypedArray()
         val matchedEntities = featureKeys.zip(scores).toMap().toMutableMap()
         val initializedBlock = entityDataKey to mutableMapOf(entityDataKey to matchedEntities)
@@ -111,11 +111,9 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
         }
 
         // transform features to matrix and compute scores
-        val featureMatrix = extractedFeatures.flatMap { (_, features) ->
-            features.map {
-                it.value.values.toDoubleArray()
-            }
-        }.toTypedArray()
+        val featureMatrix = extractedFeatures
+                .flatMap { (_, features) -> features.map { it.value } }
+                .toTypedArray()
 
         // extract list of keys (instead of map)
         val featureKeys = extractedFeatures.flatMap { (entityDataKey1, features) ->
@@ -162,8 +160,8 @@ class SocratesMatcher(model: MultiLayerNetwork, private val fqnToIdMap: Map<Full
 
     override fun extractFeatures(
             lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>
-    ): Map<String, Double> {
-        return PersonMetric.pDistance(lhs, rhs, fqnToIdMap).map { it.key to (it.value * 100.0) }.toMap()
+    ): DoubleArray {
+        return PersonMetric.pDistance(lhs, rhs, fqnToIdMap).map { it * 100.0 }.toDoubleArray()
     }
 
     override fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet> {

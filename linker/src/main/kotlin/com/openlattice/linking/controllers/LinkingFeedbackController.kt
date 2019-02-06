@@ -10,6 +10,7 @@ import com.openlattice.data.storage.PostgresDataManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.*
+import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
@@ -88,7 +89,7 @@ constructor(
                 throw IllegalArgumentException(
                         "Feedback can only be submitted for entities contained by linking entity set")
             }
-            if(!entityKeyIdsOfLinkingId.contains(entityDataKey.entityKeyId)) {
+            if (!entityKeyIdsOfLinkingId.contains(entityDataKey.entityKeyId)) {
                 throw IllegalArgumentException(
                         "Feedback can only be submitted for entities with same linking id")
             }
@@ -126,9 +127,12 @@ constructor(
             val entities = dataLoader.getEntities(setOf(it.entityPair.first, it.entityPair.second))
             EntityLinkingFeatures(
                     it,
-                    matcher.extractFeatures(
-                            matcher.extractProperties(entities.getValue(it.entityPair.first)),
-                            matcher.extractProperties(entities.getValue(it.entityPair.second))))
+                    PersonMetric.values().map { it.toString() }
+                            .zip(matcher.extractFeatures(
+                                    matcher.extractProperties(entities.getValue(it.entityPair.first)),
+                                    matcher.extractProperties(entities.getValue(it.entityPair.second))).asList())
+                            .toMap()
+            )
         }
     }
 
@@ -141,9 +145,12 @@ constructor(
         val entities = dataLoader.getEntities(setOf(feedback.entityPair.first, feedback.entityPair.second))
         return EntityLinkingFeatures(
                 feedback,
-                matcher.extractFeatures(
-                        matcher.extractProperties(entities.getValue(feedback.entityPair.first)),
-                        matcher.extractProperties(entities.getValue(feedback.entityPair.second))))
+                PersonMetric.values().map { it.toString() }
+                        .zip(matcher.extractFeatures(
+                                matcher.extractProperties(entities.getValue(feedback.entityPair.first)),
+                                matcher.extractProperties(entities.getValue(feedback.entityPair.second))).asList())
+                        .toMap()
+        )
     }
 
 

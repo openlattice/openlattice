@@ -63,7 +63,7 @@ interface Matcher {
     /**
      * Calculates the pairwise features for two entities.
      */
-    fun extractFeatures(lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>): Map<String, Double>
+    fun extractFeatures(lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>): DoubleArray
 
     /**
      * Converts the entity values to Strings for the [com.openlattice.linking.util.PersonMertic] readable format.
