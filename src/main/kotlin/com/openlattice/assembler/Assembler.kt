@@ -67,7 +67,7 @@ class Assembler(
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
 
     private val target = connect("postgres")
-    
+
     fun initializeRolesAndUsers(spm: SecurePrincipalsManager) {
         getAllRoles(spm).map(this::createRole)
         getAllUsers(spm).map(this::createUnprivilegedUser)
@@ -191,13 +191,13 @@ class Assembler(
 
     private fun createDatabase(organizationId: UUID, dbname: String) {
         val db = quote(dbname)
-        val dbRole = quote("${dbname}_role")
+        val dbRole ="${dbname}_role"
         val unquotedDbAdminUser = buildUserId(organizationId)
         val dbAdminUser = quote(unquotedDbAdminUser)
         val dbAdminUserPassword = dbCredentialService.createUserIfNotExists(unquotedDbAdminUser)
                 ?: dbCredentialService.getDbCredential(unquotedDbAdminUser)
-        val createDbRole = "CREATE ROLE $dbRole NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN"
-        val createDbUser = "CREATE ROLE $dbAdminUser NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbAdminUserPassword'"
+        val createDbRole = createRoleIfNotExistsSql(dbRole)
+        val createDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
         val grantRole = "GRANT $dbRole TO $dbAdminUser"
         val createDb = " CREATE DATABASE $db WITH OWNER=$dbAdminUser"
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM public"
@@ -224,9 +224,9 @@ class Assembler(
         val dbAdminUser = quote(unquotedDbAdminUser)
         val dbAdminUserPassword = dbCredentialService.createUser(unquotedDbAdminUser)
 
-        val dropDbUser = "CREATE ROLE $dbAdminUser NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbAdminUserPassword'"
+        val dropDbUser = "DROP ROLE $dbAdminUser"
         //TODO: If we grant this role to other users, we need to make sure we drop it
-        val dropDbRole = "CREATE ROLE $dbRole NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN"
+        val dropDbRole = "DROP ROLE $dbRole"
         val dropDb = " DROP DATABASE $db"
 
 
@@ -245,7 +245,7 @@ class Assembler(
     private fun createOpenlatticeSchema(datasource: HikariDataSource) {
         datasource.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute("CREATE SCHEMA $SCHEMA")
+                statement.execute("CREATE SCHEMA IF NOT EXISTS $SCHEMA")
             }
         }
     }
