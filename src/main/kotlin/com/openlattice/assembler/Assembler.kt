@@ -199,7 +199,7 @@ class Assembler(
         val createDbRole = createRoleIfNotExistsSql(dbRole)
         val createDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
         val grantRole = "GRANT ${quote(dbRole)} TO $dbAdminUser"
-        val createDb = " CREATE DATABASE $db WITH OWNER=$dbAdminUser"
+        val createDb = " CREATE DATABASE IF NOT EXISTS $db WITH OWNER=$dbAdminUser"
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM public"
 
         //We connect to default db in order to do initial db setup
