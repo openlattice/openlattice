@@ -91,7 +91,7 @@ class Assembler(
             }
 
             createForeignServer(datasource)
-            materializePropertyTypes(datasource)
+            //materializePropertyTypes(datasource)
         }
     }
 
