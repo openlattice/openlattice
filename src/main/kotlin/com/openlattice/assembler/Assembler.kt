@@ -67,7 +67,7 @@ class Assembler(
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
 
     private val target = connect("postgres")
-
+    
     fun initializeRolesAndUsers(spm: SecurePrincipalsManager) {
         getAllRoles(spm).map(this::createRole)
         getAllUsers(spm).map(this::createUnprivilegedUser)

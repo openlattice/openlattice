@@ -35,6 +35,7 @@ data class AssemblerConfiguration(
         val foreignDbName: String,
         val foreignPort: Short,
         val foreignUsername: String,
-        val foreignPassword: String
-
+        val foreignPassword: String,
+        val initialize: Optional<Boolean>,
+        val testEntitySet: Optional<UUID>
 )
