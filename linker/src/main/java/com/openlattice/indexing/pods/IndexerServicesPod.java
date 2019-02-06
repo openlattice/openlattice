@@ -29,6 +29,9 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
+import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConfiguration;
+import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
@@ -83,7 +86,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class } )
+@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class } )
 public class IndexerServicesPod {
     private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
@@ -111,6 +114,8 @@ public class IndexerServicesPod {
     @Inject
     private AuditingConfiguration auditingConfiguration;
 
+    @Inject
+    private AssemblerConfiguration assemblerConfiguration;
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
         return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
@@ -140,7 +145,8 @@ public class IndexerServicesPod {
     public SecurePrincipalsManager principalService() {
         return new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
-                authorizationManager() );
+                authorizationManager(),
+                assembler());
     }
 
     @Bean
@@ -154,13 +160,23 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public Assembler assembler() {
+        return new Assembler( assemblerConfiguration,
+                authorizationManager(),
+                dbcs(),
+                hikariDataSource,
+                hazelcastInstance );
+    }
+
+    @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
                 userDirectoryService(),
-                principalService() );
+                principalService(),
+                assembler());
     }
 
     @Bean
