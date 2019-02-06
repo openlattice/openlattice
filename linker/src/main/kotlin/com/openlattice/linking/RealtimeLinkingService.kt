@@ -82,6 +82,7 @@ class RealtimeLinkingService
 
     private val running = ReentrantLock()
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
+
     /**
      * Linking:
      * 1) For each new person entity perform blocking
@@ -138,14 +139,14 @@ class RealtimeLinkingService
 
                         val clusters = gqs.getClustersContaining(requiredClusters)
 
-
+                        // TODO incorporate positive feedbacks
                         var maybeBestCluster: ScoredCluster? = null
                         var highestScore = 10.0 //Arbitrary any positive value should suffice
 
                         clusters
                                 .forEach {
                                     val scoredCluster = cluster(blockKey, it, ::completeLinkCluster)
-                                    if (scoredCluster.score > MINIMUM_SCORE && (highestScore > scoredCluster.score || highestScore >= 10)) {
+                                    if (scoredCluster.score > MINIMUM_SCORE && (highestScore < scoredCluster.score || highestScore >= 10)) {
                                         highestScore = scoredCluster.score
                                         Optional
                                                 .ofNullable(maybeBestCluster?.clusterId)
