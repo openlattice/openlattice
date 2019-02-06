@@ -86,7 +86,7 @@ class Assembler(
             configureRolesInDatabase(datasource, spm)
             createOpenlatticeSchema(datasource)
 
-            organization.members.forEach { principal ->
+            organization.members.filter { it.id!="openlatticeRole" && it.id!="admin"  }.forEach { principal ->
                 configureUserInDatabase(datasource, principal.id)
             }
 
