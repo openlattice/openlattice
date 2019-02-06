@@ -5,12 +5,15 @@ import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.EntityDatastore
+import com.openlattice.data.storage.PostgresDataManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonProperties
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
+import java.lang.IllegalArgumentException
 import javax.inject.Inject
 
 @RestController
@@ -23,11 +26,12 @@ constructor(
         private val feedbackQueryService: PostgresLinkingFeedbackQueryService,
         private val matcher: Matcher,
         private val dataLoader: DataLoader,
-        private val edm: EdmManager
+        private val edm: EdmManager,
+        private val entityDataStore: EntityDatastore,
+        private val dataManager: PostgresDataManager
 ) : LinkingFeedbackApi, AuthorizingComponent {
 
-    private val linkingFeedbacks = hazelcastInstance
-            .getMap<EntityKeyPair, EntityLinkingFeedback>(HazelcastMap.LINKING_FEEDBACKS.name)
+    private val linkingFeedbacks = hazelcastInstance.getMap<EntityKeyPair, Boolean>(HazelcastMap.LINKING_FEEDBACKS.name)
     private val personPropertyIds = PersonProperties.FQNS.map { edm.getPropertyTypeId(it) }
 
     companion object {
@@ -40,8 +44,10 @@ constructor(
         ensureReadAccess(AclKey(feedback.linkingEntityDataKey.entitySetId))
 
         // ensure read access on all entity sets involved and the properties used for linking
-        linkingFeedbackAccessCheck(feedback.linkingEntities)
-        linkingFeedbackAccessCheck(feedback.nonLinkingEntities)
+        // make sure, that all entitysets are part of the linking entity set and entity ids have the provided linking id
+        linkingFeedbackCheck(
+                feedback.linkingEntities + feedback.nonLinkingEntities,
+                feedback.linkingEntityDataKey)
 
 
         // add feedbacks
@@ -62,6 +68,9 @@ constructor(
                     linkingEntity, nonLinkingEntitiesList, 0, false)
         }
 
+        // mark entities as need to be linked
+        dataManager.markAsNeedsToBeLinked(feedback.linkingEntities + feedback.nonLinkingEntities)
+
 
         logger.info("Submitted $positiveFeedbackCount positive and $negativeFeedbackCount negative feedbacks for " +
                 "linking id ${feedback.linkingEntityDataKey.entityKeyId}")
@@ -69,8 +78,21 @@ constructor(
         return positiveFeedbackCount + negativeFeedbackCount
     }
 
-    private fun linkingFeedbackAccessCheck(entityDataKeys: Set<EntityDataKey>) {
+    private fun linkingFeedbackCheck(entityDataKeys: Set<EntityDataKey>, linkingEntityDataKey: EntityDataKey) {
+        val linkingEntitySet = edm.getEntitySet(linkingEntityDataKey.entitySetId)
+        val entityKeyIdsOfLinkingId = entityDataStore
+                .getEntityKeyIdsOfLinkingIds(setOf(linkingEntityDataKey.entityKeyId)).first().right
+
         entityDataKeys.forEach { entityDataKey ->
+            if (!linkingEntitySet.linkedEntitySets.contains(entityDataKey.entitySetId)) {
+                throw IllegalArgumentException(
+                        "Feedback can only be submitted for entities contained by linking entity set")
+            }
+            if(!entityKeyIdsOfLinkingId.contains(entityDataKey.entityKeyId)) {
+                throw IllegalArgumentException(
+                        "Feedback can only be submitted for entities with same linking id")
+            }
+
             ensureReadAccess(AclKey(entityDataKey.entitySetId))
             personPropertyIds.forEach { ensureReadAccess(AclKey(entityDataKey.entitySetId, it)) }
         }
@@ -84,8 +106,8 @@ constructor(
     }
 
     private fun addLinkingFeedback(entityLinkingFeedback: EntityLinkingFeedback): Int {
-        linkingFeedbacks.set(entityLinkingFeedback.entityPair, entityLinkingFeedback)
-        val count =  feedbackQueryService.addLinkingFeedback(entityLinkingFeedback)
+        linkingFeedbacks.set(entityLinkingFeedback.entityPair, entityLinkingFeedback.linked)
+        val count = feedbackQueryService.addLinkingFeedback(entityLinkingFeedback)
 
         logger.info("Linking feedback submitted for entities: ${entityLinkingFeedback.entityPair.first} - " +
                 "${entityLinkingFeedback.entityPair.second}, linked = ${entityLinkingFeedback.linked}")
