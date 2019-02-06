@@ -198,7 +198,7 @@ class Assembler(
                 ?: dbCredentialService.getDbCredential(unquotedDbAdminUser)
         val createDbRole = createRoleIfNotExistsSql(dbRole)
         val createDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
-        val grantRole = "GRANT $dbRole TO $dbAdminUser"
+        val grantRole = "GRANT ${quote(dbRole)} TO $dbAdminUser"
         val createDb = " CREATE DATABASE $db WITH OWNER=$dbAdminUser"
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM public"
 
