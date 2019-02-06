@@ -25,6 +25,7 @@ package com.openlattice.authorization;
 
 public enum Permission {
     DISCOVER,
+    MATERIALIZE,
     LINK,
     READ,
     WRITE,
