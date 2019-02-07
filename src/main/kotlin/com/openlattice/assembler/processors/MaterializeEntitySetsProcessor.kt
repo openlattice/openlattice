@@ -38,9 +38,9 @@ private val logger = LoggerFactory.getLogger(MaterializeEntitySetsProcessor::cla
  */
 
 class MaterializeEntitySetsProcessor(
-        val entitySetIds: Set<UUID>,
         val authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
 ) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Unit>(true), Offloadable {
+    val entitySetIds: Set<UUID> = authorizedPropertyTypesByEntitySet.keys
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>) {
         val organizationId = entry.key
         val assembly = entry.value
@@ -51,6 +51,7 @@ class MaterializeEntitySetsProcessor(
             assembly.entitySetIds.addAll(entitySetIds)
             entry.setValue(assembly)
         }
+
     }
 
     override fun getExecutorName(): String {

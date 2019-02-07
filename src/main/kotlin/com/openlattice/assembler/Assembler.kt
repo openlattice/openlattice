@@ -22,15 +22,15 @@
 package com.openlattice.assembler
 
 import com.hazelcast.core.HazelcastInstance
-import com.openlattice.assembler.AssemblerConnectionManager.Companion.connect
 import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
+import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.Organization
-import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.DataTables.quote
+import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE
 import com.openlattice.postgres.PostgresTable
@@ -56,7 +56,7 @@ class Assembler(
     private val entitySets = hazelcast.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(HazelcastMap.ENTITY_SETS.name)
 
-    fun getMaterializedEntitySets( organizationId: UUID) : Set<UUID> {
+    fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {
         return assemblies[organizationId]?.entitySetIds ?: setOf()
     }
 
@@ -90,8 +90,26 @@ class Assembler(
 //    }
 
     fun createOrganization(organization: Organization) {
-        assemblies.set( organization.id , OrganizationAssembly(organization.id, organization.principal.id) )
+        assemblies.set(organization.id, OrganizationAssembly(organization.id, organization.principal.id))
         assemblies.executeOnKey(organization.id, InitializeOrganizationAssemblyProcessor())
+    }
+
+    fun materializeEntitySets(
+            organizationId: UUID,
+            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
+    ): Map<UUID, Set<OrganizationEntitySetFlag>> {
+        assemblies.executeOnKey(organizationId, MaterializeEntitySetsProcessor(authorizedPropertyTypesByEntitySet))
+        return getMaterializedEntitySets(organizationId).map {
+            it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
+        }.toMap()
+    }
+
+    private fun getInternalEntitySetFlag(organizationId: UUID, entitySetId: UUID): Set<OrganizationEntitySetFlag> {
+        return if (entitySets[entitySetId]?.organizationId == organizationId) {
+            setOf(OrganizationEntitySetFlag.INTERNAL)
+        } else {
+            setOf()
+        }
     }
 }
 
