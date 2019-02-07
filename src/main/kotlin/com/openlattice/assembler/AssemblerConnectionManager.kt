@@ -190,6 +190,12 @@ class AssemblerConnectionManager {
                 configureRolesInDatabase(datasource, securePrincipalsManager)
                 createOpenlatticeSchema(datasource)
 
+                datasource.connection.use() { connection ->
+                    connection.createStatement().use { statement ->
+                        statement.execute("ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_SCHEMA, $SCHEMA, public")
+                    }
+                }
+
                 organization.members
                         .filter { it.id != "openlatticeRole" && it.id != "admin" }
                         .forEach { principal -> configureUserInDatabase(datasource, principal.id) }
@@ -269,7 +275,7 @@ class AssemblerConnectionManager {
                 authorizedPropertyTypes: Map<UUID, PropertyType>
         ) {
             val entitySet = entitySets[entitySetId]!!
-            val propertyFqns = authorizedPropertyTypes.mapValues { it.value.type.fullQualifiedNameAsString }
+            val propertyFqns = authorizedPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
             val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
                     mapOf(),
                     propertyFqns,
@@ -493,6 +499,7 @@ private val SELECT_MATERIALIZED_ENTITY_SETS = "SELECT * FROM ${PostgresTable.ORG
 internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
     datasource.connection.use { connection ->
         connection.createStatement().use { statement ->
+
             statement.execute("CREATE SCHEMA IF NOT EXISTS $SCHEMA")
         }
     }
