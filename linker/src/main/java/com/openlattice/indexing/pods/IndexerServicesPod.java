@@ -31,8 +31,8 @@ import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
+import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -47,7 +47,6 @@ import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
-import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
@@ -64,6 +63,7 @@ import com.openlattice.linking.Matcher;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
+import com.openlattice.organization.OrganizationBootstrap;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -116,6 +116,7 @@ public class IndexerServicesPod {
 
     @Inject
     private AssemblerConfiguration assemblerConfiguration;
+
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
         return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
@@ -143,10 +144,12 @@ public class IndexerServicesPod {
 
     @Bean
     public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
+        final var spm = new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                assembler());
+                assembler() );
+        AssemblerConnectionManager.initializeSecurePrincipalsManager( spm );
+        return spm;
     }
 
     @Bean
@@ -176,7 +179,7 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 userDirectoryService(),
                 principalService(),
-                assembler());
+                assembler() );
     }
 
     @Bean
