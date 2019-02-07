@@ -56,6 +56,7 @@ private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.j
 class AssemblerConnectionManager {
     companion object {
         private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
+
         private lateinit var assemblerConfiguration: AssemblerConfiguration
         private lateinit var hds: HikariDataSource
         private lateinit var securePrincipalsManager: SecurePrincipalsManager
@@ -88,7 +89,7 @@ class AssemblerConnectionManager {
         }
 
         @JvmStatic
-        fun initializeOrganizatons(organizations: HazelcastOrganizationService) {
+        fun initializeOrganizations(organizations: HazelcastOrganizationService) {
             if (this::organizations.isInitialized) {
                 logger.info("Ignoring organizations in assembler as it is already initialized.")
             } else {
@@ -388,8 +389,11 @@ class AssemblerConnectionManager {
                                     "OPTIONS ( user '${AssemblerConnectionManager.assemblerConfiguration.foreignUsername}', " +
                                     "password '${AssemblerConnectionManager.assemblerConfiguration.foreignPassword}')"
                     )
+                    logger.info("Reseting $PRODUCTION_SCHEMA")
+                    statement.execute( "DROP SCHEMA IF EXISTS $PRODUCTION_SCHEMA")
+                    statement.execute( "CREATE SCHEMA IF NOT EXISTS $PRODUCTION_SCHEMA")
                     logger.info("Created user mapping. ")
-                    statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO public")
+                    statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO $PRODUCTION_SCHEMA")
                     logger.info("Imported foreign schema")
                 }
             }
@@ -398,6 +402,7 @@ class AssemblerConnectionManager {
     }
 }
 
+const val PRODUCTION_SCHEMA = "prod"
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PostgresColumn.PRINCIPAL_TYPE.name} = ?"
 
 private val INSERT_MATERIALIZED_ENTITY_SET = "INSERT INTO ${PostgresTable.ORGANIZATION_ASSEMBLIES.name} (?,?) ON CONFLICT DO NOTHING"
