@@ -156,6 +156,14 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
+    public Role lookupRole( Principal principal ) {
+        if ( principal.getType() != PrincipalType.ROLE ) {
+            throw new IllegalArgumentException( "The provided principal is not a role" );
+        }
+        return ( Role ) principals.values( findPrincipal( principal ) ).stream().findFirst().get();
+    }
+
+    @Override
     public SecurablePrincipal getPrincipal( String principalId ) {
         final UUID id = checkNotNull( reservations.getId( principalId ), "AclKey not found for Principal %s", principalId );
         return Util.getSafely( principals, new AclKey( id ) );
@@ -321,6 +329,11 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         return principals.getAll( roles ).values();
     }
 
+    @Override
+    public Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions ) {
+        return authorizations.getAuthorizedPrincipalsOnSecurableObject( key, permissions );
+    }
+
     private void ensurePrincipalsExist( AclKey... aclKeys ) {
         ensurePrincipalsExist( "All principals must exists!", aclKeys );
     }
@@ -333,7 +346,6 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
     }

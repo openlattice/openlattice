@@ -22,9 +22,7 @@
 package com.openlattice.assembler
 
 import com.hazelcast.core.IMap
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.*
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.edm.EntitySet
@@ -43,11 +41,12 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import com.openlattice.organization.OrganizationEntitySetFlag
+import org.apache.olingo.commons.api.edm.FullQualifiedName
+import java.sql.Connection
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
 
-private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
 
 /**
  *
@@ -122,7 +121,7 @@ class AssemblerConnectionManager {
         }
 
         private fun initializeUsersAndRoles() {
-            if( this::securePrincipalsManager.isInitialized && this::hds.isInitialized && this::dbCredentialService.isInitialized ) {
+            if (this::securePrincipalsManager.isInitialized && this::hds.isInitialized && this::dbCredentialService.isInitialized) {
                 getAllRoles(securePrincipalsManager).map(::createRole)
                 getAllUsers(securePrincipalsManager).map(::createUnprivilegedUser)
                 logger.info("Creating users and roles.")
@@ -272,7 +271,67 @@ class AssemblerConnectionManager {
                     stmt.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS openlattice.${entitySet.name} AS $sql")
                 }
                 //Next we need to grant select on materialize view to everyone who has permission.
+                val selectGrantedCount = grantSelectForEntitySet(connection, entitySet, authorizedPropertyTypes)
+                logger.info("Granted select for $selectGrantedCount users/roles on materialized view " +
+                        "openlattice.${entitySet.name}")
             }
+        }
+
+        private fun grantSelectForEntitySet(
+                connection: Connection,
+                entitySet: EntitySet,
+                authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
+
+            val permissions = EnumSet.of(Permission.READ)
+            // collect all principals of type user, role, which have read access on entityset
+            val authorizedPrincipals = securePrincipalsManager
+                    .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id), permissions)
+                    .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
+                    .toSet()
+            // on every property type collect all principals of type user, role, which have read access
+            val authorizedPrincipalsOfProperties = authorizedPropertyTypes.values.map {
+                it.type to securePrincipalsManager
+                        .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id, it.id), permissions)
+                        .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
+            }.toMap()
+
+            // collect all authorized property types for principals which have read access on entity set
+            val authorizedPropertiesOfPrincipal = authorizedPrincipals
+                    .map { it to mutableSetOf<FullQualifiedName>() }.toMap()
+            authorizedPrincipalsOfProperties.forEach { fqn, principals ->
+                principals.forEach {
+                    authorizedPropertiesOfPrincipal[it]?.add(fqn)
+                }
+            }
+
+            // filter principals with no properties authorized
+            authorizedPrincipalsOfProperties.filter { it.value.isEmpty() }
+
+            // prepare batch queries
+            val tableName = "openlattice.${entitySet.name}"
+
+            return connection.createStatement().use { stmt ->
+                authorizedPropertiesOfPrincipal.forEach { principal, fqns ->
+                    val grantSelectSql = grantSelectSql(tableName, principal, fqns)
+                    stmt.addBatch(grantSelectSql)
+                }
+                stmt.executeBatch()
+            }.sum()
+        }
+
+        private fun grantSelectSql(
+                entitySetTableName: String,
+                principal: Principal,
+                properties: Set<FullQualifiedName>): String {
+            val postgresUserName = if(principal.type == PrincipalType.USER) {
+                DataTables.quote(principal.id)
+            } else {
+                buildSqlRolename(securePrincipalsManager.lookupRole(principal))
+            }
+            return "GRANT SELECT " +
+                    "(${properties.joinToString(","){DataTables.quote(it.fullQualifiedNameAsString)}}) " +
+                    "ON $entitySetTableName " +
+                    "TO $"
         }
 
         /**
@@ -390,8 +449,8 @@ class AssemblerConnectionManager {
                                     "password '${AssemblerConnectionManager.assemblerConfiguration.foreignPassword}')"
                     )
                     logger.info("Reseting $PRODUCTION_SCHEMA")
-                    statement.execute( "DROP SCHEMA IF EXISTS $PRODUCTION_SCHEMA")
-                    statement.execute( "CREATE SCHEMA IF NOT EXISTS $PRODUCTION_SCHEMA")
+                    statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_SCHEMA")
+                    statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_SCHEMA")
                     logger.info("Created user mapping. ")
                     statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO $PRODUCTION_SCHEMA")
                     logger.info("Imported foreign schema")
