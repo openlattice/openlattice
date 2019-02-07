@@ -18,15 +18,12 @@
 
 package com.openlattice.edm.requests;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.Principal;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,7 +52,7 @@ public class MetadataUpdate {
     private Optional<Boolean>                          defaultShow;
     private Optional<String>                           url;
     private Optional<LinkedHashMultimap<UUID, String>> propertyTags;
-    private Optional<Principal>                        organization;
+    private Optional<UUID>                             organizationId;
 
         @JsonCreator
     public MetadataUpdate(
@@ -68,7 +65,7 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.DEFAULT_SHOW ) Optional<Boolean> defaultShow,
             @JsonProperty( SerializationConstants.URL ) Optional<String> url,
             @JsonProperty( SerializationConstants.PROPERTY_TAGS ) Optional<LinkedHashMultimap<UUID, String>> propertyTags,
-            @JsonProperty(SerializationConstants.ORGANIZATION) Optional<Principal> organization ) {
+            @JsonProperty(SerializationConstants.ORGANIZATION) Optional<UUID> organizationId ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
@@ -89,7 +86,7 @@ public class MetadataUpdate {
         this.defaultShow = defaultShow;
         this.url = url;
         this.propertyTags = propertyTags;
-        this.organization = organization;
+        this.organizationId = organizationId;
     }
 
     @JsonProperty( SerializationConstants.TITLE_FIELD )
@@ -138,8 +135,8 @@ public class MetadataUpdate {
     }
 
     @JsonProperty(SerializationConstants.ORGANIZATION)
-    public Optional<Principal> getOrganization() {
-        return organization;
+    public Optional<UUID> getOrganizationId() {
+        return organizationId;
     }
 
     @Override public String toString() {
@@ -153,7 +150,7 @@ public class MetadataUpdate {
                 ", defaultShow=" + defaultShow +
                 ", url=" + url +
                 ", propertyTags=" + propertyTags +
-                ", organization=" + organization +
+                ", organization=" + organizationId +
                 '}';
     }
 
@@ -170,12 +167,12 @@ public class MetadataUpdate {
                 Objects.equals( defaultShow, that.defaultShow ) &&
                 Objects.equals( url, that.url ) &&
                 Objects.equals( propertyTags, that.propertyTags ) &&
-                Objects.equals( organization, that.organization );
+                Objects.equals( organizationId, that.organizationId );
     }
 
     @Override public int hashCode() {
         return Objects
-                .hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags, organization );
+                .hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags, organizationId );
     }
 
     //TODO: Delete the code below as it doesn't seem to be used.
