@@ -85,7 +85,7 @@ class OrganizationBootstrap(organizationService: HazelcastOrganizationService) {
             )
         }
 
-        private fun createOpenLatticeOrg(): Organization {s
+        private fun createOpenLatticeOrg(): Organization {
             val id = OPENLATTICE_ORGANIZATION_ID
             val title = "OpenLattice, Inc."
             return Organization(
