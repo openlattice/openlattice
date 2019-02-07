@@ -69,7 +69,7 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     }
 
     @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
-        return ResultSetAdapters.id( rs );
+        return ResultSetAdapters.organizationId( rs );
     }
 
     @Override public UUID generateTestKey() {
