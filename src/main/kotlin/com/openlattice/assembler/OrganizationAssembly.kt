@@ -21,6 +21,7 @@
 
 package com.openlattice.assembler
 
+import java.io.Serializable
 import java.util.*
 
 /**
@@ -32,7 +33,7 @@ data class OrganizationAssembly(
         val dbname: String,
         val entitySetIds: MutableSet<UUID> = mutableSetOf(),
         var initialized : Boolean = false
-) {
+) : Serializable {
 
 
 }

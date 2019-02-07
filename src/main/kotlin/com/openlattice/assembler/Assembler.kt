@@ -54,7 +54,7 @@ class Assembler(
         hazelcast: HazelcastInstance
 ) {
     private val entitySets = hazelcast.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
-    private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(HazelcastMap.ENTITY_SETS.name)
+    private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(HazelcastMap.ASSEMBLIES.name)
 
     fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {
         return assemblies[organizationId]?.entitySetIds ?: setOf()
