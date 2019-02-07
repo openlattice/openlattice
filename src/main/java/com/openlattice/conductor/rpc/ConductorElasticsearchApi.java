@@ -32,11 +32,9 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -93,7 +91,7 @@ public interface ConductorElasticsearchApi {
 
     // organizations setup consts
     final String ORGANIZATIONS     = "organizations";
-    final String ORGANIZATION      = "organization";
+    final String ORGANIZATION      = "com/openlattice/organization";
     final String ORGANIZATION_TYPE = "organizationType";
     final String ORGANIZATION_ID   = "organizationId";
 

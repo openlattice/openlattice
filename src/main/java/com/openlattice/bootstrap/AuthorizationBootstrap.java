@@ -20,9 +20,10 @@
 
 package com.openlattice.bootstrap;
 
-import static com.openlattice.bootstrap.BootstrapConstants.GLOBAL_ORGANIZATION_ID;
-import static com.openlattice.bootstrap.BootstrapConstants.OPENLATTICE_ORGANIZATION_ID;
-import static com.openlattice.bootstrap.BootstrapConstants.ROOT_PRINCIPAL_ID;
+
+import static com.openlattice.organization.OrganizationConstants.GLOBAL_ORGANIZATION_ID;
+import static com.openlattice.organization.OrganizationConstants.OPENLATTICE_ORGANIZATION_ID;
+import static com.openlattice.organization.OrganizationConstants.ROOT_PRINCIPAL_ID;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;

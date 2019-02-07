@@ -52,7 +52,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         out.writeBoolean( object.isLinking() );
         SetStreamSerializers.fastUUIDSetSerialize( out, object.getLinkedEntitySets() );
         out.writeBoolean( object.isExternal() );
-        out.writeUTF( object.getOrganizationId() );
+        UUIDStreamSerializer.serialize( out, object.getOrganizationId() );
 
     }
 
@@ -67,7 +67,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         Optional<Boolean> linking = Optional.of( in.readBoolean() );
         Optional<Set<UUID>> linkedEntitySets = Optional.of( SetStreamSerializers.fastUUIDSetDeserialize( in ) );
         Optional<Boolean> external = Optional.of( in.readBoolean() );
-        Principal organization = new Principal( PrincipalType.ORGANIZATION, in.readUTF() );
+        UUID organizationId = UUIDStreamSerializer.deserialize( in );
         EntitySet es = new EntitySet(
                 id,
                 entityTypeId,
@@ -78,7 +78,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 linking,
                 linkedEntitySets,
                 external,
-                Optional.of( organization ) );
+                Optional.of( organizationId ) );
 
         return es;
     }
