@@ -287,39 +287,41 @@ class AssemblerConnectionManager {
                     entitySet.isLinking,
                     entitySet.isLinking
             )
+            
+            val tableName = "openlattice.${quote(entitySet.name)}"
+            datasource.connection.use { connection ->
+                val sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
 
-                datasource.connection.use { connection ->
-                    val sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS openlattice.${quote(entitySet.name)} AS $sql"
-
-                    logger.info("Executing create materialize view sql: {}", sql )
-                    connection.createStatement().use { stmt ->
-                        stmt.execute(sql)
-                    }
-                    //Next we need to grant select on materialize view to everyone who has permission.
-                    val selectGrantedCount = grantSelectForEntitySet(connection, entitySet, authorizedPropertyTypes)
-                    logger.info(
-                            "Granted select for $selectGrantedCount users/roles on materialized view " +
-                                    "openlattice.${entitySet.name}"
-                    )
+                logger.info("Executing create materialize view sql: {}", sql)
+                connection.createStatement().use { stmt ->
+                    stmt.execute(sql)
                 }
+                //Next we need to grant select on materialize view to everyone who has permission.
+                val selectGrantedCount = grantSelectForEntitySet(connection, tableName, entitySet.id, authorizedPropertyTypes)
+                logger.info(
+                        "Granted select for $selectGrantedCount users/roles on materialized view " +
+                                "openlattice.${entitySet.name}"
+                )
+            }
 
         }
 
         private fun grantSelectForEntitySet(
                 connection: Connection,
-                entitySet: EntitySet,
+                tableName: String,
+                entitySetId: UUID,
                 authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
 
             val permissions = EnumSet.of(Permission.READ)
             // collect all principals of type user, role, which have read access on entityset
             val authorizedPrincipals = securePrincipalsManager
-                    .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id), permissions)
+                    .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), permissions)
                     .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
                     .toSet()
             // on every property type collect all principals of type user, role, which have read access
             val authorizedPrincipalsOfProperties = authorizedPropertyTypes.values.map {
                 it.type to securePrincipalsManager
-                        .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id, it.id), permissions)
+                        .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId, it.id), permissions)
                         .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
             }.toMap()
 
@@ -336,8 +338,6 @@ class AssemblerConnectionManager {
             authorizedPrincipalsOfProperties.filter { it.value.isEmpty() }
 
             // prepare batch queries
-            val tableName = "openlattice.${entitySet.name}"
-
             return connection.createStatement().use { stmt ->
                 authorizedPropertiesOfPrincipal.forEach { principal, fqns ->
                     val grantSelectSql = grantSelectSql(tableName, principal, fqns)
