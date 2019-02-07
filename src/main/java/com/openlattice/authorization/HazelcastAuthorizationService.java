@@ -54,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.openlattice.organizations.PrincipalSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -358,9 +359,9 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     }
 
     @Override
-    public Iterable<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions ) {
-        final Map<AclKey, Set<Principal>> principalMap = new HashMap<>();
-        principalMap.put( key, new HashSet<>() );
+    public Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions ) {
+        final Map<AclKey, PrincipalSet> principalMap = new HashMap<>();
+        principalMap.put( key, new PrincipalSet( new HashSet<>() ) );
 
         PrincipalAggregator agg = aces.aggregate(
                 new PrincipalAggregator( ( principalMap ) ), matches( key, permissions ) );
