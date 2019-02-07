@@ -275,7 +275,7 @@ class AssemblerConnectionManager {
                 authorizedPropertyTypes: Map<UUID, PropertyType>
         ) {
             val entitySet = entitySets[entitySetId]!!
-            val propertyFqns = authorizedPropertyTypes.mapValues { it.value.type.fullQualifiedNameAsString }
+            val propertyFqns = authorizedPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
             val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
                     mapOf(),
                     propertyFqns,
