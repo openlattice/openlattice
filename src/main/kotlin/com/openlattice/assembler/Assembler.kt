@@ -56,60 +56,38 @@ class Assembler(
     private val entitySets = hazelcast.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(HazelcastMap.ENTITY_SETS.name)
 
-    private val target = connect("postgres")
-
-    fun initializeRolesAndUsers(spm: SecurePrincipalsManager) {
-
-    }
-
-
-
-
-
-    fun materializeEntityTypes(datasource: HikariDataSource) {
-        TODO("Materialize entity types")
-    }
-
-    fun materializePropertyTypes(datasource: HikariDataSource) {
-        TODO("Materialize property types")
-    }
-
-
-
-
-
-
     fun getMaterializedEntitySets( organizationId: UUID) : Set<UUID> {
         return assemblies[organizationId]?.entitySetIds ?: setOf()
     }
+
     fun getOrganizationAssembly(organizationId: UUID): OrganizationAssembly {
         return assemblies[organizationId]!!
     }
 
-    private fun dropDatabase(organizationId: UUID, dbname: String) {
-        val db = quote(dbname)
-        val dbRole = quote("${dbname}_role")
-        val unquotedDbAdminUser = buildUserId(organizationId)
-        val dbAdminUser = quote(unquotedDbAdminUser)
-        val dbAdminUserPassword = dbCredentialService.createUser(unquotedDbAdminUser)
-
-        val dropDbUser = "DROP ROLE $dbAdminUser"
-        //TODO: If we grant this role to other users, we need to make sure we drop it
-        val dropDbRole = "DROP ROLE $dbRole"
-        val dropDb = " DROP DATABASE $db"
-
-
-        //We connect to default db in order to do initial db setup
-
-        target.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute(dropDbUser)
-                statement.execute(dropDbRole)
-                statement.execute(dropDb)
-                return@use
-            }
-        }
-    }
+//    private fun dropDatabase(organizationId: UUID, dbname: String) {
+//        val db = quote(dbname)
+//        val dbRole = quote("${dbname}_role")
+//        val unquotedDbAdminUser = buildUserId(organizationId)
+//        val dbAdminUser = quote(unquotedDbAdminUser)
+//        val dbAdminUserPassword = dbCredentialService.createUser(unquotedDbAdminUser)
+//
+//        val dropDbUser = "DROP ROLE $dbAdminUser"
+//        //TODO: If we grant this role to other users, we need to make sure we drop it
+//        val dropDbRole = "DROP ROLE $dbRole"
+//        val dropDb = " DROP DATABASE $db"
+//
+//
+//        //We connect to default db in order to do initial db setup
+//
+//        target.connection.use { connection ->
+//            connection.createStatement().use { statement ->
+//                statement.execute(dropDbUser)
+//                statement.execute(dropDbRole)
+//                statement.execute(dropDb)
+//                return@use
+//            }
+//        }
+//    }
 
     fun createOrganization(organization: Organization) {
         assemblies.set( organization.id , OrganizationAssembly(organization.id, organization.principal.id) )
