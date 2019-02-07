@@ -56,14 +56,15 @@ private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.j
 class AssemblerConnectionManager {
     companion object {
         private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
-        
+
         lateinit var assemblerConfiguration: AssemblerConfiguration
-        private lateinit var hds: HikariDataSource
-        private lateinit var securePrincipalsManager: SecurePrincipalsManager
-        private lateinit var organizations: HazelcastOrganizationService
-        private lateinit var dbCredentialService: DbCredentialService
-        private lateinit var entitySets: IMap<UUID, EntitySet>
-        private lateinit var target: HikariDataSource
+
+        lateinit var hds: HikariDataSource
+        lateinit var securePrincipalsManager: SecurePrincipalsManager
+        lateinit var organizations: HazelcastOrganizationService
+        lateinit var dbCredentialService: DbCredentialService
+        lateinit var entitySets: IMap<UUID, EntitySet>
+        lateinit var target: HikariDataSource
 
 
         @JvmStatic
@@ -139,16 +140,16 @@ class AssemblerConnectionManager {
                 initializeUsersAndRoles()
             }
         }
-
-        @JvmStatic
-        fun getSecurePrincipalsManager(): SecurePrincipalsManager {
-            return securePrincipalsManager
-        }
-
-        @JvmStatic
-        fun getDbCredentialService(): DbCredentialService {
-            return dbCredentialService
-        }
+//
+//        @JvmStatic
+//        fun getSecurePrincipalsManager(): SecurePrincipalsManager {
+//            return securePrincipalsManager
+//        }
+//
+//        @JvmStatic
+//        fun getDbCredentialService(): DbCredentialService {
+//            return dbCredentialService
+//        }
 
         @JvmStatic
         fun connect(dbname: String): HikariDataSource {
