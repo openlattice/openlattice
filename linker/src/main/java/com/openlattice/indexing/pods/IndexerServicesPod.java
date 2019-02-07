@@ -27,6 +27,7 @@ import static com.openlattice.linking.MatcherKt.KERAS;
 
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.assembler.Assembler;
@@ -57,6 +58,7 @@ import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Matcher;
@@ -169,6 +171,31 @@ public class IndexerServicesPod {
                 dbcs(),
                 hikariDataSource,
                 hazelcastInstance );
+    }
+
+    @Bean
+    public AssemblerConnectionManager bootstrapRolesAndUsers() {
+        final var hos = organizationsManager();
+
+        AssemblerConnectionManager.initializeAssemblerConfiguration( assemblerConfiguration );
+        AssemblerConnectionManager.initializeProductionDatasource( hikariDataSource );
+        AssemblerConnectionManager.initializeSecurePrincipalsManager( principalService() );
+        AssemblerConnectionManager.initializeOrganizations( hos );
+        AssemblerConnectionManager.initializeDbCredentialService( dbcs() );
+        AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
+        AssemblerConnectionManager.initializeUsersAndRoles();
+
+        if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
+            final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );
+            final var org = hos.getOrganization( es.getOrganizationId() );
+            final var apt = dataModelService()
+                    .getPropertyTypesAsMap( dataModelService().getEntityType( es.getEntityTypeId() ).getProperties() );
+            AssemblerConnectionManager.createOrganizationDatabase( org.getId() );
+            final var results = AssemblerConnectionManager
+                    .materializeEntitySets( org.getId(), ImmutableMap.of( es.getId(), apt ) );
+            logger.info( "Results of materializing: {}", results );
+        }
+        return new AssemblerConnectionManager();
     }
 
     @Bean
