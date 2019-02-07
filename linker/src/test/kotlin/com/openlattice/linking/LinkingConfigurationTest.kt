@@ -44,7 +44,10 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
 
     override fun getSampleData(): LinkingConfiguration {
         return LinkingConfiguration(
-                listOf("blah.boo", "foo.fah").map(::FullQualifiedName).toSet(), RandomUtils.nextInt(),
+                listOf("blah.boo", "foo.fah")
+                        .map(::FullQualifiedName)
+                        .map(FullQualifiedName::getFullQualifiedNameAsString)
+                        .toSet(), RandomUtils.nextInt(),
                 Optional.of(setOf(UUID.randomUUID())),
                 setOf(UUID.randomUUID())
         )
