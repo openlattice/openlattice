@@ -130,6 +130,9 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private void createSecurablePrincipal( SecurablePrincipal principal ) {
         reservations.reserveIdAndValidateType( principal, principal::getName );
         principals.set( principal.getAclKey(), principal );
+        if ( !principalTrees.containsKey( principal.getAclKey() ) ) {
+            principalTrees.set( principal.getAclKey(), new AclKeySet() );
+        }
 
         securableObjectTypes.putIfAbsent( principal.getAclKey(), principal.getCategory() );
         switch ( principal.getPrincipalType() ) {
@@ -221,20 +224,13 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     @Override
     public void addPrincipalToPrincipal( AclKey source, AclKey target ) {
         ensurePrincipalsExist( source, target );
-        if ( !principalTrees.containsKey( source ) ) {
-            principalTrees.set( source, new AclKeySet( ImmutableSet.of( target ) ) );
-        } else {
-            principalTrees
-                    .executeOnKey( target, new NestedPrincipalMerger( ImmutableSet.of( source ) ) );
-        }
+        principalTrees.executeOnKey( target, new NestedPrincipalMerger( ImmutableSet.of( source ) ) );
     }
 
     @Override
     public void removePrincipalFromPrincipal( AclKey source, AclKey target ) {
         ensurePrincipalsExist( source, target );
-        principalTrees
-                .executeOnKey( target, new NestedPrincipalRemover( ImmutableSet.of( source ) ) );
-
+        principalTrees.executeOnKey( target, new NestedPrincipalRemover( ImmutableSet.of( source ) ) );
     }
 
     @Override
@@ -267,7 +263,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     @Override
     public boolean principalHasChildPrincipal( AclKey parent, AclKey child ) {
-        return principalTrees.containsKey( parent ) && principalTrees.get( parent ).contains( child );
+        return principalTrees.get( parent ).contains( child );
     }
 
     @Override
