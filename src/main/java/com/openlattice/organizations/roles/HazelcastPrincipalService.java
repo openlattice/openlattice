@@ -32,6 +32,7 @@ import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AclKeySet;
 import com.openlattice.authorization.AuthorizationManager;
@@ -129,9 +130,9 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         securableObjectTypes.putIfAbsent( principal.getAclKey(), principal.getCategory() );
         switch ( principal.getPrincipalType() ) {
             case USER:
-                assembler.createUnprivilegedUser( principal );
+                AssemblerConnectionManager.createUnprivilegedUser( principal );
             case ROLE:
-                assembler.createRole( (Role) principal );
+                AssemblerConnectionManager.createRole( (Role) principal );
         }
     }
 
