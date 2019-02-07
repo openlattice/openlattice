@@ -170,7 +170,7 @@ class AssemblerConnectionManager {
             config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
                 "${(jdbcUrl as String).removeSuffix(
                         "/"
-                )}/$dbname?ssl=true"
+                )}/$dbname" + if(assemblerConfiguration.ssl ){ "?ssl=true" }  else { "" }
             }
             return HikariDataSource(HikariConfig(config))
         }
