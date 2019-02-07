@@ -519,8 +519,8 @@ public final class ResultSetAdapters {
         Optional<Boolean> linking = Optional.ofNullable( linking( rs ) );
         Optional<Set<UUID>> linkedEntitySets = Optional.of( linkedEntitySets( rs ) );
         Optional<Boolean> external = Optional.ofNullable( external( rs ) );
-        Optional<Principal> organization = Optional
-                .of( new Principal( PrincipalType.ORGANIZATION, rs.getString( ORGANIZATION_ID_FIELD ) ) );
+        Optional<UUID> organization = Optional
+                .of( rs.getObject( ORGANIZATION_ID_FIELD, UUID.class ) );
         return new EntitySet( id,
                 entityTypeId,
                 name,
