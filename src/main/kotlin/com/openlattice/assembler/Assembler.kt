@@ -23,10 +23,12 @@ package com.openlattice.assembler
 
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.assembler.AssemblerConnectionManager.Companion.connect
+import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organization.Organization
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn
@@ -107,6 +109,11 @@ class Assembler(
                 return@use
             }
         }
+    }
+
+    fun createOrganization(organization: Organization) {
+        assemblies.set( organization.id , OrganizationAssembly(organization.id, organization.principal.id) )
+        assemblies.executeOnKey(organization.id, InitializeOrganizationAssemblyProcessor())
     }
 }
 
