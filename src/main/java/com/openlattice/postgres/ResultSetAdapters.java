@@ -87,7 +87,7 @@ public final class ResultSetAdapters {
     private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
 
-    @NotNull public static OrganizationAssembly materializedEntitySet( @NotNull ResultSet rs ) throws SQLException {
+    @NotNull public static OrganizationAssembly organizationAssembly( @NotNull ResultSet rs ) throws SQLException {
         final UUID organizationId = rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
         final Set<UUID> entitySetIds = Sets.newHashSet( PostgresArrays.getUuidArray( rs, ENTITY_SET_IDS.getName() ) );
         final String dbname = rs.getString( DB_NAME.getName() );
