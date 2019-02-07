@@ -27,11 +27,13 @@ import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import org.springframework.stereotype.Component
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Component
 class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<OrganizationAssembly> {
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.ORGANIZATION_ASSEMBLY.ordinal
