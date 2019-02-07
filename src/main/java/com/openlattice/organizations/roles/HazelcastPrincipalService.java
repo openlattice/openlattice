@@ -131,8 +131,10 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         switch ( principal.getPrincipalType() ) {
             case USER:
                 AssemblerConnectionManager.createUnprivilegedUser( principal );
+                break;
             case ROLE:
                 AssemblerConnectionManager.createRole( (Role) principal );
+                break;
         }
     }
 
