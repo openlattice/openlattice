@@ -60,26 +60,22 @@ class AssemblerConnectionManager {
         lateinit var assemblerConfiguration: AssemblerConfiguration
 
 
-        @JvmStatic
-        lateinit var hds: HikariDataSource
-        @JvmStatic
-        lateinit var securePrincipalsManager: SecurePrincipalsManager
-        @JvmStatic
-        lateinit var organizations: HazelcastOrganizationService
-        @JvmStatic
-        lateinit var dbCredentialService: DbCredentialService
-        @JvmStatic
-        lateinit var entitySets: IMap<UUID, EntitySet>
-        @JvmStatic
-        lateinit var target: HikariDataSource
+        private lateinit var hds: HikariDataSource
+        private lateinit var securePrincipalsManager: SecurePrincipalsManager
+        private lateinit var organizations: HazelcastOrganizationService
+        private lateinit var dbCredentialService: DbCredentialService
+        private lateinit var entitySets: IMap<UUID, EntitySet>
+        private lateinit var target: HikariDataSource
 
+        private val initialized = BooleanArray(6) { false }
 
         @JvmStatic
         fun initializeEntitySets(entitySets: IMap<UUID, EntitySet>) {
-            if (this::entitySets.isInitialized) {
+            if (initialized[0]) {
                 logger.info("Ignoring entity sets in assembler as it is already initialized.")
             } else {
                 this.entitySets = entitySets
+                initialized[0] = true
                 logger.info("Initialized entity sets in assembler")
             }
         }
@@ -87,68 +83,72 @@ class AssemblerConnectionManager {
 
         @JvmStatic
         fun initializeProductionDatasource(hds: HikariDataSource) {
-            if (this::hds.isInitialized) {
+            if (initialized[1]) {
                 logger.info("Ignoring production datasource in assembler as it is already initialized.")
             } else {
                 this.hds = hds
                 logger.info("Initialized production datasource in assembler")
+                initialized[1] = true
                 initializeUsersAndRoles()
             }
         }
 
         @JvmStatic
         fun initializeOrganizations(organizations: HazelcastOrganizationService) {
-            if (this::organizations.isInitialized) {
+            if (initialized[2]) {
                 logger.info("Ignoring organizations in assembler as it is already initialized.")
             } else {
                 this.organizations = organizations
-
+                initialized[2] = true
                 logger.info("Initialized organizations in assembler.")
             }
         }
 
         @JvmStatic
         fun initializeAssemblerConfiguration(assemblerConfiguration: AssemblerConfiguration) {
-            if (this::assemblerConfiguration.isInitialized) {
+            if (initialized[3]) {
                 logger.info("Ignoring assembler in assembler {} as it is already initialized.", assemblerConfiguration)
             } else {
                 this.assemblerConfiguration = assemblerConfiguration
                 target = connect("postgres")
+                initialized[3] = true
                 logger.info("Assembler in assembler initialized to: {}", assemblerConfiguration)
             }
         }
 
         @JvmStatic
         fun initializeSecurePrincipalsManager(securePrincipalsManager: SecurePrincipalsManager) {
-            if (this::securePrincipalsManager.isInitialized) {
+            if (initialized[4]) {
                 logger.info("Ignoring principals manager as it is already initialized.")
             } else {
                 this.securePrincipalsManager = securePrincipalsManager
                 logger.info("Principals manager initialized.")
+                initialized[4] = true
                 initializeUsersAndRoles()
             }
         }
 
         @JvmStatic
         fun initializeUsersAndRoles() {
-            if (this::securePrincipalsManager.isInitialized && this::hds.isInitialized && this::dbCredentialService.isInitialized) {
+            if (initialized[4] && initialized[0] && initialized[5]) {
                 getAllRoles(securePrincipalsManager).map(::createRole)
                 getAllUsers(securePrincipalsManager).map(::createUnprivilegedUser)
                 logger.info("Creating users and roles.")
             }
 
-            if (this::assemblerConfiguration.isInitialized) {
+            if (initialized[3]) {
                 target = connect("postgres")
             }
         }
 
         @JvmStatic
         fun initializeDbCredentialService(dbCredentialService: DbCredentialService) {
-            if (this::dbCredentialService.isInitialized) {
+            if (initialized[5]) {
                 logger.info("Ignoring db credential service as it is already initialized.", dbCredentialService)
             } else {
                 this.dbCredentialService = dbCredentialService
                 logger.info("Db credential service initialized.")
+                initialized[5] = true
                 initializeUsersAndRoles()
             }
         }
