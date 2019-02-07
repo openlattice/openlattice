@@ -107,7 +107,7 @@ public interface OrganizationsApi {
             @Body EnumSet<OrganizationEntitySetFlag> flagFilter );
 
     /**
-     * Materializes enum sets into the organization database.
+     * Materializes entity sets into the organization database.
      *
      * @param entitySetIds The ids of the entity sets which to assemble into materialized views.
      */
