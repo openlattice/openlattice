@@ -19,7 +19,6 @@
 package com.openlattice.organization;
 
 import java.util.EnumSet;
-import organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +33,6 @@ import retrofit2.http.HTTP;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
-import retrofit2.http.Query;
 
 public interface OrganizationsApi {
     /*

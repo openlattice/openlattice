@@ -29,6 +29,7 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.organization.OrganizationConstants;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -50,7 +51,7 @@ public class EntitySet extends AbstractSecurableObject {
     private final boolean     external;
     private       String      name;
     private       Set<String> contacts;
-    private       Principal   organization;
+    private       UUID   organizationId;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
@@ -71,7 +72,7 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.LINKING ) Optional<Boolean> linking,
             @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS ) Optional<Set<UUID>> linkedEntitySets,
             @JsonProperty( SerializationConstants.EXTERNAL ) Optional<Boolean> external,
-            @JsonProperty( SerializationConstants.ORGANIZATION ) Optional<Principal> organization ) {
+            @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId ) {
         super( id, title, description );
         this.linking = linking.orElse( false );
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
@@ -85,7 +86,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.entityTypeId = checkNotNull( entityTypeId );
         this.contacts = Sets.newHashSet( contacts );
         this.external = external.orElse( true ); //Default to external
-        this.organization = organization.orElse( SerializationConstants.GLOBAL_ORG_PRINCIPAL );
+        this.organizationId = organizationId.orElse( OrganizationConstants.GLOBAL_ORGANIZATION_ID );
     }
 
     public EntitySet(
@@ -125,14 +126,9 @@ public class EntitySet extends AbstractSecurableObject {
                 Optional.empty() );
     }
 
-    @JsonProperty( SerializationConstants.ORGANIZATION )
-    public Principal getOrganization() {
-        return organization;
-    }
-
-    @JsonIgnore
-    public String getOrganizationId() {
-        return organization.getId();
+    @JsonProperty( SerializationConstants.ORGANIZATION_ID )
+    public UUID getOrganizationId() {
+        return organizationId;
     }
 
     @JsonProperty( SerializationConstants.ENTITY_TYPE_ID )
