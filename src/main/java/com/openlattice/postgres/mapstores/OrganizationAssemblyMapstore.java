@@ -72,13 +72,15 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         return ResultSetAdapters.organizationId( rs );
     }
 
+    private final UUID testKey = UUID.randomUUID();
+
     @Override public UUID generateTestKey() {
-        return UUID.randomUUID();
+        return testKey;
     }
 
     @Override public OrganizationAssembly generateTestValue() {
         return new OrganizationAssembly(
-                UUID.randomUUID(),
+                testKey,
                 RandomStringUtils.randomAlphanumeric( 10 ),
                 ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ),
                 false );
