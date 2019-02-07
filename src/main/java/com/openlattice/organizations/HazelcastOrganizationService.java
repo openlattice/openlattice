@@ -35,6 +35,7 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
@@ -175,7 +176,7 @@ public class HazelcastOrganizationService {
         authorizations.addPermission( organization.getAclKey(), principal, EnumSet.allOf( Permission.class ) );
         //We add the user/role that created the organization to the admin role for the organization
         addRoleToPrincipalInOrganization( organization.getId(), adminRole.getId(), principal );
-        assembler.createOrganizationDatabase( organization, securePrincipalsManager );
+        assembler.createOrganization( organization );
         eventBus.post( new OrganizationCreatedEvent( organization ) );
     }
 
@@ -366,7 +367,7 @@ public class HazelcastOrganizationService {
          */
         securePrincipalsManager.createSecurablePrincipalIfNotExists( callingUser, role );
         authorizations.addPermission( role.getAclKey(), orgPrincipal.getPrincipal(), EnumSet.of( Permission.READ ) );
-        assembler.createRole( role );
+        AssemblerConnectionManager.createRole( role );
     }
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {

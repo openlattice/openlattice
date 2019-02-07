@@ -100,9 +100,18 @@ public interface SecurePrincipalsManager {
 
     AclKey lookup( Principal p );
 
+    Role lookupRole( Principal principal );
+
     Collection<Principal> getPrincipals( Predicate<AclKey, SecurablePrincipal> p );
 
     Collection<SecurablePrincipal> getSecurablePrincipals( Set<Principal> members );
 
     Collection<SecurablePrincipal> getAllPrincipals( SecurablePrincipal sp );
+
+    /**
+     * Returns all Principals, which have all the specified permissions on the securable object
+     * @param key The securable object
+     * @param permissions Set of permission to check for
+     */
+    Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
 }

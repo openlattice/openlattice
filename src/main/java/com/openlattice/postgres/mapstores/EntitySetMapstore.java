@@ -39,7 +39,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setBoolean( 7, value.isLinking() );
         ps.setArray( 8, linkedEntitySets );
         ps.setBoolean( 9, value.isExternal() );
-        ps.setString(10, value.getOrganizationId() );
+        ps.setObject(10, value.getOrganizationId() );
 
         // UPDATE
         ps.setString( 11, value.getName() );
@@ -50,7 +50,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setBoolean( 16, value.isLinking() );
         ps.setArray( 17, linkedEntitySets );
         ps.setBoolean( 18, value.isExternal() );
-        ps.setString(19, value.getOrganizationId() );
+        ps.setObject(19, value.getOrganizationId() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {

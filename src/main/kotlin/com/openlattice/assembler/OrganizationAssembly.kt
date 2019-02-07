@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,22 +16,24 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.bootstrap;
+package com.openlattice.assembler
 
-import java.util.UUID;
+import java.io.Serializable
+import java.util.*
 
 /**
+ *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public final class BootstrapConstants {
-    public static final UUID OPENLATTICE_ORGANIZATION_ID = new UUID( 0, 0 );
-    public static final UUID ROOT_PRINCIPAL_ID           = new UUID( 0, 1 );
+data class OrganizationAssembly(
+        val organizationId: UUID,
+        val dbname: String,
+        val entitySetIds: MutableSet<UUID> = mutableSetOf(),
+        var initialized : Boolean = false
+) {
 
-    public static final UUID GLOBAL_ORGANIZATION_ID      = new UUID( 1, 0 );
 
-
-    private BootstrapConstants() {
-    }
 }

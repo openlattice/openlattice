@@ -32,6 +32,7 @@ import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AclKeySet;
 import com.openlattice.authorization.AuthorizationManager;
@@ -129,9 +130,9 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         securableObjectTypes.putIfAbsent( principal.getAclKey(), principal.getCategory() );
         switch ( principal.getPrincipalType() ) {
             case USER:
-                assembler.createUnprivilegedUser( principal );
+                AssemblerConnectionManager.createUnprivilegedUser( principal );
             case ROLE:
-                assembler.createRole( (Role) principal );
+                AssemblerConnectionManager.createRole( (Role) principal );
         }
     }
 
@@ -155,8 +156,16 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
+    public Role lookupRole( Principal principal ) {
+        if ( principal.getType() != PrincipalType.ROLE ) {
+            throw new IllegalArgumentException( "The provided principal is not a role" );
+        }
+        return ( Role ) principals.values( findPrincipal( principal ) ).stream().findFirst().get();
+    }
+
+    @Override
     public SecurablePrincipal getPrincipal( String principalId ) {
-        final UUID id = checkNotNull( reservations.getId( principalId ), "AclKey not found for Principal" );
+        final UUID id = checkNotNull( reservations.getId( principalId ), "AclKey not found for Principal %s", principalId );
         return Util.getSafely( principals, new AclKey( id ) );
     }
 
@@ -320,6 +329,11 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         return principals.getAll( roles ).values();
     }
 
+    @Override
+    public Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions ) {
+        return authorizations.getAuthorizedPrincipalsOnSecurableObject( key, permissions );
+    }
+
     private void ensurePrincipalsExist( AclKey... aclKeys ) {
         ensurePrincipalsExist( "All principals must exists!", aclKeys );
     }
@@ -332,7 +346,6 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
     }

@@ -33,10 +33,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 import com.google.common.eventbus.EventBus;
+import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.openlattice.authorization.aggregators.AuthorizationAggregator;
+import com.openlattice.authorization.aggregators.PrincipalAggregator;
 import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.processors.PermissionMerger;
@@ -51,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.openlattice.organizations.PrincipalSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -351,8 +355,18 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     @Timed
     @Override
     public Acl getAllSecurableObjectPermissions( AclKey key ) {
-
         return aqs.getAclsForSecurableObject( key );
+    }
+
+    @Override
+    public Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions ) {
+        final Map<AclKey, PrincipalSet> principalMap = new HashMap<>();
+        principalMap.put( key, new PrincipalSet( new HashSet<>() ) );
+
+        PrincipalAggregator agg = aces.aggregate(
+                new PrincipalAggregator( ( principalMap ) ), matches( key, permissions ) );
+
+        return agg.getResult().get( key );
     }
 
     @Timed
@@ -394,6 +408,10 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     private static Predicate matches( Collection<AclKey> aclKeys, Set<Principal> principals ) {
         return Predicates.and( hasAnyAclKeys( aclKeys ), hasAnyPrincipals( principals ) );
+    }
+
+    private static Predicate matches( AclKey aclKey, EnumSet<Permission> permissions ) {
+        return Predicates.and( hasAclKey( aclKey ), hasExactPermissions( permissions ) );
     }
 
     private static Predicate hasExactPermissions( EnumSet<Permission> permissions ) {

@@ -20,12 +20,11 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.serializers.AuthorizationAggregatorStreamSerializer;
 import com.openlattice.authorization.Permission;
 import com.openlattice.mapstores.TestDataFactory;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationAggregator;
+import com.openlattice.authorization.aggregators.AuthorizationAggregator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;

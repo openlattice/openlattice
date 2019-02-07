@@ -26,7 +26,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationAggregator;
+import com.openlattice.authorization.aggregators.AuthorizationAggregator;
 import com.openlattice.authorization.Permission;
 import java.io.IOException;
 import java.util.EnumMap;

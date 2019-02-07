@@ -117,6 +117,13 @@ public interface AuthorizationManager {
 
     Acl getAllSecurableObjectPermissions( AclKey key );
 
+    /**
+     * Returns all Principals, which have all the specified permissions on the securable object
+     * @param key The securable object
+     * @param permissions Set of permission to check for
+     */
+    Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
+
     Stream<AclKey> getAuthorizedObjectsOfType(
             Principal principal,
             SecurableObjectType objectType,
