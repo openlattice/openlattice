@@ -510,7 +510,7 @@ public final class TestDataFactory {
                 Optional.empty(),
                 Optional.of( RandomStringUtils.randomAlphanumeric( 4 ) ),
                 Optional.of( propertyTags ),
-                Optional.of( organizationPrincipal() ) );
+                Optional.of( UUID.randomUUID() ) );
     }
 
     public static SearchDetails searchDetails() {

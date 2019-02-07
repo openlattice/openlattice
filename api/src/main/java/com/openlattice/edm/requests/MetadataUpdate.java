@@ -18,18 +18,17 @@
 
 package com.openlattice.edm.requests;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.Principal;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import java.util.Map;
+
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -42,8 +41,8 @@ import java.util.Set;
 public class MetadataUpdate {
 
     // Common across property type, entity type, entity set
-    private Optional<String>                    title;
-    private Optional<String>                    description;
+    private Optional<String>                           title;
+    private Optional<String>                           description;
     // Specific to entity set
     private Optional<String>                           name;
     private Optional<Set<String>>                      contacts;
@@ -55,9 +54,9 @@ public class MetadataUpdate {
     private Optional<Boolean>                          defaultShow;
     private Optional<String>                           url;
     private Optional<LinkedHashMultimap<UUID, String>> propertyTags;
-    private Optional<Principal>                        organization;
+    private Optional<UUID>                             organizationId;
 
-        @JsonCreator
+    @JsonCreator
     public MetadataUpdate(
             @JsonProperty( SerializationConstants.TITLE_FIELD ) Optional<String> title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
@@ -67,8 +66,9 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> pii,
             @JsonProperty( SerializationConstants.DEFAULT_SHOW ) Optional<Boolean> defaultShow,
             @JsonProperty( SerializationConstants.URL ) Optional<String> url,
-            @JsonProperty( SerializationConstants.PROPERTY_TAGS ) Optional<LinkedHashMultimap<UUID, String>> propertyTags,
-            @JsonProperty(SerializationConstants.ORGANIZATION) Optional<Principal> organization ) {
+            @JsonProperty( SerializationConstants.PROPERTY_TAGS )
+                    Optional<LinkedHashMultimap<UUID, String>> propertyTags,
+            @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
                 "Title cannot be blank." );
@@ -89,7 +89,7 @@ public class MetadataUpdate {
         this.defaultShow = defaultShow;
         this.url = url;
         this.propertyTags = propertyTags;
-        this.organization = organization;
+        this.organizationId = organizationId;
     }
 
     @JsonProperty( SerializationConstants.TITLE_FIELD )
@@ -137,9 +137,9 @@ public class MetadataUpdate {
         return propertyTags;
     }
 
-    @JsonProperty(SerializationConstants.ORGANIZATION)
-    public Optional<Principal> getOrganization() {
-        return organization;
+    @JsonProperty( SerializationConstants.ORGANIZATION_ID )
+    public Optional<UUID> getOrganizationId() {
+        return organizationId;
     }
 
     @Override public String toString() {
@@ -153,7 +153,7 @@ public class MetadataUpdate {
                 ", defaultShow=" + defaultShow +
                 ", url=" + url +
                 ", propertyTags=" + propertyTags +
-                ", organization=" + organization +
+                ", organization=" + organizationId +
                 '}';
     }
 
@@ -170,12 +170,12 @@ public class MetadataUpdate {
                 Objects.equals( defaultShow, that.defaultShow ) &&
                 Objects.equals( url, that.url ) &&
                 Objects.equals( propertyTags, that.propertyTags ) &&
-                Objects.equals( organization, that.organization );
+                Objects.equals( organizationId, that.organizationId );
     }
 
     @Override public int hashCode() {
         return Objects
-                .hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags, organization );
+                .hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags, organizationId );
     }
 
     //TODO: Delete the code below as it doesn't seem to be used.
