@@ -114,8 +114,3 @@ class Assembler(
 }
 
 
-private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
-
-private val INSERT_MATERIALIZED_ENTITY_SET = "INSERT INTO ${PostgresTable.ORGANIZATION_ASSEMBLIES.name} (?,?) ON CONFLICT DO NOTHING"
-private val SELECT_MATERIALIZED_ENTITY_SETS = "SELECT * FROM ${PostgresTable.ORGANIZATION_ASSEMBLIES.name} " +
-        "WHERE ${PostgresColumn.ORGANIZATION_ID.name} = ?"
