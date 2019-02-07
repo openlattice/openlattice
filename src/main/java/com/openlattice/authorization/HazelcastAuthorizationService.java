@@ -33,10 +33,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 import com.google.common.eventbus.EventBus;
+import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.openlattice.authorization.aggregators.AuthorizationAggregator;
+import com.openlattice.authorization.aggregators.PrincipalAggregator;
 import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
 import com.openlattice.authorization.processors.PermissionMerger;
@@ -355,6 +358,17 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
         return aqs.getAclsForSecurableObject( key );
     }
 
+    @Override
+    public Iterable<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions ) {
+        final Map<AclKey, Set<Principal>> principalMap = new HashMap<>();
+        principalMap.put( key, new HashSet<>() );
+
+        PrincipalAggregator agg = aces.aggregate(
+                new PrincipalAggregator( ( principalMap ) ), matches( key, permissions ) );
+
+        return agg.getResult().get( key );
+    }
+
     @Timed
     @Override
     public Stream<AclKey> getAuthorizedObjects( Principal principal, EnumSet<Permission> permissions ) {
@@ -394,6 +408,10 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     private static Predicate matches( Collection<AclKey> aclKeys, Set<Principal> principals ) {
         return Predicates.and( hasAnyAclKeys( aclKeys ), hasAnyPrincipals( principals ) );
+    }
+
+    private static Predicate matches( AclKey aclKey, EnumSet<Permission> permissions ) {
+        return Predicates.and( hasAclKey( aclKey ), hasExactPermissions( permissions ) );
     }
 
     private static Predicate hasExactPermissions( EnumSet<Permission> permissions ) {
