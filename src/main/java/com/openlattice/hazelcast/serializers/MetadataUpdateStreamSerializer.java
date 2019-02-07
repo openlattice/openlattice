@@ -5,17 +5,15 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.GuavaStreamSerializersKt;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
-import com.openlattice.authorization.Principal;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.springframework.stereotype.Component;
-
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.springframework.stereotype.Component;
 
 @Component
 public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSerializer<MetadataUpdate> {
@@ -55,7 +53,7 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         OptionalStreamSerializers.serialize( out, object.getUrl(), ObjectDataOutput::writeUTF );
         OptionalStreamSerializers
                 .serialize( out, object.getPropertyTags(), GuavaStreamSerializersKt::serializeSetMultimap );
-        OptionalStreamSerializers.serialize( out, object.getOrganization(), PrincipalStreamSerializer::serialize );
+        OptionalStreamSerializers.serialize( out, object.getOrganizationId(), UUIDStreamSerializer::serialize );
     }
 
     public static MetadataUpdate deserialize( ObjectDataInput in ) throws IOException {
@@ -70,8 +68,8 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
         Optional<String> url = OptionalStreamSerializers.deserialize( in, ObjectDataInput::readUTF );
         Optional<LinkedHashMultimap<UUID, String>> propertyTags = OptionalStreamSerializers
                 .deserialize( in, GuavaStreamSerializersKt::deserializeLinkedHashMultimap );
-        Optional<Principal> organization = OptionalStreamSerializers
-                .deserialize( in, PrincipalStreamSerializer::deserialize );
+        Optional<UUID> organizationId = OptionalStreamSerializers
+                .deserialize( in, UUIDStreamSerializer::deserialize );
         return new MetadataUpdate( title,
                 description,
                 name,
@@ -81,6 +79,6 @@ public class MetadataUpdateStreamSerializer implements SelfRegisteringStreamSeri
                 defaultShow,
                 url,
                 propertyTags,
-                organization );
+                organizationId);
     }
 }
