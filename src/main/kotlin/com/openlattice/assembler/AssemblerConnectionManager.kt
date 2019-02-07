@@ -403,7 +403,7 @@ class AssemblerConnectionManager {
                                     "password '${AssemblerConnectionManager.assemblerConfiguration.foreignPassword}')"
                     )
                     logger.info("Reseting $PRODUCTION_SCHEMA")
-                    statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_SCHEMA")
+                    statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_SCHEMA CASCADE")
                     statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_SCHEMA")
                     logger.info("Created user mapping. ")
                     statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO $PRODUCTION_SCHEMA")
