@@ -48,11 +48,7 @@ import java.util.function.Supplier
  *
  * Quick and dirty mapstore for principal trees.
  */
-private val insertSql = "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
-        "VALUES (?, ?) " +
-        "ON CONFLICT DO NOTHING"
-private val deleteNotIn = "DELETE FROM ${PRINCIPAL_TREES.name} " +
-        "WHERE ${ACL_KEY.name} = ? AND NOT( ${PRINCIPAL_OF_ACL_KEY.name} = ANY(?) ) AND NOT ( ${PRINCIPAL_OF_ACL_KEY.name} = ANY(?) )"
+
 private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)!!
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
@@ -66,14 +62,17 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             stmt.use {
                 map.forEach {
                     val aclKey = it.key
+                    val filterPrincipal = if (it.value.isEmpty()) {
+                        ""
+                    } else {
+                        " AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (" + it.value.joinToString(",") { toPostgres(it) } + ")"
+                    }
                     val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
-                            "WHERE ${ACL_KEY.name} = ${toPostgres(it.key)} AND ${PRINCIPAL_OF_ACL_KEY.name} " +
-                            "NOT IN (" + it.value.joinToString(",") { toPostgres(it) } + ")"
+                            "WHERE ${ACL_KEY.name} = ${toPostgres(it.key)} $filterPrincipal"
                     stmt.addBatch(sql)
                     it.value.forEach {
-                        stmt.addBatch(
-                                "INSERT INTO ${PRINCIPAL_TREES.name} (${ACL_KEY.name},${PRINCIPAL_OF_ACL_KEY.name}) " +
-                                        "VALUES (${toPostgres(aclKey)}, ${toPostgres(it)}) ON CONFLICT DO NOTHING"
+                        stmt.addBatch("INSERT INTO ${PRINCIPAL_TREES.name} " +
+                                "VALUES (${toPostgres(aclKey)}, ${toPostgres(it)}) ON CONFLICT DO NOTHING"
                         )
                     }
                 }
@@ -83,7 +82,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     fun toPostgres(aclKey: AclKey): String {
-        return "'{\"" + aclKey.joinToString("\",\"") + "\"}'"
+        return "'{\"" + aclKey.joinToString("\",\"") + "\"}'::uuid[]"
     }
 
     override fun loadAllKeys(): Iterable<AclKey> {
@@ -91,14 +90,11 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             logger.info("Load all iterator requested for ${this.mapName}")
             val connection = hds.connection
             val stmt = connection.createStatement()
-            val rs = stmt.executeQuery("SELECT distinct(acl_key) from ${PRINCIPAL_TREES.name}")
+            val rs = stmt.executeQuery("SELECT distinct(${ACL_KEY.name}) from ${PRINCIPAL_TREES.name}")
 
             StatementHolder(connection, stmt, rs)
         }, Function<ResultSet, AclKey> { ResultSetAdapters.aclKey(it) }
         )
-//        val keyList = keys.toMutableList()
-//        logger.info("Keys: {}", keyList)
-//        return keyList
     }
 
     @Timed
@@ -117,7 +113,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
                     val sql = "SELECT * from ${PRINCIPAL_TREES.name} " +
                             "WHERE ${ACL_KEY.name} " +
-                            "IN (" + keys.map { "'{\"" + it.joinToString("\",\"") + "\"}'" }.joinToString(",") + ")"
+                            "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
 
                     StatementHolder(connection, stmt, stmt.executeQuery(sql))
                 },
@@ -137,7 +133,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
             it.createStatement().use {
                 val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
                         "WHERE ${ACL_KEY.name} " +
-                        "IN (" + keys.map { "'{\"" + it.joinToString("\",\"") + "\"}'" }.joinToString(",") + ")"
+                        "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
 
                 it.executeUpdate(sql)
             }

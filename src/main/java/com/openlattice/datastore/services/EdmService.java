@@ -107,6 +107,7 @@ import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySet
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
+import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -143,13 +144,12 @@ public class EdmService implements EdmManager {
     private final PostgresTypeManager               entityTypeManager;
     private final HazelcastSchemaManager            schemaManager;
 
-    private final HazelcastInstance hazelcastInstance;
-    private final HikariDataSource  hds;
+    private final HazelcastInstance            hazelcastInstance;
+    private final HikariDataSource             hds;
     private final AuditRecordEntitySetsManager aresManager;
 
     @Inject
     private EventBus eventBus;
-
 
     public EdmService(
             HikariDataSource hds,
@@ -1259,6 +1259,7 @@ public class EdmService implements EdmManager {
                     optionalPiiUpdate,
                     Optional.empty(),
                     Optional.empty(),
+                    Optional.empty(),
                     Optional.empty() ) );
         }
     }
@@ -1288,7 +1289,8 @@ public class EdmService implements EdmManager {
                     Optional.empty(),
                     Optional.empty(),
                     Optional.empty(),
-                    optionalPropertyTagsUpdate ) );
+                    optionalPropertyTagsUpdate,
+                    Optional.empty() ) );
             if ( !et.getProperties().equals( existing.getProperties() ) ) {
                 addPropertyTypesToEntityType( existing.getId(), et.getProperties() );
             }
@@ -1665,6 +1667,10 @@ public class EdmService implements EdmManager {
 
     @Override public Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId ) {
         return entitySets.values( Predicates.equal( "entityTypeId", entityTypeId ) );
+    }
+
+    @Override public Set<UUID> getEntitySetsForOrganization( UUID organizationId ) {
+        return entitySets.keySet( Predicates.equal( EntitySetMapstore.ORGANIZATION_INDEX, organizationId ) );
     }
 
 }

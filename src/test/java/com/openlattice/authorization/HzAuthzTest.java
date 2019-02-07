@@ -38,6 +38,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.mapstores.TestDataFactory;
+import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.postgres.PostgresTablesPod;
@@ -285,6 +286,22 @@ public class HzAuthzTest {
         logger.info( "Elapsed time to access check: {} ms", w.elapsed( TimeUnit.MILLISECONDS ) );
         Assert.assertTrue( result.keySet().containsAll( Arrays.asList( aclKeys ) ) );
 
+    }
+
+    @Test
+    public void testGetAuthorizedPrincipalsOnSecurableObject() {
+        AclKey key = new AclKey( UUID.randomUUID() );
+        Principal p1 = TestDataFactory.userPrincipal();
+        Principal p2 = TestDataFactory.userPrincipal();
+        Principal p3 = TestDataFactory.userPrincipal();
+
+        EnumSet<Permission> permissions = EnumSet.of( Permission.READ );
+        hzAuthz.addPermission( key, p1, permissions );
+        hzAuthz.addPermission( key, p2, permissions );
+        PrincipalSet authorizedPrincipals = new PrincipalSet(
+                hzAuthz.getAuthorizedPrincipalsOnSecurableObject( key, permissions ) );
+
+        Assert.assertEquals( Set.of( p1, p2 ), authorizedPrincipals );
     }
 
 }

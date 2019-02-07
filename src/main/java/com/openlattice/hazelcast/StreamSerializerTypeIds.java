@@ -22,6 +22,8 @@
 
 package com.openlattice.hazelcast;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * Simplifies management of type ids within Hazelcast for serialization. Can be re-ordered safely unless doing hot
  * upgrade. <b>NOTE: Leave first entry in place</b>
@@ -181,5 +183,8 @@ public enum StreamSerializerTypeIds {
     PERSISTENT_SEARCH_MESSENGER,
     UPDATE_ENTITY_SET_AUDIT_RECORD_ENTITY_SET_ID_PROCESSOR,
     ENTITY_KEY_PAIR,
-    ENTITY_LINKING_FEEDBACK
+    ENTITY_LINKING_FEEDBACK,
+    PRINCIPAL_AGGREGATOR,
+    MATERIALIZE_ENTITY_SETS_PROCESSOR,
+    ORGANIZATION_ASSEMBLY
 }

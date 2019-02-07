@@ -30,6 +30,7 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -108,6 +109,11 @@ public class MapstoresPod {
         }
 
         return jdbi.onDemand( PostgresUserApi.class );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, OrganizationAssembly> organizationAssemblies() {
+        return new OrganizationAssemblyMapstore( hikariDataSource );
     }
 
     @Bean

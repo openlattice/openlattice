@@ -23,6 +23,7 @@
 package com.openlattice.organizations;
 
 import com.openlattice.authorization.Principal;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
@@ -124,6 +125,11 @@ public class PrincipalSet implements Set<Principal> {
 
     public static PrincipalSet wrap( Set<Principal> principals ) {
         return new PrincipalSet( principals );
+    }
+
+    @Override
+    public String toString() {
+        return "PrincipalSet{" + principals.toString() + "}";
     }
 
 }

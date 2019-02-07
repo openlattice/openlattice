@@ -34,6 +34,8 @@ import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
@@ -81,19 +83,20 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class HazelcastOrganizationService {
 
-    private static final Logger                             logger = LoggerFactory
-            .getLogger( HazelcastOrganizationService.class );
-    private final        AuthorizationManager               authorizations;
-    private final        HazelcastAclKeyReservationService  reservations;
-    private final        UserDirectoryService               principals;
-    private final        SecurePrincipalsManager            securePrincipalsManager;
-    private final        IMap<UUID, String>                 titles;
-    private final        IMap<UUID, String>                 descriptions;
-    private final        IMap<UUID, DelegatedStringSet>     autoApprovedEmailDomainsOf;
-    private final        IMap<UUID, PrincipalSet>           membersOf;
-    private final        IMap<UUID, DelegatedUUIDSet>       apps;
-    private final        IMap<AppConfigKey, AppTypeSetting> appConfigs;
-    private final        List<IMap<UUID, ?>>                allMaps;
+    private static final Logger logger = LoggerFactory.getLogger( HazelcastOrganizationService.class );
+
+    private final AuthorizationManager               authorizations;
+    private final HazelcastAclKeyReservationService  reservations;
+    private final UserDirectoryService               principals;
+    private final SecurePrincipalsManager            securePrincipalsManager;
+    private final IMap<UUID, String>                 titles;
+    private final IMap<UUID, String>                 descriptions;
+    private final IMap<UUID, DelegatedStringSet>     autoApprovedEmailDomainsOf;
+    private final IMap<UUID, PrincipalSet>           membersOf;
+    private final IMap<UUID, DelegatedUUIDSet>       apps;
+    private final IMap<AppConfigKey, AppTypeSetting> appConfigs;
+    private final List<IMap<UUID, ?>>                allMaps;
+    private final Assembler                          assembler;
 
     @Inject
     private EventBus eventBus;
@@ -103,7 +106,8 @@ public class HazelcastOrganizationService {
             HazelcastAclKeyReservationService reservations,
             AuthorizationManager authorizations,
             UserDirectoryService principals,
-            SecurePrincipalsManager securePrincipalsManager ) {
+            SecurePrincipalsManager securePrincipalsManager,
+            Assembler assembler ) {
         this.titles = hazelcastInstance.getMap( HazelcastMap.ORGANIZATIONS_TITLES.name() );
         this.descriptions = hazelcastInstance.getMap( HazelcastMap.ORGANIZATIONS_DESCRIPTIONS.name() );
         this.autoApprovedEmailDomainsOf = hazelcastInstance.getMap( HazelcastMap.ALLOWED_EMAIL_DOMAINS.name() );
@@ -119,6 +123,7 @@ public class HazelcastOrganizationService {
                 apps );
         this.principals = checkNotNull( principals );
         this.securePrincipalsManager = securePrincipalsManager;
+        this.assembler = assembler;
         //        fixOrganizations();
     }
 
@@ -171,6 +176,7 @@ public class HazelcastOrganizationService {
         authorizations.addPermission( organization.getAclKey(), principal, EnumSet.allOf( Permission.class ) );
         //We add the user/role that created the organization to the admin role for the organization
         addRoleToPrincipalInOrganization( organization.getId(), adminRole.getId(), principal );
+        assembler.createOrganization( organization );
         eventBus.post( new OrganizationCreatedEvent( organization ) );
     }
 
@@ -188,14 +194,12 @@ public class HazelcastOrganizationService {
         Future<PrincipalSet> members = membersOf.getAsync( organizationId );
         Future<DelegatedStringSet> autoApprovedEmailDomains = autoApprovedEmailDomainsOf.getAsync( organizationId );
 
-        Collection<SecurablePrincipal> maybeOrgs =
-                securePrincipalsManager.getSecurablePrincipals( getOrganizationPredicate( organizationId ) );
-        if ( maybeOrgs.isEmpty() ) {
-            logger.error( "Organization id {} has no corresponding securable principal.", organizationId );
+        OrganizationPrincipal principal = getOrganizationPrincipal( organizationId );
+
+        if ( principal == null ) {
             return null;
         }
 
-        OrganizationPrincipal principal = (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrgs );
         Set<Role> roles = getRoles( organizationId );
         Set<UUID> apps = getOrganizationApps( organizationId );
 
@@ -339,14 +343,6 @@ public class HazelcastOrganizationService {
                 .forEach( target -> securePrincipalsManager.removePrincipalFromPrincipal( orgAclKey, target ) );
     }
 
-    private void addOrganizationToMembers( UUID organizationId, Set<Principal> members ) {
-        if ( members.stream().map( Principal::getType ).allMatch( PrincipalType.USER::equals ) ) {
-            members.forEach( member -> principals.addOrganizationToUser( member.getId(), organizationId ) );
-        } else {
-            throw new IllegalArgumentException( "Cannot add a non-user role as a member of an organization." );
-        }
-    }
-
     private void removeOrganizationFromMembers( UUID organizationId, Set<Principal> members ) {
         if ( members.stream().map( Principal::getType ).allMatch( PrincipalType.USER::equals ) ) {
             members.forEach( member -> principals.removeOrganizationFromUser( member.getId(), organizationId ) );
@@ -371,6 +367,7 @@ public class HazelcastOrganizationService {
          */
         securePrincipalsManager.createSecurablePrincipalIfNotExists( callingUser, role );
         authorizations.addPermission( role.getAclKey(), orgPrincipal.getPrincipal(), EnumSet.of( Permission.READ ) );
+        AssemblerConnectionManager.createRole( role );
     }
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {
@@ -457,6 +454,16 @@ public class HazelcastOrganizationService {
                     .addPermission( organization.getAclKey(), admin, EnumSet.allOf( Permission.class ) ) );
 
         }
+    }
+
+    public OrganizationPrincipal getOrganizationPrincipal( UUID organizationId ) {
+        final var maybeOrganizationPrincipal = securePrincipalsManager
+                .getSecurablePrincipals( getOrganizationPredicate( organizationId ) );
+        if ( maybeOrganizationPrincipal.isEmpty() ) {
+            logger.error( "Organization id {} has no corresponding securable principal.", organizationId );
+            return null;
+        }
+        return (OrganizationPrincipal) Iterables.getOnlyElement( maybeOrganizationPrincipal );
     }
 
     public static Role createOrganizationAdminRole( SecurablePrincipal organization ) {

@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.authorization;
+package com.openlattice.authorization.aggregators;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -27,6 +27,11 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import com.openlattice.authorization.AceKey;
+import com.openlattice.authorization.AceValue;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Permission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

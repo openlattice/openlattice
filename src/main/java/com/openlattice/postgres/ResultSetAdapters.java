@@ -55,8 +55,10 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.assembler.OrganizationAssembly;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,6 +88,14 @@ public final class ResultSetAdapters {
     private static final ObjectMapper                       mapper               = ObjectMappers.newJsonMapper();
     private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
+
+    @NotNull public static OrganizationAssembly organizationAssembly( @NotNull ResultSet rs ) throws SQLException {
+        final UUID organizationId = rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
+        final Set<UUID> entitySetIds = Sets.newHashSet( PostgresArrays.getUuidArray( rs, ENTITY_SET_IDS.getName() ) );
+        final String dbname = rs.getString( DB_NAME.getName() );
+        final boolean initialized = rs.getBoolean( INITIALIZED.getName() );
+        return new OrganizationAssembly( organizationId, dbname, entitySetIds, initialized );
+    }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -204,15 +214,6 @@ public final class ResultSetAdapters {
             throw new IllegalStateException( "Unable to read principal of acl key", e );
         }
         return new AclKey( arr );
-    }
-
-    public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {
-        UUID[][] ids = PostgresArrays.getUuidArrayOfArrays( rs, PostgresColumn.ACL_KEY_SET_FIELD );
-        AclKeySet keySet = new AclKeySet( ids.length );
-        Stream.of( ids )
-                .map( AclKey::new )
-                .forEach( keySet::add );
-        return keySet;
     }
 
     public static SecurablePrincipal securablePrincipal( ResultSet rs ) throws SQLException {
@@ -503,6 +504,8 @@ public final class ResultSetAdapters {
         Optional<Boolean> linking = Optional.ofNullable( linking( rs ) );
         Optional<Set<UUID>> linkedEntitySets = Optional.of( linkedEntitySets( rs ) );
         Optional<Boolean> external = Optional.ofNullable( external( rs ) );
+        Optional<UUID> organization = Optional
+                .of( rs.getObject( ORGANIZATION_ID_FIELD, UUID.class ) );
         return new EntitySet( id,
                 entityTypeId,
                 name,
@@ -511,7 +514,8 @@ public final class ResultSetAdapters {
                 contacts,
                 linking,
                 linkedEntitySets,
-                external );
+                external,
+                organization );
     }
 
     public static AssociationType associationType( ResultSet rs ) throws SQLException {

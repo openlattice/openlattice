@@ -267,12 +267,11 @@ class PostgresEntityDataQueryService(
 
                     val rs = statement.executeQuery(
                             if (version.isPresent) {
-
                                 selectEntitySetWithPropertyTypesAndVersionSql(
                                         entityKeyIds,
                                         propertyFqns,
                                         allPropertyTypes.map { it.id },
-                                        authorizedPropertyTypes.mapValues { it.value.map { it.key }.toSet() },
+                                        authorizedPropertyTypes.mapValues { it.value.keys },
                                         mapOf(),
                                         metadataOptions,
                                         version.get(),
@@ -286,7 +285,7 @@ class PostgresEntityDataQueryService(
                                         entityKeyIds,
                                         propertyFqns,
                                         allPropertyTypes.map { it.id },
-                                        authorizedPropertyTypes.mapValues { it.value.map { it.key }.toSet() },
+                                        authorizedPropertyTypes.mapValues { it.value.keys },
                                         mapOf(),
                                         metadataOptions,
                                         binaryPropertyTypes,

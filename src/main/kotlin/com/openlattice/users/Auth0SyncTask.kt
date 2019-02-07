@@ -23,23 +23,19 @@ package com.openlattice.users
 
 
 import com.google.common.collect.ImmutableSet
-import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IAtomicLong
 import com.hazelcast.core.IMap
-import com.hazelcast.core.IQueue
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
-import com.openlattice.auth0.Auth0TokenProvider
 import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.UserMapstore
 import com.openlattice.bootstrap.AuthorizationBootstrap
-import com.openlattice.bootstrap.OrganizationBootstrap
 import com.openlattice.client.RetrofitFactory
+import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.datastore.services.Auth0ManagementApi
 import com.openlattice.directory.pojo.Auth0UserBasic
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organizations.HazelcastOrganizationService
-import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
+import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
 import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
 import java.time.OffsetDateTime
@@ -70,9 +66,11 @@ class Auth0SyncTask(
         val userRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
         val adminRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
 
-        val globalOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(OrganizationBootstrap.GLOBAL_ORG_PRINCIPAL)
+        val globalOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(
+                GLOBAL_ORG_PRINCIPAL
+        )
         val openlatticeOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(
-                OrganizationBootstrap.OPENLATTICE_ORG_PRINCIPAL
+                OPENLATTICE_ORG_PRINCIPAL
         )
         //Only one instance can populate and refresh the map. Unforunately, ILock is refusing to unlock causing issues
         //So we implement a different gating mechanism. This may occasionally be wrong when cluster size changes.
@@ -112,7 +110,7 @@ class Auth0SyncTask(
             users.removeAll(
                     Predicates.lessThan(
                             UserMapstore.LOAD_TIME_INDEX,
-                            OffsetDateTime.now().minus(REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
+                            OffsetDateTime.now().minus(6*REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
                     ) as Predicate<String, Auth0UserBasic>?
             )
         }
@@ -123,7 +121,7 @@ class Auth0SyncTask(
             openlatticeOrganizationAclKey: AclKey, adminRoleAclKey: AclKey
     ) {
         val principal = Principal(PrincipalType.USER, userId)
-        val title = if (user.nickname != null && user.nickname.length > 0)
+        val title = if (user.nickname != null && user.nickname.isNotEmpty())
             user.nickname
         else
             user.email

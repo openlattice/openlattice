@@ -116,8 +116,8 @@ public final class PostgresTable {
                             CONTACTS,
                             LINKING,
                             PostgresColumn.LINKED_ENTITY_SETS,
-                            EXTERNAL );
-    //.setUnique( NAME );
+                            EXTERNAL,
+                            ORGANIZATION_ID );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
                     .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )
@@ -215,12 +215,18 @@ public final class PostgresTable {
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID );
+    //.setUnique( NAME );
+    public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES =
+            new PostgresTableDefinition( "organization_assemblies" )
+                    .addColumns( ORGANIZATION_ID, DB_NAME, ENTITY_SET_IDS, INITIALIZED)
+                    .primaryKey( ORGANIZATION_ID )
+                    .setUnique( DB_NAME ); //We may have to delete for citus
 
-    public static final PostgresTableDefinition NAMES                    =
+    public static final PostgresTableDefinition NAMES                   =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )
                     .primaryKey( SECURABLE_OBJECTID );
-    public static final PostgresTableDefinition ORGANIZATIONS            =
+    public static final PostgresTableDefinition ORGANIZATIONS           =
             new PostgresTableDefinition( "organizations" )
                     .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
     public static final PostgresTableDefinition PERMISSIONS              =
@@ -246,10 +252,6 @@ public final class PostgresTable {
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )
                     .primaryKey( ACL_KEY )
                     .setUnique( PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition PRINCIPAL_TREE           = new PostgresTableDefinition(
-            "principal_tree" )
-            .addColumns( ACL_KEY, ACL_KEY_SET )
-            .primaryKey( ACL_KEY );
     public static final PostgresTableDefinition PRINCIPAL_TREES          = new PostgresTableDefinition(
             "principal_trees" )
             .addColumns( ACL_KEY, PRINCIPAL_OF_ACL_KEY )

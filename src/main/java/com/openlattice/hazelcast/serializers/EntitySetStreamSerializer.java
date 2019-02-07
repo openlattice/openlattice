@@ -22,6 +22,8 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -50,12 +52,13 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         out.writeBoolean( object.isLinking() );
         SetStreamSerializers.fastUUIDSetSerialize( out, object.getLinkedEntitySets() );
         out.writeBoolean( object.isExternal() );
+        UUIDStreamSerializer.serialize( out, object.getOrganizationId() );
 
     }
 
     @Override
     public EntitySet read( ObjectDataInput in ) throws IOException {
-        Optional<UUID> id = Optional.of(UUIDStreamSerializer.deserialize( in ));
+        Optional<UUID> id = Optional.of( UUIDStreamSerializer.deserialize( in ) );
         UUID entityTypeId = UUIDStreamSerializer.deserialize( in );
         String name = in.readUTF();
         String title = in.readUTF();
@@ -64,7 +67,7 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
         Optional<Boolean> linking = Optional.of( in.readBoolean() );
         Optional<Set<UUID>> linkedEntitySets = Optional.of( SetStreamSerializers.fastUUIDSetDeserialize( in ) );
         Optional<Boolean> external = Optional.of( in.readBoolean() );
-
+        UUID organizationId = UUIDStreamSerializer.deserialize( in );
         EntitySet es = new EntitySet(
                 id,
                 entityTypeId,
@@ -74,7 +77,8 @@ public class EntitySetStreamSerializer implements SelfRegisteringStreamSerialize
                 contacts,
                 linking,
                 linkedEntitySets,
-                external );
+                external,
+                Optional.of( organizationId ) );
 
         return es;
     }
