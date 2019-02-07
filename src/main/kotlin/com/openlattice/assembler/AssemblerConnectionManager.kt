@@ -246,9 +246,9 @@ class AssemblerConnectionManager {
                 connection.createStatement().use { stmt ->
                     stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $SCHEMA.edges")
                     stmt.execute(
-                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM EDGES WHERE src_entity_set_id IN $clause " +
-                                    "AND dst_entity_set_id IN $clause " +
-                                    "AND edge_entity_set_id IN $clause "
+                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM EDGES WHERE src_entity_set_id IN ($clause) " +
+                                    "AND dst_entity_set_id IN ($clause) " +
+                                    "AND edge_entity_set_id IN ($clause) "
                     )
                     return@use
                 }
