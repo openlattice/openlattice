@@ -200,7 +200,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
     @Override
     @RequestMapping(
-            path = DB + USER_ID_PATH,
+            path = DB,
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public String getDbAccessCredential() {

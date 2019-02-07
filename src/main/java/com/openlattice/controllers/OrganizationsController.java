@@ -65,7 +65,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import organization.OrganizationEntitySetFlag;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -191,7 +191,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         }
 
         if ( flagFilter.contains( OrganizationEntitySetFlag.MATERIALIZED ) ) {
-            materialized.stream().map( mes -> mes.getEntitySetId() ).forEach( entitySetId -> entitySets
+            materialized.forEach( entitySetId -> entitySets
                     .merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.MATERIALIZED ), ( lhs, rhs ) -> {
                         lhs.addAll( rhs );
                         return lhs;
@@ -217,9 +217,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ResourceNotFoundException( "Organization does not exist." );
         }
         return assembler
-                .materializeEntitySets( organizationPrincipal.getId(),
-                        organizationPrincipal.getPrincipal(),
-                        authorizedPropertyTypesByEntitySet );
+                .materializeEntitySets( organizationPrincipal.getId(),authorizedPropertyTypesByEntitySet );
     }
 
     @Override
