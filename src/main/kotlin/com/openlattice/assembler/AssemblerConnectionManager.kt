@@ -192,7 +192,9 @@ class AssemblerConnectionManager {
 
                 datasource.connection.use() { connection ->
                     connection.createStatement().use { statement ->
-                        statement.execute("ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_SCHEMA, $SCHEMA, public")
+                        statement.execute(
+                                "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_SCHEMA, $SCHEMA, public"
+                        )
                     }
                 }
 
@@ -238,10 +240,19 @@ class AssemblerConnectionManager {
 
         }
 
-        fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
-            "DROP MATERIALIZED VIEW IF EXISTS edges"
-            "CREATE MATERIALIZED VIEW IF NOT EXISTS edges "
-            TODO("MATERIALIZE EDGES")
+        private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
+            val clause = entitySetIds.joinToString { "'$it'" }
+            datasource.connection.use { connection ->
+                connection.createStatement().use { stmt ->
+                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $SCHEMA.edges")
+                    stmt.execute(
+                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM EDGES WHERE src_entity_set_id IN $clause " +
+                                    "AND dst_entity_set_id IN $clause " +
+                                    "AND edge_entity_set_id IN $clause "
+                    )
+                    return@use
+                }
+            }
         }
 
         @JvmStatic
@@ -287,7 +298,7 @@ class AssemblerConnectionManager {
                     entitySet.isLinking,
                     entitySet.isLinking
             )
-            
+
             val tableName = "openlattice.${quote(entitySet.name)}"
             datasource.connection.use { connection ->
                 val sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
@@ -297,7 +308,9 @@ class AssemblerConnectionManager {
                     stmt.execute(sql)
                 }
                 //Next we need to grant select on materialize view to everyone who has permission.
-                val selectGrantedCount = grantSelectForEntitySet(connection, tableName, entitySet.id, authorizedPropertyTypes)
+                val selectGrantedCount = grantSelectForEntitySet(
+                        connection, tableName, entitySet.id, authorizedPropertyTypes
+                )
                 logger.info(
                         "Granted select for $selectGrantedCount users/roles on materialized view " +
                                 "openlattice.${entitySet.name}"
@@ -310,7 +323,8 @@ class AssemblerConnectionManager {
                 connection: Connection,
                 tableName: String,
                 entitySetId: UUID,
-                authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
+                authorizedPropertyTypes: Map<UUID, PropertyType>
+        ): Int {
 
             val permissions = EnumSet.of(Permission.READ)
             // collect all principals of type user, role, which have read access on entityset
@@ -350,14 +364,15 @@ class AssemblerConnectionManager {
         private fun grantSelectSql(
                 entitySetTableName: String,
                 principal: Principal,
-                properties: Set<FullQualifiedName>): String {
-            val postgresUserName = if(principal.type == PrincipalType.USER) {
+                properties: Set<FullQualifiedName>
+        ): String {
+            val postgresUserName = if (principal.type == PrincipalType.USER) {
                 DataTables.quote(principal.id)
             } else {
                 buildSqlRolename(securePrincipalsManager.lookupRole(principal))
             }
             return "GRANT SELECT " +
-                    "(${properties.joinToString(","){DataTables.quote(it.fullQualifiedNameAsString)}}) " +
+                    "(${properties.joinToString(",") { DataTables.quote(it.fullQualifiedNameAsString) }}) " +
                     "ON $entitySetTableName " +
                     "TO $postgresUserName"
         }
