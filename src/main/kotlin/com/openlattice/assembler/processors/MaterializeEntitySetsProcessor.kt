@@ -37,7 +37,7 @@ private val logger = LoggerFactory.getLogger(MaterializeEntitySetsProcessor::cla
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-class MaterializeEntitySetsProcessor(
+data class MaterializeEntitySetsProcessor(
         val authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
 ) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Unit>(true), Offloadable {
     val entitySetIds: Set<UUID> = authorizedPropertyTypesByEntitySet.keys

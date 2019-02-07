@@ -19,17 +19,17 @@
  *
  */
 
-package com.openlattice.organization
+package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.ImmutableSet
 import com.openlattice.bootstrap.AuthorizationBootstrap.GLOBAL_ADMIN_ROLE
 import com.openlattice.bootstrap.AuthorizationBootstrap.OPENLATTICE_ROLE
+import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
-import com.openlattice.organizations.HazelcastOrganizationService
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -51,7 +51,9 @@ class OrganizationBootstrap(organizationService: HazelcastOrganizationService) {
             )
             checkState(GLOBAL_ORGANIZATION_ID == globalOrg.get().id)
         } else {
-            organizationService.createOrganization(GLOBAL_ADMIN_ROLE.getPrincipal(), createGlobalOrg())
+            organizationService.createOrganization(GLOBAL_ADMIN_ROLE.getPrincipal(),
+                                                   createGlobalOrg()
+            )
         }
 
         if (olOrg.isPresent) {
@@ -62,7 +64,9 @@ class OrganizationBootstrap(organizationService: HazelcastOrganizationService) {
             )
             checkState(OPENLATTICE_ORGANIZATION_ID == olOrg.get().id)
         } else {
-            organizationService.createOrganization(OPENLATTICE_ROLE.getPrincipal(), createOpenLatticeOrg())
+            organizationService.createOrganization(OPENLATTICE_ROLE.getPrincipal(),
+                                                   createOpenLatticeOrg()
+            )
         }
 
         isInitialized = true
