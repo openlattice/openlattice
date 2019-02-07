@@ -53,6 +53,7 @@ import com.openlattice.organizations.processors.NestedPrincipalMerger;
 import com.openlattice.organizations.processors.NestedPrincipalRemover;
 import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdater;
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater;
+
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -63,6 +64,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,13 +73,13 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private static final Logger logger = LoggerFactory
             .getLogger( HazelcastPrincipalService.class );
 
-    private final AuthorizationManager                  authorizations;
-    private final HazelcastAclKeyReservationService     reservations;
-    private final IMap<AclKey, SecurablePrincipal>      principals;
-    private final IMap<AclKey, AclKeySet>               principalTrees; // RoleName -> Member RoleNames
-    private final IMap<String, Auth0UserBasic>          users;
+    private final AuthorizationManager authorizations;
+    private final HazelcastAclKeyReservationService reservations;
+    private final IMap<AclKey, SecurablePrincipal> principals;
+    private final IMap<AclKey, AclKeySet> principalTrees; // RoleName -> Member RoleNames
+    private final IMap<String, Auth0UserBasic> users;
     private final IMap<List<UUID>, SecurableObjectType> securableObjectTypes;
-    private final Assembler                             assembler;
+    private final Assembler assembler;
 
     public HazelcastPrincipalService(
             HazelcastInstance hazelcastInstance,
@@ -107,7 +109,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         }
     }
 
-    @Override public void createSecurablePrincipal(
+    @Override
+    public void createSecurablePrincipal(
             Principal owner, SecurablePrincipal principal ) {
         createSecurablePrincipal( principal );
         final AclKey aclKey = principal.getAclKey();
@@ -127,13 +130,14 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private void createSecurablePrincipal( SecurablePrincipal principal ) {
         reservations.reserveIdAndValidateType( principal, principal::getName );
         principals.set( principal.getAclKey(), principal );
+
         securableObjectTypes.putIfAbsent( principal.getAclKey(), principal.getCategory() );
         switch ( principal.getPrincipalType() ) {
             case USER:
                 AssemblerConnectionManager.createUnprivilegedUser( principal );
                 break;
             case ROLE:
-                AssemblerConnectionManager.createRole( (Role) principal );
+                AssemblerConnectionManager.createRole( ( Role ) principal );
                 break;
         }
     }
@@ -153,7 +157,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         return principals.get( aclKey );
     }
 
-    @Override public AclKey lookup( Principal p ) {
+    @Override
+    public AclKey lookup( Principal p ) {
         return principals.values( findPrincipal( p ) ).stream().map( SecurablePrincipal::getAclKey ).findFirst().get();
     }
 
@@ -180,7 +185,8 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         return Optional.ofNullable( Util.getSafely( principals, new AclKey( id ) ) );
     }
 
-    @Override public Collection<SecurablePrincipal> getSecurablePrincipals( PrincipalType principalType ) {
+    @Override
+    public Collection<SecurablePrincipal> getSecurablePrincipals( PrincipalType principalType ) {
         return principals.values( Predicates.equal( "principalType", principalType ) );
     }
 
@@ -215,8 +221,12 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     @Override
     public void addPrincipalToPrincipal( AclKey source, AclKey target ) {
         ensurePrincipalsExist( source, target );
-        principalTrees
-                .executeOnKey( target, new NestedPrincipalMerger( ImmutableSet.of( source ) ) );
+        if ( !principalTrees.containsKey( source ) ) {
+            principalTrees.set( source, new AclKeySet( ImmutableSet.of( target ) ) );
+        } else {
+            principalTrees
+                    .executeOnKey( target, new NestedPrincipalMerger( ImmutableSet.of( source ) ) );
+        }
     }
 
     @Override
@@ -257,7 +267,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     @Override
     public boolean principalHasChildPrincipal( AclKey parent, AclKey child ) {
-        return principalTrees.get( parent ).contains( child );
+        return principalTrees.containsKey( parent ) && principalTrees.get( parent ).contains( child );
     }
 
     @Override
@@ -294,9 +304,10 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         return principals.project( new PrincipalProjection(), p );
     }
 
-    @Override public Collection<SecurablePrincipal> getSecurablePrincipals( Set<Principal> members ) {
+    @Override
+    public Collection<SecurablePrincipal> getSecurablePrincipals( Set<Principal> members ) {
         Predicate p = Predicates
-                .in( "principal", members.toArray( new Principal[ 0 ] ) );
+                .in( "principal", members.toArray( new Principal[0] ) );
         return principals.values( p );
     }
 
@@ -305,16 +316,19 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         return reservations.isReserved( p.getId() );
     }
 
-    @Override public Auth0UserBasic getUser( String userId ) {
+    @Override
+    public Auth0UserBasic getUser( String userId ) {
         return Util.getSafely( users, userId );
     }
 
-    @Override public Role getRole( UUID organizationId, UUID roleId ) {
+    @Override
+    public Role getRole( UUID organizationId, UUID roleId ) {
         AclKey aclKey = new AclKey( organizationId, roleId );
-        return (Role) Util.getSafely( principals, aclKey );
+        return ( Role ) Util.getSafely( principals, aclKey );
     }
 
-    @Override public Collection<SecurablePrincipal> getAllPrincipals( SecurablePrincipal sp ) {
+    @Override
+    public Collection<SecurablePrincipal> getAllPrincipals( SecurablePrincipal sp ) {
         final AclKeySet roles = Util.getSafely( principalTrees, sp.getAclKey() );
         if ( roles == null ) {
             return ImmutableList.of();
