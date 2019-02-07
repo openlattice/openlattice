@@ -42,7 +42,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
-import organization.OrganizationEntitySetFlag
+import com.openlattice.organization.OrganizationEntitySetFlag
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier

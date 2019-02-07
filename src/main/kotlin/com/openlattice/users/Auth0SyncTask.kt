@@ -34,6 +34,8 @@ import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.datastore.services.Auth0ManagementApi
 import com.openlattice.directory.pojo.Auth0UserBasic
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
+import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
 import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
 import java.time.OffsetDateTime
@@ -65,10 +67,10 @@ class Auth0SyncTask(
         val adminRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
 
         val globalOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(
-                SerializationConstants.GLOBAL_ORG_PRINCIPAL
+                GLOBAL_ORG_PRINCIPAL
         )
         val openlatticeOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(
-                SerializationConstants.OPENLATTICE_ORG_PRINCIPAL
+                OPENLATTICE_ORG_PRINCIPAL
         )
         //Only one instance can populate and refresh the map. Unforunately, ILock is refusing to unlock causing issues
         //So we implement a different gating mechanism. This may occasionally be wrong when cluster size changes.
