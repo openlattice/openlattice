@@ -1,0 +1,14 @@
+server:
+  jdbcUrl: "jdbc:postgresql://localhost:5432"
+  username: "oltest"
+  password: "test"
+  maximumPoolSize: 5
+  connectionTimeout: 60000
+foreignHost: "localhost"
+foreignDbName: "openlattice"
+foreignPort: 5432
+foreignUsername: "oltest"
+foreignPassword: "test"
+ssl: false
+initialize:
+testEntitySet:
