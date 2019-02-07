@@ -53,7 +53,7 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
-import com.openlattice.assembler.MaterializedEntitySet;
+import com.openlattice.assembler.OrganizationAssembly;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
@@ -87,10 +87,12 @@ public final class ResultSetAdapters {
     private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
 
-    @NotNull public static MaterializedEntitySet materializedEntitySet( @NotNull ResultSet rs ) throws SQLException {
-        final UUID organizationId = rs.getObject( ORGANIZATION_PRINCIPAL_ID.getName(), UUID.class );
-        final UUID entitySetId = entitySetId( rs );
-        return new MaterializedEntitySet( organizationId, entitySetId );
+    @NotNull public static OrganizationAssembly materializedEntitySet( @NotNull ResultSet rs ) throws SQLException {
+        final UUID organizationId = rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
+        final Set<UUID> entitySetIds = Sets.newHashSet( PostgresArrays.getUuidArray( rs, ENTITY_SET_IDS.getName() ) );
+        final String dbname = rs.getString( DB_NAME.getName() );
+        final boolean initialized = rs.getBoolean( INITIALIZED.getName() );
+        return new OrganizationAssembly( organizationId, dbname, entitySetIds, initialized );
     }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {

@@ -192,7 +192,7 @@ public final class PostgresTable {
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
                     .addColumns( PARTITION_INDEX, MSB, LSB );
-    public static final PostgresTableDefinition        MATCHED_ENTITIES             =
+    public static final PostgresTableDefinition MATCHED_ENTITIES        =
             new CitusDistributedTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
@@ -207,15 +207,17 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID )
                     .distributionColumn( ID );
     //.setUnique( NAME );
-    public static final PostgresTableDefinition        MATERIALIZED_ENTITY_SETS     =
-            new PostgresTableDefinition( "materialized_entity_sets" )
-                    .addColumns( ORGANIZATION_PRINCIPAL_ID, ENTITY_SET_ID )
-                    .primaryKey( ORGANIZATION_PRINCIPAL_ID, ENTITY_SET_ID );
-    public static final PostgresTableDefinition NAMES                    =
+    public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES =
+            new PostgresTableDefinition( "organization_assemblies" )
+                    .addColumns( ORGANIZATION_ID, DB_NAME, ENTITY_SET_IDS, INITIALIZED)
+                    .primaryKey( ORGANIZATION_ID )
+                    .setUnique( DB_NAME ); //We may have to delete for citus
+
+    public static final PostgresTableDefinition NAMES                   =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )
                     .primaryKey( SECURABLE_OBJECTID );
-    public static final PostgresTableDefinition ORGANIZATIONS            =
+    public static final PostgresTableDefinition ORGANIZATIONS           =
             new PostgresTableDefinition( "organizations" )
                     .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
     public static final PostgresTableDefinition PERMISSIONS              =

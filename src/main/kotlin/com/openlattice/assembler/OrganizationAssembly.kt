@@ -27,5 +27,12 @@ import java.util.*
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class MaterializedEntitySet(val organizationId:UUID, val entitySetId : UUID ) {
+data class OrganizationAssembly(
+        val organizationId: UUID,
+        val dbname: String,
+        val entitySetIds: MutableSet<UUID> = mutableSetOf(),
+        var initialized : Boolean = false
+) {
+
+
 }
