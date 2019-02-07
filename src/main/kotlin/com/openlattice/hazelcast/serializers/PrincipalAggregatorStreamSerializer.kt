@@ -4,7 +4,6 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.Principal
 import com.openlattice.authorization.aggregators.PrincipalAggregator
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organizations.PrincipalSet
