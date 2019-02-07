@@ -65,7 +65,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import organization.OrganizationEntitySetFlag;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -217,9 +217,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ResourceNotFoundException( "Organization does not exist." );
         }
         return assembler
-                .materializeEntitySets( organizationPrincipal.getId(),
-                        organizationPrincipal.getPrincipal(),
-                        authorizedPropertyTypesByEntitySet );
+                .materializeEntitySets( organizationPrincipal.getId(),authorizedPropertyTypesByEntitySet );
     }
 
     @Override
