@@ -40,8 +40,11 @@ private val LOAD_ACTIVE_ALERTS_SQL = "SELECT * FROM ${PERSISTENT_SEARCHES.name} 
 
 class PersistentSearchMessenger : Runnable {
 
+    @Transient
     private val propertyTypes: IMap<UUID, PropertyType> = PersistentSearchMessengerHelpers.hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
+    @Transient
     private val entityTypes: IMap<UUID, EntityType> = PersistentSearchMessengerHelpers.hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
+    @Transient
     private val entitySets: IMap<UUID, EntitySet> = PersistentSearchMessengerHelpers.hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
 
     private fun getPropertyTypeIdsForEntitySet(entitySetId: UUID): Set<UUID> {
