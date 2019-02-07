@@ -243,10 +243,6 @@ public final class PostgresTable {
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, NULLABLE_TITLE, DESCRIPTION )
                     .primaryKey( ACL_KEY )
                     .setUnique( PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition PRINCIPAL_TREE           = new PostgresTableDefinition(
-            "principal_tree" )
-            .addColumns( ACL_KEY, ACL_KEY_SET )
-            .primaryKey( ACL_KEY );
     public static final PostgresTableDefinition PRINCIPAL_TREES          = new PostgresTableDefinition(
             "principal_trees" )
             .addColumns( ACL_KEY, PRINCIPAL_OF_ACL_KEY )
