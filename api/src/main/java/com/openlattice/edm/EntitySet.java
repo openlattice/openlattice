@@ -30,16 +30,18 @@ import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.openlattice.organization.OrganizationConstants;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import org.apache.commons.lang3.StringUtils;
 
 /**
  * Describes an entity set and associated metadata, including the active audit record entity set.
- *
+ * <p>
  * TODO: Ensure that we are being consistent around how internal sets are accessed and modified. i.e is it okay
  * to return modifiable versions of linked entity sets or should we expose add/remove/update methods. The latter seems
  * like the most explicitly safe thing to do.
@@ -51,14 +53,14 @@ public class EntitySet extends AbstractSecurableObject {
     private final boolean     external;
     private       String      name;
     private       Set<String> contacts;
-    private       UUID   organizationId;
+    private       UUID        organizationId;
 
     /**
      * Creates an entity set with provided parameters and will automatically generate a UUID if not provided.
      *
-     * @param id An optional UUID for the entity set.
-     * @param name The name of the entity set.
-     * @param title The friendly name for the entity set.
+     * @param id          An optional UUID for the entity set.
+     * @param name        The name of the entity set.
+     * @param title       The friendly name for the entity set.
      * @param description A description of the entity set.
      */
     @JsonCreator
@@ -152,6 +154,10 @@ public class EntitySet extends AbstractSecurableObject {
 
     public void setContacts( Set<String> contacts ) {
         this.contacts = contacts;
+    }
+
+    public void setOrganizationId( UUID organizationId ) {
+        this.organizationId = organizationId;
     }
 
     @JsonProperty( SerializationConstants.EXTERNAL )
