@@ -169,7 +169,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 orgPrincipal.getPrincipal(),
                 SecurableObjectType.EntitySet,
                 EnumSet.of( Permission.MATERIALIZE ) );
-        final var materialized = assembler.getMaterializedEntitySets( orgPrincipal.getPrincipal() );
+        final var materialized = assembler.getMaterializedEntitySets( organizationId );
 
         final Map<UUID, Set<OrganizationEntitySetFlag>> entitySets = new HashMap<>( 2 * internal.size() );
 
@@ -191,7 +191,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         }
 
         if ( flagFilter.contains( OrganizationEntitySetFlag.MATERIALIZED ) ) {
-            materialized.stream().map( mes -> mes.getEntitySetId() ).forEach( entitySetId -> entitySets
+            materialized.forEach( entitySetId -> entitySets
                     .merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.MATERIALIZED ), ( lhs, rhs ) -> {
                         lhs.addAll( rhs );
                         return lhs;
