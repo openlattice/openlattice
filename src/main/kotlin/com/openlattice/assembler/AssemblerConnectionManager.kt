@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory
 import com.openlattice.organization.OrganizationEntitySetFlag
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.sql.Connection
+import com.openlattice.postgres.DataTables.quote
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -281,7 +282,7 @@ class AssemblerConnectionManager {
             )
             datasource.connection.use { connection ->
                 connection.createStatement().use { stmt ->
-                    stmt.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS openlattice.${entitySet.name} AS $sql")
+                    stmt.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS openlattice.${quote(entitySet.name)} AS $sql")
                 }
                 //Next we need to grant select on materialize view to everyone who has permission.
                 val selectGrantedCount = grantSelectForEntitySet(connection, entitySet, authorizedPropertyTypes)
