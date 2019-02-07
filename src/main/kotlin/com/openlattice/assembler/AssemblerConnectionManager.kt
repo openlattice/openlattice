@@ -56,8 +56,8 @@ private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.j
 class AssemblerConnectionManager {
     companion object {
         private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.java)
-
-        private lateinit var assemblerConfiguration: AssemblerConfiguration
+        
+        lateinit var assemblerConfiguration: AssemblerConfiguration
         private lateinit var hds: HikariDataSource
         private lateinit var securePrincipalsManager: SecurePrincipalsManager
         private lateinit var organizations: HazelcastOrganizationService
