@@ -41,8 +41,8 @@ private val logger = LoggerFactory.getLogger(InitializeOrganizationAssemblyProce
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-class InitializeOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Unit>(), Offloadable {
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>) {
+class InitializeOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val organizationId = entry.key
         val assembly = entry.value
         when {
@@ -60,6 +60,7 @@ class InitializeOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UU
                 entry.setValue(assembly)
             }
         }
+        return null
     }
 
     override fun getExecutorName(): String {
