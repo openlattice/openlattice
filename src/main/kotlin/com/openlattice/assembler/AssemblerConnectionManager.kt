@@ -59,11 +59,18 @@ class AssemblerConnectionManager {
 
         lateinit var assemblerConfiguration: AssemblerConfiguration
 
+
+        @JvmStatic
         lateinit var hds: HikariDataSource
+        @JvmStatic
         lateinit var securePrincipalsManager: SecurePrincipalsManager
+        @JvmStatic
         lateinit var organizations: HazelcastOrganizationService
+        @JvmStatic
         lateinit var dbCredentialService: DbCredentialService
+        @JvmStatic
         lateinit var entitySets: IMap<UUID, EntitySet>
+        @JvmStatic
         lateinit var target: HikariDataSource
 
 
@@ -122,11 +129,16 @@ class AssemblerConnectionManager {
             }
         }
 
-        private fun initializeUsersAndRoles() {
-            if( this::securePrincipalsManager.isInitialized && this::hds.isInitialized && this::dbCredentialService.isInitialized ) {
+        @JvmStatic
+        fun initializeUsersAndRoles() {
+            if (this::securePrincipalsManager.isInitialized && this::hds.isInitialized && this::dbCredentialService.isInitialized) {
                 getAllRoles(securePrincipalsManager).map(::createRole)
                 getAllUsers(securePrincipalsManager).map(::createUnprivilegedUser)
                 logger.info("Creating users and roles.")
+            }
+
+            if (this::assemblerConfiguration.isInitialized) {
+                target = connect("postgres")
             }
         }
 
@@ -189,7 +201,7 @@ class AssemblerConnectionManager {
 
         @JvmStatic
         internal fun createDatabase(organizationId: UUID, dbname: String) {
-            val dbCredentialService = AssemblerConnectionManager.getDbCredentialService()
+            val dbCredentialService = AssemblerConnectionManager.dbCredentialService
             val db = DataTables.quote(dbname)
             val dbRole = "${dbname}_role"
             val unquotedDbAdminUser = buildUserId(organizationId)
@@ -391,8 +403,8 @@ class AssemblerConnectionManager {
                                     "password '${AssemblerConnectionManager.assemblerConfiguration.foreignPassword}')"
                     )
                     logger.info("Reseting $PRODUCTION_SCHEMA")
-                    statement.execute( "DROP SCHEMA IF EXISTS $PRODUCTION_SCHEMA")
-                    statement.execute( "CREATE SCHEMA IF NOT EXISTS $PRODUCTION_SCHEMA")
+                    statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_SCHEMA")
+                    statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_SCHEMA")
                     logger.info("Created user mapping. ")
                     statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO $PRODUCTION_SCHEMA")
                     logger.info("Imported foreign schema")
