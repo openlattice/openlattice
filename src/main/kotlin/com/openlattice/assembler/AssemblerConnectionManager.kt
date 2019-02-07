@@ -121,7 +121,7 @@ class AssemblerConnectionManager {
         }
 
         private fun initializeUsersAndRoles() {
-            if( this::securePrincipalsManager.isInitialized && this::hds.isInitialized ) {
+            if( this::securePrincipalsManager.isInitialized && this::hds.isInitialized && this::dbCredentialService.isInitialized ) {
                 getAllRoles(securePrincipalsManager).map(::createRole)
                 getAllUsers(securePrincipalsManager).map(::createUnprivilegedUser)
                 logger.info("Creating users and roles.")
@@ -135,6 +135,7 @@ class AssemblerConnectionManager {
             } else {
                 this.dbCredentialService = dbCredentialService
                 logger.info("Db credential service initialized.")
+                initializeUsersAndRoles()
             }
         }
 
