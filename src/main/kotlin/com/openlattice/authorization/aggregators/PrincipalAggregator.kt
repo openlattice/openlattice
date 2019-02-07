@@ -3,13 +3,23 @@ package com.openlattice.authorization.aggregators
 
 import com.hazelcast.aggregation.Aggregator
 import com.openlattice.authorization.*
+import com.openlattice.organizations.PrincipalSet
 import java.util.Map
 
 
-class PrincipalAggregator(private val principalsMap: MutableMap<AclKey, MutableSet<Principal>>
+class PrincipalAggregator(private val principalsMap: MutableMap<AclKey, PrincipalSet>
 ) : Aggregator<Map.Entry<AceKey, AceValue>, PrincipalAggregator>() {
 
-    override fun accumulate(input: Map.Entry<AceKey, AceValue>) {}
+    override fun accumulate(input: Map.Entry<AceKey, AceValue>) {
+        val key = input.key.aclKey
+        val principal = input.key.principal
+
+        if (principalsMap.containsKey(key)) {
+            principalsMap[key]!!.add(principal)
+        } else {
+            principalsMap[key] = PrincipalSet(mutableSetOf(principal))
+        }
+    }
 
     override fun combine(aggregator: Aggregator<*, *>) {
         if (aggregator is PrincipalAggregator) {
@@ -27,7 +37,7 @@ class PrincipalAggregator(private val principalsMap: MutableMap<AclKey, MutableS
         return this
     }
 
-    fun getResult(): MutableMap<AclKey, MutableSet<Principal>> {
+    fun getResult(): MutableMap<AclKey, PrincipalSet> {
         return principalsMap
     }
 
@@ -42,7 +52,7 @@ class PrincipalAggregator(private val principalsMap: MutableMap<AclKey, MutableS
     }
 
     override fun toString(): String {
-        return "AuthorizationAggregator{principalsMap=$principalsMap}"
+        return "PrincipalAggregator{principalsMap=$principalsMap}"
     }
 
 

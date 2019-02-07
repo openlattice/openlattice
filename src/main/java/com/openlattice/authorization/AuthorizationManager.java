@@ -122,7 +122,7 @@ public interface AuthorizationManager {
      * @param key The securable object
      * @param permissions Set of permission to check for
      */
-    Iterable<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
+    Set<Principal> getAuthorizedPrincipalsOnSecurableObject( AclKey key, EnumSet<Permission> permissions );
 
     Stream<AclKey> getAuthorizedObjectsOfType(
             Principal principal,
