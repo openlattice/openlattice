@@ -44,6 +44,7 @@ import com.openlattice.organization.OrganizationEntitySetFlag
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.sql.Connection
 import com.openlattice.postgres.DataTables.quote
+import org.postgresql.util.PSQLException
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -280,15 +281,22 @@ class AssemblerConnectionManager {
                     entitySet.isLinking,
                     entitySet.isLinking
             )
-            datasource.connection.use { connection ->
-                connection.createStatement().use { stmt ->
-                    stmt.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS openlattice.${quote(entitySet.name)} AS $sql")
+
+                datasource.connection.use { connection ->
+                    val sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS openlattice.${quote(entitySet.name)} AS $sql"
+
+                    logger.info("Executing create materialize view sql: {}", sql )
+                    connection.createStatement().use { stmt ->
+                        stmt.execute(sql)
+                    }
+                    //Next we need to grant select on materialize view to everyone who has permission.
+                    val selectGrantedCount = grantSelectForEntitySet(connection, entitySet, authorizedPropertyTypes)
+                    logger.info(
+                            "Granted select for $selectGrantedCount users/roles on materialized view " +
+                                    "openlattice.${entitySet.name}"
+                    )
                 }
-                //Next we need to grant select on materialize view to everyone who has permission.
-                val selectGrantedCount = grantSelectForEntitySet(connection, entitySet, authorizedPropertyTypes)
-                logger.info("Granted select for $selectGrantedCount users/roles on materialized view " +
-                        "openlattice.${entitySet.name}")
-            }
+
         }
 
         private fun grantSelectForEntitySet(
