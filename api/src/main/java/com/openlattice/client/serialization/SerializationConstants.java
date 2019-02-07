@@ -18,6 +18,9 @@
 
 package com.openlattice.client.serialization;
 
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+
 public final class SerializationConstants {
 
     public static final String ACE                              = "ace";

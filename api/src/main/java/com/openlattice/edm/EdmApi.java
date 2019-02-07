@@ -521,7 +521,8 @@ public interface EdmApi {
      * Edit entity set metadata for a given entity set.
      *
      * @param entitySetId ID for entity set.
-     * @param update Only title, description, contacts and name fields are accepted. Other fields are ignored.
+     * @param update Only title, description, contacts and name fields are accepted. Other fields are ignored. This is
+     * somewhat out of date.
      */
     @PATCH( ENTITY_SETS_BASE_PATH + ID_PATH )
     Void updateEntitySetMetadata( @Path( ID ) UUID entitySetId, @Body MetadataUpdate update );
