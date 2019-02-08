@@ -24,8 +24,6 @@ package com.openlattice.linking.blocking
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.base.Suppliers
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
@@ -34,7 +32,6 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.Blocker
 import com.openlattice.linking.DataLoader

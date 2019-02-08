@@ -1,6 +1,5 @@
 package com.openlattice.linking.controllers
 
-import com.hazelcast.core.HazelcastInstance
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -8,7 +7,6 @@ import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityDatastore
 import com.openlattice.data.storage.PostgresDataManager
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
@@ -22,9 +20,8 @@ import javax.inject.Inject
 class LinkingFeedbackController
 @Inject
 constructor(
-        hazelcastInstance: HazelcastInstance,
         private val authorizationManager: AuthorizationManager,
-        private val feedbackQueryService: PostgresLinkingFeedbackQueryService,
+        private val feedbackService: PostgresLinkingFeedbackService,
         private val matcher: Matcher,
         private val dataLoader: DataLoader,
         private val edm: EdmManager,
@@ -32,7 +29,7 @@ constructor(
         private val dataManager: PostgresDataManager
 ) : LinkingFeedbackApi, AuthorizingComponent {
 
-    private val linkingFeedbacks = hazelcastInstance.getMap<EntityKeyPair, Boolean>(HazelcastMap.LINKING_FEEDBACKS.name)
+
     private val personPropertyIds = PersonProperties.FQNS.map { edm.getPropertyTypeId(it) }
 
     companion object {
@@ -101,29 +98,35 @@ constructor(
 
     private fun createLinkingFeedbackCombinations(
             entityDataKey: EntityDataKey, entityList: List<EntityDataKey>, offset: Int, linked: Boolean): Int {
-        return (offset until entityList.size).map {
+        (offset until entityList.size).forEach {
             addLinkingFeedback(EntityLinkingFeedback(EntityKeyPair(entityDataKey, entityList[it]), linked))
-        }.sum()
+        }
+        return entityList.size
     }
 
-    private fun addLinkingFeedback(entityLinkingFeedback: EntityLinkingFeedback): Int {
-        linkingFeedbacks.set(entityLinkingFeedback.entityPair, entityLinkingFeedback.linked)
-        val count = feedbackQueryService.addLinkingFeedback(entityLinkingFeedback)
+    private fun addLinkingFeedback(entityLinkingFeedback: EntityLinkingFeedback) {
+
+        feedbackService.addLinkingFeedback(entityLinkingFeedback)
 
         logger.info("Linking feedback submitted for entities: ${entityLinkingFeedback.entityPair.first} - " +
                 "${entityLinkingFeedback.entityPair.second}, linked = ${entityLinkingFeedback.linked}")
+    }
 
-        return count
+    @GetMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.ENTITY])
+    override fun getLinkingFeedbacksOnEntity(
+            @RequestParam(value = LinkingFeedbackApi.FEEDBACK_TYPE, required = false) feedbackType: FeedbackType,
+            @RequestBody entity: EntityDataKey): Iterable<EntityLinkingFeedback> {
+        return feedbackService.getLinkingFeedbackOnEntity(feedbackType, entity)
     }
 
     @GetMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.ALL])
     override fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback> {
-        return feedbackQueryService.getLinkingFeedbacks()
+        return feedbackService.getLinkingFeedbacks()
     }
 
     @GetMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.ALL + LinkingFeedbackApi.FEATURES])
     override fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures> {
-        return feedbackQueryService.getLinkingFeedbacks().map {
+        return feedbackService.getLinkingFeedbacks().map {
             val entities = dataLoader.getEntities(setOf(it.entityPair.first, it.entityPair.second))
             EntityLinkingFeatures(
                     it,
@@ -139,7 +142,7 @@ constructor(
     @PostMapping(path = [LinkingFeedbackApi.FEEDBACK + LinkingFeedbackApi.FEATURES])
     override fun getLinkingFeedbackWithFeatures(
             @RequestBody entityPair: EntityKeyPair): EntityLinkingFeatures? {
-        val feedback = checkNotNull(feedbackQueryService.getLinkingFeedback(entityPair))
+        val feedback = checkNotNull(feedbackService.getLinkingFeedback(entityPair))
         { "Linking feedback for entities ${entityPair.first} - ${entityPair.second} does not exist" }
 
         val entities = dataLoader.getEntities(setOf(feedback.entityPair.first, feedback.entityPair.second))

@@ -62,7 +62,7 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Matcher;
-import com.openlattice.linking.PostgresLinkingFeedbackQueryService;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
@@ -293,8 +293,8 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public PostgresLinkingFeedbackQueryService postgresLinkingFeedbackQueryService() {
-        return new PostgresLinkingFeedbackQueryService( hikariDataSource );
+    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
+        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
 
     @PostConstruct
