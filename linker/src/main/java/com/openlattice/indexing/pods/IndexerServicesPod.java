@@ -27,9 +27,13 @@ import static com.openlattice.linking.MatcherKt.KERAS;
 
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConfiguration;
+import com.openlattice.assembler.AssemblerConnectionManager;
+import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -44,7 +48,6 @@ import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
-import com.openlattice.bootstrap.OrganizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
@@ -55,6 +58,7 @@ import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Matcher;
@@ -63,6 +67,7 @@ import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.OrganizationBootstrap;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
@@ -86,7 +91,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class } )
+@Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class } )
 public class IndexerServicesPod {
     private static Logger logger = LoggerFactory.getLogger( IndexerServicesPod.class );
 
@@ -113,6 +118,9 @@ public class IndexerServicesPod {
 
     @Inject
     private AuditingConfiguration auditingConfiguration;
+
+    @Inject
+    private AssemblerConfiguration assemblerConfiguration;
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
@@ -141,9 +149,12 @@ public class IndexerServicesPod {
 
     @Bean
     public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
+        final var spm = new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
-                authorizationManager() );
+                authorizationManager(),
+                assembler() );
+        AssemblerConnectionManager.initializeSecurePrincipalsManager( spm );
+        return spm;
     }
 
     @Bean
@@ -157,13 +168,48 @@ public class IndexerServicesPod {
     }
 
     @Bean
+    public Assembler assembler() {
+        return new Assembler( assemblerConfiguration,
+                authorizationManager(),
+                dbcs(),
+                hikariDataSource,
+                hazelcastInstance );
+    }
+
+    @Bean
+    public AssemblerConnectionManager bootstrapRolesAndUsers() {
+        final var hos = organizationsManager();
+
+        AssemblerConnectionManager.initializeAssemblerConfiguration( assemblerConfiguration );
+        AssemblerConnectionManager.initializeProductionDatasource( hikariDataSource );
+        AssemblerConnectionManager.initializeSecurePrincipalsManager( principalService() );
+        AssemblerConnectionManager.initializeOrganizations( hos );
+        AssemblerConnectionManager.initializeDbCredentialService( dbcs() );
+        AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
+        AssemblerConnectionManager.initializeUsersAndRoles();
+
+        if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
+            final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );
+            final var org = hos.getOrganization( es.getOrganizationId() );
+            final var apt = dataModelService()
+                    .getPropertyTypesAsMap( dataModelService().getEntityType( es.getEntityTypeId() ).getProperties() );
+            AssemblerConnectionManager.createOrganizationDatabase( org.getId() );
+            final var results = AssemblerConnectionManager
+                    .materializeEntitySets( org.getId(), ImmutableMap.of( es.getId(), apt ) );
+            logger.info( "Results of materializing: {}", results );
+        }
+        return new AssemblerConnectionManager();
+    }
+
+    @Bean
     public HazelcastOrganizationService organizationsManager() {
         return new HazelcastOrganizationService(
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
                 userDirectoryService(),
-                principalService() );
+                principalService(),
+                assembler() );
     }
 
     @Bean
