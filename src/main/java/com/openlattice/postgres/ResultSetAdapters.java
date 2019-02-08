@@ -214,15 +214,6 @@ public final class ResultSetAdapters {
         return new AclKey( arr );
     }
 
-    public static AclKeySet aclKeySet( ResultSet rs ) throws SQLException {
-        UUID[][] ids = PostgresArrays.getUuidArrayOfArrays( rs, PostgresColumn.ACL_KEY_SET_FIELD );
-        AclKeySet keySet = new AclKeySet( ids.length );
-        Stream.of( ids )
-                .map( AclKey::new )
-                .forEach( keySet::add );
-        return keySet;
-    }
-
     public static SecurablePrincipal securablePrincipal( ResultSet rs ) throws SQLException {
         Principal principal = ResultSetAdapters.principal( rs );
         AclKey aclKey = aclKey( rs );

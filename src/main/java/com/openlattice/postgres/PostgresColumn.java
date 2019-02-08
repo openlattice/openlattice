@@ -43,9 +43,6 @@ public final class PostgresColumn {
     public static final String                   ACL_KEY_FIELD                     = "acl_key";
     public static final PostgresColumnDefinition ACL_KEY                           =
             new PostgresColumnDefinition( ACL_KEY_FIELD, UUID_ARRAY );
-    public static final String                   ACL_KEY_SET_FIELD                 = "acl_key_set";
-    public static final PostgresColumnDefinition ACL_KEY_SET                       =
-            new PostgresColumnDefinition( ACL_KEY_SET_FIELD, UUID_ARRAY_ARRAY );
     public static final String                   ALERT_METADATA_FIELD              = "alert_metadata";
     public static final PostgresColumnDefinition ALERT_METADATA                    =
             new PostgresColumnDefinition( ALERT_METADATA_FIELD, JSONB ).notNull();

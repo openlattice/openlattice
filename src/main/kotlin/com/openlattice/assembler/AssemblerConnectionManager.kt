@@ -44,7 +44,6 @@ import com.openlattice.organization.OrganizationEntitySetFlag
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.sql.Connection
 import com.openlattice.postgres.DataTables.quote
-import org.postgresql.util.PSQLException
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -170,7 +169,11 @@ class AssemblerConnectionManager {
             config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
                 "${(jdbcUrl as String).removeSuffix(
                         "/"
-                )}/$dbname" + if(assemblerConfiguration.ssl ){ "?ssl=true" }  else { "" }
+                )}/$dbname" + if (assemblerConfiguration.ssl) {
+                    "?ssl=true"
+                } else {
+                    ""
+                }
             }
             return HikariDataSource(HikariConfig(config))
         }
@@ -447,6 +450,7 @@ class AssemblerConnectionManager {
                 connection.createStatement().use { statement ->
                     statement.execute(createRoleIfNotExistsSql(dbRole))
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
+                    logger.info("Revoking public schema right from role: {}", role)
                     statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbRole)}")
 
                     return@use
@@ -463,7 +467,26 @@ class AssemblerConnectionManager {
                 connection.createStatement().use { statement ->
                     statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
+                    logger.info("Revoking public schema right from user {}", user)
                     statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbUser)}")
+
+                    return@use
+                }
+            }
+        }
+
+        private fun configureUserInDatabase(datasource: HikariDataSource, userId: String) {
+            val dbUser = DataTables.quote(userId)
+
+            datasource.connection.use { connection ->
+                connection.createStatement().use { statement ->
+
+                    statement.execute("GRANT USAGE ON SCHEMA $SCHEMA TO $dbUser")
+                    //Don't allow users to access public schema which will contain foreign data wrapper tables.
+                    logger.info("Revoking public schema right from user: {}", userId)
+                    statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbUser")
+                    //Set the search path for the user
+                    statement.execute("ALTER USER $dbUser set search_path TO $SCHEMA")
 
                     return@use
                 }
@@ -516,23 +539,6 @@ internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
         connection.createStatement().use { statement ->
 
             statement.execute("CREATE SCHEMA IF NOT EXISTS $SCHEMA")
-        }
-    }
-}
-
-private fun configureUserInDatabase(datasource: HikariDataSource, userId: String) {
-    val dbUser = DataTables.quote(userId)
-
-    datasource.connection.use { connection ->
-        connection.createStatement().use { statement ->
-
-            statement.execute("GRANT USAGE ON SCHEMA $SCHEMA TO $dbUser")
-            //Don't allow users to access public schema which will contain foreign data wrapper tables.
-            statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbUser")
-            //Set the search path for the user
-            statement.execute("ALTER USER $dbUser set search_path TO $SCHEMA")
-
-            return@use
         }
     }
 }
