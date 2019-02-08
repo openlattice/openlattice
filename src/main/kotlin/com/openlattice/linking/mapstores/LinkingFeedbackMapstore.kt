@@ -1,16 +1,27 @@
-package com.openlattice.postgres.mapstores
+package com.openlattice.linking.mapstores
 
+import com.hazelcast.config.InMemoryFormat
+import com.hazelcast.config.MapConfig
+import com.hazelcast.config.MapIndexConfig
 import com.openlattice.data.EntityDataKey
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.EntityKeyPair
-import com.openlattice.linking.EntityLinkingFeedback
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.UUID
 import kotlin.random.Random
+
+const val FIRST_ENTITY_INDEX = "__key#first"
+const val FIRST_ENTITY_SET_INDEX = "__key#first#entitySetId"
+const val FIRST_ENTITY_KEY_INDEX = "__key#first#entityKeyId"
+const val SECOND_ENTITY_INDEX = "__key#second"
+const val SECOND_ENTITY_SET_INDEX = "__key#second#entitySetId"
+const val SECOND_ENTITY_KEY_INDEX = "__key#second#entityKeyId"
+const val FEEDBACK_INDEX = "this"
 
 open class LinkingFeedbackMapstore(
         hds: HikariDataSource
@@ -40,6 +51,19 @@ open class LinkingFeedbackMapstore(
 
     override fun mapToValue(rs: ResultSet?): Boolean {
         return ResultSetAdapters.linked(rs)
+    }
+
+    override fun getMapConfig(): MapConfig {
+        return super
+                .getMapConfig()
+                .setInMemoryFormat(InMemoryFormat.OBJECT) // will be queried a lot from realtime linking service
+                .addMapIndexConfig(MapIndexConfig(FIRST_ENTITY_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(FIRST_ENTITY_SET_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(FIRST_ENTITY_KEY_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(SECOND_ENTITY_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(SECOND_ENTITY_SET_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(SECOND_ENTITY_KEY_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(FEEDBACK_INDEX, false))
     }
 
     override fun generateTestKey(): EntityKeyPair {

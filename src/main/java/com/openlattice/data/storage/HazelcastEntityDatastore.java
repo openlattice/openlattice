@@ -589,14 +589,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         signalDeletedEntities( entitySetId, entityKeyIds );
 
         // delete entities from linking feedbacks too
-        int deletedFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks( entitySetId, entityKeyIds );
+        feedbackQueryService.deleteLinkingFeedbacks( entitySetId, entityKeyIds );
 
         // Delete all neighboring entries from matched entities
         int deleteMatchCount = linkingQueryService.deleteNeighborhoods( entitySetId, entityKeyIds );
 
-        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data, " +
-                        "{} feedbacks and {} matched entries",
-                entityKeyIds, entitySetId, deleteCount, deletePropertyCount, deletedFeedbackCount, deleteMatchCount );
+        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data " +
+                        "and {} matched entries",
+                entityKeyIds, entitySetId, deleteCount, deletePropertyCount, deleteMatchCount );
 
         return deleteCount;
     }

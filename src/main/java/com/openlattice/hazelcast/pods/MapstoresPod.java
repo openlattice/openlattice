@@ -57,6 +57,7 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
+import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.postgres.PostgresPod;
 import com.openlattice.postgres.PostgresTableManager;
