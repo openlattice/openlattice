@@ -7,13 +7,13 @@ import com.openlattice.client.serialization.SerializationConstants;
 
 import java.util.Objects;
 
-public class AclKeyPair {
+public class DirectedAclKeys {
 
     private final AclKey target;
     private final AclKey source;
 
     @JsonCreator
-    public AclKeyPair(
+    public DirectedAclKeys(
             @JsonProperty( SerializationConstants.TARGET ) AclKey target,
             @JsonProperty( SerializationConstants.SRC ) AclKey source ) {
         this.target = target;
@@ -36,7 +36,7 @@ public class AclKeyPair {
             return true;
         if ( o == null || getClass() != o.getClass() )
             return false;
-        AclKeyPair that = (AclKeyPair) o;
+        DirectedAclKeys that = (DirectedAclKeys) o;
         return Objects.equals( target, that.target ) &&
                 Objects.equals( source, that.source );
     }

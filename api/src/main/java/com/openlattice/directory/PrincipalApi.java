@@ -21,7 +21,7 @@ package com.openlattice.directory;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.directory.pojo.AclKeyPair;
+import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import retrofit2.http.*;
@@ -102,8 +102,8 @@ public interface PrincipalApi {
     Collection<SecurablePrincipal> activateUser( @Body String accessToken );
 
     @POST( BASE + UPDATE )
-    Void addPrincipalToPrincipal( @Body AclKeyPair aclKeyPair );
+    Void addPrincipalToPrincipal( @Body DirectedAclKeys directedAclKeys );
 
     @DELETE( BASE + UPDATE )
-    Void removePrincipalFromPrincipal( @Body AclKeyPair aclKeyPair );
+    Void removePrincipalFromPrincipal( @Body DirectedAclKeys directedAclKeys );
 }
