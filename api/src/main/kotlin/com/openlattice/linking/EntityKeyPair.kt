@@ -15,19 +15,9 @@ class EntityKeyPair @JsonCreator constructor(
     @JsonProperty(SerializationConstants.SECOND) var second: EntityDataKey
 
     init {
-        val entityPair = sortedSetOf(entityKeyComparator, first, second)
+        val entityPair = sortedSetOf(first, second)
         this.first = entityPair.first()
         this.second = entityPair.last()
-    }
-
-    companion object {
-        val entityKeyComparator = Comparator<EntityDataKey> { key1, key2 ->
-            if (key1.entitySetId != key2.entitySetId) {
-                key1.entitySetId.compareTo(key2.entitySetId)
-            } else {
-                key1.entityKeyId.compareTo(key2.entityKeyId)
-            }
-        }
     }
 
     override fun equals(other: Any?): Boolean {
