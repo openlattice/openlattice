@@ -18,20 +18,17 @@
 
 package com.openlattice.directory;
 
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.directory.pojo.AclKeyPair;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
-import com.openlattice.authorization.AclKey;
+import retrofit2.http.*;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-
-import retrofit2.http.Body;
-import retrofit2.http.GET;
-import retrofit2.http.POST;
-import retrofit2.http.Path;
 
 public interface PrincipalApi {
     /*
@@ -57,6 +54,7 @@ public interface PrincipalApi {
     String USERS   = "/users";
     String DB      = "/db";
     String CURRENT = "/current";
+    String UPDATE  = "/update";
 
     String SEARCH_EMAIL = SEARCH + EMAIL;
 
@@ -102,4 +100,10 @@ public interface PrincipalApi {
      */
     @POST( BASE + USERS )
     Collection<SecurablePrincipal> activateUser( @Body String accessToken );
+
+    @POST( BASE + UPDATE )
+    Void addPrincipalToPrincipal( @Body AclKeyPair aclKeyPair );
+
+    @DELETE( BASE + UPDATE )
+    Void removePrincipalFromPrincipal( @Body AclKeyPair aclKeyPair );
 }
