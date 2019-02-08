@@ -26,12 +26,12 @@ import static com.google.common.base.Preconditions.checkState;
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.auth.UserInfo;
-import com.google.common.collect.ImmutableSet;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.UserDirectoryService;
+import com.openlattice.directory.pojo.AclKeyPair;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -42,16 +42,9 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.StringUtils;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping( PrincipalApi.CONTROLLER )
@@ -100,7 +93,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return Principals.getCurrentPrincipals()
                 .stream()
                 .filter( principal -> principal.getType().equals( PrincipalType.ROLE ) )
-                .map( principal -> spm.lookup( principal ))
+                .map( principal -> spm.lookup( principal ) )
                 .filter( aclKey -> aclKey != null )
                 .map( aclKey -> spm.getSecurablePrincipal( aclKey ) )
                 .collect( Collectors.toSet() );
@@ -234,5 +227,32 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Override
     public AuthorizationManager getAuthorizationManager() {
         return authorizations;
+    }
+
+
+    @Override
+    @PostMapping(
+            path = UPDATE,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void addPrincipalToPrincipal( @RequestBody AclKeyPair aclKeyPair ) {
+        ensureWriteAccess( aclKeyPair.getTarget() );
+        ensureWriteAccess( aclKeyPair.getSource() );
+
+        spm.addPrincipalToPrincipal( aclKeyPair.getSource(), aclKeyPair.getTarget() );
+
+        return null;
+    }
+
+    @Override
+    @DeleteMapping(
+            path = UPDATE,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void removePrincipalFromPrincipal( @RequestBody AclKeyPair aclKeyPair ) {
+        ensureWriteAccess( aclKeyPair.getTarget() );
+        ensureWriteAccess( aclKeyPair.getSource() );
+
+        spm.removePrincipalFromPrincipal( aclKeyPair.getSource(), aclKeyPair.getTarget() );
+
+        return null;
     }
 }
