@@ -245,7 +245,8 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
                 Optional.of( linking ),
                 Optional.of( linkedEntitySetIds ),
-                Optional.of( true ) );
+                Optional.of( true ) ,
+                Optional.empty());
 
         Map<String, UUID> entitySetIds = edmApi.createEntitySets( ImmutableSet.of( newES ) );
 

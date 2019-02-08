@@ -195,7 +195,8 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             DataEdgeKey(
                     EntityDataKey(esSrc.id, idsSrc[index]),
                     EntityDataKey(esDst.id, idsDst[index]),
-                    EntityDataKey(esEdge.id, idsEdge[index]))
+                    EntityDataKey(esEdge.id, idsEdge[index])
+            )
         }.toSet()
         val createdEdges = dataApi.createAssociations(edges)
 
@@ -428,7 +429,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val update = MetadataUpdate(
                 Optional.of(pt.title), Optional.empty(), Optional.of(es.name),
                 Optional.of(es.contacts), Optional.of(FullQualifiedName(newNameSpace, pt.type.name)), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty()
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()
         )
         edmApi.updatePropertyTypeMetadata(pt.id, update)
 
@@ -495,7 +496,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val loadedEntity = dataApi.getEntity(es.id, entityId)
 
         Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
-        Assert.assertFalse(loadedEntity.keySet()
-                .contains(FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)))
+        Assert.assertFalse(
+                loadedEntity.keySet()
+                        .contains(FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME))
+        )
     }
 }
