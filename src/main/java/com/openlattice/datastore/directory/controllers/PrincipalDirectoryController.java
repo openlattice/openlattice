@@ -31,7 +31,7 @@ import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.UserDirectoryService;
-import com.openlattice.directory.pojo.AclKeyPair;
+import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -234,11 +234,11 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @PostMapping(
             path = UPDATE,
             consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void addPrincipalToPrincipal( @RequestBody AclKeyPair aclKeyPair ) {
-        ensureWriteAccess( aclKeyPair.getTarget() );
-        ensureWriteAccess( aclKeyPair.getSource() );
+    public Void addPrincipalToPrincipal( @RequestBody DirectedAclKeys directedAclKeys ) {
+        ensureWriteAccess( directedAclKeys.getTarget() );
+        ensureWriteAccess( directedAclKeys.getSource() );
 
-        spm.addPrincipalToPrincipal( aclKeyPair.getSource(), aclKeyPair.getTarget() );
+        spm.addPrincipalToPrincipal( directedAclKeys.getSource(), directedAclKeys.getTarget() );
 
         return null;
     }
@@ -247,11 +247,11 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @DeleteMapping(
             path = UPDATE,
             consumes = MediaType.APPLICATION_JSON_VALUE )
-    public Void removePrincipalFromPrincipal( @RequestBody AclKeyPair aclKeyPair ) {
-        ensureWriteAccess( aclKeyPair.getTarget() );
-        ensureWriteAccess( aclKeyPair.getSource() );
+    public Void removePrincipalFromPrincipal( @RequestBody DirectedAclKeys directedAclKeys ) {
+        ensureWriteAccess( directedAclKeys.getTarget() );
+        ensureWriteAccess( directedAclKeys.getSource() );
 
-        spm.removePrincipalFromPrincipal( aclKeyPair.getSource(), aclKeyPair.getTarget() );
+        spm.removePrincipalFromPrincipal( directedAclKeys.getSource(), directedAclKeys.getTarget() );
 
         return null;
     }
