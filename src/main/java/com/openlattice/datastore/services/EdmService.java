@@ -1585,6 +1585,15 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getAllEntitySetPropertyMetadataForIds( Set<UUID> entitySetIds ) {
+        return entitySetIds.parallelStream()
+                .map( entitySetId -> Pair.of( entitySetId, getEntityTypeByEntitySetId( entitySetId ).getProperties() ) )
+                .collect( Collectors.toConcurrentMap( pair -> pair.getLeft(),
+                        pair -> pair.getRight().parallelStream().collect( Collectors.toConcurrentMap( ptId -> ptId,
+                                ptId -> getEntitySetPropertyMetadata( pair.getLeft(), ptId ) ) ) ) );
+    }
+
+    @Override
     public EntitySetPropertyMetadata getEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId ) {
         EntitySetPropertyKey key = new EntitySetPropertyKey( entitySetId, propertyTypeId );
         if ( !entitySetPropertyMetadata.containsKey( key ) ) {
