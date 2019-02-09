@@ -1402,8 +1402,612 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/organization"
-    # post:
-    #   summary: Create an organisation if it doesn't exist.
+    post:
+      summary: Create an organisation if it doesn't exist.
+      operationId: createOrganizationIfNotExists
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/organization"
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}:
+    get:
+      summary: Get an organisation from the organizationId
+      operationId: getOrganization
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/organization"
+    delete:
+      summary: Remove an organisation from the organizationId
+      operationId: destroyOrganization
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}/entitySets:
+    get:
+      summary: Get the entity sets for an organization for a certain filter
+      operationId: getOrganizationEntitySets
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/organizationEntitySetFlag"
+    post:
+      summary: Get the entity sets for an organization for a certain flag
+      operationId: getFlaggedOrganizationEntitySets
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/organizationEntitySetFlag"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/organizationEntitySetFlag"
+  /datastore/organizations/{organizationId}/entitySets/assemble:
+    post:
+      summary: Materializes entity sets into the organization database.
+      operationId: assembleEntitySets
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/organizationEntitySetFlag"
+  /datastore/organizations/{organizationId}/title:
+    put:
+      summary: Update the organisation title
+      operationId: updateTitle
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}/description:
+    put:
+      summary: Update the organisation description
+      operationId: updateDescription
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}/email-domains:
+    get:
+      summary: Get auto-approved email domains
+      operationId: getAutoApprovedEmailDomains
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+    put:
+      summary: Set auto-approved email domains
+      operationId: setAutoApprovedEmailDomain
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Remove auto-approved email domains
+      operationId: removeAutoApprovedEmailDomains
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}/principals/members:
+    get:
+      summary: Get members of a certain organization
+      operationId: getMembers
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: "#/components/organizationMember"
+  /datastore/organizations/{organizationId}/principals/members/{userId}:
+    put:
+      summary: Add member to an organization
+      operationId: addMember
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Remove member from an organization
+      operationId: removeMember
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/role:
+    post:
+      summary: Create role
+      operationId: createRole
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/role"
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}/principals/roles:
+    get:
+      summary: Get roles for an organization
+      operationId: getRoles
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: "#/components/role"
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}:
+    get:
+      summary: Get role for an organization from a roleId
+      operationId: getRole
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: "#/components/role"
+    delete:
+      summary: Remove role for an organization
+      operationId: deleteRole
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}/title:
+    post:
+      summary: Update role title for an organization from a roleId
+      operationId: updateRoleTitle
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}/description:
+    post:
+      summary: Update role description for an organization from a roleId
+      operationId: updateRoleDescription
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Success
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}/members/:
+    get:
+      summary: Get members of a role for an organization from a roleId
+      operationId: getAllUsersOfRole
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: "#/components/auth0userBasic"
+  /datastore/organizations/{organizationId}/principals/roles/{roleId}/members/{userId}:
+    put:
+      summary: Add a role to a user
+      operationId: addRoleToUser
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+    delete:
+      summary: Remove a role from a user
+      operationId: removeRoleFromUser
+      tags:
+        - organizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+
+
+
+
+
+
 
 components:
   securitySchemes:
@@ -1790,6 +2394,18 @@ components:
           type: array
           items:
             type: string
+    securablePrincipal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        principal:
+          $ref: "#/components/principal"
+        title:
+          type: string
+        description:
+          type: string
     role:
       type: object
       properties:
@@ -1846,6 +2462,24 @@ components:
           items:
             type: string
             format: uuid
+    organizationEntitySetFlag:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+          enum: [INTERNAL, EXTERNAL, MATERIALISED]
+    organizationMember:
+      type: object
+      properties:
+        principal:
+          $ref: securablePrincipal
+        profile:
+          $ref: "#/components/auth0userBasic"
+        roles:
+          type: array
+          items:
+            $ref: "#/components/securablePrincipal"
 
 
 tags:
