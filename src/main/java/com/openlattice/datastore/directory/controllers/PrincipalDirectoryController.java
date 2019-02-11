@@ -200,11 +200,12 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
     @Override
     @RequestMapping(
-            path = DB + USER_ID_PATH,
+            path = DB,
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public String getDbAccessCredential( @PathVariable( USER_ID ) String userId ) {
-        return dbCredService.getDbCredential( userId );
+    public String getDbAccessCredential() {
+        final var principal = Principals.getCurrentUser();
+        return dbCredService.getDbCredential( principal.getId() );
     }
 
     @Override

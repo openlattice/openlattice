@@ -25,11 +25,16 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
 import com.amazonaws.services.s3.AmazonS3;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
+import com.openlattice.assembler.Assembler;
+import com.openlattice.assembler.AssemblerConfiguration;
+import com.openlattice.assembler.AssemblerConnectionManager;
+import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -73,6 +78,7 @@ import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -97,6 +103,7 @@ import org.springframework.context.annotation.Import;
 @Import( {
         Auth0Pod.class,
         ByteBlobServicePod.class,
+        AssemblerConfigurationPod.class,
         NeuronPod.class,
 } )
 public class DatastoreServicesPod {
@@ -125,6 +132,8 @@ public class DatastoreServicesPod {
     @Inject
     private ByteBlobDataManager byteBlobDataManager;
 
+    @Inject
+    private AssemblerConfiguration assemblerConfiguration;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -218,10 +227,22 @@ public class DatastoreServicesPod {
     }
 
     @Bean
+    public Assembler assembler() {
+        return new Assembler( assemblerConfiguration,
+                authorizationManager(),
+                dcs(),
+                hikariDataSource,
+                hazelcastInstance );
+    }
+
+    @Bean
     public SecurePrincipalsManager principalService() {
-        return new HazelcastPrincipalService( hazelcastInstance,
+        final var spm = new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
-                authorizationManager() );
+                authorizationManager(),
+                assembler() );
+        AssemblerConnectionManager.initializeSecurePrincipalsManager( spm );
+        return spm;
     }
 
     @Bean
@@ -231,7 +252,8 @@ public class DatastoreServicesPod {
                 aclKeyReservationService(),
                 authorizationManager(),
                 userDirectoryService(),
-                principalService() );
+                principalService(),
+                assembler() );
     }
 
     @Bean
@@ -326,6 +348,30 @@ public class DatastoreServicesPod {
     @Bean
     public PersistentSearchService persistentSearchService() {
         return new PersistentSearchService( hikariDataSource, principalService() );
+    }
+
+    @Bean
+    public AssemblerConnectionManager bootstrapRolesAndUsers() {
+        final var hos = organizationsManager();
+
+        AssemblerConnectionManager.initializeAssemblerConfiguration( assemblerConfiguration );
+        AssemblerConnectionManager.initializeProductionDatasource( hikariDataSource );
+        AssemblerConnectionManager.initializeSecurePrincipalsManager( principalService() );
+        AssemblerConnectionManager.initializeOrganizations( hos );
+        AssemblerConnectionManager.initializeDbCredentialService( dcs() );
+        AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
+        AssemblerConnectionManager.initializeUsersAndRoles();
+
+        if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
+            final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );
+            final var org = hos.getOrganization( es.getOrganizationId() );
+            final var apt = dataModelService()
+                    .getPropertyTypesAsMap( dataModelService().getEntityType( es.getEntityTypeId() ).getProperties() );
+            AssemblerConnectionManager.createOrganizationDatabase( org.getId() );
+            final var results = AssemblerConnectionManager
+                    .materializeEntitySets( org.getId(), ImmutableMap.of( es.getId(), apt ) );
+        }
+        return new AssemblerConnectionManager();
     }
 
     @Bean PostgresDataSinkService postgresDataSinkService() {
