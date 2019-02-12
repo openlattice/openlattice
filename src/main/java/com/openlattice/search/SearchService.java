@@ -259,14 +259,16 @@ public class SearchService {
 
     private void indexLinkedEntities(
             UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
-        // linking_id/(normal)entity_set_id/property_type_id
-        Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
-                linkingIds.entrySet().stream().collect(
-                        Collectors.toMap(Map.Entry::getKey, entry -> Optional.of(entry.getValue())) ),
-                linkingIds.keySet().stream().collect(
-                        Collectors.toMap(Function.identity(), entitySetId -> propertyTypes) ));
+        if(!linkingIds.isEmpty()) {
+            // linking_id/(normal)entity_set_id/property_type_id
+            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
+                    linkingIds.entrySet().stream().collect(
+                            Collectors.toMap(Map.Entry::getKey, entry -> Optional.of(entry.getValue())) ),
+                    linkingIds.keySet().stream().collect(
+                            Collectors.toMap(Function.identity(), entitySetId -> propertyTypes) ));
 
-        elasticsearchApi.createBulkLinkedData( linkingEntitySetId, linkedData );
+            elasticsearchApi.createBulkLinkedData( linkingEntitySetId, linkedData );
+        }
     }
 
     @Subscribe
