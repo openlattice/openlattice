@@ -39,13 +39,7 @@ import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
 import com.openlattice.indexing.configuration.LinkingConfiguration;
-import com.openlattice.kindling.search.ConductorElasticsearchImpl;
-import com.openlattice.linking.Blocker;
-import com.openlattice.linking.DataLoader;
-import com.openlattice.linking.EdmCachingDataLoader;
-import com.openlattice.linking.LinkingQueryService;
-import com.openlattice.linking.Matcher;
-import com.openlattice.linking.RealtimeLinkingService;
+import com.openlattice.linking.*;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -139,7 +133,12 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public Blocker blocker() throws IOException {
-        return new ElasticsearchBlocker( elasticsearchApi, dataQueryService(), dataLoader(), hazelcastInstance );
+        return new ElasticsearchBlocker(
+                elasticsearchApi,
+                dataQueryService(),
+                dataLoader(),
+                postgresLinkingFeedbackQueryService(),
+                hazelcastInstance );
     }
 
     @Bean
@@ -162,6 +161,7 @@ public class IndexerPostConfigurationServicesPod {
                 dataLoader(),
                 lqs(),
                 executor,
+                postgresLinkingFeedbackQueryService(),
                 edm.getEntityTypeUuids( lc.getEntityTypes() ),
                 lc.getBlacklist(),
                 lc.getWhitelist(),
@@ -176,5 +176,10 @@ public class IndexerPostConfigurationServicesPod {
                 authz,
                 edm,
                 lc );
+    }
+
+    @Bean
+    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
+        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
 }

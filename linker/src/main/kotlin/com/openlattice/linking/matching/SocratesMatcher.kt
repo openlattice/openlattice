@@ -23,11 +23,10 @@ package com.openlattice.linking.matching
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
-import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityDataKey
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.Matcher
+import com.openlattice.linking.PostgresLinkingFeedbackService
 import com.openlattice.linking.util.PersonMetric
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -47,10 +46,8 @@ private val logger = LoggerFactory.getLogger(SocratesMatcher::class.java)
 @Component
 class SocratesMatcher(
         model: MultiLayerNetwork,
-        hazelcast: HazelcastInstance,
-        private val fqnToIdMap: Map<FullQualifiedName, UUID>) : Matcher {
-
-    private val linkingFeedbacks = hazelcast.getMap<EntityKeyPair, Boolean>(HazelcastMap.LINKING_FEEDBACKS.name)
+        private val fqnToIdMap: Map<FullQualifiedName, UUID>,
+        private val linkingFeedbackService: PostgresLinkingFeedbackService ) : Matcher {
 
     private var localModel = ThreadLocal.withInitial { model }
     //            Thread.currentThread().contextClassLoader.getResourceAsStream("model.bin") }
@@ -72,17 +69,18 @@ class SocratesMatcher(
 
         val entityDataKey = block.first
         // filter out positive matches from feedback to avoid computation of scores
-        // negative feedbacks are already filter out when blocking
-        // TODO rethink positive feedbacks
+        // negative feedbacks are already filtered out when blocking
         val positiveFeedbacks = HashSet<EntityDataKey>()
         val entities = block.second
                 .filter {
-                    val hasPositiveFeedback =
-                            linkingFeedbacks.getOrDefault(EntityKeyPair(entityDataKey, it.key), false)
-                    if (hasPositiveFeedback) {
-                        positiveFeedbacks.add(it.key)
+                    val feedback = linkingFeedbackService.getLinkingFeedback(EntityKeyPair(entityDataKey, it.key))
+                    if (feedback != null) {
+                        if(feedback.linked) {
+                            positiveFeedbacks.add(it.key)
+                        }
+                        !feedback.linked
                     }
-                    !hasPositiveFeedback
+                    true
                 }
 
         // extract properties and features for all entities in block
@@ -120,16 +118,18 @@ class SocratesMatcher(
         val entityDataKey = block.first
         // filter out positive matches from feedback to avoid computation of scores
         // negative feedbacks are already filter out when blocking
-        // TODO rethink positive feedbacks
         val positiveFeedbacks = HashSet<EntityKeyPair>()
         val entities = block.second.mapValues { entity ->
             block.second.keys.filter {
                 val entityPair = EntityKeyPair(entity.key, it)
-                val hasPositiveFeedback = linkingFeedbacks.getOrDefault(entityPair, false)
-                if(hasPositiveFeedback) {
-                    positiveFeedbacks.add(entityPair)
+                val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
+                if(feedback != null) {
+                    if(feedback.linked) {
+                        positiveFeedbacks.add(entityPair)
+                    }
+                    !feedback.linked
                 }
-                !hasPositiveFeedback
+                true
             }
         }.filter { it.value.isEmpty() }
 

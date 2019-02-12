@@ -279,7 +279,9 @@ public class IndexerServicesPod {
         final var modelStream = Thread.currentThread().getContextClassLoader().getResourceAsStream( "model.bin" );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
         return new SocratesMatcher(
-                ModelSerializer.restoreMultiLayerNetwork( modelStream ), hazelcastInstance, fqnToIdMap );
+                ModelSerializer.restoreMultiLayerNetwork( modelStream ),
+                fqnToIdMap,
+                postgresLinkingFeedbackQueryService() );
     }
 
     @Profile( KERAS )
@@ -289,16 +291,16 @@ public class IndexerServicesPod {
         final String simpleMlp = new ClassPathResource( "model_2019-01-30.h5" ).getFile().getPath();
         final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
-        return new SocratesMatcher( model, hazelcastInstance, fqnToIdMap );
-    }
-
-    @Bean
-    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
-        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
+        return new SocratesMatcher( model, fqnToIdMap, postgresLinkingFeedbackQueryService() );
     }
 
     @PostConstruct
     void initPrincipals() {
         Principals.init( principalService() );
+    }
+
+    @Bean
+    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
+        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
 }
