@@ -31,8 +31,8 @@ import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.edm.events.EntitySetDataClearedEvent;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.linking.PostgresLinkingFeedbackQueryService;
 import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.postgres.JsonDeserializer;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -66,7 +66,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private EventBus eventBus;
 
     @Inject
-    private PostgresLinkingFeedbackQueryService feedbackQueryService;
+    private PostgresLinkingFeedbackService feedbackQueryService;
 
     @Inject
     private LinkingQueryService linkingQueryService;
