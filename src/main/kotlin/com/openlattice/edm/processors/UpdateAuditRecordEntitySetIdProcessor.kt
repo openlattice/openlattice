@@ -43,6 +43,7 @@ class UpdateAuditRecordEntitySetIdProcessor(
                     "Encountered unexpected null value when updating audit record entity set id for securable object id {}.",
                     entry.key
             )
+            entry.setValue(AuditRecordEntitySetConfiguration(auditRecordEntitySetId, mutableSetOf(auditRecordEntitySetId)))
         } else {
             config.activeAuditRecordEntitySetId = auditRecordEntitySetId
             config.auditRecordEntitySetIds.add(auditRecordEntitySetId)

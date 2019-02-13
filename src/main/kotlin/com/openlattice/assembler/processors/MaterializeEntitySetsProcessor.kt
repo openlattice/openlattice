@@ -22,6 +22,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
@@ -56,6 +57,6 @@ data class MaterializeEntitySetsProcessor(
     }
 
     override fun getExecutorName(): String {
-        return "default"
+        return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 }

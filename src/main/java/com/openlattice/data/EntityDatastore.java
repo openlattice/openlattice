@@ -171,7 +171,7 @@ public interface EntityDatastore {
     int deleteEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
-     * Hard deletes properties of entit and removes the historical contents.
+     * Hard deletes properties of entity and removes the historical contents.
      *
      * @param entitySetId             The id of the entity set from which to delete.
      * @param entityKeyIds            The ids of entities to delete the data from.

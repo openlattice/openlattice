@@ -14,6 +14,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import java.util.function.Supplier;
+
 import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
@@ -118,6 +119,9 @@ public class JsonDeserializer {
                         value.getClass() );
                 return LocalDate.parse( (String) value );
             case DateTimeOffset:
+                if ( value instanceof OffsetDateTime ) {
+                    return value;
+                }
                 checkState( value instanceof String,
                         "Expected string for property type %s with data %s,  received %s",
                         dataType,
