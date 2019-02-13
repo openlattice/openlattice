@@ -1152,9 +1152,11 @@ paths:
           content:
             application/json:
               schema:
-                type: array
+                type: list
                 items:
-                  $ref: "#/components/entity"
+                  type: object
+                  additionalProperties:
+                    type: string
     post:
       summary: Gets a list of entities by UUID's
       operationId: loadFilteredEntitySetData
@@ -1184,9 +1186,11 @@ paths:
           content:
             application/json:
               schema:
-                type: array
+                type: list
                 items:
-                  $ref: "#/components/entity"
+                  type: object
+                  additionalProperties:
+                    type: string
     delete:
       summary: Clears the data from a single entity set.
       operationId: clearEntitySet
@@ -1205,10 +1209,10 @@ paths:
       responses:
         "200":
           description: "Success"
-  /datastore/data/set/{entitySetId}/entities:
+  /datastore/data/set/{entitySetId}/all:
     delete:
       summary: Clears the Entity matching the given Entity id and all of its neighbor Entities
-      operationId: clearAllEntitiesFromEntitySet
+      operationId: deleteAllEntitiesFromEntitySet
       parameters:
         - name: entitySetId
           in: path
@@ -1216,6 +1220,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Soft, Hard]
       tags:
         - data
       security:
@@ -1322,7 +1332,7 @@ paths:
       summary: Get the user id for the given email address.
       operationId: searchAllUsersByEmail
       tags:
-        - directory
+        - principal
       security:
         - openlattice_auth: []
         - http_auth: []
@@ -1339,6 +1349,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/auth0userBasicMap"
+  /datastore/principals/users/{userId}:
+    get:
+      summary: Get the user for the given id.
+      operationId: getUser
+      tags:
+        - principal
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/auth0userBasic"
+  /datastore/principals/db:
+    get:
+      summary: Get the db access credentials.
+      operationId: getDbAccessCredentials
+      tags:
+        - principal
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+  /datastore/principals/users/:
+    get:
+      summary: Get all users.
+      operationId: getAllUsers
+      tags:
+        - principal
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/auth0userBasicMap"
+  /datastore/principals/roles/current/:
+    get:
+      summary: Get current roles.
+      operationId: getCurrentRoles
+      tags:
+        - principal
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/securablePrincipal"
 
   #########################
   ## AUTHORIZATION API"s ##
@@ -1419,6 +1499,11 @@ paths:
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
   /datastore/organizations/{organizationId}:
     get:
       summary: Get an organisation from the organizationId
@@ -1750,7 +1835,7 @@ paths:
       responses:
         "200":
           description: Success
-  /datastore/organizations/role:
+  /datastore/organizations/roles:
     post:
       summary: Create role
       operationId: createRole
@@ -1768,6 +1853,11 @@ paths:
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
   /datastore/organizations/{organizationId}/principals/roles:
     get:
       summary: Get roles for an organization
@@ -1792,7 +1882,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: "#/components/role"
+                  $ref: "#/components/role"
   /datastore/organizations/{organizationId}/principals/roles/{roleId}:
     get:
       summary: Get role for an organization from a roleId
@@ -2270,15 +2360,13 @@ components:
         title: This is the title of the entitySet
         contacts: ["support@openlattice.com"]
         description: This is a more elaborate description of the entity set.
-    entity:
-      type: object
-      additionalProperties:
-        type: array
-        items:
-          type: string
     entityWithId:
       allOf:
-        - $ref: "#/components/entity"
+        - type: list
+          items:
+            type: object
+            additionalProperties:
+              type: string
         - type: object
           properties:
             openlattice.@id:
@@ -2336,20 +2424,23 @@ components:
     auth0userBasic:
       type: object
       properties:
-        userId:
+        user_id:
           type: string
         email:
           type: string
         nickname:
           type: string
+        username:
+          type: string
         roles:
           type: array
           items:
             type: string
-        organization:
+        "com/openlattice/organization":
           type: array
           items:
             type: string
+            format: uuid
     auth0userBasicMap:
       type: object
       additionalProperties:
@@ -2391,9 +2482,8 @@ components:
         type:
           type: string
         id:
-          type: array
-          items:
-            type: string
+          type: string
+          format: uuid
     securablePrincipal:
       type: object
       properties:
@@ -2421,6 +2511,9 @@ components:
           type: string
         description:
           type: string
+        "@class":
+          type: string
+          enum: ["com.openlattice.organization.roles.Role"]
     organization:
       type: object
       properties:
@@ -2433,7 +2526,7 @@ components:
           type: string
         description:
           type: string
-        autoApprovedEmails:
+        emails:
           type: array
           items:
             type: string
