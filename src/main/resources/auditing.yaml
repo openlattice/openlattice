@@ -8,4 +8,5 @@ fqns:
   EVENT_TYPE: "ol.type"
   ID: "ol.id"
   PRINCIPAL: "ol.userid"
+  TIMESTAMP: "general.datetime"
   OPERATION_ID: "ol.id"

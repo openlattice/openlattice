@@ -109,6 +109,7 @@ import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -127,6 +128,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -1700,6 +1702,11 @@ public class EdmService implements EdmManager {
 
     @Override public Set<UUID> getEntitySetsForOrganization( UUID organizationId ) {
         return entitySets.keySet( Predicates.equal( EntitySetMapstore.ORGANIZATION_INDEX, organizationId ) );
+    }
+
+    @Override
+    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
+        return aresManager;
     }
 
 }

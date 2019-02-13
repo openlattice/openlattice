@@ -22,6 +22,7 @@
 package com.openlattice.auditing
 
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicates
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.Principal
@@ -31,6 +32,8 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.processors.UpdateAuditRecordEntitySetIdProcessor
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore
+import com.openlattice.postgres.mapstores.AuditRecordEntitySetConfigurationMapstore.*
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -54,7 +57,7 @@ class AuditRecordEntitySetsManager(
     )
 
     fun createAuditEntitySetForEntitySet(principal: Principal, entitySetId: UUID) {
-        if (auditingTypes.initialized) {
+        if (auditingTypes.isAuditingInitialized()) {
             val auditedEntitySet = edm.getEntitySet(entitySetId)
             val name = auditedEntitySet.name
             createAuditEntitySet(principal, name, AclKey(entitySetId), auditedEntitySet.contacts)
@@ -74,9 +77,12 @@ class AuditRecordEntitySetsManager(
          * never used.
          */
 
-        edm.createEntitySet(principal, entitySet)
-        auditRecordEntitySetConfigurations
-                .executeOnKey(aclKey, UpdateAuditRecordEntitySetIdProcessor(entitySet.id))
+        val securableObjectId = aclKey.first()
+        if (auditRecordEntitySetConfigurations.keySet(Predicates.equal(ANY_AUDITING_ENTITY_SETS, securableObjectId)).isEmpty()) {
+            auditRecordEntitySetConfigurations
+                    .executeOnKey(aclKey, UpdateAuditRecordEntitySetIdProcessor(entitySet.id))
+            edm.createEntitySet(principal, entitySet)
+        }
 
     }
 
@@ -87,6 +93,12 @@ class AuditRecordEntitySetsManager(
     fun getActiveAuditRecordEntitySetId(aclKey: AclKey): UUID {
         //TODO: Don't load the entire object
         //This should never NPE as (almost) every securable object should have an entity set.
+        if (aclKey.size == 1
+                && securableObjectTypes[aclKey] == SecurableObjectType.EntitySet
+                && auditRecordEntitySetConfigurations.keySet(Predicates.equal(ANY_AUDITING_ENTITY_SETS, aclKey.first())).isNotEmpty()) {
+            return aclKey.first()
+        }
+
         return auditRecordEntitySetConfigurations[aclKey]!!.activeAuditRecordEntitySetId
     }
 
