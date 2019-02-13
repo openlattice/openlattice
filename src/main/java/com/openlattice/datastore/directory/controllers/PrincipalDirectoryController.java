@@ -236,7 +236,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void addPrincipalToPrincipal( @RequestBody DirectedAclKeys directedAclKeys ) {
         ensureWriteAccess( directedAclKeys.getTarget() );
-        ensureWriteAccess( directedAclKeys.getSource() );
+        ensureOwnerAccess( directedAclKeys.getSource() );
 
         spm.addPrincipalToPrincipal( directedAclKeys.getSource(), directedAclKeys.getTarget() );
 
@@ -249,7 +249,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void removePrincipalFromPrincipal( @RequestBody DirectedAclKeys directedAclKeys ) {
         ensureWriteAccess( directedAclKeys.getTarget() );
-        ensureWriteAccess( directedAclKeys.getSource() );
+        ensureOwnerAccess( directedAclKeys.getSource() );
 
         spm.removePrincipalFromPrincipal( directedAclKeys.getSource(), directedAclKeys.getTarget() );
 
