@@ -135,7 +135,6 @@ public class IndexerPostConfigurationServicesPod {
     public Blocker blocker() throws IOException {
         return new ElasticsearchBlocker(
                 elasticsearchApi,
-                dataQueryService(),
                 dataLoader(),
                 postgresLinkingFeedbackQueryService(),
                 hazelcastInstance );

@@ -29,7 +29,6 @@ import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicates
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
@@ -50,7 +49,6 @@ private val logger = LoggerFactory.getLogger(ElasticsearchBlocker::class.java)
 @Component
 class ElasticsearchBlocker(
         private val elasticsearch: ConductorElasticsearchApi,
-        private val dataQueryService: PostgresEntityDataQueryService,
         private val dataLoader: DataLoader,
         private val linkingFeedbackService: PostgresLinkingFeedbackService,
         hazelcast: HazelcastInstance

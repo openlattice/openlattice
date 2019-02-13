@@ -24,7 +24,6 @@ package com.openlattice.linking
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.collect.MapMaker
-import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityDataKey
@@ -32,12 +31,10 @@ import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.clustering.ClusterUpdate
-import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
@@ -65,6 +62,7 @@ class RealtimeLinkingService
         private val loader: DataLoader,
         private val gqs: LinkingQueryService,
         private val executor: ListeningExecutorService,
+        private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
         private val entitySetBlacklist: Set<UUID>,
         private val whitelist: Optional<Set<UUID>>,
@@ -97,28 +95,20 @@ class RealtimeLinkingService
 
         entityKeyIds
                 .parallel()
-                .map {
-                    val sw = Stopwatch.createStarted()
-                    val block = blocker.block(entitySetId, it)
-                    logger.info("Blocking ($entitySetId, $it) took ${sw.elapsed(TimeUnit.MILLISECONDS)} ms.")
-                    block
-                }
-                .filter {
-                    if (it.second.containsKey(it.first)) {
-                        return@filter true
-                    } else {
-                        logger.error("Skipping block for data key: {}", it.first)
-                    }
-
-                    false
-                }
                 .forEach {
-                    //block contains element being blocked
-                    val blockKey = it.first
-                    val elem = it.second[blockKey]!!
+                    // block
                     val sw = Stopwatch.createStarted()
+                    val initialBlock = blocker.block(entitySetId, it)
+                    logger.info("Blocking ($entitySetId, $it) took ${sw.elapsed(TimeUnit.MILLISECONDS)} ms.")
+
+                    //block contains element being blocked
+                    val blockKey = initialBlock.first
+                    val elem = initialBlock.second.getValue(blockKey)
+
+                    // initialize
+                    sw.reset().start()
                     logger.info("Initializing matching for block {}", blockKey)
-                    val initializedBlock = matcher.initialize(it)
+                    val initializedBlock = matcher.initialize(initialBlock)
                     logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
                     val dataKeys = collectKeys(initializedBlock.second)
                     //While a best cluster is being selected and updated we can't have other clusters being updated
@@ -201,7 +191,7 @@ class RealtimeLinkingService
 
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
-        return m!!.keys + m.values.flatMap { it.keys }
+        return m.keys + m.values.flatMap { it.keys }
     }
 
     private fun clearNeighborhoods(entitySetId: UUID, entityKeyIds: Stream<UUID>) {
@@ -209,7 +199,11 @@ class RealtimeLinkingService
         val clearedCount = entityKeyIds
                 .parallel()
                 .map { EntityDataKey(entitySetId, it) }
-                .mapToInt(gqs::deleteNeighborhood)
+                .mapToInt{
+                    val positiveFeedbacks = linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, it)
+                            .map(EntityLinkingFeedback::entityPair)
+                    gqs.deleteNeighborhood(it, positiveFeedbacks)
+                }
                 .sum()
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, entitySetId)
     }
@@ -263,11 +257,6 @@ class RealtimeLinkingService
         }
     }
 
-
-    private fun refreshLinks(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
-        clearNeighborhoods(entitySetId, entityKeyIds.stream())
-        runIterativeLinking(entitySetId, entityKeyIds.stream())
-    }
 
     private fun refreshLinks(entitySetId: UUID, entityKeyIds: Collection<UUID>) {
         clearNeighborhoods(entitySetId, entityKeyIds.stream())
