@@ -134,7 +134,7 @@ public class AppService {
         return nameAttempt;
     }
 
-    private UUID generateEntitySet( UUID appTypeId, String prefix, Principal principal ) {
+    private UUID generateEntitySet( UUID organizationId, UUID appTypeId, String prefix, Principal principal ) {
         AppType appType = getAppType( appTypeId );
         String name = getNextAvailableName( prefix.concat( "_" ).concat( appType.getType().getNamespace() )
                 .concat( "_" )
@@ -150,7 +150,7 @@ public class AppService {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.of( false ),
-                Optional.empty());
+                Optional.of( organizationId ));
         edmService.createEntitySet( principal, entitySet );
         return edmService.getEntitySet( name ).getId();
     }
@@ -358,7 +358,7 @@ public class AppService {
         EnumSet<Permission> allPermissions = EnumSet
                 .of( Permission.DISCOVER, Permission.LINK, Permission.READ, Permission.WRITE, Permission.OWNER );
 
-        UUID entitySetId = generateEntitySet( key.getAppTypeId(), prefix, userPrincipal );
+        UUID entitySetId = generateEntitySet( key.getOrganizationId(), key.getAppTypeId(), prefix, userPrincipal );
         appConfigs.put( key, new AppTypeSetting( entitySetId, EnumSet.of( Permission.READ, Permission.WRITE ) ) );
         authorizationService.addPermission( new AclKey( entitySetId ), appPrincipal, allPermissions );
         owners.forEach( owner -> {
