@@ -34,5 +34,6 @@ enum class AuditProperty {
     EVENT_TYPE,
     ID,
     PRINCIPAL,
-    OPERATION_ID
+    OPERATION_ID,
+    TIMESTAMP
 }

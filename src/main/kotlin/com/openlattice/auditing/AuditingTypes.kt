@@ -11,6 +11,7 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  *
@@ -28,31 +29,42 @@ class AuditingTypes(
     lateinit var auditingEntityTypeId: UUID
     val propertyTypes: MutableMap<UUID, PropertyType> = mutableMapOf()
     val propertyTypeIds: MutableMap<AuditProperty, UUID> = mutableMapOf()
-    var initialized = false
+    private val lock = ReentrantLock()
+    private var initialized = false
 
     fun intialize() {
         if (!initialized) {
-            val entityTypeFqn = FullQualifiedName(auditingConfiguration.entityTypeFqn)
-            entityType = edm.getEntityType(entityTypeFqn)
+            if (lock.tryLock()) {
+                try {
+                    val entityTypeFqn = FullQualifiedName(auditingConfiguration.entityTypeFqn)
+                    entityType = edm.getEntityType(entityTypeFqn)
 
-            auditingEntityTypeId = entityType.id
+                    auditingEntityTypeId = entityType.id
 
-            auditingConfiguration.fqns.forEach {
-                val propertyType = edm.getPropertyType(
-                        FullQualifiedName(it.value)
-                ) //NPE if property type does not exist.
-                propertyTypes[propertyType.id] = propertyType
-                propertyTypeIds[it.key] = propertyType.id
-            }
+                    auditingConfiguration.fqns.forEach {
+                        val propertyType = edm.getPropertyType(
+                                FullQualifiedName(it.value)
+                        ) //NPE if property type does not exist.
+                        propertyTypes[propertyType.id] = propertyType
+                        propertyTypeIds[it.key] = propertyType.id
+                    }
 
-            val allPropertyTypes = edm.getPropertyTypesAsMap(entityType.properties)
+                    val allPropertyTypes = edm.getPropertyTypesAsMap(entityType.properties)
 
 
-            check(allPropertyTypes.keys.containsAll(propertyTypes.keys)) {
-                val msg = "Auditing configuration specified the following property types not present in entity set: " +
-                        (propertyTypes - allPropertyTypes)
-                logger.error(msg)
-                return@check msg
+                    check(allPropertyTypes.keys.containsAll(propertyTypes.keys)) {
+                        val msg = "Auditing configuration specified the following property types not present in entity set: " +
+                                (propertyTypes - allPropertyTypes)
+                        logger.error(msg)
+                        return@check msg
+                    }
+
+                    initialized = true
+                } catch (ex: Exception) {
+                    logger.error("Unable to complete initialization.", ex)
+                } finally {
+                    lock.unlock()
+                }
             }
         }
     }
@@ -66,8 +78,9 @@ class AuditingTypes(
     }
 
     fun isAuditingInitialized(): Boolean {
-        initialized = edm.checkEntityTypeExists(FullQualifiedName(auditingConfiguration.entityTypeFqn)) &&
-                auditingConfiguration.fqns.values.map { FullQualifiedName(it) }.all { edm.checkPropertyTypeExists(it) }
+        if (!initialized) {
+            intialize()
+        }
         return initialized
     }
 }

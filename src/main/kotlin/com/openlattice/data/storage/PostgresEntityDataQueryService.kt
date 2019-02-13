@@ -833,7 +833,7 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
     )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now(), now()) " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) " +
             "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "VERSION = CASE WHEN abs($propertyTable.${VERSION.name}) < EXCLUDED.${VERSIONS.name} THEN EXCLUDED.${VERSIONS.name} " +
+            "VERSION = CASE WHEN abs($propertyTable.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE $propertyTable.${VERSION.name} END"
 
 }
