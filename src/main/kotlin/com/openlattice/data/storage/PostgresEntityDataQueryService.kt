@@ -384,9 +384,12 @@ class PostgresEntityDataQueryService(
                     .mapValues {
                         connection.prepareStatement(
                                 upsertPropertyValues(
-                                        entitySetId, it.key, it.value.type.fullQualifiedNameAsString, version
+                                        entitySetId,
+                                        it.key,
+                                        it.value.type.fullQualifiedNameAsString,
+                                        version
                                 )
-                        ) to connection.prepareStatement(updatePropertyVersionSql(it.key, version))
+                        )
                     }
 
 
@@ -411,7 +414,7 @@ class PostgresEntityDataQueryService(
                         )
                     } else {
                         values.forEach { value ->
-                            val (ps, ver) = upsertStatements!!
+                            val ps = upsertStatements
 
                             //Binary data types get stored in S3 bucket
                             val (propertyHash, insertValue) =
@@ -434,30 +437,19 @@ class PostgresEntityDataQueryService(
                             ps.setBytes(2, propertyHash)
                             ps.setObject(3, insertValue)
 
-                            ver.setObject(1, entitySetId)
-                            ver.setObject(2, entityKeyId)
-                            ver.setObject(3, propertyHash)
 
                             ps.addBatch()
-                            ver.addBatch()
                         }
                     }
                 }
             }
 
             //In case we want to do validation
-            val updatedPropertyCounts = preparedStatements.values.map {
-                val updateCount = it.first.executeBatch()
-                it.second.executeBatch()
-                return@map updateCount
-            }.sumBy { it.sum() }
+            val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() }
 
             val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum()
 
-            preparedStatements.values.forEach {
-                it.first.close()
-                it.second.close()
-            }
+            preparedStatements.values.forEach { it.close() }
 
             entitySetPreparedStatement.close()
             checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
@@ -840,15 +832,10 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
             ","
     )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now(), now()) " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) " +
-            "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name} "
+            "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "VERSION = CASE WHEN abs($propertyTable.${VERSION.name}) < EXCLUDED.${VERSIONS.name} THEN EXCLUDED.${VERSIONS.name} " +
+            "ELSE $propertyTable.${VERSION.name} END"
 
-}
-
-fun updatePropertyVersionSql(propertyTypeId: UUID, version: Long): String {
-    val propertyTable = quote(propertyTableName(propertyTypeId))
-    return "UPDATE $propertyTable SET ${VERSION.name} = $version " +
-            "WHERE ${ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ? AND ${HASH.name} = ? " +
-            "AND abs(${VERSION.name}) < $version "
 }
 
 fun selectEntitySetWithPropertyTypes(
