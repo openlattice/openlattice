@@ -47,7 +47,7 @@ private val logger = LoggerFactory.getLogger(SocratesMatcher::class.java)
 class SocratesMatcher(
         model: MultiLayerNetwork,
         private val fqnToIdMap: Map<FullQualifiedName, UUID>,
-        private val linkingFeedbackService: PostgresLinkingFeedbackService ) : Matcher {
+        private val linkingFeedbackService: PostgresLinkingFeedbackService) : Matcher {
 
     private var localModel = ThreadLocal.withInitial { model }
     //            Thread.currentThread().contextClassLoader.getResourceAsStream("model.bin") }
@@ -68,14 +68,20 @@ class SocratesMatcher(
         val model = localModel.get()
 
         val entityDataKey = block.first
+
+        // feedback on entity to itself should always be 1
+        val positiveFeedbacks = mutableSetOf(entityDataKey)
         // filter out positive matches from feedback to avoid computation of scores
         // negative feedbacks are already filtered out when blocking
-        val positiveFeedbacks = HashSet<EntityDataKey>()
         val entities = block.second
                 .filter {
+                    if(it.key == entityDataKey) {// is itself
+                        return@filter false
+                    }
+
                     val feedback = linkingFeedbackService.getLinkingFeedback(EntityKeyPair(entityDataKey, it.key))
                     if (feedback != null) {
-                        if(feedback.linked) {
+                        if (feedback.linked) {
                             positiveFeedbacks.add(it.key)
                         }
                         !feedback.linked
@@ -116,22 +122,28 @@ class SocratesMatcher(
 
         val model = localModel.get()
         val entityDataKey = block.first
+
+        // feedback on entity to itself should always be 1
+        val positiveFeedbacks = mutableSetOf(EntityKeyPair(entityDataKey, entityDataKey))
         // filter out positive matches from feedback to avoid computation of scores
         // negative feedbacks are already filter out when blocking
-        val positiveFeedbacks = HashSet<EntityKeyPair>()
         val entities = block.second.mapValues { entity ->
             block.second.keys.filter {
+                if (it == entityDataKey && entity.key == entityDataKey) { // is itself
+                    return@filter false
+                }
+
                 val entityPair = EntityKeyPair(entity.key, it)
                 val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
-                if(feedback != null) {
-                    if(feedback.linked) {
+                if (feedback != null) {
+                    if (feedback.linked) {
                         positiveFeedbacks.add(entityPair)
                     }
                     !feedback.linked
                 }
                 true
             }
-        }.filter { it.value.isEmpty() }
+        }.filter { !it.value.isEmpty() }
 
 
         // extract properties
