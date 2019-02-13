@@ -85,6 +85,12 @@ jacoco {
     toolVersion = "0.8.2"
 }
 
+compileKotlin {
+    kotlinOptions {
+        freeCompilerArgs = ['-Xjvm-default=compatibility']
+    }
+}
+
 dependencies {
     spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.8.0'
     compileOnly 'net.jcip:jcip-annotations:1.0'
