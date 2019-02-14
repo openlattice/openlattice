@@ -35,6 +35,7 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
@@ -202,6 +203,11 @@ public class DatastoreServicesPod {
                 entityTypeManager(),
                 schemaManager(),
                 auditingConfiguration );
+    }
+
+    @Bean
+    public AuditRecordEntitySetsManager auditRecordEntitySetsManager() {
+        return dataModelService().getAuditRecordEntitySetsManager();
     }
 
     @Bean

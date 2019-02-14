@@ -66,6 +66,7 @@ import com.openlattice.edm.type.PropertyType;
 import com.openlattice.exceptions.ApiExceptions;
 import com.openlattice.exceptions.ErrorsDTO;
 import com.openlattice.web.mediatypes.CustomMediaType;
+
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -75,6 +76,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -1004,7 +1006,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
                     }
                 } );
 
-        return Maps.toMap( entitySetIds, modelService::getAllEntitySetPropertyMetadata );
+        return modelService.getAllEntitySetPropertyMetadataForIds( entitySetIds );
     }
 
     @Override
