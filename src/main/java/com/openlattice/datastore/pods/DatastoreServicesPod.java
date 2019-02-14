@@ -91,8 +91,10 @@ import com.openlattice.postgres.PostgresTableManager;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
+
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -228,7 +230,10 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore( idService(), postgresDataManager(), dataQueryService() );
+        return new HazelcastEntityDatastore( idService(),
+                postgresDataManager(),
+                dataQueryService(),
+                dataModelService() );
     }
 
     @Bean
