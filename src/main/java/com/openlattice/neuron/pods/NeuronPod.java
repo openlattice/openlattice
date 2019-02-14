@@ -59,7 +59,9 @@ import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.neuron.Neuron;
 import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
+
 import javax.inject.Inject;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -135,7 +137,8 @@ public class NeuronPod {
         return new HazelcastEntityDatastore(
                 idService(),
                 postgresDataManager(),
-                dataQueryService()
+                dataQueryService(),
+                dataModelService()
         );
     }
 
