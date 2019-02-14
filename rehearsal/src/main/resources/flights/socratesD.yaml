@@ -1,0 +1,29 @@
+entityDefinitions:
+  SocratesTestA:
+    id: "8c97bf63-ca7a-4f37-ba1c-40338b1032d4"
+    entitySetName: "SocratesTestC"
+    fqn: "general.person"
+    propertyDefinitions:
+      nc.PersonGivenName:
+        type: "nc.PersonGivenName"
+        column: "firstname"
+      nc.PersonSurName:
+        type: "nc.PersonSurName"
+        column: "lastname"
+      nc.SSN:
+        type: "nc.SSN"
+        column: "ssn"
+      nc.PersonBirthDate:
+        type: "nc.PersonBirthDate"
+        column: "dob"
+        transforms:
+          - !<transforms.DateTransform>
+            pattern: ["yyyy-MM-dd"]
+      nc.PersonRace:
+        type: "nc.PersonRace"
+        column: "race"
+      nc.PersonEthnicity:
+        type: "nc.PersonEthnicity"
+        column: "ethnicity"
+associationDefinitions: {}
+name: "Socrates"
