@@ -2,12 +2,14 @@ package com.openlattice.linking.controllers
 
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
+import com.openlattice.data.EntityDataKey
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.indexing.configuration.LinkingConfiguration
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.RealtimeLinkingApi
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RestController
@@ -45,5 +47,16 @@ class RealtimeLinkingController(
                 .toSet()
         val entitySetsNeedLinking = lqs.getEntitiesNotLinked(linkableEntitySets).map { it.first }
         return linkableEntitySets.minus(entitySetsNeedLinking)
+    }
+
+    @RequestMapping(
+            path = [RealtimeLinkingApi.MATCHED + RealtimeLinkingApi.LINKING_ID_PATH],
+            method = [RequestMethod.GET],
+            produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getMatchedEntitiesForLinkingId(
+            @PathVariable(RealtimeLinkingApi.LINKING_ID) linkingId: UUID
+    ): Map<EntityDataKey, Map<EntityDataKey, Double>> {
+        ensureAdminAccess()
+        return lqs.getClustersContaining(setOf(linkingId)).getValue(linkingId)
     }
 }
