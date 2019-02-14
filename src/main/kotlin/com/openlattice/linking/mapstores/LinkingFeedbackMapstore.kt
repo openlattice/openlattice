@@ -16,11 +16,11 @@ import java.util.UUID
 import kotlin.random.Random
 
 const val FIRST_ENTITY_INDEX = "__key#first"
-const val FIRST_ENTITY_SET_INDEX = "__key#first#entitySetId"
-const val FIRST_ENTITY_KEY_INDEX = "__key#first#entityKeyId"
+const val FIRST_ENTITY_SET_INDEX = "__key#firstEntitySetId"
+const val FIRST_ENTITY_KEY_INDEX = "__key#firstEntityKeyId"
 const val SECOND_ENTITY_INDEX = "__key#second"
-const val SECOND_ENTITY_SET_INDEX = "__key#second#entitySetId"
-const val SECOND_ENTITY_KEY_INDEX = "__key#second#entityKeyId"
+const val SECOND_ENTITY_SET_INDEX = "__key#secondEntitySetId"
+const val SECOND_ENTITY_KEY_INDEX = "__key#secondEntityKeyId"
 const val FEEDBACK_INDEX = "this"
 
 open class LinkingFeedbackMapstore(
