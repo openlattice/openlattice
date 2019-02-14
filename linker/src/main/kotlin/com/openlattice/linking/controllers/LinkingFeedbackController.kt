@@ -38,6 +38,11 @@ constructor(
 
     @PutMapping(path = [LinkingFeedbackApi.FEEDBACK])
     override fun addLinkingFeedback(@RequestBody feedback: LinkingFeedback): Int {
+        if (feedback.linkingEntities.isEmpty() || feedback.linkingEntities.size + feedback.nonLinkingEntities.size < 2) {
+            throw IllegalArgumentException(
+                    "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided")
+        }
+
         // ensure read access on linking entity set
         ensureReadAccess(AclKey(feedback.linkingEntityDataKey.entitySetId))
 
