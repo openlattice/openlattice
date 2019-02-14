@@ -75,10 +75,6 @@ class SocratesMatcher(
         // negative feedbacks are already filtered out when blocking
         val entities = block.second
                 .filter {
-                    if(it.key == entityDataKey) {// is itself
-                        return@filter false
-                    }
-
                     val feedback = linkingFeedbackService.getLinkingFeedback(EntityKeyPair(entityDataKey, it.key))
                     if (feedback != null) {
                         if (feedback.linked) {
@@ -129,10 +125,6 @@ class SocratesMatcher(
         // negative feedbacks are already filter out when blocking
         val entities = block.second.mapValues { entity ->
             block.second.keys.filter {
-                if (it == entityDataKey && entity.key == entityDataKey) { // is itself
-                    return@filter false
-                }
-
                 val entityPair = EntityKeyPair(entity.key, it)
                 val feedback = linkingFeedbackService.getLinkingFeedback(entityPair)
                 if (feedback != null) {
