@@ -286,12 +286,16 @@ internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): Strin
 
 internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): String {
     return entityKeyPairs.joinToString(" AND ") {
-        "( (${SRC_ENTITY_SET_ID.name} = ${it.first.entitySetId} AND ${SRC_ENTITY_KEY_ID.name} = ${it.first.entityKeyId} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${it.second.entitySetId} AND ${DST_ENTITY_KEY_ID.name} = ${it.second.entityKeyId})" +
+        "( (${SRC_ENTITY_SET_ID.name} = ${uuidString(it.first.entitySetId)} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
+                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(it.second.entitySetId)} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
                 " OR " +
-                "(${SRC_ENTITY_SET_ID.name} = ${it.second.entitySetId} AND ${SRC_ENTITY_KEY_ID.name} = ${it.second.entityKeyId} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${it.first.entitySetId} AND ${DST_ENTITY_KEY_ID.name} = ${it.first.entityKeyId}) )"
+                "(${SRC_ENTITY_SET_ID.name} = ${uuidString(it.second.entitySetId)} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)} " +
+                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(it.first.entitySetId)} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)}) )"
     }
+}
+
+internal fun uuidString(id: UUID): String {
+    return "'$id'::uuid"
 }
 
 
