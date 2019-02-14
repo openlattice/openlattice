@@ -1592,7 +1592,7 @@ public class EdmService implements EdmManager {
 
         Map<EntitySetPropertyKey, EntitySetPropertyMetadata> metadataMap = entitySetPropertyMetadata.getAll( keys );
 
-        Set<EntitySetPropertyKey> missingKeys = Sets.difference( keys, metadataMap.keySet() );
+        Set<EntitySetPropertyKey> missingKeys = ImmutableSet.copyOf( Sets.difference( keys, metadataMap.keySet() ) );
         Map<UUID, PropertyType> missingPropertyTypesById = propertyTypes
                 .getAll( missingKeys.stream().map( EntitySetPropertyKey::getPropertyTypeId )
                         .collect( Collectors.toSet() ) );
