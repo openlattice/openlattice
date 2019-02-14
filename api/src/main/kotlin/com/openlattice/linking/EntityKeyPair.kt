@@ -1,6 +1,7 @@
 package com.openlattice.linking
 
 import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.data.EntityDataKey
@@ -41,18 +42,22 @@ class EntityKeyPair @JsonCreator constructor(
     /**
      * Acessor functions for LinkingFeedbackMapstore
      */
+    @JsonIgnore
     fun getFirstEntitySetId(): UUID {
         return first.entitySetId
     }
 
+    @JsonIgnore
     fun getFirstEntityKeyId(): UUID {
         return first.entityKeyId
     }
 
+    @JsonIgnore
     fun getSecondEntitySetId(): UUID {
         return second.entitySetId
     }
 
+    @JsonIgnore
     fun getSecondEntityKeyId(): UUID {
         return second.entityKeyId
     }
