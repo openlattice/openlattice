@@ -18,24 +18,34 @@
 
 package com.openlattice.linking;
 
+import com.openlattice.data.EntityDataKey;
 import retrofit2.http.GET;
+import retrofit2.http.Path;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
  * This API is responsible for any real-time linking / matching requests
+ * Currently it is only used in rehearsal tests
  */
 public interface RealtimeLinkingApi {
 
-    String SERVICE          = "/indexer";
-    String CONTROLLER       = "/linking";
-    String BASE             = SERVICE + CONTROLLER;
+    String SERVICE               = "/indexer";
+    String CONTROLLER            = "/linking";
+    String BASE                  = SERVICE + CONTROLLER;
 
-    String FINISHED         = "/finished";
+    String FINISHED              = "/finished";
+    String MATCHED               = "/matched";
 
-    String SET              = "/set";
+    String SET                   = "/set";
+    String LINKING_ID            = "linkingId";
+    String LINKING_ID_PATH       = "/{" + LINKING_ID + "}";
 
     @GET( BASE + FINISHED + SET )
-    Set<UUID> getLinkingFinishedEntitySets( );
+    Set<UUID> getLinkingFinishedEntitySets();
+
+    @GET( BASE + MATCHED + LINKING_ID_PATH )
+    Map<EntityDataKey, Map<EntityDataKey, Double>> getMatchedEntitiesForLinkingId( @Path( LINKING_ID ) UUID linkingId );
 }
