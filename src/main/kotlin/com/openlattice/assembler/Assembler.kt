@@ -64,30 +64,7 @@ class Assembler(
         return assemblies[organizationId]!!
     }
 
-//    private fun dropDatabase(organizationId: UUID, dbname: String) {
-//        val db = quote(dbname)
-//        val dbRole = quote("${dbname}_role")
-//        val unquotedDbAdminUser = buildUserId(organizationId)
-//        val dbAdminUser = quote(unquotedDbAdminUser)
-//        val dbAdminUserPassword = dbCredentialService.createUser(unquotedDbAdminUser)
-//
-//        val dropDbUser = "DROP ROLE $dbAdminUser"
-//        //TODO: If we grant this role to other users, we need to make sure we drop it
-//        val dropDbRole = "DROP ROLE $dbRole"
-//        val dropDb = " DROP DATABASE $db"
-//
-//
-//        //We connect to default db in order to do initial db setup
-//
-//        target.connection.use { connection ->
-//            connection.createStatement().use { statement ->
-//                statement.execute(dropDbUser)
-//                statement.execute(dropDbRole)
-//                statement.execute(dropDb)
-//                return@use
-//            }
-//        }
-//    }
+
 
     fun createOrganization(organization: Organization) {
         assemblies.set(organization.id, OrganizationAssembly(organization.id, organization.principal.id))

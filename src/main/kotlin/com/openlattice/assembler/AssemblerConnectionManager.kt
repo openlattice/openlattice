@@ -193,17 +193,17 @@ class AssemblerConnectionManager {
                 configureRolesInDatabase(datasource, securePrincipalsManager)
                 createOpenlatticeSchema(datasource)
 
-                datasource.connection.use() { connection ->
+                datasource.connection.use { connection ->
                     connection.createStatement().use { statement ->
                         statement.execute(
-                                "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_SCHEMA, $SCHEMA, public"
+                                "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_SCHEMA,$SCHEMA,public"
                         )
                     }
                 }
 
                 organization.members
                         .filter { it.id != "openlatticeRole" && it.id != "admin" }
-                        .forEach { principal -> configureUserInDatabase(datasource, principal.id) }
+                        .forEach { principal -> configureUserInDatabase(datasource, organization.principal.id, principal.id) }
 
                 createForeignServer(datasource)
 //                materializePropertyTypes(datasource)
@@ -241,6 +241,31 @@ class AssemblerConnectionManager {
                 }
             }
 
+        }
+
+        private fun dropDatabase(organizationId: UUID, dbname: String) {
+            val db = quote(dbname)
+            val dbRole = quote("${dbname}_role")
+            val unquotedDbAdminUser = buildUserId(organizationId)
+            val dbAdminUser = quote(unquotedDbAdminUser)
+
+            val dropDb = " DROP DATABASE $db"
+            val dropDbUser = "DROP ROLE $dbAdminUser"
+            //TODO: If we grant this role to other users, we need to make sure we drop it
+            val dropDbRole = "DROP ROLE $dbRole"
+
+
+
+            //We connect to default db in order to do initial db setup
+
+            target.connection.use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute(dropDb)
+                    statement.execute(dropDbUser)
+                    statement.execute(dropDbRole)
+                    return@use
+                }
+            }
         }
 
         private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
@@ -302,6 +327,14 @@ class AssemblerConnectionManager {
                     entitySet.isLinking
             )
 
+            //First we create view in production server view schema
+
+            hds.connection.use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute("CREATE VIEW IF NOT EXISTS ")
+                }
+
+            }
             val tableName = "openlattice.${quote(entitySet.name)}"
             datasource.connection.use { connection ->
                 val sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
@@ -475,8 +508,14 @@ class AssemblerConnectionManager {
             }
         }
 
-        private fun configureUserInDatabase(datasource: HikariDataSource, userId: String) {
+        private fun configureUserInDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
             val dbUser = DataTables.quote(userId)
+
+            target.connection.use {connection ->
+                connection.createStatement().use {statement ->
+                    statement.execute("GRANT ALL PRIVILEGES ON DATABASE ${quote(dbname)} TO $dbUser")
+                }
+            }
 
             datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
@@ -528,19 +567,23 @@ class AssemblerConnectionManager {
 }
 
 const val PRODUCTION_SCHEMA = "prod"
+const val OLVIEWS_SCHEMA = "olviews"
+
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PostgresColumn.PRINCIPAL_TYPE.name} = ?"
 
 private val INSERT_MATERIALIZED_ENTITY_SET = "INSERT INTO ${PostgresTable.ORGANIZATION_ASSEMBLIES.name} (?,?) ON CONFLICT DO NOTHING"
 private val SELECT_MATERIALIZED_ENTITY_SETS = "SELECT * FROM ${PostgresTable.ORGANIZATION_ASSEMBLIES.name} " +
         "WHERE ${PostgresColumn.ORGANIZATION_ID.name} = ?"
 
-internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
+internal fun createSchema( datasource: HikariDataSource, schema:String ) {
     datasource.connection.use { connection ->
         connection.createStatement().use { statement ->
-
-            statement.execute("CREATE SCHEMA IF NOT EXISTS $SCHEMA")
+            statement.execute("CREATE SCHEMA IF NOT EXISTS $schema")
         }
     }
+}
+internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
+    createSchema(datasource, SCHEMA)
 }
 
 internal fun createRoleIfNotExistsSql(dbRole: String): String {

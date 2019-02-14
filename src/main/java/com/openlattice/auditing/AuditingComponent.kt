@@ -21,29 +21,36 @@
 
 package com.openlattice.auditing
 
+import com.dataloom.mappers.ObjectMappers
+import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DataGraphService
 import java.util.*
+
+private val mapper = ObjectMappers.newJsonMapper();
 
 /**
  *
  * This class makes it easy for other classes to implement auditing by passing a instance of the auditable event class
  * with the appropriate data configured.
  */
+
 interface AuditingComponent {
 
     fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
-    fun getDataGraphService(): DataGraphService
+    fun getDataGraphService(): DataGraphManager
 
+    @JvmDefault
     fun recordEvent(event: AuditableEvent): Int {
         return recordEvents(listOf(event))
     }
 
+    @JvmDefault
     fun recordEvents(events: List<AuditableEvent>): Int {
 
         val ares = getAuditRecordEntitySetsManager()
         val auditingConfiguration = ares.auditingTypes
 
-        return if( auditingConfiguration.initialized ) {
+        return if( auditingConfiguration.isAuditingInitialized() ) {
             events
                     .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey) }
                     .map { (auditEntitySet, entities) ->
@@ -65,7 +72,7 @@ interface AuditingComponent {
 
             eventEntity[auditingConfiguration.getPropertyTypeId(
                     AuditProperty.ACL_KEY
-            )] = event.aclKey.map { it }.toSet()
+            )] = setOf(event.aclKey.index)
 
             event.entities.ifPresent {
                 eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ENTITIES)] = it
@@ -75,11 +82,12 @@ interface AuditingComponent {
                 eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.OPERATION_ID)] = setOf(it)
             }
 
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(event.aclKey.last()) //ID of securable object
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(event.principal)
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(event.eventType)
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(event.aclKey.last().toString()) //ID of securable object
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(event.principal.toString())
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(event.eventType.name)
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DESCRIPTION)] = setOf(event.description)
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DATA)] = setOf(event.data)
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DATA)] = setOf(mapper.writeValueAsString(event.data))
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.TIMESTAMP)] = setOf(event.timestamp)
 
             return@map eventEntity
         }

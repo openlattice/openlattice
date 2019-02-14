@@ -24,6 +24,7 @@ package com.openlattice.datastore.services;
 
 import com.codahale.metrics.annotation.Timed;
 import com.hazelcast.map.EntryProcessor;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.authorization.Principal;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.EntityDataModel;
@@ -234,4 +235,6 @@ public interface EdmManager {
     Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId );
 
     Set<UUID> getEntitySetsForOrganization( UUID organizationId );
+
+    AuditRecordEntitySetsManager getAuditRecordEntitySetsManager();
 }

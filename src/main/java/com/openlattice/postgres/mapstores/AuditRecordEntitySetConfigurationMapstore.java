@@ -1,6 +1,8 @@
 package com.openlattice.postgres.mapstores;
 
 import com.google.common.collect.ImmutableSet;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -20,6 +22,8 @@ import java.util.UUID;
  */
 public class AuditRecordEntitySetConfigurationMapstore
         extends AbstractBasePostgresMapstore<AclKey, AuditRecordEntitySetConfiguration> {
+    public static final String ANY_AUDITING_ENTITY_SETS = "auditRecordEntitySetIds[any]";
+
     public AuditRecordEntitySetConfigurationMapstore(
             HikariDataSource hds ) {
         super( HazelcastMap.AUDIT_RECORD_ENTITY_SETS.name(), PostgresTable.AUDIT_RECORD_ENTITY_SET_IDS, hds );
@@ -50,6 +54,11 @@ public class AuditRecordEntitySetConfigurationMapstore
     @Override protected AuditRecordEntitySetConfiguration mapToValue( ResultSet rs ) throws SQLException {
         return ResultSetAdapters.auditRecordEntitySetConfiguration( rs );
     }
+
+    @Override public MapConfig getMapConfig() {
+        return super.getMapConfig().addMapIndexConfig( new MapIndexConfig( ANY_AUDITING_ENTITY_SETS, false ) );
+    }
+
 
     @Override public AclKey generateTestKey() {
         return TestDataFactory.aclKey();
