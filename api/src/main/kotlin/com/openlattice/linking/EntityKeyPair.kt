@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.data.EntityDataKey
+import java.util.UUID
 
 /**
  * Represents an ordered pair of EntityDataKeys
@@ -35,5 +36,24 @@ class EntityKeyPair @JsonCreator constructor(
 
     override fun toString(): String {
         return "EntityKeyPair($first, $second)"
+    }
+
+    /**
+     * Acessor functions for LinkingFeedbackMapstore
+     */
+    fun getFirstEntitySetId(): UUID {
+        return first.entitySetId
+    }
+
+    fun getFirstEntityKeyId(): UUID {
+        return first.entityKeyId
+    }
+
+    fun getSecondEntitySetId(): UUID {
+        return second.entitySetId
+    }
+
+    fun getSecondEntityKeyId(): UUID {
+        return second.entityKeyId
     }
 }
