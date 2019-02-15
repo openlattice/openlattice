@@ -20,15 +20,12 @@
 
 package com.openlattice.mail;
 
-import java.util.Map;
-
-import com.openlattice.serializer.AbstractJacksonSerializationTest;
-import org.junit.Test;
-
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-
-import jodd.mail.att.ByteArrayAttachment;
+import com.openlattice.serializer.AbstractJacksonSerializationTest;
+import java.util.Map;
+import jodd.mail.EmailAttachment;
+import org.junit.Test;
 
 public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest<RenderableEmailRequest> {
 
@@ -49,7 +46,7 @@ public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest
                 "OutageTemplate",
                 Optional.of( "Outage" ),
                 Optional.of( map ),
-                Optional.of( new ByteArrayAttachment[] {} ),
+                Optional.of( new EmailAttachment[] {} ),
                 Optional.absent() );
     }
 
@@ -69,7 +66,7 @@ public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest
                 "TemplateName",
                 Optional.<String> absent(),
                 Optional.<Object> absent(),
-                Optional.of( new ByteArrayAttachment[] {} ),
+                Optional.of( new EmailAttachment[] {} ),
                 Optional.absent() );
     }
 
@@ -84,7 +81,7 @@ public class RenderableEmailRequestTest extends AbstractJacksonSerializationTest
                 "",
                 Optional.<String> absent(),
                 Optional.<Object> absent(),
-                Optional.of( new ByteArrayAttachment[] {} ),
+                Optional.of( new EmailAttachment[] {} ),
                 Optional.absent() );
     }
 
