@@ -195,7 +195,7 @@ class AlprAlertEmailRenderer {
             templateObjects.putAll(extractVehicleInfo(vehicle))
             templateObjects["expiration"] = persistentSearch.expiration.format(dateTimeFormatter)
 
-            val attachments = extractVehicleImages(vehicle)
+            val attachments = extractVehicleImages(vehicle).toTypedArray()
 
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
@@ -205,7 +205,7 @@ class AlprAlertEmailRenderer {
                     TEMPLATE_PATH,
                     Optional.of(subject),
                     Optional.of(templateObjects),
-                    Optional.of(attachments.toTypedArray()),
+                    Optional.of(attachments),
                     Optional.absent()
             )
         }
