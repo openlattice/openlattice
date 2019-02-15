@@ -53,6 +53,7 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.search.MultiSearchRequest;
 import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -91,6 +92,16 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     private static final ObjectMapper mapper = ObjectMappers.newJsonMapper();
     private static final Logger       logger = LoggerFactory
             .getLogger( ConductorElasticsearchImpl.class );
+
+    private static final String[] DEFAULT_INDICES = new String[] {
+            ENTITY_SET_DATA_MODEL,
+            ORGANIZATIONS,
+            ENTITY_TYPE_INDEX,
+            ASSOCIATION_TYPE_INDEX,
+            PROPERTY_TYPE_INDEX,
+            APP_INDEX,
+            APP_TYPE_INDEX
+    };
 
     static {
         mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false );
@@ -145,13 +156,32 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     public void initializeIndices() {
-        initializeEntitySetDataModelIndex();
-        initializeOrganizationIndex();
-        initializeEntityTypeIndex();
-        initializeAssociationTypeIndex();
-        initializePropertyTypeIndex();
-        initializeAppIndex();
-        initializeAppTypeIndex();
+        for ( String indexName : DEFAULT_INDICES ) {
+            createIndex( indexName );
+        }
+    }
+
+    private boolean createIndex( String indexName ) {
+        switch ( indexName ) {
+            case ENTITY_SET_DATA_MODEL:
+                return initializeEntitySetDataModelIndex();
+            case ORGANIZATIONS:
+                return initializeOrganizationIndex();
+            case ENTITY_TYPE_INDEX:
+                return initializeEntityTypeIndex();
+            case ASSOCIATION_TYPE_INDEX:
+                return initializeAssociationTypeIndex();
+            case PROPERTY_TYPE_INDEX:
+                return initializePropertyTypeIndex();
+            case APP_INDEX:
+                return initializeAppIndex();
+            case APP_TYPE_INDEX:
+                return initializeAppTypeIndex();
+            default: {
+                logger.error( "Unable to initialize index {}", indexName );
+                return false;
+            }
+        }
     }
 
     @Override
@@ -181,7 +211,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                         .endObject()
             	        .startObject( ANALYZER )
                 	        .startObject( METAPHONE_ANALYZER )
-                	            .field( TOKENIZER, STANDARD )
+                	            .field( TOKENIZER, LOWERCASE )
                 	            .field( FILTER, Lists.newArrayList( STANDARD, LOWERCASE, SHINGLE_FILTER, METAPHONE_FILTER ) )
                 	        .endObject()
                 	    .endObject()
@@ -216,16 +246,22 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> mapping = Maps.newHashMap();
         properties.put( PROPERTY_TYPES, nestedField );
         properties.put( ENTITY_SET, objectField );
+        properties.put( ENTITY_SET + "." + NAME, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
+        properties.put( ENTITY_SET + "." + TITLE, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
+        properties.put( ENTITY_SET + "." + DESCRIPTION, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
         entitySetData.put( ES_PROPERTIES, properties );
         mapping.put( ENTITY_SET_TYPE, entitySetData );
 
-        client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
-                .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 3 )
-                        .put( NUM_REPLICAS, 2 ) )
-                .addMapping( ENTITY_SET_TYPE, mapping )
-                .execute().actionGet();
-        return true;
+        try {
+            client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
+                    .setSettings( getMetaphoneSettings() )
+                    .addMapping( ENTITY_SET_TYPE, mapping )
+                    .execute().actionGet();
+            return true;
+        } catch ( IOException e ) {
+            logger.error( "Unable to initialize entity set data model index", e );
+            return false;
+        }
     }
 
     private boolean initializeOrganizationIndex() {
@@ -590,7 +626,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
 
         query.filter( QueryBuilders.idsQuery()
-                .addIds( authorizedAclKeys.stream().map( aclKey -> aclKey.get( 0 ).toString() ).toArray( String[]::new ) ) );
+                .addIds( authorizedAclKeys.stream().map( aclKey -> aclKey.get( 0 ).toString() )
+                        .toArray( String[]::new ) ) );
         SearchResponse response = client.prepareSearch( ENTITY_SET_DATA_MODEL )
                 .setTypes( ENTITY_SET_TYPE )
                 .setQuery( query )
@@ -1163,7 +1200,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .minimumShouldMatch( 1 );
 
         query.filter( QueryBuilders.idsQuery()
-                .addIds( authorizedOrganizationIds.stream().map( aclKey -> aclKey.get( 0 ).toString() ).toArray( String[]::new ) ) );
+                .addIds( authorizedOrganizationIds.stream().map( aclKey -> aclKey.get( 0 ).toString() )
+                        .toArray( String[]::new ) ) );
 
         SearchResponse response = client.prepareSearch( ORGANIZATIONS )
                 .setTypes( ORGANIZATION_TYPE )
@@ -1537,6 +1575,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         BoolQueryBuilder deleteQuery = QueryBuilders.boolQuery();
         BulkRequestBuilder bulkRequest = client.prepareBulk();
+
+        client.delete( new DeleteRequest( index ) ).actionGet();
+        createIndex( index );
 
         objects.forEach( object -> {
             try {
