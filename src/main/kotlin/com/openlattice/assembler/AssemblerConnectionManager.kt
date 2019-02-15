@@ -21,6 +21,9 @@
 
 package com.openlattice.assembler
 
+import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.MetricRegistry.name
+import com.codahale.metrics.Timer
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
 import com.openlattice.data.storage.MetadataOption
@@ -59,15 +62,18 @@ class AssemblerConnectionManager {
 
         lateinit var assemblerConfiguration: AssemblerConfiguration
 
-
         private lateinit var hds: HikariDataSource
         private lateinit var securePrincipalsManager: SecurePrincipalsManager
         private lateinit var organizations: HazelcastOrganizationService
         private lateinit var dbCredentialService: DbCredentialService
         private lateinit var entitySets: IMap<UUID, EntitySet>
         private lateinit var target: HikariDataSource
+        private lateinit var materializeAllTimer: Timer
+        private lateinit var materializeEntitySetsTimer: Timer
+        private lateinit var materializeEdgesTimer: Timer
 
-        private val initialized = BooleanArray(6) { false }
+
+        private val initialized = BooleanArray(7) { false }
 
         @JvmStatic
         fun initializeEntitySets(entitySets: IMap<UUID, EntitySet>) {
@@ -152,6 +158,26 @@ class AssemblerConnectionManager {
                 initializeUsersAndRoles()
             }
         }
+
+        @JvmStatic
+        fun initializeMetrics(metricRegistry: MetricRegistry) {
+            if (initialized[6]) {
+                logger.info("Ignoring metrics registry as it is already initialized.")
+            } else {
+                this.materializeAllTimer = metricRegistry.timer(
+                        name(AssemblerConnectionManager::class.java, "materializeAll")
+                )
+                this.materializeEntitySetsTimer = metricRegistry.timer(
+                        name(AssemblerConnectionManager::class.java, "materializeEntitySets")
+                )
+                this.materializeEdgesTimer = metricRegistry.timer(
+                        name(AssemblerConnectionManager::class.java, "materializeEdges")
+                )
+                logger.info("Principals manager initialized.")
+                initialized[6] = true
+                initializeUsersAndRoles()
+            }
+        }
 //
 //        @JvmStatic
 //        fun getSecurePrincipalsManager(): SecurePrincipalsManager {
@@ -203,7 +229,11 @@ class AssemblerConnectionManager {
 
                 organization.members
                         .filter { it.id != "openlatticeRole" && it.id != "admin" }
-                        .forEach { principal -> configureUserInDatabase(datasource, organization.principal.id, principal.id) }
+                        .forEach { principal ->
+                            configureUserInDatabase(
+                                    datasource, organization.principal.id, principal.id
+                            )
+                        }
 
                 createForeignServer(datasource)
 //                materializePropertyTypes(datasource)
@@ -255,7 +285,6 @@ class AssemblerConnectionManager {
             val dropDbRole = "DROP ROLE $dbRole"
 
 
-
             //We connect to default db in order to do initial db setup
 
             target.connection.use { connection ->
@@ -268,17 +297,23 @@ class AssemblerConnectionManager {
             }
         }
 
+        /**
+         * The reason we use an in the query for this function is that only entity sets that have been materialized
+         * should have their edges materialized.
+         */
         private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
-            val clause = entitySetIds.joinToString { "'$it'" }
-            datasource.connection.use { connection ->
-                connection.createStatement().use { stmt ->
-                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $SCHEMA.edges")
-                    stmt.execute(
-                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM EDGES WHERE src_entity_set_id IN ($clause) " +
-                                    "AND dst_entity_set_id IN ($clause) " +
-                                    "AND edge_entity_set_id IN ($clause) "
-                    )
-                    return@use
+            materializeEdgesTimer.time().use {
+                val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
+                datasource.connection.use { connection ->
+                    connection.createStatement().use { stmt ->
+                        stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $SCHEMA.edges")
+                        stmt.execute(
+                                "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM EDGES WHERE src_entity_set_id IN ($clause) " +
+                                        "AND dst_entity_set_id IN ($clause) " +
+                                        "AND edge_entity_set_id IN ($clause) "
+                        )
+                        return@use
+                    }
                 }
             }
         }
@@ -511,8 +546,8 @@ class AssemblerConnectionManager {
         private fun configureUserInDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
             val dbUser = DataTables.quote(userId)
 
-            target.connection.use {connection ->
-                connection.createStatement().use {statement ->
+            target.connection.use { connection ->
+                connection.createStatement().use { statement ->
                     statement.execute("GRANT ALL PRIVILEGES ON DATABASE ${quote(dbname)} TO $dbUser")
                 }
             }
@@ -575,13 +610,14 @@ private val INSERT_MATERIALIZED_ENTITY_SET = "INSERT INTO ${PostgresTable.ORGANI
 private val SELECT_MATERIALIZED_ENTITY_SETS = "SELECT * FROM ${PostgresTable.ORGANIZATION_ASSEMBLIES.name} " +
         "WHERE ${PostgresColumn.ORGANIZATION_ID.name} = ?"
 
-internal fun createSchema( datasource: HikariDataSource, schema:String ) {
+internal fun createSchema(datasource: HikariDataSource, schema: String) {
     datasource.connection.use { connection ->
         connection.createStatement().use { statement ->
             statement.execute("CREATE SCHEMA IF NOT EXISTS $schema")
         }
     }
 }
+
 internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
     createSchema(datasource, SCHEMA)
 }
