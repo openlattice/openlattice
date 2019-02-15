@@ -20,6 +20,8 @@
 
 plugins {
     id "java"
+    id 'maven-publish'
+    id 'signing'
     id "eclipse"
     id "idea"
     id "jacoco"
@@ -47,8 +49,9 @@ spotbugs {
 }
 
 jacoco {
-    toolVersion = "0.8.2"
+    toolVersion = "${project.jacoco_tool_version}"
 }
+
 
 tasks.withType(com.github.spotbugs.SpotBugsTask) {
     reports {
