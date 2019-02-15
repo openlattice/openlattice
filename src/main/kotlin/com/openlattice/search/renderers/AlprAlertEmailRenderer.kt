@@ -20,11 +20,11 @@ import javax.imageio.ImageIO
 
 private val logger = LoggerFactory.getLogger(AlprAlertEmailRenderer::class.java)
 
-private val FROM_EMAIL = "katherine@openlattice.com"
-private val TEMPLATE_PATH = "mail/templates/shared/AlprAlertTemplate.mustache"
-private val MIME_TYPE_PREFIX = "image/"
-private val JPEG = "jpeg"
-private val PNG = "png"
+private const val FROM_EMAIL = "katherine@openlattice.com"
+private const val TEMPLATE_PATH = "mail/templates/shared/AlprAlertTemplate.mustache"
+private const val MIME_TYPE_PREFIX = "image/"
+private const val JPEG = "jpeg"
+private const val PNG = "png"
 
 private val LAST_READ_FQN = FullQualifiedName("ol.datetimelastreported")
 private val EXPIRATION_FQN = FullQualifiedName("ol.datetimeend")
