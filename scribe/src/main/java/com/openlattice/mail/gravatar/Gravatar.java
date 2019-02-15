@@ -22,6 +22,7 @@ package com.openlattice.mail.gravatar;
 
 import com.openlattice.mail.requirements.ScribeRequirements;
 import com.openlattice.mail.templates.EmailTemplate;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -54,6 +55,7 @@ public class Gravatar {
         }
     }
 
+    @SuppressFBWarnings(value="WEAK_MESSAGE_DIGEST_MD5",justification = "Gravatar uses md5... that's not good")
     public URL getUrl( String email ) {
         String emailHash = DigestUtils.md5Hex( email.toLowerCase().trim() );
         String params = formatUrlParameters();

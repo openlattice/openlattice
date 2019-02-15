@@ -20,6 +20,7 @@
 
 package com.openlattice.mail;
 
+import jodd.mail.EmailAttachment;
 import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -27,19 +28,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 
-import jodd.mail.att.ByteArrayAttachment;
 
 public class RenderableEmailRequest extends EmailRequest {
-    private static final String                   TEMPLATE_PATH_FIELD    = "templatePath";
-    private static final String                   SUBJECT_FIELD          = "subject";
-    private static final String                   TEMPLATE_OBJS_FIELD    = "templateObjs";
-    private static final String                   ATTACHMENTS_FIELD      = "attachments";
-    private static final String                   ATTACHMENT_PATHS_FIELD = "attachmentPaths";
-    private final Optional<String>                subject;
-    private final String                          templatePath;
-    private final Optional<Object>                templateObjs;
-    private final Optional<ByteArrayAttachment[]> byteArrayAttachment;
-    private final Optional<String[]>              attachmentPaths;
+    private static final String               TEMPLATE_PATH_FIELD    = "templatePath";
+    private static final String               SUBJECT_FIELD          = "subject";
+    private static final String               TEMPLATE_OBJS_FIELD    = "templateObjs";
+    private static final String               ATTACHMENTS_FIELD      = "attachments";
+    private static final String               ATTACHMENT_PATHS_FIELD = "attachmentPaths";
+    private final Optional<String>            subject;
+    private final String                      templatePath;
+    private final Optional<Object>            templateObjs;
+    private final Optional<EmailAttachment[]> byteArrayAttachment;
+    private final Optional<String[]>          attachmentPaths;
 
     @JsonCreator
     public RenderableEmailRequest(
@@ -50,7 +50,7 @@ public class RenderableEmailRequest extends EmailRequest {
             @JsonProperty( TEMPLATE_PATH_FIELD ) String templatePath,
             @JsonProperty( SUBJECT_FIELD ) Optional<String> subject,
             @JsonProperty( TEMPLATE_OBJS_FIELD ) Optional<Object> templateObjs,
-            @JsonProperty( ATTACHMENTS_FIELD ) Optional<ByteArrayAttachment[]> byteArrayAttachment,
+            @JsonProperty( ATTACHMENTS_FIELD ) Optional<EmailAttachment[]> byteArrayAttachment,
             @JsonProperty( ATTACHMENT_PATHS_FIELD ) Optional<String[]> attachmentPaths ) {
         super( from, to, cc, bcc );
         this.subject = subject;
@@ -82,7 +82,7 @@ public class RenderableEmailRequest extends EmailRequest {
     }
 
     @JsonProperty( ATTACHMENTS_FIELD )
-    public Optional<ByteArrayAttachment[]> getByteArrayAttachment() {
+    public Optional<EmailAttachment[]> getByteArrayAttachment() {
         return byteArrayAttachment;
     }
 
@@ -91,7 +91,7 @@ public class RenderableEmailRequest extends EmailRequest {
             String templatePath,
             Optional<Object> templateObjs,
             Optional<String[]> attachmentPaths,
-            Optional<ByteArrayAttachment[]> byteArrayAttachment,
+            Optional<EmailAttachment[]> byteArrayAttachment,
             EmailRequest request ) {
         return new RenderableEmailRequest(
                 request.getFrom(),
