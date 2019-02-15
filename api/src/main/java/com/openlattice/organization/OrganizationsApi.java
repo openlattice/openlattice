@@ -18,7 +18,9 @@
 
 package com.openlattice.organization;
 
+import java.util.EnumSet;
 import com.openlattice.organization.roles.Role;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,10 +38,11 @@ public interface OrganizationsApi {
     /*
      * These determine the service routing for the LB
      */
+    // @formatter:off
     String SERVICE           = "/datastore";
     String CONTROLLER        = "/organizations";
     String BASE              = SERVICE + CONTROLLER;
-
+    // @formatter:on
     /*
      * Acutal path elements
      */
@@ -47,6 +50,8 @@ public interface OrganizationsApi {
     String ID_PATH           = "/{" + ID + "}";
     String DESCRIPTION       = "/description";
     String TITLE             = "/title";
+
+    String ENTITY_SETS       = "/entity-sets";
     String EMAIL_DOMAIN      = "email-domain";
     String EMAIL_DOMAINS     = "/email-domains";
     String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
@@ -58,10 +63,12 @@ public interface OrganizationsApi {
     String ROLES             = "/roles";
     String MEMBERS           = "/members";
 
+    String ASSEMBLE          = "/assemble";
     String ROLE_ID           = "roleId";
     String ROLE_ID_PATH      = "/{" + ROLE_ID + "}";
     String USER_ID           = "userId";
     String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
+
 
     @GET( BASE )
     Iterable<Organization> getOrganizations();
@@ -74,6 +81,40 @@ public interface OrganizationsApi {
 
     @DELETE( BASE + ID_PATH )
     Void destroyOrganization( @Path( ID ) UUID organizationId );
+
+    /**
+     * Retrieves all the organization entity sets without filtering.
+     *
+     * @param organizationId The id of the organization for which to retrieve entity sets
+     *
+     * @return All the organization entity sets along with flags indicating whether they are internal, external, and/or
+     * materialized.
+     */
+    @GET( BASE + ID_PATH + ENTITY_SETS )
+    Map<UUID,Set<OrganizationEntitySetFlag>> getOrganizationEntitySets( @Path( ID ) UUID organizationId);
+
+    /**
+     * Retrieves the
+     *
+     * @param organizationId The id of the organization for which to retrieve entity sets
+     * @param flagFilter The set of flags for which to retrieve information.
+     * @return All the organization entity sets along with flags indicating whether they are internal, external, and/or
+     * materialized.
+     */
+    @POST( BASE + ID_PATH + ENTITY_SETS )
+    Map<UUID,Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
+            @Path( ID ) UUID organizationId,
+            @Body EnumSet<OrganizationEntitySetFlag> flagFilter );
+
+    /**
+     * Materializes entity sets into the organization database.
+     *
+     * @param entitySetIds The ids of the entity sets which to assemble into materialized views.
+     */
+    @POST( BASE + ID_PATH + ENTITY_SETS + ASSEMBLE )
+    Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
+            @Path( ID ) UUID organizationId,
+            @Body Set<UUID> entitySetIds );
 
     @PUT( BASE + ID_PATH + TITLE )
     Void updateTitle( @Path( ID ) UUID organziationId, @Body String title );
@@ -97,9 +138,9 @@ public interface OrganizationsApi {
     Void addAutoApprovedEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomains );
 
     @HTTP(
-        method = "DELETE",
-        hasBody = true,
-        path = BASE + ID_PATH + EMAIL_DOMAINS )
+            method = "DELETE",
+            hasBody = true,
+            path = BASE + ID_PATH + EMAIL_DOMAINS )
     Void removeAutoApprovedEmailDomains( @Path( ID ) UUID organizationId, @Body Set<String> emailDomain );
 
     /**
@@ -146,7 +187,10 @@ public interface OrganizationsApi {
     Void updateRoleTitle( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId, @Body String title );
 
     @PUT( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + DESCRIPTION )
-    Void updateRoleDescription( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId, @Body String description );
+    Void updateRoleDescription(
+            @Path( ID ) UUID organizationId,
+            @Path( ROLE_ID ) UUID roleId,
+            @Body String description );
 
     @DELETE( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH )
     Void deleteRole( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId );
@@ -154,13 +198,16 @@ public interface OrganizationsApi {
     @GET( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS )
     Iterable<Auth0UserBasic> getAllUsersOfRole( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId );
 
-//    @GET( BASE + ID_PATH + MEMBERS )
-//    SetMultimap<SecurablePrincipal,SecurablePrincipal> getUsersAndRoles( UUID organizationsId );
+    //    @GET( BASE + ID_PATH + MEMBERS )
+    //    SetMultimap<SecurablePrincipal,SecurablePrincipal> getUsersAndRoles( UUID organizationsId );
 
     @PUT( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS + USER_ID_PATH )
     Void addRoleToUser( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId, @Path( USER_ID ) String userId );
 
     @DELETE( BASE + ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS + USER_ID_PATH )
-    Void removeRoleFromUser( @Path( ID ) UUID organizationId, @Path( ROLE_ID ) UUID roleId, @Path( USER_ID ) String userId );
+    Void removeRoleFromUser(
+            @Path( ID ) UUID organizationId,
+            @Path( ROLE_ID ) UUID roleId,
+            @Path( USER_ID ) String userId );
 
 }

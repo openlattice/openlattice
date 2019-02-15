@@ -42,7 +42,7 @@ public class Auth0UserBasic {
     public static final String USERNAME_FIELD      = "username";
     public static final String APP_METADATA_FIELD  = "app_metadata";
     public static final String ROLES_FIELD         = "roles";
-    public static final String ORGANIZATIONS_FIELD = "organization";
+    public static final String ORGANIZATIONS_FIELD = "com/openlattice/organization";
 
     private final String       userId;
     private final String       email;

@@ -18,6 +18,9 @@
 
 package com.openlattice.client.serialization;
 
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+
 public final class SerializationConstants {
 
     public static final String ACE                              = "ace";
@@ -204,6 +207,7 @@ public final class SerializationConstants {
     public static final String SYNC_ID                          = "syncId";
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
+    public static final String TARGET                           = "target";
     public static final String TIMESTAMP                        = "timestamp";
     public static final String TIME_ID                          = "timeId";
     public static final String TITLE_FIELD                      = "title";                   // for EntitySet
