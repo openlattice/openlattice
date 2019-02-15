@@ -8,10 +8,9 @@ import com.kryptnostic.rhizome.hazelcast.serializers.IoPerformingFunction;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import com.openlattice.mail.RenderableEmailRequest;
-import jodd.mail.att.ByteArrayAttachment;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
+import jodd.mail.EmailAttachment;
+import org.springframework.stereotype.Component;
 
 @Component
 public class RenderableEmailRequestStreamSerializer implements SelfRegisteringStreamSerializer<RenderableEmailRequest> {
@@ -19,27 +18,6 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
     @Override
     public Class<? extends RenderableEmailRequest> getClazz() {
         return RenderableEmailRequest.class;
-    }
-
-    private static <T> void writeOptional(
-            ObjectDataOutput out,
-            Optional<T> object,
-            IoPerformingBiConsumer<ObjectDataOutput, T> c ) throws IOException {
-        final boolean isPresent = object.isPresent();
-        out.writeBoolean( isPresent );
-        if ( isPresent ) {
-            c.accept( out, object.get() );
-        }
-    }
-
-    private static <T> Optional<T> readOptional( ObjectDataInput input, IoPerformingFunction<ObjectDataInput, T> c )
-            throws IOException {
-        final boolean isPresent = input.readBoolean();
-        if ( isPresent ) {
-            return Optional.of( c.apply( input ) );
-        }
-
-        return Optional.absent();
     }
 
     @Override
@@ -57,7 +35,7 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
             objectDataOutput.writeInt( byteArrayAttachments.length );
 
             for ( int i = 0; i < byteArrayAttachments.length; i++ ) {
-                ByteArrayAttachment attachment = byteArrayAttachments[ i ];
+                EmailAttachment attachment = byteArrayAttachments[ i ];
                 objectDataOutput.writeUTF( attachment.getContentType() );
                 objectDataOutput.writeUTF( attachment.getContentId() );
                 objectDataOutput.writeUTF( attachment.getName() );
@@ -78,9 +56,9 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
         Optional<Object> templateObjs = readOptional( in, ObjectDataInput::readObject );
         Optional<String[]> attachmentPaths = readOptional( in, ObjectDataInput::readUTFArray );
 
-        Optional<ByteArrayAttachment[]> byteArrayAttachment = readOptional( in, input -> {
+        Optional<EmailAttachment[]> byteArrayAttachment = readOptional( in, input -> {
             int size = input.readInt();
-            ByteArrayAttachment[] attachments = new ByteArrayAttachment[ size ];
+            EmailAttachment[] attachments = new EmailAttachment[ size ];
 
             for ( int i = 0; i < size; i++ ) {
                 String contentType = input.readUTF();
@@ -88,7 +66,11 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
                 String name = input.readUTF();
                 byte[] content = input.readByteArray();
 
-                attachments[ i ] = new ByteArrayAttachment( content, contentType, name, contentId );
+                attachments[ i ] = EmailAttachment.with()
+                        .content( content, contentType )
+                        .name( name )
+                        .contentId( contentId )
+                        .buildByteArrayDataSource();
             }
 
             return attachments;
@@ -112,5 +94,26 @@ public class RenderableEmailRequestStreamSerializer implements SelfRegisteringSt
 
     @Override
     public void destroy() {
+    }
+
+    private static <T> void writeOptional(
+            ObjectDataOutput out,
+            Optional<T> object,
+            IoPerformingBiConsumer<ObjectDataOutput, T> c ) throws IOException {
+        final boolean isPresent = object.isPresent();
+        out.writeBoolean( isPresent );
+        if ( isPresent ) {
+            c.accept( out, object.get() );
+        }
+    }
+
+    private static <T> Optional<T> readOptional( ObjectDataInput input, IoPerformingFunction<ObjectDataInput, T> c )
+            throws IOException {
+        final boolean isPresent = input.readBoolean();
+        if ( isPresent ) {
+            return Optional.of( c.apply( input ) );
+        }
+
+        return Optional.absent();
     }
 }
