@@ -1559,6 +1559,52 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getAllEntitySetPropertyMetadataForIds( Set<UUID> entitySetIds ) {
+        Map<UUID, EntitySet> entitySetsById = entitySets.getAll( entitySetIds );
+        Map<UUID, EntityType> entityTypesById = entityTypes
+                .getAll( entitySetsById.values().stream().map( EntitySet::getEntityTypeId ).collect(
+                        Collectors.toSet() ) );
+
+        Set<EntitySetPropertyKey> keys = entitySetIds.stream()
+                .flatMap( entitySetId -> entityTypesById.get( entitySetsById.get( entitySetId ).getEntityTypeId() )
+                        .getProperties().stream()
+                        .map( propertyTypeId -> new EntitySetPropertyKey( entitySetId, propertyTypeId ) ) )
+                .collect( Collectors.toSet() );
+
+        Map<EntitySetPropertyKey, EntitySetPropertyMetadata> metadataMap = entitySetPropertyMetadata.getAll( keys );
+
+        Set<EntitySetPropertyKey> missingKeys = ImmutableSet.copyOf( Sets.difference( keys, metadataMap.keySet() ) );
+        Map<UUID, PropertyType> missingPropertyTypesById = propertyTypes
+                .getAll( missingKeys.stream().map( EntitySetPropertyKey::getPropertyTypeId )
+                        .collect( Collectors.toSet() ) );
+
+        Map<EntitySetPropertyKey, EntitySetPropertyMetadata> defaultMetadataToCreate = new HashMap<>( missingKeys
+                .size() );
+        for ( EntitySetPropertyKey newKey : missingKeys ) {
+
+            PropertyType propertyType = missingPropertyTypesById.get( newKey.getPropertyTypeId() );
+            Set<String> propertyTags = entityTypesById
+                    .get( entitySetsById.get( newKey.getEntitySetId() ).getEntityTypeId() )
+                    .getPropertyTags().get( newKey.getPropertyTypeId() );
+
+            EntitySetPropertyMetadata defaultMetadata = new EntitySetPropertyMetadata(
+                    propertyType.getTitle(),
+                    propertyType.getDescription(),
+                    new LinkedHashSet<>( propertyTags ),
+                    true );
+
+            defaultMetadataToCreate.put( newKey, defaultMetadata );
+            metadataMap.put( newKey, defaultMetadata );
+        }
+
+        entitySetPropertyMetadata.putAll( defaultMetadataToCreate );
+
+        return metadataMap.entrySet().stream().collect( Collectors.groupingBy( entry -> entry.getKey().getEntitySetId(),
+                Collectors.toMap( entry -> entry.getKey().getPropertyTypeId(), entry -> entry.getValue() ) ) );
+
+    }
+
+    @Override
     public EntitySetPropertyMetadata getEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId ) {
         EntitySetPropertyKey key = new EntitySetPropertyKey( entitySetId, propertyTypeId );
         if ( !entitySetPropertyMetadata.containsKey( key ) ) {

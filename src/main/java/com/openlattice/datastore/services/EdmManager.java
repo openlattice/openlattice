@@ -224,6 +224,8 @@ public interface EdmManager {
 
     Map<UUID, EntitySetPropertyMetadata> getAllEntitySetPropertyMetadata( UUID entitySetId );
 
+    Map<UUID, Map<UUID, EntitySetPropertyMetadata>> getAllEntitySetPropertyMetadataForIds( Set<UUID> entitySetIds );
+
     EntitySetPropertyMetadata getEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId );
 
     void updateEntitySetPropertyMetadata( UUID entitySetId, UUID propertyTypeId, MetadataUpdate update );
