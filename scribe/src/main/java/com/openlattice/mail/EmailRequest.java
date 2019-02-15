@@ -20,6 +20,7 @@
 
 package com.openlattice.mail;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 
 import org.apache.commons.lang3.StringUtils;
@@ -67,6 +68,7 @@ public class EmailRequest {
         return from;
     }
 
+    @SuppressFBWarnings(value="E1",justification = "Only used internally hopefully not abused.")
     @JsonProperty( TO_FIELD )
     public String[] getTo() {
         return to;
