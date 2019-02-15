@@ -26,7 +26,12 @@ import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProces
 import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
+import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.DbEdmManager
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.events.EntitySetCreatedEvent
+import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
+import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.Organization
@@ -52,8 +57,11 @@ class Assembler(
         private val dbCredentialService: DbCredentialService,
         val hds: HikariDataSource,
         hazelcast: HazelcastInstance
+
 ) {
     private val entitySets = hazelcast.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
+    private val entityTypes = hazelcast.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
+    private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(HazelcastMap.PROPERTY_TYPES.name)
     private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(HazelcastMap.ASSEMBLIES.name)
 
     fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {
@@ -64,7 +72,13 @@ class Assembler(
         return assemblies[organizationId]!!
     }
 
+    fun handleEntitySetCreated( entitySetCreatedEvent: EntitySetCreatedEvent ) {
+//            entitySetCreatedEvent.
+    }
 
+    fun handlePropertyTypeAddedToEntitySet( propertyTypesAddedToEntitySetEvent: PropertyTypesAddedToEntitySetEvent) {
+//        propertyTypesAddedToEntitySetEvent.
+    }
 
     fun createOrganization(organization: Organization) {
         assemblies.set(organization.id, OrganizationAssembly(organization.id, organization.principal.id))
@@ -79,6 +93,19 @@ class Assembler(
         return getMaterializedEntitySets(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
+    }
+
+    private fun createProductionViewOfEntitySet( entitySetId: UUID ) {
+        val authorizedPropertyTypes = propertyTypes
+                .getAll( entityTypes.getValue( entitySets.getValue(entitySetId).entityTypeId ).properties )
+        hds.connection.use {conn ->
+            conn.createStatement().use { stmt ->
+//                if( stmt)
+            }
+
+        }
+
+
     }
 
     private fun getInternalEntitySetFlag(organizationId: UUID, entitySetId: UUID): Set<OrganizationEntitySetFlag> {

@@ -93,7 +93,14 @@ class AssemblerConnectionManager {
                 logger.info("Ignoring production datasource in assembler as it is already initialized.")
             } else {
                 this.hds = hds
-                logger.info("Initialized production datasource in assembler")
+                hds.connection.use { conn ->
+                    conn.createStatement().use { stmt ->
+                        stmt.execute( "CREATE SCHEMA IF NOT EXISTS $PRODUCTION_VIEWS_SCHEMA")
+                    }
+                    logger.info("Verified $PRODUCTION_VIEWS_SCHEMA schema exists.")
+                }
+
+                logger.info("Initialized production datasource in assembler.")
                 initialized[1] = true
                 initializeUsersAndRoles()
             }
@@ -222,7 +229,7 @@ class AssemblerConnectionManager {
                 datasource.connection.use { connection ->
                     connection.createStatement().use { statement ->
                         statement.execute(
-                                "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_SCHEMA,$SCHEMA,public"
+                                "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_FOREIGN_SCHEMA,$SCHEMA,public"
                         )
                     }
                 }
@@ -231,7 +238,9 @@ class AssemblerConnectionManager {
                         .filter { it.id != "openlatticeRole" && it.id != "admin" }
                         .forEach { principal ->
                             configureUserInDatabase(
-                                    datasource, organization.principal.id, principal.id
+                                    datasource,
+                                    organization.principal.id,
+                                    principal.id
                             )
                         }
 
@@ -270,7 +279,6 @@ class AssemblerConnectionManager {
                     return@use
                 }
             }
-
         }
 
         private fun dropDatabase(organizationId: UUID, dbname: String) {
@@ -323,10 +331,16 @@ class AssemblerConnectionManager {
                 organizationId: UUID,
                 authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
         ): Map<UUID, Set<OrganizationEntitySetFlag>> {
-            connect(organizations.getOrganizationPrincipal(organizationId).name).use { datasource ->
-                materializeEntitySets(datasource, authorizedPropertyTypesByEntitySet)
+            materializeAllTimer.time().use {
+                connect(organizations.getOrganizationPrincipal(organizationId).name).use { datasource ->
+                    materializeEntitySets(datasource, authorizedPropertyTypesByEntitySet)
+                }
+                return authorizedPropertyTypesByEntitySet.mapValues {
+                    EnumSet.of(
+                            OrganizationEntitySetFlag.MATERIALIZED
+                    )
+                }
             }
-            return authorizedPropertyTypesByEntitySet.mapValues { EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED) }
         }
 
 
@@ -348,46 +362,47 @@ class AssemblerConnectionManager {
                 datasource: HikariDataSource, entitySetId: UUID,
                 authorizedPropertyTypes: Map<UUID, PropertyType>
         ) {
-            val entitySet = entitySets[entitySetId]!!
-            val propertyFqns = authorizedPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
-            val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                    mapOf(entitySetId to Optional.empty()),
-                    propertyFqns,
-                    authorizedPropertyTypes.values.map(PropertyType::getId),
-                    mapOf(entitySetId to authorizedPropertyTypes.keys),
-                    mapOf(),
-                    EnumSet.allOf(MetadataOption::class.java),
-                    authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
-                    entitySet.isLinking,
-                    entitySet.isLinking
-            )
-
-            //First we create view in production server view schema
-
-            hds.connection.use { connection ->
-                connection.createStatement().use { statement ->
-                    statement.execute("CREATE VIEW IF NOT EXISTS ")
-                }
-
-            }
-            val tableName = "openlattice.${quote(entitySet.name)}"
-            datasource.connection.use { connection ->
-                val sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
-
-                logger.info("Executing create materialize view sql: {}", sql)
-                connection.createStatement().use { stmt ->
-                    stmt.execute(sql)
-                }
-                //Next we need to grant select on materialize view to everyone who has permission.
-                val selectGrantedCount = grantSelectForEntitySet(
-                        connection, tableName, entitySet.id, authorizedPropertyTypes
+            materializeEntitySetsTimer.time().use {
+                val entitySet = entitySets[entitySetId]!!
+                val propertyFqns = authorizedPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
+                val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
+                        mapOf(entitySetId to Optional.empty()),
+                        propertyFqns,
+                        authorizedPropertyTypes.values.map(PropertyType::getId),
+                        mapOf(entitySetId to authorizedPropertyTypes.keys),
+                        mapOf(),
+                        EnumSet.allOf(MetadataOption::class.java),
+                        authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
+                        entitySet.isLinking,
+                        entitySet.isLinking
                 )
-                logger.info(
-                        "Granted select for $selectGrantedCount users/roles on materialized view " +
-                                "openlattice.${entitySet.name}"
-                )
-            }
 
+                //First we create view in production server view schema
+
+                hds.connection.use { connection ->
+                    connection.createStatement().use { statement ->
+                        statement.execute("CREATE VIEW IF NOT EXISTS ")
+                    }
+
+                }
+                val tableName = "openlattice.${quote(entitySet.name)}"
+                datasource.connection.use { connection ->
+                    val sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
+
+                    logger.info("Executing create materialize view sql: {}", sql)
+                    connection.createStatement().use { stmt ->
+                        stmt.execute(sql)
+                    }
+                    //Next we need to grant select on materialize view to everyone who has permission.
+                    val selectGrantedCount = grantSelectForEntitySet(
+                            connection, tableName, entitySet.id, authorizedPropertyTypes
+                    )
+                    logger.info(
+                            "Granted select for $selectGrantedCount users/roles on materialized view " +
+                                    "openlattice.${entitySet.name}"
+                    )
+                }
+            }
         }
 
         private fun grantSelectForEntitySet(
@@ -546,6 +561,7 @@ class AssemblerConnectionManager {
         private fun configureUserInDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
             val dbUser = DataTables.quote(userId)
 
+            //First we will grant all privilege which for database is connect, temporary, and create schema
             target.connection.use { connection ->
                 connection.createStatement().use { statement ->
                     statement.execute("GRANT ALL PRIVILEGES ON DATABASE ${quote(dbname)} TO $dbUser")
@@ -560,7 +576,7 @@ class AssemblerConnectionManager {
                     logger.info("Revoking public schema right from user: {}", userId)
                     statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbUser")
                     //Set the search path for the user
-                    statement.execute("ALTER USER $dbUser set search_path TO $SCHEMA")
+                    statement.execute("ALTER USER $dbUser set search_path TO $SCHEMA,public")
 
                     return@use
                 }
@@ -588,11 +604,11 @@ class AssemblerConnectionManager {
                                     "OPTIONS ( user '${AssemblerConnectionManager.assemblerConfiguration.foreignUsername}', " +
                                     "password '${AssemblerConnectionManager.assemblerConfiguration.foreignPassword}')"
                     )
-                    logger.info("Reseting $PRODUCTION_SCHEMA")
-                    statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_SCHEMA CASCADE")
-                    statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_SCHEMA")
+                    logger.info("Reseting $PRODUCTION_FOREIGN_SCHEMA")
+                    statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_FOREIGN_SCHEMA CASCADE")
+                    statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Created user mapping. ")
-                    statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO $PRODUCTION_SCHEMA")
+                    statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Imported foreign schema")
                 }
             }
@@ -601,8 +617,8 @@ class AssemblerConnectionManager {
     }
 }
 
-const val PRODUCTION_SCHEMA = "prod"
-const val OLVIEWS_SCHEMA = "olviews"
+const val PRODUCTION_FOREIGN_SCHEMA = "prod"
+const val PRODUCTION_VIEWS_SCHEMA = "olviews"
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PostgresColumn.PRINCIPAL_TYPE.name} = ?"
 
