@@ -23,6 +23,7 @@ package com.openlattice.datastore.pods;
 import static com.openlattice.datastore.util.Util.returnAndLog;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -136,6 +137,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private AssemblerConfiguration assemblerConfiguration;
+
+    @Inject
+    private MetricRegistry metricRegistry;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -364,6 +368,7 @@ public class DatastoreServicesPod {
     public AssemblerConnectionManager bootstrapRolesAndUsers() {
         final var hos = organizationsManager();
 
+        AssemblerConnectionManager.initializeMetrics( metricRegistry );
         AssemblerConnectionManager.initializeAssemblerConfiguration( assemblerConfiguration );
         AssemblerConnectionManager.initializeProductionDatasource( hikariDataSource );
         AssemblerConnectionManager.initializeSecurePrincipalsManager( principalService() );
