@@ -68,7 +68,7 @@ public class EmailRequest {
         return from;
     }
 
-    @SuppressFBWarnings(value="E1",justification = "Only used internally hopefully not abused.")
+    @SuppressFBWarnings(value="EI_EXPOSE_REP",justification = "Only used internally hopefully not abused.")
     @JsonProperty( TO_FIELD )
     public String[] getTo() {
         return to;
