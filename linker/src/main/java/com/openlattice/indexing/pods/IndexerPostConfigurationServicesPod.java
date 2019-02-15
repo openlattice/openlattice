@@ -99,7 +99,7 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore( idService(), postgresDataManager(), dataQueryService() );
+        return new HazelcastEntityDatastore( idService(), postgresDataManager(), dataQueryService(), edm );
     }
 
     @Bean
