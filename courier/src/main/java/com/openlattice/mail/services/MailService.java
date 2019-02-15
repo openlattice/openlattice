@@ -38,10 +38,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 public class MailService {
     private final MailRenderer                   mailRenderer;
     private final IQueue<RenderableEmailRequest> emailRequests;
-    private Logger logger = LoggerFactory
+    private       Logger                         logger = LoggerFactory
             .getLogger( MailService.class );
     @SuppressWarnings( "rawtypes" )
-    private SmtpServer smtpServer;
+    private       SmtpServer                     smtpServer;
 
     public MailService(
             MailServiceConfig config,
@@ -56,12 +56,11 @@ public class MailService {
     public void configureSmtpServer( MailServiceConfig config ) {
         Preconditions.checkNotNull( config, "Mail Service configuration cannot be null." );
         smtpServer = SmtpSslServer
-                .create(
-                        config.getSmtpHost(),
-                        config.getSmtpPort() )
-                .authenticateWith(
-                        config.getUsername(),
-                        config.getPassword() );
+                .create()
+                .host( config.getSmtpHost() )
+                .port( config.getSmtpPort() )
+                .auth( config.getUsername(), config.getPassword() )
+                .buildSmtpMailServer();
         // TODO: "javax.net.ssl.SSLException: Unrecognized SSL message, plaintext connection?"
         // TODO: figure out why we get above exception when plaintextOverTLS is false and port is 587 (works for 465)
         // .plaintextOverTLS(false)
