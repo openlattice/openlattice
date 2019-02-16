@@ -149,6 +149,7 @@ public final class SerializationConstants {
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
     public static final String LTE                              = "lte";
+    public static final String MATCH                            = "match";
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";
     public static final String MESSAGE                          = "message";

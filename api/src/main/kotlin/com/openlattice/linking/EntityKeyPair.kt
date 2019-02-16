@@ -40,7 +40,7 @@ class EntityKeyPair @JsonCreator constructor(
     }
 
     /**
-     * Acessor functions for LinkingFeedbackMapstore
+     * Accessor functions for LinkingFeedbackMapstore
      */
     @JsonIgnore
     fun getFirstEntitySetId(): UUID {
