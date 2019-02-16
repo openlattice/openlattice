@@ -81,7 +81,6 @@ class Assembler(
 
     init {
         eventBus.register(this)
-        entitySets.keys.forEach(this::createOrUpdateProductionViewOfEntitySet)
     }
 
     fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {
@@ -114,7 +113,16 @@ class Assembler(
         }
     }
 
-    fun initializeMissingOrganizations() {
+    fun initialize() {
+        initializeEntitySetViews()
+        initializeOrganizations()
+    }
+
+    private fun initializeEntitySetViews() {
+        entitySets.keys.forEach(this::createOrUpdateProductionViewOfEntitySet)
+    }
+
+    private fun initializeOrganizations() {
         val currentOrganizations =
                 securableObjectTypes.keySet(
                         Predicates.equal("this", SecurableObjectType.Organization)
