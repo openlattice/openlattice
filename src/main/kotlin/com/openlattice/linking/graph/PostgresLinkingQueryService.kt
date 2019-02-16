@@ -285,7 +285,7 @@ internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): Strin
 }
 
 internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): String {
-    return entityKeyPairs.joinToString(" AND ") {
+    return entityKeyPairs.joinToString(" OR ") {
         "( (${SRC_ENTITY_SET_ID.name} = ${uuidString(it.first.entitySetId)} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
                 "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(it.second.entitySetId)} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
                 " OR " +
