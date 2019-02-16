@@ -52,8 +52,6 @@ public interface EdmManager {
 
     UUID getCurrentEntityDataModelVersion();
 
-    UUID generateNewEntityDataModelVersion();
-
     PropertyType getPropertyType( FullQualifiedName propertyTypeFqn );
 
     PropertyType getPropertyType( UUID propertyTypeId );

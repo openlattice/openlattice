@@ -128,7 +128,6 @@ import org.slf4j.LoggerFactory;
 public class EdmService implements EdmManager {
 
     private static final Logger             logger = LoggerFactory.getLogger( EdmService.class );
-    private final        IMap<String, UUID> edmVersions;
 
     private final IMap<UUID, PropertyType>                              propertyTypes;
     private final IMap<UUID, ComplexType>                               complexTypes;
@@ -171,7 +170,6 @@ public class EdmService implements EdmManager {
         this.schemaManager = schemaManager;
         this.hazelcastInstance = hazelcastInstance;
         this.hds = hds;
-        this.edmVersions = hazelcastInstance.getMap( HazelcastMap.EDM_VERSIONS.name() );
         this.propertyTypes = hazelcastInstance.getMap( HazelcastMap.PROPERTY_TYPES.name() );
         this.complexTypes = hazelcastInstance.getMap( HazelcastMap.COMPLEX_TYPES.name() );
         this.enumTypes = hazelcastInstance.getMap( HazelcastMap.ENUM_TYPES.name() );
@@ -214,17 +212,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public UUID getCurrentEntityDataModelVersion() {
-        if ( !edmVersions.containsKey( EntityDataModel.getEdmVersionKey() ) ) {
-            return generateNewEntityDataModelVersion();
-        }
-        return edmVersions.get( EntityDataModel.getEdmVersionKey() );
-    }
-
-    @Override
-    public UUID generateNewEntityDataModelVersion() {
-        UUID newVersion = new UUID( System.currentTimeMillis(), 0 );
-        edmVersions.put( EntityDataModel.getEdmVersionKey(), newVersion );
-        return newVersion;
+        return new UUID(0,0);
     }
 
     /*
