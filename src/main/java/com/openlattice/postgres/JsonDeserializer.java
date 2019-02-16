@@ -136,6 +136,9 @@ public class JsonDeserializer {
                         value.getClass() );
                 return Duration.parse( (String) value );
             case Guid:
+                if ( value instanceof UUID ) {
+                    return value;
+                }
                 checkState( value instanceof String,
                         "Expected string for property type %s with data %s,  received %s",
                         dataType,

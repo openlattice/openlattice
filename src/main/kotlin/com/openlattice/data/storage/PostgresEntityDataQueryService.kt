@@ -809,8 +809,9 @@ fun deleteEntitySetEntityKeys(entitySetId: UUID): String {
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
     //Last writer wins for entities
-    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], " +
-            "${VERSION.name} = GREATEST(${VERSION.name},$version), ${LAST_WRITE.name} = now() " +
+    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
+            "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < ${VERSION.name} THEN ${VERSION.name} " +
+            "ELSE ${IDS.name}.${VERSION.name} END " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = ?"
 }
 
@@ -833,7 +834,7 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
     )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now(), now()) " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) " +
             "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "VERSION = CASE WHEN abs($propertyTable.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
+            "${VERSION.name} = CASE WHEN abs($propertyTable.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE $propertyTable.${VERSION.name} END"
 
 }

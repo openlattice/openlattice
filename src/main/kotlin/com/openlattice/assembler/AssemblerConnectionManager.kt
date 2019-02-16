@@ -26,27 +26,23 @@ import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
-import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.DataTables.quote
+import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
-import org.slf4j.LoggerFactory
-import com.openlattice.organization.OrganizationEntitySetFlag
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.slf4j.LoggerFactory
 import java.sql.Connection
-import com.openlattice.postgres.DataTables.quote
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -95,7 +91,7 @@ class AssemblerConnectionManager {
                 this.hds = hds
                 hds.connection.use { conn ->
                     conn.createStatement().use { stmt ->
-                        stmt.execute( "CREATE SCHEMA IF NOT EXISTS $PRODUCTION_VIEWS_SCHEMA")
+                        stmt.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_VIEWS_SCHEMA")
                     }
                     logger.info("Verified $PRODUCTION_VIEWS_SCHEMA schema exists.")
                 }
@@ -185,16 +181,6 @@ class AssemblerConnectionManager {
                 initializeUsersAndRoles()
             }
         }
-//
-//        @JvmStatic
-//        fun getSecurePrincipalsManager(): SecurePrincipalsManager {
-//            return securePrincipalsManager
-//        }
-//
-//        @JvmStatic
-//        fun getDbCredentialService(): DbCredentialService {
-//            return dbCredentialService
-//        }
 
         @JvmStatic
         fun connect(dbname: String): HikariDataSource {
@@ -220,7 +206,7 @@ class AssemblerConnectionManager {
         @JvmStatic
         fun createOrganizationDatabase(organizationId: UUID) {
             val organization = organizations.getOrganization(organizationId)
-            createDatabase(organizationId, organization.principal.id)
+            createOrganizationDatabase(organizationId, organization.principal.id)
 
             connect(organization.principal.id).use { datasource ->
                 configureRolesInDatabase(datasource, securePrincipalsManager)
@@ -251,29 +237,33 @@ class AssemblerConnectionManager {
         }
 
         @JvmStatic
-        internal fun createDatabase(organizationId: UUID, dbname: String) {
+        internal fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
             val dbCredentialService = AssemblerConnectionManager.dbCredentialService
             val db = DataTables.quote(dbname)
             val dbRole = "${dbname}_role"
             val unquotedDbAdminUser = buildUserId(organizationId)
-            val dbAdminUser = DataTables.quote(unquotedDbAdminUser)
+            val dbOrgUser = DataTables.quote(unquotedDbAdminUser)
             val dbAdminUserPassword = dbCredentialService.createUserIfNotExists(unquotedDbAdminUser)
                     ?: dbCredentialService.getDbCredential(unquotedDbAdminUser)
-            val createDbRole = createRoleIfNotExistsSql(dbRole)
-            val createDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
-            val grantRole = "GRANT ${DataTables.quote(dbRole)} TO $dbAdminUser"
-            val createDb = " CREATE DATABASE $db WITH OWNER=$dbAdminUser"
+            val createOrgDbRole = createRoleIfNotExistsSql(dbRole)
+            val createOrgDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
+
+            val grantRole = "GRANT ${DataTables.quote(dbRole)} TO $dbOrgUser"
+            val createDb = " CREATE DATABASE $db"
             val revokeAll = "REVOKE ALL ON DATABASE $db FROM public"
 
             //We connect to default db in order to do initial db setup
 
             target.connection.use { connection ->
                 connection.createStatement().use { statement ->
-                    statement.execute(createDbRole)
-                    statement.execute(createDbUser)
+                    statement.execute(createOrgDbRole)
+                    statement.execute(createOrgDbUser)
                     statement.execute(grantRole)
                     if (!exists(dbname)) {
                         statement.execute(createDb)
+                        //Allow usage of schema public
+                        //statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbOrgUser)}")
+                        statement.execute("GRANT ALL PRIVILEGES ON DATABASE $db TO $dbOrgUser")
                     }
                     statement.execute(revokeAll)
                     return@use
@@ -316,7 +306,7 @@ class AssemblerConnectionManager {
                     connection.createStatement().use { stmt ->
                         stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $SCHEMA.edges")
                         stmt.execute(
-                                "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM EDGES WHERE src_entity_set_id IN ($clause) " +
+                                "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.edges WHERE src_entity_set_id IN ($clause) " +
                                         "AND dst_entity_set_id IN ($clause) " +
                                         "AND edge_entity_set_id IN ($clause) "
                         )
@@ -364,28 +354,14 @@ class AssemblerConnectionManager {
         ) {
             materializeEntitySetsTimer.time().use {
                 val entitySet = entitySets[entitySetId]!!
-                val propertyFqns = authorizedPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
-                val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                        mapOf(entitySetId to Optional.empty()),
-                        propertyFqns,
-                        authorizedPropertyTypes.values.map(PropertyType::getId),
-                        mapOf(entitySetId to authorizedPropertyTypes.keys),
-                        mapOf(),
-                        EnumSet.allOf(MetadataOption::class.java),
-                        authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
-                        entitySet.isLinking,
-                        entitySet.isLinking
-                )
+                val propertyFqns = authorizedPropertyTypes
+                        .mapValues { quote(it.value.type.fullQualifiedNameAsString) }
+                        .values.joinToString(",")
 
-                //First we create view in production server view schema
+                val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name}, $propertyFqns FROM $PRODUCTION_FOREIGN_SCHEMA.${quote(entitySet.id.toString())} "
 
-                hds.connection.use { connection ->
-                    connection.createStatement().use { statement ->
-                        statement.execute("CREATE VIEW IF NOT EXISTS ")
-                    }
+                val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
 
-                }
-                val tableName = "openlattice.${quote(entitySet.name)}"
                 datasource.connection.use { connection ->
                     val sql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
 
@@ -399,7 +375,7 @@ class AssemblerConnectionManager {
                     )
                     logger.info(
                             "Granted select for $selectGrantedCount users/roles on materialized view " +
-                                    "openlattice.${entitySet.name}"
+                                    "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
                     )
                 }
             }
@@ -608,7 +584,8 @@ class AssemblerConnectionManager {
                     statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_FOREIGN_SCHEMA CASCADE")
                     statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Created user mapping. ")
-                    statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
+                    statement.execute("IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
+                    statement.execute("IMPORT FOREIGN SCHEMA public LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Imported foreign schema")
                 }
             }
@@ -617,14 +594,11 @@ class AssemblerConnectionManager {
     }
 }
 
+const val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
 const val PRODUCTION_FOREIGN_SCHEMA = "prod"
 const val PRODUCTION_VIEWS_SCHEMA = "olviews"
 
-private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PostgresColumn.PRINCIPAL_TYPE.name} = ?"
-
-private val INSERT_MATERIALIZED_ENTITY_SET = "INSERT INTO ${PostgresTable.ORGANIZATION_ASSEMBLIES.name} (?,?) ON CONFLICT DO NOTHING"
-private val SELECT_MATERIALIZED_ENTITY_SETS = "SELECT * FROM ${PostgresTable.ORGANIZATION_ASSEMBLIES.name} " +
-        "WHERE ${PostgresColumn.ORGANIZATION_ID.name} = ?"
+private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
 
 internal fun createSchema(datasource: HikariDataSource, schema: String) {
     datasource.connection.use { connection ->

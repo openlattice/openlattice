@@ -2,6 +2,8 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.SECURABLE_OBJECTS;
 
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.authorization.AclKey;
@@ -38,6 +40,11 @@ public class SecurableObjectTypeMapstore extends AbstractBasePostgresMapstore<Ac
 
     @Override protected AclKey mapToKey( ResultSet rs ) throws SQLException {
         return ResultSetAdapters.aclKey( rs );
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super.getMapConfig()
+                .addMapIndexConfig( new MapIndexConfig( "this", false ) );
     }
 
     @Override public AclKey generateTestKey() {
