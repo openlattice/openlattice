@@ -306,7 +306,7 @@ class AssemblerConnectionManager {
                     connection.createStatement().use { stmt ->
                         stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $SCHEMA.edges")
                         stmt.execute(
-                                "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM EDGES WHERE src_entity_set_id IN ($clause) " +
+                                "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.edges WHERE src_entity_set_id IN ($clause) " +
                                         "AND dst_entity_set_id IN ($clause) " +
                                         "AND edge_entity_set_id IN ($clause) "
                         )
@@ -585,6 +585,7 @@ class AssemblerConnectionManager {
                     statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Created user mapping. ")
                     statement.execute("IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
+                    statement.execute("IMPORT FOREIGN SCHEMA public LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Imported foreign schema")
                 }
             }
