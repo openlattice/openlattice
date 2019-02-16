@@ -12,6 +12,7 @@ import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
+import retrofit2.http.Body
 import java.lang.IllegalArgumentException
 import javax.inject.Inject
 
@@ -61,10 +62,10 @@ constructor(
         var negativeFeedbackCount = 0
 
 
-        feedback.linkingEntities.forEachIndexed { index, linkingEntity ->
+        linkingEntitiesList.forEachIndexed { index, linkingEntity ->
             // generate pairs between linking entities themselves
             positiveFeedbackCount += createLinkingFeedbackCombinations(
-                    linkingEntity, linkingEntitiesList, index + 1, true)
+                    linkingEntity, linkingEntitiesList, index, true)
 
             // generate pairs between linking and non-linking entities
             negativeFeedbackCount += createLinkingFeedbackCombinations(
@@ -159,6 +160,11 @@ constructor(
                                 matcher.extractProperties(entities.getValue(feedback.entityPair.second))).asList())
                         .toMap()
         )
+    }
+
+    @DeleteMapping( path = [LinkingFeedbackApi.FEEDBACK] )
+    override fun deleteLinkingFeedback(@RequestBody entityPair: EntityKeyPair) {
+        feedbackService.deleteLinkingFeedback(entityPair)
     }
 
 
