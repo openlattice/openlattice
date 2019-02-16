@@ -81,6 +81,7 @@ class Assembler(
 
     init {
         eventBus.register(this)
+        entitySets.keys.forEach(this::createOrUpdateProductionViewOfEntitySet)
     }
 
     fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {
@@ -168,7 +169,7 @@ class Assembler(
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
                 stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
-                stmt.execute("CREATE VIEW IF NOT EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\" AS $sql")
+                stmt.execute("CREATE OR REPLACE VIEW $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\" AS $sql")
                 return@use
             }
         }

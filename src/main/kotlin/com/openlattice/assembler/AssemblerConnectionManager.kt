@@ -91,7 +91,7 @@ class AssemblerConnectionManager {
                 this.hds = hds
                 hds.connection.use { conn ->
                     conn.createStatement().use { stmt ->
-                        stmt.execute( "CREATE SCHEMA IF NOT EXISTS $PRODUCTION_VIEWS_SCHEMA")
+                        stmt.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_VIEWS_SCHEMA")
                     }
                     logger.info("Verified $PRODUCTION_VIEWS_SCHEMA schema exists.")
                 }
@@ -356,9 +356,9 @@ class AssemblerConnectionManager {
                 val entitySet = entitySets[entitySetId]!!
                 val propertyFqns = authorizedPropertyTypes
                         .mapValues { quote(it.value.type.fullQualifiedNameAsString) }
-                        .values.joinToString(",") { quote(it) }
+                        .values.joinToString(",")
 
-                val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name}, $propertyFqns"
+                val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name}, $propertyFqns FROM $PRODUCTION_FOREIGN_SCHEMA.${quote(entitySet.id.toString())} "
 
                 val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
 
@@ -584,7 +584,7 @@ class AssemblerConnectionManager {
                     statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_FOREIGN_SCHEMA CASCADE")
                     statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Created user mapping. ")
-                    statement.execute("IMPORT FOREIGN SCHEMA public FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
+                    statement.execute("IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Imported foreign schema")
                 }
             }
