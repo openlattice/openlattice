@@ -109,7 +109,7 @@ dependencies {
      * A library that provides a simple POP3/IMAP/SMTP mail server, and makes writing unit/integration tests easy for
      * testing sending/receiving emails against a running mail server.
      */
-    testCompile "com.icegreen:greenmail:1.4.1"
+    testCompile "com.icegreen:greenmail:1.5.9"
 
     testCompile( "org.mockito:mockito-all:${mockito_version}" ) {
         exclude module : 'hamcrest'

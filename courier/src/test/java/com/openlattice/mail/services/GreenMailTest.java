@@ -48,6 +48,7 @@ public class GreenMailTest {
         Security.setProperty( "ssl.SocketFactory.provider", DummySSLSocketFactory.class.getName() );
 
         greenMailServer = new GreenMail( ServerSetupTest.SMTPS );
+        greenMailServer.setUser( USERNAME, PASSWORD );
 
         testMailServiceConfig = new MailServiceConfig(
                 HOST,

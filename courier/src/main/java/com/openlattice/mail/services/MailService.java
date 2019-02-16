@@ -60,6 +60,7 @@ public class MailService {
                 .host( config.getSmtpHost() )
                 .port( config.getSmtpPort() )
                 .auth( config.getUsername(), config.getPassword() )
+                .ssl( true )
                 .buildSmtpMailServer();
         // TODO: "javax.net.ssl.SSLException: Unrecognized SSL message, plaintext connection?"
         // TODO: figure out why we get above exception when plaintextOverTLS is false and port is 587 (works for 465)
