@@ -50,4 +50,7 @@ interface LinkingFeedbackApi {
      */
     @POST(BASE + FEEDBACK + FEATURES)
     fun getLinkingFeedbackWithFeatures(@Body entityPair: EntityKeyPair): EntityLinkingFeatures?
+
+    @HTTP( method = "DELETE", path = BASE + FEEDBACK, hasBody = true )
+    fun deleteLinkingFeedback(@Body entityPair: EntityKeyPair)
 }
