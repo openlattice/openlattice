@@ -85,6 +85,10 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         linkingFeedbacks.removeAll(
                 Predicates.or(firstPredicate, secondPredicate) as Predicate<EntityKeyPair, Boolean>)
     }
+
+    fun deleteLinkingFeedback(entityPair: EntityKeyPair) {
+        linkingFeedbacks.remove(entityPair)
+    }
 }
 
 private val SELECT_ALL_SQL = "SELECT * FROM ${LINKING_FEEDBACK.name}"
