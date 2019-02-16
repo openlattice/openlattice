@@ -43,6 +43,7 @@ import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.Organization;
+import com.openlattice.organization.OrganizationIntegrationAccount;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;

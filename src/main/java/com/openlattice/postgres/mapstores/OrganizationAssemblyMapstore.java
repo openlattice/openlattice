@@ -41,6 +41,9 @@ import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 
 public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<UUID, OrganizationAssembly> {
+    public static final String INITIALIZED_INDEX = "initialized";
+    private final       UUID   testKey           = UUID.randomUUID();
+
     public OrganizationAssemblyMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ASSEMBLIES.name(), ORGANIZATION_ASSEMBLIES, hds );
     }
@@ -49,14 +52,14 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         Array entitySetIds = PostgresArrays.createUuidArray( ps.getConnection(), value.getEntitySetIds() );
 
         bind( ps, key, 1 );
-        ps.setString( 2, value.getDbname());
+        ps.setString( 2, value.getDbname() );
         ps.setArray( 3, entitySetIds );
-        ps.setBoolean( 4, value.getInitialized());
+        ps.setBoolean( 4, value.getInitialized() );
 
         // UPDATE
-        ps.setString( 5, value.getDbname());
+        ps.setString( 5, value.getDbname() );
         ps.setArray( 6, entitySetIds );
-        ps.setBoolean( 7, value.getInitialized());
+        ps.setBoolean( 7, value.getInitialized() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
@@ -71,8 +74,6 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
         return ResultSetAdapters.organizationId( rs );
     }
-
-    private final UUID testKey = UUID.randomUUID();
 
     @Override public UUID generateTestKey() {
         return testKey;
@@ -89,6 +90,7 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     @Override public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
+                .addMapIndexConfig( new MapIndexConfig( INITIALIZED_INDEX, false ) )
                 .setInMemoryFormat( InMemoryFormat.OBJECT );
     }
 }
