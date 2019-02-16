@@ -246,7 +246,9 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 dcs(),
                 hikariDataSource,
-                hazelcastInstance );
+                metricRegistry,
+                hazelcastInstance,
+                eventBus );
     }
 
     @Bean
