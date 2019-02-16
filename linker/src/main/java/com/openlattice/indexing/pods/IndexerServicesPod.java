@@ -174,7 +174,9 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 dbcs(),
                 hikariDataSource,
-                hazelcastInstance );
+                metricRegistry,
+                hazelcastInstance,
+                eventBus );
     }
 
     @Bean
