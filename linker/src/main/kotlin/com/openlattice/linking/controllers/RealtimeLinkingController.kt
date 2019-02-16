@@ -1,11 +1,13 @@
 package com.openlattice.linking.controllers
 
+
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.data.EntityDataKey
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.indexing.configuration.LinkingConfiguration
+import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
+import com.openlattice.linking.MatchedEntityPair
 import com.openlattice.linking.RealtimeLinkingApi
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -55,8 +57,18 @@ class RealtimeLinkingController(
             produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getMatchedEntitiesForLinkingId(
             @PathVariable(RealtimeLinkingApi.LINKING_ID) linkingId: UUID
-    ): Map<EntityDataKey, Map<EntityDataKey, Double>> {
+    ): Set<MatchedEntityPair> {
         ensureAdminAccess()
-        return lqs.getClustersContaining(setOf(linkingId)).getValue(linkingId)
+        val matches = lqs.getClustersContaining(setOf(linkingId)).getValue(linkingId)
+        val matchedEntityPairs = HashSet<MatchedEntityPair>()
+
+        matches.forEach {
+            val first = it
+            first.value.forEach {
+                matchedEntityPairs.add(MatchedEntityPair(EntityKeyPair(first.key, it.key), it.value))
+            }
+        }
+
+        return matchedEntityPairs
     }
 }
