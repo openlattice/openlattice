@@ -38,7 +38,6 @@ import com.google.common.collect.Sets;
 
 import jodd.mail.Email;
 import jodd.mail.EmailAttachment;
-import jodd.mail.att.ByteArrayAttachment;
 
 public class MailRenderer {
     private Logger                   logger                        = LoggerFactory
@@ -85,18 +84,18 @@ public class MailRenderer {
                     .from( emailRequest.getFrom().or( EmailTemplate.getCourierEmailAddress() ) )
                     .to( toAddress )
                     .subject( emailRequest.getSubject().or( "" ) )
-                    .addHtml( templateHtml );
+                    .htmlMessage( templateHtml );
             if ( emailRequest.getByteArrayAttachment().isPresent() ) {
-                ByteArrayAttachment[] attachments = emailRequest.getByteArrayAttachment().get();
+                EmailAttachment[] attachments = emailRequest.getByteArrayAttachment().get();
                 for ( int i = 0; i < attachments.length; i++ ) {
-                    email.attach( attachments[ i ] );
+                    email.attachment( attachments[ i ] );
                 }
             }
 
             if ( emailRequest.getAttachmentPaths().isPresent() ) {
                 String[] paths = emailRequest.getAttachmentPaths().get();
                 for ( int i = 0; i < paths.length; i++ ) {
-                    email.attach( EmailAttachment.attachment().file( paths[ i ] ) );
+                    email.attachment( EmailAttachment.with().content( paths[ i ] ) );
                 }
             }
 
