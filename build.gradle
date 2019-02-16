@@ -171,7 +171,7 @@ eclipse {
 compileKotlin {
     kotlinOptions {
         jvmTarget = "1.8"
-        freeCompilerArgs = ['-Xjvm-default=enabled']
+        freeCompilerArgs = ['-Xjvm-default=compatibility']
     }
 }
 compileTestKotlin {
