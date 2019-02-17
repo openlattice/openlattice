@@ -530,7 +530,7 @@ class AssemblerConnectionManager {
 
             target.connection.use { connection ->
                 connection.createStatement().use { statement ->
-                    statement.execute("DROP OWNED BY ${quote(user.name)} " )
+                    statement.execute(dropOwnedIfExistsSql(user.name))
                     statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
                     statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
@@ -653,6 +653,24 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "      CREATE ROLE ${DataTables.quote(
                     dbUser
             )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
+            "   END IF;\n" +
+            "END\n" +
+            "\$do\$;"
+}
+
+
+internal fun dropOwnedIfExistsSql(dbUser: String): String {
+    return "DO\n" +
+            "\$do\$\n" +
+            "BEGIN\n" +
+            "   IF EXISTS (\n" +
+            "      SELECT\n" +
+            "      FROM   pg_catalog.pg_roles\n" +
+            "      WHERE  rolname = '$dbUser') THEN\n" +
+            "\n" +
+            "      DROP OWNED BY ${DataTables.quote(
+                    dbUser
+            )} ;\n" +
             "   END IF;\n" +
             "END\n" +
             "\$do\$;"
