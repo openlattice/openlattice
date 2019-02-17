@@ -224,6 +224,7 @@ class RealtimeLinkingService
                 //For example use a fast aggregator or directly query postgres and partition operation of linking
                 linkableEntitySets = entitySets
                         .values
+                        .asSequence()
                         .filter { linkableTypes.contains(it.entityTypeId) }
                         .filter { !entitySetBlacklist.contains(it.id) }
                         .filter { es -> whitelist.map { it.contains(es.id) }.orElse(true) }
