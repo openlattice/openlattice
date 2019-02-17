@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.RandomStringUtils;
 
 public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UUID, PrincipalSet> {
-    public static final String PRINCIPAL_ID_INDEX = "this[any]";
     public OrganizationMembersMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ORGANIZATIONS_MEMBERS.name(), ORGANIZATIONS, hds );
     }
@@ -83,11 +82,6 @@ public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UU
             if ( users != null ) { result.put( id, users ); }
         } );
         return result;
-    }
-
-    @Override public MapConfig getMapConfig() {
-        return super.getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_ID_INDEX, false ) );
     }
 
     @Override
