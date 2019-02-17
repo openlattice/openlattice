@@ -109,7 +109,7 @@ class BackgroundIndexingService(
 
                 val totalIndexed = lockedEntitySets
                         .parallelStream()
-                        .filter { it -> !it.isLinking }
+                        .filter { !it.isLinking }
                         .mapToInt { indexEntitySet(it) }
                         .sum()
 
