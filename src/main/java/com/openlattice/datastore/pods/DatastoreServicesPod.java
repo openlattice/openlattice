@@ -375,7 +375,7 @@ public class DatastoreServicesPod {
         AssemblerConnectionManager.initializeOrganizations( hos );
         AssemblerConnectionManager.initializeDbCredentialService( dcs() );
         AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
-        AssemblerConnectionManager.initializeUsersAndRoles();
+//        AssemblerConnectionManager.initializeUsersAndRoles();
 
         if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
             final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );
