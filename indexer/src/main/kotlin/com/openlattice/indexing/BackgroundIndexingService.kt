@@ -113,7 +113,7 @@ class BackgroundIndexingService(
                         .mapToInt { indexEntitySet(it) }
                         .sum()
 
-                lockedEntitySets.map( EntitySet::getId).forEach(this::deleteIndexingLock)
+                lockedEntitySets.forEach(this::deleteIndexingLock)
 
                 logger.info(
                         "Completed indexing {} elements in {} ms",
@@ -219,7 +219,7 @@ class BackgroundIndexingService(
         } else  {
             logger.info("Expected {} items to index but received {}", batchToIndex.size,  entitiesById.size )
             0
-        } 
+        }
 
     }
 
