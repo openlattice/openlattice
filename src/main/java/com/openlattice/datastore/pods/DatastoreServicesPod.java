@@ -84,18 +84,17 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
-import com.openlattice.neuron.pods.NeuronPod;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.requests.HazelcastRequestsManager;
+import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
-
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -107,7 +106,6 @@ import org.springframework.context.annotation.Import;
         Auth0Pod.class,
         ByteBlobServicePod.class,
         AssemblerConfigurationPod.class,
-        NeuronPod.class,
 } )
 public class DatastoreServicesPod {
 
@@ -402,6 +400,16 @@ public class DatastoreServicesPod {
     @Bean
     public LinkingQueryService lqs() {
         return new PostgresLinkingQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public RequestQueryService rqs() {
+        return new RequestQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public HazelcastRequestsManager hazelcastRequestsManager() {
+        return new HazelcastRequestsManager( hazelcastInstance, rqs() );
     }
 
     @PostConstruct
