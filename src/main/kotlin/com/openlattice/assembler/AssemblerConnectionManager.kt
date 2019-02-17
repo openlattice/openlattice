@@ -530,6 +530,7 @@ class AssemblerConnectionManager {
 
             target.connection.use { connection ->
                 connection.createStatement().use { statement ->
+                    statement.execute("DROP OWNED BY ${quote(user.name)} " )
                     statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
                     statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
