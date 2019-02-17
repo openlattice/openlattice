@@ -24,8 +24,6 @@ import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.datastore.constants.DatastoreProfiles;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
-import com.openlattice.neuron.Neuron;
-import com.openlattice.neuron.pods.NeuronPod;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -64,7 +62,6 @@ public class HzAuthzTest {
     protected static final HazelcastInstance             hazelcastInstance;
     protected static final AuthorizationQueryService     aqs;
     protected static final HazelcastAuthorizationService hzAuthz;
-    protected static final Neuron                        neuron;
     protected static final HikariDataSource              hds;
     private static final   Logger                        logger = LoggerFactory.getLogger( HzAuthzTest.class );
 
@@ -76,7 +73,6 @@ public class HzAuthzTest {
                 PostgresPod.class,
                 SharedStreamSerializersPod.class,
                 PostgresTablesPod.class,
-                NeuronPod.class,
                 AuditingConfigurationPod.class
         );
 
@@ -84,7 +80,6 @@ public class HzAuthzTest {
                 DatastoreProfiles.MEDIA_LOCAL_PROFILE );
         hazelcastInstance = testServer.getContext().getBean( HazelcastInstance.class );
 
-        neuron = testServer.getContext().getBean( Neuron.class );
         hds = testServer.getContext().getBean( HikariDataSource.class );
 
         aqs = new AuthorizationQueryService( hds, hazelcastInstance );
