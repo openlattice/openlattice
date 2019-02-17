@@ -16,17 +16,17 @@ class PostgresRoles private constructor() {
     companion object {
         @JvmStatic
         fun buildPostgresUsername(securablePrincipal: SecurablePrincipal): String {
-            return "$INTERNAL_PREFIX|user|$securablePrincipal.id"
+            return "$INTERNAL_PREFIX|user|${securablePrincipal.id}"
         }
 
         @JvmStatic
         fun buildOrganizationUserId(organizationId: UUID): String {
-            return "ol-internal|organization|$organizationId"
+            return "$INTERNAL_PREFIX|organization|$organizationId"
         }
 
         @JvmStatic
         fun buildPostgresRoleName(role: Role): String {
-            return "ol-internal|role|${role.id}"
+            return "$INTERNAL_PREFIX|role|${role.id}"
         }
 
     }
