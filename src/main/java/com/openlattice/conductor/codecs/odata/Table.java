@@ -34,6 +34,7 @@ import java.util.EnumMap;
 
 import static com.openlattice.datastore.cassandra.CommonColumns.*;
 
+@Deprecated
 public enum Table implements TableDef {
     ACL_KEYS,
     AUDIT_LOG,
