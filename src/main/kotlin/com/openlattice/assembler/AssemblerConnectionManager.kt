@@ -361,7 +361,9 @@ class AssemblerConnectionManager {
                         .mapValues { quote(it.value.type.fullQualifiedNameAsString) }
                         .values.joinToString(",")
 
-                val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name}, $propertyFqns FROM $PRODUCTION_FOREIGN_SCHEMA.${quote(entitySet.id.toString())} "
+                val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name}, $propertyFqns FROM $PRODUCTION_FOREIGN_SCHEMA.${quote(
+                        entitySet.id.toString()
+                )} "
 
                 val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
 
@@ -523,7 +525,7 @@ class AssemblerConnectionManager {
         @JvmStatic
         fun createUnprivilegedUser(user: SecurablePrincipal) {
             val dbUser = buildPostgresUsername(user)
-                    //user.name
+            //user.name
             val dbUserPassword = dbCredentialService.getDbCredential(user.name)
 
             target.connection.use { connection ->
@@ -541,7 +543,7 @@ class AssemblerConnectionManager {
 
         private fun configureUserInDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
             val dbUser = DataTables.quote(userId)
-
+            logger.info("Configuring user {} in database {}", userId, dbname)
             //First we will grant all privilege which for database is connect, temporary, and create schema
             target.connection.use { connection ->
                 connection.createStatement().use { statement ->
@@ -589,8 +591,12 @@ class AssemblerConnectionManager {
                     statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_FOREIGN_SCHEMA CASCADE")
                     statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
                     logger.info("Created user mapping. ")
-                    statement.execute("IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
-                    statement.execute("IMPORT FOREIGN SCHEMA public LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA")
+                    statement.execute(
+                            "IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA"
+                    )
+                    statement.execute(
+                            "IMPORT FOREIGN SCHEMA public LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA"
+                    )
                     logger.info("Imported foreign schema")
                 }
             }
