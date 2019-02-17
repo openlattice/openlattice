@@ -27,6 +27,7 @@ import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
+import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
 import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
 import com.openlattice.authorization.AclKey
