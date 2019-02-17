@@ -23,7 +23,15 @@ package com.openlattice.search;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
@@ -47,28 +55,53 @@ import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.events.*;
+import com.openlattice.edm.events.AppCreatedEvent;
+import com.openlattice.edm.events.AppDeletedEvent;
+import com.openlattice.edm.events.AppTypeCreatedEvent;
+import com.openlattice.edm.events.AppTypeDeletedEvent;
+import com.openlattice.edm.events.AssociationTypeCreatedEvent;
+import com.openlattice.edm.events.AssociationTypeDeletedEvent;
+import com.openlattice.edm.events.ClearAllDataEvent;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.EntitySetDataClearedEvent;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
+import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
+import com.openlattice.edm.events.EntityTypeCreatedEvent;
+import com.openlattice.edm.events.EntityTypeDeletedEvent;
+import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
+import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.core.GraphService;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.neuron.audit.AuditEntitySetUtils;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.requests.*;
-
-import java.security.Permissions;
-import java.util.*;
-import java.util.function.Function;
+import com.openlattice.search.requests.DataSearchResult;
+import com.openlattice.search.requests.EntityDataKeySearchResult;
+import com.openlattice.search.requests.EntityNeighborsFilter;
+import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.search.requests.SearchResult;
+import com.openlattice.search.requests.SearchTerm;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -140,7 +173,7 @@ public class SearchService {
     public DataSearchResult executeSearch(
             SearchConstraints searchConstraints,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet,
-            boolean linking) {
+            boolean linking ) {
         if ( authorizedPropertyTypesByEntitySet.values().isEmpty() ) {
             return new DataSearchResult( 0, Lists.newArrayList() );
         }
@@ -262,9 +295,9 @@ public class SearchService {
         // linking_id/(normal)entity_set_id/property_type_id
         Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
                 linkingIds.entrySet().stream().collect(
-                        Collectors.toMap(Map.Entry::getKey, entry -> Optional.of(entry.getValue())) ),
+                        Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
                 linkingIds.keySet().stream().collect(
-                        Collectors.toMap(Function.identity(), entitySetId -> propertyTypes) ));
+                        Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ) );
 
         elasticsearchApi.createBulkLinkedData( linkingEntitySetId, linkedData );
     }
@@ -321,7 +354,7 @@ public class SearchService {
         } else {
             UUID linkingEntitySetId = event.getLinkingEntitySetId();
 
-            Set<UUID> removedLinkingIds =  event.getRemovedLinkingIds();
+            Set<UUID> removedLinkingIds = event.getRemovedLinkingIds();
             Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = event.getRemainingLinkingIdsByEntitySetId();
             Set<UUID> interSection = Sets.intersection(
                     removedLinkingIds,
@@ -676,7 +709,7 @@ public class SearchService {
         if ( entityKeyIds.size() == 0 ) { return ImmutableList.of(); }
         if ( linking ) {
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetIds = authorizedPropertyTypes.keySet().stream()
-                    .collect( Collectors.toMap( esId -> esId, esId -> Optional.of(entityKeyIds) ) );
+                    .collect( Collectors.toMap( esId -> esId, esId -> Optional.of( entityKeyIds ) ) );
             return dataManager.getLinkingEntities( linkingIdsByEntitySetIds, authorizedPropertyTypes )
                     .collect( Collectors.toList() );
         } else {
@@ -736,11 +769,7 @@ public class SearchService {
     }
 
     public void triggerAllEntitySetDataIndex() {
-        dataModelService.getEntitySets().forEach( entitySet -> {
-            if ( !entitySet.getName().equals( AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME ) ) {
-                triggerEntitySetDataIndex( entitySet.getId() );
-            }
-        } );
+        dataModelService.getEntitySets().forEach( entitySet -> triggerEntitySetDataIndex( entitySet.getId() ) );
     }
 
     public void triggerAppIndex( List<App> apps ) {

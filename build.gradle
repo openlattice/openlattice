@@ -27,8 +27,8 @@ plugins {
     id "maven-publish"
     id "signing"
     id 'com.github.spotbugs' version '1.6.6'
-    id 'org.jetbrains.kotlin.jvm' version '1.3.10'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.10'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.21'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.21'
     id 'org.jetbrains.dokka' version '0.9.17'
     id 'java'
 }
@@ -85,17 +85,19 @@ jacoco {
     toolVersion = "0.8.2"
 }
 
-compileKotlin {
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
         jvmTarget = "1.8"
-        freeCompilerArgs = ['-Xjvm-default=compatibility']
+        freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
-compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-}
+
+//compileTestKotlin {
+//    kotlinOptions {
+//        jvmTarget = "1.8"
+//        freeCompilerArgs += ['-Xjvm-default=enable']
+//    }
+//}
 
 
 dependencies {
