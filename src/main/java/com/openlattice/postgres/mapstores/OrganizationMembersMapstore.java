@@ -4,6 +4,8 @@ import static com.openlattice.postgres.PostgresColumn.ID;
 import static com.openlattice.postgres.PostgresColumn.MEMBERS;
 import static com.openlattice.postgres.PostgresTable.ORGANIZATIONS;
 
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.RandomStringUtils;
 
 public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UUID, PrincipalSet> {
+    public static final String PRINCIPAL_ID_INDEX = "this[any]";
     public OrganizationMembersMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ORGANIZATIONS_MEMBERS.name(), ORGANIZATIONS, hds );
     }
@@ -80,6 +83,11 @@ public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UU
             if ( users != null ) { result.put( id, users ); }
         } );
         return result;
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super.getMapConfig()
+                .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_ID_INDEX, false ) );
     }
 
     @Override
