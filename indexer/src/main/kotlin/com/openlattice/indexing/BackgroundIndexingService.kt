@@ -206,7 +206,10 @@ class BackgroundIndexingService(
 
         val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
 
-        return if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
+        if( entitiesById.size != batchToIndex.size ) {
+            logger.error("Expected {} items to index but received {}. Marking as indexed to prevent infinite loop.", batchToIndex.size,  entitiesById.size )
+        }
+        return if (batchToIndex.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
             val indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
@@ -217,7 +220,6 @@ class BackgroundIndexingService(
             )
             indexCount
         } else  {
-            logger.info("Expected {} items to index but received {}", batchToIndex.size,  entitiesById.size )
             0
         }
 
