@@ -45,7 +45,6 @@ public class Datastore extends BaseRhizomeServer {
             SharedStreamSerializersPod.class,
             AwsS3Pod.class,
             JdbcPod.class,
-            DatastoreNeuronPod.class,
             PostgresPod.class,
             AuditingConfigurationPod.class
     };
