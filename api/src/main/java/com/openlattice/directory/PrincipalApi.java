@@ -83,7 +83,7 @@ public interface PrincipalApi {
     Auth0UserBasic getUser( @Path( USER_ID ) String userId );
 
     @GET( BASE + DB )
-    String getDbAccessCredential();
+    MaterializedViewAccount getMaterializedViewAccount();
 
     @GET( BASE + USERS + SEARCH + SEARCH_QUERY_PATH )
     Map<String, Auth0UserBasic> searchAllUsers( @Path( SEARCH_QUERY ) String searchQuery );
