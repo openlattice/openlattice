@@ -810,7 +810,7 @@ fun deleteEntitySetEntityKeys(entitySetId: UUID): String {
 fun upsertEntity(entitySetId: UUID, version: Long): String {
     //Last writer wins for entities
     return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
-            "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < ${VERSION.name} THEN ${VERSION.name} " +
+            "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < $version THEN $version " +
             "ELSE ${IDS.name}.${VERSION.name} END " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = ?"
 }
