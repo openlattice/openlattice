@@ -122,7 +122,6 @@ public class IndexerPostConfigurationServicesPod {
                 postgresDataManager() );
     }
 
-
     @Bean
     public DataLoader dataLoader() {
         return new EdmCachingDataLoader( dataQueryService(), hazelcastInstance );
@@ -141,22 +140,6 @@ public class IndexerPostConfigurationServicesPod {
     @Bean
     public LinkingConfiguration linkingConfiguration() {
         return ResourceConfigurationLoader.loadConfiguration( LinkingConfiguration.class );
-    }
-
-    @Bean
-    public RealtimeLinkingService linkingService() throws IOException {
-        var lc = linkingConfiguration();
-        return new RealtimeLinkingService( hazelcastInstance,
-                blocker(),
-                matcher,
-                idService(),
-                dataLoader(),
-                lqs(),
-                executor,
-                edm.getEntityTypeUuids( lc.getEntityTypes() ),
-                lc.getBlacklist(),
-                lc.getWhitelist(),
-                lc.getBlockSize() );
     }
 
     @Bean
