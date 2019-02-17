@@ -184,7 +184,7 @@ class Assembler(
     }
 
     fun getOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
-        val organizationUserId = buildUserId(organizationId)
+        val organizationUserId = buildOrganizationUserId(organizationId)
         val credential = this.dbCredentialService.getDbCredential(organizationUserId)
                 ?: throw ResourceNotFoundException("Organization credential not found.")
         return OrganizationIntegrationAccount(organizationUserId, credential)

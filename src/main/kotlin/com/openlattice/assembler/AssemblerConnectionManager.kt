@@ -25,6 +25,9 @@ import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
 import com.hazelcast.core.IMap
+import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
+import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
+import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
@@ -226,7 +229,7 @@ class AssemblerConnectionManager {
                             configureUserInDatabase(
                                     datasource,
                                     organization.principal.id,
-                                    principal.id
+                                    buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
                             )
                         }
 
@@ -241,7 +244,7 @@ class AssemblerConnectionManager {
             val dbCredentialService = AssemblerConnectionManager.dbCredentialService
             val db = DataTables.quote(dbname)
             val dbRole = "${dbname}_role"
-            val unquotedDbAdminUser = buildUserId(organizationId)
+            val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
             val dbOrgUser = DataTables.quote(unquotedDbAdminUser)
             val dbAdminUserPassword = dbCredentialService.createUserIfNotExists(unquotedDbAdminUser)
                     ?: dbCredentialService.getDbCredential(unquotedDbAdminUser)
@@ -274,7 +277,7 @@ class AssemblerConnectionManager {
         private fun dropDatabase(organizationId: UUID, dbname: String) {
             val db = quote(dbname)
             val dbRole = quote("${dbname}_role")
-            val unquotedDbAdminUser = buildUserId(organizationId)
+            val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
             val dbAdminUser = quote(unquotedDbAdminUser)
 
             val dropDb = " DROP DATABASE $db"
@@ -431,7 +434,7 @@ class AssemblerConnectionManager {
             val postgresUserName = if (principal.type == PrincipalType.USER) {
                 DataTables.quote(principal.id)
             } else {
-                buildSqlRolename(securePrincipalsManager.lookupRole(principal))
+                buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
             }
             return "GRANT SELECT " +
                     "(${properties.joinToString(",") { DataTables.quote(it.fullQualifiedNameAsString) }}) " +
@@ -486,7 +489,7 @@ class AssemblerConnectionManager {
 
         private fun configureRolesInDatabase(datasource: HikariDataSource, spm: SecurePrincipalsManager) {
             getAllRoles(spm).forEach { role ->
-                val dbRole = DataTables.quote(buildSqlRolename(role))
+                val dbRole = DataTables.quote(buildPostgresRoleName(role))
 
                 datasource.connection.use { connection ->
                     connection.createStatement().use { statement ->
@@ -503,7 +506,7 @@ class AssemblerConnectionManager {
 
         @JvmStatic
         fun createRole(role: Role) {
-            val dbRole = buildSqlRolename(role)
+            val dbRole = buildPostgresRoleName(role)
 
             target.connection.use { connection ->
                 connection.createStatement().use { statement ->
@@ -519,11 +522,13 @@ class AssemblerConnectionManager {
 
         @JvmStatic
         fun createUnprivilegedUser(user: SecurablePrincipal) {
-            val dbUser = user.name
+            val dbUser = buildPostgresUsername(user)
+                    //user.name
             val dbUserPassword = dbCredentialService.getDbCredential(user.name)
 
             target.connection.use { connection ->
                 connection.createStatement().use { statement ->
+                    statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
                     statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
                     logger.info("Revoking public schema right from user {}", user)
@@ -646,10 +651,22 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "\$do\$;"
 }
 
-internal fun buildUserId(organizationId: UUID): String {
-    return "ol-internal|organization|$organizationId"
+internal fun dropUserIfExistsSql(dbUser: String): String {
+    return "DO\n" +
+            "\$do\$\n" +
+            "BEGIN\n" +
+            "   IF EXISTS (\n" +
+            "      SELECT\n" +
+            "      FROM   pg_catalog.pg_roles\n" +
+            "      WHERE  rolname = '$dbUser') THEN\n" +
+            "\n" +
+            "      DROP ROLE ${DataTables.quote(
+                    dbUser
+            )} ;\n" +
+            "   END IF;\n" +
+            "END\n" +
+            "\$do\$;"
 }
 
-internal fun buildSqlRolename(role: Role): String {
-    return "ol-internal|role|${role.id}"
-}
+
+
