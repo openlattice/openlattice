@@ -81,7 +81,7 @@ class BackgroundLinkingIndexingService(
                     ).toMap() // entity_set_id/linking_id
                     val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId // entity_set_id/property_type_id
                             .map { it.key to getPropertyTypeForEntitySet(it.key) }.toMap()
-                    val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_id
+                    val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_idB
                             .getLinkedEntityDataByLinkingId(dirtyLinkingIdsByEntitySetId, propertyTypesOfEntitySets)
 
 

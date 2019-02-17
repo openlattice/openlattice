@@ -122,15 +122,6 @@ public class IndexerPostConfigurationServicesPod {
                 postgresDataManager() );
     }
 
-    @Bean
-    public BackgroundLinkingIndexingService backgroundLinkingIndexingService() throws IOException {
-        return new BackgroundLinkingIndexingService(
-                hikariDataSource,
-                entityDatastore(),
-                elasticsearchApi,
-                postgresDataManager(),
-                hazelcastInstance );
-    }
 
     @Bean
     public DataLoader dataLoader() {
