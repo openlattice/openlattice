@@ -190,7 +190,7 @@ public class IndexerServicesPod {
         AssemblerConnectionManager.initializeOrganizations( hos );
         AssemblerConnectionManager.initializeDbCredentialService( dbcs() );
         AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
-        AssemblerConnectionManager.initializeUsersAndRoles();
+//        AssemblerConnectionManager.initializeUsersAndRoles();
 
         if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
             final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );
