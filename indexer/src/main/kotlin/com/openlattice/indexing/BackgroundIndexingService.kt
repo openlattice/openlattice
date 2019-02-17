@@ -113,7 +113,7 @@ class BackgroundIndexingService(
                         .mapToInt { indexEntitySet(it) }
                         .sum()
 
-                lockedEntitySets.forEach(this::deleteIndexingLock)
+                lockedEntitySets.map( EntitySet::getId).forEach(this::deleteIndexingLock)
 
                 logger.info(
                         "Completed indexing {} elements in {} ms",
@@ -203,11 +203,11 @@ class BackgroundIndexingService(
             propertyTypeMap: Map<UUID, PropertyType>
     ): Int {
         val esb = Stopwatch.createStarted()
-        var indexCount = 0
+
         val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
 
-        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
-            indexCount += dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
+        return if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
+            val indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
@@ -215,9 +215,12 @@ class BackgroundIndexingService(
                     entitySet.id,
                     esb.elapsed(TimeUnit.MILLISECONDS)
             )
-        }
+            indexCount
+        } else  {
+            logger.info("Expected {} items to index but received {}", batchToIndex.size,  entitiesById.size )
+            0
+        } 
 
-        return indexCount
     }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
