@@ -25,6 +25,7 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
 import static com.openlattice.linking.MatcherKt.DL4J;
 import static com.openlattice.linking.MatcherKt.KERAS;
 
+import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -122,6 +123,9 @@ public class IndexerServicesPod {
     @Inject
     private AssemblerConfiguration assemblerConfiguration;
 
+    @Inject
+    private MetricRegistry metricRegistry;
+
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() throws IOException {
         return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
@@ -173,20 +177,23 @@ public class IndexerServicesPod {
                 authorizationManager(),
                 dbcs(),
                 hikariDataSource,
-                hazelcastInstance );
+                metricRegistry,
+                hazelcastInstance,
+                eventBus );
     }
 
     @Bean
     public AssemblerConnectionManager bootstrapRolesAndUsers() {
         final var hos = organizationsManager();
 
+        AssemblerConnectionManager.initializeMetrics( metricRegistry );
         AssemblerConnectionManager.initializeAssemblerConfiguration( assemblerConfiguration );
         AssemblerConnectionManager.initializeProductionDatasource( hikariDataSource );
         AssemblerConnectionManager.initializeSecurePrincipalsManager( principalService() );
         AssemblerConnectionManager.initializeOrganizations( hos );
         AssemblerConnectionManager.initializeDbCredentialService( dbcs() );
         AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
-        AssemblerConnectionManager.initializeUsersAndRoles();
+//        AssemblerConnectionManager.initializeUsersAndRoles();
 
         if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
             final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );

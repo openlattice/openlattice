@@ -34,8 +34,8 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.neuron.audit.AuditEntitySetUtils
-import com.openlattice.postgres.DataTables.*
+import com.openlattice.postgres.DataTables.LAST_INDEX
+import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
@@ -51,7 +51,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
 import java.util.function.Supplier
-import kotlin.system.exitProcess
 
 /**
  *
@@ -106,11 +105,11 @@ class BackgroundIndexingService(
                 val lockedEntitySets = entitySets.values
                         .shuffled()
                         .filter { tryLockEntitySet(it) }
-                        .filter { it.name != AuditEntitySetUtils.AUDIT_ENTITY_SET_NAME }
+                        .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: remove hack
 
                 val totalIndexed = lockedEntitySets
                         .parallelStream()
-                        .filter { it -> !it.isLinking }
+                        .filter { !it.isLinking }
                         .mapToInt { indexEntitySet(it) }
                         .sum()
 
