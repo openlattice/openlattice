@@ -102,7 +102,10 @@ public class SetupEnvironment {
 
         retrofit = RetrofitFactory
                 .newClient( RetrofitFactory.Environment.TESTING, () -> tokenAdmin, new ThrowingCallAdapterFactory() );
-        retrofitIndexer = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING_INDEXER, () -> tokenAdmin );
+        retrofitIndexer = RetrofitFactory.newClient(
+                RetrofitFactory.Environment.TESTING_INDEXER,
+                () -> tokenAdmin,
+                new ThrowingCallAdapterFactory() );
         retrofit1 = RetrofitFactory
                 .newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser1, new ThrowingCallAdapterFactory() );
         retrofit2 = RetrofitFactory.newClient( RetrofitFactory.Environment.TESTING, () -> tokenUser2 );
