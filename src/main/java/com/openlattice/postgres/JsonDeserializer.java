@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.storage.BinaryDataWithContentType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -109,7 +110,7 @@ public class JsonDeserializer {
                 checkState( data instanceof String,
                         "Expected string for binary data, received %s",
                         data.getClass() );
-                return new Pair<>( (String) contentType, decoder.decode( (String) data ) );
+                return new BinaryDataWithContentType( (String) contentType, decoder.decode( (String) data ) );
             //                    logger.error("Received single value for binary data type, when expecting content type");
             case Date:
                 checkState( value instanceof String,
