@@ -41,6 +41,7 @@ import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.Organization;
+import com.openlattice.organization.OrganizationIntegrationAccount;
 import com.openlattice.organization.OrganizationMember;
 import com.openlattice.organization.OrganizationsApi;
 import com.openlattice.organization.roles.Role;
@@ -134,9 +135,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
-    @DeleteMapping(
-            value = ID_PATH,
-            produces = MediaType.APPLICATION_JSON_VALUE )
+    @DeleteMapping( value = ID_PATH, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
     public Void destroyOrganization( @PathVariable( ID ) UUID organizationId ) {
         AclKey aclKey = ensureOwner( organizationId );
@@ -148,21 +147,26 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     }
 
     @Override
-    @GetMapping(
-            value = ID_PATH + ENTITY_SETS,
-            produces = MediaType.APPLICATION_JSON_VALUE )
+    @GetMapping( value = ID_PATH + INTEGRATION, produces = MediaType.APPLICATION_JSON_VALUE )
+    public OrganizationIntegrationAccount getOrganizationIntegrationAccount( @PathVariable( ID ) UUID organizationId ) {
+        ensureOwner( organizationId );
+        return assembler.getOrganizationIntegrationAccount( organizationId );
+    }
+
+    @Override
+    @GetMapping( value = ID_PATH + ENTITY_SETS, produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
             @PathVariable( ID ) UUID organizationId ) {
+        ensureRead( organizationId );
         return getOrganizationEntitySets( organizationId, EnumSet.allOf( OrganizationEntitySetFlag.class ) );
     }
 
     @Override
-    @PostMapping(
-            value = ID_PATH + ENTITY_SETS,
-            produces = MediaType.APPLICATION_JSON_VALUE )
+    @PostMapping( value = ID_PATH + ENTITY_SETS, produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody EnumSet<OrganizationEntitySetFlag> flagFilter ) {
+        ensureRead( organizationId );
         final var orgPrincipal = organizations.getOrganizationPrincipal( organizationId );
         final var internal = edm.getEntitySetsForOrganization( organizationId );
         final var external = authorizations.getAuthorizedObjectsOfType(
@@ -217,7 +221,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ResourceNotFoundException( "Organization does not exist." );
         }
         return assembler
-                .materializeEntitySets( organizationPrincipal.getId(),authorizedPropertyTypesByEntitySet );
+                .materializeEntitySets( organizationPrincipal.getId(), authorizedPropertyTypesByEntitySet );
     }
 
     @Override

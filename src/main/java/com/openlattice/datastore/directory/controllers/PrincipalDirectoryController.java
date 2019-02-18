@@ -26,9 +26,12 @@ import static com.google.common.base.Preconditions.checkState;
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.auth.UserInfo;
+import com.openlattice.assembler.AssemblerConnectionManager;
+import com.openlattice.assembler.PostgresRoles;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.bootstrap.AuthorizationBootstrap;
+import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.directory.pojo.DirectedAclKeys;
@@ -196,9 +199,9 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             path = DB,
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
-    public String getDbAccessCredential() {
-        final var principal = Principals.getCurrentUser();
-        return dbCredService.getDbCredential( principal.getId() );
+    public MaterializedViewAccount getMaterializedViewAccount() {
+        final var principal = Principals.getCurrentSecurablePrincipal();
+        return new MaterializedViewAccount( PostgresRoles.buildPostgresUsername( principal ), dbCredService.getDbCredential( principal.getName() ) );
     }
 
     @Override

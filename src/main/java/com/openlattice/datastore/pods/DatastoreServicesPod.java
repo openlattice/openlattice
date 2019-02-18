@@ -23,6 +23,7 @@ package com.openlattice.datastore.pods;
 import static com.openlattice.datastore.util.Util.returnAndLog;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -82,20 +83,19 @@ import com.openlattice.graph.core.GraphService;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.LinkingQueryService;
-import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
-import com.openlattice.neuron.pods.NeuronPod;
+import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.requests.HazelcastRequestsManager;
+import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
 import com.zaxxer.hikari.HikariDataSource;
-
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -107,7 +107,6 @@ import org.springframework.context.annotation.Import;
         Auth0Pod.class,
         ByteBlobServicePod.class,
         AssemblerConfigurationPod.class,
-        NeuronPod.class,
 } )
 public class DatastoreServicesPod {
 
@@ -137,6 +136,9 @@ public class DatastoreServicesPod {
 
     @Inject
     private AssemblerConfiguration assemblerConfiguration;
+
+    @Inject
+    private MetricRegistry metricRegistry;
 
     @Bean
     public PostgresUserApi pgUserApi() {
@@ -243,7 +245,9 @@ public class DatastoreServicesPod {
                 authorizationManager(),
                 dcs(),
                 hikariDataSource,
-                hazelcastInstance );
+                metricRegistry,
+                hazelcastInstance,
+                eventBus );
     }
 
     @Bean
@@ -365,13 +369,14 @@ public class DatastoreServicesPod {
     public AssemblerConnectionManager bootstrapRolesAndUsers() {
         final var hos = organizationsManager();
 
+        AssemblerConnectionManager.initializeMetrics( metricRegistry );
         AssemblerConnectionManager.initializeAssemblerConfiguration( assemblerConfiguration );
         AssemblerConnectionManager.initializeProductionDatasource( hikariDataSource );
         AssemblerConnectionManager.initializeSecurePrincipalsManager( principalService() );
         AssemblerConnectionManager.initializeOrganizations( hos );
         AssemblerConnectionManager.initializeDbCredentialService( dcs() );
         AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
-        AssemblerConnectionManager.initializeUsersAndRoles();
+        //        AssemblerConnectionManager.initializeUsersAndRoles();
 
         if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
             final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );
@@ -390,7 +395,7 @@ public class DatastoreServicesPod {
     }
 
     @Bean AwsDataSinkService awsDataSinkService() {
-        return new AwsDataSinkService();
+        return new AwsDataSinkService( byteBlobDataManager, hikariDataSource );
     }
 
     @Bean
@@ -401,6 +406,16 @@ public class DatastoreServicesPod {
     @Bean
     public LinkingQueryService lqs() {
         return new PostgresLinkingQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public RequestQueryService rqs() {
+        return new RequestQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public HazelcastRequestsManager hazelcastRequestsManager() {
+        return new HazelcastRequestsManager( hazelcastInstance, rqs() );
     }
 
     @PostConstruct
