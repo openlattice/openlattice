@@ -25,16 +25,13 @@ package com.openlattice.authorization.util;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.datastax.driver.core.Row;
 import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.datastax.driver.core.Row;
-import com.openlattice.conductor.codecs.EnumSetTypeCodec;
 import com.openlattice.datastore.cassandra.CommonColumns;
-import com.openlattice.authorization.AclKey;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
@@ -60,10 +57,6 @@ public final class AuthorizationUtils {
 
     public static AclKey aclKey( Row row ) {
         return new AclKey( row.getList( CommonColumns.ACL_KEYS.cql(), UUID.class ) );
-    }
-
-    public static EnumSet<Permission> permissions( Row row ) {
-        return row.get( CommonColumns.PERMISSIONS.cql(), EnumSetTypeCodec.getTypeTokenForEnumSetPermission() );
     }
 
     public static SecurableObjectType securableObjectType( Row row ) {

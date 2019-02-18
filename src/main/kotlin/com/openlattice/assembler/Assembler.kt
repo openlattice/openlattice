@@ -21,20 +21,36 @@
 
 package com.openlattice.assembler
 
+import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.MetricRegistry.name
+import com.google.common.eventbus.EventBus
+import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicates
+import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
 import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
+import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
+import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.data.storage.MetadataOption
+import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
+import com.openlattice.datastore.exceptions.ResourceNotFoundException
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.events.EntitySetCreatedEvent
+import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
+import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.HazelcastMap.*
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.postgres.PostgresColumn
-import com.openlattice.postgres.PostgresColumn.PRINCIPAL_TYPE
-import com.openlattice.postgres.PostgresTable
+import com.openlattice.organization.OrganizationIntegrationAccount
+import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -51,10 +67,22 @@ class Assembler(
         val authz: AuthorizationManager,
         private val dbCredentialService: DbCredentialService,
         val hds: HikariDataSource,
-        hazelcast: HazelcastInstance
+        metricRegistry: MetricRegistry,
+        hazelcast: HazelcastInstance,
+        eventBus: EventBus
+
 ) {
-    private val entitySets = hazelcast.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
-    private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(HazelcastMap.ASSEMBLIES.name)
+    private val entitySets = hazelcast.getMap<UUID, EntitySet>(ENTITY_SETS.name)
+    private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
+    private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(PROPERTY_TYPES.name)
+    private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(ASSEMBLIES.name)
+    private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
+    private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
+    private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
+
+    init {
+        eventBus.register(this)
+    }
 
     fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {
         return assemblies[organizationId]?.entitySetIds ?: setOf()
@@ -64,11 +92,56 @@ class Assembler(
         return assemblies[organizationId]!!
     }
 
+    @Subscribe
+    fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
+        createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
+    }
 
+    @Subscribe
+    fun handlePropertyTypeAddedToEntitySet(propertyTypesAddedToEntitySetEvent: PropertyTypesAddedToEntitySetEvent) {
+        createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySetId)
+    }
 
     fun createOrganization(organization: Organization) {
-        assemblies.set(organization.id, OrganizationAssembly(organization.id, organization.principal.id))
-        assemblies.executeOnKey(organization.id, InitializeOrganizationAssemblyProcessor())
+        createOrganization(organization.id, organization.principal.id)
+    }
+
+    fun createOrganization(organizationId: UUID, organizationPrincipalId: String) {
+        createOrganizationTimer.time().use {
+            assemblies.set(organizationId, OrganizationAssembly(organizationId, organizationPrincipalId))
+            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor())
+            return@use
+        }
+    }
+
+    fun initialize() {
+        initializeEntitySetViews()
+        initializeOrganizations()
+    }
+
+    private fun initializeEntitySetViews() {
+        entitySets.keys.forEach(this::createOrUpdateProductionViewOfEntitySet)
+    }
+
+    private fun initializeOrganizations() {
+        val currentOrganizations =
+                securableObjectTypes.keySet(
+                        Predicates.equal("this", SecurableObjectType.Organization)
+                ).map { it.first() }.toSet()
+
+        val initializedOrganizations = assemblies.keySet(Predicates.equal(INITIALIZED_INDEX, true))
+
+        val organizationsNeedingInitialized: Set<UUID> = currentOrganizations - initializedOrganizations
+
+        organizationsNeedingInitialized.forEach { organizationId ->
+            val organizationPrincipal = principals[AclKey(organizationId)]
+            if (organizationPrincipal == null) {
+                logger.error("Unable to initialize organization with id {} because principal not found", organizationId)
+            } else {
+                logger.info("Initializing database for organization {}", organizationId)
+                createOrganization(organizationId, organizationPrincipal.principal.id)
+            }
+        }
     }
 
     fun materializeEntitySets(
@@ -79,6 +152,43 @@ class Assembler(
         return getMaterializedEntitySets(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
+    }
+
+    private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
+        val entitySet = entitySets.getValue(entitySetId)
+        val authorizedPropertyTypes = propertyTypes
+                .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)
+        val propertyFqns = authorizedPropertyTypes.mapValues {
+            DataTables.quote(it.value.type.fullQualifiedNameAsString)
+        }
+
+        val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
+                mapOf(entitySetId to Optional.empty()),
+                propertyFqns,
+                authorizedPropertyTypes.values.map(PropertyType::getId),
+                mapOf(entitySetId to authorizedPropertyTypes.keys),
+                mapOf(),
+                EnumSet.allOf(MetadataOption::class.java),
+                authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
+                entitySet.isLinking,
+                entitySet.isLinking
+        )
+
+        //Drop and recreate the view with the latest schema
+        hds.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
+                stmt.execute("CREATE OR REPLACE VIEW $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\" AS $sql")
+                return@use
+            }
+        }
+    }
+
+    fun getOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
+        val organizationUserId = buildOrganizationUserId(organizationId)
+        val credential = this.dbCredentialService.getDbCredential(organizationUserId)
+                ?: throw ResourceNotFoundException("Organization credential not found.")
+        return OrganizationIntegrationAccount(organizationUserId, credential)
     }
 
     private fun getInternalEntitySetFlag(organizationId: UUID, entitySetId: UUID): Set<OrganizationEntitySetFlag> {

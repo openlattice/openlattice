@@ -27,17 +27,11 @@ import com.openlattice.authorization.Principals;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
 import com.openlattice.requests.Status;
-import com.datastax.driver.core.Row;
-import com.openlattice.datastore.cassandra.RowAdapters;
-
-import javax.annotation.Nonnull;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static com.openlattice.authorization.util.AuthorizationUtils.*;
+import javax.annotation.Nonnull;
 
 ;
 
@@ -59,15 +53,6 @@ public final class RequestUtil {
 
     public static AceKey aceKey( Status status ) {
         return new AceKey( status.getRequest().getAclKey(), status.getPrincipal() );
-    }
-
-    public static Status status( Row row ) {
-        return new Status(
-                aclKey( row ),
-                permissions( row ),
-                reason( row ),
-                getPrincipalFromRow( row ),
-                RowAdapters.reqStatus( row ) );
     }
 
     public static Map<AceKey, Status> reqsAsStatusMap( Set<Request> requests ) {

@@ -27,8 +27,8 @@ plugins {
     id "maven-publish"
     id "signing"
     id 'com.github.spotbugs' version '1.6.6'
-    id 'org.jetbrains.kotlin.jvm' version '1.3.10'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.10'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.21'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.21'
     id 'org.jetbrains.dokka' version '0.9.17'
     id 'java'
 }
@@ -43,8 +43,8 @@ ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/conductor-c
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
 
-sourceCompatibility=JavaVersion.VERSION_1_10
-targetCompatibility=JavaVersion.VERSION_1_10
+sourceCompatibility=JavaVersion.VERSION_11
+targetCompatibility=JavaVersion.VERSION_11
 
 def versions = [
   checkstyle: '7.4',
@@ -85,11 +85,20 @@ jacoco {
     toolVersion = "0.8.2"
 }
 
-compileKotlin {
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
-        freeCompilerArgs = ['-Xjvm-default=compatibility']
+        jvmTarget = "1.8"
+        freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
+
+//compileTestKotlin {
+//    kotlinOptions {
+//        jvmTarget = "1.8"
+//        freeCompilerArgs += ['-Xjvm-default=enable']
+//    }
+//}
+
 
 dependencies {
     spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.8.0'
@@ -165,17 +174,6 @@ install {
 eclipse {
     ext.downloadSources = true
     ext.downloadJavadoc = true
-    ext.sourceCompatibility=JavaVersion.VERSION_1_10
+    ext.sourceCompatibility=JavaVersion.VERSION_11
 }
 
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-        freeCompilerArgs = ['-Xjvm-default=compatibility']
-    }
-}
-compileTestKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-}

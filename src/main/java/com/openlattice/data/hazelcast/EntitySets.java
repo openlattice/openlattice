@@ -21,10 +21,8 @@
 package com.openlattice.data.hazelcast;
 
 import com.dataloom.streams.StreamUtil;
-import com.datastax.driver.core.Row;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
-import com.openlattice.datastore.cassandra.RowAdapters;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -38,12 +36,6 @@ import java.util.stream.Collectors;
 public final class EntitySets {
 
     private EntitySets() {
-    }
-
-    public static Predicate filterByEntitySetIdAndSyncId( Row row ) {
-        UUID entitySetId = RowAdapters.entitySetId( row );
-        UUID syncId = RowAdapters.syncId( row );
-        return filterByEntitySetIdAndSyncId( entitySetId, syncId );
     }
 
     public static Predicate filterByEntitySetIdAndSyncId( List<UUID> pair ) {

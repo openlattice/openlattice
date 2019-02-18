@@ -4,17 +4,18 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
-import com.hazelcast.com.eclipsesource.json.Json;
+import com.openlattice.data.storage.BinaryDataWithContentType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.util.*;
-
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
-
 import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
@@ -109,7 +110,7 @@ public class JsonDeserializer {
                 checkState( data instanceof String,
                         "Expected string for binary data, received %s",
                         data.getClass() );
-                return new Pair<>( (String) contentType, decoder.decode( (String) data ) );
+                return new BinaryDataWithContentType( (String) contentType, decoder.decode( (String) data ) );
             //                    logger.error("Received single value for binary data type, when expecting content type");
             case Date:
                 checkState( value instanceof String,
@@ -136,6 +137,9 @@ public class JsonDeserializer {
                         value.getClass() );
                 return Duration.parse( (String) value );
             case Guid:
+                if ( value instanceof UUID ) {
+                    return value;
+                }
                 checkState( value instanceof String,
                         "Expected string for property type %s with data %s,  received %s",
                         dataType,

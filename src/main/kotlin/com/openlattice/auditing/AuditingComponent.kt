@@ -26,7 +26,7 @@ import com.openlattice.data.DataGraphManager
 import com.openlattice.data.DataGraphService
 import java.util.*
 
-private val mapper = ObjectMappers.newJsonMapper();
+private val mapper = ObjectMappers.newJsonMapper()
 
 /**
  *

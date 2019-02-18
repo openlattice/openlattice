@@ -1,7 +1,5 @@
-
-
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +16,24 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.neuron.receptors;
+package com.openlattice.assembler.processors
 
-import com.openlattice.neuron.signals.Signal;
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.edm.EntitySet
+import java.util.*
 
-public interface Receptor {
+/**
+ *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ */
 
-    void process( Signal signal );
+class ConfigureProductionEntitySetView : AbstractRhizomeEntryProcessor<UUID, EntitySet, Void?>() {
+    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet?>): Void? {
+        return null
+    }
+
 }

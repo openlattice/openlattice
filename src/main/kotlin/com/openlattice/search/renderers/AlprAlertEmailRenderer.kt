@@ -7,7 +7,7 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.mail.RenderableEmailRequest
 import com.openlattice.search.PersistentSearchMessengerHelpers
 import com.openlattice.search.requests.PersistentSearch
-import jodd.mail.att.ByteArrayAttachment
+import jodd.mail.EmailAttachment
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
@@ -20,11 +20,11 @@ import javax.imageio.ImageIO
 
 private val logger = LoggerFactory.getLogger(AlprAlertEmailRenderer::class.java)
 
-private val FROM_EMAIL = "katherine@openlattice.com"
-private val TEMPLATE_PATH = "mail/templates/shared/AlprAlertTemplate.mustache"
-private val MIME_TYPE_PREFIX = "image/"
-private val JPEG = "jpeg"
-private val PNG = "png"
+private const val FROM_EMAIL = "katherine@openlattice.com"
+private const val TEMPLATE_PATH = "mail/templates/shared/AlprAlertTemplate.mustache"
+private const val MIME_TYPE_PREFIX = "image/"
+private const val JPEG = "jpeg"
+private const val PNG = "png"
 
 private val LAST_READ_FQN = FullQualifiedName("ol.datetimelastreported")
 private val EXPIRATION_FQN = FullQualifiedName("ol.datetimeend")
@@ -54,7 +54,9 @@ class AlprAlertEmailRenderer {
 
     companion object {
 
-        private val dateTimeFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a, z").withZone(TimeZone.getTimeZone("America/Los_Angeles").toZoneId())
+        private val dateTimeFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a, z").withZone(
+                TimeZone.getTimeZone("America/Los_Angeles").toZoneId()
+        )
 
         private fun getFirstValue(entity: SetMultimap<FullQualifiedName, Any>, fqn: FullQualifiedName): String? {
             val values = entity.get(fqn)
@@ -120,7 +122,9 @@ class AlprAlertEmailRenderer {
 
             val readDateTimeList = vehicleRead.get(READ_TIMESTAMP_FQN)
 
-            values["readDateTime"] = if (readDateTimeList.isEmpty()) "" else OffsetDateTime.parse(readDateTimeList.first().toString()).format(dateTimeFormatter)
+            values["readDateTime"] = if (readDateTimeList.isEmpty()) "" else OffsetDateTime.parse(
+                    readDateTimeList.first().toString()
+            ).format(dateTimeFormatter)
             values["hitType"] = getFirstValue(vehicleRead, HIT_TYPE_FQN)
             values["cameraId"] = getFirstValue(vehicleRead, CAMERA_ID_FQN)
             values["agencyId"] = getFirstValue(vehicleRead, AGENCY_NAME_FQN)
@@ -134,7 +138,7 @@ class AlprAlertEmailRenderer {
             return values.filterValues { it != null }
         }
 
-        private fun extractVehicleImages(vehicleRead: SetMultimap<FullQualifiedName, Any>): List<ByteArrayAttachment> {
+        private fun extractVehicleImages(vehicleRead: SetMultimap<FullQualifiedName, Any>): List<EmailAttachment<*>> {
 
             val licenseImageUrl = getFirstValue(vehicleRead, LICENSE_PLATE_IMAGE_FQN)
             val vehicleImageUrl = getFirstValue(vehicleRead, VEHICLE_IMAGE_FQN)
@@ -144,22 +148,42 @@ class AlprAlertEmailRenderer {
             val vehicleImage = getImage(vehicleImageUrl, JPEG)
             val mapImage = getMapImage(coordinates)
 
-            val attachments = Lists.newArrayList<ByteArrayAttachment>()
+            val attachments = Lists.newArrayList<EmailAttachment<*>>()
             if (licenseImage != null) {
+                EmailAttachment.with().content(licenseImage.toByteArray(), "$MIME_TYPE_PREFIX$JPEG").name(
+                        "license-plate-image"
+                ).contentId("plate")
                 attachments
-                        .add(ByteArrayAttachment(licenseImage.toByteArray(), "$MIME_TYPE_PREFIX$JPEG", "license-plate-image", "plate"))
+                        .add(
+                                EmailAttachment.with()
+                                        .content(licenseImage.toByteArray(), "$MIME_TYPE_PREFIX$JPEG")
+                                        .name("license-plate-image")
+                                        .contentId("plate")
+                                        .buildByteArrayDataSource()
+                        )
             }
             if (vehicleImage != null) {
-                attachments.add(ByteArrayAttachment(vehicleImage.toByteArray(), "$MIME_TYPE_PREFIX$JPEG", "vehicle-image", "vehicle"))
+                attachments.add(
+                        EmailAttachment.with()
+                                .content(vehicleImage.toByteArray(), "$MIME_TYPE_PREFIX$JPEG")
+                                .name("vehicle-image")
+                                .contentId("vehicle").buildByteArrayDataSource()
+                )
             }
             if (mapImage != null) {
-                attachments.add(ByteArrayAttachment(mapImage.toByteArray(), "$MIME_TYPE_PREFIX$PNG", "map-image", "map"))
+                attachments.add(
+                        EmailAttachment.with().content(mapImage.toByteArray(), "$MIME_TYPE_PREFIX$PNG")
+                                .name("map-image")
+                                .contentId("map").buildByteArrayDataSource()
+                )
             }
 
             return attachments
         }
 
-        fun renderEmail(persistentSearch: PersistentSearch, vehicle: SetMultimap<FullQualifiedName, Any>, userEmail: String): RenderableEmailRequest {
+        fun renderEmail(
+                persistentSearch: PersistentSearch, vehicle: SetMultimap<FullQualifiedName, Any>, userEmail: String
+        ): RenderableEmailRequest {
 
             val caseNum = persistentSearch.alertMetadata["caseNum"]
             val licensePlate = persistentSearch.alertMetadata["licensePlate"]
@@ -171,7 +195,7 @@ class AlprAlertEmailRenderer {
             templateObjects.putAll(extractVehicleInfo(vehicle))
             templateObjects["expiration"] = persistentSearch.expiration.format(dateTimeFormatter)
 
-            val attachments = extractVehicleImages(vehicle)
+            val attachments = extractVehicleImages(vehicle).toTypedArray()
 
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
@@ -181,8 +205,9 @@ class AlprAlertEmailRenderer {
                     TEMPLATE_PATH,
                     Optional.of(subject),
                     Optional.of(templateObjects),
-                    Optional.of(attachments.toTypedArray()),
-                    Optional.absent())
+                    Optional.of(attachments),
+                    Optional.absent()
+            )
         }
     }
 }

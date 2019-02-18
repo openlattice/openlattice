@@ -373,9 +373,32 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID, entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
+        return upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+    }
+
+    fun upsertEntities(
+            entitySetId: UUID, entities: Map<UUID, Map<UUID, Set<Any>>>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>,
+            awsPassthrough: Boolean
+    ): Int {
+        val version = System.currentTimeMillis()
+
+        //Update the versions of all entities.
+        val updatedEntityCount = hds.connection.use { connection ->
+            connection.autoCommit = false
+            return@use connection.createStatement().use { updateEntities ->
+                val idsClause = buildEntityKeyIdsClause(entities.keys)
+                updateEntities.execute(lockEntities(entitySetId, idsClause, version))
+                val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
+                connection.commit()
+                connection.autoCommit = true
+                return@use updateCount
+            }
+        }
+
+        //Now upsert all the properties
         hds.connection.use { connection ->
-            val version = System.currentTimeMillis()
-            val entitySetPreparedStatement = connection.prepareStatement(upsertEntity(entitySetId, version))
+            
             val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
                 propertyType.datatype
             }
@@ -392,21 +415,16 @@ class PostgresEntityDataQueryService(
                         )
                     }
 
-
-
             entities.forEach { entity ->
-                entitySetPreparedStatement.setObject(1, entity.key)
-                entitySetPreparedStatement.addBatch()
-
                 val entityKeyId = entity.key
                 val entityData = asMap(JsonDeserializer
                                                .validateFormatAndNormalize(entity.value, dataTypes)
                                                { "Entity set $entitySetId with entity key id $entityKeyId" })
 
                 entityData.forEach { (propertyTypeId, values) ->
-                    val upsertStatements = preparedStatements[propertyTypeId]
+                    val upserts = preparedStatements[propertyTypeId]
 
-                    if (upsertStatements == null) {
+                    if (upserts == null) {
                         logger.warn(
                                 "Not inserting unauthorized property in entity {} from entity set {}",
                                 entityKeyId,
@@ -414,31 +432,37 @@ class PostgresEntityDataQueryService(
                         )
                     } else {
                         values.forEach { value ->
-                            val ps = upsertStatements
-
                             //Binary data types get stored in S3 bucket
                             val (propertyHash, insertValue) =
                                     if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
-                                        //store data in S3 bucket
-                                        val pair = value as Pair<String, ByteArray>
+                                        if (awsPassthrough) {
+                                            //Data is being stored in AWS directly the value will be the url fragment
+                                            //of where the data will be stored in AWS.
+                                            PostgresDataHasher.hashObject(value, EdmPrimitiveTypeKind.String) to value
+                                        } else {
+                                            //Data is expected to be of a specific type so that it can be stored in
+                                            //s3 bucket
 
-                                        val digest = PostgresDataHasher.hashObjectToHex(
-                                                pair.second, EdmPrimitiveTypeKind.Binary
-                                        )
-                                        //store entity set id/entity key id/property type id/property hash as key in S3
-                                        val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
-                                        byteBlobDataManager.putObject(s3Key, pair.second, pair.first)
-                                        PostgresDataHasher.hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
+                                            val binaryData = value as BinaryDataWithContentType
+
+                                            val digest = PostgresDataHasher
+                                                    .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
+                                            //store entity set id/entity key id/property type id/property hash as key in S3
+                                            val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
+                                            byteBlobDataManager
+                                                    .putObject(s3Key, binaryData.data, binaryData.contentType)
+                                            PostgresDataHasher
+                                                    .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
+                                        }
                                     } else {
                                         PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
                                     }
 
-                            ps.setObject(1, entityKeyId)
-                            ps.setBytes(2, propertyHash)
-                            ps.setObject(3, insertValue)
+                            upserts.setObject(1, entityKeyId)
+                            upserts.setBytes(2, propertyHash)
+                            upserts.setObject(3, insertValue)
 
-
-                            ps.addBatch()
+                            upserts.addBatch()
                         }
                     }
                 }
@@ -447,11 +471,8 @@ class PostgresEntityDataQueryService(
             //In case we want to do validation
             val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() }
 
-            val updatedEntityCount = entitySetPreparedStatement.executeBatch().sum()
-
             preparedStatements.values.forEach { it.close() }
 
-            entitySetPreparedStatement.close()
             checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
 
             logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
@@ -807,10 +828,26 @@ fun deleteEntitySetEntityKeys(entitySetId: UUID): String {
     return "DELETE FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' "
 }
 
+fun buildEntityKeyIdsClause(entityKeyIds: Set<UUID>): String {
+    return entityKeyIds.joinToString(",") { "'$it'" }
+}
+
+fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): String {
+    return "SELECT 1 FOR UPDATE WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = IN ($idsClause)"
+}
+
+fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String {
+    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
+            "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < $version THEN $version " +
+            "ELSE ${IDS.name}.${VERSION.name} END " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = IN ($idsClause)"
+}
+
 fun upsertEntity(entitySetId: UUID, version: Long): String {
     //Last writer wins for entities
-    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], " +
-            "${VERSION.name} = GREATEST(${VERSION.name},$version), ${LAST_WRITE.name} = now() " +
+    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
+            "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < $version THEN $version " +
+            "ELSE ${IDS.name}.${VERSION.name} END " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = ?"
 }
 
@@ -833,7 +870,7 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
     )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now(), now()) " +
             "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) " +
             "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
-            "VERSION = CASE WHEN abs($propertyTable.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
+            "${VERSION.name} = CASE WHEN abs($propertyTable.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE $propertyTable.${VERSION.name} END"
 
 }
