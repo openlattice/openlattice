@@ -75,6 +75,7 @@ public interface EdmApi {
     String SCHEMAS             = "schemas";
     String FILE_TYPE           = "fileType";
     String TOKEN               = "token";
+    String VERSION             = "version";
 
     // {namespace}/{schema_name}/{class}/{FQN}/{FQN}
     /*
@@ -97,8 +98,6 @@ public interface EdmApi {
     String SRC_PATH              = "/src";
     String DST_PATH              = "/dst";
     String DIFF_PATH             = "/diff";
-    String VERSION_PATH          = "/version";
-    String NEW_PATH              = "/new";
     String CLEAR_PATH            = "/clear";
     String FORCE_PATH            = "/force";
     String KEY_PATH              = "/key";

@@ -52,6 +52,7 @@ public interface OrganizationsApi {
     String TITLE             = "/title";
 
     String ENTITY_SETS       = "/entity-sets";
+    String INTEGRATION       = "/integration";
     String EMAIL_DOMAIN      = "email-domain";
     String EMAIL_DOMAINS     = "/email-domains";
     String EMAIL_DOMAIN_PATH = "/{" + EMAIL_DOMAIN + ":.+}";
@@ -82,6 +83,9 @@ public interface OrganizationsApi {
     @DELETE( BASE + ID_PATH )
     Void destroyOrganization( @Path( ID ) UUID organizationId );
 
+    @GET( BASE + ID_PATH + INTEGRATION )
+    OrganizationIntegrationAccount getOrganizationIntegrationAccount(@Path(ID) UUID organizationId );
+
     /**
      * Retrieves all the organization entity sets without filtering.
      *
@@ -94,7 +98,7 @@ public interface OrganizationsApi {
     Map<UUID,Set<OrganizationEntitySetFlag>> getOrganizationEntitySets( @Path( ID ) UUID organizationId);
 
     /**
-     * Retrieves the
+     * Retrieves the entity sets belong to an organization matching a specified filter.
      *
      * @param organizationId The id of the organization for which to retrieve entity sets
      * @param flagFilter The set of flags for which to retrieve information.
