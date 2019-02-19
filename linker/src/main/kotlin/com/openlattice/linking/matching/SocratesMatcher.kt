@@ -79,10 +79,10 @@ class SocratesMatcher(
                     if (feedback != null) {
                         if (feedback.linked) {
                             positiveFeedbacks.add(it.key)
+                            return@filter false
                         }
-                        !feedback.linked
                     }
-                    true
+                    return@filter true
                 }
 
         // extract properties and features for all entities in block
@@ -130,10 +130,10 @@ class SocratesMatcher(
                 if (feedback != null) {
                     if (feedback.linked) {
                         positiveFeedbacks.add(entityPair)
+                        return@filter false
                     }
-                    !feedback.linked
                 }
-                true
+                return@filter true
             }
         }.filter { !it.value.isEmpty() }
 

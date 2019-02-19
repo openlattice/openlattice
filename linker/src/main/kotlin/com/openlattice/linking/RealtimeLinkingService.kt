@@ -106,6 +106,12 @@ class RealtimeLinkingService
                             val cluster = getAndLockClusters(setOf(blockKey)).entries.first()
 
                             val scoredCluster = cluster(blockKey, cluster, ::completeLinkCluster)
+                            if (scoredCluster.score <= MINIMUM_SCORE) {
+                                logger.error("Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
+                                        scoredCluster.score,
+                                        cluster.key,
+                                        MINIMUM_SCORE)
+                            }
                             val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, blockKey, scoredCluster.cluster)
 
                             insertMatches(clusterUpdate)
@@ -249,7 +255,7 @@ class RealtimeLinkingService
     @Scheduled(fixedRate = 30000)
     fun runLinking() {
         logger.info("Trying to start linking job.")
-        var linkableEntitySets = setOf<UUID>()
+        val linkableEntitySets: Set<UUID>
         if (running.tryLock()) {
             try {
                 //TODO: Make this more efficient than pulling the entire list of entity sets locally.
