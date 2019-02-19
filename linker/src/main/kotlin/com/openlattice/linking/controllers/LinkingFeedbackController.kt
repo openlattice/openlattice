@@ -182,9 +182,10 @@ constructor(
         )
     }
 
-    @DeleteMapping( path = [LinkingFeedbackApi.FEEDBACK] )
-    override fun deleteLinkingFeedback(@RequestBody entityPair: EntityKeyPair) {
-        feedbackService.deleteLinkingFeedback(entityPair)
+    @DeleteMapping(path = [LinkingFeedbackApi.FEEDBACK])
+    override fun deleteLinkingFeedback(@RequestBody entityPair: EntityKeyPair): Int {
+        ensureAdminAccess() // currently it's only used by tests
+        return feedbackService.deleteLinkingFeedback(entityPair)
     }
 
 
