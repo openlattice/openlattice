@@ -30,7 +30,6 @@ import com.openlattice.authorization.*
 import com.openlattice.authorization.mapstores.UserMapstore
 import com.openlattice.bootstrap.AuthorizationBootstrap
 import com.openlattice.client.RetrofitFactory
-import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.datastore.services.Auth0ManagementApi
 import com.openlattice.directory.pojo.Auth0UserBasic
 import com.openlattice.hazelcast.HazelcastMap
