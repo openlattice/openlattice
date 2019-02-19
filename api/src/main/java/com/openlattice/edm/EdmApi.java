@@ -159,12 +159,6 @@ public interface EdmApi {
     UUID getEntityDataModelVersion();
 
     /**
-     * Generates and returns a new entity data model version
-     */
-    @GET( BASE + VERSION_PATH + NEW_PATH )
-    UUID generateNewEntityDataModelVersion();
-
-    /**
      * Gets information for any SecurableObjectType given its type and ID.
      *
      * @param selectors A set containing a given SecurableObjectType, ID, and a set of fields (SecurableObjectType) to
