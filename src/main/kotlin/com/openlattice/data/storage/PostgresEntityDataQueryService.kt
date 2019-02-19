@@ -373,7 +373,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID, entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        return upsertEntities(entitySetId, entities, authorizedPropertyTypes)
+        return upsertEntities(entitySetId, entities, authorizedPropertyTypes, false)
     }
 
     fun upsertEntities(
@@ -387,7 +387,7 @@ class PostgresEntityDataQueryService(
         val updatedEntityCount = hds.connection.use { connection ->
             connection.autoCommit = false
             return@use connection.createStatement().use { updateEntities ->
-                val idsClause = buildEntityKeyIdsClause(entities.keys)
+                val idsClause = buildEntityKeyIdsClause(entities.keys) // we assume, that entities is not empty
                 updateEntities.execute(lockEntities(entitySetId, idsClause, version))
                 val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
                 connection.commit()
@@ -833,14 +833,16 @@ fun buildEntityKeyIdsClause(entityKeyIds: Set<UUID>): String {
 }
 
 fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): String {
-    return "SELECT 1 FOR UPDATE WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = IN ($idsClause)"
+    return "SELECT 1 FROM ${IDS.name} " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause) " +
+            "FOR UPDATE"
 }
 
 fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String {
     return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
             "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < $version THEN $version " +
             "ELSE ${IDS.name}.${VERSION.name} END " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = IN ($idsClause)"
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause)"
 }
 
 fun upsertEntity(entitySetId: UUID, version: Long): String {
