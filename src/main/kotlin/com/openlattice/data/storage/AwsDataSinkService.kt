@@ -17,7 +17,7 @@ import javax.annotation.PostConstruct
 import javax.inject.Inject
 
 private val logger = LoggerFactory.getLogger(AwsDataSinkService::class.java)
-
+const val 
 
 class AwsDataSinkService(
         private val byteBlobDataManager: ByteBlobDataManager,
