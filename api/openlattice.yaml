@@ -956,7 +956,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/allPropertyUsageSummary"
+                type: object
+                additionalProperties:
+                  $ref:  "#/components/propertyUsageSummary"
   /datastore/edm/summary/{propertyTypeId}:
     get:
       summary: Get Property Usage Summary for property with given ID.
@@ -1156,7 +1158,9 @@ paths:
                 items:
                   type: object
                   additionalProperties:
-                    type: string
+                    type: array
+                    items:
+                      type: string
     post:
       summary: Gets a list of entities by UUID's
       operationId: loadFilteredEntitySetData
@@ -1321,7 +1325,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/neighborEntityDetailsDictionary"
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: "#/components/neighborEntityDetails"
 
   #####################
   ## DIRECTORY API"s ##
@@ -1348,7 +1356,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/auth0userBasicMap"
+                type: object
+                additionalProperties:
+                  $ref: "#/components/auth0userBasic"
   /datastore/principals/users/{userId}:
     get:
       summary: Get the user for the given id.
@@ -1402,7 +1412,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/auth0userBasicMap"
+                type: object
+                additionalProperties:
+                  $ref: "#/components/auth0userBasic"
   /datastore/principals/roles/current/:
     get:
       summary: Get current roles.
@@ -1438,7 +1450,9 @@ paths:
           in: query
           required: true
           schema:
-            $ref: "#/components/aclKey"
+            type: array
+            items:
+              type: string
       responses:
         "200":
           description: Success
@@ -1569,7 +1583,12 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/organizationEntitySetFlag"
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                      enum: [INTERNAL, EXTERNAL, MATERIALISED]
     post:
       summary: Get the entity sets for an organization for a certain flag
       operationId: getFlaggedOrganizationEntitySets
@@ -1590,7 +1609,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/organizationEntitySetFlag"
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+                  enum: [INTERNAL, EXTERNAL, MATERIALISED]
       responses:
         "200":
           description: Success
@@ -1599,7 +1623,12 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/organizationEntitySetFlag"
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                      enum: [INTERNAL, EXTERNAL, MATERIALISED]
   /datastore/organizations/{organizationId}/entitySets/assemble:
     post:
       summary: Materializes entity sets into the organization database.
@@ -1633,7 +1662,12 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/organizationEntitySetFlag"
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                      enum: [INTERNAL, EXTERNAL, MATERIALISED]
   /datastore/organizations/{organizationId}/title:
     put:
       summary: Update the organisation title
@@ -1785,7 +1819,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: "#/components/organizationMember"
+                  $ref: "#/components/organizationMember"
   /datastore/organizations/{organizationId}/principals/members/{userId}:
     put:
       summary: Add member to an organization
@@ -1913,7 +1947,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: "#/components/role"
+                  $ref: "#/components/role"
     delete:
       summary: Remove role for an organization
       operationId: deleteRole
@@ -2030,7 +2064,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: "#/components/auth0userBasic"
+                  $ref: "#/components/auth0userBasic"
   /datastore/organizations/{organizationId}/principals/roles/{roleId}/members/{userId}:
     put:
       summary: Add a role to a user
@@ -2143,12 +2177,6 @@ components:
           type: boolean
         analyzer:
           type: string
-    propertyTags:
-      type: object
-      additionalProperties:
-        type: array
-        items:
-          type: string
     entityType:
       title: An entity type
       type: object
@@ -2174,7 +2202,11 @@ components:
           items:
             type: string
         propertyTags:
-          $ref: "#/components/propertyTags"
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
         basetype:
            type: string
         category:
@@ -2295,11 +2327,14 @@ components:
         defaultShow:
           type: boolean
         propertyTags:
-          $ref: "#/components/propertyTags"
-    allPropertyUsageSummary:
-      type: object
-      additionalProperties:
-        $ref:  "#/components/propertyUsageSummary"
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        organizationId:
+          type: string
+          format: uuid
     propertyUsageSummary:
       type: object
       properties:
@@ -2353,6 +2388,9 @@ components:
             type: string
         external:
           type: boolean
+        organizationId:
+          type: string
+          format: uuid
       example:
         entityTypeId: 963b597b-b28d-4f59-b2e6-4d443499e464
         id: 843b597b-b28d-4f59-b2e6-4d443499e323
@@ -2391,13 +2429,6 @@ components:
           type: string
         neighbourDetails:
             $ref: "#/components/neighborDetails"
-    neighborEntityDetailsCollection:
-      type: array
-      items:
-        $ref: "#/components/neighborEntityDetails"
-    neighborEntityDetailsDictionary:
-      additionalProperties:
-        $ref: "#/components/neighborEntityDetailsCollection"
     neighborSearchFilter:
       type: object
       properties:
@@ -2441,10 +2472,6 @@ components:
           items:
             type: string
             format: uuid
-    auth0userBasicMap:
-      type: object
-      additionalProperties:
-        $ref: "#/components/auth0userBasic"
     ace:
       type: object
       properties:
@@ -2460,7 +2487,9 @@ components:
         aclKey:
           type: array
           items:
-            $ref: "#/components/aclKey"
+            type: array
+            items:
+              type: string
         aces:
           type: array
           items:
@@ -2472,10 +2501,6 @@ components:
           type: string # this could be ADD, REMOVE, SET or REQUEST
         acl:
           $ref: "#/components/acl"
-    aclKey:
-      type: array
-      items:
-        type: string
     principal:
       type: object
       properties:
@@ -2555,18 +2580,11 @@ components:
           items:
             type: string
             format: uuid
-    organizationEntitySetFlag:
-      type: object
-      additionalProperties:
-        type: array
-        items:
-          type: string
-          enum: [INTERNAL, EXTERNAL, MATERIALISED]
     organizationMember:
       type: object
       properties:
         principal:
-          $ref: securablePrincipal
+          $ref: "#/components/securablePrincipal"
         profile:
           $ref: "#/components/auth0userBasic"
         roles:
