@@ -105,7 +105,7 @@ class BackgroundIndexingService(
                 val lockedEntitySets = entitySets.values
                         .shuffled()
                         .filter { tryLockEntitySet(it) }
-                        .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: remove hack
+                        .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
 
                 val totalIndexed = lockedEntitySets
                         .parallelStream()
@@ -203,6 +203,7 @@ class BackgroundIndexingService(
             propertyTypeMap: Map<UUID, PropertyType>
     ): Int {
         val esb = Stopwatch.createStarted()
+<<<<<<< HEAD
 
         val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
 
@@ -211,6 +212,13 @@ class BackgroundIndexingService(
         }
         return if (batchToIndex.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
             val indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
+=======
+        val indexCount : Int
+        val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
+
+        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
+            indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
+>>>>>>> develop
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
@@ -218,9 +226,15 @@ class BackgroundIndexingService(
                     entitySet.id,
                     esb.elapsed(TimeUnit.MILLISECONDS)
             )
+<<<<<<< HEAD
             indexCount
         } else  {
             0
+=======
+        } else {
+            indexCount = 0
+            logger.error("Failed to index elements with entitiesById: {}", entitiesById)
+>>>>>>> develop
         }
 
     }
