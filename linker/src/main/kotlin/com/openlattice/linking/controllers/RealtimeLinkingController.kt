@@ -57,10 +57,10 @@ class RealtimeLinkingController(
             produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getMatchedEntitiesForLinkingId(
             @PathVariable(RealtimeLinkingApi.LINKING_ID) linkingId: UUID
-    ): Set<MatchedEntityPair> {
+    ): List<MatchedEntityPair> {
         ensureAdminAccess()
         val matches = lqs.getClustersContaining(setOf(linkingId)).getValue(linkingId)
-        val matchedEntityPairs = HashSet<MatchedEntityPair>()
+        val matchedEntityPairs = ArrayList<MatchedEntityPair>()
 
         matches.forEach {
             val first = it
