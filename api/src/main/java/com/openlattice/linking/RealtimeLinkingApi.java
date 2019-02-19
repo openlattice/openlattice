@@ -23,6 +23,7 @@ package com.openlattice.linking;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -47,5 +48,5 @@ public interface RealtimeLinkingApi {
     Set<UUID> getLinkingFinishedEntitySets();
 
     @GET( BASE + MATCHED + LINKING_ID_PATH )
-    Set<MatchedEntityPair> getMatchedEntitiesForLinkingId( @Path( LINKING_ID ) UUID linkingId );
+    List<MatchedEntityPair> getMatchedEntitiesForLinkingId( @Path( LINKING_ID ) UUID linkingId );
 }
