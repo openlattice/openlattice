@@ -60,7 +60,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             .getLogger( HazelcastEntityDatastore.class );
 
     private final EntityKeyIdService             idService;
-    private final PostgresDataManager            pdm;
+    private final IndexingMetadataManager        pdm;
     private final PostgresEntityDataQueryService dataQueryService;
     private final EdmManager                     edmManager;
 
@@ -72,7 +72,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     public HazelcastEntityDatastore(
             EntityKeyIdService idService,
-            PostgresDataManager pdm,
+            IndexingMetadataManager pdm,
             PostgresEntityDataQueryService dataQueryService,
             EdmManager edmManager ) {
         this.dataQueryService = dataQueryService;

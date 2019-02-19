@@ -398,7 +398,7 @@ class PostgresEntityDataQueryService(
 
         //Now upsert all the properties
         hds.connection.use { connection ->
-            
+
             val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
                 propertyType.datatype
             }
