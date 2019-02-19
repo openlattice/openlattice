@@ -73,7 +73,7 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
     }
 
     @SuppressWarnings("unchecked")
-    fun deleteLinkingFeedbacks(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+    fun deleteLinkingFeedbacks(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
         val firstPredicate = Predicates.and(
                 Predicates.equal(FIRST_ENTITY_SET_INDEX, entitySetId),
                 LinkingFeedbackPredicateBuilder.inUuidArray(entityKeyIds, FIRST_ENTITY_KEY_INDEX))
@@ -82,12 +82,15 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
                 Predicates.equal(SECOND_ENTITY_SET_INDEX, entitySetId),
                 LinkingFeedbackPredicateBuilder.inUuidArray(entityKeyIds, SECOND_ENTITY_KEY_INDEX))
 
+        val feedbackCount = linkingFeedbacks.count()
         linkingFeedbacks.removeAll(
                 Predicates.or(firstPredicate, secondPredicate) as Predicate<EntityKeyPair, Boolean>)
+        return feedbackCount - linkingFeedbacks.count()
     }
 
-    fun deleteLinkingFeedback(entityPair: EntityKeyPair) {
+    fun deleteLinkingFeedback(entityPair: EntityKeyPair): Int {
         linkingFeedbacks.remove(entityPair)
+        return 1
     }
 }
 
