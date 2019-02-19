@@ -36,9 +36,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
 import com.openlattice.tasks.HazelcastFixedRateTask
-import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
-import com.openlattice.tasks.TaskSchedulerService
 import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
 import java.time.OffsetDateTime
@@ -56,8 +54,8 @@ private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
  * syncDependencies be initialized within the same JVM in order to function properly.
  *
  */
-class Auth0SyncTask : HazelcastFixedRateTask {
-    override fun getDependencies(): Class<out HazelcastTaskDependencies> {
+class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
+    override fun getDependenciesClass(): Class<Auth0SyncTaskDependencies> {
         return Auth0SyncTaskDependencies::class.java
     }
 
@@ -78,7 +76,7 @@ class Auth0SyncTask : HazelcastFixedRateTask {
     }
 
     override fun run() {
-        val syncDependencies = TaskSchedulerService.getTaskDependencies(Auth0SyncTaskDependencies::class.java)
+        val syncDependencies = getDependency()
 
 
         val users: IMap<String, Auth0UserBasic> = syncDependencies.hazelcastInstance.getMap(HazelcastMap.USERS.name)

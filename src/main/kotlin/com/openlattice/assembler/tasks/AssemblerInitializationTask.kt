@@ -19,13 +19,35 @@
  *
  */
 
-package com.openlattice.tasks
+package com.openlattice.assembler.tasks
+
+import com.openlattice.assembler.AssemblerDependencies
+import com.openlattice.tasks.HazelcastInitializationTask
+import com.openlattice.tasks.Task
+import java.util.concurrent.TimeUnit
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-enum class Task {
-    AUTH0_SYNC_TASK,
-    ASSEMBLER_INITIALIZATON
+class AssemblerInitializationTask : HazelcastInitializationTask<AssemblerDependencies> {
+    override fun getInitialDelay(): Long {
+        return 0
+    }
+
+    override fun getTimeUnit(): TimeUnit {
+        return TimeUnit.MILLISECONDS
+    }
+
+    override fun run() {
+
+    }
+
+    override fun getName(): String {
+        return Task.ASSEMBLER_INITIALIZATON.name
+    }
+
+    override fun getDependenciesClass(): Class<out AssemblerDependencies> {
+        return AssemblerDependencies::class.java
+    }
 }
