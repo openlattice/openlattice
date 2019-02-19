@@ -138,7 +138,8 @@ class BackgroundIndexingService(
                 val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes[es.entityTypeId]!!.properties)
                 elasticsearchApi.saveEntitySetToElasticsearch(
                         es,
-                        missingEntitySetPropertyTypes.values.toList())
+                        missingEntitySetPropertyTypes.values.toList()
+                )
                 logger.info("Created missing index for entity set ${es.name} with id ${es.entityTypeId}")
             }
         }
@@ -203,22 +204,20 @@ class BackgroundIndexingService(
             propertyTypeMap: Map<UUID, PropertyType>
     ): Int {
         val esb = Stopwatch.createStarted()
-<<<<<<< HEAD
-
         val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
 
-        if( entitiesById.size != batchToIndex.size ) {
-            logger.error("Expected {} items to index but received {}. Marking as indexed to prevent infinite loop.", batchToIndex.size,  entitiesById.size )
+        if (entitiesById.size != batchToIndex.size) {
+            logger.error(
+                    "Expected {} items to index but received {}. Marking as indexed to prevent infinite loop.",
+                    batchToIndex.size,
+                    entitiesById.size
+            )
         }
-        return if (batchToIndex.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
-            val indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
-=======
-        val indexCount : Int
-        val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
+
+        val indexCount: Int
 
         if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
             indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
->>>>>>> develop
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
@@ -226,16 +225,12 @@ class BackgroundIndexingService(
                     entitySet.id,
                     esb.elapsed(TimeUnit.MILLISECONDS)
             )
-<<<<<<< HEAD
-            indexCount
-        } else  {
-            0
-=======
         } else {
             indexCount = 0
             logger.error("Failed to index elements with entitiesById: {}", entitiesById)
->>>>>>> develop
+
         }
+        return indexCount
 
     }
 
