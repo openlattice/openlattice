@@ -5,7 +5,7 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDatastore
-import com.openlattice.data.storage.PostgresDataManager
+import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
@@ -32,7 +32,7 @@ class BackgroundLinkingIndexingService(
         private val hds: HikariDataSource,
         private val dataStore: EntityDatastore,
         private val elasticsearchApi: ConductorElasticsearchApi,
-        private val dataManager: PostgresDataManager,
+        private val dataManager: IndexingMetadataManager,
         hazelcastInstance: HazelcastInstance
 ) {
 

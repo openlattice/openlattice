@@ -32,20 +32,17 @@ import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresDataManager;
+import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundIndexingService;
-import com.openlattice.indexing.BackgroundLinkingIndexingService;
 import com.openlattice.indexing.configuration.LinkingConfiguration;
-import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Blocker;
 import com.openlattice.linking.DataLoader;
 import com.openlattice.linking.EdmCachingDataLoader;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
-import com.openlattice.linking.RealtimeLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -109,8 +106,8 @@ public class IndexerPostConfigurationServicesPod {
     }
 
     @Bean
-    public PostgresDataManager postgresDataManager() {
-        return new PostgresDataManager( hikariDataSource );
+    public IndexingMetadataManager postgresDataManager() {
+        return new IndexingMetadataManager( hikariDataSource );
     }
 
     @Bean

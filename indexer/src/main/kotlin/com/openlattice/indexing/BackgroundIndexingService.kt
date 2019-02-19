@@ -28,7 +28,7 @@ import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.hazelcast.query.QueryConstants
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
-import com.openlattice.data.storage.PostgresDataManager
+import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
@@ -65,7 +65,7 @@ class BackgroundIndexingService(
         hazelcastInstance: HazelcastInstance,
         private val dataQueryService: PostgresEntityDataQueryService,
         private val elasticsearchApi: ConductorElasticsearchApi,
-        private val dataManager: PostgresDataManager
+        private val dataManager: IndexingMetadataManager
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(BackgroundIndexingService::class.java)!!
