@@ -28,10 +28,12 @@ import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.edm.type.PropertyType
 import org.slf4j.LoggerFactory
+import java.lang.IllegalStateException
 import java.util.*
 
 
 private val logger = LoggerFactory.getLogger(MaterializeEntitySetsProcessor::class.java)
+private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 /**
  * An offloadable entity processor that materializes an entity set.
@@ -41,6 +43,9 @@ private val logger = LoggerFactory.getLogger(MaterializeEntitySetsProcessor::cla
 data class MaterializeEntitySetsProcessor(
         val authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
 ) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(true), Offloadable {
+    @Transient
+    private var acm: AssemblerConnectionManager? = null
+
     val entitySetIds: Set<UUID> = authorizedPropertyTypesByEntitySet.keys
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val organizationId = entry.key
@@ -48,12 +53,18 @@ data class MaterializeEntitySetsProcessor(
         if (assembly == null) {
             logger.error("Encountered null assembly while trying to materialize entity sets.")
         } else {
-            AssemblerConnectionManager.materializeEntitySets(organizationId,authorizedPropertyTypesByEntitySet)
+            acm?.materializeEntitySets(organizationId, authorizedPropertyTypesByEntitySet)
+                    ?: throw IllegalStateException(NOT_INITIALIZED)
             assembly.entitySetIds.addAll(entitySetIds)
             entry.setValue(assembly)
         }
 
         return null
+    }
+
+    fun init(acm: AssemblerConnectionManager): MaterializeEntitySetsProcessor {
+        this.acm = acm
+        return this
     }
 
     override fun getExecutorName(): String {

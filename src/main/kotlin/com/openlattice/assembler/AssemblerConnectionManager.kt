@@ -24,6 +24,8 @@ package com.openlattice.assembler
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
+import com.google.common.eventbus.EventBus
+import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
@@ -42,6 +44,8 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
+import com.openlattice.principals.RoleCreatedEvent
+import com.openlattice.principals.UserCreatedEvent
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -64,6 +68,7 @@ class AssemblerConnectionManager(
         private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
         hazelcastInstance: HazelcastInstance,
+        eventBus: EventBus,
         metricRegistry: MetricRegistry
 ) {
 
@@ -76,6 +81,9 @@ class AssemblerConnectionManager(
     private val materializeEdgesTimer: Timer =
             metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeEdges"))
 
+    init {
+        eventBus.register(this)
+    }
 
     fun connect(dbname: String): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
@@ -91,12 +99,21 @@ class AssemblerConnectionManager(
         return HikariDataSource(HikariConfig(config))
     }
 
+    @Subscribe
+    fun handleUserCreated(userCreatedEvent: UserCreatedEvent) {
+        createUnprivilegedUser(userCreatedEvent.user)
+    }
+
+    @Subscribe
+    fun handleRoleCreated(roleCreatedEvent: RoleCreatedEvent) {
+        createRole(roleCreatedEvent.role)
+    }
+
     /**
      * Creates a private organization database that can be used for uploading data using launchpad.
      * Also sets up foreign data wrapper using assembler in assembler so that materialized views of data can be
      * provided.
      */
-
     fun createOrganizationDatabase(organizationId: UUID) {
         val organization = organizations.getOrganization(organizationId)
         createOrganizationDatabase(organizationId, organization.principal.id)
@@ -129,7 +146,7 @@ class AssemblerConnectionManager(
         }
     }
 
-    internal fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
+    private fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
         val db = DataTables.quote(dbname)
         val dbRole = "${dbname}_role"
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
@@ -162,7 +179,12 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun dropDatabase(organizationId: UUID, dbname: String) {
+    fun dropOrganizationDatabase( organizationId: UUID ) {
+        val organization = organizations.getOrganization(organizationId)
+        dropOrganizationDatabase(organizationId, organization.principal.id)
+    }
+
+    fun dropOrganizationDatabase(organizationId: UUID, dbname: String) {
         val db = quote(dbname)
         val dbRole = quote("${dbname}_role")
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
@@ -397,14 +419,11 @@ class AssemblerConnectionManager(
                 //TODO: Go through every database and for old users clean them out.
 //                    logger.info("Attempting to drop owned by old name {}", user.name)
 //                    statement.execute(dropOwnedIfExistsSql(user.name))
-                    logger.info("Attempting to drop user {}", user.name)
-                    statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
-                    dbCredentialService.deleteUserCredential( user.name )
+                logger.info("Attempting to drop user {}", user.name)
+                statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
+                dbCredentialService.deleteUserCredential(user.name)
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking public schema right from user {}", user)
-                statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbUser)}")
-
-                return@use
             }
         }
     }

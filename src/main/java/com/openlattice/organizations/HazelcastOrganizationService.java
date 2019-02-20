@@ -38,7 +38,6 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
@@ -379,11 +378,11 @@ public class HazelcastOrganizationService {
         /*
          * We set the organization to be the owner of the principal and grant everyone in the organization read access
          * to the principal. This is done so that anyone in the organization can see the principal and the owners of
-         * an organization all have owner on the principal
+         * an organization all have owner on the principal. The principals manager is also responsible for
+         * instantiating the role in the postgres materialized views server.
          */
         securePrincipalsManager.createSecurablePrincipalIfNotExists( callingUser, role );
         authorizations.addPermission( role.getAclKey(), orgPrincipal.getPrincipal(), EnumSet.of( Permission.READ ) );
-        AssemblerConnectionManager.createRole( role );
     }
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {

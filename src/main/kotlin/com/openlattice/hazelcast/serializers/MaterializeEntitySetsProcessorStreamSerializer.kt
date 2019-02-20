@@ -24,9 +24,11 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
+import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
+import javax.inject.Inject
 
 /**
  *
@@ -34,6 +36,9 @@ import org.springframework.stereotype.Component
  */
 @Component
 class MaterializeEntitySetsProcessorStreamSerializer : SelfRegisteringStreamSerializer<MaterializeEntitySetsProcessor> {
+    @Inject
+    private lateinit var acm: AssemblerConnectionManager
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.MATERIALIZE_ENTITY_SETS_PROCESSOR.ordinal
     }
@@ -68,7 +73,7 @@ class MaterializeEntitySetsProcessorStreamSerializer : SelfRegisteringStreamSeri
                 UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
             }.toMap())
 
-        }.toMap())
+        }.toMap()).init(acm)
     }
 
 }
