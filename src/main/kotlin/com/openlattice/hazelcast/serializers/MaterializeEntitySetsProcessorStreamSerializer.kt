@@ -35,8 +35,7 @@ import javax.inject.Inject
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class MaterializeEntitySetsProcessorStreamSerializer : SelfRegisteringStreamSerializer<MaterializeEntitySetsProcessor> {
-    @Inject
+class MaterializeEntitySetsProcessorStreamSerializer : SelfRegisteringStreamSerializer<MaterializeEntitySetsProcessor>, AssemblerConnectionManagerDependent {
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
@@ -76,4 +75,7 @@ class MaterializeEntitySetsProcessorStreamSerializer : SelfRegisteringStreamSeri
         }.toMap()).init(acm)
     }
 
+    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
+        this.acm = assemblerConnectionManager
+    }
 }

@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization;
 
+import com.google.common.base.MoreObjects;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.datastore.util.Util;
@@ -60,7 +61,7 @@ public class DbCredentialService {
         logger.info( "Generating credentials for user id {}", userId );
         String cred = generateCredential();
         logger.info( "Generated credentials for user id {}", userId );
-        return dbcreds.putIfAbsent( userId, cred );
+        return MoreObjects.firstNonNull( dbcreds.putIfAbsent( userId, cred ), cred );
     }
 
     public void deleteUserCredential( String userId ) {

@@ -27,6 +27,7 @@ import com.codahale.metrics.Timer
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
+import com.openlattice.assembler.PostgresDatabases.Companion.buildOrganizationDatabaseName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
@@ -116,9 +117,10 @@ class AssemblerConnectionManager(
      */
     fun createOrganizationDatabase(organizationId: UUID) {
         val organization = organizations.getOrganization(organizationId)
-        createOrganizationDatabase(organizationId, organization.principal.id)
+        val dbname = buildOrganizationDatabaseName( organizationId )
+        createOrganizationDatabase(organizationId,dbname)
 
-        connect(organization.principal.id).use { datasource ->
+        connect(dbname).use { datasource ->
             configureRolesInDatabase(datasource, securePrincipalsManager)
             createOpenlatticeSchema(datasource)
 
@@ -446,7 +448,7 @@ class AssemblerConnectionManager(
     fun createUnprivilegedUser(user: SecurablePrincipal) {
         val dbUser = buildPostgresUsername(user)
         //user.name
-        val dbUserPassword = dbCredentialService.getDbCredential(user.name)
+        val dbUserPassword = dbCredentialService.getOrCreateUserCredentials(dbUser)
 
         target.connection.use { connection ->
             connection.createStatement().use { statement ->

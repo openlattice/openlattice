@@ -55,12 +55,14 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
                 .filter { it.name != "openlattice" && it.name != "postgres" } //Just for safety
                 .stream()
                 .parallel().forEach { user ->
-                    logger.info("Remove old user ${user.name} from production database")
+                    logger.info("Removing old user ${user.name} from production database")
                     dependencies.hds.connection.use { connection ->
                         connection.createStatement().use { stmt ->
                             stmt.execute("DROP ROLE ${quote(user.name)}")
                         }
                     }
+                    dependencies.dbCredentialService.deleteUserCredential(user.name)
+                    logger.info("Removed old user ${user.name} from production database")
                 }
         logger.info("Cleaning out style users from materialzied view server.")
         users.map(dependencies.assemblerConnectionManager::dropUserIfExists)

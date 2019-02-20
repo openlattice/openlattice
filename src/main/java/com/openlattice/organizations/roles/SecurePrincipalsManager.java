@@ -94,6 +94,8 @@ public interface SecurePrincipalsManager {
 
     boolean principalExists( Principal p );
 
+    boolean isPrincipalIdAvailable( String principalId );
+
     Auth0UserBasic getUser( String userId );
 
     Role getRole( UUID organizationId, UUID roleId );

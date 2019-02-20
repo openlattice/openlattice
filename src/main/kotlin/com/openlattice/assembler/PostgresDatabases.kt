@@ -19,19 +19,19 @@
  *
  */
 
-package com.openlattice.tasks
+package com.openlattice.assembler
+
+import java.util.*
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-enum class Task {
-    AUTH0_SYNC_TASK,
-    AUTHORIZATION_BOOTSTRAP,
-    CLEAN_OUT_OLDER_USERS_INITIALIZATON,
-    ORGANIZATION_BOOTSTRAP,
-    PRODUCTION_VIEW_INITIALIZATON,
-    STREAM_SERIALIZER_POST_INITIALIZER,
-    USERS_AND_ROLES_INITIALIZATON
-
+class PostgresDatabases private constructor() {
+    companion object {
+        @JvmStatic
+        fun buildOrganizationDatabaseName(organizationId: UUID): String {
+            return "org_${organizationId.toString().replace("-","").toLowerCase()}"
+        }
+    }
 }

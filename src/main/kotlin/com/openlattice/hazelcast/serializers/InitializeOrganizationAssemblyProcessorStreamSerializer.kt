@@ -15,8 +15,7 @@ import javax.inject.Inject
  */
 
 @Component
-class InitializeOrganizationAssemblyProcessorStreamSerializer : SelfRegisteringStreamSerializer<InitializeOrganizationAssemblyProcessor> {
-    @Inject
+class InitializeOrganizationAssemblyProcessorStreamSerializer : SelfRegisteringStreamSerializer<InitializeOrganizationAssemblyProcessor>, AssemblerConnectionManagerDependent {
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getClazz(): Class<InitializeOrganizationAssemblyProcessor> {
@@ -35,4 +34,7 @@ class InitializeOrganizationAssemblyProcessorStreamSerializer : SelfRegisteringS
         return StreamSerializerTypeIds.INITIALIZE_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
     }
 
+    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
+        this.acm = assemblerConnectionManager
+    }
 }

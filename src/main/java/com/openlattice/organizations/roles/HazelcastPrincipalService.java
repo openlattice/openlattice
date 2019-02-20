@@ -26,15 +26,12 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
-import com.google.common.eventbus.AsyncEventBus;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
-import com.openlattice.assembler.Assembler;
-import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AclKeySet;
 import com.openlattice.authorization.AuthorizationManager;
@@ -44,6 +41,7 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.mapstores.PrincipalMapstore;
 import com.openlattice.authorization.projections.PrincipalProjection;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.datastore.util.Util;
@@ -55,10 +53,8 @@ import com.openlattice.organizations.processors.NestedPrincipalMerger;
 import com.openlattice.organizations.processors.NestedPrincipalRemover;
 import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdater;
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater;
-
 import com.openlattice.principals.RoleCreatedEvent;
 import com.openlattice.principals.UserCreatedEvent;
-import com.openlattice.tasks.TaskService;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -69,7 +65,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,14 +79,12 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     private final IMap<AclKey, AclKeySet>               principalTrees; // RoleName -> Member RoleNames
     private final IMap<String, Auth0UserBasic>          users;
     private final IMap<List<UUID>, SecurableObjectType> securableObjectTypes;
-    private final Assembler                             assembler;
     private final EventBus                              eventBus;
 
     public HazelcastPrincipalService(
             HazelcastInstance hazelcastInstance,
             HazelcastAclKeyReservationService reservations,
             AuthorizationManager authorizations,
-            Assembler assembler,
             EventBus eventBus ) {
 
         this.authorizations = authorizations;
@@ -100,7 +93,6 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
         this.principalTrees = hazelcastInstance.getMap( HazelcastMap.PRINCIPAL_TREES.name() );
         this.users = hazelcastInstance.getMap( HazelcastMap.USERS.name() );
         this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
-        this.assembler = checkNotNull( assembler );
         this.eventBus = checkNotNull( eventBus );
     }
 
@@ -319,7 +311,12 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     @Override
     public boolean principalExists( Principal p ) {
-        return reservations.isReserved( p.getId() );
+        return !principals.keySet( Predicates.equal( PrincipalMapstore.PRINCIPAL_INDEX, p ) ).isEmpty();
+    }
+
+    @Override
+    public boolean isPrincipalIdAvailable( String principalId ) {
+        return reservations.isReserved( principalId );
     }
 
     @Override

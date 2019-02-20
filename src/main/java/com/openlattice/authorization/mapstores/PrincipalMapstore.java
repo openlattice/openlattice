@@ -43,6 +43,7 @@ import java.sql.SQLException;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, SecurablePrincipal> {
+    public static final String PRINCIPAL_INDEX = "principal";
     private static Role TEST_ROLE = TestDataFactory.role();
 
     public PrincipalMapstore( HikariDataSource hds ) {
@@ -92,7 +93,7 @@ public class PrincipalMapstore extends AbstractBasePostgresMapstore<AclKey, Secu
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( "principal", false ) )
+                .addMapIndexConfig( new MapIndexConfig( PRINCIPAL_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( "aclKey[0]", false ) )
                 .addMapIndexConfig( new MapIndexConfig( "principalType", false ) );
     }

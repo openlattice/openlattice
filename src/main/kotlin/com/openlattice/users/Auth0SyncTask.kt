@@ -76,21 +76,21 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
     }
 
     override fun run() {
-        val syncDependencies = getDependency()
+        val ds = getDependency()
 
 
-        val users: IMap<String, Auth0UserBasic> = syncDependencies.hazelcastInstance.getMap(HazelcastMap.USERS.name)
+        val users: IMap<String, Auth0UserBasic> = ds.hazelcastInstance.getMap(HazelcastMap.USERS.name)
         val retrofit: Retrofit = RetrofitFactory.newClient(
-                syncDependencies.auth0TokenProvider.managementApiUrl
-        ) { syncDependencies.auth0TokenProvider.token }
+                ds.auth0TokenProvider.managementApiUrl
+        ) { ds.auth0TokenProvider.token }
         val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
-        val userRoleAclKey: AclKey = syncDependencies.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
-        val adminRoleAclKey: AclKey = syncDependencies.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
+        val userRoleAclKey: AclKey = ds.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
+        val adminRoleAclKey: AclKey = ds.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
 
-        val globalOrganizationAclKey: AclKey = syncDependencies.spm.lookup(
+        val globalOrganizationAclKey: AclKey = ds.spm.lookup(
                 GLOBAL_ORG_PRINCIPAL
         )
-        val openlatticeOrganizationAclKey: AclKey = syncDependencies.spm.lookup(
+        val openlatticeOrganizationAclKey: AclKey = ds.spm.lookup(
                 OPENLATTICE_ORG_PRINCIPAL
         )
         //Only one instance can populate and refresh the map. Unforunately, ILock is refusing to unlock causing issues
@@ -106,7 +106,8 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
                         .forEach { user ->
                             val userId = user.userId
                             users.set(userId, user)
-                            if (syncDependencies.dbCredentialService.getOrCreateUserCredentials(userId) != null) {
+
+                            if (!ds.spm.principalExists(Principal(PrincipalType.USER, userId))) {
                                 createPrincipal(
                                         user,
                                         userId,
@@ -114,14 +115,14 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
                                         userRoleAclKey,
                                         openlatticeOrganizationAclKey,
                                         adminRoleAclKey,
-                                        syncDependencies
+                                        ds
                                 )
-                            } else if (user.roles.contains(SystemRole.ADMIN.getName())) {
-                                val principal = syncDependencies.spm.getPrincipal(userId)
-                                if (principal != null && !syncDependencies.spm.principalHasChildPrincipal(
-                                                principal.aclKey, adminRoleAclKey
-                                        )) {
-                                    syncDependencies.organizationService
+                            }
+
+                            if (user.roles.contains(SystemRole.ADMIN.getName())) {
+                                val principal = ds.spm.getPrincipal(userId)
+                                if (!ds.spm.principalHasChildPrincipal(principal.aclKey, adminRoleAclKey)) {
+                                    ds.organizationService
                                             .addRoleToPrincipalInOrganization(
                                                     adminRoleAclKey[0],
                                                     adminRoleAclKey[1],
