@@ -52,3 +52,6 @@
 [submodule "transporter"]
 	path = transporter
 	url = git@github.com:openlattice/transporter.git
+[submodule "linker"]
+	path = linker
+	url = git@github.com:openlattice/linker.git
