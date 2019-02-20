@@ -45,6 +45,7 @@ data class AssemblerDependencies(
         val organizations: HazelcastOrganizationService,
         val dbCredentialService: DbCredentialService,
         val entitySets: IMap<UUID, EntitySet>,
+        val assemblerConnectionManager: AssemblerConnectionManager,
         val metricRegistry: MetricRegistry
 
 ) : HazelcastTaskDependencies {
@@ -61,7 +62,7 @@ data class AssemblerDependencies(
         config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
             "${(jdbcUrl as String).removeSuffix(
                     "/"
-            )}/$dbname" + if (AssemblerConnectionManager.assemblerConfiguration.ssl) {
+            )}/$dbname" + if (assemblerConfiguration.ssl) {
                 "?ssl=true"
             } else {
                 ""

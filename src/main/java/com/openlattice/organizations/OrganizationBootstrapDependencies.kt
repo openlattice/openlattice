@@ -19,18 +19,10 @@
  *
  */
 
-package com.openlattice.tasks
+package com.openlattice.organizations
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-enum class Task {
-    AUTH0_SYNC_TASK,
-    AUTHORIZATION_BOOTSTRAP,
-    CLEAN_OUT_OLDER_USERS_INITIALIZATON,
-    ORGANIZATION_BOOTSTRAP,
-    PRODUCTION_VIEW_INITIALIZATON,
-    USERS_AND_ROLES_INITIALIZATON
+import com.openlattice.tasks.HazelcastTaskDependencies
 
-}
+data class OrganizationBootstrapDependencies(
+        val organizationService: HazelcastOrganizationService
+) : HazelcastTaskDependencies

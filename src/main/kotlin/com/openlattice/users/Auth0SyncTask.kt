@@ -27,8 +27,8 @@ import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
+import com.openlattice.authorization.initializers.AuthorizationBootstrap
 import com.openlattice.authorization.mapstores.UserMapstore
-import com.openlattice.bootstrap.AuthorizationBootstrap
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.datastore.services.Auth0ManagementApi
 import com.openlattice.directory.pojo.Auth0UserBasic
@@ -106,7 +106,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
                         .forEach { user ->
                             val userId = user.userId
                             users.set(userId, user)
-                            if (syncDependencies.dbCredentialService.createUserIfNotExists(userId) != null) {
+                            if (syncDependencies.dbCredentialService.getOrCreateUserCredentials(userId) != null) {
                                 createPrincipal(
                                         user,
                                         userId,
