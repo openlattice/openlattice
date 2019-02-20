@@ -22,25 +22,33 @@
 package com.openlattice.organizations
 
 import com.google.common.base.Preconditions.checkState
+import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableSet
-import com.openlattice.bootstrap.AuthorizationBootstrap.GLOBAL_ADMIN_ROLE
-import com.openlattice.bootstrap.AuthorizationBootstrap.OPENLATTICE_ROLE
+import com.openlattice.authorization.initializers.AuthorizationBootstrap
+import com.openlattice.authorization.initializers.AuthorizationBootstrap.Companion.GLOBAL_ADMIN_ROLE
+import com.openlattice.authorization.initializers.AuthorizationBootstrap.Companion.OPENLATTICE_ROLE
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
+import com.openlattice.tasks.HazelcastInitializationTask
+import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.TimeUnit
+
+private val logger = LoggerFactory.getLogger(OrganizationBootstrap::class.java)
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OrganizationBootstrap(organizationService: HazelcastOrganizationService) {
-    val isInitialized: Boolean
-
-    init {
+class OrganizationBootstrap() : HazelcastInitializationTask<OrganizationBootstrapDependencies> {
+    override fun initialize(dependencies: OrganizationBootstrapDependencies) {
+        logger.info("Running bootstrap process for organizations.")
+        val sw = Stopwatch.createStarted()
+        val organizationService = dependencies.organizationService
         val globalOrg = organizationService.maybeGetOrganization(GLOBAL_ORG_PRINCIPAL)
         val olOrg = organizationService.maybeGetOrganization(OPENLATTICE_ORG_PRINCIPAL)
         if (globalOrg.isPresent) {
@@ -51,8 +59,9 @@ class OrganizationBootstrap(organizationService: HazelcastOrganizationService) {
             )
             checkState(GLOBAL_ORGANIZATION_ID == globalOrg.get().id)
         } else {
-            organizationService.createOrganization(GLOBAL_ADMIN_ROLE.getPrincipal(),
-                                                   createGlobalOrg()
+            organizationService.createOrganization(
+                    GLOBAL_ADMIN_ROLE.getPrincipal(),
+                    createGlobalOrg()
             )
         }
 
@@ -64,17 +73,35 @@ class OrganizationBootstrap(organizationService: HazelcastOrganizationService) {
             )
             checkState(OPENLATTICE_ORGANIZATION_ID == olOrg.get().id)
         } else {
-            organizationService.createOrganization(OPENLATTICE_ROLE.getPrincipal(),
-                                                   createOpenLatticeOrg()
+            organizationService.createOrganization(
+                    OPENLATTICE_ROLE.getPrincipal(),
+                    createOpenLatticeOrg()
             )
         }
+        logger.info("Bootstrapping for organizations took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
+    }
 
-        isInitialized = true
+    override fun getInitialDelay(): Long {
+        return 0
+    }
+
+    override fun getTimeUnit(): TimeUnit {
+        return TimeUnit.MILLISECONDS
+    }
+
+    override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
+        return setOf(AuthorizationBootstrap::class.java)
+    }
+
+    override fun getName(): String {
+        return Task.ORGANIZATION_BOOTSTRAP.name
+    }
+
+    override fun getDependenciesClass(): Class<out OrganizationBootstrapDependencies> {
+        return OrganizationBootstrapDependencies::class.java
     }
 
     companion object {
-        private val logger = LoggerFactory.getLogger(OrganizationBootstrap::class.java)
-
         private fun createGlobalOrg(): Organization {
             val id = GLOBAL_ORGANIZATION_ID
             val title = "Global Organization"

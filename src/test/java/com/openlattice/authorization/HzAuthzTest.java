@@ -34,6 +34,7 @@ import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.edm.PostgresEdmManager;
+import com.openlattice.hazelcast.pods.TestPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organizations.PrincipalSet;
@@ -73,7 +74,8 @@ public class HzAuthzTest {
                 PostgresPod.class,
                 SharedStreamSerializersPod.class,
                 PostgresTablesPod.class,
-                AuditingConfigurationPod.class
+                AuditingConfigurationPod.class,
+                TestPod.class
         );
 
         testServer.sprout( ConfigurationConstants.Profiles.LOCAL_CONFIGURATION_PROFILE, PostgresPod.PROFILE,

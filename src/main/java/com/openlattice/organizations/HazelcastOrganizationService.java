@@ -22,6 +22,9 @@
 
 package com.openlattice.organizations;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -35,37 +38,48 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.assembler.AssemblerConnectionManager;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.initializers.AuthorizationBootstrap;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.Organization;
-import com.openlattice.organization.OrganizationIntegrationAccount;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
-import com.openlattice.organizations.processors.*;
+import com.openlattice.organizations.processors.EmailDomainsMerger;
+import com.openlattice.organizations.processors.EmailDomainsRemover;
+import com.openlattice.organizations.processors.OrganizationAppMerger;
+import com.openlattice.organizations.processors.OrganizationAppRemover;
+import com.openlattice.organizations.processors.OrganizationMemberMerger;
+import com.openlattice.organizations.processors.OrganizationMemberRemover;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.mapstores.AppConfigMapstore;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import javax.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class manages organizations.
@@ -364,11 +378,11 @@ public class HazelcastOrganizationService {
         /*
          * We set the organization to be the owner of the principal and grant everyone in the organization read access
          * to the principal. This is done so that anyone in the organization can see the principal and the owners of
-         * an organization all have owner on the principal
+         * an organization all have owner on the principal. The principals manager is also responsible for
+         * instantiating the role in the postgres materialized views server.
          */
         securePrincipalsManager.createSecurablePrincipalIfNotExists( callingUser, role );
         authorizations.addPermission( role.getAclKey(), orgPrincipal.getPrincipal(), EnumSet.of( Permission.READ ) );
-        AssemblerConnectionManager.createRole( role );
     }
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {

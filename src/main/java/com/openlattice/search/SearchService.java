@@ -52,7 +52,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
-import com.openlattice.data.storage.PostgresDataManager;
+import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.AppCreatedEvent;
@@ -138,7 +138,7 @@ public class SearchService {
     private EntityKeyIdService entityKeyService;
 
     @Inject
-    private PostgresDataManager postgresDataManager;
+    private IndexingMetadataManager indexingMetadataManager;
 
     public SearchService( EventBus eventBus ) {
         eventBus.register( this );
@@ -764,7 +764,7 @@ public class SearchService {
 
         EntitySet entitySet = dataModelService.getEntitySet( entitySetId );
         Set<UUID> entitySetIds = ( entitySet.isLinking() ) ? entitySet.getLinkedEntitySets() : Set.of( entitySetId );
-        postgresDataManager.markAsNeedsToBeIndexed(
+        indexingMetadataManager.markAsNeedsToBeIndexed(
                 entitySetIds.stream().collect( Collectors.toMap( Function.identity(), esId -> Optional.empty() ) ),
                 entitySet.isLinking()
         );
