@@ -26,9 +26,12 @@ import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
@@ -115,6 +118,16 @@ public class LinkerPostConfigurationServicesPod {
     @Bean
     public LinkingQueryService lqs() {
         return new PostgresLinkingQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public EntityDatastore entityDatastore() {
+        return new HazelcastEntityDatastore( idService(), postgresDataManager(), dataQueryService(), edm );
+    }
+
+    @Bean
+    public IndexingMetadataManager postgresDataManager() {
+        return new IndexingMetadataManager( hikariDataSource );
     }
 
     @Bean
