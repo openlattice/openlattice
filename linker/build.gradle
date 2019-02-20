@@ -35,9 +35,9 @@ plugins {
     id "eclipse"
     id "idea"
     id "jacoco"
-    id 'com.github.spotbugs' version '1.6.3'
-    id 'org.jetbrains.kotlin.jvm' version '1.3.10'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.10'
+    id 'com.github.spotbugs' version '1.6.6'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.21'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.21'
 }
 
 description = "Linking Server"
@@ -85,8 +85,8 @@ if (GC == 'null' || GC == null || GC == "") {
 
 mainClassName = "com.openlattice.indexing.Indexer"
 applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, "-server", GC, PARALLEL]
-sourceCompatibility = JavaVersion.VERSION_1_10
-targetCompatibility = JavaVersion.VERSION_1_10
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 println "Using java args for running ${projectName}: " + Arrays.toString(applicationDefaultJvmArgs)
 
@@ -99,6 +99,10 @@ run {
 }
 
 println "Enabled profiles: " + Arrays.toString(run.args)
+
+jacoco {
+    toolVersion = "0.8.2"
+}
 
 
 configurations {
@@ -159,13 +163,29 @@ eclipse {
 
 eclipse.classpath.plusConfigurations += [configurations.provided]
 
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+tasks.withType(JavaCompile) {
+    options.compilerArgs+= [ "--add-modules", "java.se",
+                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                             "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                             "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                             "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                             "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                             "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 }
-compileTestKotlin {
+
+tasks.withType(Test) {
+    jvmArgs += [ "--add-modules", "java.se",
+                 "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                 "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                 "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                 "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                 "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                 "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
         jvmTarget = "1.8"
+        freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
