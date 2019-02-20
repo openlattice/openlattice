@@ -20,7 +20,8 @@ import javax.inject.Inject
 @RestController
 @RequestMapping(RealtimeLinkingApi.CONTROLLER)
 class RealtimeLinkingController(
-        lc: LinkingConfiguration
+        lc: LinkingConfiguration,
+        edm: EdmManager
 ) : RealtimeLinkingApi, AuthorizingComponent {
     @Inject
     private lateinit var lqs: LinkingQueryService
@@ -28,16 +29,10 @@ class RealtimeLinkingController(
     @Inject
     private lateinit var authz: AuthorizationManager
 
-    @Inject
-    private lateinit var edm: EdmManager
-
     private val entitySetBlacklist = lc.blacklist
     private val whitelist = lc.whitelist
-    private lateinit var linkableTypes: Set<UUID>
+    private val linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
 
-    init {
-        linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
-    }
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authz

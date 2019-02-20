@@ -26,7 +26,7 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityDatastore
-import com.openlattice.data.storage.PostgresDataManager
+import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.linking.*
 import com.openlattice.linking.util.PersonMetric
@@ -48,7 +48,7 @@ constructor(
         private val dataLoader: DataLoader,
         private val edm: EdmManager,
         private val entityDataStore: EntityDatastore,
-        private val dataManager: PostgresDataManager
+        private val dataManager: IndexingMetadataManager
 ) : LinkingFeedbackApi, AuthorizingComponent {
 
 

@@ -142,7 +142,7 @@ public class LinkerPostConfigurationServicesPod {
     @Bean
     public RealtimeLinkingController realtimeLinkingController() {
         var lc = linkingConfiguration();
-        return new RealtimeLinkingController( lc );
+        return new RealtimeLinkingController( lc, edm );
     }
 
     @Bean
