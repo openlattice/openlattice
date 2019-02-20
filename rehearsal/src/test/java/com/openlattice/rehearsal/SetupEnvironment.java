@@ -68,7 +68,7 @@ public class SetupEnvironment {
     protected static final Principal user2;
     protected static final Principal user3;
     protected static final Retrofit retrofit;
-    protected static final Retrofit retrofitIndexer;
+    protected static final Retrofit retrofitLinker;
     protected static final Retrofit retrofit1;
     protected static final Retrofit retrofit2;
     protected static final Retrofit retrofit3;
@@ -102,8 +102,8 @@ public class SetupEnvironment {
 
         retrofit = RetrofitFactory
                 .newClient( RetrofitFactory.Environment.TESTING, () -> tokenAdmin, new ThrowingCallAdapterFactory() );
-        retrofitIndexer = RetrofitFactory.newClient(
-                RetrofitFactory.Environment.TESTING_INDEXER,
+        retrofitLinker = RetrofitFactory.newClient(
+                RetrofitFactory.Environment.TESTING_LINKER,
                 () -> tokenAdmin,
                 new ThrowingCallAdapterFactory() );
         retrofit1 = RetrofitFactory
