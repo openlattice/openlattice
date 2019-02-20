@@ -22,8 +22,7 @@
 package com.openlattice.conductor;
 
 import com.geekbeast.rhizome.NetworkUtils;
-import com.openlattice.indexing.Indexer;
-import kotlin.jvm.Throws;
+import com.openlattice.indexing.Linker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,27 +30,27 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class ConductorBootstrap {
-    protected static final Indexer INDEXER;
+    protected static final Linker LINKER;
 
     static {
-        INDEXER = new Indexer();
+        LINKER = new Linker();
         final var logger = LoggerFactory.getLogger( ConductorBootstrap.class );
         if ( NetworkUtils.isRunningOnHost( "bamboo.openlattice.com" ) ) {
             LoggerFactory.getLogger( ConductorBootstrap.class ).info( "Running on bamboo!" );
             try {
-                INDEXER.start( "awstest", "postgres", "keras" );
+                LINKER.start( "awstest", "postgres", "keras" );
             } catch ( Exception e ) {
                 logger.error( "Unable to bootstrap condcutor with profiles: {}",
-                        INDEXER.getContext().getEnvironment().getActiveProfiles() );
+                        LINKER.getContext().getEnvironment().getActiveProfiles() );
                 throw new IllegalStateException( "Unable to to boostrap conductor");
             }
         } else {
             LoggerFactory.getLogger( ConductorBootstrap.class ).info( "Not running on bamboo!" );
             try {
-                INDEXER.start( "local", "postgres", "keras" );
+                LINKER.start( "local", "postgres", "keras" );
             } catch ( Exception e ) {
                 logger.error( "Unable to bootstrap condcutor with profiles: {}",
-                        INDEXER.getContext().getEnvironment().getActiveProfiles() );
+                        LINKER.getContext().getEnvironment().getActiveProfiles() );
                 throw new IllegalStateException( "Unable to to boostrap conductor");
             }
         }

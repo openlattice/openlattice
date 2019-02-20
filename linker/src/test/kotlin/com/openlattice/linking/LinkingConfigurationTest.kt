@@ -22,8 +22,6 @@
 package com.openlattice.linking
 
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
-import com.openlattice.indexing.configuration.LinkingConfiguration
-import com.openlattice.serializer.AbstractJacksonSerializationTest
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
 import org.apache.commons.lang.math.RandomUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName

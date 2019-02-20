@@ -40,8 +40,8 @@ import org.springframework.context.annotation.Profile;
  *
  */
 @Configuration
-public class IndexerConfigurationPod {
-    private static final Logger               logger = LoggerFactory.getLogger( IndexerConfigurationPod.class );
+public class LinkerConfigurationPod {
+    private static final Logger               logger = LoggerFactory.getLogger( LinkerConfigurationPod.class );
 
     @Inject
     private              ConfigurationService configurationService;

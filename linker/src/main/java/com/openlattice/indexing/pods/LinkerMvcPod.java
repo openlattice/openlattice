@@ -31,12 +31,12 @@ import java.util.List;
 
 @EnableAsync
 @EnableMetrics( proxyTargetClass = true )
-public class IndexerMvcPod extends WebMvcConfigurationSupport {
+public class LinkerMvcPod extends WebMvcConfigurationSupport {
     @Inject
     private ObjectMapper defaultObjectMapper;
 
     @Inject
-    private IndexerSecurityPod indexerSecurityPod;
+    private LinkerSecurityPod linkerSecurityPod;
 
     @Override
     protected void addCorsMappings( CorsRegistry registry ) {
@@ -66,6 +66,6 @@ public class IndexerMvcPod extends WebMvcConfigurationSupport {
 
     @Bean
     public AuthenticationManager authenticationManagerBean() throws Exception {
-        return indexerSecurityPod.authenticationManagerBean();
+        return linkerSecurityPod.authenticationManagerBean();
     }
 }

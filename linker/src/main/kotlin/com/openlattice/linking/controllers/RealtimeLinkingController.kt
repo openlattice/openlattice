@@ -1,10 +1,9 @@
 package com.openlattice.linking.controllers
 
-
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.indexing.configuration.LinkingConfiguration
+import com.openlattice.linking.LinkingConfiguration
 import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.MatchedEntityPair
@@ -16,19 +15,29 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
+import javax.inject.Inject
 
 @RestController
 @RequestMapping(RealtimeLinkingApi.CONTROLLER)
 class RealtimeLinkingController(
-        private val lqs: LinkingQueryService,
-        private val authz: AuthorizationManager,
-        edm: EdmManager,
         lc: LinkingConfiguration
 ) : RealtimeLinkingApi, AuthorizingComponent {
+    @Inject
+    private lateinit var lqs: LinkingQueryService
+
+    @Inject
+    private lateinit var authz: AuthorizationManager
+
+    @Inject
+    private lateinit var edm: EdmManager
 
     private val entitySetBlacklist = lc.blacklist
     private val whitelist = lc.whitelist
-    private val linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
+    private lateinit var linkableTypes: Set<UUID>
+
+    init {
+        linkableTypes = edm.getEntityTypeUuids(lc.entityTypes)
+    }
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authz
@@ -41,7 +50,8 @@ class RealtimeLinkingController(
     @RequestMapping(
             path = [RealtimeLinkingApi.FINISHED + RealtimeLinkingApi.SET],
             method = [RequestMethod.GET],
-            produces = [MediaType.APPLICATION_JSON_VALUE])
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
     override fun getLinkingFinishedEntitySets(): Set<UUID> {
         ensureAdminAccess()
         val linkableEntitySets = lqs

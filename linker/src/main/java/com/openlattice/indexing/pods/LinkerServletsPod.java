@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class IndexerServletsPod {
+public class LinkerServletsPod {
 
     @Bean
     public DispatcherServletConfiguration indexerServlet() {
@@ -15,7 +15,7 @@ public class IndexerServletsPod {
                 "indexer",
                 new String[]{ "/indexer/*" },
                 1,
-                Lists.newArrayList( IndexerMvcPod.class )
+                Lists.newArrayList( LinkerMvcPod.class )
         );
     }
 }
