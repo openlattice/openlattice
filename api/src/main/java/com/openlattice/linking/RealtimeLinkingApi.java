@@ -33,7 +33,7 @@ import java.util.UUID;
  */
 public interface RealtimeLinkingApi {
 
-    String SERVICE               = "/indexer";
+    String SERVICE               = "/linker";
     String CONTROLLER            = "/linking";
     String BASE                  = SERVICE + CONTROLLER;
 

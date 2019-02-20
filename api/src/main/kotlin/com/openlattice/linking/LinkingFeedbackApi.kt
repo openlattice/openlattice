@@ -29,7 +29,7 @@ import retrofit2.http.*
  */
 interface LinkingFeedbackApi {
     companion object {
-        const val SERVICE = "/indexer"
+        const val SERVICE = "/linker"
         const val CONTROLLER = "/linkingfeedback"
         const val BASE = SERVICE + CONTROLLER
 
