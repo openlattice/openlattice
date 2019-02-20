@@ -26,28 +26,45 @@ import static com.google.common.base.Preconditions.checkState;
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.auth.UserInfo;
-import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.PostgresRoles;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizingComponent;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.SystemRole;
+import com.openlattice.authorization.initializers.AuthorizationBootstrap;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.directory.UserDirectoryService;
-import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.directory.pojo.DirectedAclKeys;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-
-import java.util.*;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
-
 import org.apache.commons.lang.StringUtils;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping( PrincipalApi.CONTROLLER )
@@ -174,7 +191,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             spm.createSecurablePrincipalIfNotExists( principal,
                     new SecurablePrincipal( Optional.empty(), principal, title, Optional.empty() ) );
 
-            dbCredService.createUserIfNotExists( userId );
+            dbCredService.getOrCreateUserCredentials( userId );
         }
 
         AclKey userAclKey = spm.lookup( principal );
