@@ -39,6 +39,10 @@ import java.lang.reflect.UndeclaredThrowableException
 import java.util.*
 import kotlin.random.Random
 
+/**
+ * Test for [com.openlattice.linking.LinkingFeedbackApi]
+ */
+
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class LinkingFeedbackTest : SetupTestData() {
     companion object {
@@ -52,18 +56,12 @@ class LinkingFeedbackTest : SetupTestData() {
 
         lateinit var personEt: EntityType
         lateinit var linkingEntitySet: EntitySet
-        lateinit var nonLinkingEntity: EntityDataKey
 
         @JvmStatic
         @BeforeClass
         fun init() {
             importedEntitySets.forEach {
                 importDataSet(it.value.first, it.value.second)
-            }
-
-            Thread.sleep(20000L)
-            while (!checkLinkingFinished(importedEntitySets.keys)) {
-                Thread.sleep(5000L)
             }
 
             loginAs("admin")
@@ -79,7 +77,7 @@ class LinkingFeedbackTest : SetupTestData() {
                             edmApi.getEntitySetId(importedEntitySetKeysIterator.next()))
             )
 
-            Thread.sleep(60000L) // wait for indexing to finish
+            waitForBackgroundServices()
         }
 
         @JvmStatic
@@ -98,6 +96,15 @@ class LinkingFeedbackTest : SetupTestData() {
                 linkingFeedbackApi.deleteLinkingFeedback(it.entityPair)
             }
         }
+
+        private fun waitForBackgroundServices() {
+            // wait for re-linking to finish
+            Thread.sleep(20000L)
+            while (!checkLinkingFinished(importedEntitySets.keys)) {
+                Thread.sleep(5000L)
+            }
+            Thread.sleep(60000L) // wait for indexing to finish
+        }
     }
 
     /**
@@ -115,24 +122,21 @@ class LinkingFeedbackTest : SetupTestData() {
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
         // skip 0 or 1 randomly, so not all of them gets positive feedback all the time
-        val linkedEntities = ImmutableSet.copyOf(matchedEntities.drop(Random.nextInt(2))
-                .flatMap { setOf(it.entityPair.first, it.entityPair.second) })
+        val allEntities = ImmutableSet.copyOf(matchedEntities.flatMap { setOf(it.entityPair.first, it.entityPair.second) })
+        val linkedEntities = allEntities.drop(Random.nextInt(2)).toSet()
         linkingFeedbackApi.addLinkingFeedback(
                 LinkingFeedback(EntityDataKey(linkingEntitySet.id, linkingId), linkedEntities, setOf()))
 
-        // wait for re-linking to finish
-        Thread.sleep(20000L)
-        while (!checkLinkingFinished(importedEntitySets.keys)) {
-            Thread.sleep(5000L)
-        }
-        Thread.sleep(60000L) // wait for indexing to finish
+        waitForBackgroundServices()
 
         val oldMatchedEntities = matchedEntities.map { it.entityPair to it.match }.toMap()
         val newlyMatchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
         newlyMatchedEntities.forEach {
             val oldMatches = oldMatchedEntities[it.entityPair]
             Assert.assertTrue(oldMatches!! <= it.match)
-            Assert.assertEquals(it.match, 1.0, 1e-5)
+            if (linkedEntities.contains(it.entityPair.first) && linkedEntities.contains(it.entityPair.second)) {
+                Assert.assertEquals(it.match, 1.0, 1e-5)
+            }
         }
     }
 
@@ -146,22 +150,17 @@ class LinkingFeedbackTest : SetupTestData() {
         }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
-        nonLinkingEntity = matchedEntities[Random.nextInt(matchedEntities.size)].entityPair.first
-        val linkedEntities = ImmutableSet.copyOf(matchedEntities.drop(Random.nextInt(2))
-                .flatMap { setOf(it.entityPair.first, it.entityPair.second) })
+        val allEntities = ImmutableSet.copyOf(matchedEntities.flatMap { setOf(it.entityPair.first, it.entityPair.second) }).toList()
+        val nonLinkingEntity = allEntities[Random.nextInt(allEntities.size)]
+        val linkedEntities = (allEntities - nonLinkingEntity).drop(Random.nextInt(2)).toSet()
 
         linkingFeedbackApi.addLinkingFeedback(
                 LinkingFeedback(
                         EntityDataKey(linkingEntitySet.id, linkingId),
-                        linkedEntities - nonLinkingEntity,
+                        linkedEntities,
                         setOf(nonLinkingEntity)))
 
-        // wait for re-linking to finish
-        Thread.sleep(20000L)
-        while (!checkLinkingFinished(importedEntitySets.keys)) {
-            Thread.sleep(5000L)
-        }
-        Thread.sleep(60000L) // wait for indexing to finish
+        waitForBackgroundServices()
 
         val newlyMatchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
         val oldMatchedEntities = matchedEntities.map { it.entityPair to it.match }.toMap()
@@ -171,17 +170,37 @@ class LinkingFeedbackTest : SetupTestData() {
         newlyMatchedEntities.forEach {
             val oldMatches = oldMatchedEntities[it.entityPair]
             Assert.assertTrue(oldMatches!! <= it.match)
-            Assert.assertEquals(it.match, 1.0, 1e-5)
+            if (linkedEntities.contains(it.entityPair.first) && linkedEntities.contains(it.entityPair.second)) {
+                Assert.assertEquals(it.match, 1.0, 1e-5)
+            }
         }
     }
 
     @Test
     fun testC_getAllFeedbacks() {
+        val linkedData = searchApi.searchEntitySetData(
+                SearchConstraints.simpleSearchConstraints(
+                        arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
+        val linkingId = linkedData.map {
+            UUID.fromString(it[FullQualifiedName("openlattice.@id")].first() as String)
+        }.toSet().first()
+        val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
+
+        // link all positively
+        val linkedEntities = ImmutableSet.copyOf(matchedEntities.flatMap { setOf(it.entityPair.first, it.entityPair.second) })
+        linkingFeedbackApi.addLinkingFeedback(
+                LinkingFeedback(
+                        EntityDataKey(linkingEntitySet.id, linkingId),
+                        linkedEntities,
+                        setOf()))
+
+        waitForBackgroundServices()
+
         val feedbacks = linkingFeedbackApi.getAllLinkingFeedbacks().toSet()
         val feedbacksWithFeatures = linkingFeedbackApi.getAllLinkingFeedbacksWithFeatures().toSet()
 
         Assert.assertEquals(feedbacks.size, feedbacksWithFeatures.size)
-        Assert.assertTrue(20 >= feedbacks.size) // we have 4 entities: 4 * 4 + 4
+        Assert.assertEquals(10, feedbacks.size) // we have 4 entities: (4 * 5) / 2
         Assert.assertEquals(feedbacks, feedbacksWithFeatures.map { it.entityLinkingFeedback }.toSet())
 
         val linkedDataProperties = searchApi.searchEntitySetData(
@@ -205,22 +224,16 @@ class LinkingFeedbackTest : SetupTestData() {
         }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
-        nonLinkingEntity = matchedEntities[Random.nextInt(matchedEntities.size)].entityPair.first
-        val linkedEntities = ImmutableSet.copyOf(
-                matchedEntities.drop(Random.nextInt(2))
-                        .flatMap { setOf(it.entityPair.first, it.entityPair.second) })
+        val allEntities = ImmutableSet.copyOf(matchedEntities.flatMap { setOf(it.entityPair.first, it.entityPair.second) }).toList()
+        val nonLinkingEntity = allEntities[Random.nextInt(allEntities.size)]
+        val linkedEntities = (allEntities - nonLinkingEntity).drop(Random.nextInt(2)).toSet()
         linkingFeedbackApi.addLinkingFeedback(
                 LinkingFeedback(
                         EntityDataKey(linkingEntitySet.id, linkingId),
-                        linkedEntities - nonLinkingEntity,
+                        linkedEntities,
                         setOf(nonLinkingEntity)))
 
-        // wait for re-linking to finish
-        Thread.sleep(20000L)
-        while (!checkLinkingFinished(importedEntitySets.keys)) {
-            Thread.sleep(5000L)
-        }
-        Thread.sleep(60000L) // wait for indexing to finish
+        waitForBackgroundServices()
 
         // feedback on positive
         val matchedEntityPairs = matchedEntities.map { it.entityPair }.toSet()
@@ -239,6 +252,7 @@ class LinkingFeedbackTest : SetupTestData() {
             return@map otherEntity
         }.toSet()
 
+        // there is a negative feedback pair for all linked entities
         Assert.assertEquals(linkedEntities, negativeFeedbackPair)
 
         // feedback on random
