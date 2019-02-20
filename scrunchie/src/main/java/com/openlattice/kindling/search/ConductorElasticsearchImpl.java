@@ -87,7 +87,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     // @formatter:off
-    private final int MAX_CONCURRENT_SEARCHES = 3;
+    private static final int MAX_CONCURRENT_SEARCHES = 3;
 
     private static final ObjectMapper mapper = ObjectMappers.newJsonMapper();
     private static final Logger       logger = LoggerFactory
