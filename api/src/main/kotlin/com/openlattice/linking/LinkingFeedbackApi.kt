@@ -30,13 +30,12 @@ import retrofit2.http.*
 interface LinkingFeedbackApi {
     companion object {
         const val SERVICE = "/indexer"
-        const val CONTROLLER = "/linking"
+        const val CONTROLLER = "/linkingfeedback"
         const val BASE = SERVICE + CONTROLLER
 
-        const val FEEDBACK = "/feedback"
         const val ENTITY = "/entity"
-        const val ALL = "/all"
         const val FEATURES = "/features"
+        const val ALL = "/all"
 
         const val FEEDBACK_TYPE = "feedbackType"
     }
@@ -44,34 +43,35 @@ interface LinkingFeedbackApi {
     /**
      * Submits feedbacks for a given linking entity set and linking id in a batch format.
      */
-    @PUT(BASE + FEEDBACK)
+    @PUT(BASE)
     fun addLinkingFeedback(@Body feedback: LinkingFeedback): Int
 
     /**
      * Returns positive/negative/all linking feedbacks on the given entity.
      */
-    @GET(BASE + FEEDBACK + ENTITY)
+    @POST(BASE + ENTITY)
     fun getLinkingFeedbacksOnEntity(@Query(FEEDBACK_TYPE) feedbackType: FeedbackType, @Body entity: EntityDataKey
     ): Iterable<EntityLinkingFeedback>
 
     /**
+     * Returns the feedback on the given entity pair along with their features
+     */
+    @POST(BASE + FEATURES)
+    fun getLinkingFeedbackWithFeatures(@Body entityPair: EntityKeyPair): EntityLinkingFeatures?
+
+    /**
      * Returns all feedbacks submitted
      */
-    @GET(BASE + FEEDBACK + ALL)
+    @GET(BASE + ALL)
     fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback>
 
     /**
      * Returns all feedbacks submitted along with the features of pairwise entities
      */
-    @GET(BASE + FEEDBACK + ALL + FEATURES)
+    @GET(BASE + FEATURES + ALL)
     fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures>
 
-    /**
-     * Returns the feedback on the given entity pair along with their features
-     */
-    @POST(BASE + FEEDBACK + FEATURES)
-    fun getLinkingFeedbackWithFeatures(@Body entityPair: EntityKeyPair): EntityLinkingFeatures?
 
-    @HTTP(method = "DELETE", path = BASE + FEEDBACK, hasBody = true)
+    @HTTP(method = "DELETE", path = BASE, hasBody = true)
     fun deleteLinkingFeedback(@Body entityPair: EntityKeyPair): Int
 }

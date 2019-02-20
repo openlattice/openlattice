@@ -48,5 +48,5 @@ public interface RealtimeLinkingApi {
     Set<UUID> getLinkingFinishedEntitySets();
 
     @GET( BASE + MATCHED + LINKING_ID_PATH )
-    List<MatchedEntityPair> getMatchedEntitiesForLinkingId( @Path( LINKING_ID ) UUID linkingId );
+    Set<MatchedEntityPair> getMatchedEntitiesForLinkingId( @Path( LINKING_ID ) UUID linkingId );
 }
