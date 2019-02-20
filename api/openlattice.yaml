@@ -1194,7 +1194,9 @@ paths:
                 items:
                   type: object
                   additionalProperties:
-                    type: string
+                    type: array
+                    items:
+                      type: string
     delete:
       summary: Clears the data from a single entity set.
       operationId: clearEntitySet
@@ -1445,14 +1447,14 @@ paths:
       security:
         - openlattice_auth: []
         - http_auth: []
-      parameters:
-        - name: aclKey
-          in: query
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
       responses:
         "200":
           description: Success
@@ -1473,6 +1475,74 @@ paths:
       responses:
         "200":
           description: Success
+  /datastore/authorizations:
+    post:
+      summary: Check authorizations
+      operationId: checkAuthorizations
+      tags:
+        - authorizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/AccessCheck"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/Authorization"
+    get:
+      summary: Returns paged results for all authorized objects of specified objectType, that the current user has specified permission for.
+      operationId: getAccessibleObjects
+      tags:
+        - authorizations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      parameters:
+        - name: objectType
+          in: query
+          schema:
+            type: string
+            enum:
+              - EntityType
+              - EntitySet
+              - PropertyTypeInEntitySet
+              - Datasource
+              - ComplexType
+              - LinkingEntityType
+              - AssociationType
+              - Organization
+              - App
+              - AppType
+              - Principal
+              - Role
+              - UnknownEdmTemplate
+        - name: permission
+          in: query
+          schema:
+            type: string
+            enum: [DISCOVER, MATERIALIZE, LINK, READ, WRITE, OWNER]
+        - name: pagingToken
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/AuthorizedObjectsSearchResult"
+
 
   #########################
   ## ORGANISATIONS API"s ##
@@ -2591,7 +2661,42 @@ components:
           type: array
           items:
             $ref: "#/components/securablePrincipal"
-
+    AccessCheck:
+      type: object
+      properties:
+        aclKey:
+          type: array
+          items:
+            type: string
+            format: uuid
+        permissions:
+          type: array
+          items:
+            type: string
+            enum: [DISCOVER, MATERIALIZE, LINK, READ, WRITE, OWNER]
+    Authorization:
+      type: object
+      properties:
+        aclKey:
+          type: array
+          items:
+            type: string
+            format: uuid
+        permissions:
+          type: object
+          additionalProperties:
+            type: boolean
+    AuthorizedObjectsSearchResult:
+      type: object
+      properties:
+        pagingToken:
+          type: string
+        authorizedObjects:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
 
 tags:
 - name: edm
