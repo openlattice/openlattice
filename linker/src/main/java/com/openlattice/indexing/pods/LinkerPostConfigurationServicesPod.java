@@ -132,14 +132,4 @@ public class LinkerPostConfigurationServicesPod {
                 lc.getWhitelist(),
                 lc.getBlockSize() );
     }
-
-    @Bean
-    public RealtimeLinkingController realtimeLinkingController() {
-        var lc = linkingConfiguration();
-        return new RealtimeLinkingController(
-                lqs(),
-                authz,
-                edm,
-                lc );
-    }
 }
