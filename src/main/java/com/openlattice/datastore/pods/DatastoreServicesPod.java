@@ -61,7 +61,7 @@ import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer;
 import com.openlattice.data.storage.AwsDataSinkService;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
-import com.openlattice.data.storage.PostgresDataManager;
+import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresDataSinkService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.apps.services.AppService;
@@ -227,8 +227,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public PostgresDataManager postgresDataManager() {
-        return new PostgresDataManager( hikariDataSource );
+    public IndexingMetadataManager postgresDataManager() {
+        return new IndexingMetadataManager( hikariDataSource );
     }
 
     @Bean
@@ -252,12 +252,10 @@ public class DatastoreServicesPod {
 
     @Bean
     public SecurePrincipalsManager principalService() {
-        final var spm = new HazelcastPrincipalService( hazelcastInstance,
+        return new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                assembler() );
-        AssemblerConnectionManager.initializeSecurePrincipalsManager( spm );
-        return spm;
+                eventBus );
     }
 
     @Bean
@@ -361,33 +359,21 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public PersistentSearchService persistentSearchService() {
-        return new PersistentSearchService( hikariDataSource, principalService() );
+    public AssemblerConnectionManager assemblerConnectionManager() {
+        return new AssemblerConnectionManager( assemblerConfiguration,
+                hikariDataSource,
+                principalService(),
+                organizationsManager(),
+                dcs(),
+                hazelcastInstance,
+                eventBus,
+                metricRegistry );
     }
 
+
     @Bean
-    public AssemblerConnectionManager bootstrapRolesAndUsers() {
-        final var hos = organizationsManager();
-
-        AssemblerConnectionManager.initializeMetrics( metricRegistry );
-        AssemblerConnectionManager.initializeAssemblerConfiguration( assemblerConfiguration );
-        AssemblerConnectionManager.initializeProductionDatasource( hikariDataSource );
-        AssemblerConnectionManager.initializeSecurePrincipalsManager( principalService() );
-        AssemblerConnectionManager.initializeOrganizations( hos );
-        AssemblerConnectionManager.initializeDbCredentialService( dcs() );
-        AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
-        //        AssemblerConnectionManager.initializeUsersAndRoles();
-
-        if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
-            final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );
-            final var org = hos.getOrganization( es.getOrganizationId() );
-            final var apt = dataModelService()
-                    .getPropertyTypesAsMap( dataModelService().getEntityType( es.getEntityTypeId() ).getProperties() );
-            AssemblerConnectionManager.createOrganizationDatabase( org.getId() );
-            final var results = AssemblerConnectionManager
-                    .materializeEntitySets( org.getId(), ImmutableMap.of( es.getId(), apt ) );
-        }
-        return new AssemblerConnectionManager();
+    public PersistentSearchService persistentSearchService() {
+        return new PersistentSearchService( hikariDataSource, principalService() );
     }
 
     @Bean PostgresDataSinkService postgresDataSinkService() {
