@@ -18,7 +18,6 @@ import javax.inject.Inject
 
 private val logger = LoggerFactory.getLogger(AwsDataSinkService::class.java)
 
-
 class AwsDataSinkService(
         private val byteBlobDataManager: ByteBlobDataManager,
         private val hds: HikariDataSource

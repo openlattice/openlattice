@@ -27,20 +27,22 @@ import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
+import com.openlattice.authorization.initializers.AuthorizationBootstrap
 import com.openlattice.authorization.mapstores.UserMapstore
-import com.openlattice.bootstrap.AuthorizationBootstrap
 import com.openlattice.client.RetrofitFactory
-import com.openlattice.client.serialization.SerializationConstants
 import com.openlattice.datastore.services.Auth0ManagementApi
 import com.openlattice.directory.pojo.Auth0UserBasic
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
+import com.openlattice.tasks.HazelcastFixedRateTask
+import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 const val REFRESH_INTERVAL_MILLIS = 30000L
 private const val DEFAULT_PAGE_SIZE = 100
@@ -49,27 +51,46 @@ private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
 
 /**
  * This is the auth0 synchronization task that runs every REFRESH_INTERVAL_MILLIS in Hazelcast. It requires that
- * Auth0SyncHelpers be initialized within the same JVM in order to function properly.
+ * syncDependencies be initialized within the same JVM in order to function properly.
  *
  */
-class Auth0SyncTask(
+class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
+    override fun getDependenciesClass(): Class<Auth0SyncTaskDependencies> {
+        return Auth0SyncTaskDependencies::class.java
+    }
 
-) : Runnable {
+    override fun getName(): String {
+        return Task.AUTH0_SYNC_TASK.name
+    }
+
+    override fun getInitialDelay(): Long {
+        return 0
+    }
+
+    override fun getPeriod(): Long {
+        return REFRESH_INTERVAL_MILLIS
+    }
+
+    override fun getTimeUnit(): TimeUnit {
+        return TimeUnit.MILLISECONDS
+    }
 
     override fun run() {
-        if (!Auth0SyncHelpers.initialized) return
-        val users: IMap<String, Auth0UserBasic> = Auth0SyncHelpers.hazelcastInstance.getMap(HazelcastMap.USERS.name)
-        val retrofit: Retrofit = RetrofitFactory.newClient(
-                Auth0SyncHelpers.auth0TokenProvider.managementApiUrl
-        ) { Auth0SyncHelpers.auth0TokenProvider.token }
-        val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
-        val userRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
-        val adminRoleAclKey: AclKey = Auth0SyncHelpers.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
+        val ds = getDependency()
 
-        val globalOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(
+
+        val users: IMap<String, Auth0UserBasic> = ds.hazelcastInstance.getMap(HazelcastMap.USERS.name)
+        val retrofit: Retrofit = RetrofitFactory.newClient(
+                ds.auth0TokenProvider.managementApiUrl
+        ) { ds.auth0TokenProvider.token }
+        val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
+        val userRoleAclKey: AclKey = ds.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
+        val adminRoleAclKey: AclKey = ds.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
+
+        val globalOrganizationAclKey: AclKey = ds.spm.lookup(
                 GLOBAL_ORG_PRINCIPAL
         )
-        val openlatticeOrganizationAclKey: AclKey = Auth0SyncHelpers.spm.lookup(
+        val openlatticeOrganizationAclKey: AclKey = ds.spm.lookup(
                 OPENLATTICE_ORG_PRINCIPAL
         )
         //Only one instance can populate and refresh the map. Unforunately, ILock is refusing to unlock causing issues
@@ -85,16 +106,28 @@ class Auth0SyncTask(
                         .forEach { user ->
                             val userId = user.userId
                             users.set(userId, user)
-                            if (Auth0SyncHelpers.dbCredentialService.createUserIfNotExists(userId) != null) {
+
+                            if (!ds.spm.principalExists(Principal(PrincipalType.USER, userId))) {
                                 createPrincipal(
-                                        user, userId, globalOrganizationAclKey, userRoleAclKey,
-                                        openlatticeOrganizationAclKey, adminRoleAclKey
+                                        user,
+                                        userId,
+                                        globalOrganizationAclKey,
+                                        userRoleAclKey,
+                                        openlatticeOrganizationAclKey,
+                                        adminRoleAclKey,
+                                        ds
                                 )
-                            } else if (user.roles.contains(SystemRole.ADMIN.getName())) {
-                                val principal = Auth0SyncHelpers.spm.getPrincipal(userId)
-                                if (principal != null && !Auth0SyncHelpers.spm.principalHasChildPrincipal(principal.aclKey, adminRoleAclKey)) {
-                                    Auth0SyncHelpers.organizationService
-                                            .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal.principal)
+                            }
+
+                            if (user.roles.contains(SystemRole.ADMIN.getName())) {
+                                val principal = ds.spm.getPrincipal(userId)
+                                if (!ds.spm.principalHasChildPrincipal(principal.aclKey, adminRoleAclKey)) {
+                                    ds.organizationService
+                                            .addRoleToPrincipalInOrganization(
+                                                    adminRoleAclKey[0],
+                                                    adminRoleAclKey[1],
+                                                    principal.principal
+                                            )
                                 }
 
                             }
@@ -110,15 +143,19 @@ class Auth0SyncTask(
             users.removeAll(
                     Predicates.lessThan(
                             UserMapstore.LOAD_TIME_INDEX,
-                            OffsetDateTime.now().minus(6*REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
+                            OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
                     ) as Predicate<String, Auth0UserBasic>?
             )
         }
     }
 
     private fun createPrincipal(
-            user: Auth0UserBasic, userId: String, globalOrganizationAclKey: AclKey, userRoleAclKey: AclKey,
-            openlatticeOrganizationAclKey: AclKey, adminRoleAclKey: AclKey
+            user: Auth0UserBasic, userId: String,
+            globalOrganizationAclKey: AclKey,
+            userRoleAclKey: AclKey,
+            openlatticeOrganizationAclKey: AclKey,
+            adminRoleAclKey: AclKey,
+            syncDependencies: Auth0SyncTaskDependencies
     ) {
         val principal = Principal(PrincipalType.USER, userId)
         val title = if (user.nickname != null && user.nickname.isNotEmpty())
@@ -126,20 +163,20 @@ class Auth0SyncTask(
         else
             user.email
 
-        Auth0SyncHelpers.spm.createSecurablePrincipalIfNotExists(
+        syncDependencies.spm.createSecurablePrincipalIfNotExists(
                 principal,
                 SecurablePrincipal(Optional.empty(), principal, title, Optional.empty())
         )
 
         if (user.roles.contains(SystemRole.AUTHENTICATED_USER.getName())) {
-            Auth0SyncHelpers.organizationService.addMembers(globalOrganizationAclKey, ImmutableSet.of(principal))
-            Auth0SyncHelpers.organizationService
+            syncDependencies.organizationService.addMembers(globalOrganizationAclKey, ImmutableSet.of(principal))
+            syncDependencies.organizationService
                     .addRoleToPrincipalInOrganization(userRoleAclKey[0], userRoleAclKey[1], principal)
         }
 
         if (user.roles.contains(SystemRole.ADMIN.getName())) {
-            Auth0SyncHelpers.organizationService.addMembers(openlatticeOrganizationAclKey, ImmutableSet.of(principal))
-            Auth0SyncHelpers.organizationService
+            syncDependencies.organizationService.addMembers(openlatticeOrganizationAclKey, ImmutableSet.of(principal))
+            syncDependencies.organizationService
                     .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal)
         }
     }

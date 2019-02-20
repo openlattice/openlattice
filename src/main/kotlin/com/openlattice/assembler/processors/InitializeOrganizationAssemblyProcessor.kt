@@ -22,6 +22,7 @@
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
+import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
@@ -29,13 +30,16 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 private val logger = LoggerFactory.getLogger(InitializeOrganizationAssemblyProcessor::class.java)
-
+private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
 class InitializeOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+    @Transient
+    private var acm: AssemblerConnectionManager? = null
+
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val organizationId = entry.key
         val assembly = entry.value
@@ -49,7 +53,7 @@ class InitializeOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UU
                     assembly.dbname
             )
             else -> {
-                AssemblerConnectionManager.createOrganizationDatabase(organizationId)
+                acm?.createOrganizationDatabase(organizationId) ?: throw IllegalStateException(NOT_INITIALIZED)
                 assembly.initialized = true
                 entry.setValue(assembly)
             }
@@ -57,8 +61,13 @@ class InitializeOrganizationAssemblyProcessor : AbstractRhizomeEntryProcessor<UU
         return null
     }
 
+    fun init(acm: AssemblerConnectionManager): InitializeOrganizationAssemblyProcessor {
+        this.acm = acm
+        return this
+    }
+
     override fun getExecutorName(): String {
-        return "default"
+        return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
 

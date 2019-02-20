@@ -24,6 +24,7 @@ package com.openlattice.hazelcast.serializers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
+import com.openlattice.assembler.AssemblerConnectionManager;
 import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
@@ -32,6 +33,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.mockito.Mockito;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -40,7 +42,9 @@ public class MaterializeEntitySetsProcessorStreamSerializerTest extends
         AbstractStreamSerializerTest<MaterializeEntitySetsProcessorStreamSerializer, MaterializeEntitySetsProcessor> {
 
     @Override protected MaterializeEntitySetsProcessorStreamSerializer createSerializer() {
-        return new MaterializeEntitySetsProcessorStreamSerializer();
+        final var processor = new MaterializeEntitySetsProcessorStreamSerializer();
+        processor.init( Mockito.mock( AssemblerConnectionManager.class ) );
+        return processor;
     }
 
     @Override protected MaterializeEntitySetsProcessor createInput() {

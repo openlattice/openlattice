@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization;
 
+import com.google.common.base.MoreObjects;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.datastore.util.Util;
@@ -47,57 +48,30 @@ public class DbCredentialService {
     private static final SecureRandom r = new SecureRandom();
 
     private final IMap<String, String> dbcreds;
-    private final PostgresUserApi      dcqs;
 
     public DbCredentialService( HazelcastInstance hazelcastInstance, PostgresUserApi pgUserApi ) {
         this.dbcreds = hazelcastInstance.getMap( HazelcastMap.DB_CREDS.name() );
-        this.dcqs = pgUserApi;
     }
 
     public String getDbCredential( String userId ) {
         return Util.getSafely( dbcreds, userId );
     }
 
-    public @Nullable  String createUserIfNotExists( String userId ) {
-        if ( !userExistsInMap( userId ) ) {
-            if ( dcqs.exists( userId ) ) {
-                /*
-                 * User exists but is not registered in mapstore.
-                 * Since we don't know credentials for user we generate new ones
-                 * and update.
-                 */
-                return setNewDbCredential( userId );
-            } else {
-                /*
-                 * User doesn't exist in database or map. Create it.
-                 */
-                return createUser( userId );
-            }
-        }
-        return null;
-    }
-
-    public String createUser( String userId ) {
-        //Try to create user, will fail silently if user already exists.
+    public String getOrCreateUserCredentials( String userId ) {
         logger.info( "Generating credentials for user id {}", userId );
         String cred = generateCredential();
         logger.info( "Generated credentials for user id {}", userId );
-        if ( dcqs.createUser( userId, cred ) ) {
-            //User with cred was successfully created so store credentials in db.
-            dbcreds.putIfAbsent( userId, cred );
-        } else {
-            //User wasn't created so let's
-        }
-        return cred;
+        return MoreObjects.firstNonNull( dbcreds.putIfAbsent( userId, cred ), cred );
     }
 
-    public String setNewDbCredential( String userId ) {
+    public void deleteUserCredential( String userId ) {
+        dbcreds.delete( userId );
+    }
+
+    public String rollUserCredential( String userId ) {
         String cred = generateCredential();
-        if ( dcqs.setUserCredential( userId, cred ) ) {
-            dbcreds.set( userId, cred );
-            return cred;
-        }
-        throw new IllegalStateException( "Failed to set user credential." );
+        dbcreds.set( userId, cred );
+        return cred;
     }
 
     private String generateCredential() {
@@ -106,9 +80,5 @@ public class DbCredentialService {
             cred[ i ] = srcBuf[ r.nextInt( srcBuf.length ) ];
         }
         return new String( cred );
-    }
-
-    public boolean userExistsInMap( String userId ) {
-        return dbcreds.containsKey( userId );
     }
 }
