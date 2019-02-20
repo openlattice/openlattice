@@ -20,15 +20,9 @@
 
 package com.openlattice.indexing.pods;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.openlattice.datastore.util.Util.returnAndLog;
-import static com.openlattice.linking.MatcherKt.DL4J;
-import static com.openlattice.linking.MatcherKt.KERAS;
-
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.openlattice.assembler.Assembler;
@@ -48,7 +42,6 @@ import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.authorization.PostgresUserApi;
 import com.openlattice.authorization.Principals;
-import com.openlattice.bootstrap.AuthorizationBootstrap;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
@@ -59,15 +52,10 @@ import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
-import com.openlattice.linking.Matcher;
-import com.openlattice.linking.matching.SocratesMatcher;
-import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.organizations.HazelcastOrganizationService;
-import com.openlattice.organizations.OrganizationBootstrap;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
@@ -75,18 +63,11 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
-import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
-import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
-import org.deeplearning4j.util.ModelSerializer;
-import org.nd4j.linalg.io.ClassPathResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
 
 @Configuration
 @Import( { IndexerConfigurationPod.class, AuditingConfigurationPod.class, AssemblerConfigurationPod.class } )
@@ -150,12 +131,10 @@ public class IndexerServicesPod {
 
     @Bean
     public SecurePrincipalsManager principalService() {
-        final var spm = new HazelcastPrincipalService( hazelcastInstance,
+        return new HazelcastPrincipalService( hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                assembler() );
-        AssemblerConnectionManager.initializeSecurePrincipalsManager( spm );
-        return spm;
+                eventBus );
     }
 
     @Bean
@@ -180,29 +159,15 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public AssemblerConnectionManager bootstrapRolesAndUsers() {
-        final var hos = organizationsManager();
-
-        AssemblerConnectionManager.initializeMetrics( metricRegistry );
-        AssemblerConnectionManager.initializeAssemblerConfiguration( assemblerConfiguration );
-        AssemblerConnectionManager.initializeProductionDatasource( hikariDataSource );
-        AssemblerConnectionManager.initializeSecurePrincipalsManager( principalService() );
-        AssemblerConnectionManager.initializeOrganizations( hos );
-        AssemblerConnectionManager.initializeDbCredentialService( dbcs() );
-        AssemblerConnectionManager.initializeEntitySets( hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ) );
-//        AssemblerConnectionManager.initializeUsersAndRoles();
-
-        if ( assemblerConfiguration.getInitialize().orElse( false ) ) {
-            final var es = dataModelService().getEntitySet( assemblerConfiguration.getTestEntitySet().get() );
-            final var org = hos.getOrganization( es.getOrganizationId() );
-            final var apt = dataModelService()
-                    .getPropertyTypesAsMap( dataModelService().getEntityType( es.getEntityTypeId() ).getProperties() );
-            AssemblerConnectionManager.createOrganizationDatabase( org.getId() );
-            final var results = AssemblerConnectionManager
-                    .materializeEntitySets( org.getId(), ImmutableMap.of( es.getId(), apt ) );
-            logger.info( "Results of materializing: {}", results );
-        }
-        return new AssemblerConnectionManager();
+    public AssemblerConnectionManager assemblerConnectionManager() {
+        return new AssemblerConnectionManager( assemblerConfiguration,
+                hikariDataSource,
+                principalService(),
+                organizationsManager(),
+                dbcs(),
+                hazelcastInstance,
+                eventBus,
+                metricRegistry );
     }
 
     @Bean
@@ -214,19 +179,6 @@ public class IndexerServicesPod {
                 userDirectoryService(),
                 principalService(),
                 assembler() );
-    }
-
-    @Bean
-    public AuthorizationBootstrap authzBoot() {
-        return returnAndLog( new AuthorizationBootstrap( hazelcastInstance, principalService() ),
-                "Checkpoint AuthZ Boostrap" );
-    }
-
-    @Bean
-    public OrganizationBootstrap orgBoot() {
-        checkState( authzBoot().isInitialized(), "Roles must be initialized." );
-        return returnAndLog( new OrganizationBootstrap( organizationsManager() ),
-                "Checkpoint organization bootstrap." );
     }
 
     @Bean
@@ -275,24 +227,6 @@ public class IndexerServicesPod {
                 entityTypeManager(),
                 schemaManager(),
                 auditingConfiguration );
-    }
-
-    @Bean
-    @Profile( DL4J )
-    public Matcher dl4jMatcher() throws IOException {
-        final var modelStream = Thread.currentThread().getContextClassLoader().getResourceAsStream( "model.bin" );
-        final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
-        return new SocratesMatcher( ModelSerializer.restoreMultiLayerNetwork( modelStream ), fqnToIdMap );
-    }
-
-    @Profile( KERAS )
-    @Bean
-    public Matcher kerasMatcher() throws IOException, InvalidKerasConfigurationException,
-            UnsupportedKerasConfigurationException {
-        final String simpleMlp = new ClassPathResource( "model_2019-01-30.h5" ).getFile().getPath();
-        final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
-        final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
-        return new SocratesMatcher( model, fqnToIdMap );
     }
 
     @PostConstruct

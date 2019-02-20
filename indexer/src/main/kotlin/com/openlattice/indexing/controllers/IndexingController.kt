@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,17 +19,11 @@
  *
  */
 
-package com.openlattice.linking
-
-import com.openlattice.data.EntityDataKey
-import com.openlattice.postgres.streams.PostgresIterable
-import java.util.*
+package com.openlattice.indexing.controllers
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-interface Clusterer {
-    fun addToCluster(clusterId: UUID, dataKey: EntityDataKey)
-    fun getCandidateClusters(dataKeys: Set<EntityDataKey>): Set<UUID>
+class IndexingController {
 }
