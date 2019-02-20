@@ -138,7 +138,8 @@ class BackgroundIndexingService(
                 val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes[es.entityTypeId]!!.properties)
                 elasticsearchApi.saveEntitySetToElasticsearch(
                         es,
-                        missingEntitySetPropertyTypes.values.toList())
+                        missingEntitySetPropertyTypes.values.toList()
+                )
                 logger.info("Created missing index for entity set ${es.name} with id ${es.entityTypeId}")
             }
         }
@@ -203,8 +204,17 @@ class BackgroundIndexingService(
             propertyTypeMap: Map<UUID, PropertyType>
     ): Int {
         val esb = Stopwatch.createStarted()
-        val indexCount : Int
         val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
+
+        if (entitiesById.size != batchToIndex.size) {
+            logger.error(
+                    "Expected {} items to index but received {}. Marking as indexed to prevent infinite loop.",
+                    batchToIndex.size,
+                    entitiesById.size
+            )
+        }
+
+        val indexCount: Int
 
         if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
             indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
@@ -218,9 +228,10 @@ class BackgroundIndexingService(
         } else {
             indexCount = 0
             logger.error("Failed to index elements with entitiesById: {}", entitiesById)
-        }
 
+        }
         return indexCount
+
     }
 
     private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
