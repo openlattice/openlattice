@@ -3,7 +3,7 @@ package com.openlattice.linking.controllers
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.indexing.configuration.LinkingConfiguration
+import com.openlattice.linking.LinkingConfiguration
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.linking.RealtimeLinkingApi
 import org.slf4j.LoggerFactory

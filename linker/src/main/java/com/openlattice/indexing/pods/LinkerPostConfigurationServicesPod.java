@@ -26,23 +26,17 @@ import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
-import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
-import com.openlattice.data.storage.PostgresDataManager;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
-import com.openlattice.indexing.BackgroundIndexingService;
-import com.openlattice.indexing.BackgroundLinkingIndexingService;
-import com.openlattice.indexing.configuration.LinkingConfiguration;
-import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Blocker;
 import com.openlattice.linking.DataLoader;
 import com.openlattice.linking.EdmCachingDataLoader;
+import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.RealtimeLinkingService;
@@ -50,16 +44,15 @@ import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
+import java.io.IOException;
+import javax.inject.Inject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
-import javax.inject.Inject;
-import java.io.IOException;
-
 @Configuration
 @Import( { ByteBlobServicePod.class } )
-public class IndexerPostConfigurationServicesPod {
+public class LinkerPostConfigurationServicesPod {
 
     @Inject
     private HazelcastInstance hazelcastInstance;
@@ -103,34 +96,6 @@ public class IndexerPostConfigurationServicesPod {
         return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
     }
 
-    @Bean
-    public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore( idService(), postgresDataManager(), dataQueryService(), edm );
-    }
-
-    @Bean
-    public PostgresDataManager postgresDataManager() {
-        return new PostgresDataManager( hikariDataSource );
-    }
-
-    @Bean
-    public BackgroundIndexingService backgroundIndexingService() throws IOException {
-        return new BackgroundIndexingService( hikariDataSource,
-                hazelcastInstance,
-                dataQueryService(),
-                elasticsearchApi,
-                postgresDataManager() );
-    }
-
-    @Bean
-    public BackgroundLinkingIndexingService backgroundLinkingIndexingService() throws IOException {
-        return new BackgroundLinkingIndexingService(
-                hikariDataSource,
-                entityDatastore(),
-                elasticsearchApi,
-                postgresDataManager(),
-                hazelcastInstance );
-    }
 
     @Bean
     public DataLoader dataLoader() {

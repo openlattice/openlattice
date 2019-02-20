@@ -31,7 +31,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 @Configuration
 @EnableGlobalMethodSecurity( prePostEnabled = true )
 @EnableWebSecurity( debug = false )
-public class IndexerSecurityPod extends Auth0SecurityPod {
+public class LinkerSecurityPod extends Auth0SecurityPod {
 
     @Override
     protected void authorizeRequests( HttpSecurity http ) throws Exception {
