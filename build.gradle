@@ -40,7 +40,7 @@ ext.connectionUrl = 'scm:git:https://github.com/openlattice/datastore.git'
 ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/datastore.git'
 
 distTar {
-    archiveFileName "datastore.tgz"
+    archiveName "datastore.tgz"
 }
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
@@ -85,8 +85,8 @@ applicationDefaultJvmArgs += ["--add-modules java.se",
                               "--add-opens java.management/sun.management=ALL-UNNAMED",
                               "--add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 
-sourceCompatibility = JavaVersion.VERSION_1_10
-targetCompatibility = JavaVersion.VERSION_1_10
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 tasks.withType(Checkstyle) {
     reports {
@@ -179,14 +179,31 @@ eclipse {
     ext.targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-        freeCompilerArgs = ['-Xjvm-default=compatibility']
-    }
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs+= [ "--add-modules", "java.se",
+                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                             "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                             "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                             "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                             "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                             "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 }
-compileTestKotlin {
+
+tasks.withType(Test) {
+    jvmArgs += [ "--add-modules", "java.se",
+                 "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
+                 "--add-opens","java.base/java.lang=ALL-UNNAMED",
+                 "--add-opens","java.base/java.nio=ALL-UNNAMED",
+                 "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
+                 "--add-opens","java.management/sun.management=ALL-UNNAMED",
+                 "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+}
+
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
         jvmTarget = "1.8"
+        freeCompilerArgs += '-Xjvm-default=compatibility'
     }
 }
