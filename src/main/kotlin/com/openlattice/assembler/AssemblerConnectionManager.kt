@@ -51,6 +51,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.util.*
 import java.util.function.Function
@@ -62,6 +63,7 @@ private val logger = LoggerFactory.getLogger(AssemblerConnectionManager::class.j
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Component
 class AssemblerConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration,
         private val hds: HikariDataSource,
