@@ -40,13 +40,13 @@ public class GraphProcessorPod {
     @Inject
     private HikariDataSource hikariDataSource;
 
-    @Bean
-    public GraphProcessingService graphProcessingService() {
-        return new GraphProcessingService(edmManager, hikariDataSource, hazelcastInstance, graphProcessors);
-    }
-
-    @Bean
-    public BackgroundGraphProcessingService backgroundGraphProcessingService() {
-        return new BackgroundGraphProcessingService(graphProcessingService());
-    }
+//    @Bean
+//    public GraphProcessingService graphProcessingService() {
+//        return new GraphProcessingService(edmManager, hikariDataSource, hazelcastInstance, graphProcessors);
+//    }
+//
+//    @Bean
+//    public BackgroundGraphProcessingService backgroundGraphProcessingService() {
+//        return new BackgroundGraphProcessingService(graphProcessingService());
+//    }
 }
