@@ -36,7 +36,6 @@ import com.openlattice.datastore.pods.DatastoreServletsPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
 import com.openlattice.postgres.PostgresPod;
-import com.openlattice.tasks.TaskSchedulerService;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 
 public class Datastore extends BaseRhizomeServer {
