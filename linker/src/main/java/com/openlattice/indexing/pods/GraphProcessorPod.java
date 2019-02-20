@@ -1,7 +1,6 @@
 package com.openlattice.indexing.pods;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.BackgroundGraphProcessingService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.graph.processing.GraphProcessingService;
@@ -45,8 +44,4 @@ public class GraphProcessorPod {
         return new GraphProcessingService(edmManager, hikariDataSource, hazelcastInstance, graphProcessors);
     }
 
-    @Bean
-    public BackgroundGraphProcessingService backgroundGraphProcessingService() {
-        return new BackgroundGraphProcessingService(graphProcessingService());
-    }
 }
