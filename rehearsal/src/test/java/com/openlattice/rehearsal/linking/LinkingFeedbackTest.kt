@@ -41,6 +41,8 @@ import kotlin.random.Random
 
 /**
  * Test for [com.openlattice.linking.LinkingFeedbackApi]
+ *
+ * Note: tests need to run in order
  */
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -56,6 +58,9 @@ class LinkingFeedbackTest : SetupTestData() {
 
         lateinit var personEt: EntityType
         lateinit var linkingEntitySet: EntitySet
+        lateinit var linkingId: UUID
+        lateinit var allEntities: List<EntityDataKey>
+        lateinit var nonLinkingEntity: EntityDataKey
 
         @JvmStatic
         @BeforeClass
@@ -116,25 +121,42 @@ class LinkingFeedbackTest : SetupTestData() {
         val linkedData = searchApi.searchEntitySetData(
                 SearchConstraints.simpleSearchConstraints(
                         arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
-        val linkingId = linkedData.map {
+        linkingId = linkedData.map {
             UUID.fromString(it[FullQualifiedName("openlattice.@id")].first() as String)
         }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
-        // skip 0 or 1 randomly, so not all of them gets positive feedback all the time
-        val allEntities = ImmutableSet.copyOf(matchedEntities.flatMap { setOf(it.entityPair.first, it.entityPair.second) })
-        val linkedEntities = allEntities.drop(Random.nextInt(2)).toSet()
+        // skip 1, so not all of them gets positive feedback
+        allEntities = ImmutableSet.copyOf(matchedEntities
+                .flatMap { setOf(it.entityPair.first, it.entityPair.second) }).toList()
+        val linkedEntities = allEntities.drop(1).toSet()
         linkingFeedbackApi.addLinkingFeedback(
                 LinkingFeedback(EntityDataKey(linkingEntitySet.id, linkingId), linkedEntities, setOf()))
-
         waitForBackgroundServices()
 
         val oldMatchedEntities = matchedEntities.map { it.entityPair to it.match }.toMap()
         val newlyMatchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
+                .map { it.entityPair to it.match }.toMap()
         newlyMatchedEntities.forEach {
-            val oldMatches = oldMatchedEntities[it.entityPair]
+            val oldMatches = oldMatchedEntities[it.key]
+            Assert.assertTrue(oldMatches!! <= it.value)
+            if (linkedEntities.contains(it.key.first) && linkedEntities.contains(it.key.second)
+                    && it.key.second != it.key.first) {
+                Assert.assertEquals(it.value, 1.0, 1e-5)
+            }
+        }
+
+        // add pos feedback for all
+        linkingFeedbackApi.addLinkingFeedback(
+                LinkingFeedback(EntityDataKey(linkingEntitySet.id, linkingId), allEntities.toSet(), setOf()))
+        waitForBackgroundServices()
+
+        val newNewlyMatchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
+        newNewlyMatchedEntities.forEach {
+            val oldMatches = newlyMatchedEntities[it.entityPair]
             Assert.assertTrue(oldMatches!! <= it.match)
-            if (linkedEntities.contains(it.entityPair.first) && linkedEntities.contains(it.entityPair.second)) {
+            if (linkedEntities.contains(it.entityPair.first) && linkedEntities.contains(it.entityPair.second)
+                    && it.entityPair.second != it.entityPair.first) {
                 Assert.assertEquals(it.match, 1.0, 1e-5)
             }
         }
@@ -142,17 +164,10 @@ class LinkingFeedbackTest : SetupTestData() {
 
     @Test
     fun testB_addNegativeFeedback() {
-        val linkedData = searchApi.searchEntitySetData(
-                SearchConstraints.simpleSearchConstraints(
-                        arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
-        val linkingId = linkedData.map {
-            UUID.fromString(it[FullQualifiedName("openlattice.@id")].first() as String)
-        }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 
-        val allEntities = ImmutableSet.copyOf(matchedEntities.flatMap { setOf(it.entityPair.first, it.entityPair.second) }).toList()
-        val nonLinkingEntity = allEntities[Random.nextInt(allEntities.size)]
-        val linkedEntities = (allEntities - nonLinkingEntity).drop(Random.nextInt(2)).toSet()
+        nonLinkingEntity = allEntities[Random.nextInt(allEntities.size)]
+        val linkedEntities = (allEntities - nonLinkingEntity).toSet()
 
         linkingFeedbackApi.addLinkingFeedback(
                 LinkingFeedback(
@@ -170,7 +185,8 @@ class LinkingFeedbackTest : SetupTestData() {
         newlyMatchedEntities.forEach {
             val oldMatches = oldMatchedEntities[it.entityPair]
             Assert.assertTrue(oldMatches!! <= it.match)
-            if (linkedEntities.contains(it.entityPair.first) && linkedEntities.contains(it.entityPair.second)) {
+            if (linkedEntities.contains(it.entityPair.first) && linkedEntities.contains(it.entityPair.second)
+                    && it.entityPair.second != it.entityPair.first) {
                 Assert.assertEquals(it.match, 1.0, 1e-5)
             }
         }
@@ -178,29 +194,14 @@ class LinkingFeedbackTest : SetupTestData() {
 
     @Test
     fun testC_getAllFeedbacks() {
-        val linkedData = searchApi.searchEntitySetData(
-                SearchConstraints.simpleSearchConstraints(
-                        arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
-        val linkingId = linkedData.map {
-            UUID.fromString(it[FullQualifiedName("openlattice.@id")].first() as String)
-        }.toSet().first()
-        val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
-
-        // link all positively
-        val linkedEntities = ImmutableSet.copyOf(matchedEntities.flatMap { setOf(it.entityPair.first, it.entityPair.second) })
-        linkingFeedbackApi.addLinkingFeedback(
-                LinkingFeedback(
-                        EntityDataKey(linkingEntitySet.id, linkingId),
-                        linkedEntities,
-                        setOf()))
-
-        waitForBackgroundServices()
-
         val feedbacks = linkingFeedbackApi.getAllLinkingFeedbacks().toSet()
         val feedbacksWithFeatures = linkingFeedbackApi.getAllLinkingFeedbacksWithFeatures().toSet()
 
+        logger.info("All feedbacks {}", feedbacks)
+        logger.info("All feedback features{}", feedbacksWithFeatures)
+
         Assert.assertEquals(feedbacks.size, feedbacksWithFeatures.size)
-        Assert.assertEquals(10, feedbacks.size) // we have 4 entities: (4 * 5) / 2
+        Assert.assertEquals(6, feedbacks.size) // we have 3 pos and 1 neg: (2*3) / 2 + 3
         Assert.assertEquals(feedbacks, feedbacksWithFeatures.map { it.entityLinkingFeedback }.toSet())
 
         val linkedDataProperties = searchApi.searchEntitySetData(
@@ -215,30 +216,16 @@ class LinkingFeedbackTest : SetupTestData() {
 
     @Test
     fun testD_getFeedbacksForEntity() {
-        // Redo linking feedback
-        val linkedData = searchApi.searchEntitySetData(
-                SearchConstraints.simpleSearchConstraints(
-                        arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
-        val linkingId = linkedData.map {
-            UUID.fromString(it[FullQualifiedName("openlattice.@id")].first() as String)
-        }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
-
-        val allEntities = ImmutableSet.copyOf(matchedEntities.flatMap { setOf(it.entityPair.first, it.entityPair.second) }).toList()
-        val nonLinkingEntity = allEntities[Random.nextInt(allEntities.size)]
-        val linkedEntities = (allEntities - nonLinkingEntity).drop(Random.nextInt(2)).toSet()
-        linkingFeedbackApi.addLinkingFeedback(
-                LinkingFeedback(
-                        EntityDataKey(linkingEntitySet.id, linkingId),
-                        linkedEntities,
-                        setOf(nonLinkingEntity)))
-
-        waitForBackgroundServices()
+        val linkedEntities = (allEntities - nonLinkingEntity).toSet()
 
         // feedback on positive
         val matchedEntityPairs = matchedEntities.map { it.entityPair }.toSet()
         val linkingEntity = linkedEntities.toList()[Random.nextInt(linkedEntities.size)]
-        val positiveFeedbacks = linkingFeedbackApi.getLinkingFeedbacksOnEntity(FeedbackType.Positive, linkingEntity)
+        val positiveFeedbacks = linkingFeedbackApi
+                .getLinkingFeedbacksOnEntity(FeedbackType.Positive, linkingEntity).toList()
+        // 3 positive feedbacks, any of the entities is in 2 of them
+        Assert.assertEquals(2, positiveFeedbacks.size)
         positiveFeedbacks.forEach {
             Assert.assertTrue(matchedEntityPairs.contains(it.entityPair))
             Assert.assertTrue(it.linked)
@@ -261,5 +248,78 @@ class LinkingFeedbackTest : SetupTestData() {
                 (linkedEntities + nonLinkingEntity).toList()[Random.nextInt(linkedEntities.size + 1)])
         Assert.assertTrue(randomFeedbacks.map { it.linked }.contains(true))
         Assert.assertTrue(randomFeedbacks.map { it.linked }.contains(false))
+    }
+
+    @Test
+    fun testE_IllegalArguments() {
+        // test not enough entities provided
+        try{
+            linkingFeedbackApi.addLinkingFeedback(LinkingFeedback(
+                    EntityDataKey(linkingEntitySet.id, linkingId),
+                    setOf(),
+                    setOf()))
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Cannot submit feedback for less than 2 entities or if no positively linking entity is provided", true))
+        }
+
+        try{
+            linkingFeedbackApi.addLinkingFeedback(LinkingFeedback(
+                    EntityDataKey(linkingEntitySet.id, linkingId),
+                    setOf(allEntities.first()),
+                    setOf()))
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Cannot submit feedback for less than 2 entities or if no positively linking entity is provided", true))
+        }
+
+        try{
+            linkingFeedbackApi.addLinkingFeedback(LinkingFeedback(
+                    EntityDataKey(linkingEntitySet.id, linkingId),
+                    setOf(),
+                    setOf(allEntities.first(), allEntities.last())))
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Cannot submit feedback for less than 2 entities or if no positively linking entity is provided", true))
+        }
+
+        // test adding same entity to linking and nonlinking sets
+        try{
+            linkingFeedbackApi.addLinkingFeedback(LinkingFeedback(
+                    EntityDataKey(linkingEntitySet.id, linkingId),
+                    setOf(allEntities.first()),
+                    setOf(allEntities.first())))
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Cannot submit feedback with and entity being both linking and non-linking", true))
+        }
+
+        // test adding feedback for entity, which is not part on linking entity set
+        try{
+            linkingFeedbackApi.addLinkingFeedback(LinkingFeedback(
+                    EntityDataKey(linkingEntitySet.id, linkingId),
+                    setOf(EntityDataKey(UUID.randomUUID(), UUID.randomUUID())),
+                    setOf(EntityDataKey(UUID.randomUUID(), UUID.randomUUID()))))
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Feedback can only be submitted for entities contained by linking entity set", true))
+        }
+
+        // test adding feedback for entity, which has different linking id
+        try{
+            linkingFeedbackApi.addLinkingFeedback(LinkingFeedback(
+                    EntityDataKey(linkingEntitySet.id, linkingId),
+                    allEntities.toSet(),
+                    setOf()))
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Feedback can only be submitted for entities contained by linking entity set", true))
+        }
     }
 }
