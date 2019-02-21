@@ -240,8 +240,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( assemblerConfiguration,
-                authorizationManager(),
+        return new Assembler( authorizationManager(),
                 dcs(),
                 hikariDataSource,
                 metricRegistry,
@@ -368,7 +367,6 @@ public class DatastoreServicesPod {
                 eventBus,
                 metricRegistry );
     }
-
 
     @Bean
     public PersistentSearchService persistentSearchService() {
