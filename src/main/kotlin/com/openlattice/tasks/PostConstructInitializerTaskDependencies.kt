@@ -66,5 +66,9 @@ class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
         override fun getDependenciesClass(): Class<out PostConstructInitializerTaskDependencies> {
             return PostConstructInitializerTaskDependencies::class.java
         }
+
+        override fun isRunOnceAcrossCluster(): Boolean {
+            return false
+        }
     }
 }

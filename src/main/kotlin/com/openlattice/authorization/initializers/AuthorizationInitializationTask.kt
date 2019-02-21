@@ -68,10 +68,6 @@ class AuthorizationInitializationTask : HazelcastInitializationTask<Authorizatio
         return AuthorizationInitializationDependencies::class.java
     }
 
-    override fun isRunOnceAcrossCluster(): Boolean {
-        return true
-    }
-
     companion object {
         @JvmField
         val OPENLATTICE_PRINCIPAL = Principal(PrincipalType.ROLE, "openlatticeRole")

@@ -102,10 +102,6 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
         return OrganizationBootstrapDependencies::class.java
     }
 
-    override fun isRunOnceAcrossCluster(): Boolean {
-        return true
-    }
-
     companion object {
         private fun createGlobalOrg(): Organization {
             val id = GLOBAL_ORGANIZATION_ID
