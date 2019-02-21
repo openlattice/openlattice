@@ -417,7 +417,6 @@ class AssemblerConnectionManager(
     }
 
     fun dropUserIfExists(user: SecurablePrincipal) {
-
         target.connection.use { connection ->
             connection.createStatement().use { statement ->
                 //TODO: Go through every database and for old users clean them out.
@@ -428,6 +427,15 @@ class AssemblerConnectionManager(
                 dbCredentialService.deleteUserCredential(user.name)
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking public schema right from user {}", user)
+            }
+        }
+    }
+
+    fun revokeConnectAndSchemaUsage(datasource: HikariDataSource, dbname: String, user: SecurablePrincipal) {
+        datasource.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute("REVOKE ALL PRIVILEGES ON DATABASE ${quote(dbname)} from ${quote(user.name)}")
+                stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA from ${quote(user.name)}")
             }
         }
     }

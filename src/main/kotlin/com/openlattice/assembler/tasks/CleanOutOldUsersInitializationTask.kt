@@ -21,8 +21,10 @@
 
 package com.openlattice.assembler.tasks
 
+import com.hazelcast.query.Predicates
 import com.openlattice.assembler.*
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
+import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.organizations.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.tasks.HazelcastInitializationTask
@@ -42,6 +44,33 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
         val users = dependencies
                 .assemblerConnectionManager
                 .getAllUsers(dependencies.securePrincipalsManager)
+        val organizations =
+                dependencies
+                        .securableObjectTypes.keySet(Predicates.equal("this", SecurableObjectType.Organization))
+                        .map { it.first() }
+                        .toSet()
+
+        dependencies.organizations.getOrganizations(organizations.stream())
+                .forEach { organization ->
+                    try {
+                        dependencies.assemblerConnectionManager.dropOrganizationDatabase(
+                                organization.id, organization.principal.id
+                        )
+                    } catch (ex:Exception) {
+                        logger.error("Unable to clean out old database for organization: {}", organization )
+                    }
+//                    dependencies
+//                            .assemblerConnectionManager
+//                            .revokeConnectAndSchemaUsage(
+//                                    dependencies.assemblerConnectionManager.connect(
+//                                            organization.principal.id
+//                                    ),
+//                                    organization.principal.id,
+//                                    user
+//                            )
+
+                }
+
 
         users
                 .filter { it.name != "openlattice" && it.name != "postgres" } //Just for safety
@@ -55,7 +84,12 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
                     }
                     dependencies.dbCredentialService.deleteUserCredential(user.name)
                     //Also remove from materialize views server.
-                    dependencies.assemblerConnectionManager.dropUserIfExists(user)
+                    try {
+
+                        dependencies.assemblerConnectionManager.dropUserIfExists(user)
+                    } catch (ex: Exception) {
+                        logger.error("Unable to drop user: {}", user)
+                    }
                     logger.info("Removed old user ${user.name} from production database")
                 }
         logger.info("Cleaning out style users from materialzied view server.")
@@ -64,7 +98,9 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(OrganizationsInitializationTask::class.java,
+                     AuthorizationInitializationTask::class.java,
+                     )
     }
 
     override fun getInitialDelay(): Long {
