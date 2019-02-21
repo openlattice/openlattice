@@ -165,8 +165,7 @@ public class LinkerServicesPod {
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( assemblerConfiguration,
-                authorizationManager(),
+        return new Assembler( authorizationManager(),
                 dbcs(),
                 hikariDataSource,
                 metricRegistry,
@@ -196,7 +195,6 @@ public class LinkerServicesPod {
                 principalService(),
                 assembler() );
     }
-
 
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
