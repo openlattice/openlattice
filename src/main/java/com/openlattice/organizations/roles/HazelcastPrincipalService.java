@@ -265,9 +265,6 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     @Override
     public boolean principalHasChildPrincipal( AclKey parent, AclKey child ) {
-        if ( !principalTrees.containsKey( parent) ) {
-            principalTrees.set( parent, new AclKeySet() );
-        }
         return principalTrees.get( parent ).contains( child );
     }
 

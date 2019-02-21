@@ -463,7 +463,7 @@ class AssemblerConnectionManager(
                 statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking public schema right from user {}", user)
-                // statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbUser)}")
+                statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbUser)}")
 
                 return@use
             }
