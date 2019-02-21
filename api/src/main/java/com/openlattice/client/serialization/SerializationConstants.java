@@ -140,7 +140,7 @@ public final class SerializationConstants {
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
     public static final String LINKING_FEEDBACK                 = "linkingFeedback";
-    public static final String LINKING_ENTITIES                 = "linkingEntities";
+    public static final String LINK                             = "link";
     public static final String LINKING_ENTITY                   = "linkingEntity";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String LONGITUDE                        = "longitude";
@@ -164,7 +164,6 @@ public final class SerializationConstants {
     public static final String NEIGHBOR_ID                      = "neighborId";
     public static final String NEIGHBOR_PROPERTY_TYPES          = "neighborPropertyTypes";
     public static final String NEIGHBOR_TYPE_ID                 = "neighborTypeId";
-    public static final String NON_LINKING_ENTITIES             = "nonLinkingEntities";
     public static final String NUM_HITS                         = "numHits";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
@@ -218,6 +217,7 @@ public final class SerializationConstants {
     public static final String TRUSTED_ORGANIZATIONS_FIELD      = "trustedOrganizations";
     public static final String TYPE_FIELD                       = "type";
     public static final String UNIT                             = "unit";
+    public static final String UNLINK                           = "unlink";
     public static final String UPPERBOUND                       = "upperbound";
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";

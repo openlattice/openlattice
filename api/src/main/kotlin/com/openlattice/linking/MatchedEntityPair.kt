@@ -35,6 +35,6 @@ data class MatchedEntityPair(
     }
 
     override fun hashCode(): Int {
-        return 37 * entityPair.hashCode() + match.hashCode()
+        return entityPair.hashCode()
     }
 }

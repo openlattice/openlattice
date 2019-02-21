@@ -30,6 +30,6 @@ import com.openlattice.data.EntityDataKey
  */
 data class LinkingFeedback(
         @JsonProperty(SerializationConstants.LINKING_ENTITY) val linkingEntityDataKey: EntityDataKey,
-        @JsonProperty(SerializationConstants.LINKING_ENTITIES) val linkingEntities: Set<EntityDataKey>,
-        @JsonProperty(SerializationConstants.NON_LINKING_ENTITIES) val nonLinkingEntities: Set<EntityDataKey>
+        @JsonProperty(SerializationConstants.LINK) val link: Set<EntityDataKey>,
+        @JsonProperty(SerializationConstants.UNLINK) val unlink: Set<EntityDataKey>
 )
