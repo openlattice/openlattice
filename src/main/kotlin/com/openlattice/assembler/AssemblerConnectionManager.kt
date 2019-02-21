@@ -136,6 +136,7 @@ class AssemblerConnectionManager(
 
             organization.members
                     .filter { it.id != "openlatticeRole" && it.id != "admin" }
+                    .filter { securePrincipalsManager.principalExists(it) } //There are some bad principals in the member list some how-- probably from testing.
                     .forEach { principal ->
                         configureUserInDatabase(
                                 datasource,
