@@ -240,6 +240,7 @@ public class HazelcastOrganizationService {
 
     public Iterable<Organization> getOrganizations( Stream<UUID> organizationIds ) {
         return organizationIds.map( this::getOrganization )
+                .filter( com.google.common.base.Predicates.notNull()::apply )
                 .map( org -> new Organization(
                         org.getSecurablePrincipal(),
                         org.getAutoApprovedEmails(),
@@ -247,7 +248,6 @@ public class HazelcastOrganizationService {
                         //TODO: If you're an organization you can view its roles.
                         org.getRoles(),
                         org.getApps() ) )
-                .filter( com.google.common.base.Predicates.notNull()::apply )
                 ::iterator;
     }
 
