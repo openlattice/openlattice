@@ -65,5 +65,8 @@ class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDep
         return AssemblerDependencies::class.java
     }
 
+    override fun isRunOnceAcrossCluster(): Boolean {
+        return true
+    }
 
 }

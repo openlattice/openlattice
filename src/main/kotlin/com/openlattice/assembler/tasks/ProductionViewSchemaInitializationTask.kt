@@ -67,5 +67,8 @@ class ProductionViewSchemaInitializationTask : HazelcastInitializationTask<Assem
         return AssemblerDependencies::class.java
     }
 
+    override fun isRunOnceAcrossCluster(): Boolean {
+        return true
+    }
 
 }

@@ -33,6 +33,7 @@ import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_P
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
 import com.openlattice.tasks.HazelcastInitializationTask
+import com.openlattice.tasks.PostConstructInitializerTaskDependencies.*
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -90,7 +91,7 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(AuthorizationInitializationTask::class.java)
+        return setOf(AuthorizationInitializationTask::class.java, PostConstructInitializerTask::class.java)
     }
 
     override fun getName(): String {
@@ -99,6 +100,10 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
 
     override fun getDependenciesClass(): Class<out OrganizationBootstrapDependencies> {
         return OrganizationBootstrapDependencies::class.java
+    }
+
+    override fun isRunOnceAcrossCluster(): Boolean {
+        return true
     }
 
     companion object {

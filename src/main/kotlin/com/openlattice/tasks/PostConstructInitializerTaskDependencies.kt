@@ -23,30 +23,36 @@ package com.openlattice.tasks
 
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import javax.inject.Inject
 
+private val logger = LoggerFactory.getLogger(PostConstructInitializerTaskDependencies::class.java)
+
 /**
- *
+ * This class is a more structed equivalent ot using @PostConstruct which being deprecated.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class PostInitializerDependencies : HazelcastTaskDependencies {
+class PostConstructInitializerTaskDependencies : HazelcastTaskDependencies {
     @Inject
     private lateinit var accessConnectionManager: AssemblerConnectionManager
 
     @Inject
-    private  lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent>
+    private lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent>
 
 
     @Component
-    class PostInitializerTask: HazelcastInitializationTask<PostInitializerDependencies> {
+    class PostConstructInitializerTask : HazelcastInitializationTask<PostConstructInitializerTaskDependencies> {
         override fun getInitialDelay(): Long {
             return 0
         }
 
-        override fun initialize(dependencies: PostInitializerDependencies) {
-            dependencies.acmDependentStreamSerializers.forEach { it.init(dependencies.accessConnectionManager) }
+        override fun initialize(dependencies: PostConstructInitializerTaskDependencies) {
+            dependencies.acmDependentStreamSerializers.forEach {
+                it.init(dependencies.accessConnectionManager)
+                logger.info("Initialized ${it.javaClass} with ACM")
+            }
         }
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
@@ -57,8 +63,8 @@ class PostInitializerDependencies : HazelcastTaskDependencies {
             return Task.POST_INITIALIZER.name
         }
 
-        override fun getDependenciesClass(): Class<out PostInitializerDependencies> {
-            return PostInitializerDependencies::class.java
+        override fun getDependenciesClass(): Class<out PostConstructInitializerTaskDependencies> {
+            return PostConstructInitializerTaskDependencies::class.java
         }
     }
 }
