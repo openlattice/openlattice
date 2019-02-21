@@ -83,7 +83,7 @@ if (GC == 'null' || GC == null || GC == "") {
 }
 
 
-mainClassName = "com.openlattice.indexing.Indexer"
+mainClassName = "com.openlattice.linking.Linker"
 applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, "-server", GC, PARALLEL]
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
