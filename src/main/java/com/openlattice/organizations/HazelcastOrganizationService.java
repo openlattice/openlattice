@@ -386,6 +386,8 @@ public class HazelcastOrganizationService {
     }
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {
+        AclKey roleKey = new AclKey( organizationId, roleId );
+        authorizations.checkIfHasPermissions( roleKey, ImmutableSet.of( principal ), EnumSet.of( Permission.OWNER ) );
         securePrincipalsManager.addPrincipalToPrincipal( new AclKey( organizationId, roleId ),
                 securePrincipalsManager.lookup( principal ) );
     }
@@ -402,6 +404,7 @@ public class HazelcastOrganizationService {
     }
 
     public void removeRoleFromUser( AclKey roleKey, Principal user ) {
+        authorizations.checkIfHasPermissions( roleKey, ImmutableSet.of( user ), EnumSet.of( Permission.OWNER ) );
         securePrincipalsManager.removePrincipalFromPrincipal( roleKey, securePrincipalsManager.lookup( user ) );
     }
 
