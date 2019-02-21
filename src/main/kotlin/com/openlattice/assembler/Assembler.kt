@@ -171,7 +171,7 @@ class Assembler(
         //Drop and recreate the view with the latest schema
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                //                stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
+                stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
                 stmt.execute("CREATE OR REPLACE VIEW $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\" AS $sql")
                 return@use
             }
@@ -258,8 +258,10 @@ class Assembler(
         }
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-            return setOf(EntitySetViewsInitializerTask::class.java,
-                         PostInitializerTask::class.java)
+            return setOf(
+                    EntitySetViewsInitializerTask::class.java,
+                    PostInitializerTask::class.java
+            )
         }
 
         override fun getName(): String {
