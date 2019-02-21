@@ -46,6 +46,7 @@ import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
+import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
@@ -59,6 +60,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.util.*
+import javax.inject.Inject
 
 const val SCHEMA = "openlattice"
 
@@ -70,14 +72,14 @@ private val logger = LoggerFactory.getLogger(Assembler::class.java)
  */
 class Assembler(
         val authz: AuthorizationManager,
-        private val acm: AssemblerConnectionManager,
         private val dbCredentialService: DbCredentialService,
         val hds: HikariDataSource,
         metricRegistry: MetricRegistry,
         hazelcast: HazelcastInstance,
         eventBus: EventBus
 
-) : HazelcastTaskDependencies {
+) : HazelcastTaskDependencies, AssemblerConnectionManagerDependent {
+
     private val entitySets = hazelcast.getMap<UUID, EntitySet>(ENTITY_SETS.name)
     private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
     private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(PROPERTY_TYPES.name)
@@ -85,9 +87,14 @@ class Assembler(
     private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
     private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
     private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
+    private lateinit var acm: AssemblerConnectionManager
 
     init {
         eventBus.register(this)
+    }
+
+    override fun init(assemblerConnectonManager: AssemblerConnectionManager) {
+        this.acm = assemblerConnectonManager
     }
 
     fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {

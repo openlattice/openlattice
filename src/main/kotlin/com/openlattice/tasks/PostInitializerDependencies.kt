@@ -19,12 +19,10 @@
  *
  */
 
-package com.openlattice.hazelcast.serializers
+package com.openlattice.tasks
 
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.HazelcastTaskDependencies
-import com.openlattice.tasks.Task
+import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import org.springframework.stereotype.Component
 import javax.inject.Inject
 
@@ -33,7 +31,7 @@ import javax.inject.Inject
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-class StreamSerializerPostInitializerDependencies :HazelcastTaskDependencies {
+class PostInitializerDependencies : HazelcastTaskDependencies {
     @Inject
     private lateinit var accessConnectionManager: AssemblerConnectionManager
 
@@ -41,12 +39,12 @@ class StreamSerializerPostInitializerDependencies :HazelcastTaskDependencies {
     private  lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent>
 
     @Component
-    class StreamSerializerPostInitializerTask: HazelcastInitializationTask<StreamSerializerPostInitializerDependencies> {
+    class PostInitializerTask: HazelcastInitializationTask<PostInitializerDependencies> {
         override fun getInitialDelay(): Long {
             return 0
         }
 
-        override fun initialize(dependencies: StreamSerializerPostInitializerDependencies) {
+        override fun initialize(dependencies: PostInitializerDependencies) {
             dependencies.acmDependentStreamSerializers.forEach { it.init(dependencies.accessConnectionManager) }
         }
 
@@ -58,8 +56,8 @@ class StreamSerializerPostInitializerDependencies :HazelcastTaskDependencies {
             return Task.STREAM_SERIALIZER_POST_INITIALIZER.name
         }
 
-        override fun getDependenciesClass(): Class<out StreamSerializerPostInitializerDependencies> {
-            return StreamSerializerPostInitializerDependencies::class.java
+        override fun getDependenciesClass(): Class<out PostInitializerDependencies> {
+            return PostInitializerDependencies::class.java
         }
     }
 }
