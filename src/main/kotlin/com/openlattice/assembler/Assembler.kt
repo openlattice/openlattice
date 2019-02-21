@@ -70,6 +70,7 @@ private val logger = LoggerFactory.getLogger(Assembler::class.java)
  */
 class Assembler(
         val authz: AuthorizationManager,
+        private val acm: AssemblerConnectionManager,
         private val dbCredentialService: DbCredentialService,
         val hds: HikariDataSource,
         metricRegistry: MetricRegistry,
@@ -114,7 +115,7 @@ class Assembler(
     fun createOrganization(organizationId: UUID, organizationPrincipalId: String) {
         createOrganizationTimer.time().use {
             assemblies.set(organizationId, OrganizationAssembly(organizationId, organizationPrincipalId))
-            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor())
+            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
             return@use
         }
     }
@@ -131,7 +132,10 @@ class Assembler(
             organizationId: UUID,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
-        assemblies.executeOnKey(organizationId, MaterializeEntitySetsProcessor(authorizedPropertyTypesByEntitySet))
+        assemblies.executeOnKey(
+                organizationId,
+                MaterializeEntitySetsProcessor(authorizedPropertyTypesByEntitySet).init(acm)
+        )
         return getMaterializedEntitySets(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
@@ -205,6 +209,7 @@ class Assembler(
         override fun getName(): String {
             return Task.ENTITY_VIEWS_INITIALIZER.name
         }
+
         override fun getDependenciesClass(): Class<out Assembler> {
             return Assembler::class.java
         }
