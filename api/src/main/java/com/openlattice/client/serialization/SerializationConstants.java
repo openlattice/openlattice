@@ -111,8 +111,6 @@ public final class SerializationConstants {
     public static final String ENTITY_TYPES                     = "entityTypes";
     public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
-    public static final String ERROR                            = "error";
-    public static final String ERRORS                           = "errors";
     public static final String EXACT                            = "exact";
     public static final String EXACT_SEARCH_FIELDS              = "exactSearchFields";
     public static final String EXPIRATION                       = "expiration";
@@ -127,7 +125,6 @@ public final class SerializationConstants {
     public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
     public static final String HITS                             = "hits";
-    public static final String HTTP_STATUS_CODE                 = "code";
     public static final String IDS                              = "ids";
     public static final String ID_FIELD                         = "id";
     public static final String INCLUDE_FIELD                    = "include";
@@ -152,7 +149,6 @@ public final class SerializationConstants {
     public static final String MATCH                            = "match";
     public static final String MAX_HITS                         = "maxHits";
     public static final String MEMBERS_FIELD                    = "members";
-    public static final String MESSAGE                          = "message";
     public static final String MIN                              = "min";
     public static final String MISSING                          = "missing";
     public static final String MULTI_VALUED                     = "multiValued";
