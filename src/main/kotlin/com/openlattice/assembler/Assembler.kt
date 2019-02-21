@@ -30,6 +30,8 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
 import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
+import com.openlattice.assembler.tasks.CleanOutOldUsersInitializationTask
+import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
@@ -44,18 +46,24 @@ import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
+import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
+import com.openlattice.organizations.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
+import com.openlattice.tasks.HazelcastInitializationTask
+import com.openlattice.tasks.HazelcastTaskDependencies
+import com.openlattice.tasks.PostInitializerDependencies.PostInitializerTask
+import com.openlattice.tasks.Task
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.util.*
 
 const val SCHEMA = "openlattice"
-const val PRODUCTION = "olprod"
+
 private val logger = LoggerFactory.getLogger(Assembler::class.java)
 
 /**
@@ -63,7 +71,6 @@ private val logger = LoggerFactory.getLogger(Assembler::class.java)
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class Assembler(
-        private val assemblerConfiguration: AssemblerConfiguration,
         val authz: AuthorizationManager,
         private val dbCredentialService: DbCredentialService,
         val hds: HikariDataSource,
@@ -71,7 +78,8 @@ class Assembler(
         hazelcast: HazelcastInstance,
         eventBus: EventBus
 
-) {
+) : HazelcastTaskDependencies, AssemblerConnectionManagerDependent {
+
     private val entitySets = hazelcast.getMap<UUID, EntitySet>(ENTITY_SETS.name)
     private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
     private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(PROPERTY_TYPES.name)
@@ -79,9 +87,14 @@ class Assembler(
     private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
     private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
     private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
+    private lateinit var acm: AssemblerConnectionManager
 
     init {
         eventBus.register(this)
+    }
+
+    override fun init(assemblerConnectonManager: AssemblerConnectionManager) {
+        this.acm = assemblerConnectonManager
     }
 
     fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {
@@ -109,46 +122,27 @@ class Assembler(
     fun createOrganization(organizationId: UUID, organizationPrincipalId: String) {
         createOrganizationTimer.time().use {
             assemblies.set(organizationId, OrganizationAssembly(organizationId, organizationPrincipalId))
-            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor())
+            assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
             return@use
         }
     }
 
     fun initialize() {
-        initializeEntitySetViews()
         initializeOrganizations()
     }
 
-    private fun initializeEntitySetViews() {
-        entitySets.keys.forEach(this::createOrUpdateProductionViewOfEntitySet)
-    }
-
     private fun initializeOrganizations() {
-        val currentOrganizations =
-                securableObjectTypes.keySet(
-                        Predicates.equal("this", SecurableObjectType.Organization)
-                ).map { it.first() }.toSet()
 
-        val initializedOrganizations = assemblies.keySet(Predicates.equal(INITIALIZED_INDEX, true))
-
-        val organizationsNeedingInitialized: Set<UUID> = currentOrganizations - initializedOrganizations
-
-        organizationsNeedingInitialized.forEach { organizationId ->
-            val organizationPrincipal = principals[AclKey(organizationId)]
-            if (organizationPrincipal == null) {
-                logger.error("Unable to initialize organization with id {} because principal not found", organizationId)
-            } else {
-                logger.info("Initializing database for organization {}", organizationId)
-                createOrganization(organizationId, organizationPrincipal.principal.id)
-            }
-        }
     }
 
     fun materializeEntitySets(
             organizationId: UUID,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
-        assemblies.executeOnKey(organizationId, MaterializeEntitySetsProcessor(authorizedPropertyTypesByEntitySet))
+        assemblies.executeOnKey(
+                organizationId,
+                MaterializeEntitySetsProcessor(authorizedPropertyTypesByEntitySet).init(acm)
+        )
         return getMaterializedEntitySets(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
@@ -177,7 +171,7 @@ class Assembler(
         //Drop and recreate the view with the latest schema
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
+                //                stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
                 stmt.execute("CREATE OR REPLACE VIEW $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\" AS $sql")
                 return@use
             }
@@ -196,6 +190,84 @@ class Assembler(
             setOf(OrganizationEntitySetFlag.INTERNAL)
         } else {
             setOf()
+        }
+    }
+
+    /**
+     * This class is responsible for refreshing all entity set views at startup.
+     */
+    class EntitySetViewsInitializerTask : HazelcastInitializationTask<Assembler> {
+        override fun getInitialDelay(): Long {
+            return 0
+        }
+
+        override fun initialize(dependencies: Assembler) {
+            dependencies.entitySets.keys.forEach(dependencies::createOrUpdateProductionViewOfEntitySet)
+        }
+
+        override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
+            return setOf(
+                    OrganizationsInitializationTask::class.java,
+                    UsersAndRolesInitializationTask::class.java,
+                    CleanOutOldUsersInitializationTask::class.java
+            )
+        }
+
+        override fun getName(): String {
+            return Task.ENTITY_VIEWS_INITIALIZER.name
+        }
+
+        override fun getDependenciesClass(): Class<out Assembler> {
+            return Assembler::class.java
+        }
+    }
+
+
+    class OrganizationAssembliesInitializerTask : HazelcastInitializationTask<Assembler> {
+        override fun getInitialDelay(): Long {
+            return 0
+        }
+
+        override fun initialize(dependencies: Assembler) {
+            val currentOrganizations =
+                    dependencies
+                            .securableObjectTypes.keySet(
+                            Predicates.equal(
+                                    "this"
+                                    , SecurableObjectType.Organization
+                            )
+                    )
+                            .map { it.first() }
+                            .toSet()
+
+            val initializedOrganizations = dependencies.assemblies.keySet(Predicates.equal(INITIALIZED_INDEX, true))
+
+            val organizationsNeedingInitialized: Set<UUID> = currentOrganizations - initializedOrganizations
+
+            organizationsNeedingInitialized.forEach { organizationId ->
+                val organizationPrincipal = dependencies.principals[AclKey(organizationId)]
+                if (organizationPrincipal == null) {
+                    logger.error(
+                            "Unable to initialize organization with id {} because principal not found", organizationId
+                    )
+                } else {
+                    logger.info("Initializing database for organization {}", organizationId)
+                    dependencies.createOrganization(organizationId, organizationPrincipal.principal.id)
+                }
+            }
+        }
+
+        override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
+            return setOf(EntitySetViewsInitializerTask::class.java,
+                         PostInitializerTask::class.java)
+        }
+
+        override fun getName(): String {
+            return Task.ORGANIZATION_ASSEMBLIES_INITIALIZER.name
+        }
+
+        override fun getDependenciesClass(): Class<out Assembler> {
+            return Assembler::class.java
         }
     }
 }

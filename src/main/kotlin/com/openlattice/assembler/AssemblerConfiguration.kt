@@ -36,7 +36,5 @@ data class AssemblerConfiguration(
         val foreignPort: Short,
         val foreignUsername: String,
         val foreignPassword: String,
-        val ssl: Boolean = true,
-        val initialize: Optional<Boolean> = Optional.empty(),
-        val testEntitySet: Optional<UUID> = Optional.empty()
+        val ssl: Boolean = true
 )

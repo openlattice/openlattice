@@ -23,7 +23,7 @@ package com.openlattice.assembler.tasks
 
 import com.openlattice.assembler.*
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.organizations.OrganizationBootstrap
+import com.openlattice.organizations.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import java.util.concurrent.TimeUnit
@@ -46,7 +46,7 @@ class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDep
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationBootstrap::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
     }
 
     override fun getInitialDelay(): Long {

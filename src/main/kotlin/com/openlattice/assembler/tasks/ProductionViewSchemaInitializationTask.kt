@@ -23,7 +23,7 @@ package com.openlattice.assembler.tasks
 
 import com.openlattice.assembler.*
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.organizations.OrganizationBootstrap
+import com.openlattice.organizations.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
@@ -32,7 +32,9 @@ import java.util.concurrent.TimeUnit
 private val logger = LoggerFactory.getLogger(ProductionViewSchemaInitializationTask::class.java)
 
 /**
+ * This task initialization the schema where productions views read by the materialization server will live.
  *
+ * TODO: Permission this schema so that it is only usable by a special restricted account.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class ProductionViewSchemaInitializationTask : HazelcastInitializationTask<AssemblerDependencies> {
@@ -46,7 +48,7 @@ class ProductionViewSchemaInitializationTask : HazelcastInitializationTask<Assem
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationBootstrap::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
     }
 
     override fun getInitialDelay(): Long {
