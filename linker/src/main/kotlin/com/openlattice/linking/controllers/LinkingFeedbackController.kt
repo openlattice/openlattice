@@ -90,7 +90,7 @@ constructor(
         linkingEntitiesList.forEachIndexed { index, linkingEntity ->
             // generate pairs between linking entities themselves
             positiveFeedbackCount += createLinkingFeedbackCombinations(
-                    linkingEntity, linkingEntitiesList, index, true)
+                    linkingEntity, linkingEntitiesList, index + 1, true)
 
             // generate pairs between linking and non-linking entities
             negativeFeedbackCount += createLinkingFeedbackCombinations(
