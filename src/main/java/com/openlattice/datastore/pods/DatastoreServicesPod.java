@@ -26,7 +26,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.codahale.metrics.MetricRegistry;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
@@ -80,7 +79,6 @@ import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
@@ -93,6 +91,8 @@ import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
+import com.openlattice.tasks.PostInitializerDependencies;
+import com.openlattice.tasks.PostInitializerDependencies.PostInitializerTask;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -241,13 +241,21 @@ public class DatastoreServicesPod {
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( assemblerConfiguration,
-                authorizationManager(),
+        return new Assembler( authorizationManager(),
                 dcs(),
                 hikariDataSource,
                 metricRegistry,
                 hazelcastInstance,
                 eventBus );
+    }
+
+    @Bean
+    public PostInitializerDependencies postInitializerDependencies() {
+        return new PostInitializerDependencies();
+    }
+
+    public PostInitializerTask postInitializerTask() {
+        return new PostInitializerTask();
     }
 
     @Bean
@@ -369,7 +377,6 @@ public class DatastoreServicesPod {
                 eventBus,
                 metricRegistry );
     }
-
 
     @Bean
     public PersistentSearchService persistentSearchService() {
