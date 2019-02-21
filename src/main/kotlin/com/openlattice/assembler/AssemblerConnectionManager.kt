@@ -139,7 +139,7 @@ class AssemblerConnectionManager(
                     .forEach { principal ->
                         configureUserInDatabase(
                                 datasource,
-                                organization.principal.id,
+                                buildOrganizationDatabaseName(organizationId),
                                 buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
                         )
                     }
