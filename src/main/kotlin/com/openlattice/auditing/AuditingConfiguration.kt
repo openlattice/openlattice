@@ -21,17 +21,8 @@
 
 package com.openlattice.auditing
 
-import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
-import com.openlattice.datastore.exceptions.ResourceNotFoundException
-import com.openlattice.datastore.services.EdmManager
-import com.openlattice.datastore.services.EdmService
-import com.openlattice.edm.type.PropertyType
-import org.apache.olingo.commons.api.edm.FullQualifiedName
-import org.slf4j.LoggerFactory
-import java.util.*
-import javax.inject.Inject
 
 /**
  * Configuration class for auditing.

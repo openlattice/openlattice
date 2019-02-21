@@ -25,7 +25,7 @@ package com.openlattice.data.storage;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
-import com.openlattice.authorization.ForbiddenException;
+import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;

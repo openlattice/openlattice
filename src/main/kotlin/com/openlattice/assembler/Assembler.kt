@@ -35,9 +35,9 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
-import com.openlattice.datastore.exceptions.ResourceNotFoundException
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.EntitySetCreatedEvent
 import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
