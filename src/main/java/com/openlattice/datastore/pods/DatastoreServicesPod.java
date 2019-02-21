@@ -92,6 +92,8 @@ import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
+import com.openlattice.tasks.PostInitializerDependencies;
+import com.openlattice.tasks.PostInitializerDependencies.PostInitializerTask;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -241,12 +243,19 @@ public class DatastoreServicesPod {
     @Bean
     public Assembler assembler() {
         return new Assembler( authorizationManager(),
-                assemblerConnectionManager(),
                 dcs(),
                 hikariDataSource,
                 metricRegistry,
                 hazelcastInstance,
                 eventBus );
+    }
+    @Bean
+    public PostInitializerDependencies postInitializerDependencies(){
+        return new PostInitializerDependencies();
+    }
+
+    public PostInitializerTask postInitializerTask() {
+        return new PostInitializerTask();
     }
 
     @Bean
