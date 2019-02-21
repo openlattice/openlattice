@@ -149,7 +149,7 @@ public class IndexerServicesPod {
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( assemblerConfiguration,
+        return new Assembler(
                 authorizationManager(),
                 dbcs(),
                 hikariDataSource,
