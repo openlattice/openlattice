@@ -55,6 +55,8 @@ import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
+import com.openlattice.tasks.PostInitializerDependencies
+import com.openlattice.tasks.PostInitializerDependencies.*
 import com.openlattice.tasks.Task
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -258,7 +260,8 @@ class Assembler(
         }
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-            return setOf(EntitySetViewsInitializerTask::class.java)
+            return setOf(EntitySetViewsInitializerTask::class.java,
+                         PostInitializerTask::class.java)
         }
 
         override fun getName(): String {
