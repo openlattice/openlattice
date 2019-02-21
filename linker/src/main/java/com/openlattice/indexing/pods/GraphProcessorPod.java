@@ -1,21 +1,19 @@
 package com.openlattice.indexing.pods;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.openlattice.BackgroundGraphProcessingService;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.graph.processing.GraphProcessingService;
 import com.openlattice.graph.processing.processors.GraphProcessor;
 import com.openlattice.graph.processing.processors.SharedGraphProcessors;
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.context.annotation.Bean;
+import java.util.Set;
+import javax.inject.Inject;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.stereotype.Component;
 
-import javax.inject.Inject;
-import java.util.Set;
+//import com.openlattice.BackgroundGraphProcessingService;
 
 @Configuration
 @ComponentScan(
@@ -40,13 +38,9 @@ public class GraphProcessorPod {
     @Inject
     private HikariDataSource hikariDataSource;
 
-    @Bean
-    public GraphProcessingService graphProcessingService() {
-        return new GraphProcessingService(edmManager, hikariDataSource, hazelcastInstance, graphProcessors);
-    }
+//    @Bean
+//    public GraphProcessingService graphProcessingService() {
+//        return new GraphProcessingService(edmManager, hikariDataSource, hazelcastInstance, graphProcessors);
+//    }
 
-    @Bean
-    public BackgroundGraphProcessingService backgroundGraphProcessingService() {
-        return new BackgroundGraphProcessingService(graphProcessingService());
-    }
 }
