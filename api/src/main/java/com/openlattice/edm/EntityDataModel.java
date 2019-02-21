@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 // this is only here, so syncronization won't break
-// it should be deleted after EntityDataModel without version is deployed to prod
+// TODO it should be deleted after EntityDataModel without version is deployed to prod
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EntityDataModel {
     private final Iterable<String>          namespaces;
