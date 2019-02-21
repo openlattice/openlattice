@@ -24,9 +24,9 @@ package com.openlattice.organizations
 import com.google.common.base.Preconditions.checkState
 import com.google.common.base.Stopwatch
 import com.google.common.collect.ImmutableSet
-import com.openlattice.authorization.initializers.AuthorizationBootstrap
-import com.openlattice.authorization.initializers.AuthorizationBootstrap.Companion.GLOBAL_ADMIN_ROLE
-import com.openlattice.authorization.initializers.AuthorizationBootstrap.Companion.OPENLATTICE_ROLE
+import com.openlattice.authorization.initializers.AuthorizationInitializationTask
+import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.GLOBAL_ADMIN_ROLE
+import com.openlattice.authorization.initializers.AuthorizationInitializationTask.Companion.OPENLATTICE_ROLE
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORGANIZATION_ID
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
@@ -90,7 +90,7 @@ class OrganizationBootstrap() : HazelcastInitializationTask<OrganizationBootstra
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(AuthorizationBootstrap::class.java)
+        return setOf(AuthorizationInitializationTask::class.java)
     }
 
     override fun getName(): String {

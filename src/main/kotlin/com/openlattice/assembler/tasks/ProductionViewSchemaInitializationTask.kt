@@ -21,17 +21,9 @@
 
 package com.openlattice.assembler.tasks
 
-import com.hazelcast.core.Hazelcast
 import com.openlattice.assembler.*
-import com.openlattice.authorization.PrincipalType
-import com.openlattice.authorization.SecurablePrincipal
-import com.openlattice.authorization.initializers.AuthorizationBootstrap
-import com.openlattice.organization.roles.Role
+import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.organizations.OrganizationBootstrap
-import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.ResultSetAdapters
-import com.openlattice.postgres.streams.PostgresIterable
-import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
@@ -54,7 +46,7 @@ class ProductionViewSchemaInitializationTask : HazelcastInitializationTask<Assem
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationBootstrap::class.java, AuthorizationBootstrap::class.java)
+        return setOf(OrganizationBootstrap::class.java, AuthorizationInitializationTask::class.java)
     }
 
     override fun getInitialDelay(): Long {

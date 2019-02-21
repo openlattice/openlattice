@@ -41,7 +41,7 @@ class StreamSerializerPostInitializerDependencies :HazelcastTaskDependencies {
     private  lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent>
 
     @Component
-    class StreaSerializerPostInitializerTask: HazelcastInitializationTask<StreamSerializerPostInitializerDependencies> {
+    class StreamSerializerPostInitializerTask: HazelcastInitializationTask<StreamSerializerPostInitializerDependencies> {
         override fun getInitialDelay(): Long {
             return 0
         }

@@ -37,8 +37,8 @@ import java.util.concurrent.TimeUnit
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class AuthorizationBootstrap : HazelcastInitializationTask<AuthorizationBootstrapDependencies> {
-    override fun initialize(dependencies: AuthorizationBootstrapDependencies) {
+class AuthorizationInitializationTask : HazelcastInitializationTask<AuthorizationInitializationDependencies> {
+    override fun initialize(dependencies: AuthorizationInitializationDependencies) {
         val spm = dependencies.securePrincipalsManager
         spm.createSecurablePrincipalIfNotExists(OPENLATTICE_PRINCIPAL, OPENLATTICE_ROLE)
         spm.createSecurablePrincipalIfNotExists(SystemRole.AUTHENTICATED_USER.principal, GLOBAL_USER_ROLE)
@@ -64,8 +64,8 @@ class AuthorizationBootstrap : HazelcastInitializationTask<AuthorizationBootstra
         return Task.AUTHORIZATION_BOOTSTRAP.name
     }
 
-    override fun getDependenciesClass(): Class<out AuthorizationBootstrapDependencies> {
-        return AuthorizationBootstrapDependencies::class.java
+    override fun getDependenciesClass(): Class<out AuthorizationInitializationDependencies> {
+        return AuthorizationInitializationDependencies::class.java
     }
 
     companion object {
