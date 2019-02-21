@@ -56,8 +56,8 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
                         dependencies.assemblerConnectionManager.dropOrganizationDatabase(
                                 organization.id, organization.principal.id
                         )
-                    } catch (ex:Exception) {
-                        logger.error("Unable to clean out old database for organization: {}", organization )
+                    } catch (ex: Exception) {
+                        logger.error("Unable to clean out old database for organization: {}", organization)
                     }
 //                    dependencies
 //                            .assemblerConnectionManager
@@ -98,9 +98,7 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationsInitializationTask::class.java,
-                     AuthorizationInitializationTask::class.java,
-                     )
+        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
     }
 
     override fun getInitialDelay(): Long {
