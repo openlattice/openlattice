@@ -239,7 +239,7 @@ class AssemblerConnectionManager(
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
         materializeAllTimer.time().use {
-            connect(organizations.getOrganizationPrincipal(organizationId).name).use { datasource ->
+            connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
                 materializeEntitySets(datasource, authorizedPropertyTypesByEntitySet)
             }
             return authorizedPropertyTypesByEntitySet.mapValues {
@@ -290,7 +290,10 @@ class AssemblerConnectionManager(
                 }
                 //Next we need to grant select on materialize view to everyone who has permission.
                 val selectGrantedCount = grantSelectForEntitySet(
-                        connection, tableName, entitySet.id, authorizedPropertyTypes
+                        connection,
+                        tableName,
+                        entitySet.id,
+                        authorizedPropertyTypes
                 )
                 logger.info(
                         "Granted select for $selectGrantedCount users/roles on materialized view " +
