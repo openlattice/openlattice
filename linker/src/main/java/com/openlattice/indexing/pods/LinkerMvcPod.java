@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.data.DataApi;
 import com.openlattice.linking.controllers.LinkingFeedbackController;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
+import com.openlattice.linking.controllers.util.LinkerExceptionHandler;
 import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -23,7 +24,8 @@ import java.util.List;
 
 @Configuration
 @ComponentScan(
-        basePackageClasses = { RealtimeLinkingController.class, LinkingFeedbackController.class },
+        basePackageClasses = { LinkerExceptionHandler.class, RealtimeLinkingController.class,
+                LinkingFeedbackController.class },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,
                         org.springframework.web.bind.annotation.RestControllerAdvice.class },

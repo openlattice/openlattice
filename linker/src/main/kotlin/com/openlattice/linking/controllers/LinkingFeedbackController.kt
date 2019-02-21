@@ -33,6 +33,7 @@ import com.openlattice.linking.util.PersonMetric
 import com.openlattice.linking.util.PersonProperties
 import org.elasticsearch.common.util.set.Sets
 import org.slf4j.LoggerFactory
+import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.lang.IllegalArgumentException
 import javax.inject.Inject
@@ -58,7 +59,7 @@ constructor(
         private val logger = LoggerFactory.getLogger(LinkingFeedbackController::class.java)
     }
 
-    @PutMapping(path = [])
+    @PutMapping(path = [], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun addLinkingFeedback(@RequestBody feedback: LinkingFeedback): Int {
         if (feedback.linkingEntities.isEmpty() || feedback.linkingEntities.size + feedback.nonLinkingEntities.size < 2) {
             throw IllegalArgumentException(
@@ -143,14 +144,14 @@ constructor(
                 "${entityLinkingFeedback.entityPair.second}, linked = ${entityLinkingFeedback.linked}")
     }
 
-    @PostMapping(path = [LinkingFeedbackApi.ENTITY])
+    @PostMapping(path = [LinkingFeedbackApi.ENTITY], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getLinkingFeedbacksOnEntity(
             @RequestParam(value = LinkingFeedbackApi.FEEDBACK_TYPE, required = false) feedbackType: FeedbackType,
             @RequestBody entity: EntityDataKey): Iterable<EntityLinkingFeedback> {
         return feedbackService.getLinkingFeedbackOnEntity(feedbackType, entity)
     }
 
-    @PostMapping(path = [LinkingFeedbackApi.FEATURES])
+    @PostMapping(path = [LinkingFeedbackApi.FEATURES], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getLinkingFeedbackWithFeatures(
             @RequestBody entityPair: EntityKeyPair): EntityLinkingFeatures? {
         val feedback = checkNotNull(feedbackService.getLinkingFeedback(entityPair))
@@ -167,12 +168,14 @@ constructor(
         )
     }
 
-    @GetMapping(path = [LinkingFeedbackApi.ALL])
+    @GetMapping(path = [LinkingFeedbackApi.ALL], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getAllLinkingFeedbacks(): Iterable<EntityLinkingFeedback> {
         return feedbackService.getLinkingFeedbacks()
     }
 
-    @GetMapping(path = [LinkingFeedbackApi.FEATURES + LinkingFeedbackApi.ALL])
+    @GetMapping(
+            path = [LinkingFeedbackApi.FEATURES + LinkingFeedbackApi.ALL],
+            produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getAllLinkingFeedbacksWithFeatures(): Iterable<EntityLinkingFeatures> {
         return feedbackService.getLinkingFeedbacks().map {
             val entities = dataLoader.getEntities(setOf(it.entityPair.first, it.entityPair.second))
@@ -188,7 +191,7 @@ constructor(
     }
 
 
-    @DeleteMapping(path = [])
+    @DeleteMapping(path = [], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun deleteLinkingFeedback(@RequestBody entityPair: EntityKeyPair): Int {
         ensureAdminAccess() // currently it's only used by tests
         val count = feedbackService.deleteLinkingFeedback(entityPair)
