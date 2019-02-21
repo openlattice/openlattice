@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.indexing.pods;
+package com.openlattice.linker.pods;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants.Profiles;

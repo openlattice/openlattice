@@ -18,20 +18,24 @@
  *
  */
 
-package com.openlattice.indexing;
+package com.openlattice.linker;
 
 import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
 import com.kryptnostic.rhizome.hazelcast.serializers.RhizomeUtils.Pods;
 import com.kryptnostic.rhizome.pods.hazelcast.RegistryBasedHazelcastInstanceConfigurationPod;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
-import com.openlattice.indexing.pods.*;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.aws.AwsS3Pod;
 import com.openlattice.datastore.cassandra.CassandraTablesPod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
+import com.openlattice.linker.pods.LinkerPostConfigurationServicesPod;
+import com.openlattice.linker.pods.LinkerSecurityPod;
+import com.openlattice.linker.pods.LinkerServicesPod;
+import com.openlattice.linker.pods.LinkerServletsPod;
+import com.openlattice.linker.pods.PlasmaCoupling;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
 import com.openlattice.postgres.PostgresPod;
@@ -60,7 +64,6 @@ public class Linker extends BaseRhizomeServer {
             PostgresPod.class,
             Auth0Pod.class,
             AwsS3Pod.class,
-            GraphProcessorPod.class,
             AuditingConfigurationPod.class,
             TaskSchedulerPod.class
     };

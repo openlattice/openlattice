@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.indexing.pods;
+package com.openlattice.linker.pods;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
