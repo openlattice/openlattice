@@ -31,29 +31,14 @@ import java.util.UUID
 /**
  * Represents an ordered pair of EntityDataKeys
  */
-class EntityKeyPair @JsonCreator constructor(
-        @JsonProperty(SerializationConstants.FIRST) first: EntityDataKey,
-        @JsonProperty(SerializationConstants.SECOND) second: EntityDataKey) {
-    @JsonProperty(SerializationConstants.FIRST) var first: EntityDataKey
-    @JsonProperty(SerializationConstants.SECOND) var second: EntityDataKey
+data class EntityKeyPair @JsonCreator constructor(
+        @JsonProperty(SerializationConstants.FIRST) var first: EntityDataKey,
+        @JsonProperty(SerializationConstants.SECOND) var second: EntityDataKey) {
 
     init {
         val entityPair = sortedSetOf(first, second)
         this.first = entityPair.first()
         this.second = entityPair.last()
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (other == null) return false
-        if (other !is EntityKeyPair) return false
-        if (other.first != first) return false
-        if (other.second != second) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return first.hashCode() * 31 + second.hashCode()
     }
 
     override fun toString(): String {
