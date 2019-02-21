@@ -37,7 +37,7 @@ import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.SystemRole;
-import com.openlattice.authorization.initializers.AuthorizationBootstrap;
+import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.directory.MaterializedViewAccount;
 import com.openlattice.directory.PrincipalApi;
@@ -196,8 +196,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
 
         AclKey userAclKey = spm.lookup( principal );
 
-        AclKey userRoleAclKey = spm.lookup( AuthorizationBootstrap.GLOBAL_USER_ROLE.getPrincipal() );
-        AclKey adminRoleAclKey = spm.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() );
+        AclKey userRoleAclKey = spm.lookup( AuthorizationInitializationTask.GLOBAL_USER_ROLE.getPrincipal() );
+        AclKey adminRoleAclKey = spm.lookup( AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.getPrincipal() );
         Auth0UserBasic user = userDirectoryService.getUser( userId );
 
         if ( user.getRoles().contains( SystemRole.AUTHENTICATED_USER.getName() ) ) {
