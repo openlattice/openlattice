@@ -61,12 +61,12 @@ constructor(
 
     @PutMapping(path = [], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun addLinkingFeedback(@RequestBody feedback: LinkingFeedback): Int {
-        if (feedback.linkingEntities.isEmpty() || feedback.linkingEntities.size + feedback.nonLinkingEntities.size < 2) {
+        if (feedback.link.isEmpty() || feedback.link.size + feedback.unlink.size < 2) {
             throw IllegalArgumentException(
                     "Cannot submit feedback for less than 2 entities or if no positively linking entity is provided")
         }
 
-        if(!Sets.haveEmptyIntersection(feedback.linkingEntities, feedback.nonLinkingEntities)) {
+        if(!Sets.haveEmptyIntersection(feedback.link, feedback.unlink)) {
             throw IllegalArgumentException("Cannot submit feedback with and entity being both linking and non-linking")
         }
 
@@ -76,13 +76,13 @@ constructor(
         // ensure read access on all entity sets involved and the properties used for linking
         // make sure, that all entitysets are part of the linking entity set and entity ids have the provided linking id
         linkingFeedbackCheck(
-                feedback.linkingEntities + feedback.nonLinkingEntities,
+                feedback.link + feedback.unlink,
                 feedback.linkingEntityDataKey)
 
 
         // add feedbacks
-        val linkingEntitiesList = feedback.linkingEntities.toList()
-        val nonLinkingEntitiesList = feedback.nonLinkingEntities.toList()
+        val linkingEntitiesList = feedback.link.toList()
+        val nonLinkingEntitiesList = feedback.unlink.toList()
 
         var positiveFeedbackCount = 0
         var negativeFeedbackCount = 0
@@ -99,7 +99,7 @@ constructor(
         }
 
         // mark entities as need to be linked
-        dataManager.markAsNeedsToBeLinked(feedback.linkingEntities + feedback.nonLinkingEntities)
+        dataManager.markAsNeedsToBeLinked(feedback.link + feedback.unlink)
 
 
         logger.info("Submitted $positiveFeedbackCount positive and $negativeFeedbackCount negative feedbacks for " +
