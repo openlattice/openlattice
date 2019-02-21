@@ -241,6 +241,7 @@ public class DatastoreServicesPod {
     @Bean
     public Assembler assembler() {
         return new Assembler( authorizationManager(),
+                assemblerConnectionManager(),
                 dcs(),
                 hikariDataSource,
                 metricRegistry,
