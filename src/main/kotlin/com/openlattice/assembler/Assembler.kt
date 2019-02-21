@@ -55,14 +55,12 @@ import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
-import com.openlattice.tasks.PostInitializerDependencies
-import com.openlattice.tasks.PostInitializerDependencies.*
+import com.openlattice.tasks.PostInitializerDependencies.PostInitializerTask
 import com.openlattice.tasks.Task
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
 import java.util.*
-import javax.inject.Inject
 
 const val SCHEMA = "openlattice"
 

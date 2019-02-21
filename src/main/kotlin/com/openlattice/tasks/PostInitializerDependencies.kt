@@ -38,6 +38,7 @@ class PostInitializerDependencies : HazelcastTaskDependencies {
     @Inject
     private  lateinit var acmDependentStreamSerializers: Set<AssemblerConnectionManagerDependent>
 
+
     @Component
     class PostInitializerTask: HazelcastInitializationTask<PostInitializerDependencies> {
         override fun getInitialDelay(): Long {
@@ -53,7 +54,7 @@ class PostInitializerDependencies : HazelcastTaskDependencies {
         }
 
         override fun getName(): String {
-            return Task.STREAM_SERIALIZER_POST_INITIALIZER.name
+            return Task.POST_INITIALIZER.name
         }
 
         override fun getDependenciesClass(): Class<out PostInitializerDependencies> {
