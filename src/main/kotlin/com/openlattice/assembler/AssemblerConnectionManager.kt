@@ -119,8 +119,8 @@ class AssemblerConnectionManager(
      */
     fun createOrganizationDatabase(organizationId: UUID) {
         val organization = organizations.getOrganization(organizationId)
-        val dbname = buildOrganizationDatabaseName( organizationId )
-        createOrganizationDatabase(organizationId,dbname)
+        val dbname = buildOrganizationDatabaseName(organizationId)
+        createOrganizationDatabase(organizationId, dbname)
 
         connect(dbname).use { datasource ->
             configureRolesInDatabase(datasource, securePrincipalsManager)
@@ -129,7 +129,7 @@ class AssemblerConnectionManager(
             datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
                     statement.execute(
-                            "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_FOREIGN_SCHEMA,$SCHEMA,public"
+                            "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_FOREIGN_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,public"
                     )
                 }
             }
@@ -183,7 +183,7 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun dropOrganizationDatabase( organizationId: UUID ) {
+    fun dropOrganizationDatabase(organizationId: UUID) {
         val organization = organizations.getOrganization(organizationId)
         dropOrganizationDatabase(organizationId, organization.principal.id)
     }
@@ -221,9 +221,9 @@ class AssemblerConnectionManager(
             val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
             datasource.connection.use { connection ->
                 connection.createStatement().use { stmt ->
-                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $SCHEMA.edges")
+                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $MATERIALIZED_VIEWS_SCHEMA.edges")
                     stmt.execute(
-                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $SCHEMA.edges AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.edges WHERE src_entity_set_id IN ($clause) " +
+                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $MATERIALIZED_VIEWS_SCHEMA.edges AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.edges WHERE src_entity_set_id IN ($clause) " +
                                     "AND dst_entity_set_id IN ($clause) " +
                                     "AND edge_entity_set_id IN ($clause) "
                     )
@@ -483,12 +483,12 @@ class AssemblerConnectionManager(
         datasource.connection.use { connection ->
             connection.createStatement().use { statement ->
 
-                statement.execute("GRANT USAGE ON SCHEMA $SCHEMA TO $dbUser")
+                statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $dbUser")
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking public schema right from user: {}", userId)
                 statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbUser")
                 //Set the search path for the user
-                statement.execute("ALTER USER $dbUser set search_path TO $SCHEMA,public")
+                statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA,public")
 
                 return@use
             }
@@ -504,14 +504,14 @@ class AssemblerConnectionManager(
                 logger.info("Installed postgres_fdw extension.")
 
                 statement.execute(
-                        "CREATE SERVER IF NOT EXISTS $PRODUCTION FOREIGN DATA WRAPPER postgres_fdw " +
+                        "CREATE SERVER IF NOT EXISTS $PRODUCTION_SERVER FOREIGN DATA WRAPPER postgres_fdw " +
                                 "OPTIONS (host '${assemblerConfiguration.foreignHost}', " +
                                 "dbname '${assemblerConfiguration.foreignDbName}', " +
                                 "port '${assemblerConfiguration.foreignPort}')"
                 )
                 logger.info("Created foreign server definition. ")
                 statement.execute(
-                        "CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER SERVER $PRODUCTION " +
+                        "CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER SERVER $PRODUCTION_SERVER " +
                                 "OPTIONS ( user '${assemblerConfiguration.foreignUsername}', " +
                                 "password '${assemblerConfiguration.foreignPassword}')"
                 )
@@ -520,10 +520,10 @@ class AssemblerConnectionManager(
                 statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
                 logger.info("Created user mapping. ")
                 statement.execute(
-                        "IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA"
+                        "IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
                 )
                 statement.execute(
-                        "IMPORT FOREIGN SCHEMA public LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION INTO $PRODUCTION_FOREIGN_SCHEMA"
+                        "IMPORT FOREIGN SCHEMA public LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
                 )
                 logger.info("Imported foreign schema")
             }
@@ -535,6 +535,7 @@ class AssemblerConnectionManager(
 const val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
 const val PRODUCTION_FOREIGN_SCHEMA = "prod"
 const val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
+const val PRODUCTION_SERVER = "olprod"
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
 

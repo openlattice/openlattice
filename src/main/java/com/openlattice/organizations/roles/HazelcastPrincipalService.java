@@ -23,6 +23,7 @@ package com.openlattice.organizations.roles;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
@@ -265,7 +266,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     @Override
     public boolean principalHasChildPrincipal( AclKey parent, AclKey child ) {
-        return principalTrees.get( parent ).contains( child );
+        return MoreObjects.firstNonNull( principalTrees.get( parent ), ImmutableSet.of() ).contains( child );
     }
 
     @Override

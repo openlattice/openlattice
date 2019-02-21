@@ -38,13 +38,13 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-private val logger = LoggerFactory.getLogger(OrganizationBootstrap::class.java)
+private val logger = LoggerFactory.getLogger(OrganizationsInitializationTask::class.java)
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OrganizationBootstrap() : HazelcastInitializationTask<OrganizationBootstrapDependencies> {
+class OrganizationsInitializationTask() : HazelcastInitializationTask<OrganizationBootstrapDependencies> {
     override fun initialize(dependencies: OrganizationBootstrapDependencies) {
         logger.info("Running bootstrap process for organizations.")
         val sw = Stopwatch.createStarted()

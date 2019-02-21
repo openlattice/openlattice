@@ -23,7 +23,7 @@ package com.openlattice.assembler.tasks
 
 import com.openlattice.assembler.*
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.organizations.OrganizationBootstrap
+import com.openlattice.organizations.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
@@ -50,10 +50,12 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
                     logger.info("Removing old user ${user.name} from production database")
                     dependencies.hds.connection.use { connection ->
                         connection.createStatement().use { stmt ->
-                            stmt.execute("DROP ROLE ${quote(user.name)}")
+                            stmt.execute(dropUserIfExistsSql(user.name))
                         }
                     }
                     dependencies.dbCredentialService.deleteUserCredential(user.name)
+                    //Also remove from materialize views server.
+                    dependencies.assemblerConnectionManager.dropUserIfExists(user)
                     logger.info("Removed old user ${user.name} from production database")
                 }
         logger.info("Cleaning out style users from materialzied view server.")
@@ -62,7 +64,7 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationBootstrap::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
     }
 
     override fun getInitialDelay(): Long {
