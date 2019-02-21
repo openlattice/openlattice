@@ -319,7 +319,7 @@ class LinkingFeedbackTest : SetupTestData() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Feedback can only be submitted for entities contained by linking entity set", true))
+                    .contains("Feedback can only be submitted for entities with same linking id", true))
         }
     }
 }
