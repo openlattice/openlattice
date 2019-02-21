@@ -21,8 +21,6 @@
 
 package com.openlattice.hazelcast.serializers
 
-import com.openlattice.tasks.HazelcastInitializationTask
-
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;

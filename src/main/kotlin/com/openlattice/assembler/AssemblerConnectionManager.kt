@@ -534,7 +534,7 @@ class AssemblerConnectionManager(
 
 const val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
 const val PRODUCTION_FOREIGN_SCHEMA = "prod"
-const val PRODUCTION_VIEWS_SCHEMA = "olviews"
+const val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
 

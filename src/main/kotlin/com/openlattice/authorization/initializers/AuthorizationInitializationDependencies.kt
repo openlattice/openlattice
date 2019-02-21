@@ -28,6 +28,6 @@ import com.openlattice.tasks.HazelcastTaskDependencies
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class AuthorizationBootstrapDependencies(
+class AuthorizationInitializationDependencies(
         val securePrincipalsManager: SecurePrincipalsManager
 ) : HazelcastTaskDependencies

@@ -45,7 +45,7 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.authorization.initializers.AuthorizationBootstrap;
+import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.UserDirectoryService;
@@ -420,13 +420,13 @@ public class HazelcastOrganizationService {
     }
 
     private void fixOrganizations() {
-        checkNotNull( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() );
+        checkNotNull( AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.getPrincipal() );
         logger.info( "Fixing organizations." );
         for ( SecurablePrincipal organization : securePrincipalsManager
                 .getSecurablePrincipals( PrincipalType.ORGANIZATION ) ) {
             authorizations.setSecurableObjectType( organization.getAclKey(), SecurableObjectType.Organization );
             authorizations.addPermission( organization.getAclKey(),
-                    AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal(),
+                    AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.getPrincipal(),
                     EnumSet.allOf( Permission.class ) );
 
             logger.info( "Setting titles, descriptions, and autoApproved e-mails domains if not present." );
@@ -460,7 +460,7 @@ public class HazelcastOrganizationService {
 
             logger.info( "Synchronizing admins." );
             var adminPrincipals = PrincipalSet.wrap( securePrincipalsManager.getAllUsersWithPrincipal(
-                    securePrincipalsManager.lookup( AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.getPrincipal() ) )
+                    securePrincipalsManager.lookup( AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.getPrincipal() ) )
                     .stream()
                     .collect( Collectors.toSet() ) );
 

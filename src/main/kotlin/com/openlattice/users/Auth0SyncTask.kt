@@ -27,7 +27,7 @@ import com.hazelcast.core.IMap
 import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.authorization.*
-import com.openlattice.authorization.initializers.AuthorizationBootstrap
+import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.authorization.mapstores.UserMapstore
 import com.openlattice.client.RetrofitFactory
 import com.openlattice.datastore.services.Auth0ManagementApi
@@ -84,8 +84,8 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
                 ds.auth0TokenProvider.managementApiUrl
         ) { ds.auth0TokenProvider.token }
         val auth0ManagementApi = retrofit.create(Auth0ManagementApi::class.java)
-        val userRoleAclKey: AclKey = ds.spm.lookup(AuthorizationBootstrap.GLOBAL_USER_ROLE.principal)
-        val adminRoleAclKey: AclKey = ds.spm.lookup(AuthorizationBootstrap.GLOBAL_ADMIN_ROLE.principal)
+        val userRoleAclKey: AclKey = ds.spm.lookup(AuthorizationInitializationTask.GLOBAL_USER_ROLE.principal)
+        val adminRoleAclKey: AclKey = ds.spm.lookup(AuthorizationInitializationTask.GLOBAL_ADMIN_ROLE.principal)
 
         val globalOrganizationAclKey: AclKey = ds.spm.lookup(
                 GLOBAL_ORG_PRINCIPAL
@@ -119,6 +119,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
                                 )
                             }
 
+                            //If the user is an admin but doesn't have admin permissions grant him correct permissions.
                             if (user.roles.contains(SystemRole.ADMIN.getName())) {
                                 val principal = ds.spm.getPrincipal(userId)
                                 if (!ds.spm.principalHasChildPrincipal(principal.aclKey, adminRoleAclKey)) {
@@ -129,7 +130,6 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
                                                     principal.principal
                                             )
                                 }
-
                             }
                         }
                 pageOfUsers = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
