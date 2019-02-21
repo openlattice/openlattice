@@ -69,7 +69,7 @@ import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected final static Map<String, Retrofit> retrofitMap = new HashMap<>();
-    protected final static Map<String, Retrofit> indexerRetrofitMap = new HashMap<>();
+    protected final static Map<String, Retrofit> linkerRetrofitMap = new HashMap<>();
 
     protected static EdmApi edmApi;
     protected static PermissionsApi permissionsApi;
@@ -89,7 +89,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         retrofitMap.put( "user2", retrofit2 );
         retrofitMap.put( "user3", retrofit3 );
         retrofitMap.put( "prod", retrofitProd );
-        indexerRetrofitMap.put( "admin", retrofitLinker );
+        linkerRetrofitMap.put( "admin", retrofitLinker );
     }
 
     /**
@@ -112,10 +112,10 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         entitySetsApi = currentRetrofit.create( EntitySetsApi.class );
         analysisApi = currentRetrofit.create( AnalysisApi.class );
 
-        Retrofit indexerRetrofit = indexerRetrofitMap.get( user );
-        if ( indexerRetrofit != null ) {
-            realtimeLinkingApi = indexerRetrofit.create( RealtimeLinkingApi.class );
-            linkingFeedbackApi = indexerRetrofit.create( LinkingFeedbackApi.class );
+        Retrofit linkerRetrofit = linkerRetrofitMap.get( user );
+        if ( linkerRetrofit != null ) {
+            realtimeLinkingApi = linkerRetrofit.create( RealtimeLinkingApi.class );
+            linkingFeedbackApi = linkerRetrofit.create( LinkingFeedbackApi.class );
         }
     }
 
