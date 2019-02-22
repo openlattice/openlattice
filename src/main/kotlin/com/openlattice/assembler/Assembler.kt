@@ -157,7 +157,7 @@ class Assembler(
                 EnumSet.allOf(MetadataOption::class.java),
                 authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 entitySet.isLinking,
-                entitySet.isLinking
+                false //Always provide entity set id
         )
 
         //Drop and recreate the view with the latest schema

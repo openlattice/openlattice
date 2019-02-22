@@ -136,7 +136,11 @@ class AssemblerConnectionManager(
 
             organization.members
                     .filter { it.id != "openlatticeRole" && it.id != "admin" }
-                    .filter { securePrincipalsManager.principalExists(it) } //There are some bad principals in the member list some how-- probably from testing.
+                    .filter {
+                        securePrincipalsManager.principalExists(
+                                it
+                        )
+                    } //There are some bad principals in the member list some how-- probably from testing.
                     .forEach { principal ->
                         configureUserInDatabase(
                                 datasource,
@@ -351,7 +355,7 @@ class AssemblerConnectionManager(
             properties: Set<FullQualifiedName>
     ): String {
         val postgresUserName = if (principal.type == PrincipalType.USER) {
-            DataTables.quote(principal.id)
+            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
         } else {
             buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
         }
