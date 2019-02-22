@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.linker.pods;
+package com.openlattice.linking.pods;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
@@ -41,7 +41,6 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.RealtimeLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
-import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
