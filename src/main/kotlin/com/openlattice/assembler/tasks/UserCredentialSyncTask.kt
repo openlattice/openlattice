@@ -22,33 +22,49 @@
 package com.openlattice.assembler.tasks
 
 import com.openlattice.assembler.*
+import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.organizations.OrganizationsInitializationTask
+import com.openlattice.postgres.DataTables
 import com.openlattice.tasks.HazelcastInitializationTask
+import com.openlattice.tasks.PostConstructInitializerTaskDependencies
+import com.openlattice.tasks.PostConstructInitializerTaskDependencies.*
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
+import java.lang.Exception
 import java.util.concurrent.TimeUnit
 
-private val logger = LoggerFactory.getLogger(ProductionViewSchemaInitializationTask::class.java)
+
+private val logger = LoggerFactory.getLogger(UserCredentialSyncTask::class.java)
 
 /**
- * This task initialization the schema where productions views read by the materialization server will live.
  *
- * TODO: Permission this schema so that it is only usable by a special restricted account.
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class ProductionViewSchemaInitializationTask : HazelcastInitializationTask<AssemblerDependencies> {
+class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies> {
     override fun initialize(dependencies: AssemblerDependencies) {
-        dependencies.hds.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_VIEWS_SCHEMA")
-            }
-            logger.info("Created $PRODUCTION_VIEWS_SCHEMA schema if it didn't exist.")
-        }
+        dependencies
+                .assemblerConnectionManager
+                .getAllUsers(dependencies.securePrincipalsManager)
+                .forEach { user ->
+                    dependencies.target.connection.use { conn ->
+                        conn.createStatement().use { stmt ->
+                            val username = buildPostgresUsername(user)
+                            val credential = dependencies.dbCredentialService.getOrCreateUserCredentials(username)
+                            try {
+                                stmt.execute(
+                                        "ALTER USER ${DataTables.quote(username)} WITH ENCRYPTED PASSWORD '$credential'"
+                                )
+                            } catch (ex: Exception) {
+                                logger.error("Unable to set credential for user {}", username, ex)
+                            }
+                        }
+                    }
+                }
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(PostConstructInitializerTask::class.java)
     }
 
     override fun getInitialDelay(): Long {
@@ -60,11 +76,14 @@ class ProductionViewSchemaInitializationTask : HazelcastInitializationTask<Assem
     }
 
     override fun getName(): String {
-        return Task.PRODUCTION_VIEW_INITIALIZATON.name
+        return Task.USER_CREDENTIAL_SYNC_TASK.name
     }
 
     override fun getDependenciesClass(): Class<out AssemblerDependencies> {
         return AssemblerDependencies::class.java
     }
 
+    override fun isRunOnceAcrossCluster(): Boolean {
+        return false
+    }
 }

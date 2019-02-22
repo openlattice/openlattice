@@ -136,7 +136,9 @@ class AssemblerConnectionManager(
 
             organization.members
                     .filter { it.id != "openlatticeRole" && it.id != "admin" }
-                    .filter { securePrincipalsManager.principalExists(it) } //There are some bad principals in the member list some how-- probably from testing.
+                    .filter {
+                        securePrincipalsManager.principalExists(it)
+                    } //There are some bad principals in the member list some how-- probably from testing.
                     .forEach { principal ->
                         configureUserInDatabase(
                                 datasource,
@@ -270,7 +272,7 @@ class AssemblerConnectionManager(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ) {
         materializeEntitySetsTimer.time().use {
-            val entitySet = entitySets[entitySetId]!!
+            val entitySet = entitySets.getValue(entitySetId)
             val propertyFqns = authorizedPropertyTypes
                     .mapValues { quote(it.value.type.fullQualifiedNameAsString) }
                     .values.joinToString(",")
@@ -351,14 +353,14 @@ class AssemblerConnectionManager(
             properties: Set<FullQualifiedName>
     ): String {
         val postgresUserName = if (principal.type == PrincipalType.USER) {
-            DataTables.quote(principal.id)
+            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
         } else {
             buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
         }
         return "GRANT SELECT " +
                 "(${properties.joinToString(",") { DataTables.quote(it.fullQualifiedNameAsString) }}) " +
                 "ON $entitySetTableName " +
-                "TO $postgresUserName"
+                "TO ${DataTables.quote(postgresUserName)}"
     }
 
     /**
@@ -500,7 +502,7 @@ class AssemblerConnectionManager(
                 logger.info("Revoking public schema right from user: {}", userId)
                 statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbUser")
                 //Set the search path for the user
-                statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA,public")
+                statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA")
 
                 return@use
             }
