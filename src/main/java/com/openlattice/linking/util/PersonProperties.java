@@ -27,7 +27,6 @@ import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
@@ -58,9 +57,8 @@ public class PersonProperties {
     private static final FullQualifiedName ETHNICITY_FQN      = new FullQualifiedName( "nc.PersonEthnicity" );
     private static final FullQualifiedName DOB_FQN            = new FullQualifiedName( "nc.PersonBirthDate" );
     private static final FullQualifiedName IDENTIFICATION_FQN = new FullQualifiedName( "nc.SubjectIdentification" );
-    private static final FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.ssn" );
-    private static final FullQualifiedName AGE_FQN            = new FullQualifiedName( "person.age" );
-    private static final FullQualifiedName XREF_FQN           = new FullQualifiedName( "justice.xref" );
+    private static final FullQualifiedName SSN_FQN            = new FullQualifiedName( "nc.SSN" );
+
     public static final Set<FullQualifiedName> FQNS = ImmutableSet.of( FIRST_NAME_FQN,
             MIDDLE_NAME_FQN,
             LAST_NAME_FQN,
@@ -69,9 +67,7 @@ public class PersonProperties {
             ETHNICITY_FQN,
             DOB_FQN,
             IDENTIFICATION_FQN,
-            SSN_FQN,
-            AGE_FQN,
-            XREF_FQN );
+            SSN_FQN );
     private static Map<String, Double> firstNameCounts;
     private static Map<String, Double> lastNameCounts;
     private static final DecimalFormat dd = new DecimalFormat( "00" );
@@ -207,26 +203,6 @@ public class PersonProperties {
 
     public static int getHasSsn( Map<UUID, DelegatedStringSet> entity, Map<FullQualifiedName, UUID> fqnToIdMap ) {
         return valueIsPresent( entity, fqnToIdMap.get( SSN_FQN ) );
-    }
-
-    public static DelegatedStringSet getAge(
-            Map<UUID, DelegatedStringSet> entity,
-            Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        return getValuesAsSet( entity, fqnToIdMap.get( AGE_FQN ) );
-    }
-
-    public static int getHasAge( Map<UUID, DelegatedStringSet> entity, Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        return valueIsPresent( entity, fqnToIdMap.get( AGE_FQN ) );
-    }
-
-    public static DelegatedStringSet getXref(
-            Map<UUID, DelegatedStringSet> entity,
-            Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        return getValuesAsSet( entity, fqnToIdMap.get( XREF_FQN ) );
-    }
-
-    public static int getHasXref( Map<UUID, DelegatedStringSet> entity, Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        return valueIsPresent( entity, fqnToIdMap.get( XREF_FQN ) );
     }
 
     public static double getFirstProba(

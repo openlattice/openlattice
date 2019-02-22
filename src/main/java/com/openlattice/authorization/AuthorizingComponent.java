@@ -27,6 +27,7 @@ import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISS
 
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.edm.type.PropertyType;
 import java.util.EnumMap;
 import java.util.EnumSet;

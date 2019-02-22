@@ -101,11 +101,6 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID,
                             EDGE_ENTITY_SET_ID,
                             EDGE_ENTITY_KEY_ID );
-
-    public static final PostgresTableDefinition        EDM_VERSIONS                 =
-            new PostgresTableDefinition( "edm_versions" )
-                    .addColumns( EDM_VERSION_NAME, EDM_VERSION )
-                    .primaryKey( EDM_VERSION_NAME, EDM_VERSION );
     public static final PostgresTableDefinition        ENTITY_QUERIES               =
             new PostgresTableDefinition( "entity_graph_queries" )
                     .addColumns( QUERY_ID, ID_VALUE, CLAUSES )
@@ -192,7 +187,7 @@ public final class PostgresTable {
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
                     .addColumns( PARTITION_INDEX, MSB, LSB );
-    public static final PostgresTableDefinition MATCHED_ENTITIES        =
+    public static final PostgresTableDefinition        MATCHED_ENTITIES             =
             new CitusDistributedTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
                             SRC_ENTITY_SET_ID,
@@ -205,7 +200,21 @@ public final class PostgresTable {
                             SRC_ENTITY_KEY_ID,
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID )
-                    .distributionColumn( ID );
+                    .distributionColumn( LINKING_ID );
+
+    public static final PostgresTableDefinition LINKING_FEEDBACK         =
+            new PostgresTableDefinition( "linking_feedback" )
+                    .addColumns(
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID,
+                            LINKED )
+                    .primaryKey(
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID );
     //.setUnique( NAME );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES =
             new PostgresTableDefinition( "organization_assemblies" )

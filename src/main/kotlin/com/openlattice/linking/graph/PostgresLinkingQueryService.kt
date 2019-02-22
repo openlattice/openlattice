@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 package com.openlattice.linking.graph
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.linking.EntityKeyPair
 import com.openlattice.linking.LinkingQueryService
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresArrays
@@ -170,16 +171,16 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         )
     }
 
-    override fun getNeighborhoodScores(u: EntityDataKey): Map<EntityDataKey, Double> {
+    override fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
                     val ps = connection.prepareStatement(NEIGHBORHOOD_SQL)
 
-                    ps.setObject(1, u.entitySetId)
-                    ps.setObject(2, u.entityKeyId)
-                    ps.setObject(3, u.entitySetId)
-                    ps.setObject(4, u.entityKeyId)
+                    ps.setObject(1, blockKey.entitySetId)
+                    ps.setObject(2, blockKey.entityKeyId)
+                    ps.setObject(3, blockKey.entitySetId)
+                    ps.setObject(4, blockKey.entityKeyId)
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
@@ -197,11 +198,11 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                 }).toMap()
     }
 
-    override fun insertMatchScores(clusterId: UUID, score: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int {
+    override fun insertMatchScores(clusterId: UUID, scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int {
         hds.connection.use {
             it.prepareStatement(INSERT_SQL).use {
                 val ps = it
-                score.forEach {
+                scores.forEach {
                     val srcEntityDataKey = it.key
                     it.value.forEach {
                         val dstEntityDataKey = it.key
@@ -236,25 +237,27 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         }
     }
 
-    override fun deleteMatchScore(u: EntityDataKey, v: EntityDataKey): Int {
+    override fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int {
         hds.connection.use {
             it.prepareStatement(DELETE_SQL).use {
-                it.setObject(1, u.entitySetId)
-                it.setObject(2, u.entityKeyId)
-                it.setObject(3, v.entitySetId)
-                it.setObject(4, v.entityKeyId)
+                it.setObject(1, blockKey.entitySetId)
+                it.setObject(2, blockKey.entityKeyId)
+                it.setObject(3, blockElement.entitySetId)
+                it.setObject(4, blockElement.entityKeyId)
                 return it.executeUpdate()
             }
         }
     }
 
-    override fun deleteNeighborhood(u: EntityDataKey): Int {
+    override fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int {
+        val deleteNeighborHoodSql = DELETE_NEIGHBORHOOD_SQL +
+                if (!positiveFeedbacks.isEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(positiveFeedbacks)} )" else ""
         hds.connection.use {
-            it.prepareStatement(DELETE_NEIGHBORHOOD_SQL).use {
-                it.setObject(1, u.entitySetId)
-                it.setObject(2, u.entityKeyId)
-                it.setObject(3, u.entitySetId)
-                it.setObject(4, u.entityKeyId)
+            it.prepareStatement(deleteNeighborHoodSql).use {
+                it.setObject(1, entity.entitySetId)
+                it.setObject(2, entity.entityKeyId)
+                it.setObject(3, entity.entitySetId)
+                it.setObject(4, entity.entityKeyId)
                 return it.executeUpdate()
             }
         }
@@ -281,6 +284,20 @@ internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): Strin
             "OR ((${DST_ENTITY_SET_ID.name},${DST_ENTITY_KEY_ID.name}) IN ($dataKeysSql))"
 }
 
+internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): String {
+    return entityKeyPairs.joinToString(" OR ") {
+        "( (${SRC_ENTITY_SET_ID.name} = ${uuidString(it.first.entitySetId)} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
+                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(it.second.entitySetId)} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
+                " OR " +
+                "(${SRC_ENTITY_SET_ID.name} = ${uuidString(it.second.entitySetId)} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)} " +
+                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(it.first.entitySetId)} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)}) )"
+    }
+}
+
+internal fun uuidString(id: UUID): String {
+    return "'$id'::uuid"
+}
+
 
 private val COLUMNS = listOf(
         LINKING_ID,
@@ -298,8 +315,8 @@ private val DELETE_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
         "AND ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?"
 
 private val DELETE_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
-        "WHERE (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) " +
-        "OR (${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?)"
+        "WHERE ( (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) " +
+        "OR (${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?) )"
 
 private val DELETE_NEIGHBORHOODS_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
