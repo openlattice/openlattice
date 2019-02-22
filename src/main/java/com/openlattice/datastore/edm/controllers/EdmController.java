@@ -27,7 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -114,7 +114,7 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     private PostgresEdmManager edmManager;
 
     @Inject
-    private AbstractSecurableObjectResolveTypeService securableObjectTypes;
+    private SecurableObjectResolveTypeService securableObjectTypes;
 
     @Inject
     private AuthenticationManager authenticationManager;
