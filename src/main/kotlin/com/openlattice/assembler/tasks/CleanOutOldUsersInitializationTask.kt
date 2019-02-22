@@ -115,6 +115,4 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
     override fun getDependenciesClass(): Class<out AssemblerDependencies> {
         return AssemblerDependencies::class.java
     }
-
-
 }

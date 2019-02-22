@@ -55,7 +55,7 @@ import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
-import com.openlattice.tasks.PostInitializerDependencies.PostInitializerTask
+import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
@@ -119,20 +119,12 @@ class Assembler(
         createOrganization(organization.id, organization.principal.id)
     }
 
-    fun createOrganization(organizationId: UUID, organizationPrincipalId: String) {
+    fun createOrganization(organizationId: UUID, dbname: String) {
         createOrganizationTimer.time().use {
-            assemblies.set(organizationId, OrganizationAssembly(organizationId, organizationPrincipalId))
+            assemblies.set(organizationId, OrganizationAssembly(organizationId, dbname))
             assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
             return@use
         }
-    }
-
-    fun initialize() {
-        initializeOrganizations()
-    }
-
-    private fun initializeOrganizations() {
-
     }
 
     fun materializeEntitySets(
@@ -165,7 +157,7 @@ class Assembler(
                 EnumSet.allOf(MetadataOption::class.java),
                 authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 entitySet.isLinking,
-                entitySet.isLinking
+                false //Always provide entity set id
         )
 
         //Drop and recreate the view with the latest schema
@@ -252,7 +244,7 @@ class Assembler(
                     )
                 } else {
                     logger.info("Initializing database for organization {}", organizationId)
-                    dependencies.createOrganization(organizationId, organizationPrincipal.principal.id)
+                    dependencies.createOrganization(organizationId, PostgresDatabases.buildOrganizationDatabaseName(organizationId))
                 }
             }
         }
@@ -260,7 +252,7 @@ class Assembler(
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
             return setOf(
                     EntitySetViewsInitializerTask::class.java,
-                    PostInitializerTask::class.java
+                    PostConstructInitializerTask::class.java
             )
         }
 

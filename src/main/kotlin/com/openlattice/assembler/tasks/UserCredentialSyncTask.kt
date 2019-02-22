@@ -22,31 +22,49 @@
 package com.openlattice.assembler.tasks
 
 import com.openlattice.assembler.*
+import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.organizations.tasks.OrganizationsInitializationTask
+import com.openlattice.organizations.OrganizationsInitializationTask
+import com.openlattice.postgres.DataTables
 import com.openlattice.tasks.HazelcastInitializationTask
+import com.openlattice.tasks.PostConstructInitializerTaskDependencies
+import com.openlattice.tasks.PostConstructInitializerTaskDependencies.*
 import com.openlattice.tasks.Task
+import org.slf4j.LoggerFactory
+import java.lang.Exception
 import java.util.concurrent.TimeUnit
+
+
+private val logger = LoggerFactory.getLogger(UserCredentialSyncTask::class.java)
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDependencies> {
+class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies> {
     override fun initialize(dependencies: AssemblerDependencies) {
         dependencies
                 .assemblerConnectionManager
-                .getAllRoles(dependencies.securePrincipalsManager)
-                .map(dependencies.assemblerConnectionManager::createRole)
-        dependencies
-                .assemblerConnectionManager
                 .getAllUsers(dependencies.securePrincipalsManager)
-                .map(dependencies.assemblerConnectionManager::createUnprivilegedUser)
-
+                .forEach { user ->
+                    dependencies.target.connection.use { conn ->
+                        conn.createStatement().use { stmt ->
+                            val username = buildPostgresUsername(user)
+                            val credential = dependencies.dbCredentialService.getOrCreateUserCredentials(username)
+                            try {
+                                stmt.execute(
+                                        "ALTER USER ${DataTables.quote(username)} WITH ENCRYPTED PASSWORD '$credential'"
+                                )
+                            } catch (ex: Exception) {
+                                logger.error("Unable to set credential for user {}", username, ex)
+                            }
+                        }
+                    }
+                }
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(OrganizationsInitializationTask::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(PostConstructInitializerTask::class.java)
     }
 
     override fun getInitialDelay(): Long {
@@ -58,10 +76,14 @@ class UsersAndRolesInitializationTask : HazelcastInitializationTask<AssemblerDep
     }
 
     override fun getName(): String {
-        return Task.USERS_AND_ROLES_INITIALIZATON.name
+        return Task.USER_CREDENTIAL_SYNC_TASK.name
     }
 
     override fun getDependenciesClass(): Class<out AssemblerDependencies> {
         return AssemblerDependencies::class.java
+    }
+
+    override fun isRunOnceAcrossCluster(): Boolean {
+        return false
     }
 }
