@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.linker.pods;
+package com.openlattice.linking.pods;
 
 import static com.openlattice.linking.MatcherKt.DL4J;
 import static com.openlattice.linking.MatcherKt.KERAS;

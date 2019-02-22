@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,29 +16,27 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.linker.pods;
+package com.openlattice.linking.pods;
 
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.hazelcast.serializers.ConductorElasticsearchCallStreamSerializer;
-
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-
+import com.google.common.collect.Lists;
+import com.kryptnostic.rhizome.configuration.servlets.DispatcherServletConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class PlasmaCoupling {
+public class LinkerServletsPod {
 
-    @Inject
-    private ConductorElasticsearchApi elasticsearchApi;
+    @Bean
+    public DispatcherServletConfiguration indexerServlet() {
 
-    @Inject
-    private ConductorElasticsearchCallStreamSerializer cecss;
-
-    @PostConstruct
-    public void connect() {
-        cecss.setConductorElasticsearchApi(elasticsearchApi);
+        return new DispatcherServletConfiguration(
+                "linker",
+                new String[]{ "/linker/*" },
+                1,
+                Lists.newArrayList( LinkerMvcPod.class )
+        );
     }
 }

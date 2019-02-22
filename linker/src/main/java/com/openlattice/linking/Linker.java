@@ -18,7 +18,7 @@
  *
  */
 
-package com.openlattice.linker;
+package com.openlattice.linking;
 
 import com.kryptnostic.rhizome.configuration.websockets.BaseRhizomeServer;
 import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
@@ -31,11 +31,11 @@ import com.openlattice.datastore.cassandra.CassandraTablesPod;
 import com.openlattice.hazelcast.pods.MapstoresPod;
 import com.openlattice.hazelcast.pods.SharedStreamSerializersPod;
 import com.openlattice.jdbc.JdbcPod;
-import com.openlattice.linker.pods.LinkerPostConfigurationServicesPod;
-import com.openlattice.linker.pods.LinkerSecurityPod;
-import com.openlattice.linker.pods.LinkerServicesPod;
-import com.openlattice.linker.pods.LinkerServletsPod;
-import com.openlattice.linker.pods.PlasmaCoupling;
+import com.openlattice.linking.pods.LinkerPostConfigurationServicesPod;
+import com.openlattice.linking.pods.LinkerSecurityPod;
+import com.openlattice.linking.pods.LinkerServicesPod;
+import com.openlattice.linking.pods.LinkerServletsPod;
+import com.openlattice.linking.pods.PlasmaCoupling;
 import com.openlattice.mail.pods.MailServicePod;
 import com.openlattice.mail.services.MailService;
 import com.openlattice.postgres.PostgresPod;

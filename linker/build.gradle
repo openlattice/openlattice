@@ -85,6 +85,13 @@ if (GC == 'null' || GC == null || GC == "") {
 
 mainClassName = "com.openlattice.linking.Linker"
 applicationDefaultJvmArgs = [LINKER_XMS, LINKER_XMX, "-server", GC, PARALLEL]
+applicationDefaultJvmArgs += ["--add-modules", "java.se",
+                              "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
+                              "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+                              "--add-opens", "java.base/java.nio=ALL-UNNAMED",
+                              "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
+                              "--add-opens", "java.management/sun.management=ALL-UNNAMED",
+                              "--add-opens", "jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
@@ -164,23 +171,23 @@ eclipse {
 eclipse.classpath.plusConfigurations += [configurations.provided]
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs+= [ "--add-modules", "java.se",
-                             "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
-                             "--add-opens","java.base/java.lang=ALL-UNNAMED",
-                             "--add-opens","java.base/java.nio=ALL-UNNAMED",
-                             "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
-                             "--add-opens","java.management/sun.management=ALL-UNNAMED",
-                             "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+    options.compilerArgs += ["--add-modules", "java.se",
+                             "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
+                             "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+                             "--add-opens", "java.base/java.nio=ALL-UNNAMED",
+                             "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
+                             "--add-opens", "java.management/sun.management=ALL-UNNAMED",
+                             "--add-opens", "jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 }
 
 tasks.withType(Test) {
-    jvmArgs += [ "--add-modules", "java.se",
-                 "--add-exports","java.base/jdk.internal.ref=ALL-UNNAMED",
-                 "--add-opens","java.base/java.lang=ALL-UNNAMED",
-                 "--add-opens","java.base/java.nio=ALL-UNNAMED",
-                 "--add-opens","java.base/sun.nio.ch=ALL-UNNAMED",
-                 "--add-opens","java.management/sun.management=ALL-UNNAMED",
-                 "--add-opens","jdk.management/com.sun.management.internal=ALL-UNNAMED"]
+    jvmArgs += ["--add-modules", "java.se",
+                "--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED",
+                "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+                "--add-opens", "java.base/java.nio=ALL-UNNAMED",
+                "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
+                "--add-opens", "java.management/sun.management=ALL-UNNAMED",
+                "--add-opens", "jdk.management/com.sun.management.internal=ALL-UNNAMED"]
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {

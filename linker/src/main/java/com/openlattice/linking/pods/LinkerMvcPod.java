@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.linker.pods;
+package com.openlattice.linking.pods;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.data.DataApi;

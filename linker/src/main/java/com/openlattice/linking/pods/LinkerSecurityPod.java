@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.linker.pods;
+package com.openlattice.linking.pods;
 
 import com.openlattice.auth0.Auth0SecurityPod;
 import org.springframework.context.annotation.Configuration;
