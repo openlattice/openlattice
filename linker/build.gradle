@@ -44,7 +44,7 @@ description = "Linking Server"
 group = "com.openlattice"
 
 distTar {
-    archiveName "linking.tgz"
+    archiveName "linker.tgz"
 }
 
 ext.projectName = "linking"
