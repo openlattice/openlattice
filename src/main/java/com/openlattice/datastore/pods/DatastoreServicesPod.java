@@ -34,7 +34,10 @@ import com.openlattice.analysis.AnalysisService;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.assembler.AssemblerConfiguration;
 import com.openlattice.assembler.AssemblerConnectionManager;
+import com.openlattice.assembler.AssemblerDependencies;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
+import com.openlattice.assembler.tasks.UserCredentialSyncTask;
+import com.openlattice.assembler.tasks.UserCredentialSyncTaskKt;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auth0.Auth0Pod;
@@ -79,6 +82,7 @@ import com.openlattice.graph.Graph;
 import com.openlattice.graph.GraphQueryService;
 import com.openlattice.graph.PostgresGraphQueryService;
 import com.openlattice.graph.core.GraphService;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -275,6 +279,25 @@ public class DatastoreServicesPod {
                 userDirectoryService(),
                 principalService(),
                 assembler() );
+    }
+
+    @Bean
+    public AssemblerDependencies assemblerDependencies() {
+        return new AssemblerDependencies(
+                assemblerConfiguration,
+                hikariDataSource,
+                principalService(),
+                organizationsManager(),
+                dcs(),
+                hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() ),
+                assemblerConnectionManager(),
+                hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() ),
+                metricRegistry );
+    }
+
+    @Bean
+    public UserCredentialSyncTask userCredentialSyncTask() {
+        return new UserCredentialSyncTask();
     }
 
     @Bean
