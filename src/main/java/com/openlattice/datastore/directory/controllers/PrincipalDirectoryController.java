@@ -140,6 +140,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Auth0UserBasic getUser( @PathVariable( USER_ID ) String userId ) {
+        ensureAdminAccess();
         return userDirectoryService.getUser( userId );
     }
 
@@ -217,8 +218,8 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
             method = RequestMethod.GET,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public MaterializedViewAccount getMaterializedViewAccount() {
-        final var principal = Principals.getCurrentSecurablePrincipal();
-        return new MaterializedViewAccount( PostgresRoles.buildPostgresUsername( principal ), dbCredService.getDbCredential( principal.getName() ) );
+        final var principal =  PostgresRoles.buildPostgresUsername( Principals.getCurrentSecurablePrincipal() );
+        return new MaterializedViewAccount(principal, dbCredService.getDbCredential( principal) );
     }
 
     @Override
