@@ -188,7 +188,11 @@ public class DataController implements DataApi, AuthorizingComponent {
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
+
             EntitySet es = edmService.getEntitySet( entitySetId );
+            Optional<Set<UUID>> entityKeyIds = (selection == null) ? Optional.empty() : selection.getEntityKeyIds();
+            Optional<Set<UUID>> propertyTypeIds = (selection == null) ? Optional.empty() : selection.getProperties();
+
             if ( es.isLinking() ) {
                 Set<UUID> allEntitySetIds = Sets.newHashSet( es.getLinkedEntitySets() );
                 checkState( !allEntitySetIds.isEmpty(),
@@ -196,15 +200,15 @@ public class DataController implements DataApi, AuthorizingComponent {
                 return loadEntitySetData(
                         allEntitySetIds.stream().collect( Collectors.toMap(
                                 Function.identity(),
-                                esId -> selection.getEntityKeyIds() ) ),
+                                esId -> entityKeyIds ) ),
                         allEntitySetIds,
-                        selection,
+                        propertyTypeIds,
                         true );
             } else {
                 return loadEntitySetData(
-                        Map.of( entitySetId, selection.getEntityKeyIds() ),
+                        Map.of( entitySetId, entityKeyIds ),
                         Set.of( entitySetId ),
-                        selection,
+                        propertyTypeIds,
                         false );
             }
         } else {
@@ -215,10 +219,10 @@ public class DataController implements DataApi, AuthorizingComponent {
     private EntitySetData<FullQualifiedName> loadEntitySetData(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             Set<UUID> dataEntitySetIds,
-            EntitySetSelection selection,
+            Optional<Set<UUID>> propertyTypeIds,
             Boolean linking ) {
         final Set<UUID> allProperties = authzHelper.getAllPropertiesOnEntitySet( dataEntitySetIds.iterator().next() );
-        final Set<UUID> selectedProperties = selection.getProperties().orElse( allProperties );
+        final Set<UUID> selectedProperties = propertyTypeIds.orElse( allProperties );
 
         checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
                 "Selected properties are not property types of entity set %s",
