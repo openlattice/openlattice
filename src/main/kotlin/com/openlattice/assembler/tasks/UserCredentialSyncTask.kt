@@ -21,17 +21,13 @@
 
 package com.openlattice.assembler.tasks
 
-import com.openlattice.assembler.*
+import com.openlattice.assembler.AssemblerDependencies
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
-import com.openlattice.authorization.initializers.AuthorizationInitializationTask
-import com.openlattice.organizations.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
 import com.openlattice.tasks.HazelcastInitializationTask
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies
-import com.openlattice.tasks.PostConstructInitializerTaskDependencies.*
+import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
-import java.lang.Exception
 import java.util.concurrent.TimeUnit
 
 
