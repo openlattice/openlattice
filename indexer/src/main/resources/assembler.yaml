@@ -10,5 +10,3 @@ foreignPort: 5432
 foreignUsername: "oltest"
 foreignPassword: "test"
 ssl: false
-initialize:
-testEntitySet:
