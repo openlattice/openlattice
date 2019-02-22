@@ -11,6 +11,10 @@ blacklist:
   - 2ef9d5ce-0245-4f85-95ab-6e4b06f8c8a7
   - 71ddddd6-3c5d-4a8b-8fe3-808d1eb13f19
 whitelist:
+  - d189f747-fa39-4b41-b86e-a056100ed2fa # JC3
+  - 9d9a6c3e-fd82-4599-9dcc-a2602e2bd54d #BerksHC
+  - 6576d2d5-aa5e-4a15-ab56-48387aa405c4 #Guilford Inmates
+  - 681712a1-450f-4a2e-a40d-5d10cb5d6523 #Guilford Arrestees
   #   - 2cade629-d165-4a9d-92e2-44d7836142e2 # MSO
   - 5722abca-5b64-4744-8eb9-26a74fb3013b # MS-Ac
   - 2ab42bf5-8d16-4f8d-a549-7b2de4a525cf # MS-Bi
@@ -19,10 +23,8 @@ whitelist:
   - a6d7d333-4905-4562-bcda-34fe773775eb # MS-Ar
   - 46c83978-a50c-4cff-939a-7b1a8c0ad52c # MS-Bu
   #   - c5a9e6b5-822e-44ca-b19d-e10628618574
-  - d189f747-fa39-4b41-b86e-a056100ed2fa # JC3
   - e9dc56bf-7cf9-4e25-8969-1ac4c1b1e1ec #BerksInmates
   - 87707f36-14f4-44c2-a3cb-f140389f7067 #BerksParolees
-  - a3ee392f-3e4b-4185-917f-22800acc1d02 #BerksHC
   - 4e369747-66aa-432f-8aa3-2591cee0fa8d #BerksCEH
   #   - 6b32e5a9-9858-449a-a228-8340486d84b7 # JC1
   #   - b278d952-3bad-420e-9e0d-f66352760f42 # JC2
@@ -35,6 +37,13 @@ whitelist:
   - 30d476d8-de21-4157-a4da-91b46b5d4341 # DEMO1
   - a8328e14-5024-4595-b4da-a4a3ebb57b2a # DEMO2
   #   - 51992ab5-c315-4696-be93-7780c29d490f #BerksRelcust
+  - fb861624-8374-42dc-b5c2-8ec778c44026 #DaWi
+  - a0790efc-d6df-42a0-8165-2a08ef12b032 #DaWi
+  - 35d01cc3-3ae7-46ea-b6be-37017969c242 #DaWi
+  - 3deef13a-881e-4494-8f80-d06e90b70d0b #DaWi
+  - e612bc32-023c-4733-8c26-1927c9f0383e #DaWi
+  - c5ae29df-676e-4c15-9acd-cd2b452e9731 #DaWi
+  - 9cd97623-0a21-4617-a23c-3489f6f65309 #DaWi
 
   # Only for rehearsal tests
   - 91551726-afa2-4aee-8579-46cdfc610b97 #SocratesTestA
