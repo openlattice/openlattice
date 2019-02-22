@@ -64,7 +64,7 @@ class UserCredentialSyncTask : HazelcastInitializationTask<AssemblerDependencies
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
-        return setOf(PostConstructInitializerTask::class.java, AuthorizationInitializationTask::class.java)
+        return setOf(PostConstructInitializerTask::class.java)
     }
 
     override fun getInitialDelay(): Long {
