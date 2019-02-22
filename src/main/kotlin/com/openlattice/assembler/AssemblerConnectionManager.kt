@@ -137,9 +137,7 @@ class AssemblerConnectionManager(
             organization.members
                     .filter { it.id != "openlatticeRole" && it.id != "admin" }
                     .filter {
-                        securePrincipalsManager.principalExists(
-                                it
-                        )
+                        securePrincipalsManager.principalExists(it)
                     } //There are some bad principals in the member list some how-- probably from testing.
                     .forEach { principal ->
                         configureUserInDatabase(
@@ -504,7 +502,7 @@ class AssemblerConnectionManager(
                 logger.info("Revoking public schema right from user: {}", userId)
                 statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbUser")
                 //Set the search path for the user
-                statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA,public")
+                statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA")
 
                 return@use
             }

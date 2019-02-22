@@ -119,9 +119,9 @@ class Assembler(
         createOrganization(organization.id, organization.principal.id)
     }
 
-    fun createOrganization(organizationId: UUID, organizationPrincipalId: String) {
+    fun createOrganization(organizationId: UUID, dbname: String) {
         createOrganizationTimer.time().use {
-            assemblies.set(organizationId, OrganizationAssembly(organizationId, organizationPrincipalId))
+            assemblies.set(organizationId, OrganizationAssembly(organizationId, dbname))
             assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
             return@use
         }
@@ -244,7 +244,7 @@ class Assembler(
                     )
                 } else {
                     logger.info("Initializing database for organization {}", organizationId)
-                    dependencies.createOrganization(organizationId, organizationPrincipal.principal.id)
+                    dependencies.createOrganization(organizationId, buildOrganizationUserId(organizationId))
                 }
             }
         }
