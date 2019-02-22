@@ -62,4 +62,9 @@ public class AuthorizedObjectsSearchResult {
         return Objects.equals( authorizedObjectsSearchResult.pagingToken, this.pagingToken ) &&
                Objects.equals( authorizedObjectsSearchResult.authorizedObjects, this.authorizedObjects );
     }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash( pagingToken, authorizedObjects );
+    }
 }
