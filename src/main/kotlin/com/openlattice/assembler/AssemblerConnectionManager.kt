@@ -360,7 +360,7 @@ class AssemblerConnectionManager(
         return "GRANT SELECT " +
                 "(${properties.joinToString(",") { DataTables.quote(it.fullQualifiedNameAsString) }}) " +
                 "ON $entitySetTableName " +
-                "TO $postgresUserName"
+                "TO ${DataTables.quote(postgresUserName)}"
     }
 
     /**
