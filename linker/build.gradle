@@ -47,10 +47,10 @@ distTar {
     archiveName "linker.tgz"
 }
 
-ext.projectName = "linking"
-ext.scmUrl = 'scm:git:https://github.com/openlattice/linking.git'
-ext.connectionUrl = 'scm:git:https://github.com/openlattice/linking.git'
-ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/linking.git'
+ext.projectName = "linker"
+ext.scmUrl = 'scm:git:https://github.com/openlattice/linker.git'
+ext.connectionUrl = 'scm:git:https://github.com/openlattice/linker.git'
+ext.developerConnectionUrl = 'scm:git:https://github.com/openlattice/linker.git'
 
 apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openlattice.gradle"
 apply plugin: 'kotlin'
