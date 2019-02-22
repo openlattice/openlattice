@@ -33,11 +33,11 @@ import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
 import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.HazelcastAbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
 import com.openlattice.authorization.HazelcastAclKeyReservationService;
 import com.openlattice.authorization.HazelcastAuthorizationService;
 import com.openlattice.authorization.PostgresUserApi;
@@ -187,8 +187,8 @@ public class IndexerServicesPod {
     }
 
     @Bean
-    public AbstractSecurableObjectResolveTypeService securableObjectTypes() {
-        return new HazelcastAbstractSecurableObjectResolveTypeService( hazelcastInstance );
+    public SecurableObjectResolveTypeService securableObjectTypes() {
+        return new HazelcastSecurableObjectResolveTypeService( hazelcastInstance );
     }
 
     @Bean
