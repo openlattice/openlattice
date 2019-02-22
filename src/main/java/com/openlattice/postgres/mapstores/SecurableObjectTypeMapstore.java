@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 public class SecurableObjectTypeMapstore extends AbstractBasePostgresMapstore<AclKey, SecurableObjectType> {
+    public static final String SECURABLE_OBJECT_TYPE_INDEX = "this";
 
     public SecurableObjectTypeMapstore( HikariDataSource hds ) {
         super( HazelcastMap.SECURABLE_OBJECT_TYPES.name(), SECURABLE_OBJECTS, hds );
@@ -44,7 +45,7 @@ public class SecurableObjectTypeMapstore extends AbstractBasePostgresMapstore<Ac
 
     @Override public MapConfig getMapConfig() {
         return super.getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig( "this", false ) );
+                .addMapIndexConfig( new MapIndexConfig( SECURABLE_OBJECT_TYPE_INDEX, false ) );
     }
 
     @Override public AclKey generateTestKey() {

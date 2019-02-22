@@ -1,5 +1,7 @@
+
+
 /*
- * Copyright (C) 2019. OpenLattice, Inc.
+ * Copyright (C) 2018. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,13 +18,22 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
- *
  */
 
-package com.openlattice.organizations
+package com.openlattice.authorization;
 
-import com.openlattice.tasks.HazelcastTaskDependencies
+import com.openlattice.authorization.securable.SecurableObjectType;
 
-data class OrganizationBootstrapDependencies(
-        val organizationService: HazelcastOrganizationService
-) : HazelcastTaskDependencies
+import com.openlattice.authorization.AclKey;
+import java.util.Set;
+
+public interface SecurableObjectResolveTypeService {
+    
+    void createSecurableObjectType( AclKey aclKey, SecurableObjectType type );
+    
+    void deleteSecurableObjectType( AclKey aclKey );
+    
+    SecurableObjectType getSecurableObjectType( AclKey aclKey );
+
+    Set<AclKey> getSecurableObjectsOfType( SecurableObjectType type );
+}

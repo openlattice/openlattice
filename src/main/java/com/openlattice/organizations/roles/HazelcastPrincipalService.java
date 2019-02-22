@@ -66,6 +66,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -157,7 +158,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public SecurablePrincipal getSecurablePrincipal( AclKey aclKey ) {
+    public @Nullable SecurablePrincipal getSecurablePrincipal( AclKey aclKey ) {
         return principals.get( aclKey );
     }
 

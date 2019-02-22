@@ -25,8 +25,7 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.*
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask
 import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.organizations.OrganizationsInitializationTask
-import com.openlattice.postgres.DataTables.quote
+import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
