@@ -253,6 +253,7 @@ public class DatastoreServicesPod {
         return new PostConstructInitializerTaskDependencies();
     }
 
+    @Bean
     public PostConstructInitializerTask postInitializerTask() {
         return new PostConstructInitializerTask();
     }
