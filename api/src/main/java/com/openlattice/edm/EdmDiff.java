@@ -56,9 +56,4 @@ public class EdmDiff {
     public EntityDataModel getConflicts() {
         return conflicts;
     }
-
-    public boolean getAreVersionsMatching() {
-        return present.getVersion().equals( missing.getVersion() );
-
-    }
 }
