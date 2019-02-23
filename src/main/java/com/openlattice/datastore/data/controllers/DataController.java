@@ -30,16 +30,7 @@ import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticati
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -156,7 +147,7 @@ public class DataController implements DataApi, AuthorizingComponent {
                     .authenticate( PreAuthenticatedAuthenticationJsonWebToken.usingToken( token ) );
             SecurityContextHolder.getContext().setAuthentication( authentication );
         }
-        return loadEntitySetData( entitySetId, new EntitySetSelection( Optional.empty() ) );
+        return loadEntitySetData( entitySetId, null );
     }
 
     @RequestMapping(
@@ -179,6 +170,10 @@ public class DataController implements DataApi, AuthorizingComponent {
             UUID entitySetId,
             EntitySetSelection selection,
             FileType fileType ) {
+        if ( selection != null && selection.getEntityKeyIds().isEmpty() && selection.getProperties().isEmpty() ) {
+            return new EntitySetData<>( Sets.newLinkedHashSet(), Lists.newArrayList() );
+        }
+
         return loadEntitySetData( entitySetId, selection );
     }
 
