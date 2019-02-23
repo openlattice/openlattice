@@ -24,7 +24,6 @@ package com.openlattice.linking
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.collect.MapMaker
-import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityDataKey
@@ -32,12 +31,10 @@ import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.linking.clustering.ClusterUpdate
-import com.openlattice.postgres.streams.PostgresIterable
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import java.util.stream.Stream
@@ -65,6 +62,7 @@ class RealtimeLinkingService
         private val loader: DataLoader,
         private val gqs: LinkingQueryService,
         private val executor: ListeningExecutorService,
+        private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
         private val entitySetBlacklist: Set<UUID>,
         private val whitelist: Optional<Set<UUID>>,
@@ -82,6 +80,7 @@ class RealtimeLinkingService
 
     private val running = ReentrantLock()
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
+
     /**
      * Linking:
      * 1) For each new person entity perform blocking
@@ -96,90 +95,85 @@ class RealtimeLinkingService
 
         entityKeyIds
                 .parallel()
-                .map {
-                    val sw = Stopwatch.createStarted()
-                    val block = blocker.block(entitySetId, it)
-                    logger.info("Blocking ($entitySetId, $it) took ${sw.elapsed(TimeUnit.MILLISECONDS)} ms.")
-                    block
-                }
-                .filter {
-                    if (it.second.containsKey(it.first)) {
-                        return@filter true
-                    } else {
-                        logger.error("Skipping block for data key: {}", it.first)
-                    }
-
-                    false
-                }
                 .forEach {
-                    //block contains element being blocked
-                    val blockKey = it.first
-                    val elem = it.second[blockKey]!!
-                    val sw = Stopwatch.createStarted()
-                    logger.info("Initializing matching for block {}", blockKey)
-                    val initializedBlock = matcher.initialize(it)
-                    logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
-                    val dataKeys = collectKeys(initializedBlock.second)
-                    //While a best cluster is being selected and updated we can't have other clusters being updated
+                    val blockKey = EntityDataKey(entitySetId, it)
 
-                    try {
-                        logger.debug("Acquiring cluster update lock.")
-                        clusterUpdateLock.lock()
-                        logger.debug("Acquired cluster update lock.")
-                        val requiredClusters = gqs.getIdsOfClustersContaining(dataKeys).toList()
-                        logger.debug(
-                                "Currently held cluster locks: {}",
-                                clusterLocks.filter { it.value.isLocked }.map { it.key })
-                        logger.debug("Acquiring locks for required clusters: {}", requiredClusters)
-                        requiredClusters.forEach { clusterLocks.getOrPut(it) { ReentrantLock() }.lock() }
-                        logger.debug("Acquired locks for required clusters: {}", requiredClusters)
-                        clusterUpdateLock.unlock()
-                        logger.debug("Released cluster update lock.")
+                    // if we have positive feedbacks on entity, we use its linking id and match them together
+                    if (hasPositiveFeedback(blockKey)) {
+                        try {
+                            // only linking id of entity should remain, since we cleared neighborhood, except the ones
+                            // with positive feedback
+                            val cluster = getAndLockClusters(setOf(blockKey)).entries.first()
 
-                        val clusters = gqs.getClustersContaining(requiredClusters)
-
-
-                        var maybeBestCluster: ScoredCluster? = null
-                        var highestScore = 10.0 //Arbitrary any positive value should suffice
-
-                        clusters
-                                .forEach {
-                                    val scoredCluster = cluster(blockKey, it, ::completeLinkCluster)
-                                    if (scoredCluster.score > MINIMUM_SCORE && (highestScore > scoredCluster.score || highestScore >= 10)) {
-                                        highestScore = scoredCluster.score
-                                        Optional
-                                                .ofNullable(maybeBestCluster?.clusterId)
-                                                .ifPresent { clusterLocks[it]?.unlock() }
-                                        maybeBestCluster = scoredCluster
-                                    } else {
-                                        clusterLocks[it.key]!!.unlock()
-                                    }
-                                }
-                        val clusterUpdate = if (maybeBestCluster == null) {
-                            val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
-                            clusterLocks.getOrPut(clusterId) { ReentrantLock() }.lock()
-                            val block = blockKey to mapOf(blockKey to elem)
-                            ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
-                        } else {
-                            val bestCluster = maybeBestCluster!!
-                            ClusterUpdate(bestCluster.clusterId, blockKey, bestCluster.cluster)
-                        }
-
-                        gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
-                        gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
-                        clusterLocks[clusterUpdate.clusterId]!!.unlock()
-
-                    } catch (ex: Exception) {
-                        logger.error("An error occurred while performing linking.", ex)
-                        if (clusterUpdateLock.isLocked) {
-                            clusterUpdateLock.unlock()
-                        }
-                        clusterLocks.values.forEach { lock ->
-                            if (lock.isLocked) {
-                                lock.unlock()
+                            val scoredCluster = cluster(blockKey, cluster, ::completeLinkCluster)
+                            if (scoredCluster.score <= MINIMUM_SCORE) {
+                                logger.error("Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
+                                        scoredCluster.score,
+                                        cluster.key,
+                                        MINIMUM_SCORE)
                             }
+                            val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, blockKey, scoredCluster.cluster)
+
+                            insertMatches(clusterUpdate)
+
+                        } catch (ex: Exception) {
+                            logger.error("An error occurred while performing linking.", ex)
+                            unlockClusters()
+                            throw IllegalStateException("Error occured while performing linking.", ex)
                         }
-                        throw IllegalStateException("Error occured while performing linking.", ex)
+                    } else {
+                        // block
+                        val sw = Stopwatch.createStarted()
+                        val initialBlock = blocker.block(entitySetId, it)
+                        logger.info("Blocking ($entitySetId, $it) took ${sw.elapsed(TimeUnit.MILLISECONDS)} ms.")
+
+                        //block contains element being blocked
+                        val elem = initialBlock.second.getValue(blockKey)
+
+                        // initialize
+                        sw.reset().start()
+                        logger.info("Initializing matching for block {}", blockKey)
+                        val initializedBlock = matcher.initialize(initialBlock)
+                        logger.info("Initialization took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
+                        val dataKeys = collectKeys(initializedBlock.second)
+
+                        //While a best cluster is being selected and updated we can't have other clusters being updated
+                        try {
+                            val clusters = getAndLockClusters(dataKeys)
+
+                            var maybeBestCluster: ScoredCluster? = null
+                            var highestScore = 10.0 //Arbitrary any positive value should suffice
+
+                            clusters
+                                    .forEach {
+                                        val scoredCluster = cluster(blockKey, it, ::completeLinkCluster)
+                                        if (scoredCluster.score > MINIMUM_SCORE && (highestScore < scoredCluster.score || highestScore >= 10)) {
+                                            highestScore = scoredCluster.score
+                                            Optional
+                                                    .ofNullable(maybeBestCluster?.clusterId)
+                                                    .ifPresent { clusterLocks[it]?.unlock() }
+                                            maybeBestCluster = scoredCluster
+                                        } else {
+                                            clusterLocks[it.key]!!.unlock()
+                                        }
+                                    }
+                            val clusterUpdate = if (maybeBestCluster == null) {
+                                val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
+                                clusterLocks.getOrPut(clusterId) { ReentrantLock() }.lock()
+                                val block = blockKey to mapOf(blockKey to elem)
+                                ClusterUpdate(clusterId, blockKey, matcher.match(block).second)
+                            } else {
+                                val bestCluster = maybeBestCluster!!
+                                ClusterUpdate(bestCluster.clusterId, blockKey, bestCluster.cluster)
+                            }
+
+                            insertMatches(clusterUpdate)
+
+                        } catch (ex: Exception) {
+                            logger.error("An error occurred while performing linking.", ex)
+                            unlockClusters()
+                            throw IllegalStateException("Error occured while performing linking.", ex)
+                        }
                     }
                 }
     }
@@ -200,7 +194,11 @@ class RealtimeLinkingService
 
 
     private fun <T> collectKeys(m: Map<EntityDataKey, Map<EntityDataKey, T>>): Set<EntityDataKey> {
-        return m!!.keys + m.values.flatMap { it.keys }
+        return m.keys + m.values.flatMap { it.keys }
+    }
+
+    private fun hasPositiveFeedback(entity: EntityDataKey): Boolean {
+        return linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, entity).iterator().hasNext()
     }
 
     private fun clearNeighborhoods(entitySetId: UUID, entityKeyIds: Stream<UUID>) {
@@ -208,16 +206,56 @@ class RealtimeLinkingService
         val clearedCount = entityKeyIds
                 .parallel()
                 .map { EntityDataKey(entitySetId, it) }
-                .mapToInt(gqs::deleteNeighborhood)
+                .mapToInt {
+                    val positiveFeedbacks = linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, it)
+                            .map(EntityLinkingFeedback::entityPair)
+                    gqs.deleteNeighborhood(it, positiveFeedbacks)
+                }
                 .sum()
         logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, entitySetId)
+    }
+
+    private fun getAndLockClusters(
+            dataKeys: Set<EntityDataKey>
+    ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
+        logger.debug("Acquiring cluster update lock.")
+        clusterUpdateLock.lock()
+        logger.debug("Acquired cluster update lock.")
+        val requiredClusters = gqs.getIdsOfClustersContaining(dataKeys).toList()
+        logger.debug(
+                "Currently held cluster locks: {}",
+                clusterLocks.filter { it.value.isLocked }.map { it.key })
+        logger.debug("Acquiring locks for required clusters: {}", requiredClusters)
+        requiredClusters.forEach { clusterLocks.getOrPut(it) { ReentrantLock() }.lock() }
+        logger.debug("Acquired locks for required clusters: {}", requiredClusters)
+        clusterUpdateLock.unlock()
+        logger.debug("Released cluster update lock.")
+
+        return gqs.getClustersContaining(requiredClusters)
+    }
+
+    private fun unlockClusters() {
+        if (clusterUpdateLock.isLocked) {
+            clusterUpdateLock.unlock()
+        }
+        clusterLocks.values.forEach { lock ->
+            if (lock.isLocked) {
+                lock.unlock()
+            }
+        }
+    }
+
+    private fun insertMatches(clusterUpdate: ClusterUpdate) {
+        gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
+        gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
+        clusterLocks[clusterUpdate.clusterId]!!.unlock()
     }
 
     @Timed
     @Scheduled(fixedRate = 30000)
     fun runLinking() {
         logger.info("Trying to start linking job.")
-        var linkableEntitySets = setOf<UUID>()
+        val linkableEntitySets: Set<UUID>
         if (running.tryLock()) {
             try {
                 //TODO: Make this more efficient than pulling the entire list of entity sets locally.
@@ -263,11 +301,6 @@ class RealtimeLinkingService
         }
     }
 
-
-    private fun refreshLinks(entitySetId: UUID, entityKeyIds: PostgresIterable<UUID>) {
-        clearNeighborhoods(entitySetId, entityKeyIds.stream())
-        runIterativeLinking(entitySetId, entityKeyIds.stream())
-    }
 
     private fun refreshLinks(entitySetId: UUID, entityKeyIds: Collection<UUID>) {
         clearNeighborhoods(entitySetId, entityKeyIds.stream())

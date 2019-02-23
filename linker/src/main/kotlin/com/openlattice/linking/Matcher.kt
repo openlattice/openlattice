@@ -22,6 +22,7 @@
 package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
+import com.openlattice.rhizome.hazelcast.DelegatedStringSet
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork
 import java.util.*
 
@@ -40,7 +41,7 @@ interface Matcher {
     /**
      * Computes an approximation of the discrete metric of every pair of blocked entities.
      *
-     * A computed match of 0.0 is 'close' and a match of 1.0 is 'far'.
+     * A computed match of 1.0 is 'close' and a match of 0.0 is 'far'.
      *
      * @param block An entity paired to a set of entities from across zero or more entity sets mapped by data key.
      * @return The computed match between all unique entities pairs in the block.
@@ -59,5 +60,14 @@ interface Matcher {
 
     fun updateMatchingModel(model: MultiLayerNetwork)
 
+    /**
+     * Calculates the pairwise features for two entities.
+     */
+    fun extractFeatures(lhs: Map<UUID, DelegatedStringSet>, rhs: Map<UUID, DelegatedStringSet>): DoubleArray
+
+    /**
+     * Converts the entity values to Strings for the [com.openlattice.linking.util.PersonMertic] readable format.
+     */
+    fun extractProperties(entity: Map<UUID, Set<Any>>): Map<UUID, DelegatedStringSet>
 }
 

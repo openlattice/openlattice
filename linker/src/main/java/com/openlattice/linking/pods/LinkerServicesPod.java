@@ -58,6 +58,7 @@ import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.linking.Matcher;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.matching.SocratesMatcher;
 import com.openlattice.linking.util.PersonProperties;
 import com.openlattice.mail.config.MailServiceRequirements;
@@ -66,9 +67,11 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
+
 import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
+
 import org.deeplearning4j.nn.modelimport.keras.KerasModelImport;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.InvalidKerasConfigurationException;
 import org.deeplearning4j.nn.modelimport.keras.exceptions.UnsupportedKerasConfigurationException;
@@ -246,7 +249,10 @@ public class LinkerServicesPod {
     public Matcher dl4jMatcher() throws IOException {
         final var modelStream = Thread.currentThread().getContextClassLoader().getResourceAsStream( "model.bin" );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
-        return new SocratesMatcher( ModelSerializer.restoreMultiLayerNetwork( modelStream ), fqnToIdMap );
+        return new SocratesMatcher(
+                ModelSerializer.restoreMultiLayerNetwork( modelStream ),
+                fqnToIdMap,
+                postgresLinkingFeedbackQueryService() );
     }
 
     @Profile( KERAS )
@@ -256,11 +262,16 @@ public class LinkerServicesPod {
         final String simpleMlp = new ClassPathResource( "model_2019-01-30.h5" ).getFile().getPath();
         final MultiLayerNetwork model = KerasModelImport.importKerasSequentialModelAndWeights( simpleMlp );
         final var fqnToIdMap = dataModelService().getFqnToIdMap( PersonProperties.FQNS );
-        return new SocratesMatcher( model, fqnToIdMap );
+        return new SocratesMatcher( model, fqnToIdMap, postgresLinkingFeedbackQueryService() );
     }
 
     @PostConstruct
     void initPrincipals() {
         Principals.init( principalService() );
+    }
+
+    @Bean
+    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
+        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
 }

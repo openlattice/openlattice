@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,17 +19,11 @@
  *
  */
 
-package com.openlattice.linking.clustering
+package com.openlattice.linking.controllers.util
 
-import com.openlattice.data.EntityDataKey
-import java.util.*
+import com.openlattice.controllers.util.BaseExceptionHandler
+import org.springframework.web.bind.annotation.RestControllerAdvice
 
-/**
- *
- *
- */
-class ClusterUpdate(
-        val clusterId: UUID,
-        val newMember: EntityDataKey,
-        val scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
-        )
+@RestControllerAdvice
+class LinkerExceptionHandler: BaseExceptionHandler() {
+}

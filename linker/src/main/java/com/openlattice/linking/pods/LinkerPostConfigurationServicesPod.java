@@ -26,13 +26,17 @@ import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
+import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.ids.PostgresEntityKeyIdService;
 import com.openlattice.data.storage.ByteBlobDataManager;
+import com.openlattice.data.storage.HazelcastEntityDatastore;
+import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
+import com.openlattice.linking.*;
 import com.openlattice.linking.Blocker;
 import com.openlattice.linking.DataLoader;
 import com.openlattice.linking.EdmCachingDataLoader;
@@ -103,12 +107,26 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public Blocker blocker() throws IOException {
-        return new ElasticsearchBlocker( elasticsearchApi, dataQueryService(), dataLoader(), hazelcastInstance );
+        return new ElasticsearchBlocker(
+                elasticsearchApi,
+                dataLoader(),
+                postgresLinkingFeedbackQueryService(),
+                hazelcastInstance );
     }
 
     @Bean
     public LinkingQueryService lqs() {
         return new PostgresLinkingQueryService( hikariDataSource );
+    }
+
+    @Bean
+    public EntityDatastore entityDatastore() {
+        return new HazelcastEntityDatastore( idService(), postgresDataManager(), dataQueryService(), edm );
+    }
+
+    @Bean
+    public IndexingMetadataManager postgresDataManager() {
+        return new IndexingMetadataManager( hikariDataSource );
     }
 
     @Bean
@@ -126,9 +144,21 @@ public class LinkerPostConfigurationServicesPod {
                 dataLoader(),
                 lqs(),
                 executor,
+                postgresLinkingFeedbackQueryService(),
                 edm.getEntityTypeUuids( lc.getEntityTypes() ),
                 lc.getBlacklist(),
                 lc.getWhitelist(),
                 lc.getBlockSize() );
+    }
+
+    @Bean
+    public RealtimeLinkingController realtimeLinkingController() {
+        var lc = linkingConfiguration();
+        return new RealtimeLinkingController( lc, edm );
+    }
+
+    @Bean
+    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
+        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
 }

@@ -37,9 +37,9 @@ public class LinkerSecurityPod extends Auth0SecurityPod {
     protected void authorizeRequests( HttpSecurity http ) throws Exception {
         http.authorizeRequests()
                 .antMatchers( HttpMethod.OPTIONS ).permitAll()
-                .antMatchers( HttpMethod.POST, "/indexer/**" ).authenticated()
-                .antMatchers( HttpMethod.PUT, "/indexer/**" ).authenticated()
-                .antMatchers( HttpMethod.GET, "/indexer/**" ).permitAll()
-                .antMatchers( "/indexer/**" ).authenticated();
+                .antMatchers( HttpMethod.POST, "/linker/**" ).authenticated()
+                .antMatchers( HttpMethod.PUT, "/linker/**" ).authenticated()
+                .antMatchers( HttpMethod.GET, "/linker/**" ).permitAll()
+                .antMatchers( "/linker/**" ).authenticated();
     }
 }

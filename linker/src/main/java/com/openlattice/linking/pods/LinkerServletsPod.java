@@ -33,8 +33,8 @@ public class LinkerServletsPod {
     public DispatcherServletConfiguration indexerServlet() {
 
         return new DispatcherServletConfiguration(
-                "indexer",
-                new String[]{ "/indexer/*" },
+                "linker",
+                new String[]{ "/linker/*" },
                 1,
                 Lists.newArrayList( LinkerMvcPod.class )
         );
