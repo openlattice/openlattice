@@ -44,7 +44,6 @@ public enum Table implements TableDef {
     COMPLEX_TYPES,
     DATA,
     EDGES,
-    EDM_VERSIONS,
     ENTITY_SET_PROPERTY_METADATA,
     ENTITY_SETS,
     ENTITY_TYPES,
@@ -214,14 +213,6 @@ public enum Table implements TableDef {
                                 DST_ENTITY_SET_ID,
                                 DST_SYNC_ID,
                                 EDGE_ENTITY_SET_ID );
-
-            case EDM_VERSIONS:
-                return new CassandraTableBuilder( EDM_VERSIONS )
-                        .ifNotExists()
-                        .partitionKey( EDM_VERSION_NAME )
-                        .clusteringColumns( EDM_VERSION )
-                        .withDescendingOrder( EDM_VERSION );
-
             case ENTITY_SET_PROPERTY_METADATA:
                 return new CassandraTableBuilder( ENTITY_SET_PROPERTY_METADATA )
                         .ifNotExists()
