@@ -23,19 +23,18 @@ package com.openlattice.datastore.pods;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.controllers.OrganizationsController;
 import com.openlattice.data.DataApi;
-import com.openlattice.data.controllers.EntitySetsController;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
 import com.openlattice.datastore.apps.controllers.AppController;
 import com.openlattice.datastore.authorization.controllers.AuthorizationsController;
 import com.openlattice.datastore.data.controllers.DataController;
 import com.openlattice.datastore.directory.controllers.PrincipalDirectoryController;
 import com.openlattice.datastore.edm.controllers.EdmController;
-import com.openlattice.datastore.linking.controllers.LinkingController;
 import com.openlattice.datastore.permissions.controllers.PermissionsController;
 import com.openlattice.datastore.requests.controllers.RequestsController;
 import com.openlattice.datastore.search.controllers.PersistentSearchController;
 import com.openlattice.datastore.search.controllers.SearchController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
+import com.openlattice.entitysets.controllers.EntitySetsController;
 import com.openlattice.graph.controllers.GraphController;
 import com.openlattice.web.converters.CsvHttpMessageConverter;
 import com.openlattice.web.converters.YamlHttpMessageConverter;
@@ -63,9 +62,9 @@ import java.util.List;
                 PermissionsController.class, AuthorizationsController.class,
                 PrincipalDirectoryController.class,
                 EdmController.class, OrganizationsController.class,
-                DataStoreExceptionHandler.class, LinkingController.class, AnalysisController.class,
-                RequestsController.class, AppController.class, GraphController.class, EntitySetsController.class,
-                PersistentSearchController.class },
+                DataStoreExceptionHandler.class, EntitySetsController.class, AnalysisController.class,
+                RequestsController.class, AppController.class, GraphController.class, PersistentSearchController.class
+        },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,
                         org.springframework.web.bind.annotation.RestControllerAdvice.class },
