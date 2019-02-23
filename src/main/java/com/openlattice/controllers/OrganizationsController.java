@@ -24,7 +24,7 @@ import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -82,7 +82,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     private Assembler assembler;
 
     @Inject
-    private AbstractSecurableObjectResolveTypeService securableObjectTypes;
+    private SecurableObjectResolveTypeService securableObjectTypes;
 
     @Inject
     private SecurePrincipalsManager principalService;
