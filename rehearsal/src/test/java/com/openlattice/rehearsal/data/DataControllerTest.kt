@@ -88,6 +88,21 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries.toLong(), results.size.toLong())
     }
 
+    @Test
+    fun testLoadEntityDataEmptySelection() {
+        val et = MultipleAuthenticatedUsersBase.createEntityType()
+        val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
+
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
+                .values
+                .toList()
+        dataApi.createEntities(es.id, testData)
+        val ess = EntitySetSelection(Optional.empty(), Optional.empty())
+        val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+
+        Assert.assertEquals(0, results.size.toLong())
+    }
+
 
     @Test
     fun testCreateAndLoadBinaryEntityData() {
