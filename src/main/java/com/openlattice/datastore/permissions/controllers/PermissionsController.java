@@ -25,12 +25,12 @@ import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.openlattice.authorization.*;
-import com.openlattice.datastore.exceptions.BadRequestException;
+import com.openlattice.controllers.exceptions.BadRequestException;
+import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
