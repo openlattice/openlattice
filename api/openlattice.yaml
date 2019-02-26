@@ -1458,6 +1458,10 @@ paths:
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/acl"
     patch: #lattice-js l.29
       summary: Updates the ACL for a particular ACL Key, only if the user is the owner of the ACL Key.
       operationId: updateAcl
@@ -2557,9 +2561,8 @@ components:
         aclKey:
           type: array
           items:
-            type: array
-            items:
-              type: string
+            type: string
+            format: uuid
         aces:
           type: array
           items:
