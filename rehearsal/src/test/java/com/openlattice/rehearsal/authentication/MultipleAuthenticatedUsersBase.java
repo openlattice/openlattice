@@ -30,22 +30,26 @@ import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.client.RetrofitFactory;
 import com.openlattice.data.DataApi;
 import com.openlattice.data.DataEdge;
 import com.openlattice.data.EntityDataKey;
+import com.openlattice.directory.PrincipalApi;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.linking.LinkingApi;
+import com.openlattice.entitysets.EntitySetsApi;
 import com.openlattice.linking.RealtimeLinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
+import com.openlattice.rehearsal.GeneralException;
 import com.openlattice.rehearsal.SetupEnvironment;
 import com.openlattice.requests.RequestsApi;
 import com.openlattice.search.SearchApi;
 
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,25 +65,33 @@ import java.util.stream.Stream;
 
 import kotlin.Pair;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
 import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
-    protected final static Map<String, Retrofit> retrofitMap = new HashMap<>();
-    protected final static Map<String, Retrofit> indexerRetrofitMap = new HashMap<>();
+    private final static Map<String, Retrofit> retrofitMap = new HashMap<>();
+    private final static Map<String, Retrofit> indexerRetrofitMap = new HashMap<>();
+    private final static Map<String, OkHttpClient> httpClientMap = new HashMap<>();
 
-    protected static EdmApi edmApi;
-    protected static PermissionsApi permissionsApi;
-    protected static AuthorizationsApi authorizationsApi;
-    protected static RequestsApi requestsApi;
-    protected static DataApi dataApi;
-    protected static SearchApi searchApi;
-    protected static OrganizationsApi organizationsApi;
-    protected static LinkingApi linkingApi;
+    protected static EdmApi             edmApi;
+    protected static PermissionsApi     permissionsApi;
+    protected static AuthorizationsApi  authorizationsApi;
+    protected static RequestsApi        requestsApi;
+    protected static DataApi            dataApi;
+    protected static SearchApi          searchApi;
+    protected static OrganizationsApi   organizationsApi;
+    protected static EntitySetsApi      entitySetsApi;
     protected static RealtimeLinkingApi realtimeLinkingApi;
-    protected static AnalysisApi       analysisApi;
+    protected static AnalysisApi        analysisApi;
+    protected static PrincipalApi       principalApi;
+
+    protected static OkHttpClient       currentHttpClient;
 
     static {
         retrofitMap.put( "admin", retrofit );
@@ -88,6 +100,8 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         retrofitMap.put( "user3", retrofit3 );
         retrofitMap.put( "prod", retrofitProd );
         indexerRetrofitMap.put( "admin", retrofitIndexer );
+
+        httpClientMap.put( "admin", httpClient );
     }
 
     /**
@@ -107,14 +121,53 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         dataApi = currentRetrofit.create( DataApi.class );
         searchApi = currentRetrofit.create( SearchApi.class );
         organizationsApi = currentRetrofit.create( OrganizationsApi.class );
-        linkingApi = currentRetrofit.create( LinkingApi.class );
+        entitySetsApi = currentRetrofit.create( EntitySetsApi.class );
         analysisApi = currentRetrofit.create( AnalysisApi.class );
+        principalApi = currentRetrofit.create( PrincipalApi.class );
 
         Retrofit indexerRetrofit = indexerRetrofitMap.get( user );
         if ( indexerRetrofit != null ) {
             realtimeLinkingApi = indexerRetrofit.create( RealtimeLinkingApi.class );
         }
+
+        currentHttpClient = httpClientMap.get( user );
     }
+
+    public static Response makeGetRequest( String url ) throws GeneralException {
+        Request request = new Request.Builder()
+                .url( RetrofitFactory.Environment.TESTING.getBaseUrl() + url.substring( 1 ) ) // remove extra "/"
+                .build();
+        try {
+            Response response = currentHttpClient.newCall( request ).execute();
+            if ( !response.isSuccessful() ) {
+                throw new GeneralException( "Something went wrong with call: " + request + ". " +
+                        "Code: " + response.code() + ", message: " + response.message() );
+            }
+
+            return response;
+        } catch ( IOException ex ) {
+            throw new GeneralException( "Something went wrong with call: " + request );
+        }
+    }
+
+    public static Response makePutRequest( String url, RequestBody body ) throws GeneralException {
+        Request request = new Request.Builder()
+                .url( RetrofitFactory.Environment.TESTING.getBaseUrl() + url.substring( 1 ) ) // remove extra "/"
+                .put( body )
+                .build();
+        try {
+            Response response = currentHttpClient.newCall( request ).execute();
+            if ( !response.isSuccessful() ) {
+                throw new GeneralException( "Something went wrong with call: " + request + ". " +
+                        "Code: " + response.code() + ", message: " + response.message() );
+            }
+
+            return response;
+        } catch ( IOException ex ) {
+            throw new GeneralException( "Something went wrong with call: " + request );
+        }
+    }
+
 
     public static PropertyType getBinaryPropertyType() {
         PropertyType pt = TestDataFactory.binaryPropertyType();
