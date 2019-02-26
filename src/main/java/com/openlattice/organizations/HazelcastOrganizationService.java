@@ -41,6 +41,7 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -381,8 +382,10 @@ public class HazelcastOrganizationService {
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {
         AclKey roleKey = new AclKey( organizationId, roleId );
-        authorizations.checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(),
-                EnumSet.of( Permission.OWNER ) );
+        if ( !authorizations
+                .checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(), EnumSet.of( Permission.OWNER ) ) ) {
+            throw new ForbiddenException( "Object " + roleKey.toString() + " is not accessible." );
+        }
         securePrincipalsManager.addPrincipalToPrincipal( roleKey, securePrincipalsManager.lookup( principal ) );
     }
 
@@ -398,8 +401,10 @@ public class HazelcastOrganizationService {
     }
 
     public void removeRoleFromUser( AclKey roleKey, Principal user ) {
-        authorizations.checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(),
-                EnumSet.of( Permission.OWNER ) );
+        if(! authorizations.checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(),
+                EnumSet.of( Permission.OWNER ) ) ) {
+            throw new ForbiddenException( "Object " + roleKey.toString() + " is not accessible." );
+        }
         securePrincipalsManager.removePrincipalFromPrincipal( roleKey, securePrincipalsManager.lookup( user ) );
     }
 
