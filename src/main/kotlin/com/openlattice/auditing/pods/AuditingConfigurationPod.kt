@@ -25,6 +25,8 @@ import com.amazonaws.services.s3.AmazonS3
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
+import com.openlattice.auditing.AuditInitializationTask
+import com.openlattice.auditing.AuditTaskDependencies
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.hazelcast.serializers.FullQualifiedNameStreamSerializer
@@ -76,5 +78,18 @@ class AuditingConfigurationPod {
         )
         logger.info("Using aws auditing configuration: {}", config)
         return config
+    }
+
+    @Bean
+    fun auditTaskDependencies(): AuditTaskDependencies {
+        return AuditTaskDependencies(
+                principalService(),
+                dataModelService(),
+                authorizationManager())
+    }
+
+    @Bean
+    fun auditInitializationTask(): AuditInitializationTask {
+        return AuditInitializationTask(hazelcastInstance)
     }
 }
