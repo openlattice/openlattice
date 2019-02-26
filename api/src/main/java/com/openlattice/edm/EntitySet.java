@@ -172,16 +172,6 @@ public class EntitySet extends AbstractSecurableObject {
         this.organizationId = organizationId;
     }
 
-    @JsonProperty( SerializationConstants.EXTERNAL )
-    public boolean isExternal() {
-        return flags.contains( EntitySetFlag.EXTERNAL );
-    }
-
-    @JsonProperty( SerializationConstants.LINKING )
-    public boolean isLinking() {
-        return flags.contains( EntitySetFlag.LINKING );
-    }
-
     @JsonProperty( SerializationConstants.LINKED_ENTITY_SETS )
     public Set<UUID> getLinkedEntitySets() {
         return linkedEntitySets;
@@ -198,6 +188,14 @@ public class EntitySet extends AbstractSecurableObject {
 
     public void removeFlag( EntitySetFlag flag ) {
         this.flags.remove( flag );
+    }
+
+    public boolean isExternal() {
+        return flags.contains( EntitySetFlag.EXTERNAL );
+    }
+
+    public boolean isLinking() {
+        return flags.contains( EntitySetFlag.LINKING );
     }
 
     @Override public boolean equals( Object o ) {
