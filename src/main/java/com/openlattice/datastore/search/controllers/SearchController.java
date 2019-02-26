@@ -427,54 +427,54 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                     neighbors = searchService
                             .executeLinkingEntityNeighborSearch( authorizedEntitySets,
                                     new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
-                            .get( entityKeyId );
+                            .getOrDefault( entityKeyId, ImmutableList.of() );
                 }
             } else {
                 neighbors = searchService
                         .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
                                 new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
-                        .get( entityKeyId );
+                        .getOrDefault( entityKeyId, ImmutableList.of() );
             }
         }
 
-                UUID userId = getCurrentUserId();
+        UUID userId = getCurrentUserId();
 
-                SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
-                neighbors.forEach( neighborEntityDetails -> {
-                    neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
-                            getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
-                    if ( neighborEntityDetails.getNeighborEntitySet().isPresent() ) {
-                        neighborsByEntitySet.put( neighborEntityDetails.getNeighborEntitySet().get().getId(),
-                                getEntityKeyId( neighborEntityDetails.getNeighborDetails().get() ) );
-                    }
-                } );
+        SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
+        neighbors.forEach( neighborEntityDetails -> {
+            neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
+                    getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
+            if ( neighborEntityDetails.getNeighborEntitySet().isPresent() ) {
+                neighborsByEntitySet.put( neighborEntityDetails.getNeighborEntitySet().get().getId(),
+                        getEntityKeyId( neighborEntityDetails.getNeighborDetails().get() ) );
+            }
+        } );
 
-                List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
-                events.add( new AuditableEvent(
-                        userId,
-                        new AclKey( entitySetId ),
-                        AuditEventType.LOAD_ENTITY_NEIGHBORS,
-                        "Load entity neighbors through SearchApi.executeEntityNeighborSearch",
-                        Optional.of( ImmutableSet.of( entityKeyId ) ),
-                        ImmutableMap.of(),
-                        OffsetDateTime.now(),
-                        Optional.empty()
-                ) );
+        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
+        events.add( new AuditableEvent(
+                userId,
+                new AclKey( entitySetId ),
+                AuditEventType.LOAD_ENTITY_NEIGHBORS,
+                "Load entity neighbors through SearchApi.executeEntityNeighborSearch",
+                Optional.of( ImmutableSet.of( entityKeyId ) ),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
 
-                for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
-                    events.add( new AuditableEvent(
-                            userId,
-                            new AclKey( neighborEntitySetId ),
-                            AuditEventType.READ_ENTITIES,
-                            "Read entities as neighbors through SearchApi.executeEntityNeighborSearch",
-                            Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
-                            ImmutableMap.of(),
-                            OffsetDateTime.now(),
-                            Optional.empty()
-                    ) );
-                }
+        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+            events.add( new AuditableEvent(
+                    userId,
+                    new AclKey( neighborEntitySetId ),
+                    AuditEventType.READ_ENTITIES,
+                    "Read entities as neighbors through SearchApi.executeEntityNeighborSearch",
+                    Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
+                    ImmutableMap.of(),
+                    OffsetDateTime.now(),
+                    Optional.empty()
+            ) );
+        }
 
-                recordEvents( events );
+        recordEvents( events );
 
         return neighbors;
     }
