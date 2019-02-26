@@ -42,6 +42,7 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.entitysets.EntitySetsApi;
+import com.openlattice.linking.LinkingFeedbackApi;
 import com.openlattice.linking.RealtimeLinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
@@ -78,7 +79,7 @@ import retrofit2.Retrofit;
 
 public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     private final static Map<String, Retrofit> retrofitMap = new HashMap<>();
-    private final static Map<String, Retrofit> indexerRetrofitMap = new HashMap<>();
+    private final static Map<String, Retrofit> linkerRetrofitMap = new HashMap<>();
     private final static Map<String, OkHttpClient> httpClientMap = new HashMap<>();
 
     protected static EdmApi             edmApi;
@@ -91,6 +92,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     protected static EntitySetsApi      entitySetsApi;
     protected static RealtimeLinkingApi realtimeLinkingApi;
     protected static AnalysisApi        analysisApi;
+    protected static LinkingFeedbackApi linkingFeedbackApi;
     protected static PrincipalApi       principalApi;
 
     protected static OkHttpClient       currentHttpClient;
@@ -101,11 +103,12 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         retrofitMap.put( "user2", retrofit2 );
         retrofitMap.put( "user3", retrofit3 );
         retrofitMap.put( "prod", retrofitProd );
-        indexerRetrofitMap.put( "admin", retrofitIndexer );
+        linkerRetrofitMap.put( "admin", retrofitLinker );
 
         httpClientMap.put( "admin", httpClient );
         httpClientMap.put( "user1", httpClient1 );
         httpClientMap.put( "user2", httpClient2 );
+
     }
 
     /**
@@ -129,9 +132,10 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         analysisApi = currentRetrofit.create( AnalysisApi.class );
         principalApi = currentRetrofit.create( PrincipalApi.class );
 
-        Retrofit indexerRetrofit = indexerRetrofitMap.get( user );
-        if ( indexerRetrofit != null ) {
-            realtimeLinkingApi = indexerRetrofit.create( RealtimeLinkingApi.class );
+        Retrofit linkerRetrofit = linkerRetrofitMap.get( user );
+        if ( linkerRetrofit != null ) {
+            realtimeLinkingApi = linkerRetrofit.create( RealtimeLinkingApi.class );
+            linkingFeedbackApi = linkerRetrofit.create( LinkingFeedbackApi.class );
         }
 
         currentHttpClient = httpClientMap.get( user );
