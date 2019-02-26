@@ -196,6 +196,10 @@ public class EntitySet extends AbstractSecurableObject {
         this.flags.add( flag );
     }
 
+    public void removeFlag( EntitySetFlag flag ) {
+        this.flags.remove( flag );
+    }
+
     @Override public boolean equals( Object o ) {
         if ( this == o )
             return true;
