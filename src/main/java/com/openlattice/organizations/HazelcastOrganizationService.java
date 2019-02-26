@@ -38,13 +38,7 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.datastore.util.Util;
@@ -387,9 +381,9 @@ public class HazelcastOrganizationService {
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {
         AclKey roleKey = new AclKey( organizationId, roleId );
-        authorizations.checkIfHasPermissions( roleKey, ImmutableSet.of( principal ), EnumSet.of( Permission.OWNER ) );
-        securePrincipalsManager.addPrincipalToPrincipal( new AclKey( organizationId, roleId ),
-                securePrincipalsManager.lookup( principal ) );
+        authorizations.checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(),
+                EnumSet.of( Permission.OWNER ) );
+        securePrincipalsManager.addPrincipalToPrincipal( roleKey, securePrincipalsManager.lookup( principal ) );
     }
 
     private Collection<Role> getRolesInFull( UUID organizationId ) {
@@ -404,7 +398,8 @@ public class HazelcastOrganizationService {
     }
 
     public void removeRoleFromUser( AclKey roleKey, Principal user ) {
-        authorizations.checkIfHasPermissions( roleKey, ImmutableSet.of( user ), EnumSet.of( Permission.OWNER ) );
+        authorizations.checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(),
+                EnumSet.of( Permission.OWNER ) );
         securePrincipalsManager.removePrincipalFromPrincipal( roleKey, securePrincipalsManager.lookup( user ) );
     }
 
