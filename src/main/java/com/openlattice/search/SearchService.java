@@ -320,7 +320,7 @@ public class SearchService {
     @Subscribe
     public void addPropertyTypesToEntitySet( PropertyTypesAddedToEntitySetEvent event ) {
         elasticsearchApi.addPropertyTypesToEntitySet(
-                event.getEntitySetId(),
+                event.getEntitySet().getId(),
                 event.getNewPropertyTypes(),
                 event.getLinkedEntitySetIds() );
     }
