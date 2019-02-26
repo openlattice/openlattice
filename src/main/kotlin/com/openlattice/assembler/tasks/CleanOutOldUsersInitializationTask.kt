@@ -52,11 +52,10 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
         dependencies.organizations.getOrganizations(organizations.stream())
                 .forEach { organization ->
                     try {
-                        dependencies.assemblerConnectionManager.dropOrganizationDatabase(
-                                organization.id, organization.principal.id
-                        )
+                        dependencies.assemblerConnectionManager.dropOrganizationDatabase(organization.id)
                     } catch (ex: Exception) {
-                        logger.error("Unable to clean out old database for organization: {}", organization)
+                        logger.error("Unable to clean out old database for organization: {}. \n\t Due to {}",
+                                organization, ex.message)
                     }
 //                    dependencies
 //                            .assemblerConnectionManager
