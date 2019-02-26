@@ -20,12 +20,18 @@
 
 package com.openlattice.datastore.search.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
+import com.openlattice.auditing.AuditEventType;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditableEvent;
+import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
@@ -33,23 +39,25 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
+import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.search.SearchApi;
 import com.openlattice.search.SearchService;
 import com.openlattice.search.requests.*;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+
 import javax.inject.Inject;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+
+import static com.openlattice.postgres.DataTables.ID_FQN;
 
 @RestController
 @RequestMapping( SearchApi.CONTROLLER )
-public class SearchController implements SearchApi, AuthorizingComponent {
+public class SearchController implements SearchApi, AuthorizingComponent, AuditingComponent {
 
     @Inject
     private SearchService searchService;
@@ -68,6 +76,18 @@ public class SearchController implements SearchApi, AuthorizingComponent {
 
     @Inject
     private HazelcastOrganizationService organizationService;
+
+    @Inject
+    private SecurePrincipalsManager spm;
+
+    @Inject
+    private ObjectMapper mapper;
+
+    @Inject
+    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
+
+    @Inject
+    private DataGraphManager dgm;
 
     @RequestMapping(
             path = { "/", "" },
@@ -145,15 +165,33 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                 linkedAuthorizedProperties,
                 true );
 
-        return mergeDataSearchResults( results, linkedResults );
+        DataSearchResult mergedResults = mergeDataSearchResults( results, linkedResults );
+
+        List<AuditableEvent> searchEvents = Lists.newArrayList();
+        for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
+            searchEvents.add( new AuditableEvent(
+                    getCurrentUserId(),
+                    new AclKey( searchConstraints.getEntitySetIds()[ i ] ),
+                    AuditEventType.SEARCH_ENTITY_SET_DATA,
+                    "Entity set data searched through SearchApi.searchEntitySetData",
+                    Optional.of( getEntityKeyIdsFromSearchResult( mergedResults ) ),
+                    ImmutableMap.of( "query", searchConstraints ),
+                    OffsetDateTime.now(),
+                    Optional.empty()
+            ) );
+        }
+
+        recordEvents( searchEvents );
+
+        return mergedResults;
     }
 
     private DataSearchResult mergeDataSearchResults(
             DataSearchResult results1,
-            DataSearchResult results2) {
+            DataSearchResult results2 ) {
         List<SetMultimap<FullQualifiedName, Object>> mergedHits = Streams
                 .concat( results1.getHits().stream(), results2.getHits().stream() )
-                .collect( Collectors.toList());
+                .collect( Collectors.toList() );
 
         return new DataSearchResult( results1.getNumHits() + results2.getNumHits(), mergedHits );
     }
@@ -180,6 +218,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     public DataSearchResult executeEntitySetDataQuery(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody SearchTerm searchTerm ) {
+        DataSearchResult dataSearchResult = new DataSearchResult( 0, Lists.newArrayList() );
+
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
@@ -196,21 +236,32 @@ public class SearchController implements SearchApi, AuthorizingComponent {
 
             if ( authorizedEntitySets.size() == 0 ) {
                 logger.warn( "Read authorization failed for all the entity sets." );
-                return new DataSearchResult( 0, Lists.newArrayList() );
+            } else {
+
+                dataSearchResult = searchService.executeSearch( SearchConstraints
+                                .simpleSearchConstraints(
+                                        new UUID[] { entitySetId },
+                                        searchTerm.getStart(),
+                                        searchTerm.getMaxHits(),
+                                        searchTerm.getSearchTerm(),
+                                        searchTerm.getFuzzy() ),
+                        authorizedProperties,
+                        es.isLinking() );
             }
-
-            return searchService.executeSearch( SearchConstraints
-                            .simpleSearchConstraints(
-                                    new UUID[]{ entitySetId },
-                                    searchTerm.getStart(),
-                                    searchTerm.getMaxHits(),
-                                    searchTerm.getSearchTerm(),
-                                    searchTerm.getFuzzy() ),
-                    authorizedProperties,
-                    es.isLinking() );
-
         }
-        return new DataSearchResult( 0, Lists.newArrayList() );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.SEARCH_ENTITY_SET_DATA,
+                "Entity set data search through SearchApi.executeEntitySetDataQuery",
+                Optional.of( getEntityKeyIdsFromSearchResult( dataSearchResult ) ),
+                ImmutableMap.of( "query", searchTerm ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        return dataSearchResult;
     }
 
     @RequestMapping(
@@ -221,6 +272,8 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     public DataSearchResult executeAdvancedEntitySetDataQuery(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody AdvancedSearch search ) {
+        DataSearchResult dataSearchResult = new DataSearchResult( 0, Lists.newArrayList() );
+
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
@@ -238,19 +291,30 @@ public class SearchController implements SearchApi, AuthorizingComponent {
 
             if ( authorizedEntitySets.size() == 0 ) {
                 logger.warn( "Read authorization failed for all the entity sets." );
-                return new DataSearchResult( 0, Lists.newArrayList() );
+            } else {
+                dataSearchResult = searchService.executeSearch(
+                        SearchConstraints.advancedSearchConstraints(
+                                new UUID[] { entitySetId },
+                                search.getStart(),
+                                search.getMaxHits(),
+                                search.getSearches() ),
+                        authorizedPropertyTypes,
+                        es.isLinking() );
             }
-
-            return searchService.executeSearch(
-                    SearchConstraints.advancedSearchConstraints(
-                            new UUID[]{ entitySetId },
-                            search.getStart(),
-                            search.getMaxHits(),
-                            search.getSearches() ),
-                    authorizedPropertyTypes,
-                    es.isLinking() );
         }
-        return new DataSearchResult( 0, Lists.newArrayList() );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.SEARCH_ENTITY_SET_DATA,
+                "Advanced entity set data search through SearchApi.executeAdvancedEntitySetDataQuery",
+                Optional.of( getEntityKeyIdsFromSearchResult( dataSearchResult ) ),
+                ImmutableMap.of( "query", search ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        return dataSearchResult;
     }
 
     @RequestMapping(
@@ -340,7 +404,11 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     public List<NeighborEntityDetails> executeEntityNeighborSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_ID ) UUID entityKeyId ) {
-        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), Principals.getCurrentPrincipals(),
+        List<NeighborEntityDetails> neighbors = Lists.newArrayList();
+
+        Set<Principal> principals = Principals.getCurrentPrincipals();
+
+        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
             EntitySet es = edm.getEntitySet( entitySetId );
             if ( es.isLinking() ) {
@@ -355,20 +423,60 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                         .collect( Collectors.toSet() );
                 if ( authorizedEntitySets.size() == 0 ) {
                     logger.warn( "Read authorization failed for all the linked entity sets." );
-                    return Lists.newArrayList();
+                } else {
+                    neighbors = searchService
+                            .executeLinkingEntityNeighborSearch( authorizedEntitySets,
+                                    new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
+                            .get( entityKeyId );
                 }
-                return searchService
-                        .executeLinkingEntityNeighborSearch( authorizedEntitySets,
-                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
-                        .get( entityKeyId );
             } else {
-                return searchService
+                neighbors = searchService
                         .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
                                 new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
                         .get( entityKeyId );
             }
         }
-        return Lists.newArrayList();
+
+                UUID userId = getCurrentUserId();
+
+                SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
+                neighbors.forEach( neighborEntityDetails -> {
+                    neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
+                            getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
+                    if ( neighborEntityDetails.getNeighborEntitySet().isPresent() ) {
+                        neighborsByEntitySet.put( neighborEntityDetails.getNeighborEntitySet().get().getId(),
+                                getEntityKeyId( neighborEntityDetails.getNeighborDetails().get() ) );
+                    }
+                } );
+
+                List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
+                events.add( new AuditableEvent(
+                        userId,
+                        new AclKey( entitySetId ),
+                        AuditEventType.LOAD_ENTITY_NEIGHBORS,
+                        "Load entity neighbors through SearchApi.executeEntityNeighborSearch",
+                        Optional.of( ImmutableSet.of( entityKeyId ) ),
+                        ImmutableMap.of(),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                ) );
+
+                for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+                    events.add( new AuditableEvent(
+                            userId,
+                            new AclKey( neighborEntitySetId ),
+                            AuditEventType.READ_ENTITIES,
+                            "Read entities as neighbors through SearchApi.executeEntityNeighborSearch",
+                            Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
+                            ImmutableMap.of(),
+                            OffsetDateTime.now(),
+                            Optional.empty()
+                    ) );
+                }
+
+                recordEvents( events );
+
+        return neighbors;
     }
 
     @RequestMapping(
@@ -390,9 +498,10 @@ public class SearchController implements SearchApi, AuthorizingComponent {
     public Map<UUID, List<NeighborEntityDetails>> executeFilteredEntityNeighborSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter ) {
+        Set<Principal> principals = Principals.getCurrentPrincipals();
 
         Map<UUID, List<NeighborEntityDetails>> result = Maps.newHashMap();
-        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), Principals.getCurrentPrincipals(),
+        if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
             EntitySet es = edm.getEntitySet( entitySetId );
             if ( es.isLinking() ) {
@@ -407,14 +516,59 @@ public class SearchController implements SearchApi, AuthorizingComponent {
                         .collect( Collectors.toSet() );
                 if ( authorizedEntitySets.size() == 0 ) {
                     logger.warn( "Read authorization failed for all the linked entity sets." );
-                    return result;
+                } else {
+                    result = searchService.executeLinkingEntityNeighborSearch( authorizedEntitySets, filter );
                 }
 
-                result = searchService.executeLinkingEntityNeighborSearch( authorizedEntitySets, filter );
             } else {
                 result = searchService.executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), filter );
             }
         }
+
+
+        /* audit */
+
+        SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
+
+        result.values().forEach( neighborList -> {
+            neighborList.forEach( neighborEntityDetails -> {
+                neighborsByEntitySet.put( neighborEntityDetails.getAssociationEntitySet().getId(),
+                        getEntityKeyId( neighborEntityDetails.getAssociationDetails() ) );
+                if ( neighborEntityDetails.getNeighborEntitySet().isPresent() ) {
+                    neighborsByEntitySet.put( neighborEntityDetails.getNeighborEntitySet().get().getId(),
+                            getEntityKeyId( neighborEntityDetails.getNeighborDetails().get() ) );
+                }
+            } );
+        } );
+
+        List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
+        UUID userId = getCurrentUserId();
+        events.add( new AuditableEvent(
+                userId,
+                new AclKey( entitySetId ),
+                AuditEventType.LOAD_ENTITY_NEIGHBORS,
+                "Load neighbors of entities with filter through SearchApi.executeFilteredEntityNeighborSearch",
+                Optional.of( filter.getEntityKeyIds() ),
+                ImmutableMap.of( "filters", filter ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+            events.add( new AuditableEvent(
+                    userId,
+                    new AclKey( neighborEntitySetId ),
+                    AuditEventType.READ_ENTITIES,
+                    "Read entities as filtered neighbors through SearchApi.executeFilteredEntityNeighborSearch",
+                    Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
+                    ImmutableMap.of(),
+                    OffsetDateTime.now(),
+                    Optional.empty()
+            ) );
+        }
+
+        recordEvents( events );
+
         return result;
     }
 
@@ -478,5 +632,29 @@ public class SearchController implements SearchApi, AuthorizingComponent {
         ensureAdminAccess();
         searchService.triggerOrganizationIndex( organizationService.getOrganization( organizationId ) );
         return null;
+    }
+
+    private UUID getCurrentUserId() {
+        return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
+    }
+
+    private static Set<UUID> getEntityKeyIdsFromSearchResult( DataSearchResult searchResult ) {
+        return searchResult.getHits().stream().map( SearchController::getEntityKeyId ).collect( Collectors.toSet() );
+    }
+
+    private static UUID getEntityKeyId( SetMultimap<FullQualifiedName, Object> entity ) {
+        return UUID.fromString( entity.get( ID_FQN ).iterator().next().toString() );
+    }
+
+    @NotNull
+    @Override
+    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
+        return auditRecordEntitySetsManager;
+    }
+
+    @NotNull
+    @Override
+    public DataGraphManager getDataGraphService() {
+        return dgm;
     }
 }

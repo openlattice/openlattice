@@ -30,16 +30,11 @@ import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticati
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
+import com.openlattice.auditing.AuditEventType;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditableEvent;
+import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -47,17 +42,7 @@ import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
-import com.openlattice.data.DataApi;
-import com.openlattice.data.DataAssociation;
-import com.openlattice.data.DataEdge;
-import com.openlattice.data.DataEdgeKey;
-import com.openlattice.data.DataGraph;
-import com.openlattice.data.DataGraphIds;
-import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.DeleteType;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntitySetData;
-import com.openlattice.data.UpdateType;
+import com.openlattice.data.*;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
@@ -65,8 +50,13 @@ import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.web.mediatypes.CustomMediaType;
+
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -80,9 +70,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -103,7 +95,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
-public class DataController implements DataApi, AuthorizingComponent {
+public class DataController implements DataApi, AuthorizingComponent, AuditingComponent {
     private static final Logger logger = LoggerFactory.getLogger( DataController.class );
 
     @Inject
@@ -123,6 +115,12 @@ public class DataController implements DataApi, AuthorizingComponent {
 
     @Inject
     private AuthenticationManager authProvider;
+
+    @Inject
+    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
+
+    @Inject
+    private SecurePrincipalsManager spm;
 
     private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
@@ -263,16 +261,41 @@ public class DataController implements DataApi, AuthorizingComponent {
 
         var authorizedPropertyTypes = Maps.asMap( requiredPropertyTypes, allAuthorizedPropertyTypes::get );
 
+        final AuditEventType auditEventType;
+        final WriteEvent writeEvent;
+
         switch ( updateType ) {
             case Replace:
-                return dgm.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+                auditEventType = AuditEventType.REPLACE_ENTITIES;
+                writeEvent = dgm.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+                break;
             case PartialReplace:
-                return dgm.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+                auditEventType = AuditEventType.PARTIAL_REPLACE_ENTITIES;
+                writeEvent = dgm.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+                break;
             case Merge:
-                return dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
+                auditEventType = AuditEventType.MERGE_ENTITIES;
+                writeEvent = dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
+                break;
             default:
-                return 0;
+                auditEventType = null;
+                writeEvent = new WriteEvent( 0, 0 );
+                break;
         }
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                auditEventType,
+                "Entities updated using update type " + updateType.toString()
+                        + " through DataApi.updateEntitiesInEntitySet",
+                Optional.of( entities.keySet() ),
+                ImmutableMap.of(),
+                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.empty()
+        ) );
+
+        return writeEvent.getNumUpdates();
     }
 
     @PatchMapping(
@@ -289,9 +312,22 @@ public class DataController implements DataApi, AuthorizingComponent {
                         .putAll( entitySetId, requiredPropertyTypes ).build(),
                 WRITE_PERMISSION ) );
 
-        return dgm.replacePropertiesInEntities( entitySetId,
+        WriteEvent writeEvent = dgm.replacePropertiesInEntities( entitySetId,
                 entities,
                 edmService.getPropertyTypesAsMap( requiredPropertyTypes ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.REPLACE_PROPERTIES_OF_ENTITIES,
+                "Entity properties replaced through DataApi.replaceEntityProperties",
+                Optional.of( entities.keySet() ),
+                ImmutableMap.of(),
+                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.empty()
+        ) );
+
+        return writeEvent.getNumUpdates();
     }
 
     @Override
@@ -314,7 +350,21 @@ public class DataController implements DataApi, AuthorizingComponent {
                 }
         );
 
-        return dgm.createAssociations( associations );
+        int numUpdates = dgm.createAssociations( associations );
+
+        // TODO figure out what to do with associations
+        //        recordEvents( associations.stream().map( dataEdgeKey -> new AuditableEvent(
+        //                getCurrentUserId(),
+        //                new AclKey( dataEdgeKey.getEdge().getEntitySetId() ),
+        //                AuditEventType.CREATE_ASSOCIATIONS,
+        //                "Replace entity properties",
+        //                Optional.of( entities.keySet() ),
+        //                ImmutableMap.of(),
+        //                OffsetDateTime.now(),
+        //                Optional.empty()
+        //        ) ).collect( Collectors.toList() ) );
+
+        return numUpdates;
     }
 
     @Timed
@@ -331,7 +381,20 @@ public class DataController implements DataApi, AuthorizingComponent {
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
-        return dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
+        List<UUID> entityKeyIds = dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.CREATE_ENTITIES,
+                "Entities created through DataApi.createEntities",
+                Optional.of( Sets.newHashSet( entityKeyIds ) ),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
+        return entityKeyIds;
     }
 
     @Override
@@ -392,12 +455,12 @@ public class DataController implements DataApi, AuthorizingComponent {
             if ( partial ) {
                 return dgm.partialReplaceEntities( entitySetId,
                         transformValues( association.getValue(), DataEdge::getData ),
-                        authorizedPropertyTypes );
+                        authorizedPropertyTypes ).getNumUpdates();
             } else {
 
                 return dgm.replaceEntities( entitySetId,
                         transformValues( association.getValue(), DataEdge::getData ),
-                        authorizedPropertyTypes );
+                        authorizedPropertyTypes ).getNumUpdates();
             }
         } ).sum();
     }
@@ -450,16 +513,33 @@ public class DataController implements DataApi, AuthorizingComponent {
             method = RequestMethod.DELETE )
     public Integer deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestParam( value = TYPE ) DeleteType deleteType) {
-        if( deleteType == DeleteType.Hard) {
+            @RequestParam( value = TYPE ) DeleteType deleteType ) {
+
+        WriteEvent writeEvent;
+
+        if ( deleteType == DeleteType.Hard ) {
             final Map<UUID, PropertyType> authorizedPropertyTypes =
                     getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
-            return dgm.deleteEntitySet(entitySetId, authorizedPropertyTypes);
+            writeEvent = dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
         } else {
             ensureReadAccess( new AclKey( entitySetId ) );
-            return dgm.clearEntitySet(
+            writeEvent = dgm.clearEntitySet(
                     entitySetId, authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
         }
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.DELETE_ENTITIES,
+                "All entities deleted from entity set using delete type " + deleteType.toString()
+                        + " through DataApi.deleteAllEntitiesFromEntitySet",
+                Optional.empty(),
+                ImmutableMap.of(),
+                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.empty()
+        ) );
+
+        return writeEvent.getNumUpdates();
     }
 
     @Override
@@ -477,19 +557,32 @@ public class DataController implements DataApi, AuthorizingComponent {
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+        WriteEvent writeEvent;
         if ( deleteType == DeleteType.Hard ) {
             final Map<UUID, PropertyType> authorizedPropertyTypes =
                     getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
-            return dgm.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
+            writeEvent = dgm.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
         } else {
             ensureReadAccess( new AclKey( entitySetId ) );
             //Note this will only clear properties to which the caller has access.
-            return dgm.clearEntities( entitySetId,
+            writeEvent = dgm.clearEntities( entitySetId,
                     entityKeyIds,
                     authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
         }
-    }
 
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.DELETE_ENTITIES,
+                "Entities deleted using delete type " + deleteType.toString() + " through DataApi.deleteEntities",
+                Optional.of( entityKeyIds ),
+                ImmutableMap.of(),
+                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.empty()
+        ) );
+
+        return writeEvent.getNumUpdates();
+    }
 
     @Override
     @DeleteMapping(
@@ -499,18 +592,36 @@ public class DataController implements DataApi, AuthorizingComponent {
             @PathVariable( ENTITY_KEY_ID ) UUID entityKeyId,
             @RequestBody Set<UUID> propertyTypeIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+        WriteEvent writeEvent;
+
         if ( deleteType == DeleteType.Hard ) {
             final Map<UUID, PropertyType> authorizedPropertyTypes =
                     getAuthorizedPropertyTypesForDelete( entitySetId, Optional.of( propertyTypeIds ) );
-            return dgm.deleteEntityProperties( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes );
+            writeEvent = dgm
+                    .deleteEntityProperties( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes );
         } else {
             ensureReadAccess( new AclKey( entitySetId ) );
             Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                     .getAuthorizedPropertyTypes(
                             ImmutableSet.of( entitySetId ), propertyTypeIds, EnumSet.of( Permission.WRITE ) )
                     .get( entitySetId );
-            return dgm.clearEntityProperties( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes );
+            writeEvent = dgm
+                    .clearEntityProperties( entitySetId, ImmutableSet.of( entityKeyId ), authorizedPropertyTypes );
         }
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.DELETE_PROPERTIES_OF_ENTITIES,
+                "Entity properties deleted using delete type " + deleteType.toString()
+                        + " through DataApi.deleteEntityProperties",
+                Optional.of( ImmutableSet.of( entityKeyId ) ),
+                ImmutableMap.of( "propertyTypeIds", propertyTypeIds ),
+                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.empty()
+        ) );
+
+        return writeEvent.getNumUpdates();
     }
 
     @Timed
@@ -574,16 +685,55 @@ public class DataController implements DataApi, AuthorizingComponent {
          */
 
         if ( allEntitySetIds.containsAll( entitySetIdToEntityDataKeysMap.keySet() ) ) {
-            entitySetIdToEntityDataKeysMap.forEach( ( entitySetId, entityDataKeys ) -> dgm.clearEntities(
-                    entitySetId,
-                    entityDataKeys.stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
-                    entitySetIdToPropertyTypesMap.get( entitySetId ) )
-            );
-            return entitySetIdToEntityDataKeysMap
-                    .entrySet()
-                    .stream()
-                    .mapToLong( entry -> entry.getValue().size() )
-                    .sum();
+
+            /* Delete entity */
+
+            long numUpdates = 0;
+
+            WriteEvent writeEvent = dgm.clearEntities( vertexEntitySetId,
+                    ImmutableSet.of( vertexEntityKeyId ),
+                    entitySetIdToPropertyTypesMap.get( vertexEntitySetId ) );
+
+            numUpdates += writeEvent.getNumUpdates();
+
+            recordEvent( new AuditableEvent(
+                    getCurrentUserId(),
+                    new AclKey( vertexEntitySetId ),
+                    AuditEventType.DELETE_ENTITY_AND_NEIGHBORHOOD,
+                    "Entity and all neighbors cleared through DataApi.clearEntityAndNeighborEntities",
+                    Optional.of( ImmutableSet.of( vertexEntityKeyId ) ),
+                    ImmutableMap.of(),
+                    getDateTimeFromLong( writeEvent.getVersion() ),
+                    Optional.empty()
+            ) );
+
+            /* Delete neighbors */
+
+            List<AuditableEvent> neighborDeleteEvents = Lists.newArrayList();
+
+            for ( Map.Entry<UUID, Set<EntityDataKey>> entry : entitySetIdToEntityDataKeysMap.entrySet() ) {
+                WriteEvent neighborWriteEvent = dgm.clearEntities(
+                        entry.getKey(),
+                        entry.getValue().stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
+                        entitySetIdToPropertyTypesMap.get( entry.getKey() ) );
+
+                numUpdates += neighborWriteEvent.getNumUpdates();
+                neighborDeleteEvents.add( new AuditableEvent(
+                        getCurrentUserId(),
+                        new AclKey( entry.getKey() ),
+                        AuditEventType.DELETE_ENTITY_AS_PART_OF_NEIGHBORHOOD,
+                        "Entity cleared as part of neighborhood delete through DataApi.clearEntityAndNeighborEntities",
+                        Optional.of( entry.getValue().stream().map( EntityDataKey::getEntityKeyId )
+                                .collect( Collectors.toSet() ) ),
+                        ImmutableMap.of(),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                ) );
+            }
+
+            recordEvents( neighborDeleteEvents );
+
+            return numUpdates;
         } else {
             throw new ForbiddenException( "Insufficient permissions to perform operation." );
         }
@@ -602,7 +752,21 @@ public class DataController implements DataApi, AuthorizingComponent {
                 WRITE_PERMISSION,
                 edmService.getPropertyTypesAsMap( entity.keySet() ) );
 
-        return dgm.replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
+        WriteEvent writeEvent = dgm
+                .replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.REPLACE_ENTITIES,
+                "Entity replaced through DataApi.replaceEntityInEntitySet",
+                Optional.of( ImmutableSet.of( entityKeyId ) ),
+                ImmutableMap.of(),
+                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.empty()
+        ) );
+
+        return writeEvent.getNumUpdates();
     }
 
     @Override
@@ -698,7 +862,6 @@ public class DataController implements DataApi, AuthorizingComponent {
         }
     }
 
-
     private Map<UUID, PropertyType> getAuthorizedPropertyTypesForDelete(
             UUID entitySetId,
             Optional<Set<UUID>> properties ) {
@@ -711,8 +874,10 @@ public class DataController implements DataApi, AuthorizingComponent {
         final EntityType entityType = edmService.getEntityType( entitySet.getEntityTypeId() );
         final Set<UUID> requiredProperties = properties.orElse( entityType.getProperties() );
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
-                .getAuthorizedPropertyTypes( ImmutableSet.of(entitySetId), requiredProperties, EnumSet.of( Permission.OWNER ) )
-                .get(entitySetId);
+                .getAuthorizedPropertyTypes( ImmutableSet.of( entitySetId ),
+                        requiredProperties,
+                        EnumSet.of( Permission.OWNER ) )
+                .get( entitySetId );
         if ( !authorizedPropertyTypes.keySet().containsAll( requiredProperties ) ) {
             throw new ForbiddenException(
                     "You must be an owner of all required entity set properties to delete entities from it." );
@@ -766,4 +931,25 @@ public class DataController implements DataApi, AuthorizingComponent {
         return entities.values().stream().map( SetMultimap::keySet ).flatMap( Set::stream )
                 .collect( Collectors.toSet() );
     }
+
+    private UUID getCurrentUserId() {
+        return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
+    }
+
+    private static OffsetDateTime getDateTimeFromLong( long epochTime ) {
+        return OffsetDateTime.ofInstant( Instant.ofEpochMilli( epochTime ), ZoneId.systemDefault() );
+    }
+
+    @NotNull
+    @Override
+    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
+        return auditRecordEntitySetsManager;
+    }
+
+    @NotNull
+    @Override
+    public DataGraphManager getDataGraphService() {
+        return dgm;
+    }
+
 }
