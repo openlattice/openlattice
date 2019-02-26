@@ -190,10 +190,12 @@ public class EntitySet extends AbstractSecurableObject {
         this.flags.remove( flag );
     }
 
+    @JsonIgnore
     public boolean isExternal() {
         return flags.contains( EntitySetFlag.EXTERNAL );
     }
 
+    @JsonIgnore
     public boolean isLinking() {
         return flags.contains( EntitySetFlag.LINKING );
     }
