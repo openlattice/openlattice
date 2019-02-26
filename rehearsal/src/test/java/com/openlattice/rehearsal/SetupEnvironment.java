@@ -74,6 +74,8 @@ public class SetupEnvironment {
     protected static final Retrofit retrofit3;
     protected static final Retrofit retrofitProd;
     protected static final OkHttpClient httpClient;
+    protected static final OkHttpClient httpClient1;
+    protected static final OkHttpClient httpClient2;
 
     protected static final Logger logger = LoggerFactory.getLogger( SetupEnvironment.class );
 
@@ -111,6 +113,8 @@ public class SetupEnvironment {
         retrofitProd = RetrofitFactory.newClient( RetrofitFactory.Environment.PRODUCTION );
 
         httpClient = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenAdmin ).build();
+        httpClient1 = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenUser1 ).build();
+        httpClient2 = RetrofitFactory.okhttpClientWithLoomAuth( () -> tokenUser2 ).build();
 
         String idAdmin = ( String ) jwtAdmin.getPrincipal();
         String idUser1 = ( String ) jwtUser1.getPrincipal();

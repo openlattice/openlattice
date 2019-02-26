@@ -20,6 +20,7 @@
 
 package com.openlattice.rehearsal.authentication;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
@@ -69,6 +70,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
@@ -102,6 +104,8 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         indexerRetrofitMap.put( "admin", retrofitIndexer );
 
         httpClientMap.put( "admin", httpClient );
+        httpClientMap.put( "user1", httpClient1 );
+        httpClientMap.put( "user2", httpClient2 );
     }
 
     /**
@@ -133,22 +137,9 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         currentHttpClient = httpClientMap.get( user );
     }
 
-    public static Response makeGetRequest( String url ) throws GeneralException {
-        Request request = new Request.Builder()
-                .url( RetrofitFactory.Environment.TESTING.getBaseUrl() + url.substring( 1 ) ) // remove extra "/"
-                .build();
-        try {
-            Response response = currentHttpClient.newCall( request ).execute();
-            if ( !response.isSuccessful() ) {
-                throw new GeneralException( "Something went wrong with call: " + request + ". " +
-                        "Code: " + response.code() + ", message: " + response.message() );
-            }
-
-            return response;
-        } catch ( IOException ex ) {
-            throw new GeneralException( "Something went wrong with call: " + request );
-        }
-    }
+    /**
+     * Helper functions to make direct HTTP calls
+     */
 
     public static Response makePutRequest( String url, RequestBody body ) throws GeneralException {
         Request request = new Request.Builder()
@@ -158,8 +149,26 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         try {
             Response response = currentHttpClient.newCall( request ).execute();
             if ( !response.isSuccessful() ) {
-                throw new GeneralException( "Something went wrong with call: " + request + ". " +
-                        "Code: " + response.code() + ", message: " + response.message() );
+                String errorBody = IOUtils.toString( response.body().byteStream(), Charsets.UTF_8 );
+                throw new GeneralException( errorBody );
+            }
+
+            return response;
+        } catch ( IOException ex ) {
+            throw new GeneralException( "Something went wrong with call: " + request );
+        }
+    }
+
+    public static Response makeDeleteRequest( String url ) throws GeneralException {
+        Request request = new Request.Builder()
+                .url( RetrofitFactory.Environment.TESTING.getBaseUrl() + url.substring( 1 ) ) // remove extra "/"
+                .delete()
+                .build();
+        try {
+            Response response = currentHttpClient.newCall( request ).execute();
+            if ( !response.isSuccessful() ) {
+                String errorBody = IOUtils.toString( response.body().byteStream(), Charsets.UTF_8 );
+                throw new GeneralException( errorBody );
             }
 
             return response;
