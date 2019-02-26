@@ -52,7 +52,7 @@ interface AuditingComponent {
 
         return if( auditingConfiguration.isAuditingInitialized() ) {
             events
-                    .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey) }
+                    .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey, it.eventType) }
                     .map { (auditEntitySet, entities) ->
                         getDataGraphService().createEntities(
                                 auditEntitySet,

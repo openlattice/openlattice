@@ -22,20 +22,10 @@
 
 package com.openlattice.datastore.services;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -44,62 +34,23 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.AuditingTypes;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.edm.EntityDataModel;
-import com.openlattice.edm.EntityDataModelDiff;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.PostgresEdmManager;
-import com.openlattice.edm.Schema;
-import com.openlattice.edm.events.AssociationTypeCreatedEvent;
-import com.openlattice.edm.events.AssociationTypeDeletedEvent;
-import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
-import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
-import com.openlattice.edm.events.EntityTypeCreatedEvent;
-import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
-import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypeMetaDataUpdatedEvent;
-import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
+import com.openlattice.edm.*;
+import com.openlattice.edm.events.*;
 import com.openlattice.edm.exceptions.TypeExistsException;
 import com.openlattice.edm.exceptions.TypeNotFoundException;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.AssociationDetails;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
-import com.openlattice.edm.type.PropertyType;
-import com.openlattice.edm.types.processors.AddDstEntityTypesToAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.AddPrimaryKeysToEntityTypeProcessor;
-import com.openlattice.edm.types.processors.AddPropertyTypesToEntityTypeProcessor;
-import com.openlattice.edm.types.processors.AddSrcEntityTypesToAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.RemoveDstEntityTypesFromAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.RemovePrimaryKeysFromEntityTypeProcessor;
-import com.openlattice.edm.types.processors.RemovePropertyTypesFromEntityTypeProcessor;
-import com.openlattice.edm.types.processors.RemoveSrcEntityTypesFromAssociationTypeProcessor;
-import com.openlattice.edm.types.processors.ReorderPropertyTypesInEntityTypeProcessor;
-import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
-import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
+import com.openlattice.edm.type.*;
+import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
@@ -109,7 +60,12 @@ import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
@@ -118,16 +74,13 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.inject.Inject;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 public class EdmService implements EdmManager {
 
-    private static final Logger             logger = LoggerFactory.getLogger( EdmService.class );
+    private static final Logger logger = LoggerFactory.getLogger( EdmService.class );
 
     private final IMap<UUID, PropertyType>                              propertyTypes;
     private final IMap<UUID, ComplexType>                               complexTypes;
@@ -212,7 +165,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public UUID getCurrentEntityDataModelVersion() {
-        return new UUID(0,0);
+        return new UUID( 0, 0 );
     }
 
     /*
@@ -490,6 +443,13 @@ public class EdmService implements EdmManager {
     public void createEntitySet( Principal principal, EntitySet entitySet ) {
         EntityType entityType = entityTypes.get( entitySet.getEntityTypeId() );
         ensureValidEntitySet( entitySet );
+
+        if ( entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
+            entitySet.addFlag( EntitySetFlag.ASSOCIATION );
+        } else if ( entitySet.getFlags().contains( EntitySetFlag.ASSOCIATION ) ) {
+            entitySet.removeFlag( EntitySetFlag.ASSOCIATION );
+        }
+
         createEntitySet( principal, entitySet, entityType.getProperties() );
     }
 
@@ -531,7 +491,10 @@ public class EdmService implements EdmManager {
             edmManager.createEntitySet( entitySet, ownablePropertyTypes );
 
             eventBus.post( new EntitySetCreatedEvent( entitySet, ownablePropertyTypes ) );
-            aresManager.createAuditEntitySetForEntitySet( principal, entitySet.getId() );
+
+            if ( !entitySet.getFlags().contains( EntitySetFlag.AUDIT ) ) {
+                aresManager.createAuditEntitySetForEntitySet( entitySet );
+            }
 
         } catch ( Exception e ) {
             logger.error( "Unable to create entity set {} for principal {}", entitySet, principal, e );

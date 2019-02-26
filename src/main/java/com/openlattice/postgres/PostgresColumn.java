@@ -162,6 +162,9 @@ public final class PostgresColumn {
     public static final String                   ENTITY_KEY_IDS_FIELD              = "entity_key_ids";
     public static final PostgresColumnDefinition ENTITY_KEY_IDS                    =
             new PostgresColumnDefinition( ENTITY_KEY_IDS_FIELD, UUID_ARRAY );
+    public static final String                   ENTITY_SET_FLAGS_FIELD            = "flags";
+    public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
+            new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY );
     public static final String                   ENTITY_SET_IDS_FIELD              = "entity_set_ids";
     public static final PostgresColumnDefinition ENTITY_SET_IDS                    =
             new PostgresColumnDefinition( ENTITY_SET_IDS_FIELD, UUID_ARRAY ).notNull();

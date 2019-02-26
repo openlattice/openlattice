@@ -26,6 +26,7 @@ package com.openlattice.tasks
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 enum class Task {
+    AUDIT_INITIALIZATION,
     AUTH0_SYNC_TASK,
     AUTHORIZATION_BOOTSTRAP,
     CLEAN_OUT_OLDER_USERS_INITIALIZATON,

@@ -119,10 +119,9 @@ public final class PostgresTable {
                             TITLE,
                             DESCRIPTION,
                             CONTACTS,
-                            LINKING,
                             PostgresColumn.LINKED_ENTITY_SETS,
-                            EXTERNAL,
-                            ORGANIZATION_ID );
+                            ORGANIZATION_ID,
+                            ENTITY_SET_FLAGS );
     public static final PostgresTableDefinition        ENTITY_SET_PROPERTY_METADATA =
             new PostgresTableDefinition( "entity_set_property_metadata" )
                     .addColumns( ENTITY_SET_ID, PROPERTY_TYPE_ID, TITLE, DESCRIPTION, TAGS, SHOW )

@@ -23,6 +23,7 @@ package com.openlattice.graph.core;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking;
 import com.openlattice.data.DataEdgeKey;
+import com.openlattice.data.WriteEvent;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
@@ -46,7 +47,7 @@ public interface GraphService {
 
     int clearVertices( UUID entitySetId, Set<UUID> vertices );
 
-    int deleteEdges( Set<EdgeKey> keys );
+    WriteEvent deleteEdges( Set<EdgeKey> keys );
 
     int deleteVerticesInEntitySet( UUID entitySetId );
 
