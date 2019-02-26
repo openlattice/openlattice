@@ -64,7 +64,7 @@ class AuditInitializationTask(
 
             if (dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.isAuditingInitialized()) {
 
-                dependencies.edmService.createEntitySet(admins.first(), EntitySet(
+                edmAuditEntitySet = EntitySet(
                         dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.auditingEntityTypeId,
                         EDM_AUDIT_ENTITY_SET_NAME,
                         "EDM Audit Entity Set",
@@ -72,16 +72,19 @@ class AuditInitializationTask(
                         ImmutableSet.of(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT))
-                ))
+                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT)))
+
+                dependencies.edmService.createEntitySet(admins.first(), edmAuditEntitySet)
             }
 
-            edmAuditEntitySet = dependencies.edmService.getEntitySet(EDM_AUDIT_ENTITY_SET_NAME)
+            val edmAuditAclKeys = dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.propertyTypeIds.values.map { AclKey(edmAuditEntitySet.id, it) }.toMutableSet()
+            edmAuditAclKeys.add(AclKey(edmAuditEntitySet.id))
 
-            dependencies.authorizationManager.addPermission(
-                    AclKey(edmAuditEntitySet.id),
-                    SystemRole.ADMIN.principal,
+            dependencies.authorizationManager.setPermission(
+                    edmAuditAclKeys,
+                    setOf(SystemRole.ADMIN.principal),
                     EnumSet.allOf(Permission::class.java))
+
         }
     }
 
