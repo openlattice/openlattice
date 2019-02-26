@@ -129,7 +129,7 @@ class AssemblerConnectionManager(
             datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
                     statement.execute(
-                            "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_FOREIGN_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,public"
+                            "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_FOREIGN_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,$PUBLIC_SCHEMA"
                     )
                 }
             }
@@ -165,7 +165,7 @@ class AssemblerConnectionManager(
 
         val grantRole = "GRANT ${DataTables.quote(dbRole)} TO $dbOrgUser"
         val createDb = " CREATE DATABASE $db"
-        val revokeAll = "REVOKE ALL ON DATABASE $db FROM public"
+        val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_SCHEMA"
 
         //We connect to default db in order to do initial db setup
 
@@ -177,7 +177,7 @@ class AssemblerConnectionManager(
                 if (!exists(dbname)) {
                     statement.execute(createDb)
                     //Allow usage of schema public
-                    //statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbOrgUser)}")
+                    //statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbOrgUser)}")
                     statement.execute("GRANT ALL PRIVILEGES ON DATABASE $db TO $dbOrgUser")
                 }
                 statement.execute(revokeAll)
@@ -412,9 +412,9 @@ class AssemblerConnectionManager(
 
             datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
-                    logger.info("Revoking public schema right from role: {}", role)
+                    logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                    statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbRole")
+                    statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbRole")
 
                     return@use
                 }
@@ -432,7 +432,7 @@ class AssemblerConnectionManager(
                 statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
                 dbCredentialService.deleteUserCredential(user.name)
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking public schema right from user {}", user)
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
             }
         }
     }
@@ -453,8 +453,8 @@ class AssemblerConnectionManager(
             connection.createStatement().use { statement ->
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking public schema right from role: {}", role)
-                statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbRole)}")
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbRole)}")
 
                 return@use
             }
@@ -476,8 +476,8 @@ class AssemblerConnectionManager(
 //                    logger.info("Creating new user {}", dbUser)
                 statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking public schema right from user {}", user)
-                statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbUser)}")
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbUser)}")
 
                 return@use
             }
@@ -499,8 +499,8 @@ class AssemblerConnectionManager(
 
                 statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $dbUser")
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking public schema right from user: {}", userId)
-                statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbUser")
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from user: {}", userId)
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbUser")
                 //Set the search path for the user
                 statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA")
 
@@ -537,7 +537,7 @@ class AssemblerConnectionManager(
                         "IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
                 )
                 statement.execute(
-                        "IMPORT FOREIGN SCHEMA public LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
+                        "IMPORT FOREIGN SCHEMA $PUBLIC_SCHEMA LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
                 )
                 logger.info("Imported foreign schema")
             }
@@ -549,7 +549,9 @@ class AssemblerConnectionManager(
 const val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
 const val PRODUCTION_FOREIGN_SCHEMA = "prod"
 const val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
+const val PUBLIC_SCHEMA = "public"
 const val PRODUCTION_SERVER = "olprod"
+
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
 
@@ -564,6 +566,8 @@ internal fun createSchema(datasource: HikariDataSource, schema: String) {
 internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
     createSchema(datasource, SCHEMA)
 }
+
+internal fun import
 
 internal fun createRoleIfNotExistsSql(dbRole: String): String {
     return "DO\n" +
