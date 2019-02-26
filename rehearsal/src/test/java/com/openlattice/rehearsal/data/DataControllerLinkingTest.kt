@@ -25,6 +25,7 @@ import com.google.common.collect.*
 import com.openlattice.data.DeleteType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
+import com.openlattice.edm.type.EntityType
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.PERSON_GIVEN_NAME_NAME
@@ -33,9 +34,11 @@ import com.openlattice.rehearsal.edm.PERSON_NAME
 import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
+import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
+import java.lang.reflect.UndeclaredThrowableException
 import java.util.*
 
 /**
@@ -47,39 +50,44 @@ private val numberOfEntries = 10
 
 class DataControllerLinkingTest : SetupTestData() {
     companion object {
+        private val importedEntitySets = mapOf(
+                "SocratesTestC" to Pair("socratesC.yaml", "emptyTestData.csv"),
+                "SocratesTestD" to Pair("socratesD.yaml", "emptyTestData.csv"))
+
+        lateinit var personEt: EntityType
+
         @JvmStatic
         @BeforeClass
         fun init() {
-            importDataSet("socratesA.yaml", "test_linked_ppl_1.csv")
-            importDataSet("associationTestFlight.yaml", "emptyTestData.csv")
+            importedEntitySets.forEach {
+                importDataSet(it.value.first, it.value.second)
+            }
 
-            Thread.sleep(5000)
-            while (!checkLinkingFinished(setOf("SocratesTestA"))) {
-                Thread.sleep(3000)
+            Thread.sleep(10000L)
+            while (!checkLinkingFinished(importedEntitySets.keys)) {
+                Thread.sleep(5000L)
+            }
+
+            loginAs("admin")
+            personEt = edmApi.getEntityType(edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME))
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun tearDown() {
+            importedEntitySets.keys.forEach {
+                try {
+                    edmApi.deleteEntitySet(edmApi.getEntitySetId(it))
+                } catch (e: UndeclaredThrowableException) {
+                }
             }
         }
     }
 
     @Test
     fun testGetLinkedEntitySets() {
-        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
-
-        // these ids are put into the whitelist configuration in indexer > linking.yaml
-        // otherwise it will never get picked up by linking
-        val esId1 = UUID.fromString("65847f7b-c939-414f-bb45-863cd594e412")
-        val esId2 = UUID.fromString("8c97bf63-ca7a-4f37-ba1c-40338b1032d4")
-
-        val es1 = try {
-            createEntitySet(esId1, personEt)
-        } catch (e: Exception) {
-            edmApi.getEntitySet(esId1)
-        }
-        val es2 = try {
-            createEntitySet(esId2, personEt)
-        } catch (e: Exception) {
-            edmApi.getEntitySet(esId2)
-        }
+        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
@@ -102,7 +110,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         // wait while linking finishes
         Thread.sleep(5000)
-        while (!checkLinkingFinished(setOf(es1.name, es2.name))) {
+        while (!checkLinkingFinished(setOf(importedEntitySets.keys.first(), importedEntitySets.keys.last()))) {
             Thread.sleep(2000)
         }
 
@@ -123,24 +131,8 @@ class DataControllerLinkingTest : SetupTestData() {
 
     @Test
     fun testGetLinkedEntitySetsWithLinkingIds() {
-        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
-
-        // these ids are put into the whitelist configuration in indexer > linking.yaml
-        // otherwise it will never get picked up by linking
-        val esId1 = UUID.fromString("65847f7b-c939-414f-bb45-863cd594e412")
-        val esId2 = UUID.fromString("8c97bf63-ca7a-4f37-ba1c-40338b1032d4")
-
-        val es1 = try {
-            createEntitySet(esId1, personEt)
-        } catch (e: Exception) {
-            edmApi.getEntitySet(esId1)
-        }
-        val es2 = try {
-            createEntitySet(esId2, personEt)
-        } catch (e: Exception) {
-            edmApi.getEntitySet(esId2)
-        }
+        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
@@ -159,7 +151,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         // wait while linking finishes
         Thread.sleep(5000)
-        while (!checkLinkingFinished(setOf(es1.name, es2.name))) {
+        while (!checkLinkingFinished(setOf(importedEntitySets.keys.first(), importedEntitySets.keys.last()))) {
             Thread.sleep(3000)
         }
 
