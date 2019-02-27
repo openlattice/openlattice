@@ -52,6 +52,7 @@ import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
@@ -110,7 +111,8 @@ class Assembler(
         createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
         createOrUpdateProductionForeignSchemaOfEntitySet(
                 entitySetCreatedEvent.entitySet.organizationId,
-                entitySetCreatedEvent.entitySet.id)
+                entitySetCreatedEvent.entitySet.id,
+                false)
     }
 
     @Subscribe
@@ -118,7 +120,8 @@ class Assembler(
         createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySet.id)
         createOrUpdateProductionForeignSchemaOfEntitySet(
                 propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
-                propertyTypesAddedToEntitySetEvent.entitySet.id)
+                propertyTypesAddedToEntitySetEvent.entitySet.id,
+                true)
     }
 
     fun createOrganization(organization: Organization) {
@@ -181,14 +184,26 @@ class Assembler(
         }
     }
 
-    private fun createOrUpdateProductionForeignSchemaOfEntitySet(organizationId: UUID, entitySetId: UUID) {
+    private fun createOrUpdateProductionForeignSchemaOfEntitySet(organizationId: UUID, entitySetId: UUID, propertyTypeAdded: Boolean) {
         val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
         acm.connect(dbname).use { datasource ->
             datasource.connection.use { conn ->
                 conn.createStatement().use { stmt ->
                     val tableName = "\"$entitySetId\""
+                    // (re-)import table
                     stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$tableName ")
                     stmt.execute(importProductionViewsSchemaSql(setOf(tableName)))
+
+                    // (re)-import entity_sets and if propertyTypeAdded: property_types, entity_types
+                    val publicTables = mutableSetOf(PostgresTable.ENTITY_SETS.name)
+                    if (propertyTypeAdded) {
+                        publicTables.addAll(setOf(PostgresTable.PROPERTY_TYPES.name, PostgresTable.ENTITY_TYPES.name))
+                    }
+
+                    publicTables.forEach {
+                        stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$it")
+                    }
+                    stmt.execute(importPublicSchemaSql(publicTables))
                 }
             }
         }
