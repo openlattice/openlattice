@@ -255,6 +255,7 @@ public class HazelcastOrganizationService {
         allMaps.stream().forEach( m -> m.delete( organizationId ) );
         reservations.release( organizationId );
         appConfigs.removeAll( Predicates.equal( AppConfigMapstore.ORGANIZATION_ID, organizationId ) );
+        assembler.destroyOrganization( organizationId );
         eventBus.post( new OrganizationDeletedEvent( organizationId ) );
     }
 

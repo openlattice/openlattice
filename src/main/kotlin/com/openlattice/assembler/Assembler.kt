@@ -108,11 +108,17 @@ class Assembler(
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
         createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
+        createOrUpdateProductionForeignSchemaOfEntitySet(
+                entitySetCreatedEvent.entitySet.organizationId,
+                entitySetCreatedEvent.entitySet.id)
     }
 
     @Subscribe
     fun handlePropertyTypeAddedToEntitySet(propertyTypesAddedToEntitySetEvent: PropertyTypesAddedToEntitySetEvent) {
-        createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySetId)
+        createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySet.id)
+        createOrUpdateProductionForeignSchemaOfEntitySet(
+                propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
+                propertyTypesAddedToEntitySetEvent.entitySet.id)
     }
 
     fun createOrganization(organization: Organization) {
@@ -125,6 +131,11 @@ class Assembler(
             assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
             return@use
         }
+    }
+
+    fun destroyOrganization(organizationId: UUID) {
+        assemblies.remove(organizationId)
+        acm.dropOrganizationDatabase(organizationId)
     }
 
     fun materializeEntitySets(
@@ -166,6 +177,19 @@ class Assembler(
                 stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
                 stmt.execute("CREATE OR REPLACE VIEW $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\" AS $sql")
                 return@use
+            }
+        }
+    }
+
+    private fun createOrUpdateProductionForeignSchemaOfEntitySet(organizationId: UUID, entitySetId: UUID) {
+        val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        acm.connect(dbname).use { datasource ->
+            datasource.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    val tableName = "\"$entitySetId\""
+                    stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$tableName ")
+                    stmt.execute(importProductionViewsSchemaSql(setOf(tableName)))
+                }
             }
         }
     }
