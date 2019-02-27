@@ -32,10 +32,7 @@ import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProces
 import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
 import com.openlattice.assembler.tasks.CleanOutOldUsersInitializationTask
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.MetadataOption
@@ -122,6 +119,9 @@ class Assembler(
                 propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
                 propertyTypesAddedToEntitySetEvent.entitySet.id,
                 true)
+        // flag entity set as non-materialized
+        assemblies[propertyTypesAddedToEntitySetEvent.entitySet.organizationId]?.entitySetIds!!
+                .remove(propertyTypesAddedToEntitySetEvent.entitySet.id)
     }
 
     fun createOrganization(organization: Organization) {
@@ -191,7 +191,7 @@ class Assembler(
                 conn.createStatement().use { stmt ->
                     val tableName = "\"$entitySetId\""
                     // (re-)import table
-                    stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$tableName ")
+                    stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$tableName CASCADE")
                     stmt.execute(importProductionViewsSchemaSql(setOf(tableName)))
 
                     // (re)-import entity_sets and if propertyTypeAdded: property_types, entity_types
@@ -201,7 +201,7 @@ class Assembler(
                     }
 
                     publicTables.forEach {
-                        stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$it")
+                        stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$it CASCADE")
                     }
                     stmt.execute(importPublicSchemaSql(publicTables))
                 }
