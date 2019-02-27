@@ -31,6 +31,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
+import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
 import java.util.*
@@ -113,7 +114,7 @@ interface DataGraphManager {
             entitySetId: UUID,
             entities: List<Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): List<UUID>
+    ): Pair<List<UUID>, WriteEvent>
 
     fun replaceEntities(
             entitySetId: UUID,
@@ -147,7 +148,7 @@ interface DataGraphManager {
     fun createAssociations(
             associations: ListMultimap<UUID, DataEdge>,
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): ListMultimap<UUID, UUID>
+    ): Map<UUID, CreateAssociationEvent>
 
     fun integrateEntitiesAndAssociations(
             entities: Set<Entity>,
@@ -183,6 +184,6 @@ interface DataGraphManager {
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
 
-    fun createEdges(edges: Set<DataEdgeKey>): Int
-    fun createAssociations(associations: Set<DataEdgeKey>): Int
+    fun createEdges(edges: Set<DataEdgeKey>): WriteEvent
+    fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
 }

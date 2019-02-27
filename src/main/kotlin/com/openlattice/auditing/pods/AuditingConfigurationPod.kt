@@ -26,7 +26,6 @@ import com.hazelcast.core.HazelcastInstance
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
-import com.openlattice.auditing.AuditInitializationTask
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import org.slf4j.LoggerFactory
@@ -80,10 +79,5 @@ class AuditingConfigurationPod {
         )
         logger.info("Using aws auditing configuration: {}", config)
         return config
-    }
-
-    @Bean
-    fun auditInitializationTask(): AuditInitializationTask {
-        return AuditInitializationTask(hazelcastInstance!!)
     }
 }

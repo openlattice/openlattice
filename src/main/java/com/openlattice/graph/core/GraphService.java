@@ -39,7 +39,7 @@ import java.util.stream.Stream;
  */
 public interface GraphService {
 
-    int createEdges( Set<DataEdgeKey> keys );
+    WriteEvent createEdges( Set<DataEdgeKey> keys );
 
     int clearEdges( Set<EdgeKey> keys );
 

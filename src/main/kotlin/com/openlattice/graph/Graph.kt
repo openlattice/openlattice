@@ -72,7 +72,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     /* Create */
 
-    override fun createEdges(keys: MutableSet<DataEdgeKey>): Int {
+    override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
         hds.connection.use {
             val ps = it.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
@@ -89,7 +89,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     ps.setArray(8, versions)
                     ps.addBatch()
                 }
-                return ps.executeBatch().sum()
+                return WriteEvent(version, ps.executeBatch().sum())
             }
         }
     }

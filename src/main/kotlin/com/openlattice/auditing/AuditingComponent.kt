@@ -58,7 +58,7 @@ interface AuditingComponent {
                                 auditEntitySet,
                                 toMap(entities),
                                 auditingConfiguration.propertyTypes
-                        ).size
+                        ).key.size
                     }.sum()
         } else {
             0
