@@ -72,6 +72,8 @@ import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.jetbrains.annotations.NotNull;
@@ -350,21 +352,40 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 }
         );
 
-        int numUpdates = dgm.createAssociations( associations );
+        WriteEvent writeEvent = dgm.createAssociations( associations );
 
-        // TODO figure out what to do with associations
-        //        recordEvents( associations.stream().map( dataEdgeKey -> new AuditableEvent(
-        //                getCurrentUserId(),
-        //                new AclKey( dataEdgeKey.getEdge().getEntitySetId() ),
-        //                AuditEventType.CREATE_ASSOCIATIONS,
-        //                "Replace entity properties",
-        //                Optional.of( entities.keySet() ),
-        //                ImmutableMap.of(),
-        //                OffsetDateTime.now(),
-        //                Optional.empty()
-        //        ) ).collect( Collectors.toList() ) );
+        Stream<Pair<EntityDataKey, Map<String, Object>>> neighborMappingsCreated = associations.stream()
+                .flatMap( dataEdgeKey -> Stream.of(
+                        Pair.of( dataEdgeKey.getSrc(),
+                                ImmutableMap.of( "association",
+                                        dataEdgeKey.getEdge(),
+                                        "neighbor",
+                                        dataEdgeKey.getDst(),
+                                        "isSrc",
+                                        true ) ),
+                        Pair.of( dataEdgeKey.getDst(),
+                                ImmutableMap.of( "association",
+                                        dataEdgeKey.getEdge(),
+                                        "neighbor",
+                                        dataEdgeKey.getSrc(),
+                                        "isSrc",
+                                        false ) ),
+                        Pair.of( dataEdgeKey.getEdge(),
+                                ImmutableMap.of( "src", dataEdgeKey.getSrc(), "dst", dataEdgeKey.getDst() ) )
+                ) );
 
-        return numUpdates;
+        recordEvents( neighborMappingsCreated.map( pair -> new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( pair.getKey().getEntitySetId() ),
+                AuditEventType.ASSOCIATE_ENTITIES,
+                "Create associations between entities using DataApi.createAssociations",
+                Optional.of( ImmutableSet.of( pair.getKey().getEntityKeyId() ) ),
+                pair.getValue(),
+                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.empty()
+        ) ).collect( Collectors.toList() ) );
+
+        return writeEvent.getNumUpdates();
     }
 
     @Timed
@@ -381,7 +402,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         //Load authorized property types
         final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
                 .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION );
-        List<UUID> entityKeyIds = dgm.createEntities( entitySetId, entities, authorizedPropertyTypes );
+        Pair<List<UUID>, WriteEvent> entityKeyIdsToWriteEvent = dgm
+                .createEntities( entitySetId, entities, authorizedPropertyTypes );
+        List<UUID> entityKeyIds = entityKeyIdsToWriteEvent.getKey();
 
         recordEvent( new AuditableEvent(
                 getCurrentUserId(),
@@ -390,7 +413,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 "Entities created through DataApi.createEntities",
                 Optional.of( Sets.newHashSet( entityKeyIds ) ),
                 ImmutableMap.of(),
-                OffsetDateTime.now(),
+                getDateTimeFromLong( entityKeyIdsToWriteEvent.getValue().getVersion() ),
                 Optional.empty()
         ) );
 
@@ -433,7 +456,87 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         .collect( Collectors.toMap( Function.identity(),
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, EnumSet.of( Permission.WRITE ) ) ) );
-        return dgm.createAssociations( associations, authorizedPropertyTypesByEntitySet );
+
+        Map<UUID, CreateAssociationEvent> associationsCreated = dgm
+                .createAssociations( associations, authorizedPropertyTypesByEntitySet );
+
+        ListMultimap<UUID, UUID> associationIds = ArrayListMultimap.create();
+
+        UUID currentUserId = getCurrentUserId();
+
+        Stream<AuditableEvent> associationEntitiesCreated = associationsCreated.entrySet().stream().map( entry -> {
+            UUID associationEntitySetId = entry.getKey();
+            OffsetDateTime writeDateTime = getDateTimeFromLong( entry.getValue().getEntityWriteEvent()
+                    .getVersion() );
+            associationIds.putAll( associationEntitySetId, entry.getValue().getIds() );
+
+            return new AuditableEvent(
+                    currentUserId,
+                    new AclKey( associationEntitySetId ),
+                    AuditEventType.CREATE_ENTITIES,
+                    "Create association entities using DataApi.createAssociations",
+                    Optional.of( Sets.newHashSet( entry.getValue().getIds() ) ),
+                    ImmutableMap.of(),
+                    writeDateTime,
+                    Optional.empty()
+            );
+        } );
+
+        Stream<AuditableEvent> neighborMappingsCreated = associationsCreated
+                .entrySet()
+                .stream()
+                .flatMap( entry -> {
+                    UUID associationEntitySetId = entry.getKey();
+                    OffsetDateTime writeDateTime = getDateTimeFromLong( entry.getValue().getEdgeWriteEvent()
+                            .getVersion() );
+
+                    return Streams.mapWithIndex( entry.getValue().getIds().stream(),
+                            ( associationEntityKeyId, index ) -> {
+
+                                EntityDataKey associationEntityDataKey = new EntityDataKey( associationEntitySetId,
+                                        associationEntityKeyId );
+                                DataEdge dataEdge = associations.get( associationEntitySetId )
+                                        .get( Long.valueOf( index ).intValue() );
+
+                                return Stream.<Triple<EntityDataKey, OffsetDateTime, Map<String, Object>>>of(
+                                        Triple.of( dataEdge.getSrc(),
+                                                writeDateTime,
+                                                ImmutableMap.of( "association",
+                                                        associationEntityDataKey,
+                                                        "neighbor",
+                                                        dataEdge.getDst(),
+                                                        "isSrc",
+                                                        true ) ),
+                                        Triple.of( dataEdge.getDst(),
+                                                writeDateTime,
+                                                ImmutableMap.of( "association",
+                                                        associationEntityDataKey,
+                                                        "neighbor",
+                                                        dataEdge.getSrc(),
+                                                        "isSrc",
+                                                        false ) ),
+                                        Triple.of( associationEntityDataKey,
+                                                writeDateTime,
+                                                ImmutableMap.of( "src",
+                                                        dataEdge.getSrc(),
+                                                        "dst",
+                                                        dataEdge.getDst() ) ) );
+                            } );
+                } ).flatMap( Function.identity() ).map( triple -> new AuditableEvent(
+                        currentUserId,
+                        new AclKey( triple.getLeft().getEntitySetId() ),
+                        AuditEventType.ASSOCIATE_ENTITIES,
+                        "Create associations between entities using DataApi.createAssociations",
+                        Optional.of( ImmutableSet.of( triple.getLeft().getEntityKeyId() ) ),
+                        triple.getRight(),
+                        triple.getMiddle(),
+                        Optional.empty()
+                ) );
+
+        recordEvents( Stream.concat( associationEntitiesCreated, neighborMappingsCreated )
+                .collect( Collectors.toList() ) );
+
+        return associationIds;
     }
 
     @Timed
@@ -503,6 +606,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                     }
                 } );
         associationEntityKeyIds = createAssociations( toBeCreated );
+
+        /* entity and association creation will be audited by createEntities and createAssociations */
 
         return new DataGraphIds( entityKeyIds, associationEntityKeyIds );
     }
@@ -726,7 +831,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         Optional.of( entry.getValue().stream().map( EntityDataKey::getEntityKeyId )
                                 .collect( Collectors.toSet() ) ),
                         ImmutableMap.of(),
-                        OffsetDateTime.now(),
+                        getDateTimeFromLong( neighborWriteEvent.getVersion() ),
                         Optional.empty()
                 ) );
             }
