@@ -42,6 +42,7 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -53,7 +54,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
-import java.sql.Statement
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -224,11 +224,12 @@ class AssemblerConnectionManager(
             val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
             datasource.connection.use { connection ->
                 connection.createStatement().use { stmt ->
-                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $MATERIALIZED_VIEWS_SCHEMA.edges")
+                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}")
                     stmt.execute(
-                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $MATERIALIZED_VIEWS_SCHEMA.edges AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.edges WHERE src_entity_set_id IN ($clause) " +
-                                    "AND dst_entity_set_id IN ($clause) " +
-                                    "AND edge_entity_set_id IN ($clause) "
+                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name} AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
+                                    "WHERE ${SRC_ENTITY_SET_ID.name} IN ($clause) " +
+                                    "AND ${DST_ENTITY_SET_ID.name} IN ($clause) " +
+                                    "AND ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
                     )
                     return@use
                 }
@@ -535,7 +536,7 @@ class AssemblerConnectionManager(
                 logger.info("Created user mapping. ")
                 statement.execute(importProductionViewsSchemaSql(setOf()))
                 statement.execute(
-                        importPublicSchemaSql(setOf("edges", "property_types", "entity_types", "entity_sets"))
+                        importPublicSchemaSql(setOf(EDGES.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name))
                 )
                 logger.info("Imported foreign schema")
             }
