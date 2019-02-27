@@ -426,13 +426,13 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 } else {
                     neighbors = searchService
                             .executeLinkingEntityNeighborSearch( authorizedEntitySets,
-                                    new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
+                                    new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ), principals )
                             .getOrDefault( entityKeyId, ImmutableList.of() );
                 }
             } else {
                 neighbors = searchService
                         .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
-                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ) )
+                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ), principals )
                         .getOrDefault( entityKeyId, ImmutableList.of() );
             }
         }
@@ -517,11 +517,13 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                 if ( authorizedEntitySets.size() == 0 ) {
                     logger.warn( "Read authorization failed for all the linked entity sets." );
                 } else {
-                    result = searchService.executeLinkingEntityNeighborSearch( authorizedEntitySets, filter );
+                    result = searchService
+                            .executeLinkingEntityNeighborSearch( authorizedEntitySets, filter, principals );
                 }
 
             } else {
-                result = searchService.executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), filter );
+                result = searchService
+                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), filter, principals );
             }
         }
 
