@@ -53,6 +53,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
+import java.sql.Statement
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -187,8 +188,7 @@ class AssemblerConnectionManager(
     }
 
     fun dropOrganizationDatabase(organizationId: UUID) {
-        val organization = organizations.getOrganization(organizationId)
-        dropOrganizationDatabase(organizationId, organization.principal.id)
+        dropOrganizationDatabase(organizationId, buildOrganizationDatabaseName(organizationId))
     }
 
     fun dropOrganizationDatabase(organizationId: UUID, dbname: String) {
@@ -533,11 +533,9 @@ class AssemblerConnectionManager(
                 statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_FOREIGN_SCHEMA CASCADE")
                 statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
                 logger.info("Created user mapping. ")
+                statement.execute(importProductionViewsSchemaSql(setOf()))
                 statement.execute(
-                        "IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
-                )
-                statement.execute(
-                        "IMPORT FOREIGN SCHEMA $PUBLIC_SCHEMA LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
+                        importPublicSchemaSql(setOf("edges", "property_types", "entity_types", "entity_sets"))
                 )
                 logger.info("Imported foreign schema")
             }
@@ -567,7 +565,19 @@ internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
     createSchema(datasource, SCHEMA)
 }
 
-internal fun import
+internal fun importProductionViewsSchemaSql(limitTo: Set<String>): String {
+    return importForeignSchema(PRODUCTION_VIEWS_SCHEMA, limitTo)
+}
+
+internal fun importPublicSchemaSql(limitTo: Set<String>): String {
+    return importForeignSchema(PUBLIC_SCHEMA, limitTo)
+}
+
+internal fun importForeignSchema(from: String, limitTo: Set<String>): String {
+    val limitToSql = if(limitTo.isEmpty()) "" else "LIMIT TO ( ${limitTo.joinToString(", ")} )"
+    return "IMPORT FOREIGN SCHEMA $from $limitToSql FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
+}
+
 
 internal fun createRoleIfNotExistsSql(dbRole: String): String {
     return "DO\n" +
