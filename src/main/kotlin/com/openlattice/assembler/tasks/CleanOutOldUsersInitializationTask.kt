@@ -43,7 +43,7 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
         val users = dependencies
                 .assemblerConnectionManager
                 .getAllUsers(dependencies.securePrincipalsManager)
-        val organizations =
+/*        val organizations =
                 dependencies
                         .securableObjectTypes.keySet(Predicates.equal("this", SecurableObjectType.Organization))
                         .map { it.first() }
@@ -69,7 +69,7 @@ class CleanOutOldUsersInitializationTask : HazelcastInitializationTask<Assembler
 
                 }
 
-
+*/
         users
                 .filter { it.name != "openlattice" && it.name != "postgres" } //Just for safety
                 .stream()
