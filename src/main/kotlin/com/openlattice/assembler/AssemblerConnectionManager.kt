@@ -24,6 +24,7 @@ package com.openlattice.assembler
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
+import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
@@ -54,6 +55,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
+import java.sql.Statement
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -224,13 +226,18 @@ class AssemblerConnectionManager(
             val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
             datasource.connection.use { connection ->
                 connection.createStatement().use { stmt ->
-                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}")
+                    val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
+                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName")
                     stmt.execute(
-                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name} AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
+                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
                                     "WHERE ${SRC_ENTITY_SET_ID.name} IN ($clause) " +
                                     "AND ${DST_ENTITY_SET_ID.name} IN ($clause) " +
                                     "AND ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
                     )
+
+                    val selectGrantedCount = grantSelectForEdges(stmt, tableName, entitySetIds)
+
+                    logger.info("Granted select for $selectGrantedCount users/roles on materialized view $tableName")
                     return@use
                 }
             }
@@ -298,10 +305,7 @@ class AssemblerConnectionManager(
                         entitySet.id,
                         authorizedPropertyTypes
                 )
-                logger.info(
-                        "Granted select for $selectGrantedCount users/roles on materialized view " +
-                                "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
-                )
+                logger.info("Granted select for $selectGrantedCount users/roles on materialized view $tableName")
             }
         }
     }
@@ -348,6 +352,24 @@ class AssemblerConnectionManager(
         }.sum()
     }
 
+    fun grantSelectForEdges(stmt: Statement, tableName: String, entitySetIds: Set<UUID>): Int {
+        val permissions = EnumSet.of(Permission.READ)
+        // collect all principals of type user, role, which have read access on entityset
+        val authorizedPrincipals = entitySetIds.fold(mutableSetOf<Principal>()) { acc, entitySetId ->
+            Sets.union(acc,
+                    securePrincipalsManager.getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), permissions)
+                            .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
+                            .toSet())
+        }
+
+        authorizedPrincipals.forEach {
+            val grantSelectSql = grantSelectSql(tableName, it, setOf())
+            stmt.addBatch(grantSelectSql)
+        }
+
+        return stmt.executeBatch().sum()
+    }
+
     private fun grantSelectSql(
             entitySetTableName: String,
             principal: Principal,
@@ -358,8 +380,14 @@ class AssemblerConnectionManager(
         } else {
             buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
         }
-        return "GRANT SELECT " +
-                "(${properties.joinToString(",") { DataTables.quote(it.fullQualifiedNameAsString) }}) " +
+
+        val onProperties = if (properties.isEmpty()) {
+            ""
+        } else {
+            "(${properties.joinToString(",") { DataTables.quote(it.fullQualifiedNameAsString) }}) "
+        }
+
+        return "GRANT SELECT $onProperties " +
                 "ON $entitySetTableName " +
                 "TO ${DataTables.quote(postgresUserName)}"
     }
