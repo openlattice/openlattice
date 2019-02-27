@@ -14,7 +14,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-private const val FROM_EMAIL = "katherine@openlattice.com"
+private const val FROM_EMAIL = "courier@openlattice.com"
 private const val TEMPLATE_PATH = "mail/templates/shared/BHRAlertTemplate.mustache"
 
 /* TIME ZONE SETUP */
