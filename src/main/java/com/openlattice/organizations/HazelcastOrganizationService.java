@@ -382,10 +382,6 @@ public class HazelcastOrganizationService {
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {
         AclKey roleKey = new AclKey( organizationId, roleId );
-        if ( !authorizations
-                .checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(), EnumSet.of( Permission.OWNER ) ) ) {
-            throw new ForbiddenException( "Object " + roleKey.toString() + " is not accessible." );
-        }
         securePrincipalsManager.addPrincipalToPrincipal( roleKey, securePrincipalsManager.lookup( principal ) );
     }
 
@@ -401,10 +397,6 @@ public class HazelcastOrganizationService {
     }
 
     public void removeRoleFromUser( AclKey roleKey, Principal user ) {
-        if(! authorizations.checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(),
-                EnumSet.of( Permission.OWNER ) ) ) {
-            throw new ForbiddenException( "Object " + roleKey.toString() + " is not accessible." );
-        }
         securePrincipalsManager.removePrincipalFromPrincipal( roleKey, securePrincipalsManager.lookup( user ) );
     }
 
