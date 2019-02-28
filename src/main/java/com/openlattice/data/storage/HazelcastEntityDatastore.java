@@ -25,15 +25,15 @@ package com.openlattice.data.storage;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
-import com.openlattice.authorization.ForbiddenException;
+import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.events.EntitySetDataClearedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.postgres.JsonDeserializer;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -66,6 +66,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Inject
     private EventBus eventBus;
+
+    @Inject
+    private PostgresLinkingFeedbackService feedbackQueryService;
 
     @Inject
     private LinkingQueryService linkingQueryService;
@@ -276,10 +279,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 pdm.markLinkingIdsAsNeedToBeIndexed( dirtyLinkingIds );
             }
         }
-    }
-
-    private void signalEntitySetDeleted( UUID entitySetId ) {
-        eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
     }
 
     @Timed
@@ -590,15 +589,19 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         WriteEvent writeEvent = dataQueryService.deleteEntities( entitySetId, entityKeyIds );
         signalDeletedEntities( entitySetId, entityKeyIds );
 
+        // delete entities from linking feedbacks too
+        int deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks( entitySetId, entityKeyIds );
+
         // Delete all neighboring entries from matched entities
         int deleteMatchCount = linkingQueryService.deleteNeighborhoods( entitySetId, entityKeyIds );
 
-        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data and" +
-                        " {} matched entries",
+        logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data, " +
+                        "{} linking feedback and {} matched entries",
                 entityKeyIds,
                 entitySetId,
                 writeEvent.getNumUpdates(),
                 propertyWriteEvent.getNumUpdates(),
+                deleteFeedbackCount,
                 deleteMatchCount );
 
         return writeEvent;

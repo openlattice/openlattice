@@ -38,15 +38,10 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -386,8 +381,12 @@ public class HazelcastOrganizationService {
     }
 
     public void addRoleToPrincipalInOrganization( UUID organizationId, UUID roleId, Principal principal ) {
-        securePrincipalsManager.addPrincipalToPrincipal( new AclKey( organizationId, roleId ),
-                securePrincipalsManager.lookup( principal ) );
+        AclKey roleKey = new AclKey( organizationId, roleId );
+        if ( !authorizations
+                .checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(), EnumSet.of( Permission.OWNER ) ) ) {
+            throw new ForbiddenException( "Object " + roleKey.toString() + " is not accessible." );
+        }
+        securePrincipalsManager.addPrincipalToPrincipal( roleKey, securePrincipalsManager.lookup( principal ) );
     }
 
     private Collection<Role> getRolesInFull( UUID organizationId ) {
@@ -402,6 +401,10 @@ public class HazelcastOrganizationService {
     }
 
     public void removeRoleFromUser( AclKey roleKey, Principal user ) {
+        if(! authorizations.checkIfHasPermissions( roleKey, Principals.getCurrentPrincipals(),
+                EnumSet.of( Permission.OWNER ) ) ) {
+            throw new ForbiddenException( "Object " + roleKey.toString() + " is not accessible." );
+        }
         securePrincipalsManager.removePrincipalFromPrincipal( roleKey, securePrincipalsManager.lookup( user ) );
     }
 

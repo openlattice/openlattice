@@ -150,12 +150,6 @@ public final class PostgresColumn {
     public static final String                   EDGE_VALUE_FIELD                  = "edge_value";
     public static final PostgresColumnDefinition EDGE_VALUE                        =
             new PostgresColumnDefinition( EDGE_VALUE_FIELD, DECIMAL );
-    public static final String                   EDM_VERSION_FIELD                 = "edm_version";
-    public static final PostgresColumnDefinition EDM_VERSION                       =
-            new PostgresColumnDefinition( EDM_VERSION_FIELD, UUID ).notNull();
-    public static final String                   EDM_VERSION_NAME_FIELD            = "edm_version_name";
-    public static final PostgresColumnDefinition EDM_VERSION_NAME                  =
-            new PostgresColumnDefinition( EDM_VERSION_NAME_FIELD, TEXT ).notNull();
     public static final String                   ENTITY_ID_FIELD                   = "entity_id";
     public static final PostgresColumnDefinition ENTITY_ID                         =
             new PostgresColumnDefinition( ENTITY_ID_FIELD, TEXT );
@@ -234,9 +228,12 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final String                   LAST_WRITE_FIELD                  = "last_write";
-    public static final String                   LINKED_ENTITY_SETS_FIELD          = "linked_entity_sets";
-    public static final PostgresColumnDefinition LINKED_ENTITY_SETS                =
+    public static final String                   LAST_WRITE_FIELD            = "last_write";
+    public static final String                   LINKED_FIELD                = "linked";
+    public static final PostgresColumnDefinition LINKED                      =
+            new PostgresColumnDefinition( LINKED_FIELD, BOOLEAN ).notNull();
+    public static final String                   LINKED_ENTITY_SETS_FIELD    = "linked_entity_sets";
+    public static final PostgresColumnDefinition LINKED_ENTITY_SETS          =
             new PostgresColumnDefinition( LINKED_ENTITY_SETS_FIELD, UUID_ARRAY );
     public static final String                   LINKING_FIELD                     = "linking";
     public static final PostgresColumnDefinition LINKING                           =

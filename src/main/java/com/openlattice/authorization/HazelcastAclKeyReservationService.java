@@ -32,10 +32,10 @@ import com.hazelcast.core.IMap;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.controllers.exceptions.UniqueIdConflictException;
+import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.exceptions.AclKeyConflictException;
-import com.openlattice.edm.exceptions.TypeExistsException;
 import com.openlattice.hazelcast.HazelcastMap;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -133,7 +133,7 @@ public class HazelcastAclKeyReservationService {
 
     /**
      * This function reserves a UUID for a SecurableObject based on AclKey. It throws unchecked exception
-     * {@link TypeExistsException} if the type already exists or {@link AclKeyConflictException} if a different AclKey
+     * {@link TypeExistsException} if the type already exists or {@link UniqueIdConflictException} if a different AclKey
      * is already associated with the type.
      *
      * @param type The type for which to reserve an FQN and UUID.
@@ -148,8 +148,8 @@ public class HazelcastAclKeyReservationService {
 
     /**
      * This function reserves an {@code AclKey} for a SecurableObject that has a name. It throws unchecked exceptions
-     * {@link TypeExistsException} if the type already exists with the same name or {@link AclKeyConflictException} if a
-     * different AclKey is already associated with the type.
+     * {@link TypeExistsException} if the type already exists with the same name or {@link UniqueIdConflictException}
+     * if a different AclKey is already associated with the type.
      */
     public <T extends AbstractSecurableObject> void reserveIdAndValidateType( T type, Supplier<String> namer ) {
         /*
@@ -183,13 +183,13 @@ public class HazelcastAclKeyReservationService {
              * Only a single thread should ever reach here.
              */
         } else {
-            throw new AclKeyConflictException( "AclKey is already associated with different type." );
+            throw new UniqueIdConflictException( "AclKey is already associated with different type." );
         }
     }
 
     /**
      * This function reserves an id for a SecurableObject. It throws unchecked exceptions
-     * {@link TypeExistsException} if the type already exists or {@link AclKeyConflictException} if a different AclKey
+     * {@link TypeExistsException} if the type already exists or {@link UniqueIdConflictException} if a different AclKey
      * is already associated with the type.
      */
     public void reserveId( AbstractSecurableObject type ) {
@@ -206,7 +206,7 @@ public class HazelcastAclKeyReservationService {
          */
 
         if ( name != null ) {
-            throw new AclKeyConflictException( "AclKey is already associated with different name." );
+            throw new UniqueIdConflictException( "AclKey is already associated with different name." );
         }
     }
 

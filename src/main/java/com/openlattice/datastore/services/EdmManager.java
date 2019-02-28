@@ -50,8 +50,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 public interface EdmManager {
     void clearTables();
 
-    UUID getCurrentEntityDataModelVersion();
-
     PropertyType getPropertyType( FullQualifiedName propertyTypeFqn );
 
     PropertyType getPropertyType( UUID propertyTypeId );

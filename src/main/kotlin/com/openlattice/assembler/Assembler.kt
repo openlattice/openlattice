@@ -37,9 +37,9 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.securable.SecurableObjectType
+import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
-import com.openlattice.datastore.exceptions.ResourceNotFoundException
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.EntitySetCreatedEvent
 import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
@@ -50,7 +50,7 @@ import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
-import com.openlattice.organizations.OrganizationsInitializationTask
+import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.openlattice.tasks.HazelcastInitializationTask

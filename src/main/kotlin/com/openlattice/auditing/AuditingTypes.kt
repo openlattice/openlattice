@@ -1,6 +1,6 @@
 package com.openlattice.auditing
 
-import com.openlattice.datastore.exceptions.ResourceNotFoundException
+import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType

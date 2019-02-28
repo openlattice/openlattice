@@ -20,12 +20,20 @@
  *
  */
 
-package com.openlattice.datastore.exceptions;
+package com.openlattice.authorization;
 
-public class ResourceNotFoundException extends RuntimeException {
-    private static final long serialVersionUID = 9036215896394849079L;
+import com.openlattice.authorization.securable.SecurableObjectType;
 
-    public ResourceNotFoundException( String msg ) {
-        super( msg );
-    }
+import com.openlattice.authorization.AclKey;
+import java.util.Set;
+
+public interface SecurableObjectResolveTypeService {
+    
+    void createSecurableObjectType( AclKey aclKey, SecurableObjectType type );
+    
+    void deleteSecurableObjectType( AclKey aclKey );
+    
+    SecurableObjectType getSecurableObjectType( AclKey aclKey );
+
+    Set<AclKey> getSecurableObjectsOfType( SecurableObjectType type );
 }

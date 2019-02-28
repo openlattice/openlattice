@@ -272,7 +272,7 @@ class AssemblerConnectionManager(
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ) {
         materializeEntitySetsTimer.time().use {
-            val entitySet = entitySets[entitySetId]!!
+            val entitySet = entitySets.getValue(entitySetId)
             val propertyFqns = authorizedPropertyTypes
                     .mapValues { quote(it.value.type.fullQualifiedNameAsString) }
                     .values.joinToString(",")

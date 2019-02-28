@@ -75,6 +75,8 @@ import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.graph.query.GraphQueryState;
 import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
+import com.openlattice.linking.EntityKeyPair;
+import com.openlattice.linking.EntityLinkingFeedback;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
@@ -465,14 +467,6 @@ public final class ResultSetAdapters {
 
     public static String nullableTitle( ResultSet rs ) throws SQLException {
         return rs.getString( NULLABLE_TITLE.getName() );
-    }
-
-    public static String edmVersionName( ResultSet rs ) throws SQLException {
-        return rs.getString( EDM_VERSION_NAME.getName() );
-    }
-
-    public static UUID edmVersion( ResultSet rs ) throws SQLException {
-        return rs.getObject( EDM_VERSION.getName(), UUID.class );
     }
 
     public static UUID currentSyncId( ResultSet rs ) throws SQLException {
@@ -987,6 +981,23 @@ public final class ResultSetAdapters {
         Map<String, Object> alertMetadata = alertMetadata( rs );
 
         return new PersistentSearch( id, lastRead, expiration, alertType, searchConstraints, alertMetadata );
+    }
+
+    public static EntityLinkingFeedback entityLinkingFeedback( ResultSet rs ) throws SQLException {
+        boolean linked = linked( rs );
+
+        return new EntityLinkingFeedback( entityKeyPair( rs ), linked );
+    }
+
+    public static Boolean linked( ResultSet rs ) throws SQLException {
+        return rs.getBoolean( LINKED_FIELD );
+    }
+
+    public static EntityKeyPair entityKeyPair( ResultSet rs ) throws SQLException {
+        EntityDataKey srcEntityDataKey = srcEntityDataKey( rs );
+        EntityDataKey dstEntityDataKey = dstEntityDataKey( rs );
+
+        return new EntityKeyPair( srcEntityDataKey, dstEntityDataKey );
     }
 
     public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn( MetadataOption metadataOption ) {
