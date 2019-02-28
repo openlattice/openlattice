@@ -64,6 +64,7 @@ import com.openlattice.graph.core.GraphService;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.LinkingQueryService;
+import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.HazelcastPrincipalService;
@@ -160,8 +161,8 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public AbstractSecurableObjectResolveTypeService securableObjectTypes() {
-        return new HazelcastAbstractSecurableObjectResolveTypeService( hazelcastInstance );
+    public SecurableObjectResolveTypeService securableObjectTypes() {
+        return new HazelcastSecurableObjectResolveTypeService( hazelcastInstance );
     }
 
     @Bean
@@ -394,6 +395,11 @@ public class DatastoreServicesPod {
 
     @Bean AwsDataSinkService awsDataSinkService() {
         return new AwsDataSinkService( byteBlobDataManager, hikariDataSource );
+    }
+
+    @Bean
+    public PostgresLinkingFeedbackService postgresLinkingFeedbackQueryService() {
+        return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
 
     @Bean

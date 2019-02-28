@@ -39,10 +39,21 @@ import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
 import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.ForbiddenException;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principals;
 import com.openlattice.data.*;
+import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.openlattice.data.DataApi;
+import com.openlattice.data.DataAssociation;
+import com.openlattice.data.DataEdge;
+import com.openlattice.data.DataEdgeKey;
+import com.openlattice.data.DataGraph;
+import com.openlattice.data.DataGraphIds;
+import com.openlattice.data.DataGraphManager;
+import com.openlattice.data.DeleteType;
+import com.openlattice.data.EntityDataKey;
+import com.openlattice.data.EntitySetData;
+import com.openlattice.data.UpdateType;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
@@ -156,7 +167,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                     .authenticate( PreAuthenticatedAuthenticationJsonWebToken.usingToken( token ) );
             SecurityContextHolder.getContext().setAuthentication( authentication );
         }
-        return loadEntitySetData( entitySetId, new EntitySetSelection( Optional.empty() ) );
+        return loadEntitySetData( entitySetId, null );
     }
 
     @RequestMapping(
@@ -179,6 +190,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             UUID entitySetId,
             EntitySetSelection selection,
             FileType fileType ) {
+        if ( selection != null && selection.getEntityKeyIds().isEmpty() && selection.getProperties().isEmpty() ) {
+            return new EntitySetData<>( Sets.newLinkedHashSet(), Lists.newArrayList() );
+        }
+
         return loadEntitySetData( entitySetId, selection );
     }
 
@@ -188,7 +203,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         if ( authz.checkIfHasPermissions( new AclKey( entitySetId ),
                 Principals.getCurrentPrincipals(),
                 EnumSet.of( Permission.READ ) ) ) {
+
             EntitySet es = edmService.getEntitySet( entitySetId );
+            Optional<Set<UUID>> entityKeyIds = (selection == null) ? Optional.empty() : selection.getEntityKeyIds();
+            Optional<Set<UUID>> propertyTypeIds = (selection == null) ? Optional.empty() : selection.getProperties();
+
             if ( es.isLinking() ) {
                 Set<UUID> allEntitySetIds = Sets.newHashSet( es.getLinkedEntitySets() );
                 checkState( !allEntitySetIds.isEmpty(),
@@ -196,15 +215,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 return loadEntitySetData(
                         allEntitySetIds.stream().collect( Collectors.toMap(
                                 Function.identity(),
-                                esId -> selection.getEntityKeyIds() ) ),
+                                esId -> entityKeyIds ) ),
                         allEntitySetIds,
-                        selection,
+                        propertyTypeIds,
                         true );
             } else {
                 return loadEntitySetData(
-                        Map.of( entitySetId, selection.getEntityKeyIds() ),
+                        Map.of( entitySetId, entityKeyIds ),
                         Set.of( entitySetId ),
-                        selection,
+                        propertyTypeIds,
                         false );
             }
         } else {
@@ -215,10 +234,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private EntitySetData<FullQualifiedName> loadEntitySetData(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             Set<UUID> dataEntitySetIds,
-            EntitySetSelection selection,
+            Optional<Set<UUID>> propertyTypeIds,
             Boolean linking ) {
         final Set<UUID> allProperties = authzHelper.getAllPropertiesOnEntitySet( dataEntitySetIds.iterator().next() );
-        final Set<UUID> selectedProperties = selection.getProperties().orElse( allProperties );
+        final Set<UUID> selectedProperties = propertyTypeIds.orElse( allProperties );
 
         checkState( allProperties.equals( selectedProperties ) || allProperties.containsAll( selectedProperties ),
                 "Selected properties are not property types of entity set %s",

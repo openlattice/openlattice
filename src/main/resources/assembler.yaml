@@ -1,11 +1,12 @@
 server:
-  jdbcUrl: jdbc:postgresql://localhost:5432
-  username: "bruh"
-  password: "nobruh"
+  jdbcUrl: "jdbc:postgresql://localhost:5432"
+  username: "oltest"
+  password: "test"
   maximumPoolSize: 5
   connectionTimeout: 60000
-foreignHost: "bruh"
-foreignDbName: "nobruh"
+foreignHost: "localhost"
+foreignDbName: "openlattice"
 foreignPort: 5432
-foreignUsername: "fuhrealzbruh"
-foreignPassword: "comeonbruh"
+foreignUsername: "oltest"
+foreignPassword: "test"
+ssl: false

@@ -35,7 +35,7 @@ import com.openlattice.apps.processors.*;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
-import com.openlattice.datastore.exceptions.BadRequestException;
+import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;

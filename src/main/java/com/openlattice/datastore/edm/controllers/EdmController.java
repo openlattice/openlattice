@@ -31,12 +31,15 @@ import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
+import com.openlattice.controllers.exceptions.BadRequestException;
+import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.openlattice.controllers.exceptions.wrappers.BatchException;
+import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO;
+import com.openlattice.controllers.util.ApiExceptions;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
-import com.openlattice.datastore.exceptions.BadRequestException;
-import com.openlattice.datastore.exceptions.BatchException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.*;
 import com.openlattice.edm.requests.EdmDetailsSelector;
@@ -45,8 +48,6 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.*;
-import com.openlattice.exceptions.ApiExceptions;
-import com.openlattice.exceptions.ErrorsDTO;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import org.apache.commons.lang3.NotImplementedException;
@@ -86,7 +87,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     private PostgresEdmManager edmManager;
 
     @Inject
-    private AbstractSecurableObjectResolveTypeService securableObjectTypes;
+    private SecurableObjectResolveTypeService securableObjectTypes;
 
     @Inject
     private AuthenticationManager authenticationManager;
@@ -175,16 +176,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         ensureAdminAccess();
         modelService.setEntityDataModel( edm );
         return null;
-    }
-
-    @Override
-    @RequestMapping(
-            path = VERSION_PATH,
-            method = RequestMethod.GET
-    )
-    @ResponseStatus( HttpStatus.OK )
-    public UUID getEntityDataModelVersion() {
-        return modelService.getCurrentEntityDataModelVersion();
     }
 
     @Override
