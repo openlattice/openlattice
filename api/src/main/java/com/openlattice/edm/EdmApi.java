@@ -98,8 +98,6 @@ public interface EdmApi {
     String SRC_PATH              = "/src";
     String DST_PATH              = "/dst";
     String DIFF_PATH             = "/diff";
-    String VERSION_PATH          = "/version";
-    String NEW_PATH              = "/new";
     String CLEAR_PATH            = "/clear";
     String FORCE_PATH            = "/force";
     String KEY_PATH              = "/key";
@@ -151,12 +149,6 @@ public interface EdmApi {
      */
     @POST( BASE + DIFF_PATH )
     EntityDataModelDiff getEntityDataModelDiff( EntityDataModel edm );
-
-    /**
-     * Returns the current entity data model version
-     */
-    @GET( BASE + VERSION_PATH )
-    UUID getEntityDataModelVersion();
 
     /**
      * Gets information for any SecurableObjectType given its type and ID.

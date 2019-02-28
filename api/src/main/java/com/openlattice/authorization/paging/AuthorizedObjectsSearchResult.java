@@ -18,17 +18,22 @@
 
 package com.openlattice.authorization.paging;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.AclKey;
 
+import java.util.Objects;
 import java.util.Set;
 
 public class AuthorizedObjectsSearchResult {
     private String      pagingToken;
     private Set<AclKey> authorizedObjects;
 
-    public AuthorizedObjectsSearchResult( String pagingToken, Set<AclKey> authorizedObjects ) {
+    @JsonCreator
+    public AuthorizedObjectsSearchResult(
+            @JsonProperty( SerializationConstants.PAGING_TOKEN ) String pagingToken,
+            @JsonProperty( SerializationConstants.AUTHORIZED_OBJECTS ) Set<AclKey> authorizedObjects ) {
         this.pagingToken = pagingToken;
         this.authorizedObjects = authorizedObjects;
     }
@@ -49,4 +54,17 @@ public class AuthorizedObjectsSearchResult {
                 + "]";
     }
 
+    @Override
+    public boolean equals( Object other ) {
+        if ( this == other ) return true;
+        if ( other == null || getClass() != other.getClass() ) return false;
+        AuthorizedObjectsSearchResult authorizedObjectsSearchResult = ( AuthorizedObjectsSearchResult ) other;
+        return Objects.equals( authorizedObjectsSearchResult.pagingToken, this.pagingToken ) &&
+               Objects.equals( authorizedObjectsSearchResult.authorizedObjects, this.authorizedObjects );
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash( pagingToken, authorizedObjects );
+    }
 }
