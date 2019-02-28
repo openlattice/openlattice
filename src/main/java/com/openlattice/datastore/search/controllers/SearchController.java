@@ -593,7 +593,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             path = { ENTITY_SETS + INDEX + ENTITY_SET_ID_PATH },
             method = RequestMethod.GET )
     @Override
-    public Void trigerEntitySetDataIndex( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
+    public Void triggerEntitySetDataIndex( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
         ensureAdminAccess();
         searchService.triggerEntitySetDataIndex( entitySetId );
         return null;
