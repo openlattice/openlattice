@@ -52,6 +52,7 @@ import java.util.*
 
 private val numberOfEntries = 10
 private val random = Random()
+private val OL_ID_FQN = FullQualifiedName("openlattice", "@id")
 
 class DataControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -77,15 +78,27 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val et = MultipleAuthenticatedUsersBase.createEntityType()
         val es = MultipleAuthenticatedUsersBase.createEntitySet(et)
 
-        //added transformValues()
         val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
                 .values
                 .toList()
-        dataApi.createEntities(es.id, testData)
+        val entities = dataApi.createEntities(es.id, testData).toSet().zip(testData).toMap()
         val ess = EntitySetSelection(Optional.of(et.properties))
-        val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val results1 = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
 
-        Assert.assertEquals(numberOfEntries.toLong(), results.size.toLong())
+        Assert.assertEquals(numberOfEntries.toLong(), results1.size.toLong())
+        results1.forEach {
+            val id = it[OL_ID_FQN].first()
+            val originalData = entities.getValue(UUID.fromString(id as String))
+            it.forEach { fqn, value ->
+                if(fqn != OL_ID_FQN) {
+                    val propertyId = edmApi.getPropertyTypeId(fqn.namespace, fqn.name)
+                    Assert.assertEquals(originalData.getValue(propertyId).first(), value)
+                }
+            }
+        }
+
+        // optional/nullable EntitySetSelection in loadEntitySetData cannot be tested from here, only manually
+        // Retrofit will throw java.lang.IllegalArgumentException: Body parameter value must not be null.
     }
 
     @Test
@@ -179,7 +192,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         Assert.assertFalse(
-                data2[0][fqnCache[replacementProperty]] == indexActual[ids[0]]!![fqnCache[replacementProperty]]
+                data2[0][fqnCache[replacementProperty]] == indexActual.getValue(ids[0])[fqnCache[replacementProperty]]
         )
     }
 
@@ -284,7 +297,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     edgesCreatedData[numberOfEntries - index - 1].data.mapValues { it.value.toMutableSet() }.toMutableMap()
             )
             de.asMap()
-                    .filter { it.key.name != "@id" }
+                    .filter { it.key.name != OL_ID_FQN.name }
                     .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
         }
     }

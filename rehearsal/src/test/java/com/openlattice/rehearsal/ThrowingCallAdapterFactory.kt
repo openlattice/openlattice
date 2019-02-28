@@ -62,6 +62,4 @@ class ThrowingCallAdapterFactory: CallAdapter.Factory() {
         }
 }
 
-class GeneralException:java.lang.Exception {
-    constructor( message:String ): super(message)
-}
+class GeneralException(message: String):java.lang.Exception(message)
