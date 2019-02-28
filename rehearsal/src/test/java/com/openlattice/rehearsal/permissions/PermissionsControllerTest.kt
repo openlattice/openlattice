@@ -3,12 +3,12 @@ package com.openlattice.rehearsal.permissions
 import com.google.common.collect.Iterables
 import com.openlattice.authorization.*
 import com.openlattice.mapstores.TestDataFactory
+import com.openlattice.organization.OrganizationsApi
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import okhttp3.RequestBody
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.slf4j.LoggerFactory
-import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.*
@@ -21,7 +21,6 @@ private lateinit var rolePrincipal2: Principal
 class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
 
     companion object {
-        val logger = LoggerFactory.getLogger(PermissionsControllerTest::class.java)
 
         @JvmStatic
         @BeforeClass
@@ -41,8 +40,28 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
             rolePrincipal1 = Principal(PrincipalType.ROLE, role1.principal.id.toString())
             rolePrincipal2 = Principal(PrincipalType.ROLE, role2.principal.id.toString())
 
-            organizationsApi.addRoleToUser(organizationID, role1.id, user1.id)
-            organizationsApi.addRoleToUser(organizationID, role2.id, user1.id)
+
+            // These calls are for substituting organizationsApi.addRoleToUser, because Retrofit cannot handle URI regex
+            // add role1 to user1
+            val url1 = OrganizationsApi.BASE +
+                    "/$organizationID" +
+                    OrganizationsApi.PRINCIPALS +
+                    OrganizationsApi.ROLES +
+                    "/${role1.id}" +
+                    OrganizationsApi.MEMBERS +
+                    "/${user1.id}"
+            makePutRequest(url1, RequestBody.create(null, ByteArray(0)))
+
+
+            // add role2 to user1
+            val url2 = OrganizationsApi.BASE +
+                    "/$organizationID" +
+                    OrganizationsApi.PRINCIPALS +
+                    OrganizationsApi.ROLES +
+                    "/${role2.id}" +
+                    OrganizationsApi.MEMBERS +
+                    "/${user1.id}"
+            makePutRequest(url2, RequestBody.create(null, ByteArray(0)))
         }
     }
 
@@ -109,7 +128,7 @@ class PermissionsControllerTest : MultipleAuthenticatedUsersBase() {
     fun testGetAclExplanation() {
         loginAs("admin")
         val es2 = MultipleAuthenticatedUsersBase.createEntitySet()
-        val aclKey = AclKey( es2.id)
+        val aclKey = AclKey(es2.id)
 
         //add Permissions
         val user1Acl = Acl(aclKey, setOf(Ace(user1, EnumSet.of(Permission.DISCOVER), OffsetDateTime.MAX)))
