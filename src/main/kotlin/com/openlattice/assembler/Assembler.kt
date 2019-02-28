@@ -103,6 +103,12 @@ class Assembler(
         return assemblies[organizationId]!!
     }
 
+    private fun flagAsNonMaterialized(organizationId: UUID, entitySetId: UUID) {
+        val orgAssembly = assemblies[organizationId]
+        orgAssembly?.entitySetIds!!.remove(entitySetId)
+        assemblies[organizationId] = orgAssembly
+    }
+
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
         createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
@@ -120,8 +126,9 @@ class Assembler(
                 propertyTypesAddedToEntitySetEvent.entitySet.id,
                 true)
         // flag entity set as non-materialized
-        assemblies[propertyTypesAddedToEntitySetEvent.entitySet.organizationId]?.entitySetIds!!
-                .remove(propertyTypesAddedToEntitySetEvent.entitySet.id)
+        flagAsNonMaterialized(
+                propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
+                propertyTypesAddedToEntitySetEvent.entitySet.id)
     }
 
     fun createOrganization(organization: Organization) {
