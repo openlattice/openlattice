@@ -229,7 +229,8 @@ class AssemblerConnectionManager(
                     val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
                     stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName")
                     stmt.execute(
-                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
+                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS " +
+                                    "SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
                                     "WHERE ${SRC_ENTITY_SET_ID.name} IN ($clause) " +
                                     "OR ${DST_ENTITY_SET_ID.name} IN ($clause) " +
                                     "OR ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
@@ -345,7 +346,13 @@ class AssemblerConnectionManager(
         // prepare batch queries
         return connection.createStatement().use { stmt ->
             authorizedPropertiesOfPrincipal.forEach { principal, fqns ->
-                val grantSelectSql = grantSelectSql(tableName, principal, fqns)
+                val allColumns =
+                        if (fqns == authorizedPrincipalsOfProperties.keys) {
+                            setOf() // if user is authorized for all properties, grant select on whole table
+                        } else {
+                            setOf(ENTITY_SET_ID.name, ID_VALUE.name) + fqns.map { it.fullQualifiedNameAsString }
+                        }
+                val grantSelectSql = grantSelectSql(tableName, principal, allColumns)
                 stmt.addBatch(grantSelectSql)
             }
             stmt.executeBatch()
@@ -370,10 +377,14 @@ class AssemblerConnectionManager(
         return stmt.executeBatch().sum()
     }
 
+    /**
+     * Build grant select sql statement for a given table and user with column level security.
+     * If properties (columns) are left empty, it will grant select on whole table.
+     */
     private fun grantSelectSql(
             entitySetTableName: String,
             principal: Principal,
-            properties: Set<FullQualifiedName>
+            columns: Set<String>
     ): String {
         val postgresUserName = if (principal.type == PrincipalType.USER) {
             buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
@@ -381,10 +392,10 @@ class AssemblerConnectionManager(
             buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
         }
 
-        val onProperties = if (properties.isEmpty()) {
+        val onProperties = if (columns.isEmpty()) {
             ""
         } else {
-            "(${properties.joinToString(",") { DataTables.quote(it.fullQualifiedNameAsString) }}) "
+            "(${columns.joinToString(",") { DataTables.quote(it) }}) "
         }
 
         return "GRANT SELECT $onProperties " +
