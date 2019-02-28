@@ -231,8 +231,8 @@ class AssemblerConnectionManager(
                     stmt.execute(
                             "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
                                     "WHERE ${SRC_ENTITY_SET_ID.name} IN ($clause) " +
-                                    "AND ${DST_ENTITY_SET_ID.name} IN ($clause) " +
-                                    "AND ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
+                                    "OR ${DST_ENTITY_SET_ID.name} IN ($clause) " +
+                                    "OR ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
                     )
 
                     val selectGrantedCount = grantSelectForEdges(stmt, tableName, entitySetIds)
