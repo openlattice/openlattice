@@ -236,9 +236,9 @@ class AssemblerConnectionManager(
                                     "OR ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
                     )
 
-                    val selectGrantedCount = grantSelectForEdges(stmt, tableName, entitySetIds)
+                    val selectGrantedResults = grantSelectForEdges(stmt, tableName, entitySetIds)
 
-                    logger.info("Granted select for $selectGrantedCount users/roles on materialized view $tableName")
+                    logger.info("Grant select results are: $selectGrantedResults  on materialized view $tableName")
                     return@use
                 }
             }
@@ -300,13 +300,13 @@ class AssemblerConnectionManager(
                     stmt.execute(sql)
                 }
                 //Next we need to grant select on materialize view to everyone who has permission.
-                val selectGrantedCount = grantSelectForEntitySet(
+                val selectGrantedResults = grantSelectForEntitySet(
                         connection,
                         tableName,
                         entitySet.id,
                         authorizedPropertyTypes
                 )
-                logger.info("Granted select for $selectGrantedCount users/roles on materialized view $tableName")
+                logger.info("Grant select results are $selectGrantedResults on materialized view $tableName")
             }
         }
     }
@@ -316,7 +316,7 @@ class AssemblerConnectionManager(
             tableName: String,
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): IntArray {
 
         val permissions = EnumSet.of(Permission.READ)
         // collect all principals of type user, role, which have read access on entityset
@@ -356,10 +356,10 @@ class AssemblerConnectionManager(
                 stmt.addBatch(grantSelectSql)
             }
             stmt.executeBatch()
-        }.sum()
+        }
     }
 
-    fun grantSelectForEdges(stmt: Statement, tableName: String, entitySetIds: Set<UUID>): Int {
+    fun grantSelectForEdges(stmt: Statement, tableName: String, entitySetIds: Set<UUID>): IntArray {
         val permissions = EnumSet.of(Permission.READ)
         // collect all principals of type user, role, which have read access on entityset
         val authorizedPrincipals = entitySetIds.fold(mutableSetOf<Principal>()) { acc, entitySetId ->
@@ -374,7 +374,7 @@ class AssemblerConnectionManager(
             stmt.addBatch(grantSelectSql)
         }
 
-        return stmt.executeBatch().sum()
+        return stmt.executeBatch()
     }
 
     /**
