@@ -74,7 +74,7 @@ public class EntitySet extends AbstractSecurableObject {
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
         this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
         checkArgument( StringUtils.isNotBlank( name ), "Entity set name cannot be blank." );
-        checkArgument( this.linkedEntitySets.isEmpty() || ( this.flags.contains( EntitySetFlag.LINKING ) ),
+        checkArgument( this.linkedEntitySets.isEmpty() || isLinking(),
                 "You cannot specify linked entity sets unless this is a linking entity set." );
 
         // Temporary
