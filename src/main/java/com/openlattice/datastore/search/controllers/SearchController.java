@@ -468,7 +468,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                     AuditEventType.READ_ENTITIES,
                     "Read entities as neighbors through SearchApi.executeEntityNeighborSearch",
                     Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
-                    ImmutableMap.of(),
+                    ImmutableMap.of( "aclKeySearched", new AclKey( entitySetId, entityKeyId ) ),
                     OffsetDateTime.now(),
                     Optional.empty()
             ) );
@@ -563,7 +563,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
                     AuditEventType.READ_ENTITIES,
                     "Read entities as filtered neighbors through SearchApi.executeFilteredEntityNeighborSearch",
                     Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
-                    ImmutableMap.of(),
+                    ImmutableMap.of( "entitySetId", entitySetId, "filter", filter ),
                     OffsetDateTime.now(),
                     Optional.empty()
             ) );
