@@ -72,7 +72,7 @@ public class EntitySet extends AbstractSecurableObject {
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) Optional<EnumSet<EntitySetFlag>> flags ) {
         super( id, title, description );
         this.linkedEntitySets = linkedEntitySets.orElse( new HashSet<>() );
-        this.flags = flags.orElse( EnumSet.noneOf( EntitySetFlag.class ) );
+        this.flags = flags.orElse( EnumSet.of( EntitySetFlag.EXTERNAL ) );
         checkArgument( StringUtils.isNotBlank( name ), "Entity set name cannot be blank." );
         checkArgument( this.linkedEntitySets.isEmpty() || ( this.flags.contains( EntitySetFlag.LINKING ) ),
                 "You cannot specify linked entity sets unless this is a linking entity set." );
@@ -100,7 +100,7 @@ public class EntitySet extends AbstractSecurableObject {
                 contacts,
                 Optional.empty(),
                 Optional.empty(),
-                Optional.of( EnumSet.of( EntitySetFlag.EXTERNAL ) ) );
+                Optional.empty() );
     }
 
     public EntitySet(
@@ -117,7 +117,7 @@ public class EntitySet extends AbstractSecurableObject {
                 contacts,
                 Optional.empty(),
                 Optional.empty(),
-                Optional.of( EnumSet.of( EntitySetFlag.EXTERNAL ) ) );
+                Optional.empty() );
     }
 
     public EntitySet(
