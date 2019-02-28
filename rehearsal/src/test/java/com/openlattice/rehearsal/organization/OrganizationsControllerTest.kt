@@ -1,6 +1,5 @@
 package com.openlattice.rehearsal.organization
 
-import com.openlattice.authorization.*
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationsApi
 import com.openlattice.rehearsal.GeneralException
@@ -9,10 +8,7 @@ import okhttp3.RequestBody
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.slf4j.LoggerFactory
-import java.time.OffsetDateTime
 import java.util.UUID
-import java.util.EnumSet
 
 class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -51,11 +47,6 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(user1.id, usersOfRole1[0].userId)
 
         // try to add role to user2 with user1
-        val organizationAcl = Acl(
-                AclKey(organizationID),
-                setOf(Ace(user1, EnumSet.of(Permission.WRITE), OffsetDateTime.MAX)))
-        permissionsApi.updateAcl(AclData(organizationAcl, Action.ADD)) // add write permission to organization to user1
-
         loginAs("user1")
 
         val url2 = OrganizationsApi.BASE +
@@ -92,11 +83,6 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         makePutRequest(url1, RequestBody.create(null, ByteArray(0)))
 
         // try to remove role1 from user1 with user2
-        val organizationAcl = Acl(
-                AclKey(organizationID),
-                setOf(Ace(user2, EnumSet.of(Permission.WRITE), OffsetDateTime.MAX)))
-        permissionsApi.updateAcl(AclData(organizationAcl, Action.ADD)) // add write permission to organization to user2
-
         loginAs("user2")
 
         try {
