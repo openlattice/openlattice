@@ -1092,4 +1092,8 @@ public final class ResultSetAdapters {
         return new AuditRecordEntitySetConfiguration( auditRecordEntitySetId( rs ),
                 Sets.newHashSet( PostgresArrays.getUuidArray( rs, AUDIT_RECORD_ENTITY_SET_IDS_FIELD ) ) );
     }
+
+    public static Boolean exists( ResultSet rs) throws SQLException {
+        return rs.getBoolean( "exists" );
+    }
 }

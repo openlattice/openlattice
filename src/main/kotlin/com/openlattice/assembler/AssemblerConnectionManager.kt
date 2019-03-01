@@ -34,6 +34,7 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -43,6 +44,8 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -55,6 +58,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
+import java.sql.ResultSet
 import java.sql.Statement
 import java.util.*
 import java.util.function.Function
@@ -267,6 +271,7 @@ class AssemblerConnectionManager(
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ) {
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
+            createProductionForeignSchemaOfEntitySetIfNotExists(datasource, entitySetId)
             materialize(datasource, entitySetId, authorizedPropertyTypes)
         }
 
@@ -580,6 +585,64 @@ class AssemblerConnectionManager(
                 logger.info("Imported foreign schema")
             }
         }
+    }
+
+    fun createProductionForeignSchemaOfEntitySetIfNotExists(organizationId: UUID, entitySetId: UUID) {
+        val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        connect(dbname).use { datasource ->
+            createProductionForeignSchemaOfEntitySetIfNotExists(datasource, entitySetId)
+        }
+    }
+
+    private fun createProductionForeignSchemaOfEntitySetIfNotExists(dataSource: HikariDataSource, entitySetId: UUID) {
+        dataSource.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                // check if table exists and import if not
+                if (!checkIfProductionViewsSchemaExists(stmt, entitySetId)) {
+                    stmt.execute(importProductionViewsSchemaSql(setOf("\"$entitySetId\"")))
+                    // (re)-import entity_sets
+                    updatePublicTables(stmt, setOf(PostgresTable.ENTITY_SETS.name))
+                }
+            }
+        }
+    }
+
+    private fun checkIfProductionViewsSchemaExists(stmt: Statement, entitySetId: UUID): Boolean {
+        val rs = stmt.executeQuery("SELECT EXISTS" +
+                "(SELECT 1 FROM pg_tables WHERE schemaname = $PRODUCTION_FOREIGN_SCHEMA and tablename = \"$entitySetId\")")
+        return ResultSetAdapters.exists(rs)
+    }
+
+    fun updateProductionForeignSchemaOfEntitySet(
+            organizationId: UUID, entitySetId: UUID, newPropertyTypes: List<PropertyType>) {
+        val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        connect(dbname).use { datasource ->
+            datasource.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    // add new columns
+                    newPropertyTypes.forEach {
+                        val newColumn = PostgresColumnDefinition(
+                                quote(it.type.fullQualifiedNameAsString),
+                                PostgresEdmTypeConverter.map(it.datatype))
+                        stmt.execute("ALTER FOREIGN TABLE $PRODUCTION_FOREIGN_SCHEMA.\"$entitySetId\" ADD COLUMN ${newColumn.sql()}")
+                    }
+
+                    // (re)-import entity_sets, property_types, entity_types
+                    val publicTables = mutableSetOf(
+                            PostgresTable.ENTITY_SETS.name,
+                            PostgresTable.PROPERTY_TYPES.name,
+                            PostgresTable.ENTITY_TYPES.name)
+                    updatePublicTables(stmt, publicTables)
+                }
+            }
+        }
+    }
+
+    private fun updatePublicTables(stmt: Statement, tables: Set<String>) {
+        tables.forEach {
+            stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$it CASCADE")
+        }
+        stmt.execute(importPublicSchemaSql(tables))
     }
 
 }

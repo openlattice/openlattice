@@ -28,8 +28,10 @@ import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
+import com.openlattice.assembler.processors.CreateProductionForeignTableOfEntitySetProcessor
 import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
 import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
+import com.openlattice.assembler.processors.UpdateProductionForeignTableOfEntitySetProcessor
 import com.openlattice.assembler.tasks.CleanOutOldUsersInitializationTask
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.*
@@ -49,7 +51,6 @@ import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
@@ -112,19 +113,19 @@ class Assembler(
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
         createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
-        createOrUpdateProductionForeignSchemaOfEntitySet(
+        assemblies.executeOnKey(
                 entitySetCreatedEvent.entitySet.organizationId,
-                entitySetCreatedEvent.entitySet.id,
-                false)
+                CreateProductionForeignTableOfEntitySetProcessor(entitySetCreatedEvent.entitySet.id).init(acm))
     }
 
     @Subscribe
     fun handlePropertyTypeAddedToEntitySet(propertyTypesAddedToEntitySetEvent: PropertyTypesAddedToEntitySetEvent) {
         createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySet.id)
-        createOrUpdateProductionForeignSchemaOfEntitySet(
+        assemblies.executeOnKey(
                 propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
-                propertyTypesAddedToEntitySetEvent.entitySet.id,
-                true)
+                UpdateProductionForeignTableOfEntitySetProcessor(
+                        propertyTypesAddedToEntitySetEvent.entitySet.id,
+                        propertyTypesAddedToEntitySetEvent.newPropertyTypes).init(acm))
         // flag entity set as non-materialized
         flagAsNonMaterialized(
                 propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
@@ -187,31 +188,6 @@ class Assembler(
                 stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
                 stmt.execute("CREATE OR REPLACE VIEW $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\" AS $sql")
                 return@use
-            }
-        }
-    }
-
-    private fun createOrUpdateProductionForeignSchemaOfEntitySet(organizationId: UUID, entitySetId: UUID, propertyTypeAdded: Boolean) {
-        val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-        acm.connect(dbname).use { datasource ->
-            datasource.connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    val tableName = "\"$entitySetId\""
-                    // (re-)import table
-                    stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$tableName CASCADE")
-                    stmt.execute(importProductionViewsSchemaSql(setOf(tableName)))
-
-                    // (re)-import entity_sets and if propertyTypeAdded: property_types, entity_types
-                    val publicTables = mutableSetOf(PostgresTable.ENTITY_SETS.name)
-                    if (propertyTypeAdded) {
-                        publicTables.addAll(setOf(PostgresTable.PROPERTY_TYPES.name, PostgresTable.ENTITY_TYPES.name))
-                    }
-
-                    publicTables.forEach {
-                        stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$it CASCADE")
-                    }
-                    stmt.execute(importPublicSchemaSql(publicTables))
-                }
             }
         }
     }
