@@ -38,11 +38,14 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
+import java.security.InvalidParameterException
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
+import kotlin.streams.asSequence
+import kotlin.streams.toList
 
 /**
  *
@@ -370,14 +373,19 @@ class PostgresEntityDataQueryService(
     }
 
     fun upsertEntities(
-            entitySetId: UUID, entities: Map<UUID, Map<UUID, Set<Any>>>,
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
         return upsertEntities(entitySetId, entities, authorizedPropertyTypes, false)
     }
 
+    /**
+     * This function assumes no upstream parallelization as it will parallelize writes automatically.
+     */
     fun upsertEntities(
-            entitySetId: UUID, entities: Map<UUID, Map<UUID, Set<Any>>>,
+            entitySetId: UUID,
+            entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean
     ): Int {
@@ -415,56 +423,58 @@ class PostgresEntityDataQueryService(
                         )
                     }
 
-            entities.forEach { entity ->
+            val insertions: Map<UUID, List<PropertyInsertion>> = entities.flatMap { entity ->
                 val entityKeyId = entity.key
                 val entityData = asMap(JsonDeserializer
                                                .validateFormatAndNormalize(entity.value, dataTypes)
                                                { "Entity set $entitySetId with entity key id $entityKeyId" })
 
-                entityData.forEach { (propertyTypeId, values) ->
-                    val upserts = preparedStatements[propertyTypeId]
+                return@flatMap entityData.flatMap { (propertyTypeId, values) ->
 
-                    if (upserts == null) {
-                        logger.warn(
-                                "Not inserting unauthorized property in entity {} from entity set {}",
-                                entityKeyId,
-                                entitySetId
-                        )
-                    } else {
-                        values.forEach { value ->
-                            //Binary data types get stored in S3 bucket
-                            val (propertyHash, insertValue) =
-                                    if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
-                                        if (awsPassthrough) {
-                                            //Data is being stored in AWS directly the value will be the url fragment
-                                            //of where the data will be stored in AWS.
-                                            PostgresDataHasher.hashObject(value, EdmPrimitiveTypeKind.String) to value
-                                        } else {
-                                            //Data is expected to be of a specific type so that it can be stored in
-                                            //s3 bucket
 
-                                            val binaryData = value as BinaryDataWithContentType
-
-                                            val digest = PostgresDataHasher
-                                                    .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
-                                            //store entity set id/entity key id/property type id/property hash as key in S3
-                                            val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
-                                            byteBlobDataManager
-                                                    .putObject(s3Key, binaryData.data, binaryData.contentType)
-                                            PostgresDataHasher
-                                                    .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
-                                        }
+                    return@flatMap values.parallelStream().map { value ->
+                        //Binary data types get stored in S3 bucket
+                        val (propertyHash, insertValue) =
+                                if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
+                                    if (awsPassthrough) {
+                                        //Data is being stored in AWS directly the value will be the url fragment
+                                        //of where the data will be stored in AWS.
+                                        PostgresDataHasher.hashObject(value, EdmPrimitiveTypeKind.String) to value
                                     } else {
-                                        PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
+                                        //Data is expected to be of a specific type so that it can be stored in
+                                        //s3 bucket
+
+                                        val binaryData = value as BinaryDataWithContentType
+
+                                        val digest = PostgresDataHasher
+                                                .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
+                                        //store entity set id/entity key id/property type id/property hash as key in S3
+                                        val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
+                                        byteBlobDataManager
+                                                .putObject(s3Key, binaryData.data, binaryData.contentType)
+                                        PostgresDataHasher
+                                                .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
                                     }
+                                } else {
+                                    PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
+                                }
+                        return@map PropertyInsertion(propertyTypeId, entityKeyId, propertyHash, insertValue)
+                    }.toList()
+                }
+            }.groupBy { it.propertyTypeId }
 
-                            upserts.setObject(1, entityKeyId)
-                            upserts.setBytes(2, propertyHash)
-                            upserts.setObject(3, insertValue)
+//            lockProperties(entitySetId, insertions )
+//
+            insertions.values.forEach {
+                val upserts = preparedStatements[propertyTypeId] ?: throw InvalidParameterException(
+                        "Cannot insert property type not in authorized property types for entity $entityKeyId from entity set $entitySetId."
+                )
+                it.foreach { insertion ->
+                    upserts.setObject(1, insertion.entityKeyId)
+                    upserts.setBytes(2, insertion.propertyHash)
+                    upserts.setObject(3, insertion.insertValue)
 
-                            upserts.addBatch()
-                        }
-                    }
+                    upserts.addBatch()
                 }
             }
 
@@ -832,7 +842,14 @@ fun buildEntityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     return entityKeyIds.joinToString(",") { "'$it'" }
 }
 
-fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): String {
+internal fun lockProperties(entitySetId: UUID,propertyType propertyInsertions:List<PropertyInsertion>): String {
+    val idsClause = propertyInsertions.joinToString(",") { "(${it.entityKeyId},${it.propertyHash})" }
+    return "SELECT 1 FROM ${IDS.name} " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND (${ID_VALUE.name},${HASH.name}) IN ($idsClause) " +
+            "FOR UPDATE"
+}
+
+internal fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): String {
     return "SELECT 1 FROM ${IDS.name} " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause) " +
             "FOR UPDATE"
