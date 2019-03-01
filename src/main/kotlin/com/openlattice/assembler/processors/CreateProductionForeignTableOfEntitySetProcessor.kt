@@ -14,7 +14,7 @@ import java.util.UUID
 private val logger = LoggerFactory.getLogger(CreateProductionForeignTableOfEntitySetProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-class CreateProductionForeignTableOfEntitySetProcessor(private val entitySetId: UUID) :
+data class CreateProductionForeignTableOfEntitySetProcessor(val entitySetId: UUID) :
         AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(true), Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
