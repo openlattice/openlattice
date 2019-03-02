@@ -19,7 +19,7 @@
  *
  */
 
-package com.openlattice.organizations
+package com.openlattice.organizations.tasks
 
 import com.google.common.base.Preconditions.checkState
 import com.google.common.base.Stopwatch
@@ -45,8 +45,8 @@ private val logger = LoggerFactory.getLogger(OrganizationsInitializationTask::cl
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class OrganizationsInitializationTask() : HazelcastInitializationTask<OrganizationBootstrapDependencies> {
-    override fun initialize(dependencies: OrganizationBootstrapDependencies) {
+class OrganizationsInitializationTask() : HazelcastInitializationTask<OrganizationsInitializationDependencies> {
+    override fun initialize(dependencies: OrganizationsInitializationDependencies) {
         logger.info("Running bootstrap process for organizations.")
         val sw = Stopwatch.createStarted()
         val organizationService = dependencies.organizationService
@@ -98,8 +98,8 @@ class OrganizationsInitializationTask() : HazelcastInitializationTask<Organizati
         return Task.ORGANIZATION_BOOTSTRAP.name
     }
 
-    override fun getDependenciesClass(): Class<out OrganizationBootstrapDependencies> {
-        return OrganizationBootstrapDependencies::class.java
+    override fun getDependenciesClass(): Class<out OrganizationsInitializationDependencies> {
+        return OrganizationsInitializationDependencies::class.java
     }
 
     companion object {

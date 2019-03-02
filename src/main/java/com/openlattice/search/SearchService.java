@@ -36,7 +36,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
-import com.openlattice.authorization.AbstractSecurableObjectResolveTypeService;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -117,7 +117,7 @@ public class SearchService {
     private AuthorizationManager authorizations;
 
     @Inject
-    private AbstractSecurableObjectResolveTypeService securableObjectTypes;
+    private SecurableObjectResolveTypeService securableObjectTypes;
 
     @Inject
     private ConductorElasticsearchApi elasticsearchApi;
@@ -292,14 +292,16 @@ public class SearchService {
 
     private void indexLinkedEntities(
             UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
-        // linking_id/(normal)entity_set_id/property_type_id
-        Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
-                linkingIds.entrySet().stream().collect(
-                        Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
-                linkingIds.keySet().stream().collect(
-                        Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ) );
+        if(!linkingIds.isEmpty()) {
+            // linking_id/(normal)entity_set_id/property_type_id
+            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
+                    linkingIds.entrySet().stream().collect(
+                            Collectors.toMap(Map.Entry::getKey, entry -> Optional.of(entry.getValue())) ),
+                    linkingIds.keySet().stream().collect(
+                            Collectors.toMap(Function.identity(), entitySetId -> propertyTypes) ));
 
-        elasticsearchApi.createBulkLinkedData( linkingEntitySetId, linkedData );
+            elasticsearchApi.createBulkLinkedData( linkingEntitySetId, linkedData );
+        }
     }
 
     @Subscribe

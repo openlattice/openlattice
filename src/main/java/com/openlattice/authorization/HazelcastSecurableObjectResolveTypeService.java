@@ -22,33 +22,41 @@
 
 package com.openlattice.authorization;
 
+import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
+import java.util.Set;
 
-public class HazelcastAbstractSecurableObjectResolveTypeService implements AbstractSecurableObjectResolveTypeService {
-    
+public class HazelcastSecurableObjectResolveTypeService implements SecurableObjectResolveTypeService {
+
     private final IMap<AclKey, SecurableObjectType> securableObjectTypes;
-    
-    public HazelcastAbstractSecurableObjectResolveTypeService( HazelcastInstance hazelcastInstance ) {
+
+    public HazelcastSecurableObjectResolveTypeService( HazelcastInstance hazelcastInstance ) {
         securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
     }
-    
+
     @Override
     public void createSecurableObjectType( AclKey aclKey, SecurableObjectType type ) {
         securableObjectTypes.set( new AclKey( aclKey ), type );
-        
+
     }
 
     @Override
     public void deleteSecurableObjectType( AclKey aclKey ) {
         securableObjectTypes.remove( new AclKey( aclKey ) );
     }
-    
+
     @Override
     public SecurableObjectType getSecurableObjectType( AclKey aclKey ) {
         return securableObjectTypes.get( new AclKey( aclKey ) );
     }
 
+    @Override
+    public Set<AclKey> getSecurableObjectsOfType( SecurableObjectType type ) {
+        return securableObjectTypes
+                .keySet( Predicates.equal( SecurableObjectTypeMapstore.SECURABLE_OBJECT_TYPE_INDEX, type ) );
+    }
 }

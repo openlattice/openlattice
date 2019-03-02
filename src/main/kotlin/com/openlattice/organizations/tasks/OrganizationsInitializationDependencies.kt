@@ -1,7 +1,5 @@
-
-
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +16,14 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
 
-package com.openlattice.datastore.exceptions;
+package com.openlattice.organizations.tasks
 
-public class BadRequestException extends RuntimeException {
-    private static final long serialVersionUID = 9049360916124505696L;
+import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.tasks.HazelcastTaskDependencies
 
-    public BadRequestException( String msg ) {
-        super( msg );
-    }
-}
+data class OrganizationsInitializationDependencies(
+        val organizationService: HazelcastOrganizationService
+) : HazelcastTaskDependencies

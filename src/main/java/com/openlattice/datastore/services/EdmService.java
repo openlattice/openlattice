@@ -51,8 +51,10 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.controllers.exceptions.ResourceNotFoundException;
+import com.openlattice.controllers.exceptions.TypeExistsException;
+import com.openlattice.controllers.exceptions.TypeNotFoundException;
 import com.openlattice.data.PropertyUsageSummary;
-import com.openlattice.datastore.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntityDataModel;
 import com.openlattice.edm.EntityDataModelDiff;
@@ -74,8 +76,6 @@ import com.openlattice.edm.events.PropertyTypeDeletedEvent;
 import com.openlattice.edm.events.PropertyTypeMetaDataUpdatedEvent;
 import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
 import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
-import com.openlattice.edm.exceptions.TypeExistsException;
-import com.openlattice.edm.exceptions.TypeNotFoundException;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -113,7 +113,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -208,11 +207,6 @@ public class EdmService implements EdmManager {
         } catch ( SQLException e ) {
             logger.debug( "Unable to clear all data.", e );
         }
-    }
-
-    @Override
-    public UUID getCurrentEntityDataModelVersion() {
-        return new UUID(0,0);
     }
 
     /*
@@ -1118,7 +1112,16 @@ public class EdmService implements EdmManager {
     @Override
     public Map<FullQualifiedName, UUID> getFqnToIdMap( Set<FullQualifiedName> propertyTypeFqns ) {
         return aclKeys.getAll( Util.fqnToString( propertyTypeFqns ) ).entrySet().stream()
-                .collect( Collectors.toMap( e -> new FullQualifiedName( e.getKey() ), Entry::getValue ) );
+                .collect( Collectors.toMap(
+                        e -> new FullQualifiedName( e.getKey() ),
+                        e -> {
+                            if ( e.getValue() == null ) {
+                                throw new NullPointerException( "Property type " + e.getKey() + " does not exist" );
+                            } else {
+                                return e.getValue();
+                            }
+                        } )
+                );
     }
 
     @Override
@@ -1357,14 +1360,6 @@ public class EdmService implements EdmManager {
     }
 
     private Pair<EntityDataModelDiff, Set<List<UUID>>> getEntityDataModelDiffAndFqnLists( EntityDataModel edm ) {
-        UUID currentVersion = getCurrentEntityDataModelVersion();
-        if ( !edm.getVersion().equals( currentVersion ) ) {
-            throw new IllegalArgumentException(
-                    "Unable to generate diff: version " + edm.getVersion().toString()
-                            + " does not match current version "
-                            + currentVersion.toString() );
-        }
-
         ConcurrentSkipListSet<PropertyType> conflictingPropertyTypes = new ConcurrentSkipListSet<>( Comparator
                 .comparing( propertyType -> propertyType.getType().toString() ) );
         ConcurrentSkipListSet<EntityType> conflictingEntityTypes = new ConcurrentSkipListSet<>( Comparator
@@ -1478,7 +1473,6 @@ public class EdmService implements EdmManager {
         } );
 
         EntityDataModel edmDiff = new EntityDataModel(
-                getCurrentEntityDataModelVersion(),
                 Sets.newHashSet(),
                 updatedSchemas,
                 updatedEntityTypes,
@@ -1490,7 +1484,6 @@ public class EdmService implements EdmManager {
         if ( !conflictingPropertyTypes.isEmpty() || !conflictingEntityTypes.isEmpty()
                 || !conflictingAssociationTypes.isEmpty() ) {
             conflicts = new EntityDataModel(
-                    getCurrentEntityDataModelVersion(),
                     Sets.newHashSet(),
                     Sets.newHashSet(),
                     conflictingEntityTypes,
@@ -1643,7 +1636,6 @@ public class EdmService implements EdmManager {
         propertyTypes.sort( Comparator.comparing( propertyType -> propertyType.getType().toString() ) );
 
         return new EntityDataModel(
-                getCurrentEntityDataModelVersion(),
                 namespaces,
                 schemas,
                 entityTypes,

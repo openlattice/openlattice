@@ -1,13 +1,9 @@
 package com.openlattice.auditing
 
-import com.google.common.base.Suppliers
-import com.google.common.collect.LinkedHashMultimap
-import com.openlattice.authorization.securable.SecurableObjectType
-import com.openlattice.datastore.exceptions.ResourceNotFoundException
+import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.util.*

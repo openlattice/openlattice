@@ -22,16 +22,13 @@ package com.openlattice.linking.util;
 
 import com.google.common.collect.Sets;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import com.google.common.io.Resources;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -51,7 +48,7 @@ public enum PersonMetric {
     MIDDLE_NAME_LHS_PRESENCE( lhs( ( e, map ) -> 0 ) ),
     MIDDLE_NAME_RHS_PRESENCE( rhs( ( e, map ) -> 0 ) ),
 
-    LAST_NAME_STRINGG( jaroWinkler( ( e, map ) -> PersonProperties.getLastName( e, map ) ) ),
+    LAST_NAME_STRING( jaroWinkler( ( e, map ) -> PersonProperties.getLastName( e, map ) ) ),
     LAST_NAME_METAPHONE( metaphone( ( e, map ) -> PersonProperties.getLastName( e, map ) ) ),
     LAST_NAME_METAPHONE_ALT( metaphoneAlternate( ( e, map ) -> PersonProperties.getLastName( e, map ) ) ),
     LAST_NAME_LHS_PRESENCE( lhs( ( e, map ) -> PersonProperties.getHasLastName( e, map ) ) ),
@@ -81,7 +78,6 @@ public enum PersonMetric {
     SSN_RHS_PRESENCE( rhs( ( e, map ) -> PersonProperties.getHasSsn( e, map ) ) );
 
 
-    private static final PersonMetric[]    metrics         = PersonMetric.values();
     private static final Set<PersonMetric> metricsList     = Sets.newHashSet( PersonMetric.values() );
     private static final DoubleMetaphone   doubleMetaphone = new DoubleMetaphone();
 
@@ -98,14 +94,15 @@ public enum PersonMetric {
         return this.metric.extract( lhs, rhs, fqnToIdMap );
     }
 
-    public static Double[] distance(
+    public static double[] distance(
             Map<UUID, DelegatedStringSet> lhs,
             Map<UUID, DelegatedStringSet> rhs,
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        Double[] result = new Double[ metrics.length ];
-        metricsList.parallelStream().forEach( m -> {
-            result[ m.ordinal() ] = m.extract( lhs, rhs, fqnToIdMap );
-        } );
+        double[] result = new double[ metricsList.size() ];
+
+        metricsList.parallelStream().forEach( m ->
+                result[ m.ordinal() ] = m.extract( lhs, rhs, fqnToIdMap )
+        );
         return result;
     }
 
@@ -113,10 +110,10 @@ public enum PersonMetric {
             Map<UUID, DelegatedStringSet> lhs,
             Map<UUID, DelegatedStringSet> rhs,
             Map<FullQualifiedName, UUID> fqnToIdMap ) {
-        double[] result = new double[ metrics.length ];
-        metricsList.parallelStream().forEach( m -> {
-            result[ m.ordinal() ] = m.extract( lhs, rhs, fqnToIdMap );
-        } );
+        double[] result = new double[ metricsList.size() ];
+        metricsList.parallelStream().forEach( m ->
+                result[ m.ordinal() ] = m.extract( lhs, rhs, fqnToIdMap )
+        );
         return result;
     }
 

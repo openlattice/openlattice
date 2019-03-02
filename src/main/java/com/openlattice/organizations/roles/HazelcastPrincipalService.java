@@ -45,9 +45,9 @@ import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.mapstores.PrincipalMapstore;
 import com.openlattice.authorization.projections.PrincipalProjection;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.edm.exceptions.TypeExistsException;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.processors.NestedPrincipalMerger;
@@ -66,6 +66,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -157,7 +158,7 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     }
 
     @Override
-    public SecurablePrincipal getSecurablePrincipal( AclKey aclKey ) {
+    public @Nullable SecurablePrincipal getSecurablePrincipal( AclKey aclKey ) {
         return principals.get( aclKey );
     }
 
