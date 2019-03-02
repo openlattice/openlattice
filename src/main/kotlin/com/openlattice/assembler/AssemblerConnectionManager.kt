@@ -58,7 +58,6 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
-import java.sql.ResultSet
 import java.sql.Statement
 import java.util.*
 import java.util.function.Function
@@ -242,7 +241,8 @@ class AssemblerConnectionManager(
 
                     val selectGrantedResults = grantSelectForEdges(stmt, tableName, entitySetIds)
 
-                    logger.info("Grant select results are: $selectGrantedResults  on materialized view $tableName")
+                    logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
+                            "on materialized view $tableName")
                     return@use
                 }
             }
@@ -311,7 +311,8 @@ class AssemblerConnectionManager(
                         entitySet.id,
                         authorizedPropertyTypes
                 )
-                logger.info("Grant select results are $selectGrantedResults on materialized view $tableName")
+                logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
+                        "on materialized view $tableName")
             }
         }
     }
@@ -596,10 +597,10 @@ class AssemblerConnectionManager(
 
     private fun createProductionForeignSchemaOfEntitySetIfNotExists(dataSource: HikariDataSource, entitySetId: UUID) {
         dataSource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                // check if table exists and import if not
-                if (!checkIfProductionViewsSchemaExists(stmt, entitySetId)) {
-                    stmt.execute(importProductionViewsSchemaSql(setOf("\"$entitySetId\"")))
+            // check if table exists and import if not
+            if (!checkIfProductionViewsSchemaExists(conn, entitySetId)) {
+                conn.createStatement().use { stmt ->
+                    stmt.execute(importProductionViewsSchemaSql(setOf(DataTables.quote(entitySetId.toString()))))
                     // (re)-import entity_sets
                     updatePublicTables(stmt, setOf(PostgresTable.ENTITY_SETS.name))
                 }
@@ -607,9 +608,14 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun checkIfProductionViewsSchemaExists(stmt: Statement, entitySetId: UUID): Boolean {
-        val rs = stmt.executeQuery("SELECT EXISTS" +
-                "(SELECT 1 FROM pg_tables WHERE schemaname = $PRODUCTION_FOREIGN_SCHEMA and tablename = \"$entitySetId\")")
+    private fun checkIfProductionViewsSchemaExists(connection: Connection, entitySetId: UUID): Boolean {
+        val stmt = connection
+                .prepareStatement("SELECT EXISTS " +
+                        "(SELECT 1 FROM ( SELECT to_regclass(?) AS name) AS foo WHERE foo.name IS NOT NULL)")
+        stmt.setObject(1, "$PRODUCTION_FOREIGN_SCHEMA.${DataTables.quote(entitySetId.toString())}")
+
+        val rs = stmt.executeQuery()
+        rs.next()
         return ResultSetAdapters.exists(rs)
     }
 
