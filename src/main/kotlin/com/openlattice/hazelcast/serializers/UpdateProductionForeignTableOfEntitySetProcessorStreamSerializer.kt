@@ -59,7 +59,7 @@ class UpdateProductionForeignTableOfEntitySetProcessorStreamSerializer
             PropertyTypeStreamSerializer.deserialize(input)
         }
 
-        return UpdateProductionForeignTableOfEntitySetProcessor(entitySetId, newPropertyTypes)
+        return UpdateProductionForeignTableOfEntitySetProcessor(entitySetId, newPropertyTypes).init(acm)
     }
 
     override fun init(assemblerConnectonManager: AssemblerConnectionManager) {

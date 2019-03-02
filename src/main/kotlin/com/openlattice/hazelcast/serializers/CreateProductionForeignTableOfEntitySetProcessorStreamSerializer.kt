@@ -48,7 +48,7 @@ class CreateProductionForeignTableOfEntitySetProcessorStreamSerializer
     }
 
     override fun read(input: ObjectDataInput): CreateProductionForeignTableOfEntitySetProcessor {
-        return CreateProductionForeignTableOfEntitySetProcessor(UUIDStreamSerializer.deserialize(input))
+        return CreateProductionForeignTableOfEntitySetProcessor(UUIDStreamSerializer.deserialize(input)).init(acm)
     }
 
     override fun init(assemblerConnectonManager: AssemblerConnectionManager) {
