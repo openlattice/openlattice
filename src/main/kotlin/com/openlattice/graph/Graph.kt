@@ -116,7 +116,17 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun clearVerticesInEntitySet(entitySetId: UUID?): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val connection = hds.connection
+        connection.use {
+            val ps = connection.prepareStatement(CLEAR_BY_SET_SQL)
+            val version = -System.currentTimeMillis()
+            ps.setLong(1, version)
+            ps.setLong(2, version)
+            ps.setObject(3, entitySetId)
+            ps.setObject(4, entitySetId)
+            ps.setObject(5, entitySetId)
+            return ps.executeUpdate()
+        }
     }
 
     override fun clearVertices(entitySetId: UUID?, vertices: Set<UUID>?): Int {
@@ -228,6 +238,37 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     stmt.setArray(3, PostgresArrays.createUuidArray(connection, dstEntityKeyIds.stream()))
                     val rs = stmt.executeQuery()
                     logger.info(stmt.toString())
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+        )
+    }
+
+    override fun getEdgeKeysContainingEntities( entitySetId: UUID, entityKeyIds: Set<UUID> ): Iterable<EdgeKey> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val idArr= PostgresArrays.createUuidArray(connection, entityKeyIds)
+                    val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
+                    stmt.setObject(1, entitySetId)
+                    stmt.setObject(2, idArr)
+                    stmt.setObject(3, entitySetId)
+                    stmt.setObject(4, idArr)
+                    val rs = stmt.executeQuery()
+                    StatementHolder(connection, stmt, rs)
+                },
+                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+        )
+    }
+
+    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): Iterable<EdgeKey> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.prepareStatement(NEIGHBORHOOD_OF_ENTITY_SET_SQL)
+                    stmt.setObject(1, entitySetId)
+                    stmt.setObject(3, entitySetId)
+                    val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
                 Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
@@ -730,6 +771,9 @@ private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToStri
 
 private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+private val CLEAR_BY_SET_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
+        "WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
+
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val DELETE_BY_SET_SQL = "DELETE FROM ${EDGES.name} WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
@@ -738,6 +782,9 @@ private val DELETE_BY_VERTICES_SQL = "DELETE FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
         "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
+
+private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
+        "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +

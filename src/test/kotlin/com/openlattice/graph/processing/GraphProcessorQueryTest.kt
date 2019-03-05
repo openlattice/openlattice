@@ -1,6 +1,8 @@
 package com.openlattice.graph.processing
 
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.getFilteredNeighborhoodSql
+import com.openlattice.search.requests.EntityNeighborsFilter
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Test
@@ -31,5 +33,17 @@ class GraphProcessorQueryTest {
 
         buildPropagationQueries(neighborEntitySetIds, neighborPropertyTypeIds, entitySetIds, propertyTypes,
                 associationType, isSelf).forEach { logger.info(it) }
+    }
+
+    @Test
+    fun testGetFilteredNeighborhoodSql() {
+        val entityKeyIds = (0 until 10).map { UUID.randomUUID() }.toSet()
+        val filter = EntityNeighborsFilter(
+                entityKeyIds,
+                Optional.of(setOf(UUID.randomUUID())),
+                Optional.of(setOf(UUID.randomUUID())),
+                Optional.of(setOf(UUID.randomUUID())))
+        val query = getFilteredNeighborhoodSql(filter, true)
+        logger.info(query)
     }
 }
