@@ -130,7 +130,21 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun clearVertices(entitySetId: UUID?, vertices: Set<UUID>?): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val connection = hds.connection
+        connection.use {
+            val ps = connection.prepareStatement(CLEAR_BY_VERTICES_SQL)
+            val arr = PostgresArrays.createUuidArray(it, vertices)
+            val version = -System.currentTimeMillis()
+            ps.setLong(1, version)
+            ps.setLong(2, version)
+            ps.setObject(3, entitySetId)
+            ps.setObject(4, arr)
+            ps.setObject(5, entitySetId)
+            ps.setObject(6, arr)
+            ps.setObject(7, entitySetId)
+            ps.setObject(8, arr)
+            return ps.executeUpdate()
+        }
     }
 
     override fun deleteEdges(keys: Set<EdgeKey>): Int {
@@ -773,6 +787,10 @@ private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versio
         "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 private val CLEAR_BY_SET_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
+private val CLEAR_BY_VERTICES_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE " +
+        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
+        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
 
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
