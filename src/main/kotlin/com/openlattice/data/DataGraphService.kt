@@ -209,6 +209,12 @@ open class DataGraphService(
         // clear association entities
         clearAssociations(entitySetId, Optional.of(entityKeyIds))
 
+        return clearEntityDataAndVertices(entitySetId, entityKeyIds, authorizedPropertyTypes)
+    }
+
+    private fun clearEntityDataAndVertices(entitySetId: UUID,
+                                           entityKeyIds: Set<UUID>,
+                                           authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         // clear edges
         val verticesCount = graphService.clearVertices(entitySetId, entityKeyIds)
 
@@ -239,7 +245,7 @@ open class DataGraphService(
     override fun clearEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int {
-        val propertyCount =  eds.clearEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        val propertyCount = eds.clearEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
         logger.info("Cleared properties {} of {} entities.",
                 authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount)
         return propertyCount
@@ -272,6 +278,13 @@ open class DataGraphService(
         // delete associations
         deleteAssociations(entitySetId, Optional.of(entityKeyIds))
 
+        return deleteEntityDataAnVertices(entitySetId, entityKeyIds, authorizedPropertyTypes)
+    }
+
+    private fun deleteEntityDataAnVertices(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
         // delete edges
         val entityCount = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
 
@@ -279,6 +292,7 @@ open class DataGraphService(
         val verticesCount = graphService.deleteVertices(entitySetId, entityKeyIds)
 
         logger.info("Deleted {} entities and {} vertices.", entityCount, verticesCount)
+
         return entityCount
     }
 
@@ -289,20 +303,20 @@ open class DataGraphService(
         // access checks
         val authorizedPropertyTypesOfAssociations = HashMap<UUID, Map<UUID, PropertyType>>()
         associationsEntityKeyIds.forEach {
-            val authorizedPropertyTypesOfAssociation = getAuthorizedPropertyTypesForDelete( it.key, Optional.empty() )
+            val authorizedPropertyTypesOfAssociation = getAuthorizedPropertyTypesForDelete(it.key, Optional.empty())
             authorizedPropertyTypesOfAssociations[it.key] = authorizedPropertyTypesOfAssociation
         }
 
         // delete associations of entity set
         val associationDeleteCount = associationsEntityKeyIds.map {
-            deleteEntities(
+            deleteEntityDataAnVertices(
                     it.key,
                     it.value,
                     authorizedPropertyTypesOfAssociations[it.key]!!)
         }.sum()
 
-        logger.info( "Deleted {} associations when deleting entities from entity set {}",
-                associationDeleteCount, entitySetId )
+        logger.info("Deleted {} associations when deleting entities from entity set {}",
+                associationDeleteCount, entitySetId)
     }
 
     private fun collectAssociationsEntityKeyIds(

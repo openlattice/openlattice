@@ -79,6 +79,9 @@ interface DataGraphManager {
     //Soft deletes
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
 
+    /**
+     * Clears property data, id, edges and associations of entities.
+     */
     fun clearEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int
@@ -91,7 +94,7 @@ interface DataGraphManager {
     fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
 
     /**
-     * Deletes property data, id and edges of entities.
+     * Deletes property data, id, edges and associations of entities.
      */
     fun deleteEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
