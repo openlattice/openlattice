@@ -344,7 +344,9 @@ public class DatastoreServicesPod {
                 graphApi(),
                 idService(),
                 entityDatastore(),
-                dataModelService() );
+                dataModelService(),
+                authorizationManager(),
+                edmAuthorizationHelper() );
     }
 
     @Bean
