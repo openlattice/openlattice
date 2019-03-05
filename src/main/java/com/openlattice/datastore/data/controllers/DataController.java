@@ -637,33 +637,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             method = RequestMethod.DELETE )
     public Integer deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestParam( value = TYPE ) DeleteType deleteType ) {
-
-        WriteEvent writeEvent;
-
-        if ( deleteType == DeleteType.Hard ) {
-            final Map<UUID, PropertyType> authorizedPropertyTypes =
-                    getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
-            writeEvent = dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
-        } else {
-            ensureReadAccess( new AclKey( entitySetId ) );
-            writeEvent = dgm.clearEntitySet(
-                    entitySetId, authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
-        }
-
-        recordEvent( new AuditableEvent(
-                getCurrentUserId(),
-                new AclKey( entitySetId ),
-                AuditEventType.DELETE_ENTITIES,
-                "All entities deleted from entity set using delete type " + deleteType.toString()
-                        + " through DataApi.deleteAllEntitiesFromEntitySet",
-                Optional.empty(),
-                ImmutableMap.of(),
-                getDateTimeFromLong( writeEvent.getVersion() ),
-                Optional.empty()
-        ) );
-
-        return writeEvent.getNumUpdates();
+            @RequestParam( value = TYPE ) DeleteType deleteType) {
+        final Set<UUID> entityKeyIds = dgm.getEntityKeyIdsInEntitySet( entitySetId );
+        return deleteEntities( entitySetId, entityKeyIds, deleteType );
     }
 
     @Override
@@ -683,10 +659,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
         WriteEvent writeEvent;
         if ( deleteType == DeleteType.Hard ) {
+            // access checks for entity set and properties
             final Map<UUID, PropertyType> authorizedPropertyTypes =
                     getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
             writeEvent = dgm.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
         } else {
+            // clear entities
             ensureReadAccess( new AclKey( entitySetId ) );
             //Note this will only clear properties to which the caller has access.
             writeEvent = dgm.clearEntities( entitySetId,

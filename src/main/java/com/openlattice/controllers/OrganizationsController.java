@@ -444,10 +444,9 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( ROLE_ID ) UUID roleId,
             @PathVariable( USER_ID ) String userId ) {
-        ensureWriteAccess( new AclKey( organizationId ) );
-        organizations
-                .addRoleToPrincipalInOrganization( organizationId,
-                        roleId,
+        ensureOwnerAccess( new AclKey( organizationId, roleId ) );
+
+        organizations.addRoleToPrincipalInOrganization( organizationId, roleId,
                         new Principal( PrincipalType.USER, userId ) );
         return null;
     }
@@ -459,7 +458,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( ROLE_ID ) UUID roleId,
             @PathVariable( USER_ID ) String userId ) {
-        ensureWriteAccess( new AclKey( organizationId ) );
+        ensureOwnerAccess( new AclKey( organizationId, roleId ) );
+
         organizations.removeRoleFromUser( new AclKey( organizationId, roleId ),
                 new Principal( PrincipalType.USER, userId ) );
         return null;
