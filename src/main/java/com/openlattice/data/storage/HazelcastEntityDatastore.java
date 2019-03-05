@@ -97,6 +97,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 Optional.empty() );
     }
 
+    @Override
+    @Timed
+    public Set<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId ) {
+        return dataQueryService.getEntityKeyIdsInEntitySet( entitySetId );
+    }
+
     @Timed
     @Override
     public int createOrUpdateEntities(
@@ -226,7 +232,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
     }
 
-    private void signalEntitySetDataCleared( UUID entitySetId ) {
+    private void signalEntitySetDataDeleted( UUID entitySetId ) {
         eventBus.post( new EntitySetDataClearedEvent( entitySetId ) );
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
     }
@@ -302,7 +308,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override public int clearEntitySet(
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var count = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
-        signalEntitySetDataCleared(entitySetId);
+        signalEntitySetDataDeleted(entitySetId);
         return count;
     }
 

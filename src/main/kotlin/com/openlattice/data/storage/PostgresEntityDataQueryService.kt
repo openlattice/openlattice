@@ -300,6 +300,19 @@ class PostgresEntityDataQueryService(
         )
     }
 
+    fun getEntityKeyIdsInEntitySet(entitySetId: UUID): Set<UUID> {
+        val adapter = Function<ResultSet, UUID> {
+            ResultSetAdapters.id(it)
+        }
+        return PostgresIterable(Supplier<StatementHolder> {
+            val connection = hds.connection
+            val statement = connection.prepareStatement(getEntityKeyIdsOfEntitySetQuery())
+            statement.setObject(1, entitySetId)
+            val rs = statement.executeQuery()
+            StatementHolder(connection, statement, rs)
+        }, adapter).toSet()
+    }
+
     /**
      * Selects linking ids by their entity set ids with filtering on entity key ids.
      */
@@ -1023,4 +1036,8 @@ internal fun getLinkingEntitySetIdsOfEntitySetIdQuery(entitySetId: UUID): String
     return "SELECT ${ID.name} " +
             "FROM ${ENTITY_SETS.name} " +
             "WHERE '$entitySetId' = ANY(${LINKED_ENTITY_SETS.name})"
+}
+
+internal fun getEntityKeyIdsOfEntitySetQuery(): String {
+    return "SELECT ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 }
