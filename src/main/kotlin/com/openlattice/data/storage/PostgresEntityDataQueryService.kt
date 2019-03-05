@@ -24,6 +24,7 @@ package com.openlattice.data.storage
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Multimaps.asMap
 import com.google.common.collect.SetMultimap
+import com.openlattice.data.WriteEvent
 import com.openlattice.data.util.PostgresDataHasher
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
@@ -385,7 +386,7 @@ class PostgresEntityDataQueryService(
     fun upsertEntities(
             entitySetId: UUID, entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         return upsertEntities(entitySetId, entities, authorizedPropertyTypes, false)
     }
 
@@ -393,7 +394,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID, entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>,
             awsPassthrough: Boolean
-    ): Int {
+    ): WriteEvent {
         val version = System.currentTimeMillis()
 
         //Update the versions of all entities.
@@ -490,12 +491,15 @@ class PostgresEntityDataQueryService(
 
             logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
-            return updatedEntityCount
+            return WriteEvent(version, updatedEntityCount)
         }
     }
 
-    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
-        return tombstone(entitySetId) + tombstone(entitySetId, authorizedPropertyTypes.values)
+    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+        val entitySetWriteEvent = tombstone(entitySetId)
+        val entitiesWriteEvent = tombstone(entitySetId, authorizedPropertyTypes.values)
+
+        return WriteEvent(entitiesWriteEvent.version, entitiesWriteEvent.numUpdates + entitySetWriteEvent.numUpdates)
     }
 
     /**
@@ -507,7 +511,7 @@ class PostgresEntityDataQueryService(
      */
     fun clearEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         //TODO: Make these a single transaction.
         tombstone(entitySetId, entityKeyIds, authorizedPropertyTypes.values)
         return tombstone(entitySetId, entityKeyIds)
@@ -523,15 +527,15 @@ class PostgresEntityDataQueryService(
      */
     fun clearEntityData(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         return tombstone(entitySetId, entityKeyIds, authorizedPropertyTypes.values)
     }
 
     fun deleteEntityData(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         val connection = hds.connection
-        return connection.use {
+        val numUpdates = connection.use {
             authorizedPropertyTypes
                     .map { property ->
                         if (property.value.datatype == EdmPrimitiveTypeKind.Binary) {
@@ -551,11 +555,13 @@ class PostgresEntityDataQueryService(
                     }
                     .sum()
         }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
-    fun deleteEntitySetData(entitySetId: UUID, propertyTypes: Map<UUID, PropertyType>): Int {
+    fun deleteEntitySetData(entitySetId: UUID, propertyTypes: Map<UUID, PropertyType>): WriteEvent {
         val connection = hds.connection
-        return connection.use {
+        val numUpdates = connection.use {
             propertyTypes
                     .map {
                         val s = connection.createStatement()
@@ -570,6 +576,8 @@ class PostgresEntityDataQueryService(
                     }
                     .sum()
         }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
     fun deletePropertyOfEntityFromS3(
@@ -604,20 +612,24 @@ class PostgresEntityDataQueryService(
                 }).asSequence().chunked(1000).forEach { byteBlobDataManager.deleteObjects(it) }
     }
 
-    fun deleteEntitySet(entitySetId: UUID): Int {
-        return hds.connection.use {
+    fun deleteEntitySet(entitySetId: UUID): WriteEvent {
+        val numUpdates = hds.connection.use {
             val s = it.prepareStatement(deleteEntitySetEntityKeys(entitySetId))
             s.executeUpdate()
         }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
-    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
-        return hds.connection.use {
+    fun deleteEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
+        val numUpdates = hds.connection.use {
             val s = it.prepareStatement(deleteEntityKeys(entitySetId))
             val arr = PostgresArrays.createUuidArray(it, entityKeyIds)
             s.setArray(1, arr)
             s.executeUpdate()
         }
+
+        return WriteEvent(System.currentTimeMillis(), numUpdates)
     }
 
 
@@ -636,7 +648,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         tombstone(entitySetId, entities.keys, authorizedPropertyTypes.values)
         return upsertEntities(entitySetId, entities, authorizedPropertyTypes)
     }
@@ -645,7 +657,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         //Only tombstone properties being replaced.
         entities.forEach {
             val entity = it.value
@@ -659,7 +671,7 @@ class PostgresEntityDataQueryService(
             entitySetId: UUID,
             replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         //We expect controller to have performed access control checks upstream.
         tombstone(entitySetId, replacementProperties)
         //This performs unnecessary copies and we should fix at some point
@@ -685,12 +697,11 @@ class PostgresEntityDataQueryService(
      */
     private fun tombstone(
             entitySetId: UUID, entityKeyIds: Set<UUID>, propertyTypesToTombstone: Collection<PropertyType>
-    ): Int {
+    ): WriteEvent {
         val connection = hds.connection
         connection.use {
             val tombstoneVersion = -System.currentTimeMillis()
-
-            return propertyTypesToTombstone
+            val numUpdated = propertyTypesToTombstone
                     .map {
                         val ps = connection.prepareStatement(
                                 updatePropertyVersionForDataKey(entitySetId, it.id, tombstoneVersion)
@@ -701,19 +712,20 @@ class PostgresEntityDataQueryService(
                         }
                         ps.executeBatch().sum()
                     }
-                    .sum()
+                    .sum();
+
+            return WriteEvent(tombstoneVersion, numUpdated)
         }
     }
 
     /**
      * Tombstones the provided set of property types for each provided entity key.
      */
-    private fun tombstone(entitySetId: UUID, propertyTypesToTombstone: Collection<PropertyType>): Int {
+    private fun tombstone(entitySetId: UUID, propertyTypesToTombstone: Collection<PropertyType>): WriteEvent {
         val connection = hds.connection
         connection.use {
             val tombstoneVersion = -System.currentTimeMillis()
-
-            return propertyTypesToTombstone
+            val numUpdated = propertyTypesToTombstone
                     .map {
                         val propertyTypeId = it.id
                         connection.createStatement().use {
@@ -723,16 +735,18 @@ class PostgresEntityDataQueryService(
                         }
                     }
                     .sum()
+
+            return WriteEvent(tombstoneVersion, numUpdated)
         }
     }
 
     /**
      * Tombstones specific property values through hash id
      */
-    private fun tombstone(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>): Int {
+    private fun tombstone(entitySetId: UUID, entities: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>): WriteEvent {
         val connection = hds.connection
-        return connection.use {
-            val tombstoneVersion = -System.currentTimeMillis()
+        val tombstoneVersion = -System.currentTimeMillis()
+        val numUpdated = connection.use {
             val propertyTypePreparedStatements = entities.values
                     .flatMap { it.keySet() }
                     .toSet()
@@ -760,26 +774,34 @@ class PostgresEntityDataQueryService(
             }
             propertyTypePreparedStatements.values.map(PreparedStatement::executeBatch).map(IntArray::sum).sum()
         }
+
+        return WriteEvent(tombstoneVersion, numUpdated)
     }
 
-    private fun tombstone(entitySetId: UUID): Int {
+    private fun tombstone(entitySetId: UUID): WriteEvent {
         val connection = hds.connection
-        return connection.use {
-            val ps = it.prepareStatement(updateAllEntityVersions(entitySetId, -System.currentTimeMillis()))
+        val tombstoneVersion = -System.currentTimeMillis()
+        val numUpdated = connection.use {
+            val ps = it.prepareStatement(updateAllEntityVersions(entitySetId, tombstoneVersion))
             ps.executeUpdate()
         }
+
+        return WriteEvent(tombstoneVersion, numUpdated)
     }
 
-    private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
+    private fun tombstone(entitySetId: UUID, entityKeyIds: Set<UUID>): WriteEvent {
         val connection = hds.connection
-        return connection.use {
-            val ps = connection.prepareStatement(updateEntityVersion(entitySetId, -System.currentTimeMillis()))
+        val tombstoneVersion = -System.currentTimeMillis()
+        val numUpdated = connection.use {
+            val ps = connection.prepareStatement(updateEntityVersion(entitySetId, tombstoneVersion))
             entityKeyIds.forEach {
                 ps.setObject(1, it)
                 ps.addBatch()
             }
             ps.executeBatch().sum()
         }
+
+        return WriteEvent(tombstoneVersion, numUpdated)
     }
 }
 

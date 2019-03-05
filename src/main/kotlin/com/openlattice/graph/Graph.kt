@@ -29,6 +29,7 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.WriteEvent
 import com.openlattice.data.analytics.IncrementableWeightId
 import com.openlattice.data.storage.entityKeyIdColumns
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
@@ -71,7 +72,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     /* Create */
 
-    override fun createEdges(keys: MutableSet<DataEdgeKey>): Int {
+    override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
         hds.connection.use {
             val ps = it.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
@@ -88,7 +89,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     ps.setArray(8, versions)
                     ps.addBatch()
                 }
-                return ps.executeBatch().sum()
+                return WriteEvent(version, ps.executeBatch().sum())
             }
         }
     }
@@ -147,11 +148,12 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    override fun deleteEdges(keys: Set<EdgeKey>): Int {
+    override fun deleteEdges(keys: Set<EdgeKey>): WriteEvent {
         val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(deleteEdgesSql(keys))
-            return ps.executeUpdate()
+            val numUpdated = ps.executeUpdate()
+            return WriteEvent(System.currentTimeMillis(), numUpdated)
         }
     }
 
