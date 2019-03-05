@@ -85,13 +85,13 @@ public interface EntityDatastore {
     /**
      * Creates entities if they do not exist and then adds the provided properties to specified entities.
      */
-    int createOrUpdateEntities(
+    WriteEvent createOrUpdateEntities(
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
 
     @Deprecated
-    int integrateEntities(
+    WriteEvent integrateEntities(
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
@@ -100,7 +100,7 @@ public interface EntityDatastore {
      * Replaces the contents of an entity in its entirety. Equivalent to a delete of the existing entity and write
      * of new values
      */
-    int replaceEntities(
+    WriteEvent replaceEntities(
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes );
@@ -108,7 +108,7 @@ public interface EntityDatastore {
     /**
      * Replaces a subset of the properties of an entity specified in the provided {@code entity} argument.
      */
-    int partialReplaceEntities(
+    WriteEvent partialReplaceEntities(
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entity,
             Map<UUID, PropertyType> authorizedPropertyTypes );
@@ -116,7 +116,7 @@ public interface EntityDatastore {
     /**
      * Replace specific values in an entity
      */
-    int replacePropertiesInEntities(
+    WriteEvent replacePropertiesInEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes );
@@ -127,7 +127,7 @@ public interface EntityDatastore {
      * @param entitySetId The id of the entity set to clear.
      * @return The number of rows cleared from the entity set.
      */
-    int clearEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
+    WriteEvent clearEntitySet( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
@@ -137,7 +137,7 @@ public interface EntityDatastore {
      * @param authorizedPropertyTypes The property types the user is allowed to clear.
      * @return The number of entities cleared.
      */
-    int clearEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+    WriteEvent clearEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
@@ -147,7 +147,7 @@ public interface EntityDatastore {
      * @param authorizedPropertyTypes The property types the user is requested and is allowed to clear.
      * @return The number of properties cleared.
      */
-    int clearEntityData( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+    WriteEvent clearEntityData( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Hard deletes an entity set and removes the historical contents. This causes loss of historical data
@@ -157,7 +157,7 @@ public interface EntityDatastore {
      * @param authorizedPropertyTypes The authorized property types on this entity set. In this case all the property
      *                                types for its entity type
      */
-    int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
+    WriteEvent deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Hard deletes entities and removes the historical contents.
@@ -168,7 +168,7 @@ public interface EntityDatastore {
      *                                types for its entity type
      * @return count of deletes
      */
-    int deleteEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+    WriteEvent deleteEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Hard deletes properties of entity and removes the historical contents.
@@ -177,7 +177,7 @@ public interface EntityDatastore {
      * @param entityKeyIds            The ids of entities to delete the data from.
      * @param authorizedPropertyTypes The authorized property types to delete the data from.
      */
-    int deleteEntityProperties(
+    WriteEvent deleteEntityProperties(
             UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
 
 }

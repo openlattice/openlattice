@@ -83,6 +83,10 @@ public interface AuthorizationManager {
             Principal principal,
             EnumSet<Permission> permissions,
             OffsetDateTime expirationDate );
+
+    @Timed
+    void setPermission( Set<AclKey> aclKeys, Set<Principal> principals, EnumSet<Permission> permissions );
+
     @Timed
     void deletePermissions( AclKey aclKey );
 

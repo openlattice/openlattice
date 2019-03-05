@@ -143,6 +143,26 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     }
 
     @Override
+    public void setPermission( Set<AclKey> aclKeys, Set<Principal> principals, EnumSet<Permission> permissions ) {
+        //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
+        Map<AclKey, SecurableObjectType> securableObejctTypesForAclKeys = securableObjectTypes.getAll( aclKeys );
+
+        Map<AceKey, AceValue> newPermissions = new HashMap<>( aclKeys.size() * principals.size() );
+        for ( AclKey aclKey : aclKeys ) {
+            SecurableObjectType objectType = securableObejctTypesForAclKeys
+                    .getOrDefault( aclKey, SecurableObjectType.Unknown );
+
+            AceValue aceValue = new AceValue( permissions, objectType, OffsetDateTime.MAX );
+
+            for ( Principal principal : principals ) {
+                newPermissions.put( new AceKey( aclKey, principal ), aceValue );
+            }
+        }
+
+        aces.putAll( newPermissions );
+    }
+
+    @Override
     public void deletePermissions( AclKey aclKey ) {
         securableObjectTypes.delete( aclKey );
         aces.removeAll( hasAclKey( aclKey ) );

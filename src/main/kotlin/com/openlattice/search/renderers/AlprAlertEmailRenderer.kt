@@ -20,7 +20,7 @@ import javax.imageio.ImageIO
 
 private val logger = LoggerFactory.getLogger(AlprAlertEmailRenderer::class.java)
 
-private const val FROM_EMAIL = "katherine@openlattice.com"
+private const val FROM_EMAIL = "courier@openlattice.com"
 private const val TEMPLATE_PATH = "mail/templates/shared/AlprAlertTemplate.mustache"
 private const val MIME_TYPE_PREFIX = "image/"
 private const val JPEG = "jpeg"

@@ -6,6 +6,7 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
@@ -29,6 +30,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
     @Override protected void bind( PreparedStatement ps, UUID key, EntitySet value ) throws SQLException {
         Array contacts = PostgresArrays.createTextArray( ps.getConnection(), value.getContacts().stream() );
         Array linkedEntitySets = PostgresArrays.createUuidArray( ps.getConnection(), value.getLinkedEntitySets().stream() );
+        Array flags = PostgresArrays.createTextArray( ps.getConnection(), value.getFlags().stream().map( EntitySetFlag::toString ) );
 
         bind( ps, key, 1 );
         ps.setString( 2, value.getName() );
@@ -36,21 +38,19 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setString( 4, value.getTitle() );
         ps.setString( 5, value.getDescription() );
         ps.setArray( 6, contacts );
-        ps.setBoolean( 7, value.isLinking() );
-        ps.setArray( 8, linkedEntitySets );
-        ps.setBoolean( 9, value.isExternal() );
-        ps.setObject(10, value.getOrganizationId() );
+        ps.setArray( 7, linkedEntitySets );
+        ps.setObject(8, value.getOrganizationId() );
+        ps.setArray( 9, flags );
 
         // UPDATE
-        ps.setString( 11, value.getName() );
-        ps.setObject( 12, value.getEntityTypeId() );
-        ps.setString( 13, value.getTitle() );
-        ps.setString( 14, value.getDescription() );
-        ps.setArray( 15, contacts );
-        ps.setBoolean( 16, value.isLinking() );
-        ps.setArray( 17, linkedEntitySets );
-        ps.setBoolean( 18, value.isExternal() );
-        ps.setObject(19, value.getOrganizationId() );
+        ps.setString( 10, value.getName() );
+        ps.setObject( 11, value.getEntityTypeId() );
+        ps.setString( 12, value.getTitle() );
+        ps.setString( 13, value.getDescription() );
+        ps.setArray( 14, contacts );
+        ps.setArray( 15, linkedEntitySets );
+        ps.setObject(16, value.getOrganizationId() );
+        ps.setObject( 17, flags );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
