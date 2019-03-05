@@ -43,6 +43,7 @@ import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
 import org.apache.commons.collections4.keyvalue.MultiKey
+import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
@@ -172,7 +173,7 @@ open class DataGraphService(
 
     /* Delete */
 
-    override fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
+    override fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         return eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
     }
 
@@ -180,7 +181,7 @@ open class DataGraphService(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         val edgeKeys = entityKeyIds
                 .flatMap { graphService.getEdgeKeysContainingEntity(entitySetId, it) }
                 .toSet()
@@ -190,20 +191,20 @@ open class DataGraphService(
         return eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
-    override fun clearAssociations(key: Set<EdgeKey>): Int {
-        return 0 // TODO
+    override fun clearAssociations(key: Set<EdgeKey>): WriteEvent {
+        return WriteEvent(0, 0) // TODO
     }
 
     override fun clearEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
-        val propertyCount =  eds.clearEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
+    ): WriteEvent {
+        val propertyCount = eds.clearEntityData(entitySetId, entityKeyIds, authorizedPropertyTypes)
         logger.info("Cleared properties {} of {} entities.",
                 authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount)
         return propertyCount
     }
 
-    override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
+    override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         logger.info("Deleting edges of entity set: {}.", entitySetId)
         val edgesDeletedCount = graphService.deleteVerticesInEntitySet(entitySetId)
         logger.info("Finished deleting {} edges.", edgesDeletedCount)
@@ -214,7 +215,7 @@ open class DataGraphService(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         val verticesCount = graphService.deleteVertices(entitySetId, entityKeyIds)
         val entityCount = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
         logger.info("Deleted {} entities and {} vertices.", entityCount, verticesCount)
@@ -222,25 +223,27 @@ open class DataGraphService(
     }
 
     @Timed
-    override fun deleteAssociation(keys: Set<EdgeKey>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
+    override fun deleteAssociation(keys: Set<EdgeKey>, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         val entitySetsToEntityKeyIds = HashMultimap.create<UUID, UUID>()
 
         keys.forEach {
             entitySetsToEntityKeyIds.put(it.edge.entitySetId, it.edge.entityKeyId)
         }
 
-        return graphService.deleteEdges(keys) + Multimaps.asMap(entitySetsToEntityKeyIds)
+        Multimaps.asMap(entitySetsToEntityKeyIds)
                 .entries
                 .stream()
-                .mapToInt { e -> eds.deleteEntities(e.key, e.value, authorizedPropertyTypes) }
-                .sum()
+                .forEach { e -> eds.deleteEntities(e.key, e.value, authorizedPropertyTypes) }
+
+        return graphService.deleteEdges(keys)
+
     }
 
     override fun deleteEntityProperties(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         val propertyCount = eds.deleteEntityProperties(entitySetId, entityKeyIds, authorizedPropertyTypes)
         logger.info("Deleted properties {} of {} entities.",
                 authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount)
@@ -275,18 +278,18 @@ open class DataGraphService(
             entitySetId: UUID,
             entities: List<Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): List<UUID> {
+    ): Pair<List<UUID>, WriteEvent> {
         val ids = idService.reserveIds(entitySetId, entities.size)
         val entityMap = ids.mapIndexed { i, id -> id to entities[i] }.toMap()
-        eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
-        return ids
+        val writeEvent = eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
+        return Pair.of(ids, writeEvent)
     }
 
     override fun mergeEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         return eds.createOrUpdateEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
@@ -294,7 +297,7 @@ open class DataGraphService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         return eds.replaceEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
@@ -302,7 +305,7 @@ open class DataGraphService(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         return eds.partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
@@ -310,36 +313,37 @@ open class DataGraphService(
             entitySetId: UUID,
             replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): WriteEvent {
         return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
     }
 
-    override fun createAssociations(associations: Set<DataEdgeKey>): Int {
+    override fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent {
         return graphService.createEdges(associations)
     }
 
     override fun createAssociations(
             associations: ListMultimap<UUID, DataEdge>,
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): ListMultimap<UUID, UUID> {
-        val entityKeyIds: ListMultimap<UUID, UUID> = ArrayListMultimap.create()
+    ): Map<UUID, CreateAssociationEvent> {
+
+        val associationCreateEvents: MutableMap<UUID, CreateAssociationEvent> = mutableMapOf()
 
         Multimaps
                 .asMap(associations)
                 .forEach {
                     val entitySetId = it.key
                     val entities = it.value.map { it.data }
-                    val ids = createEntities(entitySetId, entities, authorizedPropertiesByEntitySetId[entitySetId]!!)
-
-                    entityKeyIds.putAll(entitySetId, ids)
+                    val (ids, entityWrite) = createEntities(entitySetId, entities, authorizedPropertiesByEntitySetId[entitySetId]!!)
 
                     val edgeKeys = it.value.asSequence().mapIndexed { index, dataEdge ->
                         DataEdgeKey(dataEdge.src, dataEdge.dst, EntityDataKey(entitySetId, ids[index]))
                     }.toSet()
-                    graphService.createEdges(edgeKeys)
+                    val edgeWrite = graphService.createEdges(edgeKeys)
+
+                    associationCreateEvents[entitySetId] = CreateAssociationEvent(ids, entityWrite, edgeWrite)
                 }
 
-        return entityKeyIds
+        return associationCreateEvents
     }
 
     override fun integrateAssociations(
@@ -419,7 +423,7 @@ open class DataGraphService(
         return null
     }
 
-    override fun createEdges(edges: Set<DataEdgeKey>): Int {
+    override fun createEdges(edges: Set<DataEdgeKey>): WriteEvent {
         return graphService.createEdges(edges);
     }
 

@@ -22,17 +22,18 @@
 package com.openlattice.auditing.pods
 
 import com.amazonaws.services.s3.AmazonS3
+import com.hazelcast.core.HazelcastInstance
 import com.kryptnostic.rhizome.configuration.ConfigurationConstants
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration
 import com.openlattice.ResourceConfigurationLoader
 import com.openlattice.auditing.AuditingConfiguration
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
-import com.openlattice.hazelcast.serializers.FullQualifiedNameStreamSerializer
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import javax.inject.Inject
 
 private val logger = LoggerFactory.getLogger(AuditingConfigurationPod::class.java)
 
@@ -47,6 +48,8 @@ class AuditingConfigurationPod {
         FullQualifiedNameJacksonSerializer.registerWithMapper(ResourceConfigurationLoader.getYamlMapper())
     }
 
+    @Inject
+    private val hazelcastInstance: HazelcastInstance? = null
 
     @Autowired(required = false)
     private val awsS3: AmazonS3? = null

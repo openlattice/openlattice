@@ -4,12 +4,14 @@ import com.google.common.collect.SetMultimap
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
+import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mail.MailServiceClient
 import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.LAST_WRITE_FQN
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
@@ -80,10 +82,16 @@ class PersistentSearchMessenger : Runnable {
         return constraints
     }
 
-    private fun sendAlertsForNewWrites(userSecurablePrincipal: SecurablePrincipal, persistentSearch: PersistentSearch, newResults: DataSearchResult) {
+    private fun sendAlertsForNewWrites(
+            userSecurablePrincipal: SecurablePrincipal,
+            persistentSearch: PersistentSearch,
+            newResults: DataSearchResult,
+            neighborsById: Map<UUID, List<NeighborEntityDetails>>
+    ) {
         val userEmail = PersistentSearchMessengerHelpers.principalsManager.getUser(userSecurablePrincipal.principal.id).email
         newResults.hits.forEach {
-            val renderableEmail = PersistentSearchEmailRenderer.renderEmail(persistentSearch, it, userEmail)
+            val entityKeyId = UUID.fromString(it[DataTables.ID_FQN].first().toString())
+            val renderableEmail = PersistentSearchEmailRenderer.renderEmail(persistentSearch, it, userEmail, neighborsById.getOrDefault(entityKeyId, listOf()))
             PersistentSearchMessengerHelpers.mailServiceClient.spool(renderableEmail)
         }
     }
@@ -99,15 +107,21 @@ class PersistentSearchMessenger : Runnable {
                 .firstOrNull()
     }
 
+    private fun getHitEntityKeyIds(hits: List<SetMultimap<FullQualifiedName, Any>>): Set<UUID> {
+        return hits.map { UUID.fromString(it[DataTables.ID_FQN].first().toString()) }.toSet()
+    }
+
     private fun findNewWritesForAlert(userAclKey: AclKey, persistentSearch: PersistentSearch): OffsetDateTime? {
         val userSecurablePrincipal = PersistentSearchMessengerHelpers.principalsManager.getSecurablePrincipal(userAclKey)
+        val allUserPrincipals = PersistentSearchMessengerHelpers.principalsManager.getAllPrincipals(userSecurablePrincipal).map { it.principal }.toSet()
+
         val entitySets = entitySets.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
                 .groupBy { it.isLinking }
 
         val authorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
-                entitySets[false]!!.map { it.id })
+                entitySets.getOrDefault(false, listOf()).map { it.id })
         val linkedAuthorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
-                entitySets[false]!!.map { it.id })
+                entitySets.getOrDefault(true, listOf()).map { it.id })
         val constraints = getUpdatedConstraints(persistentSearch)
 
         val results = PersistentSearchMessengerHelpers.searchService.executeSearch(constraints,
@@ -115,10 +129,24 @@ class PersistentSearchMessenger : Runnable {
         val linkedResults = PersistentSearchMessengerHelpers.searchService.executeSearch(constraints,
                 linkedAuthorizedPropertyTypeMap, true)
         val newResults = DataSearchResult(results.numHits + linkedResults.numHits,
-                results.hits + linkedResults.hits )
+                results.hits + linkedResults.hits)
 
         if (newResults.numHits > 0) {
-            sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, newResults)
+            val neighborsById = mutableMapOf<UUID, List<NeighborEntityDetails>>()
+
+            if (results.hits.isNotEmpty()) neighborsById.putAll(PersistentSearchMessengerHelpers.searchService.executeEntityNeighborSearch(
+                    entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
+                    EntityNeighborsFilter(getHitEntityKeyIds(results.hits)),
+                    allUserPrincipals)
+            )
+
+            if (linkedResults.hits.isNotEmpty()) neighborsById.putAll(PersistentSearchMessengerHelpers.searchService.executeLinkingEntityNeighborSearch(
+                    entitySets.getOrDefault(true, listOf()).map { it.id }.toSet(),
+                    EntityNeighborsFilter(getHitEntityKeyIds(results.hits)),
+                    allUserPrincipals)
+            )
+
+            sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, newResults, neighborsById)
             return getLatestRead(newResults.hits)
         }
 
