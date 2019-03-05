@@ -40,6 +40,12 @@ public class PostgresQuery {
         return SELECT.concat( DISTINCT ).concat( colsString ).concat( FROM ).concat( table ).concat( " " );
     }
 
+
+    public static String selectDistinctFrom( List<String> tables, List<String> columns ) {
+        String colsString = columns.size() == 0 ? ALL : commaJoin( columns );
+        return SELECT.concat( DISTINCT ).concat( colsString ).concat( FROM ).concat( commaJoin( tables ) ).concat( " " );
+    }
+
     public static String selectFrom( String table ) {
         return selectColsFrom( table, ImmutableList.of() );
     }

@@ -111,7 +111,7 @@ public class AuthorizationQueryService {
 
         // SELECT permissions.acl_key from permissions, securable_objects
         StringBuilder sql = new StringBuilder( PostgresQuery
-                .selectColsFrom( ImmutableList.of( PERMISSIONS_TABLE, SECURABLE_OBJECTS ),
+                .selectDistinctFrom( ImmutableList.of( PERMISSIONS_TABLE, SECURABLE_OBJECTS ),
                         ImmutableList.of( PT_ACL_KEY ) ) );
 
         // WHERE permissions.acl_key = securable_objects.acl_key
