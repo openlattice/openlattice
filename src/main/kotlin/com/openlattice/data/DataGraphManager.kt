@@ -56,6 +56,11 @@ interface DataGraphManager {
 
     fun getEntitySetSize(entitySetId: UUID): Long
 
+    /**
+     * Returns all entity key ids belonging to this entity set
+     */
+    fun getEntityKeyIdsInEntitySet(entitySetId: UUID): Set<UUID>
+
     /*
      * CRUD methods for entity
      */
@@ -78,8 +83,6 @@ interface DataGraphManager {
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int
 
-    fun clearAssociations(key: Set<EdgeKey>): Int
-
     fun clearEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int
@@ -87,11 +90,13 @@ interface DataGraphManager {
     //Hard deletes
     fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
 
+    /**
+     * Deletes property data, id and edges of entities.
+     */
     fun deleteEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Int
 
-    fun deleteAssociation(key: Set<EdgeKey>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
 
     fun deleteEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
@@ -182,6 +187,8 @@ interface DataGraphManager {
     fun getNeighborEntitySetIds(entitySetId: Set<UUID>): Set<UUID>
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
+    fun getEdgeKeysOfEntitySet(entitySetId: UUID): Set<EdgeKey>
+    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<EdgeKey>
 
     fun createEdges(edges: Set<DataEdgeKey>): Int
     fun createAssociations(associations: Set<DataEdgeKey>): Int
