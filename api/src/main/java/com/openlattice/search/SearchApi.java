@@ -282,7 +282,7 @@ public interface SearchApi {
     Void triggerEdmIndex();
 
     @GET( BASE + ENTITY_SETS + INDEX + ENTITY_SET_ID_PATH )
-    Void trigerEntitySetDataIndex( @Path( ENTITY_SET_ID ) UUID entitySetId );
+    Void triggerEntitySetDataIndex( @Path( ENTITY_SET_ID ) UUID entitySetId );
 
     @GET( BASE + ENTITY_SETS + INDEX )
     Void triggerAllEntitySetDataIndex();
