@@ -450,15 +450,8 @@ public class DataController implements DataApi, AuthorizingComponent {
     public Integer deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestParam( value = TYPE ) DeleteType deleteType) {
-        if( deleteType == DeleteType.Hard) {
-            final Map<UUID, PropertyType> authorizedPropertyTypes =
-                    getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
-            return dgm.deleteEntitySet(entitySetId, authorizedPropertyTypes);
-        } else {
-            ensureReadAccess( new AclKey( entitySetId ) );
-            return dgm.clearEntitySet(
-                    entitySetId, authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
-        }
+        final Set<UUID> entityKeyIds = dgm.getEntityKeyIdsInEntitySet( entitySetId );
+        return deleteEntities( entitySetId, entityKeyIds, deleteType );
     }
 
     @Override
@@ -476,14 +469,20 @@ public class DataController implements DataApi, AuthorizingComponent {
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+
         if ( deleteType == DeleteType.Hard ) {
+            // access checks for entity set and properties
             final Map<UUID, PropertyType> authorizedPropertyTypes =
                     getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
+
+            // delete entities
             return dgm.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
         } else {
+            // clear entities
             ensureReadAccess( new AclKey( entitySetId ) );
             //Note this will only clear properties to which the caller has access.
-            return dgm.clearEntities( entitySetId,
+            return dgm.clearEntities(
+                    entitySetId,
                     entityKeyIds,
                     authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
         }
