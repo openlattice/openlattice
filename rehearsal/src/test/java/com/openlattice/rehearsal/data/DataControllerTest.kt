@@ -572,29 +572,54 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         dataApi.createAssociations(edges)
 
 
-        // delete 1st entity
+        // hard delete 1st entity
         dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
 
-        val ess = EntitySetSelection(Optional.of(personEt.properties))
-        val loadedEntries = dataApi.loadEntitySetData(es.id, ess, FileType.json).toList()
+        val ess1 = EntitySetSelection(Optional.of(personEt.properties))
+        val loadedEntries1 = dataApi.loadEntitySetData(es.id, ess1, FileType.json).toList()
 
-        val essDst = EntitySetSelection(Optional.of(dst.properties))
-        val loadedEntriesDst = dataApi.loadEntitySetData(esDst.id, essDst, FileType.json).toList()
+        val essDst1 = EntitySetSelection(Optional.of(dst.properties))
+        val loadedEntriesDst1 = dataApi.loadEntitySetData(esDst.id, essDst1, FileType.json).toList()
 
-        val essEdge = EntitySetSelection(Optional.of(edge.properties))
-        val loadedEntriesEdge = dataApi.loadEntitySetData(esEdge.id, essEdge, FileType.json).toList()
+        val essEdge1 = EntitySetSelection(Optional.of(edge.properties))
+        val loadedEntriesEdge1 = dataApi.loadEntitySetData(esEdge.id, essEdge1, FileType.json).toList()
 
-        Assert.assertEquals(numberOfEntries - 1, loadedEntries.size)
-        Assert.assertEquals(numberOfEntries - 1, loadedEntriesEdge.size)
-        Assert.assertEquals(numberOfEntries, loadedEntriesDst.size)
-        Assert.assertTrue(loadedEntries.none {
+        Assert.assertEquals(numberOfEntries - 1, loadedEntries1.size)
+        Assert.assertEquals(numberOfEntries - 1, loadedEntriesEdge1.size)
+        Assert.assertEquals(numberOfEntries, loadedEntriesDst1.size)
+        Assert.assertTrue(loadedEntries1.none {
             it[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)] == entries.first().values
         })
-        Assert.assertTrue(loadedEntries.none {
+        Assert.assertTrue(loadedEntries1.none {
             it[OL_ID_FQN].first() == newEntityIds.first().toString()
         })
-        Assert.assertTrue(loadedEntriesEdge.none {
+        Assert.assertTrue(loadedEntriesEdge1.none {
             it[OL_ID_FQN].first() == idsEdge.first().toString()
+        })
+
+        // soft delete last entity
+        dataApi.deleteEntities(es.id, setOf(newEntityIds[numberOfEntries-1]), DeleteType.Soft)
+
+        val ess2 = EntitySetSelection(Optional.of(personEt.properties))
+        val loadedEntries2 = dataApi.loadEntitySetData(es.id, ess2, FileType.json).toList()
+
+        val essDst2 = EntitySetSelection(Optional.of(dst.properties))
+        val loadedEntriesDst = dataApi.loadEntitySetData(esDst.id, essDst2, FileType.json).toList()
+
+        val essEdge2 = EntitySetSelection(Optional.of(edge.properties))
+        val loadedEntriesEdge2 = dataApi.loadEntitySetData(esEdge.id, essEdge2, FileType.json).toList()
+
+        Assert.assertEquals(numberOfEntries - 2, loadedEntries2.size)
+        Assert.assertEquals(numberOfEntries - 2, loadedEntriesEdge2.size)
+        Assert.assertEquals(numberOfEntries, loadedEntriesDst.size)
+        Assert.assertTrue(loadedEntries2.none {
+            it[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)] == entries.last().values
+        })
+        Assert.assertTrue(loadedEntries2.none {
+            it[OL_ID_FQN].last() == newEntityIds.last().toString()
+        })
+        Assert.assertTrue(loadedEntriesEdge2.none {
+            it[OL_ID_FQN].last() == idsEdge.last().toString()
         })
     }
 
