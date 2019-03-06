@@ -23,7 +23,6 @@ package com.openlattice.auditing
 
 import com.dataloom.mappers.ObjectMappers
 import com.openlattice.data.DataGraphManager
-import com.openlattice.data.DataGraphService
 import java.util.*
 
 private val mapper = ObjectMappers.newJsonMapper()

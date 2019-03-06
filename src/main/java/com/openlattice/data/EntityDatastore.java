@@ -43,6 +43,8 @@ public interface EntityDatastore {
             UUID entitySetId,
             Map<UUID, PropertyType> authorizedPropertyTypes);
 
+    PostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId );
+
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,

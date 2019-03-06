@@ -30,7 +30,7 @@ import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.edm.events.EntitySetDataClearedEvent;
+import com.openlattice.edm.events.EntitySetDataDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
@@ -95,6 +95,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 authorizedPropertyTypes,
                 EnumSet.noneOf( MetadataOption.class ),
                 Optional.empty() );
+    }
+
+    @Override
+    @Timed
+    public PostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId ) {
+        return dataQueryService.getEntityKeyIdsInEntitySet( entitySetId );
     }
 
     @Timed
@@ -231,8 +237,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
     }
 
-    private void signalEntitySetDataCleared( UUID entitySetId ) {
-        eventBus.post( new EntitySetDataClearedEvent( entitySetId ) );
+    private void signalEntitySetDataDeleted( UUID entitySetId ) {
+        eventBus.post( new EntitySetDataDeletedEvent( entitySetId ) );
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
     }
 
@@ -308,7 +314,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override public WriteEvent clearEntitySet(
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var writeEvent = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
-        signalEntitySetDataCleared( entitySetId );
+        signalEntitySetDataDeleted(entitySetId);
         return writeEvent;
     }
 
@@ -561,10 +567,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     /**
      * Delete data of an entity set across ALL sync Ids.
-     * <p>
-     * Note: this is currently only used when deleting an entity set, which takes care of deleting the data in
-     * elasticsearch. If this is ever called without deleting the entity set, logic must be added to delete the data
-     * from elasticsearch.
      */
     @SuppressFBWarnings(
             value = "UC_USELESS_OBJECT",
@@ -573,8 +575,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         logger.info( "Deleting data of entity set: {}", entitySetId );
         WriteEvent propertyWriteEvent = dataQueryService.deleteEntitySetData( entitySetId, propertyTypes );
         WriteEvent writeEvent = dataQueryService.deleteEntitySet( entitySetId );
-        logger.info( "Finished deletion of entity set {}. Deleted {} rows and {} property data",
+        logger.info( "Finished deletion data from entity set {}. Deleted {} rows and {} property data",
                 entitySetId, writeEvent.getNumUpdates(), propertyWriteEvent.getNumUpdates() );
+        signalEntitySetDataDeleted( entitySetId );
         return writeEvent;
     }
 
