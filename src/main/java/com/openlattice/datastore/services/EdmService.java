@@ -783,7 +783,7 @@ public class EdmService implements EdmManager {
 
                 eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes ) );
                 eventBus.post( new PropertyTypesAddedToEntitySetEvent(
-                        entitySet.getId(),
+                        entitySet,
                         Lists.newArrayList( propertyTypes.values() ),
                         ( entitySet.isLinking() )
                                 ? Optional.of( entitySet.getLinkedEntitySets() ) : Optional.empty() ) );

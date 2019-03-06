@@ -24,6 +24,7 @@ package com.openlattice.assembler
 import com.codahale.metrics.MetricRegistry
 import com.codahale.metrics.MetricRegistry.name
 import com.codahale.metrics.Timer
+import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
@@ -33,6 +34,7 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -42,6 +44,9 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumnDefinition
+import com.openlattice.postgres.PostgresTable
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -53,6 +58,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
+import java.sql.Statement
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -129,7 +135,7 @@ class AssemblerConnectionManager(
             datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
                     statement.execute(
-                            "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_FOREIGN_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,public"
+                            "ALTER ROLE ${assemblerConfiguration.server["username"]} SET search_path to $PRODUCTION_FOREIGN_SCHEMA,$MATERIALIZED_VIEWS_SCHEMA,$PUBLIC_SCHEMA"
                     )
                 }
             }
@@ -165,7 +171,7 @@ class AssemblerConnectionManager(
 
         val grantRole = "GRANT ${DataTables.quote(dbRole)} TO $dbOrgUser"
         val createDb = " CREATE DATABASE $db"
-        val revokeAll = "REVOKE ALL ON DATABASE $db FROM public"
+        val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_SCHEMA"
 
         //We connect to default db in order to do initial db setup
 
@@ -177,7 +183,7 @@ class AssemblerConnectionManager(
                 if (!exists(dbname)) {
                     statement.execute(createDb)
                     //Allow usage of schema public
-                    //statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbOrgUser)}")
+                    //statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbOrgUser)}")
                     statement.execute("GRANT ALL PRIVILEGES ON DATABASE $db TO $dbOrgUser")
                 }
                 statement.execute(revokeAll)
@@ -187,8 +193,7 @@ class AssemblerConnectionManager(
     }
 
     fun dropOrganizationDatabase(organizationId: UUID) {
-        val organization = organizations.getOrganization(organizationId)
-        dropOrganizationDatabase(organizationId, organization.principal.id)
+        dropOrganizationDatabase(organizationId, buildOrganizationDatabaseName(organizationId))
     }
 
     fun dropOrganizationDatabase(organizationId: UUID, dbname: String) {
@@ -224,12 +229,20 @@ class AssemblerConnectionManager(
             val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
             datasource.connection.use { connection ->
                 connection.createStatement().use { stmt ->
-                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $MATERIALIZED_VIEWS_SCHEMA.edges")
+                    val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
+                    stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName")
                     stmt.execute(
-                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $MATERIALIZED_VIEWS_SCHEMA.edges AS SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.edges WHERE src_entity_set_id IN ($clause) " +
-                                    "AND dst_entity_set_id IN ($clause) " +
-                                    "AND edge_entity_set_id IN ($clause) "
+                            "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS " +
+                                    "SELECT * FROM $PRODUCTION_FOREIGN_SCHEMA.${EDGES.name} " +
+                                    "WHERE ${SRC_ENTITY_SET_ID.name} IN ($clause) " +
+                                    "OR ${DST_ENTITY_SET_ID.name} IN ($clause) " +
+                                    "OR ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
                     )
+
+                    val selectGrantedResults = grantSelectForEdges(stmt, tableName, entitySetIds)
+
+                    logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
+                            "on materialized view $tableName")
                     return@use
                 }
             }
@@ -258,6 +271,7 @@ class AssemblerConnectionManager(
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ) {
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
+            createProductionForeignSchemaOfEntitySetIfNotExists(datasource, entitySetId)
             materialize(datasource, entitySetId, authorizedPropertyTypes)
         }
 
@@ -291,16 +305,14 @@ class AssemblerConnectionManager(
                     stmt.execute(sql)
                 }
                 //Next we need to grant select on materialize view to everyone who has permission.
-                val selectGrantedCount = grantSelectForEntitySet(
+                val selectGrantedResults = grantSelectForEntitySet(
                         connection,
                         tableName,
                         entitySet.id,
                         authorizedPropertyTypes
                 )
-                logger.info(
-                        "Granted select for $selectGrantedCount users/roles on materialized view " +
-                                "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
-                )
+                logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
+                        "on materialized view $tableName")
             }
         }
     }
@@ -310,7 +322,7 @@ class AssemblerConnectionManager(
             tableName: String,
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int {
+    ): IntArray {
 
         val permissions = EnumSet.of(Permission.READ)
         // collect all principals of type user, role, which have read access on entityset
@@ -340,25 +352,59 @@ class AssemblerConnectionManager(
         // prepare batch queries
         return connection.createStatement().use { stmt ->
             authorizedPropertiesOfPrincipal.forEach { principal, fqns ->
-                val grantSelectSql = grantSelectSql(tableName, principal, fqns)
+                val allColumns =
+                        if (fqns == authorizedPrincipalsOfProperties.keys) {
+                            setOf() // if user is authorized for all properties, grant select on whole table
+                        } else {
+                            setOf(ENTITY_SET_ID.name, ID_VALUE.name) + fqns.map { it.fullQualifiedNameAsString }
+                        }
+                val grantSelectSql = grantSelectSql(tableName, principal, allColumns)
                 stmt.addBatch(grantSelectSql)
             }
             stmt.executeBatch()
-        }.sum()
+        }
     }
 
+    fun grantSelectForEdges(stmt: Statement, tableName: String, entitySetIds: Set<UUID>): IntArray {
+        val permissions = EnumSet.of(Permission.READ)
+        // collect all principals of type user, role, which have read access on entityset
+        val authorizedPrincipals = entitySetIds.fold(mutableSetOf<Principal>()) { acc, entitySetId ->
+            Sets.union(acc,
+                    securePrincipalsManager.getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), permissions)
+                            .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
+                            .toSet())
+        }
+
+        authorizedPrincipals.forEach {
+            val grantSelectSql = grantSelectSql(tableName, it, setOf())
+            stmt.addBatch(grantSelectSql)
+        }
+
+        return stmt.executeBatch()
+    }
+
+    /**
+     * Build grant select sql statement for a given table and user with column level security.
+     * If properties (columns) are left empty, it will grant select on whole table.
+     */
     private fun grantSelectSql(
             entitySetTableName: String,
             principal: Principal,
-            properties: Set<FullQualifiedName>
+            columns: Set<String>
     ): String {
         val postgresUserName = if (principal.type == PrincipalType.USER) {
             buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
         } else {
             buildPostgresRoleName(securePrincipalsManager.lookupRole(principal))
         }
-        return "GRANT SELECT " +
-                "(${properties.joinToString(",") { DataTables.quote(it.fullQualifiedNameAsString) }}) " +
+
+        val onProperties = if (columns.isEmpty()) {
+            ""
+        } else {
+            "(${columns.joinToString(",") { DataTables.quote(it) }}) "
+        }
+
+        return "GRANT SELECT $onProperties " +
                 "ON $entitySetTableName " +
                 "TO ${DataTables.quote(postgresUserName)}"
     }
@@ -412,9 +458,9 @@ class AssemblerConnectionManager(
 
             datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
-                    logger.info("Revoking public schema right from role: {}", role)
+                    logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
                     //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                    statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbRole")
+                    statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbRole")
 
                     return@use
                 }
@@ -432,7 +478,7 @@ class AssemblerConnectionManager(
                 statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
                 dbCredentialService.deleteUserCredential(user.name)
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking public schema right from user {}", user)
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
             }
         }
     }
@@ -453,8 +499,8 @@ class AssemblerConnectionManager(
             connection.createStatement().use { statement ->
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking public schema right from role: {}", role)
-                statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbRole)}")
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbRole)}")
 
                 return@use
             }
@@ -476,8 +522,8 @@ class AssemblerConnectionManager(
 //                    logger.info("Creating new user {}", dbUser)
                 statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking public schema right from user {}", user)
-                statement.execute("REVOKE USAGE ON SCHEMA public FROM ${DataTables.quote(dbUser)}")
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbUser)}")
 
                 return@use
             }
@@ -499,8 +545,8 @@ class AssemblerConnectionManager(
 
                 statement.execute("GRANT USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA TO $dbUser")
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
-                logger.info("Revoking public schema right from user: {}", userId)
-                statement.execute("REVOKE USAGE ON SCHEMA public FROM $dbUser")
+                logger.info("Revoking $PUBLIC_SCHEMA schema right from user: {}", userId)
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbUser")
                 //Set the search path for the user
                 statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA")
 
@@ -533,15 +579,76 @@ class AssemblerConnectionManager(
                 statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_FOREIGN_SCHEMA CASCADE")
                 statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
                 logger.info("Created user mapping. ")
+                statement.execute(importProductionViewsSchemaSql(setOf()))
                 statement.execute(
-                        "IMPORT FOREIGN SCHEMA $PRODUCTION_VIEWS_SCHEMA FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
-                )
-                statement.execute(
-                        "IMPORT FOREIGN SCHEMA public LIMIT TO (edges, property_types, entity_types, entity_sets) FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
+                        importPublicSchemaSql(setOf(EDGES.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name))
                 )
                 logger.info("Imported foreign schema")
             }
         }
+    }
+
+    fun createProductionForeignSchemaOfEntitySetIfNotExists(organizationId: UUID, entitySetId: UUID) {
+        val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        connect(dbname).use { datasource ->
+            createProductionForeignSchemaOfEntitySetIfNotExists(datasource, entitySetId)
+        }
+    }
+
+    private fun createProductionForeignSchemaOfEntitySetIfNotExists(dataSource: HikariDataSource, entitySetId: UUID) {
+        dataSource.connection.use { conn ->
+            // check if table exists and import if not
+            if (!checkIfProductionViewsSchemaExists(conn, entitySetId)) {
+                conn.createStatement().use { stmt ->
+                    stmt.execute(importProductionViewsSchemaSql(setOf(DataTables.quote(entitySetId.toString()))))
+                    // (re)-import entity_sets
+                    updatePublicTables(stmt, setOf(PostgresTable.ENTITY_SETS.name))
+                }
+            }
+        }
+    }
+
+    private fun checkIfProductionViewsSchemaExists(connection: Connection, entitySetId: UUID): Boolean {
+        val stmt = connection
+                .prepareStatement("SELECT EXISTS " +
+                        "(SELECT 1 FROM ( SELECT to_regclass(?) AS name) AS foo WHERE foo.name IS NOT NULL)")
+        stmt.setObject(1, "$PRODUCTION_FOREIGN_SCHEMA.${DataTables.quote(entitySetId.toString())}")
+
+        val rs = stmt.executeQuery()
+        rs.next()
+        return ResultSetAdapters.exists(rs)
+    }
+
+    fun updateProductionForeignSchemaOfEntitySet(
+            organizationId: UUID, entitySetId: UUID, newPropertyTypes: List<PropertyType>) {
+        val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        connect(dbname).use { datasource ->
+            datasource.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    // add new columns
+                    newPropertyTypes.forEach {
+                        val newColumn = PostgresColumnDefinition(
+                                quote(it.type.fullQualifiedNameAsString),
+                                PostgresEdmTypeConverter.map(it.datatype))
+                        stmt.execute("ALTER FOREIGN TABLE $PRODUCTION_FOREIGN_SCHEMA.\"$entitySetId\" ADD COLUMN ${newColumn.sql()}")
+                    }
+
+                    // (re)-import entity_sets, property_types, entity_types
+                    val publicTables = mutableSetOf(
+                            PostgresTable.ENTITY_SETS.name,
+                            PostgresTable.PROPERTY_TYPES.name,
+                            PostgresTable.ENTITY_TYPES.name)
+                    updatePublicTables(stmt, publicTables)
+                }
+            }
+        }
+    }
+
+    private fun updatePublicTables(stmt: Statement, tables: Set<String>) {
+        tables.forEach {
+            stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$it CASCADE")
+        }
+        stmt.execute(importPublicSchemaSql(tables))
     }
 
 }
@@ -549,7 +656,9 @@ class AssemblerConnectionManager(
 const val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
 const val PRODUCTION_FOREIGN_SCHEMA = "prod"
 const val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
+const val PUBLIC_SCHEMA = "public"
 const val PRODUCTION_SERVER = "olprod"
+
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
 
@@ -564,6 +673,20 @@ internal fun createSchema(datasource: HikariDataSource, schema: String) {
 internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
     createSchema(datasource, SCHEMA)
 }
+
+internal fun importProductionViewsSchemaSql(limitTo: Set<String>): String {
+    return importForeignSchema(PRODUCTION_VIEWS_SCHEMA, limitTo)
+}
+
+internal fun importPublicSchemaSql(limitTo: Set<String>): String {
+    return importForeignSchema(PUBLIC_SCHEMA, limitTo)
+}
+
+internal fun importForeignSchema(from: String, limitTo: Set<String>): String {
+    val limitToSql = if(limitTo.isEmpty()) "" else "LIMIT TO ( ${limitTo.joinToString(", ")} )"
+    return "IMPORT FOREIGN SCHEMA $from $limitToSql FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
+}
+
 
 internal fun createRoleIfNotExistsSql(dbRole: String): String {
     return "DO\n" +

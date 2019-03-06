@@ -28,18 +28,15 @@ import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
-import com.openlattice.assembler.processors.InitializeOrganizationAssemblyProcessor
-import com.openlattice.assembler.processors.MaterializeEntitySetsProcessor
+import com.openlattice.assembler.processors.*
 import com.openlattice.assembler.tasks.CleanOutOldUsersInitializationTask
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
-import com.openlattice.authorization.AclKey
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.DbCredentialService
-import com.openlattice.authorization.SecurablePrincipal
+import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
+import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.EntitySetCreatedEvent
 import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
@@ -87,6 +84,7 @@ class Assembler(
     private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
     private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
     private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
+    private val deleteOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "deleteOrganization"))
     private lateinit var acm: AssemblerConnectionManager
 
     init {
@@ -105,14 +103,32 @@ class Assembler(
         return assemblies[organizationId]!!
     }
 
+    private fun flagAsNonMaterialized(organizationId: UUID, entitySetId: UUID) {
+        val orgAssembly = assemblies[organizationId]
+        orgAssembly?.entitySetIds!!.remove(entitySetId)
+        assemblies[organizationId] = orgAssembly
+    }
+
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
         createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
+        assemblies.executeOnKey(
+                entitySetCreatedEvent.entitySet.organizationId,
+                CreateProductionForeignTableOfEntitySetProcessor(entitySetCreatedEvent.entitySet.id).init(acm))
     }
 
     @Subscribe
     fun handlePropertyTypeAddedToEntitySet(propertyTypesAddedToEntitySetEvent: PropertyTypesAddedToEntitySetEvent) {
-        createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySetId)
+        createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySet.id)
+        assemblies.executeOnKey(
+                propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
+                UpdateProductionForeignTableOfEntitySetProcessor(
+                        propertyTypesAddedToEntitySetEvent.entitySet.id,
+                        propertyTypesAddedToEntitySetEvent.newPropertyTypes).init(acm))
+        // flag entity set as non-materialized
+        flagAsNonMaterialized(
+                propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
+                propertyTypesAddedToEntitySetEvent.entitySet.id)
     }
 
     fun createOrganization(organization: Organization) {
@@ -124,6 +140,13 @@ class Assembler(
             assemblies.set(organizationId, OrganizationAssembly(organizationId, dbname))
             assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
             return@use
+        }
+    }
+
+    fun destroyOrganization(organizationId: UUID) {
+        deleteOrganizationTimer.time().use {
+            assemblies.executeOnKey(organizationId, DeleteOrganizationAssemblyProcessor().init(acm))
+            Util.deleteSafely(assemblies, organizationId)
         }
     }
 
