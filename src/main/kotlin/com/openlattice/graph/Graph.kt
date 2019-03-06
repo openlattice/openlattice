@@ -283,7 +283,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val connection = hds.connection
                     val stmt = connection.prepareStatement(NEIGHBORHOOD_OF_ENTITY_SET_SQL)
                     stmt.setObject(1, entitySetId)
-                    stmt.setObject(3, entitySetId)
+                    stmt.setObject(2, entitySetId)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
