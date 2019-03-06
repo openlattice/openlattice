@@ -137,10 +137,6 @@ open class DataGraphService(
         return eds.getEntities(entitySetId, setOf(), mapOf()).count()
     }
 
-    override fun getEntityKeyIdsInEntitySet(entitySetId: UUID): Set<UUID> {
-        return eds.getEntityKeyIdsInEntitySet(entitySetId).toSet()
-    }
-
     override fun getEntity(
             entitySetId: UUID,
             entityKeyId: UUID,
@@ -253,11 +249,6 @@ open class DataGraphService(
         return propertyWriteEvent
     }
 
-    /**
-     * Note: this is currently only used when deleting an entity set, which takes care of deleting the data in
-     * elasticsearch. If this is ever called without deleting the entity set, logic must be added to delete the data
-     * from elasticsearch.
-     */
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // delete associations
         deleteAssociations(entitySetId, Optional.empty())

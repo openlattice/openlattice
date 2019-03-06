@@ -63,7 +63,7 @@ import com.openlattice.edm.events.AssociationTypeCreatedEvent;
 import com.openlattice.edm.events.AssociationTypeDeletedEvent;
 import com.openlattice.edm.events.ClearAllDataEvent;
 import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDataClearedEvent;
+import com.openlattice.edm.events.EntitySetDataDeletedEvent;
 import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
 import com.openlattice.edm.events.EntityTypeCreatedEvent;
@@ -242,7 +242,7 @@ public class SearchService {
 
     @Timed
     @Subscribe
-    public void entitySetDataCleared( EntitySetDataClearedEvent event ) {
+    public void entitySetDataCleared( EntitySetDataDeletedEvent event ) {
         elasticsearchApi.clearEntitySetData( event.getEntitySetId() );
     }
 

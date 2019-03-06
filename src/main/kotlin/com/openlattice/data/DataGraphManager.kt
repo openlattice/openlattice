@@ -58,11 +58,6 @@ interface DataGraphManager {
 
     fun getEntitySetSize(entitySetId: UUID): Long
 
-    /**
-     * Returns all entity key ids belonging to this entity set
-     */
-    fun getEntityKeyIdsInEntitySet(entitySetId: UUID): Set<UUID>
-
     /*
      * CRUD methods for entity
      */
