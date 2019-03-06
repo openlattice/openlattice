@@ -450,8 +450,30 @@ public class DataController implements DataApi, AuthorizingComponent {
     public Integer deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestParam( value = TYPE ) DeleteType deleteType) {
-        final Set<UUID> entityKeyIds = dgm.getEntityKeyIdsInEntitySet( entitySetId );
-        return deleteEntities( entitySetId, entityKeyIds, deleteType );
+        WriteEvent writeEvent;
+        if ( deleteType == DeleteType.Hard ) {
+            final Map<UUID, PropertyType> authorizedPropertyTypes =
+                    getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty() );
+            writeEvent = dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
+        } else {
+            ensureReadAccess( new AclKey( entitySetId ) );
+            writeEvent = dgm.clearEntitySet(
+                    entitySetId, authzHelper.getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) );
+        }
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.DELETE_ENTITIES,
+                "All entities deleted from entity set using delete type " + deleteType.toString()
+                        + " through DataApi.deleteAllEntitiesFromEntitySet",
+                Optional.empty(),
+                ImmutableMap.of(),
+                getDateTimeFromLong( writeEvent.getVersion() ),
+                Optional.empty()
+        ) );
+
+        return writeEvent.getNumUpdates();
     }
 
     @Override
