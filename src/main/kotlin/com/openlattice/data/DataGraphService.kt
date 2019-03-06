@@ -138,7 +138,7 @@ open class DataGraphService(
     }
 
     override fun getEntityKeyIdsInEntitySet(entitySetId: UUID): Set<UUID> {
-        return eds.getEntityKeyIdsInEntitySet(entitySetId)
+        return eds.getEntityKeyIdsInEntitySet(entitySetId).toSet()
     }
 
     override fun getEntity(

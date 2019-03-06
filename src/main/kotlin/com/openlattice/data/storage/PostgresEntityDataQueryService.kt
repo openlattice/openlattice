@@ -301,7 +301,7 @@ class PostgresEntityDataQueryService(
         )
     }
 
-    fun getEntityKeyIdsInEntitySet(entitySetId: UUID): Set<UUID> {
+    fun getEntityKeyIdsInEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
         val adapter = Function<ResultSet, UUID> {
             ResultSetAdapters.id(it)
         }
@@ -311,7 +311,7 @@ class PostgresEntityDataQueryService(
             statement.setObject(1, entitySetId)
             val rs = statement.executeQuery()
             StatementHolder(connection, statement, rs)
-        }, adapter).toSet()
+        }, adapter)
     }
 
     /**

@@ -99,7 +99,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Override
     @Timed
-    public Set<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId ) {
+    public PostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId ) {
         return dataQueryService.getEntityKeyIdsInEntitySet( entitySetId );
     }
 
