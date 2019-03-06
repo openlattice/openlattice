@@ -20,86 +20,59 @@
 
 package com.openlattice.datastore.edm.controllers;
 
-import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
-
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
-import com.openlattice.authorization.AccessCheck;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principals;
+import com.google.common.collect.*;
+import com.openlattice.auditing.AuditEventType;
+import com.openlattice.auditing.AuditRecordEntitySetsManager;
+import com.openlattice.auditing.AuditableEvent;
+import com.openlattice.auditing.AuditingComponent;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
-import com.openlattice.controllers.util.ApiExceptions;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.wrappers.BatchException;
 import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO;
+import com.openlattice.controllers.util.ApiExceptions;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.edm.EdmApi;
-import com.openlattice.edm.EdmDetails;
-import com.openlattice.edm.EntityDataModel;
-import com.openlattice.edm.EntityDataModelDiff;
-import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.PostgresEdmManager;
-import com.openlattice.edm.Schema;
+import com.openlattice.edm.*;
 import com.openlattice.edm.requests.EdmDetailsSelector;
 import com.openlattice.edm.requests.EdmRequest;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.AssociationDetails;
-import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
-import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.type.*;
+import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.web.mediatypes.CustomMediaType;
-
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
 
 @RestController
 @RequestMapping( EdmApi.CONTROLLER )
-public class EdmController implements EdmApi, AuthorizingComponent {
+public class EdmController implements EdmApi, AuthorizingComponent, AuditingComponent {
 
     @Inject
     private EdmManager modelService;
@@ -130,6 +103,15 @@ public class EdmController implements EdmApi, AuthorizingComponent {
 
     @Inject
     private Environment env;
+
+    @Inject
+    private SecurePrincipalsManager spm;
+
+    @Inject
+    private ObjectMapper mapper;
+
+    @Inject
+    private AuditRecordEntitySetsManager auditRecordEntitySetsManager;
 
     @RequestMapping(
             path = CLEAR_PATH,
@@ -381,16 +363,31 @@ public class EdmController implements EdmApi, AuthorizingComponent {
         ErrorsDTO dto = new ErrorsDTO();
 
         Map<String, UUID> createdEntitySets = Maps.newHashMapWithExpectedSize( entitySets.size() );
+        List<AuditableEvent> auditableEvents = Lists.newArrayList();
+
         // TODO: Add access check to make sure user can create entity sets.
         for ( EntitySet entitySet : entitySets ) {
             try {
                 ensureValidEntitySet( entitySet );
                 modelService.createEntitySet( Principals.getCurrentUser(), entitySet );
                 createdEntitySets.put( entitySet.getName(), entitySet.getId() );
+
+                auditableEvents.add( new AuditableEvent(
+                        getCurrentUserId(),
+                        new AclKey( entitySet.getId() ),
+                        AuditEventType.CREATE_ENTITY_SET,
+                        "Created entity set through EdmApi.createEntitySets",
+                        Optional.empty(),
+                        ImmutableMap.of( "entitySet", entitySet ),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                ) );
             } catch ( Exception e ) {
                 dto.addError( ApiExceptions.OTHER_EXCEPTION, entitySet.getName() + ": " + e.getMessage() );
             }
         }
+
+        recordEvents( auditableEvents );
 
         if ( !dto.isEmpty() ) {
             throw new BatchException( dto );
@@ -441,6 +438,17 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             method = RequestMethod.GET )
     public EntitySet getEntitySet( @PathVariable( ID ) UUID entitySetId ) {
         ensureReadAccess( new AclKey( entitySetId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.READ_ENTITY_SET,
+                "Entity set read through EdmApi.getEntitySet",
+                Optional.empty(),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
         return modelService.getEntitySet( entitySetId );
     }
 
@@ -462,6 +470,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
         modelService.deleteEntitySet( entitySetId );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( entitySetId ) );
         dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.DELETE_ENTITY_SET,
+                "Entity set deleted through EdmApi.deleteEntitySet",
+                Optional.empty(),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -603,6 +623,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public UUID createEntityType( @RequestBody EntityType entityType ) {
         ensureValidEntityType( entityType );
         modelService.createEntityType( entityType );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityType.getId() ), // TODO should this be written as an AclKey?
+                AuditEventType.CREATE_ENTITY_TYPE,
+                "Entity type deleted through EdmApi.createEntityType",
+                Optional.empty(),
+                ImmutableMap.of( "entityType", entityType ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return entityType.getId();
     }
 
@@ -657,6 +689,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
         modelService.addPropertyTypesToEntityType( entityTypeId, ImmutableSet.of( propertyTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.ADD_PROPERTY_TYPE_TO_ENTITY_TYPE,
+                "Property type added to entity type through EdmApi.addPropertyTypeToEntityType",
+                Optional.empty(),
+                ImmutableMap.of( "propertyTypeId", propertyTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -670,6 +714,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
         modelService.removePropertyTypesFromEntityType( entityTypeId, ImmutableSet.of( propertyTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.REMOVE_PROPERTY_TYPE_FROM_ENTITY_TYPE,
+                "Property type removed from entity type through EdmApi.removePropertyTypesFromEntityType",
+                Optional.empty(),
+                ImmutableMap.of( "propertyTypeId", propertyTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -691,6 +747,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( PROPERTY_TYPE_ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
         modelService.forceRemovePropertyTypesFromEntityType( entityTypeId, ImmutableSet.of( propertyTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.REMOVE_PROPERTY_TYPE_FROM_ENTITY_TYPE,
+                "Property type forcibly removed from entity type through EdmApi.forceRemovePropertyTypeFromEntityType",
+                Optional.empty(),
+                ImmutableMap.of( "propertyTypeId", propertyTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -715,6 +783,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public Void deleteEntityType( @PathVariable( ID ) UUID entityTypeId ) {
         ensureAdminAccess();
         modelService.deleteEntityType( entityTypeId );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.DELETE_ENTITY_TYPE,
+                "Entity type deleted through EdmApi.deleteEntityType",
+                Optional.empty(),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -737,6 +817,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public UUID createPropertyType( @RequestBody PropertyType propertyType ) {
         ensureAdminAccess();
         modelService.createPropertyTypeIfNotExists( propertyType );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( propertyType.getId() ), // TODO should this be written as an AclKey?
+                AuditEventType.CREATE_PROPERTY_TYPE,
+                "Property type created through EdmApi.createPropertyType",
+                Optional.empty(),
+                ImmutableMap.of( "propertyType", propertyType ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return propertyType.getId();
     }
 
@@ -749,6 +841,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
         modelService.deletePropertyType( propertyTypeId );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( propertyTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.DELETE_PROPERTY_TYPE,
+                "Property type deleted through EdmApi.deletePropertyType",
+                Optional.empty(),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -761,6 +865,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( ID ) UUID propertyTypeId ) {
         ensureAdminAccess();
         modelService.forceDeletePropertyType( propertyTypeId );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( propertyTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.DELETE_PROPERTY_TYPE,
+                "Property type forcibly deleted through EdmApi.forceDeletePropertyType",
+                Optional.empty(),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -836,6 +952,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @RequestBody MetadataUpdate update ) {
         ensureAdminAccess();
         modelService.updatePropertyTypeMetadata( propertyTypeId, update );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( propertyTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.UPDATE_PROPERTY_TYPE,
+                "Property type metadata updated through EdmApi.updatePropertyTypeMetadata",
+                Optional.empty(),
+                ImmutableMap.of( "update", update ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -847,6 +975,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public Void updateEntityTypeMetadata( @PathVariable( ID ) UUID entityTypeId, @RequestBody MetadataUpdate update ) {
         ensureAdminAccess();
         modelService.updateEntityTypeMetadata( entityTypeId, update );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entityTypeId ), // TODO should this be written as an AclKey?
+                AuditEventType.UPDATE_ENTITY_TYPE,
+                "Entity type metadata updated through EdmApi.updateEntityTypeMetadata",
+                Optional.empty(),
+                ImmutableMap.of( "update", update ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -858,6 +998,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public Void updateEntitySetMetadata( @PathVariable( ID ) UUID entitySetId, @RequestBody MetadataUpdate update ) {
         ensureOwnerAccess( new AclKey( entitySetId ) );
         modelService.updateEntitySetMetadata( entitySetId, update );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId ),
+                AuditEventType.UPDATE_ENTITY_SET,
+                "Entity set metadata updated through EdmApi.updateEntitySetMetadata",
+                Optional.empty(),
+                ImmutableMap.of( "update", update ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -899,6 +1051,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
                 "You cannot create an edge type with not an AssociationType category" );
         createEntityType( entityType );
         modelService.createAssociationType( associationType, entityType.getId() );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( associationType.getAssociationEntityType().getId() ),
+                AuditEventType.CREATE_ASSOCIATION_TYPE,
+                "Association type created through EdmApi.createAssociationType",
+                Optional.empty(),
+                ImmutableMap.of( "associationType", associationType ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return entityType.getId();
     }
 
@@ -910,6 +1074,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
     public Void deleteAssociationType( @PathVariable( ID ) UUID associationTypeId ) {
         ensureAdminAccess();
         modelService.deleteAssociationType( associationTypeId );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( associationTypeId ),
+                AuditEventType.DELETE_ASSOCIATION_TYPE,
+                "Association type deleted through EdmApi.deleteAssociationType",
+                Optional.empty(),
+                ImmutableMap.of(),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -922,6 +1098,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId ) {
         ensureAdminAccess();
         modelService.addSrcEntityTypesToAssociationType( associationTypeId, ImmutableSet.of( entityTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( associationTypeId ),
+                AuditEventType.ADD_ENTITY_TYPE_TO_ASSOCIATION_TYPE,
+                "Src entity type added to association type through EdmApi.addSrcEntityTypeToAssociationType",
+                Optional.empty(),
+                ImmutableMap.of( "src", entityTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -934,6 +1122,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId ) {
         ensureAdminAccess();
         modelService.addDstEntityTypesToAssociationType( associationTypeId, ImmutableSet.of( entityTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( associationTypeId ),
+                AuditEventType.ADD_ENTITY_TYPE_TO_ASSOCIATION_TYPE,
+                "Dst entity type added to association type through EdmApi.addDstEntityTypeToAssociationType",
+                Optional.empty(),
+                ImmutableMap.of( "dst", entityTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -946,6 +1146,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId ) {
         ensureAdminAccess();
         modelService.removeSrcEntityTypesFromAssociationType( associationTypeId, ImmutableSet.of( entityTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( associationTypeId ),
+                AuditEventType.REMOVE_ENTITY_TYPE_FROM_ASSOCIATION_TYPE,
+                "Src entity type removed from association type through EdmApi.removeSrcEntityTypeFromAssociationType",
+                Optional.empty(),
+                ImmutableMap.of( "src", entityTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -958,6 +1170,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @PathVariable( ENTITY_TYPE_ID ) UUID entityTypeId ) {
         ensureAdminAccess();
         modelService.removeDstEntityTypesFromAssociationType( associationTypeId, ImmutableSet.of( entityTypeId ) );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( associationTypeId ),
+                AuditEventType.REMOVE_ENTITY_TYPE_FROM_ASSOCIATION_TYPE,
+                "Dst entity type removed from association type through EdmApi.removeDstEntityTypeFromAssociationType",
+                Optional.empty(),
+                ImmutableMap.of( "dst", entityTypeId ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -1052,6 +1276,18 @@ public class EdmController implements EdmApi, AuthorizingComponent {
             @RequestBody MetadataUpdate update ) {
         ensureOwnerAccess( new AclKey( entitySetId, propertyTypeId ) );
         modelService.updateEntitySetPropertyMetadata( entitySetId, propertyTypeId, update );
+
+        recordEvent( new AuditableEvent(
+                getCurrentUserId(),
+                new AclKey( entitySetId, propertyTypeId ),
+                AuditEventType.UPDATE_ENTITY_SET_PROPERTY_METADATA,
+                "Entity set property metadata updated through EdmApi.updateEntitySetPropertyMetadata",
+                Optional.empty(),
+                ImmutableMap.of( "update", update ),
+                OffsetDateTime.now(),
+                Optional.empty()
+        ) );
+
         return null;
     }
 
@@ -1086,5 +1322,21 @@ public class EdmController implements EdmApi, AuthorizingComponent {
                     "attachment; filename=" + fileName + "." + fileType.toString()
             );
         }
+    }
+
+    private UUID getCurrentUserId() {
+        return spm.getPrincipal( Principals.getCurrentUser().getId() ).getId();
+    }
+
+    @NotNull
+    @Override
+    public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
+        return auditRecordEntitySetsManager;
+    }
+
+    @NotNull
+    @Override
+    public DataGraphManager getDataGraphService() {
+        return dgm;
     }
 }

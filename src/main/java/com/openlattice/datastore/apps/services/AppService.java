@@ -33,6 +33,7 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.*;
 import com.openlattice.apps.processors.*;
 import com.openlattice.authorization.*;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.datastore.services.EdmManager;
@@ -43,6 +44,7 @@ import com.openlattice.edm.events.AppDeletedEvent;
 import com.openlattice.edm.events.AppTypeCreatedEvent;
 import com.openlattice.edm.events.AppTypeDeletedEvent;
 import com.openlattice.edm.requests.MetadataUpdate;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.roles.Role;
@@ -141,6 +143,8 @@ public class AppService {
                 .concat( appType.getType().getName() ) );
         String title = prefix.concat( " " ).concat( appType.getTitle() );
         Optional<String> description = Optional.of( prefix.concat( " " ).concat( appType.getDescription() ) );
+        EnumSet<EntitySetFlag> flags = EnumSet.noneOf( EntitySetFlag.class );
+
         EntitySet entitySet = new EntitySet( Optional.empty(),
                 appType.getEntityTypeId(),
                 name,
@@ -148,11 +152,10 @@ public class AppService {
                 description,
                 ImmutableSet.of(),
                 Optional.empty(),
-                Optional.empty(),
-                Optional.of( false ),
-                Optional.of( organizationId ));
+                Optional.of( organizationId ),
+                Optional.of( flags ) );
         edmService.createEntitySet( principal, entitySet );
-        return edmService.getEntitySet( name ).getId();
+        return entitySet.getId();
     }
 
     private Map<Permission, Principal> getOrCreateRolesForAppPermission(
@@ -413,7 +416,9 @@ public class AppService {
                 if ( !appConfigKeys.contains( appConfigKey ) ) {
                     createEntitySetForApp( appConfigKey,
                             org.getTitle(),
-                            ownerPrincipals.stream().filter( principal -> principal.getType().equals( PrincipalType.USER ) ).iterator().next(),
+                            ownerPrincipals.stream()
+                                    .filter( principal -> principal.getType().equals( PrincipalType.USER ) ).iterator()
+                                    .next(),
                             appPrincipal,
                             appRoles,
                             ownerPrincipals );
