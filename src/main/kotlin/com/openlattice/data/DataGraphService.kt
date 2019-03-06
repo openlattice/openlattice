@@ -43,6 +43,7 @@ import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.collections4.keyvalue.MultiKey
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -177,12 +178,12 @@ open class DataGraphService(
         return graphService.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
     }
 
-    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): Set<EdgeKey> {
-        return graphService.getEdgeKeysOfEntitySet(entitySetId).toSet()
+    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<EdgeKey> {
+        return graphService.getEdgeKeysOfEntitySet(entitySetId)
     }
 
-    override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): Set<EdgeKey> {
-        return graphService.getEdgeKeysContainingEntities(entitySetId, entityKeyIds).toSet()
+    override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<EdgeKey> {
+        return graphService.getEdgeKeysContainingEntities(entitySetId, entityKeyIds)
     }
 
 

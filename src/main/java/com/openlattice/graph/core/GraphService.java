@@ -59,9 +59,9 @@ public interface GraphService {
 
     Stream<Edge> getEdges( Set<EdgeKey> keys );
 
-    Iterable<EdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
+    PostgresIterable<EdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
-    Iterable<EdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
+    PostgresIterable<EdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
 
     Iterable<EdgeKey> getEdgeKeysContainingEntity( UUID entitySetId, UUID entityKeyId );
 

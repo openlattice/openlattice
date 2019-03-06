@@ -260,7 +260,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         )
     }
 
-    override fun getEdgeKeysContainingEntities( entitySetId: UUID, entityKeyIds: Set<UUID> ): Iterable<EdgeKey> {
+    override fun getEdgeKeysContainingEntities( entitySetId: UUID, entityKeyIds: Set<UUID> ): PostgresIterable<EdgeKey> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
@@ -277,7 +277,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         )
     }
 
-    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): Iterable<EdgeKey> {
+    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<EdgeKey> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
