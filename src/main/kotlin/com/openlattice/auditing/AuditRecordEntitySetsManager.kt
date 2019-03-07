@@ -142,7 +142,7 @@ class AuditRecordEntitySetsManager(
         return auditRecordEntitySetConfigurations[aclKey]?.auditRecordEntitySetIds ?: setOf()
     }
 
-    fun getActiveAuditRecordEntitySetId(aclKey: AclKey, eventType: AuditEventType): UUID {
+    fun getActiveAuditRecordEntitySetId(aclKey: AclKey, eventType: AuditEventType): UUID? {
         //TODO: Don't load the entire object
         //This should never NPE as (almost) every securable object should have an entity set.
 
@@ -156,7 +156,13 @@ class AuditRecordEntitySetsManager(
             return aclKeyRoot
         }
 
-        return auditRecordEntitySetConfigurations[AclKey(aclKeyRoot)]!!.activeAuditRecordEntitySetId
+        val auditEntitySetId = auditRecordEntitySetConfigurations[AclKey(aclKeyRoot)]?.activeAuditRecordEntitySetId
+
+        if (auditEntitySetId == null) {
+            logger.error("Missing audit entity set id for aclKey {}", aclKey)
+        }
+
+        return auditEntitySetId
     }
 
     fun rollAuditEntitySet(aclKey: AclKey) {

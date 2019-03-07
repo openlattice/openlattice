@@ -49,12 +49,13 @@ interface AuditingComponent {
         val ares = getAuditRecordEntitySetsManager()
         val auditingConfiguration = ares.auditingTypes
 
-        return if( auditingConfiguration.isAuditingInitialized() ) {
+        return if (auditingConfiguration.isAuditingInitialized()) {
             events
                     .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey, it.eventType) }
+                    .filter { (auditEntitySet, entities) -> auditEntitySet != null }
                     .map { (auditEntitySet, entities) ->
                         getDataGraphService().createEntities(
-                                auditEntitySet,
+                                auditEntitySet!!,
                                 toMap(entities),
                                 auditingConfiguration.propertyTypes
                         ).key.size
