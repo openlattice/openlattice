@@ -167,7 +167,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                     .authenticate( PreAuthenticatedAuthenticationJsonWebToken.usingToken( token ) );
             SecurityContextHolder.getContext().setAuthentication( authentication );
         }
-        return loadEntitySetData( entitySetId, null );
+        return loadEntitySetData( entitySetId, new EntitySetSelection( Optional.empty() ) );
     }
 
     @RequestMapping(
@@ -190,10 +190,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             UUID entitySetId,
             EntitySetSelection selection,
             FileType fileType ) {
-        if ( selection != null && selection.getEntityKeyIds().isEmpty() && selection.getProperties().isEmpty() ) {
-            return new EntitySetData<>( Sets.newLinkedHashSet(), Lists.newArrayList() );
-        }
-
         return loadEntitySetData( entitySetId, selection );
     }
 
