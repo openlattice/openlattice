@@ -35,6 +35,10 @@ private val mapper = ObjectMappers.newJsonMapper()
 
 interface AuditingComponent {
 
+    companion object {
+        const val MAX_ENTITY_KEY_IDS_PER_EVENT = 100
+    }
+
     fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
     fun getDataGraphService(): DataGraphManager
 
@@ -49,12 +53,13 @@ interface AuditingComponent {
         val ares = getAuditRecordEntitySetsManager()
         val auditingConfiguration = ares.auditingTypes
 
-        return if( auditingConfiguration.isAuditingInitialized() ) {
+        return if (auditingConfiguration.isAuditingInitialized()) {
             events
                     .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey, it.eventType) }
+                    .filter { (auditEntitySet, entities) -> auditEntitySet != null }
                     .map { (auditEntitySet, entities) ->
                         getDataGraphService().createEntities(
-                                auditEntitySet,
+                                auditEntitySet!!,
                                 toMap(entities),
                                 auditingConfiguration.propertyTypes
                         ).key.size
