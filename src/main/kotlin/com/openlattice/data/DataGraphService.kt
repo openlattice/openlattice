@@ -90,6 +90,8 @@ open class DataGraphService(
                 logger.error("Future execution failed.", e)
             }
         }
+
+        const val ASSOCIATION_SIZE = 30000
     }
 
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
@@ -225,18 +227,37 @@ open class DataGraphService(
 
     private fun clearAssociations(entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>) {
         // collect association entity key ids
-        val associationsEntityKeyIds = collectAssociationsEntityKeyIds(entitySetId, entityKeyIds)
+        val associationsEdgeKeys = collectAssociations(entitySetId, entityKeyIds)
 
-        associationsEntityKeyIds.forEach {
-            if (!authorizationManager.checkIfHasPermissions(
-                            AclKey(it.key),
-                            Principals.getCurrentPrincipals(),
-                            EnumSet.of(Permission.READ))) {
-                throw ForbiddenException("You cannot clear entities from entity set $entitySetId, because you don't " +
-                        "have read permission to its association entity set ${it.key}")
+        // access checks
+        val authorizedPropertyTypesCache = CacheBuilder.newBuilder().build<UUID, Map<UUID, PropertyType>>()
+        associationsEdgeKeys.stream().parallel().forEach {
+            if (authorizedPropertyTypesCache.getIfPresent(it.edge.entitySetId) == null) {
+                if (!authorizationManager.checkIfHasPermissions(
+                                AclKey(it.edge.entitySetId),
+                                Principals.getCurrentPrincipals(),
+                                EnumSet.of(Permission.READ))) {
+                    throw ForbiddenException("You cannot clear entities from entity set $entitySetId, because you don't " +
+                            "have read permission to its association entity set ${it.edge.entitySetId}")
+                }
+                authorizedPropertyTypesCache.put(
+                        it.edge.entitySetId,
+                        authzHelper.getAuthorizedPropertyTypes(it.edge.entitySetId, EnumSet.of(Permission.WRITE)))
             }
-            clearEntities(
-                    it.key, it.value, authzHelper.getAuthorizedPropertyTypes(it.key, EnumSet.of(Permission.WRITE)))
+        }
+
+        // clear associations
+        var associationDeleteCount = 0
+        val edgeKeysIterator = associationsEdgeKeys.iterator()
+
+        while (edgeKeysIterator.hasNext()) {
+            while (edgeKeysIterator.hasNext()) {
+                val batch = getBatch(edgeKeysIterator)
+                batch.forEach {
+                    associationDeleteCount += clearEntityDataAndVertices(it.key, it.value,
+                            authorizedPropertyTypesCache.getIfPresent(it.key)!!).numUpdates
+                }
+            }
         }
     }
 
@@ -291,44 +312,55 @@ open class DataGraphService(
 
     private fun deleteAssociations(entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>) {
         // collect association entity key ids
-        val associationsEntityKeyIds = collectAssociationsEntityKeyIds(entitySetId, entityKeyIds)
+        val associationsEdgeKeys = collectAssociations(entitySetId, entityKeyIds)
 
         // access checks
-        val authorizedPropertyTypesOfAssociations = HashMap<UUID, Map<UUID, PropertyType>>()
-        associationsEntityKeyIds.forEach {
-            val authorizedPropertyTypesOfAssociation = getAuthorizedPropertyTypesForDelete(it.key, Optional.empty())
-            authorizedPropertyTypesOfAssociations[it.key] = authorizedPropertyTypesOfAssociation
+        val authorizedPropertyTypesCache = CacheBuilder.newBuilder().build<UUID, Map<UUID, PropertyType>>()
+        associationsEdgeKeys.stream().parallel().forEach {
+            if (authorizedPropertyTypesCache.getIfPresent(it.edge.entitySetId) == null) {
+                val authorizedPropertyTypesOfAssociation =
+                        getAuthorizedPropertyTypesForDelete(it.edge.entitySetId, Optional.empty())
+                authorizedPropertyTypesCache.put(it.edge.entitySetId, authorizedPropertyTypesOfAssociation)
+            }
         }
 
         // delete associations of entity set
-        val associationDeleteCount = associationsEntityKeyIds.map {
-            deleteEntityDataAnVertices(
-                    it.key,
-                    it.value,
-                    authorizedPropertyTypesOfAssociations[it.key]!!).numUpdates
-        }.sum()
+        var associationDeleteCount = 0
+        val edgeKeysIterator = associationsEdgeKeys.iterator()
+
+        while (edgeKeysIterator.hasNext()) {
+            while (edgeKeysIterator.hasNext()) {
+                val batch = getBatch(edgeKeysIterator)
+                batch.forEach {
+                    associationDeleteCount += deleteEntityDataAnVertices(it.key, it.value,
+                            authorizedPropertyTypesCache.getIfPresent(it.key)!!).numUpdates
+                }
+            }
+        }
 
         logger.info("Deleted {} associations when deleting entities from entity set {}",
                 associationDeleteCount, entitySetId)
     }
 
-    private fun collectAssociationsEntityKeyIds(
-            entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>): Map<UUID, Set<UUID>> {
-        val associations = if (entityKeyIds.isPresent) {
+    private fun collectAssociations(
+            entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>): PostgresIterable<EdgeKey> {
+        return if (entityKeyIds.isPresent) {
             getEdgesConnectedToEntities(entitySetId, entityKeyIds.get())
         } else {
             getEdgeKeysOfEntitySet(entitySetId)
         }
-        val associationsEntityKeyIds = HashMap<UUID, MutableSet<UUID>>()
-        associations.forEach {
-            val previousValue = associationsEntityKeyIds
-                    .putIfAbsent(it.edge.entitySetId, mutableSetOf(it.edge.entityKeyId))
-            if (previousValue != null) {
-                associationsEntityKeyIds[it.edge.entitySetId]!!.add(it.edge.entityKeyId)
-            }
+    }
+
+    private fun getBatch(edgeKeysIterator: Iterator<EdgeKey>): Map<UUID, Set<UUID>> {
+        val edges = ArrayList<EntityDataKey>(ASSOCIATION_SIZE)
+
+        var i = 0
+        while (edgeKeysIterator.hasNext() && i < ASSOCIATION_SIZE) {
+            edges.add(edgeKeysIterator.next().edge)
+            ++i
         }
 
-        return associationsEntityKeyIds
+        return edges.groupBy { it.entitySetId }.mapValues { it.value.map { it.entityKeyId }.toSet() }
     }
 
 
