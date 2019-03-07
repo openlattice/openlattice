@@ -35,6 +35,10 @@ private val mapper = ObjectMappers.newJsonMapper()
 
 interface AuditingComponent {
 
+    companion object {
+        const val MAX_ENTITY_KEY_IDS_PER_EVENT = 100
+    }
+
     fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
     fun getDataGraphService(): DataGraphManager
 
