@@ -370,7 +370,7 @@ open class DataGraphService(
         if (!authorizationManager.checkIfHasPermissions(
                         AclKey(entitySetId),
                         Principals.getCurrentPrincipals(),
-                        EnumSet.of(Permission.READ))) {
+                        EnumSet.of(Permission.OWNER))) {
             throw ForbiddenException("You cannot delete entities from entity set $entitySetId, because you don't " +
                     "have owner access")
         }
