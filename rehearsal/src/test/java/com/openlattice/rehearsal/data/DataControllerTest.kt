@@ -114,7 +114,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val ess = EntitySetSelection(Optional.empty(), Optional.empty())
         val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
 
-        Assert.assertEquals(0, results.size.toLong())
+        Assert.assertEquals(numberOfEntries, results.size.toLong())
     }
 
 
