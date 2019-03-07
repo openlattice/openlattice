@@ -530,7 +530,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         /* audit */
 
-        SetMultimap<UUID, UUID> neighborsByEntitySet = HashMultimap.create();
+        ListMultimap<UUID, UUID> neighborsByEntitySet = ArrayListMultimap.create();
 
         result.values().forEach( neighborList -> {
             neighborList.forEach( neighborEntityDetails -> {
@@ -545,28 +545,61 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         List<AuditableEvent> events = new ArrayList<>( neighborsByEntitySet.keySet().size() + 1 );
         UUID userId = getCurrentUserId();
-        events.add( new AuditableEvent(
-                userId,
-                new AclKey( entitySetId ),
-                AuditEventType.LOAD_ENTITY_NEIGHBORS,
-                "Load neighbors of entities with filter through SearchApi.executeFilteredEntityNeighborSearch",
-                Optional.of( filter.getEntityKeyIds() ),
-                ImmutableMap.of( "filters", filter ),
-                OffsetDateTime.now(),
-                Optional.empty()
-        ) );
 
-        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+        int segments = filter.getEntityKeyIds().size() / AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
+        if ( filter.getEntityKeyIds().size() % AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT != 0 ) {
+            segments++;
+        }
+
+        List<UUID> entityKeyIdsAsList = Lists.newArrayList( filter.getEntityKeyIds() );
+
+        for ( int i = 0; i < segments; i++ ) {
+
+            int fromIndex = i * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
+            int toIndex = i == segments - 1 ?
+                    entityKeyIdsAsList.size() :
+                    ( i + 1 ) * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
+
+            Set<UUID> segmentOfIds = Sets.newHashSet( entityKeyIdsAsList.subList( fromIndex, toIndex ));
+
             events.add( new AuditableEvent(
                     userId,
-                    new AclKey( neighborEntitySetId ),
-                    AuditEventType.READ_ENTITIES,
-                    "Read entities as filtered neighbors through SearchApi.executeFilteredEntityNeighborSearch",
-                    Optional.of( neighborsByEntitySet.get( neighborEntitySetId ) ),
-                    ImmutableMap.of( "entitySetId", entitySetId, "filter", filter ),
+                    new AclKey( entitySetId ),
+                    AuditEventType.LOAD_ENTITY_NEIGHBORS,
+                    "Load neighbors of entities with filter through SearchApi.executeFilteredEntityNeighborSearch",
+                    Optional.of( segmentOfIds ),
+                    ImmutableMap.of( "filters", new EntityNeighborsFilter( segmentOfIds, filter.getSrcEntitySetIds(), filter.getDstEntitySetIds(), filter.getAssociationEntitySetIds() ) ),
                     OffsetDateTime.now(),
                     Optional.empty()
             ) );
+        }
+
+        for ( UUID neighborEntitySetId : neighborsByEntitySet.keySet() ) {
+            List<UUID> neighbors = neighborsByEntitySet.get( neighborEntitySetId );
+
+            int neighborSegments = neighbors.size() / AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
+            if ( neighbors.size() % AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT != 0 ) {
+                neighborSegments++;
+            }
+
+            for ( int i = 0; i < neighborSegments; i++ ) {
+
+                int fromIndex = i * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
+                int toIndex = i == neighborSegments - 1 ?
+                        neighbors.size() :
+                        ( i + 1 ) * AuditingComponent.MAX_ENTITY_KEY_IDS_PER_EVENT;
+
+                events.add( new AuditableEvent(
+                        userId,
+                        new AclKey( neighborEntitySetId ),
+                        AuditEventType.READ_ENTITIES,
+                        "Read entities as filtered neighbors through SearchApi.executeFilteredEntityNeighborSearch",
+                        Optional.of( Sets.newHashSet( neighbors.subList( fromIndex, toIndex ) ) ),
+                        ImmutableMap.of( "entitySetId", entitySetId ),
+                        OffsetDateTime.now(),
+                        Optional.empty()
+                ) );
+            }
         }
 
         recordEvents( events );
