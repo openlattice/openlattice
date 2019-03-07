@@ -44,7 +44,6 @@ import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
-import kotlin.streams.asSequence
 import kotlin.streams.toList
 
 /**
@@ -403,15 +402,28 @@ class PostgresEntityDataQueryService(
                 return@use updateCount
             }
         }
-
+        /*
+         * We need to insert or update all the properties without causing deadlocks, while minimizing round trips to the
+         * server. We also need to use parameterized statements to avoid the risk of SQL inject, while also explicitly
+         * locking to avoid deadlocks.
+         *
+         * Our approach is separate the version updates which can cause deadlocks by using an on conflict do nothing.
+         *
+         * The first transaction
+         */
         //Now upsert all the properties
         hds.connection.use { connection ->
-
+            connection.autoCommit = false
             val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
                 propertyType.datatype
             }
 
-            val preparedStatements = authorizedPropertyTypes
+            //First we prepare the statements to lock rows for update
+            val preparedLocks = authorizedPropertyTypes
+                    .mapValues { connection.prepareStatement(buildLockPropertiesStatement(entitySetId, it.key)) }
+
+            //Next we prepare the inserts
+            val preparedInserts = authorizedPropertyTypes
                     .mapValues {
                         connection.prepareStatement(
                                 upsertPropertyValues(
@@ -423,6 +435,7 @@ class PostgresEntityDataQueryService(
                         )
                     }
 
+
             val insertions: Map<UUID, List<PropertyInsertion>> = entities.flatMap { entity ->
                 val entityKeyId = entity.key
                 val entityData = asMap(JsonDeserializer
@@ -431,6 +444,10 @@ class PostgresEntityDataQueryService(
 
                 return@flatMap entityData.flatMap { (propertyTypeId, values) ->
 
+                    val dbLock = preparedLocks[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
+                    val arr = PostgresArrays.create
+                    dbLock.setObject(1, entityKeyId )
+                    dbLock.setArray()
 
                     return@flatMap values.parallelStream().map { value ->
                         //Binary data types get stored in S3 bucket
@@ -463,12 +480,11 @@ class PostgresEntityDataQueryService(
                 }
             }.groupBy { it.propertyTypeId }
 
-//            lockProperties(entitySetId, insertions )
+
+//            buildLockPropertiesStatement(entitySetId, insertions )
 //
             insertions.values.forEach {
-                val upserts = preparedStatements[propertyTypeId] ?: throw InvalidParameterException(
-                        "Cannot insert property type not in authorized property types for entity $entityKeyId from entity set $entitySetId."
-                )
+                val upserts = preparedInserts[propertyTypeId] ?: abortInsert()
                 it.foreach { insertion ->
                     upserts.setObject(1, insertion.entityKeyId)
                     upserts.setBytes(2, insertion.propertyHash)
@@ -479,9 +495,9 @@ class PostgresEntityDataQueryService(
             }
 
             //In case we want to do validation
-            val updatedPropertyCounts = preparedStatements.values.map { it.executeBatch() }.sumBy { it.sum() }
+            val updatedPropertyCounts = preparedInserts.values.map { it.executeBatch() }.sumBy { it.sum() }
 
-            preparedStatements.values.forEach { it.close() }
+            preparedInserts.values.forEach { it.close() }
 
             checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
 
@@ -489,6 +505,12 @@ class PostgresEntityDataQueryService(
 
             return updatedEntityCount
         }
+    }
+
+    private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
+        throw InvalidParameterException(
+                "Cannot insert property type not in authorized property types for entity $entityKeyId from entity set $entitySetId."
+        )
     }
 
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int {
@@ -842,10 +864,10 @@ fun buildEntityKeyIdsClause(entityKeyIds: Set<UUID>): String {
     return entityKeyIds.joinToString(",") { "'$it'" }
 }
 
-internal fun lockProperties(entitySetId: UUID,propertyType propertyInsertions:List<PropertyInsertion>): String {
-    val idsClause = propertyInsertions.joinToString(",") { "(${it.entityKeyId},${it.propertyHash})" }
-    return "SELECT 1 FROM ${IDS.name} " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND (${ID_VALUE.name},${HASH.name}) IN ($idsClause) " +
+internal fun buildLockPropertiesStatement(entitySetId: UUID, propertyTypeId: UUID): String {
+    val propertyTable = quote(propertyTableName(propertyTypeId))
+    return "SELECT 1 FROM $propertyTable " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = ? AND ${HASH.name} IN ? " +
             "FOR UPDATE"
 }
 
@@ -887,12 +909,29 @@ fun upsertPropertyValues(entitySetId: UUID, propertyTypeId: UUID, propertyType: 
     return "INSERT INTO $propertyTable (${columns.joinToString(
             ","
     )}) VALUES('$entitySetId'::uuid,?,?,?,$version,ARRAY[$version],now(), now()) " +
-            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) " +
-            "DO UPDATE SET versions = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
+            "ON CONFLICT (${ENTITY_SET_ID.name},${ID_VALUE.name}, ${HASH.name}) DO UPDATE " +
+            "SET ${VERSIONS.name} = $propertyTable.${VERSIONS.name} || EXCLUDED.${VERSIONS.name}, " +
             "${VERSION.name} = CASE WHEN abs($propertyTable.${VERSION.name}) < EXCLUDED.${VERSION.name} THEN EXCLUDED.${VERSION.name} " +
             "ELSE $propertyTable.${VERSION.name} END"
 
 }
+
+//fun updateLatestVersion(
+//        entitySetId: UUID,
+//        entityKeyIds: Map<UUID,List<ByteArray>>,
+//        propertyTypeId: UUID,
+//        version: Long ) : String {
+//    val propertyTable = quote(propertyTableName(propertyTypeId))
+//    val propertyKeyClause = entityKeyIds.entries
+//            .joinToString(" AND ") {
+//                "(${ID_VALUE.name} = ${it.key} AND ${HASH.name} IN ? )" }
+//    return "UPDATE $propertyTable " +
+//            "SET ${VERSIONS.name} = ${VERSIONS.name} || $version, ${VERSION.name} = $version " +
+//            "WHERE ${ENTITY_SET_ID.name} = $entitySetId  " +
+//            "$propertyKeyClause " +
+//            "AND abs($propertyTable.${VERSION.name}) < $version"
+//
+//}
 
 fun selectEntitySetWithPropertyTypes(
         entitySetId: UUID,
