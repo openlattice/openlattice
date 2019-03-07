@@ -23,6 +23,7 @@ package com.openlattice.graph.core;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking;
 import com.openlattice.data.DataEdgeKey;
+import com.openlattice.data.WriteEvent;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
@@ -38,7 +39,7 @@ import java.util.stream.Stream;
  */
 public interface GraphService {
 
-    int createEdges( Set<DataEdgeKey> keys );
+    WriteEvent createEdges( Set<DataEdgeKey> keys );
 
     int clearEdges( Set<EdgeKey> keys );
 
@@ -46,7 +47,7 @@ public interface GraphService {
 
     int clearVertices( UUID entitySetId, Set<UUID> vertices );
 
-    int deleteEdges( Set<EdgeKey> keys );
+    WriteEvent deleteEdges( Set<EdgeKey> keys );
 
     int deleteVerticesInEntitySet( UUID entitySetId );
 
@@ -57,6 +58,10 @@ public interface GraphService {
     Map<EdgeKey, Edge> getEdgesAsMap( Set<EdgeKey> keys );
 
     Stream<Edge> getEdges( Set<EdgeKey> keys );
+
+    PostgresIterable<EdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
+
+    PostgresIterable<EdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
 
     Iterable<EdgeKey> getEdgeKeysContainingEntity( UUID entitySetId, UUID entityKeyId );
 

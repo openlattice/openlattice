@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+    <title>New Behavioral Health Report</title>
+    <style>
+
+      @import url("//fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800");
+
+      h1 {
+        font-family: 'Open Sans', sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        line-height: normal;
+        color: #555e6f;
+        text-transform: uppercase;
+      }
+
+      .header {
+        font-size: 16px;
+        text-transform: uppercase;
+        line-height: normal;
+        color: #8e929b;
+        padding-top: 10px;
+      }
+
+      body {
+        font-family: 'Open Sans', sans-serif;
+        line-height: 1.8em;
+        color: #333;
+      }
+
+      .divider {
+        width: 100%;
+        background-color: #e1e1eb;
+        height: 1px;
+        margin: 20px 0;
+      }
+
+      .detail {
+        font-family: 'Open Sans', sans-serif;
+        padding-top: 5px;
+      }
+
+    </style>
+</head>
+
+<body>
+    <div>
+        <h1>New Behavioral Health Report</h1>
+
+        <div class="divider" />
+
+        <div class="header">Person</div>
+        <div class="detail"><b>Name:</b> {{formattedName}}</div>
+        <div class="detail"><b>Alias:</b> {{aliases}}</div>
+        <div class="detail"><b>Date of Birth:</b> {{dob}}</div>
+        <div class="detail"><b>Age:</b> {{age}}</div>
+        <div class="detail"><b>Sex:</b> {{sex}}</div>
+        <div class="detail"><b>Race:</b> {{race}}</div>
+
+        <div class="divider" />
+
+        <div class="header">Housing</div>
+        <div class="detail"><b>Housing Situation:</b> {{housingSituation}}</div>
+
+        <div class="divider" />
+
+        <div class="header">Incident</div>
+        <div class="detail"><b>Date:</b> {{date}}</div>
+        <div class="detail"><b>Time:</b> {{time}}</div>
+        <div class="detail"><b>Nature of Crisis:</b> {{natureOfCrisis}}</div>
+        <div class="detail"><b>Disposition:</b> {{disposition}}</div>
+
+        <div class="divider" />
+
+        <div class="header">Report</div>
+        <div class="detail"><b>Law Enforcement Contact:</b> {{lawEnforcementContact}}</div>
+
+    </div>
+</body>
+</html>

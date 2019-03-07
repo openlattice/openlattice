@@ -23,7 +23,6 @@ package com.openlattice.auditing
 
 import com.dataloom.mappers.ObjectMappers
 import com.openlattice.data.DataGraphManager
-import com.openlattice.data.DataGraphService
 import java.util.*
 
 private val mapper = ObjectMappers.newJsonMapper()
@@ -52,13 +51,13 @@ interface AuditingComponent {
 
         return if( auditingConfiguration.isAuditingInitialized() ) {
             events
-                    .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey) }
+                    .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey, it.eventType) }
                     .map { (auditEntitySet, entities) ->
                         getDataGraphService().createEntities(
                                 auditEntitySet,
                                 toMap(entities),
                                 auditingConfiguration.propertyTypes
-                        ).size
+                        ).key.size
                     }.sum()
         } else {
             0

@@ -31,6 +31,8 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
+import com.openlattice.postgres.streams.PostgresIterable
+import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.nio.ByteBuffer
 import java.util.*
@@ -72,30 +74,33 @@ interface DataGraphManager {
     ): SetMultimap<FullQualifiedName, Any>
 
     //Soft deletes
-    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
+    fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
 
+    /**
+     * Clears property data, id, edges and associations of entities.
+     */
     fun clearEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int
-
-    fun clearAssociations(key: Set<EdgeKey>): Int
+    ): WriteEvent
 
     fun clearEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int
+    ): WriteEvent
 
     //Hard deletes
-    fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
+    fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
 
+    /**
+     * Deletes property data, id, edges and associations of entities.
+     */
     fun deleteEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int
+    ): WriteEvent
 
-    fun deleteAssociation(key: Set<EdgeKey>, authorizedPropertyTypes: Map<UUID, PropertyType>): Int
 
     fun deleteEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int
+    ): WriteEvent
 
     /*
      * Bulk endpoints for entities/associations
@@ -113,25 +118,25 @@ interface DataGraphManager {
             entitySetId: UUID,
             entities: List<Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): List<UUID>
+    ): Pair<List<UUID>, WriteEvent>
 
     fun replaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int
+    ): WriteEvent
 
     fun partialReplaceEntities(
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int
+    ): WriteEvent
 
     fun replacePropertiesInEntities(
             entitySetId: UUID,
             replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int
+    ): WriteEvent
 
     /**
      * Integrates association data into the system.
@@ -147,7 +152,7 @@ interface DataGraphManager {
     fun createAssociations(
             associations: ListMultimap<UUID, DataEdge>,
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): ListMultimap<UUID, UUID>
+    ): Map<UUID, CreateAssociationEvent>
 
     fun integrateEntitiesAndAssociations(
             entities: Set<Entity>,
@@ -177,12 +182,14 @@ interface DataGraphManager {
             entitySetId: UUID,
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
-    ): Int
+    ): WriteEvent
 
     fun getNeighborEntitySetIds(entitySetId: Set<UUID>): Set<UUID>
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
+    fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<EdgeKey>
+    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<EdgeKey>
 
-    fun createEdges(edges: Set<DataEdgeKey>): Int
-    fun createAssociations(associations: Set<DataEdgeKey>): Int
+    fun createEdges(edges: Set<DataEdgeKey>): WriteEvent
+    fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
 }

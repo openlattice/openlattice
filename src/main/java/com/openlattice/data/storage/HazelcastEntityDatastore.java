@@ -30,7 +30,7 @@ import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.edm.events.EntitySetDataClearedEvent;
+import com.openlattice.edm.events.EntitySetDataDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
@@ -97,31 +97,15 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 Optional.empty() );
     }
 
-    @Timed
     @Override
-    public int createOrUpdateEntities(
-            UUID entitySetId,
-            Map<UUID, Map<UUID, Set<Object>>> entities,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        // need to collect linking ids before writes to the entities
-        Set<UUID> oldLinkingIds = dataQueryService
-                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
-                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
-
-        int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
-        signalCreatedEntities( entitySetId, entities.keySet() );
-        if ( !oldLinkingIds.isEmpty() ) {
-            signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
-                    oldLinkingIds,
-                    entities.keySet() );
-        }
-        return count;
+    @Timed
+    public PostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId ) {
+        return dataQueryService.getEntityKeyIdsInEntitySet( entitySetId );
     }
 
     @Timed
     @Override
-    public int integrateEntities(
+    public WriteEvent createOrUpdateEntities(
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
@@ -130,19 +114,21 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
                 .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
 
-        int count = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
+        WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
+                            .collect( Collectors.toSet() ),
                     oldLinkingIds,
                     entities.keySet() );
         }
-        return count;
+        return writeEvent;
     }
 
     @Timed
-    @Override public int replaceEntities(
+    @Override
+    public WriteEvent integrateEntities(
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
@@ -151,19 +137,20 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
                 .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
 
-        final var count = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
+                            .collect( Collectors.toSet() ),
                     oldLinkingIds,
                     entities.keySet() );
         }
-        return count;
+        return writeEvent;
     }
 
     @Timed
-    @Override public int partialReplaceEntities(
+    @Override public WriteEvent replaceEntities(
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entities,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
@@ -172,15 +159,39 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
                 .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
 
-        final var count = dataQueryService.partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        final var writeEvent = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
+                            .collect( Collectors.toSet() ),
                     oldLinkingIds,
                     entities.keySet() );
         }
-        return count;
+        return writeEvent;
+    }
+
+    @Timed
+    @Override public WriteEvent partialReplaceEntities(
+            UUID entitySetId,
+            Map<UUID, Map<UUID, Set<Object>>> entities,
+            Map<UUID, PropertyType> authorizedPropertyTypes ) {
+        // need to collect linking ids before writes to the entities
+        Set<UUID> oldLinkingIds = dataQueryService
+                .getLinkingIds( Map.of( entitySetId, Optional.of( entities.keySet() ) ) )
+                .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
+
+        final var writeEvent = dataQueryService
+                .partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
+        signalCreatedEntities( entitySetId, entities.keySet() );
+        if ( !oldLinkingIds.isEmpty() ) {
+            signalLinkedEntitiesUpserted(
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
+                            .collect( Collectors.toSet() ),
+                    oldLinkingIds,
+                    entities.keySet() );
+        }
+        return writeEvent;
     }
 
     private static SetMultimap<UUID, Object> setMultimapFromMap( Map<UUID, Set<Object>> m ) {
@@ -226,8 +237,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
     }
 
-    private void signalEntitySetDataCleared( UUID entitySetId ) {
-        eventBus.post( new EntitySetDataClearedEvent( entitySetId ) );
+    private void signalEntitySetDataDeleted( UUID entitySetId ) {
+        eventBus.post( new EntitySetDataDeletedEvent( entitySetId ) );
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
     }
 
@@ -277,7 +288,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     @Timed
-    @Override public int replacePropertiesInEntities(
+    @Override public WriteEvent replacePropertiesInEntities(
             UUID entitySetId,
             Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> replacementProperties,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
@@ -286,43 +297,44 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .getLinkingIds( Map.of( entitySetId, Optional.of( replacementProperties.keySet() ) ) )
                 .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
 
-        final var count = dataQueryService
+        final var writeEvent = dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, replacementProperties.keySet() );
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
-                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream().collect( Collectors.toSet() ),
+                    dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
+                            .collect( Collectors.toSet() ),
                     oldLinkingIds,
                     replacementProperties.keySet() );
         }
-        return count;
+        return writeEvent;
     }
 
     @Timed
-    @Override public int clearEntitySet(
+    @Override public WriteEvent clearEntitySet(
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        final var count = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
-        signalEntitySetDataCleared(entitySetId);
-        return count;
+        final var writeEvent = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
+        signalEntitySetDataDeleted(entitySetId);
+        return writeEvent;
     }
 
     @Timed
-    @Override public int clearEntities(
+    @Override public WriteEvent clearEntities(
             UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        final var count = dataQueryService.clearEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
+        final var writeEvent = dataQueryService.clearEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
         signalDeletedEntities( entitySetId, entityKeyIds );
-        return count;
+        return writeEvent;
     }
 
     @Timed
-    @Override public int clearEntityData(
+    @Override public WriteEvent clearEntityData(
             UUID entitySetId,
             Set<UUID> entityKeyIds,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        final var count = dataQueryService.clearEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
+        final var writeEvent = dataQueryService.clearEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         // same as if we updated the entities
         signalCreatedEntities( entitySetId, entityKeyIds );
-        return count;
+        return writeEvent;
     }
 
     @Override
@@ -334,15 +346,15 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
         PostgresIterable result = ( linking )
                 ? dataQueryService.streamableLinkingEntitySet(
-                    entityKeyIds,
-                    authorizedPropertyTypes,
-                    EnumSet.noneOf( MetadataOption.class ),
-                    Optional.empty())
+                entityKeyIds,
+                authorizedPropertyTypes,
+                EnumSet.noneOf( MetadataOption.class ),
+                Optional.empty() )
                 : dataQueryService.streamableEntitySet(
-                    entityKeyIds,
-                    authorizedPropertyTypes,
-                    EnumSet.noneOf( MetadataOption.class ),
-                    Optional.empty());
+                entityKeyIds,
+                authorizedPropertyTypes,
+                EnumSet.noneOf( MetadataOption.class ),
+                Optional.empty() );
 
         return new EntitySetData<>( orderedPropertyTypes, result );
     }
@@ -359,7 +371,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 ids,
                 authorizedPropertyTypes,
                 EnumSet.noneOf( MetadataOption.class ),
-                Optional.empty()).stream();
+                Optional.empty() ).stream();
     }
 
     @Override
@@ -406,7 +418,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     /**
      * Retrieves the authorized, linked property data for the given linking ids of entity sets.
-     * @param linkingIdsByEntitySetId map of linked(normal) entity set ids and their linking ids
+     *
+     * @param linkingIdsByEntitySetId              map of linked(normal) entity set ids and their linking ids
      * @param authorizedPropertyTypesByEntitySetId map of authorized property types
      */
     @Override
@@ -434,10 +447,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return linkedEntityData;
     }
 
-
     /**
      * Loads data from multiple entity sets. Note: not implemented for linking entity sets!
-     * @param entitySetIdsToEntityKeyIds map of entity sets to entity keys for which the data should be loaded
+     *
+     * @param entitySetIdsToEntityKeyIds         map of entity sets to entity keys for which the data should be loaded
      * @param authorizedPropertyTypesByEntitySet map of entity sets and the property types for which the user is authorized
      * @return map of entity set ids to list of entity data
      */
@@ -476,7 +489,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Timed
     public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
         return dataQueryService.getLinkingIds( entitySetIds.stream().collect(
-                Collectors.toMap( Function.identity(), it ->  Optional.empty() ) ) );
+                Collectors.toMap( Function.identity(), it -> Optional.empty() ) ) );
     }
 
     @Override
@@ -554,32 +567,29 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     /**
      * Delete data of an entity set across ALL sync Ids.
-     * <p>
-     * Note: this is currently only used when deleting an entity set, which takes care of deleting the data in
-     * elasticsearch. If this is ever called without deleting the entity set, logic must be added to delete the data
-     * from elasticsearch.
      */
     @SuppressFBWarnings(
             value = "UC_USELESS_OBJECT",
             justification = "results Object is used to execute deletes in batches" )
-    public int deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> propertyTypes ) {
+    public WriteEvent deleteEntitySetData( UUID entitySetId, Map<UUID, PropertyType> propertyTypes ) {
         logger.info( "Deleting data of entity set: {}", entitySetId );
-        int deletePropertyCount = dataQueryService.deleteEntitySetData( entitySetId, propertyTypes );
-        int deleteCount = dataQueryService.deleteEntitySet( entitySetId );
-        logger.info( "Finished deletion of entity set {}. Deleted {} rows and {} property data",
-                entitySetId, deleteCount, deletePropertyCount );
-        return deleteCount;
+        WriteEvent propertyWriteEvent = dataQueryService.deleteEntitySetData( entitySetId, propertyTypes );
+        WriteEvent writeEvent = dataQueryService.deleteEntitySet( entitySetId );
+        logger.info( "Finished deletion data from entity set {}. Deleted {} rows and {} property data",
+                entitySetId, writeEvent.getNumUpdates(), propertyWriteEvent.getNumUpdates() );
+        signalEntitySetDataDeleted( entitySetId );
+        return writeEvent;
     }
 
     @Override
-    public int deleteEntities(
+    public WriteEvent deleteEntities(
             UUID entitySetId,
             Set<UUID> entityKeyIds,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
 
-        int deletePropertyCount = dataQueryService
+        WriteEvent propertyWriteEvent = dataQueryService
                 .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
-        int deleteCount = dataQueryService.deleteEntities( entitySetId, entityKeyIds );
+        WriteEvent writeEvent = dataQueryService.deleteEntities( entitySetId, entityKeyIds );
         signalDeletedEntities( entitySetId, entityKeyIds );
 
         // delete entities from linking feedbacks too
@@ -590,16 +600,21 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data, " +
                         "{} linking feedback and {} matched entries",
-                entityKeyIds, entitySetId, deleteCount, deletePropertyCount, deleteFeedbackCount, deleteMatchCount );
+                entityKeyIds,
+                entitySetId,
+                writeEvent.getNumUpdates(),
+                propertyWriteEvent.getNumUpdates(),
+                deleteFeedbackCount,
+                deleteMatchCount );
 
-        return deleteCount;
+        return writeEvent;
     }
 
-    public int deleteEntityProperties(
+    public WriteEvent deleteEntityProperties(
             UUID entitySetId,
             Set<UUID> entityKeyIds,
             Map<UUID, PropertyType> authorizedPropertyTypes ) {
-        int deletePropertyCount = dataQueryService
+        WriteEvent propertyWriteEvent = dataQueryService
                 .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         // same as if we updated the entities
         signalCreatedEntities( entitySetId, entityKeyIds );
@@ -607,9 +622,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         logger.info( "Finished deletion of properties ( {} ) from entity set {} and ( {} ) entities. Deleted {} rows " +
                         "of property data",
                 authorizedPropertyTypes.values().stream().map( PropertyType::getType ).collect( Collectors.toSet() ),
-                entitySetId, entityKeyIds, deletePropertyCount );
+                entitySetId, entityKeyIds, propertyWriteEvent.getNumUpdates() );
 
-        return deletePropertyCount;
+        return propertyWriteEvent;
     }
 
     public static SetMultimap<Object, Object> fromEntityDataValue(

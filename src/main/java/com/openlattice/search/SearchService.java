@@ -63,7 +63,7 @@ import com.openlattice.edm.events.AssociationTypeCreatedEvent;
 import com.openlattice.edm.events.AssociationTypeDeletedEvent;
 import com.openlattice.edm.events.ClearAllDataEvent;
 import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDataClearedEvent;
+import com.openlattice.edm.events.EntitySetDataDeletedEvent;
 import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
 import com.openlattice.edm.events.EntityTypeCreatedEvent;
@@ -91,6 +91,7 @@ import com.openlattice.search.requests.EntityNeighborsFilter;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchResult;
 import com.openlattice.search.requests.SearchTerm;
+
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -102,6 +103,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -240,7 +242,7 @@ public class SearchService {
 
     @Timed
     @Subscribe
-    public void entitySetDataCleared( EntitySetDataClearedEvent event ) {
+    public void entitySetDataCleared( EntitySetDataDeletedEvent event ) {
         elasticsearchApi.clearEntitySetData( event.getEntitySetId() );
     }
 
@@ -320,7 +322,7 @@ public class SearchService {
     @Subscribe
     public void addPropertyTypesToEntitySet( PropertyTypesAddedToEntitySetEvent event ) {
         elasticsearchApi.addPropertyTypesToEntitySet(
-                event.getEntitySetId(),
+                event.getEntitySet().getId(),
                 event.getNewPropertyTypes(),
                 event.getLinkedEntitySetIds() );
     }
@@ -474,7 +476,8 @@ public class SearchService {
     @Timed
     public Map<UUID, List<NeighborEntityDetails>> executeLinkingEntityNeighborSearch(
             Set<UUID> linkedEntitySetIds,
-            EntityNeighborsFilter filter ) {
+            EntityNeighborsFilter filter,
+            Set<Principal> principals ) {
         if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
             return ImmutableMap.of();
         }
@@ -493,7 +496,8 @@ public class SearchService {
                 new EntityNeighborsFilter( entityKeyIds,
                         filter.getSrcEntitySetIds(),
                         filter.getDstEntitySetIds(),
-                        filter.getAssociationEntitySetIds() ) );
+                        filter.getAssociationEntitySetIds() ),
+                principals );
 
         if ( entityNeighbors.isEmpty() ) {
             return entityNeighbors;
@@ -518,7 +522,8 @@ public class SearchService {
     @Timed
     public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearch(
             Set<UUID> entitySetIds,
-            EntityNeighborsFilter filter ) {
+            EntityNeighborsFilter filter,
+            Set<Principal> principals ) {
         final Stopwatch sw1 = Stopwatch.createStarted();
         final Stopwatch sw2 = Stopwatch.createStarted();
 
@@ -527,8 +532,6 @@ public class SearchService {
             logger.info( "Missing association entity set ids.. returning empty result" );
             return ImmutableMap.of();
         }
-
-        Set<Principal> principals = Principals.getCurrentPrincipals();
 
         Set<UUID> entityKeyIds = filter.getEntityKeyIds();
 
