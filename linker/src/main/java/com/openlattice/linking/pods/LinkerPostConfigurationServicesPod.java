@@ -45,6 +45,7 @@ import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
 import com.openlattice.linking.RealtimeLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
+import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
