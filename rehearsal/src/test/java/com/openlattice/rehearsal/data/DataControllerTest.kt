@@ -35,6 +35,7 @@ import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.*
+import com.openlattice.search.requests.SearchTerm
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
@@ -621,6 +622,95 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertTrue(loadedEntriesEdge2.none {
             it[OL_ID_FQN].last() == idsEdge.last().toString()
         })
+    }
+
+    @Test
+    fun testDeleteAllDataInEntitySet() {
+        // hard delete entityset data
+        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
+        val personEt = edmApi.getEntityType(personEntityTypeId)
+
+        val es = createEntitySet(personEt)
+
+        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
+        val entries = (1..numberOfEntries)
+                .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
+        val newEntityIds = dataApi.createEntities(es.id, entries)
+
+        // create edges with original entityset as source
+        val dst = MultipleAuthenticatedUsersBase.createEntityType()
+        val edge = MultipleAuthenticatedUsersBase.createEdgeEntityType()
+
+        val esDst = MultipleAuthenticatedUsersBase.createEntitySet(dst)
+        val esEdge = MultipleAuthenticatedUsersBase.createEntitySet(edge)
+
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge.properties)
+
+        val entriesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entriesDst)
+
+        val entriesEdge = ImmutableList.copyOf(testDataEdge.values)
+        val idsEdge = dataApi.createEntities(esEdge.id, entriesEdge)
+
+        val edges = newEntityIds.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(es.id, newEntityIds[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdge.id, idsEdge[index])
+            )
+        }.toSet()
+        dataApi.createAssociations(edges)
+
+        dataApi.deleteAllEntitiesFromEntitySet(es.id, DeleteType.Hard)
+
+        val ess1 = EntitySetSelection(Optional.of(personEt.properties))
+        val loadedEntries1 = dataApi.loadEntitySetData(es.id, ess1, FileType.json).toList()
+
+        val essDst1 = EntitySetSelection(Optional.of(dst.properties))
+        val loadedEntriesDst1 = dataApi.loadEntitySetData(esDst.id, essDst1, FileType.json).toList()
+
+        val essEdge1 = EntitySetSelection(Optional.of(edge.properties))
+        val loadedEntriesEdge1 = dataApi.loadEntitySetData(esEdge.id, essEdge1, FileType.json).toList()
+
+        Assert.assertEquals(0, loadedEntries1.size)
+        Assert.assertEquals(0, loadedEntriesEdge1.size)
+        Assert.assertEquals(numberOfEntries, loadedEntriesDst1.size)
+        Assert.assertEquals(0, searchApi.executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)))
+        Assert.assertEquals(0, searchApi.executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)))
+
+
+
+
+        // soft delete entityset data
+        val newEntityIds2 = dataApi.createEntities(es.id, entries)
+
+        val idsEdge2 = dataApi.createEntities(esEdge.id, entriesEdge)
+        val edges2 = newEntityIds.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(es.id, newEntityIds2[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdge.id, idsEdge2[index])
+            )
+        }.toSet()
+        dataApi.createAssociations(edges2)
+
+        dataApi.deleteAllEntitiesFromEntitySet(es.id, DeleteType.Soft)
+
+        val ess2 = EntitySetSelection(Optional.of(personEt.properties))
+        val loadedEntries2 = dataApi.loadEntitySetData(es.id, ess2, FileType.json).toList()
+
+        val essDst2 = EntitySetSelection(Optional.of(dst.properties))
+        val loadedEntriesDst = dataApi.loadEntitySetData(esDst.id, essDst2, FileType.json).toList()
+
+        val essEdge2 = EntitySetSelection(Optional.of(edge.properties))
+        val loadedEntriesEdge2 = dataApi.loadEntitySetData(esEdge.id, essEdge2, FileType.json).toList()
+
+        Assert.assertEquals(0, loadedEntries2.size)
+        Assert.assertEquals(0, loadedEntriesEdge2.size)
+        Assert.assertEquals(numberOfEntries, loadedEntriesDst.size)
+        Assert.assertEquals(0, searchApi.executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)))
+        Assert.assertEquals(0, searchApi.executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)))
     }
 
     @Test
