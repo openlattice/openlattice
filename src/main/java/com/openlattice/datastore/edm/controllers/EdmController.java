@@ -36,9 +36,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.wrappers.BatchException;
 import com.openlattice.controllers.exceptions.wrappers.ErrorsDTO;
 import com.openlattice.controllers.util.ApiExceptions;
-import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.EntityDatastore;
-import com.openlattice.data.PropertyUsageSummary;
+import com.openlattice.data.*;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.*;
@@ -48,7 +46,9 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.*;
+import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
+import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.web.mediatypes.CustomMediaType;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
@@ -469,6 +469,8 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
         modelService.deleteEntitySet( entitySetId );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( entitySetId ) );
+        // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
+        deleteAssociationsOfEntitySet( entitySetId );
         dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
 
         recordEvent( new AuditableEvent(
@@ -483,6 +485,51 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         ) );
 
         return null;
+    }
+
+    private Set<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId) {
+        // collect association entity key ids
+        final PostgresIterable<EdgeKey> associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet( entitySetId );
+
+        // access checks
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
+        associationsEdgeKeys.stream().forEach( edgeKey -> {
+                    if ( !authorizedPropertyTypes.containsKey( edgeKey.getEdge().getEntitySetId() ) ) {
+                        Map<UUID, PropertyType> authorizedPropertyTypesOfAssociation =
+                                getAuthorizedPropertyTypesForDelete(
+                                        edgeKey.getEdge().getEntitySetId(), Optional.empty() );
+                        authorizedPropertyTypes.put(
+                                edgeKey.getEdge().getEntitySetId(), authorizedPropertyTypesOfAssociation );
+                    }
+                }
+        );
+
+        // delete associations of entity set
+        return dgm.deleteAssociationsBatch( entitySetId, associationsEdgeKeys, authorizedPropertyTypes );
+    }
+
+    private Map<UUID, PropertyType> getAuthorizedPropertyTypesForDelete(
+            UUID entitySetId,
+            Optional<Set<UUID>> properties ) {
+        ensureOwnerAccess( new AclKey( entitySetId ) );
+        final EntitySet entitySet = getEntitySet( entitySetId );
+        if ( entitySet.isLinking() ) {
+            throw new IllegalArgumentException( "You cannot delete entities from a linking entity set." );
+        }
+
+        final EntityType entityType = getEntityType( entitySet.getEntityTypeId() );
+        final Set<UUID> requiredProperties = properties.orElse( entityType.getProperties() );
+        final Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper
+                .getAuthorizedPropertyTypes( ImmutableSet.of( entitySetId ),
+                        requiredProperties,
+                        EnumSet.of( Permission.OWNER ) )
+                .get( entitySetId );
+        if ( !authorizedPropertyTypes.keySet().containsAll( requiredProperties ) ) {
+            throw new ForbiddenException(
+                    "You must be an owner of all required entity set properties to delete entities from it." );
+        }
+
+        return authorizedPropertyTypes;
     }
 
     @Override
