@@ -77,25 +77,46 @@ interface DataGraphManager {
     fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
 
     /**
-     * Clears property data, id, edges and associations of entities.
+     * Clears property data, id, edges of entities.
      */
     fun clearEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
+
+    /**
+     * Deletes property data, id, edges of association entities in batches.
+     */
+    fun clearAssociationsBatch(
+            entitySetId: UUID,
+            associationsEdgeKeys: PostgresIterable<EdgeKey>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): Set<WriteEvent>
 
     fun clearEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
     //Hard deletes
+    /**
+     * Deletes property data, id, edges of all entities in entityset.
+     */
     fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent
 
     /**
-     * Deletes property data, id, edges and associations of entities.
+     * Deletes property data, id, edges of entities.
      */
     fun deleteEntities(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
+
+    /**
+     * Deletes property data, id, edges of association entities in batches.
+     */
+    fun deleteAssociationsBatch(
+            entitySetId: UUID,
+            associationsEdgeKeys: PostgresIterable<EdgeKey>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): Set<WriteEvent>
 
 
     fun deleteEntityProperties(
