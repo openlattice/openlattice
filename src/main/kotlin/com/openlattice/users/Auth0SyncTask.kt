@@ -35,6 +35,7 @@ import com.openlattice.directory.pojo.Auth0UserBasic
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
+import com.openlattice.retrofit.RhizomeRetrofitCallException
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
@@ -134,19 +135,22 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
                         }
                 pageOfUsers = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
             }
-        } finally {
-            /*
-             * If we did not see a user in any of the pages we should delete that user.
-             * In the future we should consider persisting users to our own database so that we
-             * don't have to load all of them at startup.
-             */
-            users.removeAll(
-                    Predicates.lessThan(
-                            UserMapstore.LOAD_TIME_INDEX,
-                            OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
-                    ) as Predicate<String, Auth0UserBasic>?
-            )
+        } catch (ex: RhizomeRetrofitCallException) {
+            logger.error("Retrofit called failed during auth0 sync task." , ex )
+            return
         }
+
+        /*
+         * If we did not see a user in any of the pages we should delete that user.
+         * In the future we should consider persisting users to our own database so that we
+         * don't have to load all of them at startup.
+         */
+        users.removeAll(
+                Predicates.lessThan(
+                        UserMapstore.LOAD_TIME_INDEX,
+                        OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
+                ) as Predicate<String, Auth0UserBasic>?
+        )
     }
 
     private fun createPrincipal(
