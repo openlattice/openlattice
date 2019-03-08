@@ -92,9 +92,7 @@ class DataControllerLinkingTest : SetupTestData() {
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
 
-        val pt = createPropertyType()
-        val et = createEntityType(pt.id)
-        val esLinked = createEntitySet(et, true, setOf(esId1, esId2))
+        val esLinked = createEntitySet(personEt, true, setOf(esId1, esId2))
 
         val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
         val givenNames = mapOf(personGivenNamePropertyId to
