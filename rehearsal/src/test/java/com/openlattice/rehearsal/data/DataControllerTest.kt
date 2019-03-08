@@ -35,6 +35,7 @@ import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.*
+import com.openlattice.search.requests.Search
 import com.openlattice.search.requests.SearchTerm
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -114,7 +115,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val ess = EntitySetSelection(Optional.empty(), Optional.empty())
         val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
 
-        Assert.assertEquals(numberOfEntries, results.size.toLong())
+        Assert.assertEquals(numberOfEntries.toLong(), results.size.toLong())
     }
 
 
@@ -485,29 +486,73 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
-        loginAs("user1")
+        // create edges with original entityset as source
+        val dst = MultipleAuthenticatedUsersBase.createEntityType()
+        val edge = MultipleAuthenticatedUsersBase.createEdgeEntityType()
+
+        val esDst = MultipleAuthenticatedUsersBase.createEntitySet(dst)
+        val esEdge = MultipleAuthenticatedUsersBase.createEntitySet(edge)
+
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge.properties)
+
+        val entriesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entriesDst)
+
+        val entriesEdge = ImmutableList.copyOf(testDataEdge.values)
+        val idsEdge = dataApi.createEntities(esEdge.id, entriesEdge)
+
+        val edges = newEntityIds.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(es.id, newEntityIds[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdge.id, idsEdge[index])
+            )
+        }.toSet()
+        dataApi.createAssociations(edges)
+
+
         try {
+            loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es.id}] is not accessible.", true))
+        } finally {
+            loginAs("admin")
         }
 
         // add user1 as owner of entityset
-        loginAs("admin")
         val newPermissions = EnumSet.of(Permission.OWNER)
         val acl = Acl(AclKey(es.id), setOf(Ace(user1, newPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(acl, Action.ADD))
 
 
-        loginAs("user1")
         try {
+            loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must be an owner of all required entity set properties to delete entities from it.", true))
+        } finally {
+            loginAs("admin")
         }
-        loginAs("admin")
+
+        // add user1 as owner for all property types in entityset
+        personEt.properties.forEach {
+            val acl = Acl(AclKey(es.id, it), setOf(Ace(user1, newPermissions, OffsetDateTime.MAX)))
+            permissionsApi.updateAcl(AclData(acl, Action.ADD))
+        }
+
+        try {
+            loginAs("user1")
+            dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Object [${esEdge.id}] is not accessible.", true))
+        } finally {
+            loginAs("admin")
+        }
     }
 
     @Test
@@ -676,9 +721,12 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(0, loadedEntries1.size)
         Assert.assertEquals(0, loadedEntriesEdge1.size)
         Assert.assertEquals(numberOfEntries, loadedEntriesDst1.size)
-        Assert.assertEquals(0, searchApi.executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)))
-        Assert.assertEquals(0, searchApi.executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)))
 
+        Thread.sleep(5000L) // it takes some time to delete documents from elasticsearch
+        Assert.assertEquals(0L, searchApi
+                .executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)).numHits)
+        Assert.assertEquals(0L, searchApi
+                .executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)).numHits)
 
 
 
@@ -709,8 +757,12 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(0, loadedEntries2.size)
         Assert.assertEquals(0, loadedEntriesEdge2.size)
         Assert.assertEquals(numberOfEntries, loadedEntriesDst.size)
-        Assert.assertEquals(0, searchApi.executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)))
-        Assert.assertEquals(0, searchApi.executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)))
+
+        Thread.sleep(5000L) // it takes some time to delete documents from elasticsearch
+        Assert.assertEquals(0L, searchApi
+                .executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)).numHits)
+        Assert.assertEquals(0L, searchApi
+                .executeEntitySetDataQuery(esEdge.id, SearchTerm("*", 0, 10)).numHits)
     }
 
     @Test
