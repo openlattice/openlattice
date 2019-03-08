@@ -13,6 +13,8 @@ import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
 import com.openlattice.tasks.Task
+import com.openlattice.users.Auth0SyncInitializationTask
+import com.openlattice.users.Auth0SyncTask
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -43,7 +45,8 @@ class AuditInitializationTask(
         return setOf(
                 PostConstructInitializerTask::class.java,
                 UsersAndRolesInitializationTask::class.java,
-                OrganizationsInitializationTask::class.java
+                OrganizationsInitializationTask::class.java,
+                Auth0SyncInitializationTask::class.java
         )
     }
 
