@@ -67,10 +67,7 @@ open class DataGraphService(
         private val eventBus: EventBus,
         private val graphService: GraphService,
         private val idService: EntityKeyIdService,
-        private val eds: EntityDatastore,
-        private val edm: EdmManager,
-        private val authorizationManager: AuthorizationManager,
-        private val authzHelper: EdmAuthorizationHelper
+        private val eds: EntityDatastore
 ) : DataGraphManager {
     override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
         return idService.reserveEntityKeyIds(entityKeys)
@@ -90,6 +87,8 @@ open class DataGraphService(
                 logger.error("Future execution failed.", e)
             }
         }
+
+        const val ASSOCIATION_SIZE = 30000
     }
 
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
@@ -186,9 +185,6 @@ open class DataGraphService(
     /* Delete */
 
     override fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
-        // clear association entities
-        clearAssociations(entitySetId, Optional.empty())
-
         // clear edges
         val verticesCount = graphService.clearVerticesInEntitySet(entitySetId)
 
@@ -204,10 +200,31 @@ open class DataGraphService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        // clear association entities
-        clearAssociations(entitySetId, Optional.of(entityKeyIds))
-
         return clearEntityDataAndVertices(entitySetId, entityKeyIds, authorizedPropertyTypes)
+    }
+
+    override fun clearAssociationsBatch(
+            entitySetId: UUID,
+            associationsEdgeKeys: PostgresIterable<EdgeKey>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): Set<WriteEvent> {
+        var associationDeleteCount = 0
+        val edgeKeysIterator = associationsEdgeKeys.iterator()
+        val writeEvents = HashSet<WriteEvent>()
+
+        while (edgeKeysIterator.hasNext()) {
+            while (edgeKeysIterator.hasNext()) {
+                val batch = getBatch(edgeKeysIterator);
+                batch.forEach {
+                    val writeEvent = clearEntities(it.key, it.value,
+                            authorizedPropertyTypes.getValue(it.key))
+                    writeEvents.add(writeEvent)
+                    associationDeleteCount += writeEvent.numUpdates
+                }
+            }
+        }
+
+        return writeEvents
     }
 
     private fun clearEntityDataAndVertices(entitySetId: UUID,
@@ -223,23 +240,6 @@ open class DataGraphService(
         return entityWriteEvent
     }
 
-    private fun clearAssociations(entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>) {
-        // collect association entity key ids
-        val associationsEntityKeyIds = collectAssociationsEntityKeyIds(entitySetId, entityKeyIds)
-
-        associationsEntityKeyIds.forEach {
-            if (!authorizationManager.checkIfHasPermissions(
-                            AclKey(it.key),
-                            Principals.getCurrentPrincipals(),
-                            EnumSet.of(Permission.READ))) {
-                throw ForbiddenException("You cannot clear entities from entity set $entitySetId, because you don't " +
-                        "have read permission to its association entity set ${it.key}")
-            }
-            clearEntities(
-                    it.key, it.value, authzHelper.getAuthorizedPropertyTypes(it.key, EnumSet.of(Permission.WRITE)))
-        }
-    }
-
     override fun clearEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
@@ -250,9 +250,6 @@ open class DataGraphService(
     }
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
-        // delete associations
-        deleteAssociations(entitySetId, Optional.empty())
-
         // delete edges
         val verticesCount = graphService.deleteVerticesInEntitySet(entitySetId)
 
@@ -268,9 +265,6 @@ open class DataGraphService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        // delete associations
-        deleteAssociations(entitySetId, Optional.of(entityKeyIds))
-
         return deleteEntityDataAnVertices(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
@@ -289,78 +283,45 @@ open class DataGraphService(
         return entityWriteEvent
     }
 
-    private fun deleteAssociations(entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>) {
-        // collect association entity key ids
-        val associationsEntityKeyIds = collectAssociationsEntityKeyIds(entitySetId, entityKeyIds)
+    override fun deleteAssociationsBatch(
+            entitySetId: UUID,
+            associationsEdgeKeys: PostgresIterable<EdgeKey>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<WriteEvent> {
+        var associationDeleteCount = 0
+        val edgeKeysIterator = associationsEdgeKeys.iterator()
+        val writeEvents = HashSet<WriteEvent>()
 
-        // access checks
-        val authorizedPropertyTypesOfAssociations = HashMap<UUID, Map<UUID, PropertyType>>()
-        associationsEntityKeyIds.forEach {
-            val authorizedPropertyTypesOfAssociation = getAuthorizedPropertyTypesForDelete(it.key, Optional.empty())
-            authorizedPropertyTypesOfAssociations[it.key] = authorizedPropertyTypesOfAssociation
-        }
-
-        // delete associations of entity set
-        val associationDeleteCount = associationsEntityKeyIds.map {
-            deleteEntityDataAnVertices(
-                    it.key,
-                    it.value,
-                    authorizedPropertyTypesOfAssociations[it.key]!!).numUpdates
-        }.sum()
-
-        logger.info("Deleted {} associations when deleting entities from entity set {}",
-                associationDeleteCount, entitySetId)
-    }
-
-    private fun collectAssociationsEntityKeyIds(
-            entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>): Map<UUID, Set<UUID>> {
-        val associations = if (entityKeyIds.isPresent) {
-            getEdgesConnectedToEntities(entitySetId, entityKeyIds.get())
-        } else {
-            getEdgeKeysOfEntitySet(entitySetId)
-        }
-        val associationsEntityKeyIds = HashMap<UUID, MutableSet<UUID>>()
-        associations.forEach {
-            val previousValue = associationsEntityKeyIds
-                    .putIfAbsent(it.edge.entitySetId, mutableSetOf(it.edge.entityKeyId))
-            if (previousValue != null) {
-                associationsEntityKeyIds[it.edge.entitySetId]!!.add(it.edge.entityKeyId)
+        while (edgeKeysIterator.hasNext()) {
+            while (edgeKeysIterator.hasNext()) {
+                val batch = getBatch(edgeKeysIterator)
+                batch.forEach {
+                    val writeEvent = deleteEntityDataAnVertices(
+                            it.key, it.value, authorizedPropertyTypes.getValue(it.key))
+                    writeEvents.add(writeEvent)
+                    associationDeleteCount += writeEvent.numUpdates
+                }
             }
         }
 
-        return associationsEntityKeyIds
+        logger.info("Deleted {} associations when deleting entities from entity set {}", associationDeleteCount,
+                entitySetId)
+
+        return writeEvents
+    }
+
+    private fun getBatch(edgeKeysIterator: Iterator<EdgeKey>): Map<UUID, Set<UUID>> {
+        val edges = ArrayList<EntityDataKey>(ASSOCIATION_SIZE)
+
+        var i = 0
+        while (edgeKeysIterator.hasNext() && i < ASSOCIATION_SIZE) {
+            edges.add(edgeKeysIterator.next().edge)
+            ++i
+        }
+
+        return edges.groupBy { it.entitySetId }.mapValues { it.value.map { it.entityKeyId }.toSet() }
     }
 
 
-    private fun getAuthorizedPropertyTypesForDelete(
-            entitySetId: UUID,
-            properties: Optional<Set<UUID>>): Map<UUID, PropertyType> {
-        if (!authorizationManager.checkIfHasPermissions(
-                        AclKey(entitySetId),
-                        Principals.getCurrentPrincipals(),
-                        EnumSet.of(Permission.READ))) {
-            throw ForbiddenException("You cannot delete entities from entity set $entitySetId, because you don't " +
-                    "have owner access")
-        }
-
-        val entitySet = edm.getEntitySet(entitySetId)
-        if (entitySet.isLinking) {
-            throw IllegalArgumentException("You cannot delete entities from a linking entity set.")
-        }
-
-        val entityType = edm.getEntityType(entitySet.entityTypeId)
-        val requiredProperties = properties.orElse(entityType.properties)
-        val authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes(
-                ImmutableSet.of(entitySetId),
-                requiredProperties,
-                EnumSet.of(Permission.OWNER))[entitySetId]!!
-        if (!authorizedPropertyTypes.keys.containsAll(requiredProperties)) {
-            throw ForbiddenException("You must be an owner of all required entity set $entitySetId properties to " +
-                    "delete entities from it.")
-        }
-
-        return authorizedPropertyTypes
-    }
 
     override fun deleteEntityProperties(
             entitySetId: UUID,

@@ -134,9 +134,6 @@ public class SearchService {
     private EntityDatastore dataManager;
 
     @Inject
-    private EdmAuthorizationHelper authzHelper;
-
-    @Inject
     private EntityKeyIdService entityKeyService;
 
     @Inject
@@ -646,21 +643,6 @@ public class SearchService {
 
         logger.info( "Finished entity neighbor search in {} ms", sw2.elapsed( TimeUnit.MILLISECONDS ) );
         return entityNeighbors;
-    }
-
-    private boolean getAuthorization( UUID entitySetId, Set<Principal> principals ) {
-        return authorizations.accessChecksForPrincipals( ImmutableSet
-                .of( new AccessCheck( new AclKey( entitySetId ), EnumSet.of( Permission.READ ) ) ), principals )
-                .findFirst().get().getPermissions().get( Permission.READ );
-    }
-
-    private Map<UUID, PropertyType> getAuthorizedProperties( UUID entitySetId ) {
-        return authzHelper
-                .getAuthorizedPropertiesOnEntitySet( entitySetId,
-                        EnumSet.of( Permission.READ ) )
-                .stream()
-                .collect( Collectors.toMap( ptId -> ptId,
-                        ptId -> dataModelService.getPropertyType( ptId ) ) );
     }
 
     private NeighborEntityDetails getNeighborEntityDetails(
