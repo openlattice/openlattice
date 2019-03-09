@@ -403,12 +403,12 @@ class PostgresEntityDataQueryService(
             awsPassthrough: Boolean
     ): WriteEvent {
         val version = System.currentTimeMillis()
+        val idsClause = buildEntityKeyIdsClause(entities.keys) // we assume, that entities is not empty
 
         //Update the versions of all entities.
         val updatedEntityCount = hds.connection.use { connection ->
             connection.autoCommit = false
             return@use connection.createStatement().use { updateEntities ->
-                val idsClause = buildEntityKeyIdsClause(entities.keys) // we assume, that entities is not empty
                 updateEntities.execute(lockEntities(entitySetId, idsClause, version))
                 val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
                 connection.commit()
@@ -421,97 +421,88 @@ class PostgresEntityDataQueryService(
          * server. We also need to use parameterized statements to avoid the risk of SQL inject, while also explicitly
          * locking to avoid deadlocks.
          *
-         * Our approach is separate the version updates which can cause deadlocks by using an on conflict do nothing.
+         * Option 1
+         * Since we cannot lock properties before they exist, we need to ensure that all data is inserted with an
+         * on conflict do nothing statement. This is fairly safe as entries are immutable and tied to the hash of the
+         * value via the primary key. After that we can lock all the properties for the entities that need to be updated
+         * and since we know all the rows exists we can use the default read-committed serialization level since
+         * any inserts the committed after the initial cannot affect inserted rows.
          *
-         * The first transaction
+         * We are not able to do more fine-grained locking due to https://github.com/pgjdbc/pgjdbc/issues/936
+         *
+         * Option 2
+         * Rather than batching inserts, we're going to put each insert into it's own transaction. As the statements are
+         * all in their own transaction the code will execute correctly and not be able to deadlock.
+         *
+         * We are going with Option 2, due to simplicity and not having to deal
          */
-        //Now upsert all the properties
+
+
+
         hds.connection.use { connection ->
             connection.autoCommit = false
             val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
                 propertyType.datatype
             }
 
-            //First we prepare the statements to lock rows for update
-            val preparedLocks = authorizedPropertyTypes
-                    .mapValues { connection.prepareStatement(buildLockPropertiesStatement(entitySetId, it.key)) }
+            val updatedPropertyCounts = entities.entries.parallelStream().mapToInt { (entityKeyId, rawValue) ->
+                hds.connection.use { connection ->
+                    val entityData = asMap(JsonDeserializer
+                                                   .validateFormatAndNormalize(rawValue, dataTypes)
+                                                   { "Entity set $entitySetId with entity key id $entityKeyId" })
 
-            //Next we prepare the inserts
-            val preparedInserts = authorizedPropertyTypes
-                    .mapValues {
+                    entityData.map { (propertyTypeId, values) ->
+                        val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
                         connection.prepareStatement(
                                 upsertPropertyValues(
                                         entitySetId,
-                                        it.key,
-                                        it.value.type.fullQualifiedNameAsString,
+                                        propertyTypeId,
+                                        pt.type.fullQualifiedNameAsString,
                                         version
                                 )
-                        )
-                    }
+                        ).use { upsert ->
+                            //TODO: Keep track of collisions here. We can detect when hashes collide for an entity
+                            //and read the existing value to determine which colliding values need to be assigned new
+                            // hashes. This is fine because hashes are immutable and the front-end always requests them
+                            // from the backend before performing operations.
+                            
+                            values.map { value ->
+                                //Binary data types get stored in S3 bucket
+                                val (propertyHash, insertValue) =
+                                        if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
+                                            if (awsPassthrough) {
+                                                //Data is being stored in AWS directly the value will be the url fragment
+                                                //of where the data will be stored in AWS.
+                                                PostgresDataHasher.hashObject(
+                                                        value, EdmPrimitiveTypeKind.String
+                                                ) to value
+                                            } else {
+                                                //Data is expected to be of a specific type so that it can be stored in
+                                                //s3 bucket
 
+                                                val binaryData = value as BinaryDataWithContentType
 
-            val insertions: Map<UUID, List<PropertyInsertion>> = entities.flatMap { entity ->
-                val entityKeyId = entity.key
-                val entityData = asMap(JsonDeserializer
-                                               .validateFormatAndNormalize(entity.value, dataTypes)
-                                               { "Entity set $entitySetId with entity key id $entityKeyId" })
-
-                return@flatMap entityData.flatMap { (propertyTypeId, values) ->
-
-                    val dbLock = preparedLocks[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
-                    val arr = PostgresArrays.create
-                    dbLock.setObject(1, entityKeyId )
-                    dbLock.setArray()
-
-                    return@flatMap values.parallelStream().map { value ->
-                        //Binary data types get stored in S3 bucket
-                        val (propertyHash, insertValue) =
-                                if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
-                                    if (awsPassthrough) {
-                                        //Data is being stored in AWS directly the value will be the url fragment
-                                        //of where the data will be stored in AWS.
-                                        PostgresDataHasher.hashObject(value, EdmPrimitiveTypeKind.String) to value
-                                    } else {
-                                        //Data is expected to be of a specific type so that it can be stored in
-                                        //s3 bucket
-
-                                        val binaryData = value as BinaryDataWithContentType
-
-                                        val digest = PostgresDataHasher
-                                                .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
-                                        //store entity set id/entity key id/property type id/property hash as key in S3
-                                        val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
-                                        byteBlobDataManager
-                                                .putObject(s3Key, binaryData.data, binaryData.contentType)
-                                        PostgresDataHasher
-                                                .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
-                                    }
-                                } else {
-                                    PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
-                                }
-                        return@map PropertyInsertion(propertyTypeId, entityKeyId, propertyHash, insertValue)
-                    }.toList()
+                                                val digest = PostgresDataHasher
+                                                        .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
+                                                //store entity set id/entity key id/property type id/property hash as key in S3
+                                                val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
+                                                byteBlobDataManager
+                                                        .putObject(s3Key, binaryData.data, binaryData.contentType)
+                                                PostgresDataHasher
+                                                        .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
+                                            }
+                                        } else {
+                                            PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
+                                        }
+                                upsert.setObject(1, entityKeyId)
+                                upsert.setBytes(2, propertyHash)
+                                upsert.setObject(3, insertValue)
+                                upsert.executeUpdate()
+                            }.sum()
+                        }
+                    }.sum()
                 }
-            }.groupBy { it.propertyTypeId }
-
-
-//            buildLockPropertiesStatement(entitySetId, insertions )
-//
-            insertions.values.forEach {
-                val upserts = preparedInserts[propertyTypeId] ?: abortInsert()
-                it.foreach { insertion ->
-                    upserts.setObject(1, insertion.entityKeyId)
-                    upserts.setBytes(2, insertion.propertyHash)
-                    upserts.setObject(3, insertion.insertValue)
-
-                    upserts.addBatch()
-                }
-            }
-
-            //In case we want to do validation
-            val updatedPropertyCounts = preparedInserts.values.map { it.executeBatch() }.sumBy { it.sum() }
-
-            preparedInserts.values.forEach { it.close() }
+            }.sum()
 
             checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
 
@@ -903,6 +894,13 @@ internal fun buildLockPropertiesStatement(entitySetId: UUID, propertyTypeId: UUI
     val propertyTable = quote(propertyTableName(propertyTypeId))
     return "SELECT 1 FROM $propertyTable " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} = ? AND ${HASH.name} IN ? " +
+            "FOR UPDATE"
+}
+
+internal fun buildLockPropertiesStatement(entitySetId: UUID, propertyTypeId: UUID, idsClause: String): String {
+    val propertyTable = quote(propertyTableName(propertyTypeId))
+    return "SELECT 1 FROM $propertyTable " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause) " +
             "FOR UPDATE"
 }
 
