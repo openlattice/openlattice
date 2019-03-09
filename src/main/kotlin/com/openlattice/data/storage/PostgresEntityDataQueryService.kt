@@ -45,7 +45,6 @@ import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
-import kotlin.streams.toList
 
 /**
  *
@@ -253,6 +252,7 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false,
             omitEntitySetId: Boolean = false
     ): PostgresIterable<T> {
+
         return PostgresIterable(
                 Supplier<StatementHolder> {
                     val connection = hds.connection
@@ -301,6 +301,23 @@ class PostgresEntityDataQueryService(
                 },
                 adapter
         )
+    }
+
+    fun getEntitySetSize(entitySetId: UUID): Long {
+        val connection = hds.connection
+
+        return connection.use {
+            val statement = connection.createStatement()
+            val rs = statement.executeQuery(buildGetEntitySetSizeQuery(entitySetId))
+            val count: Long
+            if (rs.next()) {
+                count = rs.getLong(1)
+            } else {
+                count = 0
+            }
+            statement.close()
+            count
+        }
     }
 
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
@@ -403,7 +420,7 @@ class PostgresEntityDataQueryService(
             awsPassthrough: Boolean
     ): WriteEvent {
         val version = System.currentTimeMillis()
-        val idsClause = buildEntityKeyIdsClause(entities.keys) // we assume, that entities is not empty
+        val idsClause = buildEntityKeyIdsClause(entities.keys) // we assume that entities is not empty
 
         //Update the versions of all entities.
         val updatedEntityCount = hds.connection.use { connection ->
@@ -431,7 +448,7 @@ class PostgresEntityDataQueryService(
          * We are not able to do more fine-grained locking due to https://github.com/pgjdbc/pgjdbc/issues/936
          *
          * Option 2
-         * Rather than batching inserts, we're going to put each insert into it's own transaction. As the statements are
+         * Rather than batching inserts, we're going to put each insert into its own transaction. As the statements are
          * all in their own transaction the code will execute correctly and not be able to deadlock.
          *
          * We are going with Option 2, due to simplicity and not having to deal
