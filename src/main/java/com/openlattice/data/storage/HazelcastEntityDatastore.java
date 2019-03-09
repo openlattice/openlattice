@@ -103,6 +103,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return dataQueryService.getEntityKeyIdsInEntitySet( entitySetId );
     }
 
+    @Override
+    @Timed
+    public long getEntitySetSize( UUID entitySetId ) {
+        return dataQueryService.getEntitySetSize( entitySetId );
+    }
+
     @Timed
     @Override
     public WriteEvent createOrUpdateEntities(
@@ -314,7 +320,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     @Override public WriteEvent clearEntitySet(
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var writeEvent = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
-        signalEntitySetDataDeleted(entitySetId);
+        signalEntitySetDataDeleted( entitySetId );
         return writeEvent;
     }
 

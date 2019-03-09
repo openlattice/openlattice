@@ -133,7 +133,7 @@ open class DataGraphService(
     }
 
     override fun getEntitySetSize(entitySetId: UUID): Long {
-        return eds.getEntities(entitySetId, setOf(), mapOf()).count()
+        return eds.getEntitySetSize(entitySetId)
     }
 
     override fun getEntity(

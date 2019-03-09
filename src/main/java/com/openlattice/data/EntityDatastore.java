@@ -41,9 +41,11 @@ public interface EntityDatastore {
 
     Map<UUID, Map<UUID, Set<Object>>> getEntitySetData(
             UUID entitySetId,
-            Map<UUID, PropertyType> authorizedPropertyTypes);
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     PostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId );
+
+    long getEntitySetSize( UUID entitySetId );
 
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
@@ -66,7 +68,7 @@ public interface EntityDatastore {
 
     Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityDataByLinkingId(
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId);
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId );
 
     EntitySetData<FullQualifiedName> getEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
@@ -134,22 +136,28 @@ public interface EntityDatastore {
     /**
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
      *
-     * @param entitySetId The id of the entity set to clear.
-     * @param entityKeyIds The entity key ids for the entity set to clear.
+     * @param entitySetId             The id of the entity set to clear.
+     * @param entityKeyIds            The entity key ids for the entity set to clear.
      * @param authorizedPropertyTypes The property types the user is allowed to clear.
      * @return The number of entities cleared.
      */
-    WriteEvent clearEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+    WriteEvent clearEntities(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Clears (soft-deletes) the contents of an entity by setting versions of all properties to {@code -now()}
      *
-     * @param entitySetId The id of the entity set to clear.
-     * @param entityKeyIds The entity key ids for the entity set to clear.
+     * @param entitySetId             The id of the entity set to clear.
+     * @param entityKeyIds            The entity key ids for the entity set to clear.
      * @param authorizedPropertyTypes The property types the user is requested and is allowed to clear.
      * @return The number of properties cleared.
      */
-    WriteEvent clearEntityData( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+    WriteEvent clearEntityData(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Hard deletes an entity set and removes the historical contents. This causes loss of historical data
@@ -170,7 +178,10 @@ public interface EntityDatastore {
      *                                types for its entity type
      * @return count of deletes
      */
-    WriteEvent deleteEntities( UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes );
+    WriteEvent deleteEntities(
+            UUID entitySetId,
+            Set<UUID> entityKeyIds,
+            Map<UUID, PropertyType> authorizedPropertyTypes );
 
     /**
      * Hard deletes properties of entity and removes the historical contents.
