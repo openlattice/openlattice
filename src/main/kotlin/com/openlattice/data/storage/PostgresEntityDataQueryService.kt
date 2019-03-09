@@ -438,78 +438,76 @@ class PostgresEntityDataQueryService(
          */
 
 
-
-        hds.connection.use { connection ->
-            connection.autoCommit = false
-            val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
-                propertyType.datatype
-            }
-
-            val updatedPropertyCounts = entities.entries.parallelStream().mapToInt { (entityKeyId, rawValue) ->
-                hds.connection.use { connection ->
-                    val entityData = asMap(JsonDeserializer
-                                                   .validateFormatAndNormalize(rawValue, dataTypes)
-                                                   { "Entity set $entitySetId with entity key id $entityKeyId" })
-
-                    entityData.map { (propertyTypeId, values) ->
-                        val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
-                        connection.prepareStatement(
-                                upsertPropertyValues(
-                                        entitySetId,
-                                        propertyTypeId,
-                                        pt.type.fullQualifiedNameAsString,
-                                        version
-                                )
-                        ).use { upsert ->
-                            //TODO: Keep track of collisions here. We can detect when hashes collide for an entity
-                            //and read the existing value to determine which colliding values need to be assigned new
-                            // hashes. This is fine because hashes are immutable and the front-end always requests them
-                            // from the backend before performing operations.
-                            
-                            values.map { value ->
-                                //Binary data types get stored in S3 bucket
-                                val (propertyHash, insertValue) =
-                                        if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
-                                            if (awsPassthrough) {
-                                                //Data is being stored in AWS directly the value will be the url fragment
-                                                //of where the data will be stored in AWS.
-                                                PostgresDataHasher.hashObject(
-                                                        value, EdmPrimitiveTypeKind.String
-                                                ) to value
-                                            } else {
-                                                //Data is expected to be of a specific type so that it can be stored in
-                                                //s3 bucket
-
-                                                val binaryData = value as BinaryDataWithContentType
-
-                                                val digest = PostgresDataHasher
-                                                        .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
-                                                //store entity set id/entity key id/property type id/property hash as key in S3
-                                                val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
-                                                byteBlobDataManager
-                                                        .putObject(s3Key, binaryData.data, binaryData.contentType)
-                                                PostgresDataHasher
-                                                        .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
-                                            }
-                                        } else {
-                                            PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
-                                        }
-                                upsert.setObject(1, entityKeyId)
-                                upsert.setBytes(2, propertyHash)
-                                upsert.setObject(3, insertValue)
-                                upsert.executeUpdate()
-                            }.sum()
-                        }
-                    }.sum()
-                }
-            }.sum()
-
-            checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
-
-            logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
-
-            return WriteEvent(version, updatedEntityCount)
+        val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
+            propertyType.datatype
         }
+
+        val updatedPropertyCounts = entities.entries.parallelStream().mapToInt { (entityKeyId, rawValue) ->
+            hds.connection.use { connection ->
+                val entityData = asMap(JsonDeserializer
+                                               .validateFormatAndNormalize(rawValue, dataTypes)
+                                               { "Entity set $entitySetId with entity key id $entityKeyId" })
+
+                entityData.map { (propertyTypeId, values) ->
+                    val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)
+                    connection.prepareStatement(
+                            upsertPropertyValues(
+                                    entitySetId,
+                                    propertyTypeId,
+                                    pt.type.fullQualifiedNameAsString,
+                                    version
+                            )
+                    ).use { upsert ->
+                        //TODO: Keep track of collisions here. We can detect when hashes collide for an entity
+                        //and read the existing value to determine which colliding values need to be assigned new
+                        // hashes. This is fine because hashes are immutable and the front-end always requests them
+                        // from the backend before performing operations.
+
+                        values.map { value ->
+                            //Binary data types get stored in S3 bucket
+                            val (propertyHash, insertValue) =
+                                    if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
+                                        if (awsPassthrough) {
+                                            //Data is being stored in AWS directly the value will be the url fragment
+                                            //of where the data will be stored in AWS.
+                                            PostgresDataHasher.hashObject(
+                                                    value,
+                                                    EdmPrimitiveTypeKind.String
+                                            ) to value
+                                        } else {
+                                            //Data is expected to be of a specific type so that it can be stored in
+                                            //s3 bucket
+
+                                            val binaryData = value as BinaryDataWithContentType
+
+                                            val digest = PostgresDataHasher
+                                                    .hashObjectToHex(binaryData.data, EdmPrimitiveTypeKind.Binary)
+                                            //store entity set id/entity key id/property type id/property hash as key in S3
+                                            val s3Key = "$entitySetId/$entityKeyId/$propertyTypeId/$digest"
+                                            byteBlobDataManager
+                                                    .putObject(s3Key, binaryData.data, binaryData.contentType)
+                                            PostgresDataHasher
+                                                    .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
+                                        }
+                                    } else {
+                                        PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
+                                    }
+                            upsert.setObject(1, entityKeyId)
+                            upsert.setBytes(2, propertyHash)
+                            upsert.setObject(3, insertValue)
+                            upsert.executeUpdate()
+                        }.sum()
+                    }
+                }.sum()
+            }
+        }.sum()
+
+        checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
+
+        logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
+
+        return WriteEvent(version, updatedEntityCount)
+
     }
 
     private fun abortInsert(entitySetId: UUID, entityKeyId: UUID): Nothing {
