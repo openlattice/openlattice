@@ -47,6 +47,10 @@ class AuditInitializationTask(
         )
     }
 
+    override fun isRunOnceAcrossCluster(): Boolean {
+        return false
+    }
+
     override fun getName(): String {
         return Task.AUDIT_INITIALIZATION.name
     }
