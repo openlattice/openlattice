@@ -65,7 +65,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
     }
 
     override fun getInitialDelay(): Long {
-        return 0
+        return REFRESH_INTERVAL_MILLIS
     }
 
     override fun getPeriod(): Long {
