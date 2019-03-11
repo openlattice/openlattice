@@ -24,6 +24,7 @@ class AuditInitializationTask(
         val hazelcastInstance: HazelcastInstance
 ) : HazelcastInitializationTask<AuditTaskDependencies> {
 
+    private val entityTypes = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_TYPES.name)
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val organizations = hazelcastInstance.getMap<UUID, String>(HazelcastMap.ORGANIZATIONS_TITLES.name)
     private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<AclKey, AuditRecordEntitySetConfiguration>(
@@ -35,6 +36,10 @@ class AuditInitializationTask(
     }
 
     override fun initialize(dependencies: AuditTaskDependencies) {
+        if (entityTypes.isEmpty) {
+            logger.info("EDM not yet initialized -- skipping audit initialization.")
+            return
+        }
         logger.info("Creating any missing audit entity sets")
         ensureEdmEntitySetExists(dependencies)
         ensureAllEntitySetsHaveAuditEntitySets(dependencies)
