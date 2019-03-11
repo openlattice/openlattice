@@ -37,6 +37,7 @@ import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_P
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
 import com.openlattice.retrofit.RhizomeRetrofitCallException
 import com.openlattice.tasks.HazelcastFixedRateTask
+import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.Task
 import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
@@ -55,7 +56,7 @@ private val logger = LoggerFactory.getLogger(Auth0SyncTask::class.java)
  * syncDependencies be initialized within the same JVM in order to function properly.
  *
  */
-class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
+class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, HazelcastTaskDependencies {
     override fun getDependenciesClass(): Class<Auth0SyncTaskDependencies> {
         return Auth0SyncTaskDependencies::class.java
     }
