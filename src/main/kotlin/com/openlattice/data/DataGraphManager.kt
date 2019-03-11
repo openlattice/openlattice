@@ -90,7 +90,7 @@ interface DataGraphManager {
             entitySetId: UUID,
             associationsEdgeKeys: PostgresIterable<EdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Set<WriteEvent>
+    ): List<WriteEvent>
 
     fun clearEntityProperties(
             entitySetId: UUID, entityKeyIds: Set<UUID>, authorizedPropertyTypes: Map<UUID, PropertyType>
@@ -116,7 +116,7 @@ interface DataGraphManager {
             entitySetId: UUID,
             associationsEdgeKeys: PostgresIterable<EdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Set<WriteEvent>
+    ): List<WriteEvent>
 
 
     fun deleteEntityProperties(
