@@ -31,11 +31,8 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
-import com.openlattice.authorization.*
-import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
@@ -207,10 +204,10 @@ open class DataGraphService(
             entitySetId: UUID,
             associationsEdgeKeys: PostgresIterable<EdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Set<WriteEvent> {
+    ): List<WriteEvent> {
         var associationDeleteCount = 0
         val edgeKeysIterator = associationsEdgeKeys.iterator()
-        val writeEvents = HashSet<WriteEvent>()
+        val writeEvents = ArrayList<WriteEvent>()
 
         while (edgeKeysIterator.hasNext()) {
             while (edgeKeysIterator.hasNext()) {
@@ -286,10 +283,10 @@ open class DataGraphService(
     override fun deleteAssociationsBatch(
             entitySetId: UUID,
             associationsEdgeKeys: PostgresIterable<EdgeKey>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<WriteEvent> {
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): List<WriteEvent> {
         var associationDeleteCount = 0
         val edgeKeysIterator = associationsEdgeKeys.iterator()
-        val writeEvents = HashSet<WriteEvent>()
+        val writeEvents = ArrayList<WriteEvent>()
 
         while (edgeKeysIterator.hasNext()) {
             while (edgeKeysIterator.hasNext()) {
