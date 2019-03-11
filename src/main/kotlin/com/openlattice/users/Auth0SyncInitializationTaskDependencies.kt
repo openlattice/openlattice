@@ -19,25 +19,8 @@
  *
  */
 
-package com.openlattice.tasks
+package com.openlattice.users
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-enum class Task {
-    AUDIT_INITIALIZATION,
-    AUTH0_SYNC_INITIALIZATION_TASK,
-    AUTH0_SYNC_TASK,
-    AUTHORIZATION_BOOTSTRAP,
-    CLEAN_OUT_OLDER_USERS_INITIALIZATON,
-    ENTITY_VIEWS_INITIALIZER,
-    ORGANIZATION_ASSEMBLIES_INITIALIZER,
-    ORGANIZATION_BOOTSTRAP,
-    ORGANIZATION_MEMBERS_CLEANUP,
-    PRODUCTION_VIEW_INITIALIZATON,
-    POST_INITIALIZER,
-    USERS_AND_ROLES_INITIALIZATON,
-    USER_CREDENTIAL_SYNC_TASK
+import com.openlattice.tasks.HazelcastTaskDependencies
 
-}
+data class Auth0SyncInitializationTaskDependencies(val auth0Task: Auth0SyncTask) : HazelcastTaskDependencies

@@ -86,7 +86,7 @@ public class JsonDeserializer {
                     return value;
                 }
                 checkState( value instanceof String,
-                        "Expected string for property type %s with data %s, received %s",
+                        "Expected string for property type %s with property type %s, received %s",
                         dataType,
                         propertyTypeId,
                         value.getClass() );
@@ -96,7 +96,7 @@ public class JsonDeserializer {
              */
             case Binary:
                 checkState( value instanceof Map,
-                        "Expected map for property type %s with data %s, received %s",
+                        "Expected map for property type %s with property type %s, received %s",
                         dataType,
                         propertyTypeId,
                         value.getClass() );
