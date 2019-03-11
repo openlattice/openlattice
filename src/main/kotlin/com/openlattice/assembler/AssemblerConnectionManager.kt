@@ -140,23 +140,26 @@ class AssemblerConnectionManager(
                 }
             }
 
-            organization.members
-                    .filter { it.id != "openlatticeRole" && it.id != "admin" }
-                    .filter {
-                        securePrincipalsManager.principalExists(it)
-                    } //There are some bad principals in the member list some how-- probably from testing.
-                    .forEach { principal ->
-                        configureUserInDatabase(
-                                datasource,
-                                buildOrganizationDatabaseName(organizationId),
-                                buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
-                        )
-                    }
+            addMembersToOrganization(dbname, datasource, organization.members)
 
             createForeignServer(datasource)
 //                materializePropertyTypes(datasource)
 //                materialzieEntityTypes(datasource)
         }
+    }
+
+    fun addMembersToOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
+        members.filter { it.id != "openlatticeRole" && it.id != "admin" }
+                .filter {
+                    securePrincipalsManager.principalExists(it)
+                } //There are some bad principals in the member list some how-- probably from testing.
+                .forEach { principal ->
+                    configureUserInDatabase(
+                            dataSource,
+                            dbName,
+                            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
+                    )
+                }
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbname: String) {

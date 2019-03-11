@@ -291,6 +291,7 @@ public class HazelcastOrganizationService {
 
     public void addMembers( UUID organizationId, Set<Principal> members ) {
         addMembers( new AclKey( organizationId ), members );
+        assembler.addMembersToOrganization( organizationId, members );
     }
 
     public void addMembers( AclKey orgAclKey, Set<Principal> members ) {
@@ -445,7 +446,7 @@ public class HazelcastOrganizationService {
             PrincipalSet principals = PrincipalSet.wrap( new HashSet<>( securePrincipalsManager
                     .getAllUsersWithPrincipal( organization.getAclKey() ) ) );
             //Add all users who have the organization role to the organizaton.
-            addMembers( organization.getAclKey(), principals );
+            addMembers( organization.getId(), principals );
 
             /*
              * This is a one time thing so that admins at this point in time have access to and can fix organizations.
@@ -460,7 +461,7 @@ public class HazelcastOrganizationService {
                     .stream()
                     .collect( Collectors.toSet() ) );
 
-            addMembers( organization.getAclKey(), adminPrincipals );
+            addMembers( organization.getId(), adminPrincipals );
             adminPrincipals.forEach( admin -> authorizations
                     .addPermission( organization.getAclKey(), admin, EnumSet.allOf( Permission.class ) ) );
 

@@ -173,13 +173,13 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies> {
         )
 
         if (user.roles.contains(SystemRole.AUTHENTICATED_USER.getName())) {
-            syncDependencies.organizationService.addMembers(globalOrganizationAclKey, ImmutableSet.of(principal))
+            syncDependencies.organizationService.addMembers(globalOrganizationAclKey[0], ImmutableSet.of(principal))
             syncDependencies.organizationService
                     .addRoleToPrincipalInOrganization(userRoleAclKey[0], userRoleAclKey[1], principal)
         }
 
         if (user.roles.contains(SystemRole.ADMIN.getName())) {
-            syncDependencies.organizationService.addMembers(openlatticeOrganizationAclKey, ImmutableSet.of(principal))
+            syncDependencies.organizationService.addMembers(openlatticeOrganizationAclKey[0], ImmutableSet.of(principal))
             syncDependencies.organizationService
                     .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal)
         }
