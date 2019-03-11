@@ -128,8 +128,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
-    private int ASSOCIATION_SIZE = 30000;
-
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
             method = RequestMethod.GET,
@@ -746,7 +744,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return writeEvent.getNumUpdates();
     }
 
-    private Set<WriteEvent> clearAssociations(UUID entitySetId , Optional<Set<UUID>> entityKeyIds) {
+    private List<WriteEvent> clearAssociations(UUID entitySetId , Optional<Set<UUID>> entityKeyIds) {
         // collect association entity key ids
         final PostgresIterable<EdgeKey> associationsEdgeKeys = collectAssociations(entitySetId, entityKeyIds);
 
@@ -767,7 +765,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return dgm.clearAssociationsBatch( entitySetId, associationsEdgeKeys, authorizedPropertyTypes );
     }
 
-    private Set<WriteEvent> deleteAssociations(UUID entitySetId, Optional<Set<UUID>> entityKeyIds) {
+    private List<WriteEvent> deleteAssociations(UUID entitySetId, Optional<Set<UUID>> entityKeyIds) {
         // collect association entity key ids
         final PostgresIterable<EdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds );
 

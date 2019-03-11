@@ -487,7 +487,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
-    private Set<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId) {
+    private List<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId) {
         // collect association entity key ids
         final PostgresIterable<EdgeKey> associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet( entitySetId );
 
