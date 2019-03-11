@@ -307,16 +307,14 @@ class PostgresEntityDataQueryService(
         val connection = hds.connection
 
         return connection.use {
-            val statement = connection.createStatement()
-            val rs = statement.executeQuery(buildGetEntitySetSizeQuery(entitySetId))
-            val count: Long
-            if (rs.next()) {
-                count = rs.getLong(1)
-            } else {
-                count = 0
+            return@use connection.createStatement().use { statement ->
+                val rs = statement.executeQuery(buildGetEntitySetSizeQuery(entitySetId))
+                return@use if (rs.next()) {
+                    rs.getLong(1)
+                } else {
+                    0
+                }
             }
-            statement.close()
-            count
         }
     }
 
@@ -461,9 +459,13 @@ class PostgresEntityDataQueryService(
 
         val updatedPropertyCounts = entities.entries.parallelStream().mapToInt { (entityKeyId, rawValue) ->
             hds.connection.use { connection ->
-                val entityData = asMap(JsonDeserializer
-                                               .validateFormatAndNormalize(rawValue, dataTypes)
-                                               { "Entity set $entitySetId with entity key id $entityKeyId" })
+                val entityData = if (awsPassthrough) {
+                    rawValue
+                } else {
+                    asMap(JsonDeserializer
+                                  .validateFormatAndNormalize(rawValue, dataTypes)
+                                  { "Entity set $entitySetId with entity key id $entityKeyId" })
+                }
 
                 entityData.map { (propertyTypeId, values) ->
                     val pt = authorizedPropertyTypes[propertyTypeId] ?: abortInsert(entitySetId, entityKeyId)

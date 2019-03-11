@@ -31,11 +31,8 @@ import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
-import com.openlattice.authorization.*
-import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
-import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
@@ -184,12 +181,16 @@ open class DataGraphService(
 
     /* Delete */
 
+    private val groupEdges: (List<EdgeKey>) -> Map<UUID, Set<UUID>> = { edges ->
+        edges.map { it.edge }.groupBy { it.entitySetId }.mapValues { it.value.map { it.entityKeyId }.toSet() }
+    }
+
     override fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // clear edges
         val verticesCount = graphService.clearVerticesInEntitySet(entitySetId)
 
         //clear entities
-        val entityWriteEvent =  eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
+        val entityWriteEvent = eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
 
         logger.info("Cleared {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
         return entityWriteEvent
@@ -207,22 +208,20 @@ open class DataGraphService(
             entitySetId: UUID,
             associationsEdgeKeys: PostgresIterable<EdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): Set<WriteEvent> {
+    ): List<WriteEvent> {
         var associationDeleteCount = 0
-        val edgeKeysIterator = associationsEdgeKeys.iterator()
-        val writeEvents = HashSet<WriteEvent>()
+        val writeEvents = ArrayList<WriteEvent>()
 
-        while (edgeKeysIterator.hasNext()) {
-            while (edgeKeysIterator.hasNext()) {
-                val batch = getBatch(edgeKeysIterator);
-                batch.forEach {
-                    val writeEvent = clearEntities(it.key, it.value,
-                            authorizedPropertyTypes.getValue(it.key))
-                    writeEvents.add(writeEvent)
-                    associationDeleteCount += writeEvent.numUpdates
-                }
+        associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE, groupEdges).forEach { entityKeyIds ->
+            entityKeyIds.entries.forEach {
+                val writeEvent = clearEntityDataAndVertices(it.key, it.value, authorizedPropertyTypes.getValue(it.key))
+                writeEvents.add(writeEvent)
+                associationDeleteCount += writeEvent.numUpdates
             }
         }
+
+        logger.info("Cleared {} associations when deleting entities from entity set {}", associationDeleteCount,
+                entitySetId)
 
         return writeEvents
     }
@@ -286,20 +285,15 @@ open class DataGraphService(
     override fun deleteAssociationsBatch(
             entitySetId: UUID,
             associationsEdgeKeys: PostgresIterable<EdgeKey>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): Set<WriteEvent> {
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): List<WriteEvent> {
         var associationDeleteCount = 0
-        val edgeKeysIterator = associationsEdgeKeys.iterator()
-        val writeEvents = HashSet<WriteEvent>()
+        val writeEvents = ArrayList<WriteEvent>()
 
-        while (edgeKeysIterator.hasNext()) {
-            while (edgeKeysIterator.hasNext()) {
-                val batch = getBatch(edgeKeysIterator)
-                batch.forEach {
-                    val writeEvent = deleteEntityDataAnVertices(
-                            it.key, it.value, authorizedPropertyTypes.getValue(it.key))
-                    writeEvents.add(writeEvent)
-                    associationDeleteCount += writeEvent.numUpdates
-                }
+        associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE, groupEdges).forEach { entityKeyIds ->
+            entityKeyIds.entries.forEach {
+                val writeEvent = deleteEntityDataAnVertices(it.key, it.value, authorizedPropertyTypes.getValue(it.key))
+                writeEvents.add(writeEvent)
+                associationDeleteCount += writeEvent.numUpdates
             }
         }
 
@@ -308,20 +302,6 @@ open class DataGraphService(
 
         return writeEvents
     }
-
-    private fun getBatch(edgeKeysIterator: Iterator<EdgeKey>): Map<UUID, Set<UUID>> {
-        val edges = ArrayList<EntityDataKey>(ASSOCIATION_SIZE)
-
-        var i = 0
-        while (edgeKeysIterator.hasNext() && i < ASSOCIATION_SIZE) {
-            edges.add(edgeKeysIterator.next().edge)
-            ++i
-        }
-
-        return edges.groupBy { it.entitySetId }.mapValues { it.value.map { it.entityKeyId }.toSet() }
-    }
-
-
 
     override fun deleteEntityProperties(
             entitySetId: UUID,

@@ -395,13 +395,9 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
     val filterLinkingIds = if (linking) " AND ${LINKING_ID.name} IS NOT NULL " else ""
 
     val idsColumn = if (linking) LINKING_ID.name else ID_VALUE.name
-    return filterLinkingIds + " AND (" + entityKeyIds.entries.joinToString(" OR ") {
-        val idsClause = it.value.map { ids ->
-            if (ids.isNotEmpty()) {
-                " AND $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")"
-            } else {
-                " AND false"
-            }
+    return "$filterLinkingIds AND (" + entityKeyIds.entries.joinToString(" OR ") {
+        val idsClause = it.value.filter { ids -> ids.isNotEmpty() }.map { ids ->
+            " AND $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")"
         }.orElse("")
         " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
     } + ")"
