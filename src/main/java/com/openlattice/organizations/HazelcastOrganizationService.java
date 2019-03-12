@@ -41,7 +41,6 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.initializers.AuthorizationInitializationTask;
 import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.directory.UserDirectoryService;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -294,7 +293,7 @@ public class HazelcastOrganizationService {
         assembler.addMembersToOrganization( organizationId, members );
     }
 
-    public void addMembers( AclKey orgAclKey, Set<Principal> members ) {
+    private void addMembers( AclKey orgAclKey, Set<Principal> members ) {
         checkState( orgAclKey.size() == 1, "Organization acl key should only be of length 1" );
         checkState( members
                 .stream()
