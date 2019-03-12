@@ -156,6 +156,11 @@ class Assembler(
                 .init(acm))
     }
 
+    fun removeMembersFromOrganization(organizationId: UUID, newMembers: Set<Principal> ) {
+        assemblies.executeOnKey(organizationId, RemoveMembersFromOrganizationAssemblyProcessor(PrincipalSet(newMembers))
+                .init(acm))
+    }
+
     fun materializeEntitySets(
             organizationId: UUID,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>

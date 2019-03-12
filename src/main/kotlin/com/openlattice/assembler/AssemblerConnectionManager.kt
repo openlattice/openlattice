@@ -162,6 +162,20 @@ class AssemblerConnectionManager(
                 }
     }
 
+    fun removeMembersFromOrganization(dbName: String, dataSource: HikariDataSource, members: Set<Principal>) {
+        members.filter { it.id != "openlatticeRole" && it.id != "admin" }
+                .filter {
+                    securePrincipalsManager.principalExists(it)
+                } //There are some bad principals in the member list some how-- probably from testing.
+                .forEach { principal ->
+                    revokeUserFromDatabase(
+                            dataSource,
+                            dbName,
+                            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
+                    )
+                }
+    }
+
     private fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
         val db = DataTables.quote(dbname)
         val dbRole = "${dbname}_role"
@@ -539,7 +553,7 @@ class AssemblerConnectionManager(
         //First we will grant all privilege which for database is connect, temporary, and create schema
         target.connection.use { connection ->
             connection.createStatement().use { statement ->
-                statement.execute("GRANT ALL PRIVILEGES ON DATABASE ${quote(dbname)} TO $dbUser")
+                statement.execute("GRANT CREATE, CONNECT, TEMPORARY, TEMP ON DATABASE ${quote(dbname)} TO $dbUser")
             }
         }
 
@@ -554,6 +568,25 @@ class AssemblerConnectionManager(
                 statement.execute("ALTER USER $dbUser set search_path TO $MATERIALIZED_VIEWS_SCHEMA")
 
                 return@use
+            }
+        }
+    }
+
+    private fun revokeUserFromDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
+        val dbUser = DataTables.quote(userId)
+        logger.info("Removing user {} from database {}", userId, dbname)
+
+        // revoke all privileges from database
+        target.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute("REVOKE CREATE, CONNECT, TEMPORARY, TEMP ON DATABASE ${quote(dbname)} FROM $dbUser")
+            }
+        }
+
+        datasource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.execute("REVOKE USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $dbUser")
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbUser")
             }
         }
     }

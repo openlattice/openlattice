@@ -322,22 +322,6 @@ public class HazelcastOrganizationService {
 
     }
 
-    public void setMembers( UUID organizationId, Set<Principal> members ) {
-        Set<Principal> current = Util.getSafely( membersOf, organizationId );
-        Set<Principal> removed = current
-                .stream()
-                .filter( member -> !members.contains( member ) && current.contains( member ) )
-                .collect( Collectors.toSet() );
-
-        Set<Principal> added = current
-                .stream()
-                .filter( member -> members.contains( member ) && !current.contains( member ) )
-                .collect( Collectors.toSet() );
-
-        addMembers( organizationId, added );
-        removeMembers( organizationId, removed );
-    }
-
     public void removeMembers( UUID organizationId, Set<Principal> members ) {
         removeRolesFromMembers(
                 getRolesInFull( organizationId ).stream().map( Role::getAclKey ),
@@ -352,6 +336,8 @@ public class HazelcastOrganizationService {
         members.stream().filter( PrincipalType.USER::equals )
                 .map( securePrincipalsManager::lookup )
                 .forEach( target -> securePrincipalsManager.removePrincipalFromPrincipal( orgAclKey, target ) );
+
+        assembler.removeMembersFromOrganization( organizationId, members );
     }
 
     private void removeOrganizationFromMembers( UUID organizationId, Set<Principal> members ) {
