@@ -270,6 +270,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     stmt.setObject(2, idArr)
                     stmt.setObject(3, entitySetId)
                     stmt.setObject(4, idArr)
+                    stmt.fetchSize = BATCH_SIZE
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
@@ -284,6 +285,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val stmt = connection.prepareStatement(NEIGHBORHOOD_OF_ENTITY_SET_SQL)
                     stmt.setObject(1, entitySetId)
                     stmt.setObject(2, entitySetId)
+                    stmt.fetchSize = BATCH_SIZE
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },

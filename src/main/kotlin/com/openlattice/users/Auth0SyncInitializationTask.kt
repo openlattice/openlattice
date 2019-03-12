@@ -27,7 +27,7 @@ import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies
 import com.openlattice.tasks.Task.AUTH0_SYNC_INITIALIZATION_TASK
 
-class Auth0SyncInitializationTask : HazelcastInitializationTask<Auth0SyncInitializationTaskDependencies> {
+class Auth0SyncInitializationTask : HazelcastInitializationTask<Auth0SyncTask> {
     override fun getInitialDelay(): Long {
         return 0L
     }
@@ -36,12 +36,12 @@ class Auth0SyncInitializationTask : HazelcastInitializationTask<Auth0SyncInitial
         return AUTH0_SYNC_INITIALIZATION_TASK.name
     }
 
-    override fun getDependenciesClass(): Class<out Auth0SyncInitializationTaskDependencies> {
-        return Auth0SyncInitializationTaskDependencies::class.java
+    override fun getDependenciesClass(): Class<out Auth0SyncTask> {
+        return Auth0SyncTask::class.java
     }
 
-    override fun initialize(dependencies: Auth0SyncInitializationTaskDependencies) {
-        dependencies.auth0Task.run()
+    override fun initialize(dependencies: Auth0SyncTask) {
+        dependencies.run()
     }
 
     override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
