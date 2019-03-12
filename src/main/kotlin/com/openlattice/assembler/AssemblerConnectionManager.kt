@@ -582,13 +582,6 @@ class AssemblerConnectionManager(
                 statement.execute("REVOKE CREATE, CONNECT, TEMPORARY, TEMP ON DATABASE ${quote(dbname)} FROM $dbUser")
             }
         }
-
-        datasource.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute("REVOKE USAGE ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $dbUser")
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM $dbUser")
-            }
-        }
     }
 
     private fun createForeignServer(datasource: HikariDataSource) {
