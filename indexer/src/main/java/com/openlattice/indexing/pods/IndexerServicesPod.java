@@ -176,7 +176,6 @@ public class IndexerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                userDirectoryService(),
                 principalService(),
                 assembler() );
     }
