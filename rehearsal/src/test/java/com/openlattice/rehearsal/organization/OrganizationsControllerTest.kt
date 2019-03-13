@@ -1,5 +1,6 @@
 package com.openlattice.rehearsal.organization
 
+import com.openlattice.authorization.*
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.OrganizationsApi
 import com.openlattice.rehearsal.GeneralException
@@ -8,7 +9,8 @@ import okhttp3.RequestBody
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.util.UUID
+import java.time.OffsetDateTime
+import java.util.*
 
 class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -33,14 +35,7 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         loginAs("admin")
 
         // add role1 to user1 with admin
-        val url1 = OrganizationsApi.BASE +
-                "/$organizationID" +
-                OrganizationsApi.PRINCIPALS +
-                OrganizationsApi.ROLES +
-                "/$roleId" +
-                OrganizationsApi.MEMBERS +
-                "/${user1.id}"
-        makePutRequest(url1, RequestBody.create(null, ByteArray(0)))
+        addRoleToUser(organizationID, roleId, user1.id)
 
         val usersOfRole1 = organizationsApi.getAllUsersOfRole(organizationID, roleId).toList()
         Assert.assertEquals(1, usersOfRole1.size)
@@ -48,16 +43,8 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
 
         // try to add role to user2 with user1
         loginAs("user1")
-
-        val url2 = OrganizationsApi.BASE +
-                "/$organizationID" +
-                OrganizationsApi.PRINCIPALS +
-                OrganizationsApi.ROLES +
-                "/$roleId" +
-                OrganizationsApi.MEMBERS +
-                "/${user2.id}"
         try {
-            makePutRequest(url2, RequestBody.create(null, ByteArray(0)))
+            addRoleToUser(organizationID, roleId, user2.id)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: GeneralException) {
             Assert.assertTrue(e.message!!.contains("Object [$organizationID, $roleId] is not accessible"))
@@ -69,27 +56,124 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         loginAs("admin")
 
         // add and remove role1 to/from user1 with admin
-        val url1 = OrganizationsApi.BASE +
-                "/$organizationID" +
-                OrganizationsApi.PRINCIPALS +
-                OrganizationsApi.ROLES +
-                "/$roleId" +
-                OrganizationsApi.MEMBERS +
-                "/${user1.id}"
-        makePutRequest(url1, RequestBody.create(null, ByteArray(0)))
-        makeDeleteRequest(url1)
+        addRoleToUser(organizationID, roleId, user1.id)
+        removeRoleFromUser(organizationID, roleId, user1.id)
 
         // re-add role1 to user1 with admin
-        makePutRequest(url1, RequestBody.create(null, ByteArray(0)))
+        addRoleToUser(organizationID, roleId, user1.id)
 
         // try to remove role1 from user1 with user2
         loginAs("user2")
 
         try {
-            makeDeleteRequest(url1)
+            removeRoleFromUser(organizationID, roleId, user1.id)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: GeneralException) {
             Assert.assertTrue(e.message!!.contains("Object [$organizationID, $roleId] is not accessible"))
         }
+    }
+
+    @Test
+    fun testAddMembersToOrganiztion() {
+        // test owner access check
+        loginAs("user1")
+
+        try {
+            addMemberToOrganization(organizationID, user2.id)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: GeneralException) {
+            Assert.assertTrue(e.message!!.contains("Object [$organizationID] is not accessible"))
+        }
+
+
+        // test normal behavior
+        loginAs("admin")
+
+        // add ownership to user1
+        val ownerPermission = EnumSet.of(Permission.OWNER)
+        val acl = Acl(AclKey(organizationID), setOf(Ace(user1, ownerPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(acl, Action.ADD))
+
+        loginAs("user1")
+        addMemberToOrganization(organizationID, user2.id)
+
+        // clean up: remove ownership from user1, remove user2 from organization
+        loginAs("admin")
+        permissionsApi.updateAcl(AclData(acl, Action.REMOVE))
+        removeMemberFromOrganization(organizationID, user2.id)
+    }
+
+    @Test
+    fun testRemoveMembersFromOrganization() {
+        // add member with admin
+        loginAs("admin")
+        addMemberToOrganization(organizationID, user2.id)
+
+        // test owner access check
+        loginAs("user1")
+
+        try {
+            removeMemberFromOrganization(organizationID, user2.id)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: GeneralException) {
+            Assert.assertTrue(e.message!!.contains("Object [$organizationID] is not accessible"))
+        }
+
+
+        // test normal behavior
+        loginAs("admin")
+
+        // add ownership to user1
+        val ownerPermission = EnumSet.of(Permission.OWNER)
+        val acl = Acl(AclKey(organizationID), setOf(Ace(user1, ownerPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(acl, Action.ADD))
+
+        loginAs("user1")
+        removeMemberFromOrganization(organizationID, user2.id)
+
+        // clean up: remove ownership from user1
+        loginAs("admin")
+        permissionsApi.updateAcl(AclData(acl, Action.REMOVE))
+
+    }
+
+    private fun addRoleToUser(organizationId: UUID, roleId: UUID, userId: String) {
+        val url = OrganizationsApi.BASE +
+                "/$organizationId" +
+                OrganizationsApi.PRINCIPALS +
+                OrganizationsApi.ROLES +
+                "/$roleId" +
+                OrganizationsApi.MEMBERS +
+                "/$userId"
+        makePutRequest(url, RequestBody.create(null, ByteArray(0)))
+    }
+
+    private fun removeRoleFromUser(organizationId: UUID, roleId: UUID, userId: String) {
+        val url = OrganizationsApi.BASE +
+                "/$organizationId" +
+                OrganizationsApi.PRINCIPALS +
+                OrganizationsApi.ROLES +
+                "/$roleId" +
+                OrganizationsApi.MEMBERS +
+                "/$userId"
+        makeDeleteRequest(url)
+    }
+
+    private fun addMemberToOrganization(organizationId: UUID, userId: String) {
+        val url = OrganizationsApi.BASE +
+                "/$organizationId" +
+                OrganizationsApi.PRINCIPALS +
+                OrganizationsApi.MEMBERS +
+                "/$userId"
+        makePutRequest(url, RequestBody.create(null, ByteArray(0)))
+    }
+
+    private fun removeMemberFromOrganization(organizationId: UUID, userId: String) {
+        val url = OrganizationsApi.BASE +
+                "/$organizationId" +
+                OrganizationsApi.PRINCIPALS +
+                OrganizationsApi.MEMBERS +
+                "/$userId"
+        makeDeleteRequest(url)
     }
 }
