@@ -46,9 +46,7 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.OrganizationPrincipal;
 import com.openlattice.organization.roles.Role;
-import com.openlattice.organizations.events.OrganizationCreatedEvent;
-import com.openlattice.organizations.events.OrganizationDeletedEvent;
-import com.openlattice.organizations.events.OrganizationUpdatedEvent;
+import com.openlattice.organizations.events.*;
 import com.openlattice.organizations.processors.EmailDomainsMerger;
 import com.openlattice.organizations.processors.EmailDomainsRemover;
 import com.openlattice.organizations.processors.OrganizationAppMerger;
@@ -286,7 +284,7 @@ public class HazelcastOrganizationService {
 
     public void addMembers( UUID organizationId, Set<Principal> members ) {
         addMembers( new AclKey( organizationId ), members );
-        assembler.addMembersToOrganization( organizationId, members );
+        eventBus.post( new MembersAddedToOrganizationEvent( organizationId, new PrincipalSet( members ) ) );
     }
 
     private void addMembers( AclKey orgAclKey, Set<Principal> members ) {
@@ -332,7 +330,7 @@ public class HazelcastOrganizationService {
                 .map( securePrincipalsManager::lookup )
                 .forEach( target -> securePrincipalsManager.removePrincipalFromPrincipal( orgAclKey, target ) );
 
-        assembler.removeMembersFromOrganization( organizationId, members );
+        eventBus.post( new MembersRemovedFromOrganizationEvent( organizationId, new PrincipalSet( members ) ) );
     }
 
     private void removeRolesFromMembers( Stream<AclKey> roles, Stream<AclKey> members ) {

@@ -154,10 +154,11 @@ class AssemblerConnectionManager(
                     securePrincipalsManager.principalExists(it)
                 } //There are some bad principals in the member list some how-- probably from testing.
                 .forEach { principal ->
+                    val securablePrincipal = securePrincipalsManager.getPrincipal(principal.id)
                     configureUserInDatabase(
                             dataSource,
                             dbName,
-                            buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
+                            buildPostgresUsername(securablePrincipal)
                     )
                 }
     }
@@ -528,6 +529,7 @@ class AssemblerConnectionManager(
 //                    logger.info("Attempting to drop user {}", user.name)
 //                    statement.execute(dropUserIfExistsSql(user.name)) //Clean out the old users.
 //                    logger.info("Creating new user {}", dbUser)
+                logger.info("Creating user if not exists {}", dbUser)
                 statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)

@@ -48,6 +48,8 @@ import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
 import com.openlattice.organizations.PrincipalSet
+import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
+import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
@@ -151,14 +153,17 @@ class Assembler(
         }
     }
 
-    fun addMembersToOrganization(organizationId: UUID, newMembers: Set<Principal>) {
-        assemblies.executeOnKey(organizationId, AddMembersToOrganizationAssemblyProcessor(PrincipalSet(newMembers))
-                .init(acm))
+    @Subscribe
+    fun handleAddMembersToOrganization(event: MembersAddedToOrganizationEvent) {
+        assemblies.executeOnKey(
+                event.organizationId,
+                AddMembersToOrganizationAssemblyProcessor(event.newMembers).init(acm))
     }
 
-    fun removeMembersFromOrganization(organizationId: UUID, newMembers: Set<Principal> ) {
-        assemblies.executeOnKey(organizationId, RemoveMembersFromOrganizationAssemblyProcessor(PrincipalSet(newMembers))
-                .init(acm))
+    @Subscribe
+    fun removeMembersFromOrganization(event: MembersRemovedFromOrganizationEvent) {
+        assemblies.executeOnKey(event.organizationId,
+                RemoveMembersFromOrganizationAssemblyProcessor(event.members).init(acm))
     }
 
     fun materializeEntitySets(
