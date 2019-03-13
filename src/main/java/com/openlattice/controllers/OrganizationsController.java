@@ -40,6 +40,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.OrganizationIntegrationAccount;
 import com.openlattice.organization.OrganizationMember;
@@ -53,6 +54,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import org.springframework.http.HttpStatus;
@@ -213,8 +215,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Set<UUID> entitySetIds ) {
         ensureOwner( organizationId );
-        final var authorizedPropertyTypesByEntitySet =
-                authzHelper.getAuthorizedPropertiesOnEntitySets( entitySetIds, EnumSet.of( Permission.MATERIALIZE ) );
+        entitySetIds.forEach( this::ensureMaterialize );
+
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = entitySetIds.stream().collect(
+                Collectors.toMap(
+                        Function.identity(),
+                        entitySetId -> edm.getPropertyTypesForEntitySet( entitySetId ) ) );
         final var organizationPrincipal = organizations.getOrganizationPrincipal( organizationId );
         if ( organizationPrincipal == null ) {
             //This will be rare, since it is unlikely you have access to an organization that does not exist.
@@ -486,6 +492,12 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     private AclKey ensureRead( UUID organizationId ) {
         AclKey aclKey = new AclKey( organizationId );
         accessCheck( aclKey, EnumSet.of( Permission.READ ) );
+        return aclKey;
+    }
+
+    private AclKey ensureMaterialize ( UUID entitySetId ) {
+        AclKey aclKey = new AclKey( entitySetId );
+        accessCheck( aclKey, EnumSet.of( Permission.MATERIALIZE ) );
         return aclKey;
     }
 
