@@ -217,7 +217,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 	    .endObject()
         	        .endObject()
         	        .field( NUM_SHARDS, 3 )
-        	        .field( NUM_REPLICAS, 3 )
+        	        .field( NUM_REPLICAS, 2 )
     	        .endObject();
     	return settings;
     }
