@@ -168,7 +168,7 @@ class AssemblerConnectionManager(
                     securePrincipalsManager.principalExists(it)
                 } //There are some bad principals in the member list some how-- probably from testing.
                 .forEach { principal ->
-                    revokeUserFromDatabase(
+                    revokeConnectAndSchemaUsage(
                             dataSource,
                             dbName,
                             buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
@@ -500,15 +500,6 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun revokeConnectAndSchemaUsage(datasource: HikariDataSource, dbname: String, user: SecurablePrincipal) {
-        datasource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.execute("REVOKE ALL PRIVILEGES ON DATABASE ${quote(dbname)} from ${quote(user.name)}")
-                stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA from ${quote(user.name)}")
-            }
-        }
-    }
-
     fun createRole(role: Role) {
         val dbRole = buildPostgresRoleName(role)
 
@@ -572,14 +563,14 @@ class AssemblerConnectionManager(
         }
     }
 
-    private fun revokeUserFromDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
+    private fun revokeConnectAndSchemaUsage(datasource: HikariDataSource, dbname: String, userId: String) {
         val dbUser = DataTables.quote(userId)
-        logger.info("Removing user {} from database {}", userId, dbname)
+        logger.info("Removing user {} from database {} and schema usage of $MATERIALIZED_VIEWS_SCHEMA", userId, dbname)
 
-        // revoke all privileges from database
-        target.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute("REVOKE CREATE, CONNECT, TEMPORARY, TEMP ON DATABASE ${quote(dbname)} FROM $dbUser")
+        datasource.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute("REVOKE CREATE, CONNECT, TEMPORARY, TEMP ON DATABASE ${quote(dbname)} FROM $dbUser")
+                stmt.execute("REVOKE ALL PRIVILEGES ON SCHEMA $MATERIALIZED_VIEWS_SCHEMA FROM $dbUser")
             }
         }
     }
