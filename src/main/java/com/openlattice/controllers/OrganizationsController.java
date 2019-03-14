@@ -40,11 +40,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.edm.type.PropertyType;
-import com.openlattice.organization.Organization;
-import com.openlattice.organization.OrganizationIntegrationAccount;
-import com.openlattice.organization.OrganizationMember;
-import com.openlattice.organization.OrganizationsApi;
+import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -54,7 +50,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import org.springframework.http.HttpStatus;
@@ -68,7 +63,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import com.openlattice.organization.OrganizationEntitySetFlag;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -214,18 +208,22 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Set<UUID> entitySetIds ) {
+        // materialize should be a property level permission that can only be granted to organization principals and
+        // the person requesting materialize should be the owner of the organization
         ensureOwner( organizationId );
-        entitySetIds.forEach( this::ensureMaterialize );
 
-        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = entitySetIds.stream().collect(
-                Collectors.toMap(
-                        Function.identity(),
-                        entitySetId -> edm.getPropertyTypesForEntitySet( entitySetId ) ) );
         final var organizationPrincipal = organizations.getOrganizationPrincipal( organizationId );
         if ( organizationPrincipal == null ) {
             //This will be rare, since it is unlikely you have access to an organization that does not exist.
             throw new ResourceNotFoundException( "Organization does not exist." );
         }
+
+        entitySetIds.forEach( entitySetId -> ensureMaterialize(entitySetId, organizationPrincipal) );
+        final var authorizedPropertyTypesByEntitySet = authzHelper.getAuthorizedPropertiesOnEntitySets(
+                entitySetIds,
+                EnumSet.of( Permission.MATERIALIZE ),
+                Set.of( organizationPrincipal.getPrincipal() ) );
+
         return assembler
                 .materializeEntitySets( organizationPrincipal.getId(), authorizedPropertyTypesByEntitySet );
     }
@@ -495,9 +493,17 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return aclKey;
     }
 
-    private AclKey ensureMaterialize ( UUID entitySetId ) {
+    private AclKey ensureMaterialize ( UUID entitySetId, OrganizationPrincipal principal ) {
         AclKey aclKey = new AclKey( entitySetId );
-        accessCheck( aclKey, EnumSet.of( Permission.MATERIALIZE ) );
+
+        if ( !getAuthorizationManager().checkIfHasPermissions(
+                aclKey,
+                Set.of(principal.getPrincipal()),
+                EnumSet.of( Permission.MATERIALIZE ) ) ) {
+            throw new ForbiddenException( "Object " + aclKey.toString() + " is not accessible by " +
+                    principal.getPrincipal().getId()  + " ." );
+        }
+
         return aclKey;
     }
 
