@@ -23,7 +23,6 @@
 package com.openlattice.authorization;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.util.Preconditions;
 import com.openlattice.datastore.services.EdmManager;
@@ -52,19 +51,21 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             EnumSet<Permission> requiredPermissions ) {
         return getAuthorizedPropertyTypes( entitySetId,
                 requiredPermissions,
-                edm.getPropertyTypesForEntitySet( entitySetId ) );
+                edm.getPropertyTypesForEntitySet( entitySetId ),
+                Principals.getCurrentPrincipals() );
     }
 
     public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions,
-            Map<UUID, PropertyType> propertyTypes ) {
+            Map<UUID, PropertyType> propertyTypes,
+            Set<Principal> principals ) {
 
         Map<AclKey, EnumSet<Permission>> accessRequest = propertyTypes.keySet().stream()
                 .map( ptId -> new AclKey( entitySetId, ptId ) )
                 .collect( Collectors.toMap( Function.identity(), aclKey -> requiredPermissions ) );
 
-        Map<AclKey, EnumMap<Permission, Boolean>> authorizations = authorize( accessRequest );
+        Map<AclKey, EnumMap<Permission, Boolean>> authorizations = authorize( accessRequest, principals );
         authorizations.entrySet().stream()
                 .filter( authz -> authz.getValue().values().stream().anyMatch( v -> !v ) )
                 .forEach( authz -> propertyTypes.remove( authz.getKey().get( 1 ) ) );
@@ -72,16 +73,33 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         return propertyTypes;
     }
 
-    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(Set<UUID> entitySetIds,
-                                                                          Set<UUID> selectedProperties,
-                                                                         EnumSet<Permission> requiredPermissions) {
+    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(
+            Set<UUID> entitySetIds,
+            Set<UUID> selectedProperties,
+            EnumSet<Permission> requiredPermissions ) {
         return entitySetIds.stream()
                 .collect( Collectors.toMap(
                         it -> it,
                         it -> getAuthorizedPropertyTypes(
                                 it,
                                 requiredPermissions,
-                                edm.getPropertyTypesAsMap( selectedProperties ) ) ) );
+                                edm.getPropertyTypesAsMap( selectedProperties ),
+                                Principals.getCurrentPrincipals() ) ) );
+    }
+
+    private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(
+            Set<UUID> entitySetIds,
+            Set<UUID> selectedProperties,
+            EnumSet<Permission> requiredPermissions,
+            Set<Principal> principals ) {
+        return entitySetIds.stream()
+                .collect( Collectors.toMap(
+                        it -> it,
+                        it -> getAuthorizedPropertyTypes(
+                                it,
+                                requiredPermissions,
+                                edm.getPropertyTypesAsMap( selectedProperties ),
+                                principals ) ) );
     }
 
     public Set<UUID> getAuthorizedPropertiesOnEntitySet(
@@ -104,7 +122,20 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 requiredPermissions );
     }
 
-    public Set<UUID> getAuthorizedPropertiesOnEntitySet(
+    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
+            Set<UUID> entitySetIds,
+            EnumSet<Permission> requiredPermissions,
+            Set<Principal> principals ) {
+        return ( entitySetIds.isEmpty() )
+                ? ImmutableMap.of()
+                : getAuthorizedPropertyTypes(
+                entitySetIds,
+                getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
+                requiredPermissions,
+                principals );
+    }
+
+    private Set<UUID> getAuthorizedPropertiesOnEntitySet(
             UUID entitySetId,
             Set<UUID> selectedProperties,
             EnumSet<Permission> requiredPermissions ) {
@@ -115,23 +146,9 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 .map( authorization -> authorization.getAclKey().get( 1 ) ).collect( Collectors.toSet() );
     }
 
-    public Set<PropertyType> getAuthorizedPropertyTypesOnEntitySet(
-            UUID entitySetId,
-            EnumSet<Permission> requiredPermissions ) {
-        return ImmutableSet.copyOf( edm.getPropertyTypes(
-                authz.accessChecksForPrincipals( getAllPropertiesOnEntitySet( entitySetId ).stream()
-                        .map( ptId -> new AccessCheck( new AclKey( entitySetId, ptId ), requiredPermissions ) )
-                        .collect( Collectors.toSet() ), Principals.getCurrentPrincipals() )
-                        .filter( authorization ->
-                                authorization.getPermissions().values().stream().allMatch( val -> val ) )
-                        .map( authorization -> authorization.getAclKey().get( 1 ) )
-                        .collect( Collectors.toSet() ) ) );
-
-    }
-
     /**
      * Get all property types of an entity set
-     * @param entitySetId
+     * @param entitySetId the id of the entity set
      * @return all the property type ids on the entity type of the entity set
      */
     public Set<UUID> getAllPropertiesOnEntitySet( UUID entitySetId ) {
