@@ -8,6 +8,7 @@ import com.openlattice.authorization.Permission
 import com.openlattice.authorization.SystemRole
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.edm.type.EntityType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.tasks.HazelcastInitializationTask
@@ -24,6 +25,7 @@ class AuditInitializationTask(
         val hazelcastInstance: HazelcastInstance
 ) : HazelcastInitializationTask<AuditTaskDependencies> {
 
+    private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val organizations = hazelcastInstance.getMap<UUID, String>(HazelcastMap.ORGANIZATIONS_TITLES.name)
     private val auditRecordEntitySetConfigurations = hazelcastInstance.getMap<AclKey, AuditRecordEntitySetConfiguration>(
@@ -35,6 +37,10 @@ class AuditInitializationTask(
     }
 
     override fun initialize(dependencies: AuditTaskDependencies) {
+        if (entityTypes.isEmpty) {
+            logger.info("EDM not yet initialized -- skipping audit initialization.")
+            return
+        }
         logger.info("Creating any missing audit entity sets")
         ensureEdmEntitySetExists(dependencies)
         ensureAllEntitySetsHaveAuditEntitySets(dependencies)
