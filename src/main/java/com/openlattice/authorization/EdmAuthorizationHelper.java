@@ -111,17 +111,27 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 requiredPermissions );
     }
 
+    /**
+     * @see EdmAuthorizationHelper#getAuthorizedPropertiesOnEntitySets
+     */
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions ) {
-        return ( entitySetIds.isEmpty() )
-                ? ImmutableMap.of()
-                : getAuthorizedPropertyTypes(
+        return getAuthorizedPropertiesOnEntitySets(
                 entitySetIds,
-                getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
-                requiredPermissions );
+                requiredPermissions,
+                Principals.getCurrentPrincipals() );
     }
 
+    /**
+     * Returns authorized property types be entity sets.
+     * Note: entity sets are assumed to have same entity type
+     *
+     * @param entitySetIds        the ids of entity sets for which to check for
+     * @param requiredPermissions the permissions which to check for
+     * @param principals          the principals to check against
+     * @return Map of authorized property types by entity set ids
+     */
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions,
