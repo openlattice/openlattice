@@ -32,12 +32,13 @@ import retrofit2.CallAdapter;
 import retrofit2.Retrofit;
 
 public final class RetrofitFactory {
-    private static final String BASE_URL         = "https://api.openlattice.com/";
-    private static final String STAGING_BASE_URL = "https://api.staging.openlattice.com/";
-    private static final String LOCAL_BASE_URL   = "http://localhost:8080/";
-    private static final String TESTING_BASE_URL = "http://localhost:8080/";
+    private static final String BASE_URL            = "https://api.openlattice.com/";
+    private static final String INTEGRATION_URL     = "https://integration.openlattice.com/";
+    private static final String LOCAL_BASE_URL      = "http://localhost:8080/";
+    private static final String STAGING_BASE_URL    = "https://api.staging.openlattice.com/";
+    private static final String TESTING_BASE_URL    = "http://localhost:8080/";
     private static final String TESTING_INDEXER_URL = "http://localhost:8081/";
-    private static final String TESTING_LINKER_URL = "http://localhost:8082/";
+    private static final String TESTING_LINKER_URL  = "http://localhost:8082/";
 
     private static final ObjectMapper jsonMapper = ObjectMappers.getJsonMapper();
 
@@ -45,6 +46,7 @@ public final class RetrofitFactory {
     }
 
     public enum Environment {
+        PROD_INTEGRATION( INTEGRATION_URL ),
         PRODUCTION( BASE_URL ),
         STAGING( STAGING_BASE_URL ),
         LOCAL( LOCAL_BASE_URL ),
@@ -75,9 +77,13 @@ public final class RetrofitFactory {
         return newClient( Environment.PRODUCTION, jwtToken );
     }
 
-    public static final Retrofit newClient( Environment environment, Supplier<String> jwtToken, CallAdapter.Factory callFactory ) {
+    public static final Retrofit newClient(
+            Environment environment,
+            Supplier<String> jwtToken,
+            CallAdapter.Factory callFactory ) {
         OkHttpClient.Builder httpBuilder = okhttpClientWithLoomAuth( jwtToken );
-        return decorateWithFactories( createBaseRhizomeRetrofitBuilder( environment, httpBuilder ), callFactory ).build();
+        return decorateWithFactories( createBaseRhizomeRetrofitBuilder( environment, httpBuilder ), callFactory )
+                .build();
     }
 
     public static final Retrofit newClient( Environment environment, Supplier<String> jwtToken ) {
@@ -116,7 +122,9 @@ public final class RetrofitFactory {
                 .addCallAdapterFactory( new RhizomeCallAdapterFactory() );
     }
 
-    public static final Retrofit.Builder decorateWithFactories( Retrofit.Builder builder, CallAdapter.Factory callFactory ) {
+    public static final Retrofit.Builder decorateWithFactories(
+            Retrofit.Builder builder,
+            CallAdapter.Factory callFactory ) {
         return builder.addConverterFactory( new RhizomeByteConverterFactory() )
                 .addConverterFactory( new RhizomeJacksonConverterFactory( jsonMapper ) )
                 .addCallAdapterFactory( callFactory );
