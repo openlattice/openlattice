@@ -124,11 +124,11 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     }
 
     /**
-     * Returns authorized property types be entity sets.
+     * Returns authorized property types for entity sets.
      * Note: entity sets are assumed to have same entity type
      *
-     * @param entitySetIds        the ids of entity sets for which to check for
-     * @param requiredPermissions the permissions which to check for
+     * @param entitySetIds        the ids of entity sets to check for
+     * @param requiredPermissions the permissions to check for
      * @param principals          the principals to check against
      * @return Map of authorized property types by entity set ids
      */
