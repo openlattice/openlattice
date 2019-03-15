@@ -14,10 +14,11 @@ import org.apache.commons.lang.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.util.*
-import kotlin.random.Random
+import java.util.UUID
+import java.util.EnumSet
+import java.util.Optional
 
-private val numberOfEntries = 10
+private const val numberOfEntities = 10
 
 class AssemblerTest : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -57,18 +58,18 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val esDst = MultipleAuthenticatedUsersBase.createEntitySet(dst)
         val esEdge = MultipleAuthenticatedUsersBase.createEntitySet(edge)
 
-        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
-        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
-        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge.properties)
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntities, src.properties)
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntities, dst.properties)
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntities, edge.properties)
 
-        val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
-        val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
+        val entitiesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val idsSrc = dataApi.createEntities(esSrc.id, entitiesSrc)
 
-        val entriesDst = ImmutableList.copyOf(testDataDst.values)
-        val idsDst = dataApi.createEntities(esDst.id, entriesDst)
+        val entitiesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entitiesDst)
 
-        val entriesEdge = ImmutableList.copyOf(testDataEdge.values)
-        val idsEdge = dataApi.createEntities(esEdge.id, entriesEdge)
+        val entitiesEdge = ImmutableList.copyOf(testDataEdge.values)
+        val idsEdge = dataApi.createEntities(esEdge.id, entitiesEdge)
 
         val edges = idsSrc.mapIndexed { index, _ ->
             DataEdgeKey(
@@ -78,7 +79,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             )
         }.toSet()
 
-        val createdEdges = dataApi.createAssociations(edges)
+        dataApi.createAssociations(edges)
 
         // materialize src entity set
         organizationsApi.assembleEntitySets(organizationID, setOf(esSrc.id))
