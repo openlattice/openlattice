@@ -205,6 +205,10 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                             "Unsupported Securable Object Type when retrieving Edm Details: " + selector.getType() );
             }
         } );
+
+        accessCheck( entitySetIds.stream()
+                .collect( Collectors.toMap( id -> new AclKey( id ), id -> EnumSet.of( Permission.READ ) ) ) );
+
         return new EdmDetails(
                 modelService.getPropertyTypesAsMap( propertyTypeIds ),
                 modelService.getEntityTypesAsMap( entityTypeIds ),
@@ -487,7 +491,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
-    private List<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId) {
+    private List<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId ) {
         // collect association entity key ids
         final PostgresIterable<EdgeKey> associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet( entitySetId );
 
