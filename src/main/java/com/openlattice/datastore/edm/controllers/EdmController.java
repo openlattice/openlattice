@@ -952,6 +952,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             produces = MediaType.APPLICATION_JSON_VALUE )
     public UUID getEntitySetId( @PathVariable( NAME ) String entitySetName ) {
         EntitySet es = modelService.getEntitySet( entitySetName );
+        ensureReadAccess( new AclKey( es.getId() ) );
         Preconditions.checkNotNull( es, "Entity Set %s does not exists.", entitySetName );
         return es.getId();
     }
