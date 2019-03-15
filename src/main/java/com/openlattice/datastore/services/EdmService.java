@@ -534,6 +534,11 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public Map<String, UUID> getAclsByName( Set<String> aclNames ) {
+        return aclKeys.getAll( aclNames );
+    }
+
+    @Override
     public Set<UUID> getEntityTypeUuids( Set<FullQualifiedName> fqns ) {
         return aclKeys.getAll( Util.fqnToString( fqns ) ).values().stream()
                 .filter( id -> id != null )
