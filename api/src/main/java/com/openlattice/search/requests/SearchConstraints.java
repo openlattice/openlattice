@@ -32,6 +32,8 @@ public class SearchConstraints {
         this.maxHits = Math.min( maxHits, SearchApi.MAX_SEARCH_RESULTS );
         this.constraintGroups = constraintGroups;
 
+        Preconditions.checkNotNull( entitySetIds, "entitySetIds cannot be null" );
+        Preconditions.checkArgument( entitySetIds.length > 0, "entitySetIds cannot be empty" );
         Preconditions
                 .checkArgument( constraintGroups.size() > 0, "SearchConstraints constraintGroups cannot be empty" );
 
