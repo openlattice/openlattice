@@ -28,7 +28,8 @@ import java.util.stream.Stream;
 public enum SystemRole {
     ADMIN( "admin" ),
     USER( "user" ),
-    AUTHENTICATED_USER( "AuthenticatedUser" );
+    AUTHENTICATED_USER( "AuthenticatedUser" ),
+    OPENLATTICE( "openlatticeRole" );
     private final Principal          principal;
     
     private static final Set<String> allRoles;
