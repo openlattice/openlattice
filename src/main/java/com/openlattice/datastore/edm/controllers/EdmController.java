@@ -66,6 +66,7 @@ import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
@@ -959,6 +960,17 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         ensureReadAccess( new AclKey( es.getId() ) );
         Preconditions.checkNotNull( es, "Entity Set %s does not exists.", entitySetName );
         return es.getId();
+    }
+
+    @Override
+    @RequestMapping(
+            path = IDS_PATH + ENTITY_SETS_PATH,
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<String, UUID> getEntitySetIds( @RequestBody Set<String> entitySetNames ) {
+        final Map<String, UUID> entitySetIds = modelService.getAclsByName( entitySetNames );
+        entitySetIds.values().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+        return entitySetIds;
     }
 
     @Override
