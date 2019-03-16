@@ -154,6 +154,8 @@ public interface EdmManager {
 
     Set<UUID> getAclKeys( Set<?> fqnsOrNames );
 
+    Map<String, UUID> getAclKeyIds( Set<String> aclNames );
+
     UUID getTypeAclKey( FullQualifiedName fqns );
 
     Set<UUID> getEntityTypeUuids( Set<FullQualifiedName> fqns );
