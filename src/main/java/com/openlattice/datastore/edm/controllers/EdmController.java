@@ -968,7 +968,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<String, UUID> getEntitySetIds( @RequestBody Set<String> entitySetNames ) {
-        final Map<String, UUID> entitySetIds = modelService.getAclsByName( entitySetNames );
+        final Map<String, UUID> entitySetIds = modelService.getAclKeyIds( entitySetNames );
         entitySetIds.values().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
         return entitySetIds;
     }
