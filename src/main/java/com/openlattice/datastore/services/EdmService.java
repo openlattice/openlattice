@@ -534,7 +534,7 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Map<String, UUID> getAclsByName( Set<String> aclNames ) {
+    public Map<String, UUID> getAclKeyIds( Set<String> aclNames ) {
         return aclKeys.getAll( aclNames );
     }
 
