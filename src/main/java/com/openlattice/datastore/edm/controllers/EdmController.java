@@ -66,6 +66,7 @@ import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
@@ -205,6 +206,10 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                             "Unsupported Securable Object Type when retrieving Edm Details: " + selector.getType() );
             }
         } );
+
+        accessCheck( entitySetIds.stream()
+                .collect( Collectors.toMap( id -> new AclKey( id ), id -> EnumSet.of( Permission.READ ) ) ) );
+
         return new EdmDetails(
                 modelService.getPropertyTypesAsMap( propertyTypeIds ),
                 modelService.getEntityTypesAsMap( entityTypeIds ),
@@ -487,7 +492,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
-    private List<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId) {
+    private List<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId ) {
         // collect association entity key ids
         final PostgresIterable<EdgeKey> associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet( entitySetId );
 
@@ -952,8 +957,20 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
             produces = MediaType.APPLICATION_JSON_VALUE )
     public UUID getEntitySetId( @PathVariable( NAME ) String entitySetName ) {
         EntitySet es = modelService.getEntitySet( entitySetName );
+        ensureReadAccess( new AclKey( es.getId() ) );
         Preconditions.checkNotNull( es, "Entity Set %s does not exists.", entitySetName );
         return es.getId();
+    }
+
+    @Override
+    @RequestMapping(
+            path = IDS_PATH + ENTITY_SETS_PATH,
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    public Map<String, UUID> getEntitySetIds( @RequestBody Set<String> entitySetNames ) {
+        final Map<String, UUID> entitySetIds = modelService.getAclsByName( entitySetNames );
+        entitySetIds.values().forEach( entitySetId -> ensureReadAccess( new AclKey( entitySetId ) ) );
+        return entitySetIds;
     }
 
     @Override
