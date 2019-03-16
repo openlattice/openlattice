@@ -919,7 +919,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         ensureReadAccess( new AclKey( entitySetId ) );
         Map<UUID, PropertyType> authorizedPropertyTypes = authzHelper.getAuthorizedPropertyTypes( entitySetId,
                 WRITE_PERMISSION,
-                edmService.getPropertyTypesAsMap( entity.keySet() ) );
+                edmService.getPropertyTypesAsMap( entity.keySet() ),
+                Principals.getCurrentPrincipals() );
 
         WriteEvent writeEvent = dgm
                 .replaceEntities( entitySetId, ImmutableMap.of( entityKeyId, entity ), authorizedPropertyTypes );
