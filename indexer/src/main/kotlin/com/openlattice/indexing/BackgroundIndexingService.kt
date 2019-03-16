@@ -135,7 +135,8 @@ class BackgroundIndexingService(
             val missingEntitySets = entitySets.getAll(missingIndices)
             logger.info("The following entity sets where missing indices: {}", missingEntitySets)
             missingEntitySets.values.forEach { es ->
-                val missingEntitySetPropertyTypes = propertyTypes.getAll(entityTypes[es.entityTypeId]!!.properties)
+                val missingEntitySetPropertyTypes =
+                        propertyTypes.getAll(entityTypes.getValue(es.entityTypeId).properties)
                 elasticsearchApi.saveEntitySetToElasticsearch(
                         es,
                         missingEntitySetPropertyTypes.values.toList()
