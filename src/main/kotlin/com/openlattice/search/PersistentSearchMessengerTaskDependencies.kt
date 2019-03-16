@@ -1,3 +1,12 @@
+package com.openlattice.search
+
+import com.hazelcast.core.HazelcastInstance
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.mail.MailServiceClient
+import com.openlattice.organizations.roles.SecurePrincipalsManager
+import com.openlattice.tasks.HazelcastTaskDependencies
+import com.zaxxer.hikari.HikariDataSource
+
 /*
  * Copyright (C) 2019. OpenLattice, Inc.
  *
@@ -19,26 +28,12 @@
  *
  */
 
-package com.openlattice.tasks
-
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-enum class Task {
-    AUDIT_INITIALIZATION,
-    AUTH0_SYNC_INITIALIZATION_TASK,
-    AUTH0_SYNC_TASK,
-    AUTHORIZATION_BOOTSTRAP,
-    CLEAN_OUT_OLDER_USERS_INITIALIZATON,
-    ENTITY_VIEWS_INITIALIZER,
-    ORGANIZATION_ASSEMBLIES_INITIALIZER,
-    ORGANIZATION_BOOTSTRAP,
-    ORGANIZATION_MEMBERS_CLEANUP,
-    PERSISTENT_SEARCH_MESSENGER_TASK,
-    PRODUCTION_VIEW_INITIALIZATON,
-    POST_INITIALIZER,
-    USERS_AND_ROLES_INITIALIZATON,
-    USER_CREDENTIAL_SYNC_TASK
-
-}
+data class PersistentSearchMessengerTaskDependencies(
+        val hazelcastInstance: HazelcastInstance,
+        val hds: HikariDataSource,
+        val principalsManager: SecurePrincipalsManager,
+        val authorizationManager: AuthorizationManager,
+        val searchService: SearchService,
+        val mailServiceClient: MailServiceClient,
+        val mapboxToken: String
+) : HazelcastTaskDependencies
