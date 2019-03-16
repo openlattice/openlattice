@@ -470,6 +470,15 @@ public interface EdmApi {
     UUID getEntitySetId( @Path( NAME ) String entitySetName );
 
     /**
+     * Get IDs for entity sets given their names.
+     *
+     * @param entitySetNames The names of the entity sets.
+     * @return Ids of entity sets.
+     */
+    @POST( BASE + IDS_PATH + ENTITY_SETS_PATH )
+    Map<String, UUID> getEntitySetIds( @Body Set<String> entitySetNames );
+
+    /**
      * Get ID for property type with given namespace and name.
      *
      * @param namespace The namespace for a property.
