@@ -339,7 +339,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void addMember(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( USER_ID ) String userId ) {
-        ensureWriteAccess( new AclKey( organizationId ) );
+        ensureOwnerAccess( new AclKey( organizationId ) );
         organizations.addMembers( organizationId, ImmutableSet.of( new Principal( PrincipalType.USER, userId ) ) );
         return null;
     }
@@ -350,7 +350,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void removeMember(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( USER_ID ) String userId ) {
-        ensureWriteAccess( new AclKey( organizationId ) );
+        ensureOwnerAccess( new AclKey( organizationId ) );
         organizations.removeMembers( organizationId, ImmutableSet.of( new Principal( PrincipalType.USER, userId ) ) );
         return null;
     }
