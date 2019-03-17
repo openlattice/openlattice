@@ -63,40 +63,25 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         return PersistentSearchMessengerTaskDependencies::class.java
     }
 
-    private fun getPropertyTypeIdsForEntitySet(
-            entitySetId: UUID,
-            entitySets: IMap<UUID, EntitySet>,
-            entityTypes: IMap<UUID, EntityType>
-    ): Set<UUID> {
-        return entityTypes[entitySets[entitySetId]?.entityTypeId]?.properties.orEmpty()
+    private fun getPropertyTypeIdsForEntitySet(entitySetId: UUID): Set<UUID> {
+        val dependencies = getDependency()
+        return dependencies.entityTypes[dependencies.entitySets[entitySetId]?.entityTypeId]?.properties.orEmpty()
     }
 
-    private fun getAuthorizedPropertyMap(
-            principals: Set<Principal>,
-            entitySetId: UUID,
-            entitySets: IMap<UUID, EntitySet>,
-            entityTypes: IMap<UUID, EntityType>,
-            propertyTypes: IMap<UUID, PropertyType>
-    ): Map<UUID, PropertyType> {
-        val accessChecks = getPropertyTypeIdsForEntitySet(entitySetId, entitySets, entityTypes).map { AccessCheck(AclKey(entitySetId, it), EnumSet.of(Permission.READ)) }.toMutableSet()
-        return propertyTypes.getAll(getDependency().authorizationManager.accessChecksForPrincipals(accessChecks, principals)
+    private fun getAuthorizedPropertyMap(principals: Set<Principal>, entitySetId: UUID): Map<UUID, PropertyType> {
+        val accessChecks = getPropertyTypeIdsForEntitySet(entitySetId).map { AccessCheck(AclKey(entitySetId, it), EnumSet.of(Permission.READ)) }.toMutableSet()
+        return getDependency().propertyTypes.getAll(getDependency().authorizationManager.accessChecksForPrincipals(accessChecks, principals)
                 .filter { it.permissions[Permission.READ]!! }
                 .map { it.aclKey[1] }
                 .collect(Collectors.toSet()))
     }
 
-    private fun getAuthorizedPropertyTypeMap(
-            securablePrincipal: SecurablePrincipal,
-            entitySetIds: List<UUID>,
-            entitySets: IMap<UUID, EntitySet>,
-            entityTypes: IMap<UUID, EntityType>,
-            propertyTypes: IMap<UUID, PropertyType>
-    ): Map<UUID, Map<UUID, PropertyType>> {
+    private fun getAuthorizedPropertyTypeMap(securablePrincipal: SecurablePrincipal, entitySetIds: List<UUID>): Map<UUID, Map<UUID, PropertyType>> {
         var principals = getDependency().principalsManager.getAllPrincipals(securablePrincipal)
                 .plus(securablePrincipal)
                 .map { it.principal }
                 .toSet()
-        return entitySetIds.map { it to getAuthorizedPropertyMap(principals, it, entitySets, entityTypes, propertyTypes) }.toMap()
+        return entitySetIds.map { it to getAuthorizedPropertyMap(principals, it) }.toMap()
     }
 
     private fun getUpdatedConstraints(persistentSearch: PersistentSearch): SearchConstraints {
@@ -141,13 +126,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         return hits.map { UUID.fromString(it[DataTables.ID_FQN].first().toString()) }.toSet()
     }
 
-    private fun findNewWritesForAlert(
-            userAclKey: AclKey,
-            persistentSearch: PersistentSearch,
-            entitySetsMap: IMap<UUID, EntitySet>,
-            entityTypes: IMap<UUID, EntityType>,
-            propertyTypes: IMap<UUID, PropertyType>
-    ): OffsetDateTime? {
+    private fun findNewWritesForAlert(userAclKey: AclKey, persistentSearch: PersistentSearch): OffsetDateTime? {
         val dependencies = getDependency()
 
         val userSecurablePrincipal = dependencies.principalsManager.getSecurablePrincipal(userAclKey)
@@ -158,13 +137,13 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             return null
         }
 
-        val entitySets = entitySetsMap.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
+        val entitySets = dependencies.entitySets.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
                 .groupBy { it.isLinking }
 
         val authorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
-                entitySets.getOrDefault(false, listOf()).map { it.id }, entitySetsMap, entityTypes, propertyTypes)
+                entitySets.getOrDefault(false, listOf()).map { it.id })
         val linkedAuthorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
-                entitySets.getOrDefault(true, listOf()).map { it.id }, entitySetsMap, entityTypes, propertyTypes)
+                entitySets.getOrDefault(true, listOf()).map { it.id })
         val constraints = getUpdatedConstraints(persistentSearch)
 
         val results = dependencies.searchService.executeSearch(constraints,
@@ -209,10 +188,6 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val dependencies = getDependency()
 
-        val propertyTypes: IMap<UUID, PropertyType> = dependencies.hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
-        val entityTypes: IMap<UUID, EntityType> = dependencies.hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
-        val entitySets: IMap<UUID, EntitySet> = dependencies.hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
-
         PostgresIterable(Supplier<StatementHolder> {
             val connection = dependencies.hds.connection
             val stmt = connection.createStatement()
@@ -222,7 +197,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it)
         })
                 .stream()
-                .map { it.second.id to findNewWritesForAlert(it.first, it.second, entitySets, entityTypes, propertyTypes) }
+                .map { it.second.id to findNewWritesForAlert(it.first, it.second) }
                 .filter { it.second != null }
                 .forEach { updateLastReadForAlert(it.first, it.second!!) }
 

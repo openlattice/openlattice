@@ -1,11 +1,17 @@
 package com.openlattice.search
 
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.core.IMap
 import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.edm.EntitySet
+import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.type.PropertyType
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.mail.MailServiceClient
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.zaxxer.hikari.HikariDataSource
+import java.util.*
 
 /*
  * Copyright (C) 2019. OpenLattice, Inc.
@@ -29,11 +35,33 @@ import com.zaxxer.hikari.HikariDataSource
  */
 
 data class PersistentSearchMessengerTaskDependencies(
-        val hazelcastInstance: HazelcastInstance,
         val hds: HikariDataSource,
         val principalsManager: SecurePrincipalsManager,
         val authorizationManager: AuthorizationManager,
         val searchService: SearchService,
         val mailServiceClient: MailServiceClient,
-        val mapboxToken: String
-) : HazelcastTaskDependencies
+        val mapboxToken: String,
+        val entitySets: IMap<UUID, EntitySet>,
+        val entityTypes: IMap<UUID, EntityType>,
+        val propertyTypes: IMap<UUID, PropertyType>
+) : HazelcastTaskDependencies {
+
+    constructor(
+            hazelcastInstance: HazelcastInstance,
+            hds: HikariDataSource,
+            principalsManager: SecurePrincipalsManager,
+            authorizationManager: AuthorizationManager,
+            searchService: SearchService,
+            mailServiceClient: MailServiceClient,
+            mapboxToken: String
+    ) : this(
+            hds,
+            principalsManager,
+            authorizationManager,
+            searchService,
+            mailServiceClient,
+            mapboxToken,
+            hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name),
+            hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name),
+            hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name))
+}
