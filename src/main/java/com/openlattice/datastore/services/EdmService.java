@@ -791,13 +791,7 @@ public class EdmService implements EdmManager {
                             } );
                 }
 
-                // add edm_unsync flag for materialized views
-                if ( assembler.isEntitySetMaterialized( entitySet.getOrganizationId(), entitySet.getId() )
-                        && !entitySet.getFlags().contains( EntitySetFlag.EDM_UNSYNCHRONIZED ) ) {
-                    entitySets.executeOnKey(
-                            entitySet.getId(),
-                            new AddFlagsToEntitySetProcessor( Set.of( EntitySetFlag.EDM_UNSYNCHRONIZED ) ) );
-                }
+                flagEntitySetUnsynchronized( entitySet );  // add edm_unsync flag for materialized views
 
                 eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes ) );
                 eventBus.post( new PropertyTypesAddedToEntitySetEvent(
@@ -973,13 +967,7 @@ public class EdmService implements EdmManager {
                     .newArrayList( propertyTypes.getAll( et.getProperties() ).values() );
             edmManager.getAllEntitySetsForType( et.getId() ).forEach( entitySet -> {
                 if ( isFqnUpdated ) {
-                    // add edm_unsync flag for materialized views
-                    if ( assembler.isEntitySetMaterialized( entitySet.getOrganizationId(), entitySet.getId() )
-                            && !entitySet.getFlags().contains( EntitySetFlag.EDM_UNSYNCHRONIZED ) ) {
-                        entitySets.executeOnKey(
-                                entitySet.getId(),
-                                new AddFlagsToEntitySetProcessor( Set.of( EntitySetFlag.EDM_UNSYNCHRONIZED ) ) );
-                    }
+                    flagEntitySetUnsynchronized( entitySet );  // add edm_unsync flag for materialized views
                 }
                 eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), properties ) );
             } );
@@ -1009,6 +997,15 @@ public class EdmService implements EdmManager {
         }
         entitySets.executeOnKey( entitySetId, new UpdateEntitySetMetadataProcessor( update ) );
         eventBus.post( new EntitySetMetadataUpdatedEvent( getEntitySet( entitySetId ) ) );
+    }
+
+    private void flagEntitySetUnsynchronized( EntitySet entitySet ) {
+        if ( assembler.isEntitySetMaterialized( entitySet.getOrganizationId(), entitySet.getId() )
+                && !entitySet.getFlags().contains( EntitySetFlag.EDM_UNSYNCHRONIZED ) ) {
+            entitySets.executeOnKey(
+                    entitySet.getId(),
+                    new AddFlagsToEntitySetProcessor( Set.of( EntitySetFlag.EDM_UNSYNCHRONIZED ) ) );
+        }
     }
 
     /**************
