@@ -323,7 +323,7 @@ public class HazelcastOrganizationService {
                         .stream()
                         .filter( m -> m.getType().equals( PrincipalType.USER ) )
                         .map( securePrincipalsManager::lookup ) );
-        membersOf.submitToKey( organizationId, new OrganizationMemberRemover( members ) );
+        membersOf.executeOnKey( organizationId, new OrganizationMemberRemover( members ) );
 
         final AclKey orgAclKey = new AclKey( organizationId );
         members.stream().filter( PrincipalType.USER::equals )
