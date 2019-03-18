@@ -99,6 +99,10 @@ class Assembler(
         return assemblies[organizationId]?.entitySetIds ?: setOf()
     }
 
+    fun isEntitySetMaterialized(organizationId: UUID, entitySetId: UUID): Boolean {
+        return assemblies[organizationId]?.entitySetIds?.contains(entitySetId) ?: false
+    }
+
     fun getOrganizationAssembly(organizationId: UUID): OrganizationAssembly {
         return assemblies[organizationId]!!
     }
