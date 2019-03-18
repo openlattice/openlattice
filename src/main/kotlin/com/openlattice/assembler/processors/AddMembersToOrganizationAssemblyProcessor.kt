@@ -28,11 +28,9 @@ import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.assembler.PostgresDatabases
 import com.openlattice.organizations.PrincipalSet
-import org.slf4j.LoggerFactory
 import java.lang.IllegalStateException
 import java.util.*
 
-private val logger = LoggerFactory.getLogger(AddMembersToOrganizationAssemblyProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSet)
@@ -45,8 +43,8 @@ data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSe
         val organizationId = entry.key
         val assembly = entry.value
         if (assembly == null) {
-            logger.error("Encountered null assembly while trying to add new members $newMembers  to organization " +
-                    "$organizationId.")
+            throw IllegalStateException("Encountered null assembly while trying to add new members $newMembers to " +
+                    "organization $organizationId.")
         } else {
             if(acm == null) {
                 throw IllegalStateException(NOT_INITIALIZED)
