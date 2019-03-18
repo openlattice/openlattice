@@ -192,7 +192,8 @@ public class DatastoreServicesPod {
                 pgEdmManager(),
                 entityTypeManager(),
                 schemaManager(),
-                auditingConfiguration );
+                auditingConfiguration,
+                assembler() );
     }
 
     @Bean
