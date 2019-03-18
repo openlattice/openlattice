@@ -105,7 +105,7 @@ public class IndexerServicesPod {
     private MetricRegistry metricRegistry;
 
     @Bean
-    public ConductorElasticsearchApi elasticsearchApi() throws IOException {
+    public ConductorElasticsearchApi elasticsearchApi() {
         return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
     }
 
