@@ -225,7 +225,8 @@ public class IndexerServicesPod {
                 edmManager(),
                 entityTypeManager(),
                 schemaManager(),
-                auditingConfiguration );
+                auditingConfiguration,
+                assembler() );
     }
 
     @PostConstruct
