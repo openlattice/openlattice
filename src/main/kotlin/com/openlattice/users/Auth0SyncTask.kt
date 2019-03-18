@@ -136,7 +136,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                         }
                 pageOfUsers = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
             }
-        } catch (ex: RhizomeRetrofitCallException) {
+        } catch (ex: Exception) {
             logger.error("Retrofit called failed during auth0 sync task." , ex )
             return
         }
