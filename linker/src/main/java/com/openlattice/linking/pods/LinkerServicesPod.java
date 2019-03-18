@@ -241,7 +241,8 @@ public class LinkerServicesPod {
                 edmManager(),
                 entityTypeManager(),
                 schemaManager(),
-                auditingConfiguration );
+                auditingConfiguration,
+                assembler() );
     }
 
     @Bean
