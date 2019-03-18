@@ -31,13 +31,11 @@ import com.openlattice.organizations.PrincipalSet
 import java.lang.IllegalStateException
 import java.util.*
 
-private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
-
 data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSet)
     : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
 
     @Transient
-    private var acm: AssemblerConnectionManager? = null
+    private lateinit var acm: AssemblerConnectionManager
 
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val organizationId = entry.key
@@ -46,11 +44,8 @@ data class AddMembersToOrganizationAssemblyProcessor(val newMembers: PrincipalSe
             throw IllegalStateException("Encountered null assembly while trying to add new members $newMembers to " +
                     "organization $organizationId.")
         } else {
-            if(acm == null) {
-                throw IllegalStateException(NOT_INITIALIZED)
-            }
             val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-            acm!!.connect(dbName).use { dataSource -> acm!!.addMembersToOrganization(dbName, dataSource, newMembers) }
+            acm.connect(dbName).use { dataSource -> acm.addMembersToOrganization(dbName, dataSource, newMembers) }
         }
 
         return null
