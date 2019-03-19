@@ -220,10 +220,12 @@ public class DatastoreServicesPod {
 
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore( idService(),
+        return new HazelcastEntityDatastore( hazelcastInstance,
+                idService(),
                 postgresDataManager(),
                 dataQueryService(),
-                dataModelService() );
+                dataModelService(),
+                assembler() );
     }
 
     @Bean
@@ -321,13 +323,10 @@ public class DatastoreServicesPod {
     @Bean
     public DataGraphManager dataGraphService() {
         return new DataGraphService(
-                hazelcastInstance,
                 eventBus,
                 graphApi(),
                 idService(),
-                entityDatastore(),
-                dataModelService(),
-                assembler() );
+                entityDatastore() );
     }
 
     @Bean
