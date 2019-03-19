@@ -390,6 +390,7 @@ public class EdmService implements EdmManager {
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
         final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
+        flagEntitySetDataUnsynchronized( linkingEntitySet );
 
         eventBus.post( new LinkedEntitySetAddedEvent(
                 updatedLinkingEntitySet,
@@ -409,6 +410,7 @@ public class EdmService implements EdmManager {
                 .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
         Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = edmManager
                 .getLinkingIdsByEntitySetIds( updatedLinkingEntitySet.getLinkedEntitySets() );
+        flagEntitySetDataUnsynchronized( linkingEntitySet );
 
         eventBus.post( new LinkedEntitySetRemovedEvent(
                 linkingEntitySetId,
@@ -791,7 +793,7 @@ public class EdmService implements EdmManager {
                             } );
                 }
 
-                flagEntitySetUnsynchronized( entitySet );  // add edm_unsync flag for materialized views
+                flagEntitySetEdmUnsynchronized( entitySet );  // add edm_unsync flag for materialized views
 
                 eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes ) );
                 eventBus.post( new PropertyTypesAddedToEntitySetEvent(
@@ -967,7 +969,7 @@ public class EdmService implements EdmManager {
                     .newArrayList( propertyTypes.getAll( et.getProperties() ).values() );
             edmManager.getAllEntitySetsForType( et.getId() ).forEach( entitySet -> {
                 if ( isFqnUpdated ) {
-                    flagEntitySetUnsynchronized( entitySet );  // add edm_unsync flag for materialized views
+                    flagEntitySetEdmUnsynchronized( entitySet );  // add edm_unsync flag for materialized views
                 }
                 eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), properties ) );
             } );
@@ -999,12 +1001,20 @@ public class EdmService implements EdmManager {
         eventBus.post( new EntitySetMetadataUpdatedEvent( getEntitySet( entitySetId ) ) );
     }
 
-    private void flagEntitySetUnsynchronized( EntitySet entitySet ) {
+    private void flagEntitySetEdmUnsynchronized( EntitySet entitySet ) {
+        flagEntitySetUnsynchronized( entitySet, EntitySetFlag.EDM_UNSYNCHRONIZED );
+    }
+
+    private void flagEntitySetDataUnsynchronized( EntitySet entitySet ) {
+        flagEntitySetUnsynchronized( entitySet, EntitySetFlag.DATA_UNSYNCHRONIZED );
+    }
+
+    private void flagEntitySetUnsynchronized( EntitySet entitySet, EntitySetFlag flag ) {
         if ( assembler.isEntitySetMaterialized( entitySet.getOrganizationId(), entitySet.getId() )
-                && !entitySet.getFlags().contains( EntitySetFlag.EDM_UNSYNCHRONIZED ) ) {
+                && !entitySet.getFlags().contains( flag ) ) {
             entitySets.executeOnKey(
                     entitySet.getId(),
-                    new AddFlagsToEntitySetProcessor( Set.of( EntitySetFlag.EDM_UNSYNCHRONIZED ) ) );
+                    new AddFlagsToEntitySetProcessor( Set.of( flag ) ) );
         }
     }
 
