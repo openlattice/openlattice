@@ -172,4 +172,20 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         val updatedLinkedEs = edmApi.getEntitySet(linkedEs.id)
         Assert.assertTrue(updatedLinkedEs.linkedEntitySets.isEmpty())
     }
+
+    @Test
+    fun testGetEntitySetIds() {
+        // test empty
+        Assert.assertEquals(mapOf<String, UUID>(), edmApi.getEntitySetIds(setOf<String>()))
+
+        // test multiple
+        val es1 = createEntitySet()
+        val es2 = createEntitySet()
+        val es3 = createEntitySet()
+
+        Assert.assertEquals(
+                mapOf(es1.name to es1.id, es2.name to es2.id, es3.name to es3.id),
+                edmApi.getEntitySetIds(setOf(es1.name, es2.name, es3.name))
+        )
+    }
 }
