@@ -52,6 +52,7 @@ import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
+import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
@@ -291,13 +292,13 @@ public class SearchService {
 
     private void indexLinkedEntities(
             UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
-        if(!linkingIds.isEmpty()) {
+        if ( !linkingIds.isEmpty() ) {
             // linking_id/(normal)entity_set_id/property_type_id
             Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
                     linkingIds.entrySet().stream().collect(
-                            Collectors.toMap(Map.Entry::getKey, entry -> Optional.of(entry.getValue())) ),
+                            Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
                     linkingIds.keySet().stream().collect(
-                            Collectors.toMap(Function.identity(), entitySetId -> propertyTypes) ));
+                            Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ) );
 
             elasticsearchApi.createBulkLinkedData( linkingEntitySetId, linkedData );
         }
@@ -686,6 +687,123 @@ public class SearchService {
             }
         }
         return null;
+    }
+
+    @Timed
+    public Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeLinkingEntityNeighborIdsSearch(
+            Set<UUID> linkedEntitySetIds,
+            EntityNeighborsFilter filter,
+            Set<Principal> principals ) {
+        if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
+            return ImmutableMap.of();
+        }
+
+        Set<UUID> linkingIds = filter.getEntityKeyIds();
+
+        PostgresIterable<Pair<UUID, Set<UUID>>> entityKeyIdsByLinkingIds = getEntityKeyIdsByLinkingIds( linkingIds );
+
+        Set<UUID> entityKeyIds = entityKeyIdsByLinkingIds.stream()
+                .flatMap( entityKeyIdsOfLinkingId -> entityKeyIdsOfLinkingId.getRight().stream() )
+                .collect( Collectors.toSet() );
+
+        // Will return only entries, where there is at least 1 neighbor
+        Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> entityNeighbors = executeEntityNeighborIdsSearch(
+                linkedEntitySetIds,
+                new EntityNeighborsFilter( entityKeyIds,
+                        filter.getSrcEntitySetIds(),
+                        filter.getDstEntitySetIds(),
+                        filter.getAssociationEntitySetIds() ),
+                principals );
+
+        if ( entityNeighbors.isEmpty() ) {
+            return entityNeighbors;
+        }
+
+        return entityKeyIdsByLinkingIds.stream()
+                .filter( entityKeyIdsOfLinkingId ->
+                        entityNeighbors.keySet().stream().anyMatch( entityKeyIdsOfLinkingId.getRight()::contains ) )
+                .collect( Collectors.toMap(
+                        Pair::getLeft, // linking_id
+                        entityKeyIdsOfLinkingId -> {
+                            Map<UUID, SetMultimap<UUID, NeighborEntityIds>> neighborIds = Maps.newHashMap();
+                            entityKeyIdsOfLinkingId.getRight().stream()
+                                    .filter( entityKeyId -> entityNeighbors.containsKey( entityKeyId ) )
+                                    .forEach( entityKeyId -> {
+                                        entityNeighbors.get( entityKeyId ).entrySet().forEach( entry -> {
+                                            neighborIds.getOrDefault( entry.getKey(), HashMultimap.create() ).putAll( entry.getValue() );
+                                        } );
+                                    } );
+                            return neighborIds;
+                        }
+                ) );
+    }
+
+    @Timed
+    public Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeEntityNeighborIdsSearch(
+            Set<UUID> entitySetIds,
+            EntityNeighborsFilter filter,
+            Set<Principal> principals ) {
+        final Stopwatch sw1 = Stopwatch.createStarted();
+
+        logger.info( "Starting Reduced Entity Neighbor Search..." );
+        if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
+            logger.info( "Missing association entity set ids. Returning empty result." );
+            return ImmutableMap.of();
+        }
+
+        Set<UUID> entityKeyIds = filter.getEntityKeyIds();
+        Set<UUID> allEntitySetIds = Sets.newHashSet();
+
+        Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> neighbors = Maps.newHashMap();
+
+        graphService.getEdgesAndNeighborsForVerticesBulk( entitySetIds, filter ).forEach( edge -> {
+
+            boolean isSrc = entityKeyIds.contains( edge.getSrc().getEntityKeyId() );
+            UUID entityKeyId = isSrc ? edge.getSrc().getEntityKeyId() : edge.getDst().getEntityKeyId();
+            EntityDataKey neighborEntityDataKey = isSrc ? edge.getDst() : edge.getSrc();
+
+            NeighborEntityIds neighborEntityIds = new NeighborEntityIds( edge.getEdge().getEntityKeyId(),
+                    neighborEntityDataKey.getEntityKeyId(),
+                    isSrc );
+
+            if ( !neighbors.containsKey( entityKeyId ) ) {
+                neighbors.put( entityKeyId, Maps.newHashMap() );
+            }
+
+            if ( !neighbors.get( entityKeyId ).containsKey( edge.getEdge().getEntitySetId() ) ) {
+                neighbors.get( entityKeyId ).put( edge.getEdge().getEntitySetId(), HashMultimap.create() );
+            }
+
+            neighbors.get( entityKeyId ).get( edge.getEdge().getEntitySetId() )
+                    .put( neighborEntityDataKey.getEntitySetId(), neighborEntityIds );
+
+            allEntitySetIds.add( edge.getEdge().getEntitySetId() );
+            allEntitySetIds.add( neighborEntityDataKey.getEntitySetId() );
+
+        } );
+
+        Set<UUID> unauthorizedEntitySetIds = authorizations.accessChecksForPrincipals( allEntitySetIds.stream()
+                .map( esId -> new AccessCheck( new AclKey( esId ), EnumSet.of( Permission.READ ) ) )
+                .collect( Collectors.toSet() ), principals )
+                .filter( auth -> !auth.getPermissions().get( Permission.READ ) )
+                .map( auth -> auth.getAclKey().get( 0 ) )
+                .collect( Collectors.toSet() );
+
+        if ( unauthorizedEntitySetIds.size() > 0 ) {
+
+            neighbors.values().forEach( associationMap -> {
+                associationMap.values().forEach( neighborsMap -> neighborsMap.entries()
+                        .removeIf( neighborEntry -> unauthorizedEntitySetIds.contains( neighborEntry.getKey() ) ) );
+                associationMap.entrySet().removeIf( entry -> unauthorizedEntitySetIds.contains( entry.getKey() )
+                        || entry.getValue().size() == 0 );
+
+            } );
+
+        }
+
+        logger.info( "Reduced entity neighbor search took {}", sw1.elapsed( TimeUnit.MILLISECONDS ) );
+
+        return neighbors;
     }
 
     private List<SetMultimap<FullQualifiedName, Object>> getResults(
