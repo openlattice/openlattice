@@ -28,7 +28,6 @@ import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
@@ -41,11 +40,9 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.processors.AddFlagsToEntitySetProcessor;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
-import com.openlattice.postgres.JsonDeserializer;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,13 +50,12 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.Maps.newHashMap;
-import static com.google.common.collect.Maps.transformValues;
+
 
 public class HazelcastEntityDatastore implements EntityDatastore {
     private static final int    BATCH_INDEX_THRESHOLD = 256;
@@ -541,67 +537,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return dataQueryService.getLinkingEntitySetIds( linkingId );
     }
 
-    @Deprecated
-    @Timed
-    public Stream<UUID> createEntityData(
-            UUID entitySetId,
-            Map<String, SetMultimap<UUID, Object>> entities,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
-
-        return entities.entrySet().stream().map(
-                entity -> {
-                    // Get an id for this object
-                    final UUID id = idService.getEntityKeyId( entitySetId, entity.getKey() );
-                    return createData(
-                            entitySetId,
-                            authorizedPropertyTypes,
-                            id,
-                            entity.getValue() );
-                } );
-    }
-
-    /* creating */
-    @Timed
-    public UUID createData(
-            UUID entitySetId,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            UUID entityKeyId,
-            SetMultimap<UUID, Object> entityDetails ) {
-        //TODO: Keep full local copy of PropertyTypes EDM
-        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType = transformValues( authorizedPropertyTypes,
-                PropertyType::getDatatype );
-        Set<UUID> authorizedProperties = authorizedPropertiesWithDataType.keySet();
-        // does not write the row if some property values that user is trying to write to are not authorized.
-        //TODO: Don't fail silently
-        //TODO: Move all access checks up to controller.
-        if ( !authorizedProperties.containsAll( entityDetails.keySet() ) ) {
-            String msg = String
-                    .format( "Entity %s not written because the following properties are not authorized: %s",
-                            entityKeyId,
-                            Sets.difference( entityDetails.keySet(), authorizedProperties ) );
-            logger.error( msg );
-            throw new ForbiddenException( msg );
-        }
-
-        SetMultimap<UUID, Object> normalizedPropertyValues;
-        try {
-            normalizedPropertyValues = JsonDeserializer.validateFormatAndNormalize( Multimaps.asMap( entityDetails ),
-                    authorizedPropertiesWithDataType );
-        } catch ( Exception e ) {
-            logger.error( "Entity {} not written because some property values are of invalid format.",
-                    entityKeyId,
-                    e );
-            return null;
-        }
-
-        // write the data
-        dataQueryService.upsertEntities( entitySetId,
-                ImmutableMap.of( entityKeyId, Multimaps.asMap( normalizedPropertyValues ) ),
-                authorizedPropertyTypes );
-        signalCreatedEntities( entitySetId, ImmutableSet.of( entityKeyId ) );
-        return entityKeyId;
-    }
-
     /**
      * Delete data of an entity set across ALL sync Ids.
      */
@@ -667,66 +602,4 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return propertyWriteEvent;
     }
 
-    public static SetMultimap<Object, Object> fromEntityDataValue(
-            EntityDataKey dataKey,
-            EntityDataValue dataValue,
-            long count,
-            Map<UUID, PropertyType> propertyTypes ) {
-        SetMultimap entityData = fromEntityDataValue( dataValue, propertyTypes );
-        entityData.put( "id", dataKey.getEntityKeyId() );
-        entityData.put( "count", count );
-        return entityData;
-    }
-
-    public static SetMultimap<Object, Object> fromEntityDataValue(
-            EntityDataKey dataKey,
-            EntityDataValue dataValue,
-            Map<UUID, PropertyType> propertyTypes ) {
-        SetMultimap entityData = fromEntityDataValue( dataValue, propertyTypes );
-        entityData.put( "id", dataKey.getEntityKeyId() );
-        return entityData;
-    }
-
-    public static SetMultimap<FullQualifiedName, Object> fromEntity(
-            Entity edv,
-            Map<UUID, PropertyType> propertyTypes ) {
-        SetMultimap<FullQualifiedName, Object> entityData = HashMultimap.create();
-        final var entityDataByUUID = edv.getProperties();
-
-        for ( Entry<UUID, PropertyType> propertyTypeEntry : propertyTypes.entrySet() ) {
-            UUID propertyTypeId = propertyTypeEntry.getKey();
-            entityData.put( propertyTypeEntry.getValue().getType(), entityDataByUUID.get( propertyTypeId ) );
-        }
-        return entityData;
-    }
-
-    public static SetMultimap<FullQualifiedName, Object> fromEntityDataValue(
-            EntityDataValue edv,
-            Map<UUID, PropertyType> propertyTypes ) {
-        SetMultimap<FullQualifiedName, Object> entityData = HashMultimap.create();
-        Map<UUID, Map<Object, PropertyMetadata>> properties = edv.getProperties();
-        for ( Entry<UUID, PropertyType> propertyTypeEntry : propertyTypes.entrySet() ) {
-            UUID propertyTypeId = propertyTypeEntry.getKey();
-            Map<Object, PropertyMetadata> valueMap = properties.get( propertyTypeId );
-            if ( valueMap != null ) {
-                PropertyType propertyType = propertyTypeEntry.getValue();
-                entityData.putAll( propertyType.getType(), valueMap.keySet() );
-            }
-        }
-        return entityData;
-    }
-
-    public static SetMultimap<UUID, Object> fromEntityDataValue(
-            EntityDataValue edv,
-            Set<UUID> authorizedPropertyTypes ) {
-        SetMultimap<UUID, Object> entityData = HashMultimap.create();
-        Map<UUID, Map<Object, PropertyMetadata>> properties = edv.getProperties();
-        for ( UUID propertyTypeId : authorizedPropertyTypes ) {
-            Map<Object, PropertyMetadata> valueMap = properties.get( propertyTypeId );
-            if ( valueMap != null ) {
-                entityData.putAll( propertyTypeId, valueMap.keySet() );
-            }
-        }
-        return entityData;
-    }
 }
