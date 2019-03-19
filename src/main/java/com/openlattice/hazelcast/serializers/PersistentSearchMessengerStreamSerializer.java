@@ -4,25 +4,25 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.openlattice.search.PersistentSearchMessenger;
+import com.openlattice.search.PersistentSearchMessengerTask;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
 @Component
 public class PersistentSearchMessengerStreamSerializer
-        implements SelfRegisteringStreamSerializer<PersistentSearchMessenger> {
+        implements SelfRegisteringStreamSerializer<PersistentSearchMessengerTask> {
 
-    @Override public Class<? extends PersistentSearchMessenger> getClazz() {
-        return PersistentSearchMessenger.class;
+    @Override public Class<? extends PersistentSearchMessengerTask> getClazz() {
+        return PersistentSearchMessengerTask.class;
     }
 
-    @Override public void write( ObjectDataOutput out, PersistentSearchMessenger object ) throws IOException {
+    @Override public void write( ObjectDataOutput out, PersistentSearchMessengerTask object ) throws IOException {
 
     }
 
-    @Override public PersistentSearchMessenger read( ObjectDataInput in ) throws IOException {
-        return new PersistentSearchMessenger();
+    @Override public PersistentSearchMessengerTask read( ObjectDataInput in ) throws IOException {
+        return new PersistentSearchMessengerTask();
     }
 
     @Override public int getTypeId() {
