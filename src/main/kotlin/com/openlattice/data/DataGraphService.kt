@@ -21,38 +21,27 @@
 
 package com.openlattice.data
 
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
-import com.google.common.cache.LoadingCache
 import com.google.common.collect.*
 import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListenableFuture
-import com.hazelcast.core.HazelcastInstance
-import com.hazelcast.core.IMap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.assembler.Assembler
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.graph.edge.EdgeKey
-import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.hazelcast.processors.AddFlagsToEntitySetProcessor
 import com.openlattice.postgres.streams.PostgresIterable
-import org.apache.commons.collections4.keyvalue.MultiKey
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.collections.HashMap
 import kotlin.collections.HashSet
@@ -64,13 +53,10 @@ import kotlin.collections.HashSet
 private val logger = LoggerFactory.getLogger(DataGraphService::class.java)
 
 open class DataGraphService(
-        hazelcastInstance: HazelcastInstance,
         private val eventBus: EventBus,
         private val graphService: GraphService,
         private val idService: EntityKeyIdService,
-        private val eds: EntityDatastore,
-        private val edm: EdmManager,
-        private val assembler: Assembler
+        private val eds: EntityDatastore
 
 ) : DataGraphManager {
     override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
@@ -94,24 +80,6 @@ open class DataGraphService(
 
         const val ASSOCIATION_SIZE = 30000
     }
-
-    private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
-
-    private val typeIds: LoadingCache<UUID, UUID> = CacheBuilder.newBuilder()
-            .maximumSize(100000) // 100K * 16 = 16000K = 16MB
-            .build(
-                    object : CacheLoader<UUID, UUID>() {
-
-                        @Throws(Exception::class)
-                        override fun load(key: UUID): UUID {
-                            return entitySets[key]!!.entityTypeId
-                        }
-                    }
-            )
-    private val queryCache = CacheBuilder.newBuilder()
-            .maximumSize(1000)
-            .expireAfterWrite(30, TimeUnit.SECONDS)
-            .build<MultiKey<*>, Map<String, Object>>()
 
 
     /* Select */
@@ -199,9 +167,6 @@ open class DataGraphService(
         //clear entities
         val entityWriteEvent = eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
 
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
         logger.info("Cleared {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
         return entityWriteEvent
     }
@@ -245,9 +210,6 @@ open class DataGraphService(
         //clear entities
         val entityWriteEvent = eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
 
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
         logger.info("Cleared {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
         return entityWriteEvent
     }
@@ -259,9 +221,6 @@ open class DataGraphService(
         logger.info("Cleared properties {} of {} entities.",
                 authorizedPropertyTypes.values.map(PropertyType::getType), propertyWriteEvent.numUpdates)
 
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
         return propertyWriteEvent
     }
 
@@ -271,9 +230,6 @@ open class DataGraphService(
 
         // delete entities
         val entityWriteEvent = eds.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
-
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
 
         logger.info("Deleted {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
         return entityWriteEvent
@@ -296,9 +252,6 @@ open class DataGraphService(
 
         // delete entities
         val verticesCount = graphService.deleteVertices(entitySetId, entityKeyIds)
-
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
 
         logger.info("Deleted {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
 
@@ -333,9 +286,6 @@ open class DataGraphService(
     ): WriteEvent {
         val propertyCount = eds.deleteEntityProperties(entitySetId, entityKeyIds, authorizedPropertyTypes)
 
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
         logger.info("Deleted properties {} of {} entities.",
                 authorizedPropertyTypes.values.map(PropertyType::getType), propertyCount.numUpdates)
         return propertyCount
@@ -363,9 +313,6 @@ open class DataGraphService(
         val identifiedEntities = ids.map { it.value to entities[it.key.entityId] }.toMap()
         eds.integrateEntities(entitySetId, identifiedEntities, authorizedPropertyTypes)
 
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
         return ids
     }
 
@@ -378,9 +325,6 @@ open class DataGraphService(
         val entityMap = ids.mapIndexed { i, id -> id to entities[i] }.toMap()
         val writeEvent = eds.createOrUpdateEntities(entitySetId, entityMap, authorizedPropertyTypes)
 
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
         return Pair.of(ids, writeEvent)
     }
 
@@ -389,12 +333,7 @@ open class DataGraphService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        val writeEvent = eds.createOrUpdateEntities(entitySetId, entities, authorizedPropertyTypes)
-
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
-        return writeEvent
+        return eds.createOrUpdateEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
     override fun replaceEntities(
@@ -402,12 +341,7 @@ open class DataGraphService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        val writeEvent = eds.replaceEntities(entitySetId, entities, authorizedPropertyTypes)
-
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
-        return writeEvent
+        return eds.replaceEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
     override fun partialReplaceEntities(
@@ -415,12 +349,7 @@ open class DataGraphService(
             entities: Map<UUID, Map<UUID, Set<Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        val writeEvent = eds.partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes)
-
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
-        return writeEvent
+        return eds.partialReplaceEntities(entitySetId, entities, authorizedPropertyTypes)
     }
 
     override fun replacePropertiesInEntities(
@@ -428,12 +357,7 @@ open class DataGraphService(
             replacementProperties: Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Any>>>,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent {
-        val writeEvent = eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
-
-        // mark entityset as unsync with data
-        flagEntitySetUnsynchronized(entitySetId)
-
-        return writeEvent
+        return eds.replacePropertiesInEntities(entitySetId, replacementProperties, authorizedPropertyTypes)
     }
 
     override fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent {
@@ -540,18 +464,6 @@ open class DataGraphService(
         integrateAssociations(associations, authorizedPropertiesByEntitySetId)
         return null
     }
-
-    /* CRUD helpers */
-
-    private fun flagEntitySetUnsynchronized(entitySetId: UUID) {
-        val entitySet = edm.getEntitySet(entitySetId)
-        if (assembler.isEntitySetMaterialized(entitySet.organizationId, entitySet.id)
-                && !entitySet.flags.contains(EntitySetFlag.DATA_UNSYNCHRONIZED)) {
-            entitySets
-                    .executeOnKey(entitySet.id, AddFlagsToEntitySetProcessor(setOf(EntitySetFlag.DATA_UNSYNCHRONIZED)))
-        }
-    }
-
 
     /* Top utilizers */
 

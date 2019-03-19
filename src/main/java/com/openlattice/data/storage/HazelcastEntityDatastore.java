@@ -25,13 +25,20 @@ package com.openlattice.data.storage;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
+import com.openlattice.assembler.Assembler;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.EntitySetDataDeletedEvent;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.hazelcast.processors.AddFlagsToEntitySetProcessor;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.postgres.JsonDeserializer;
@@ -63,6 +70,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private final IndexingMetadataManager        pdm;
     private final PostgresEntityDataQueryService dataQueryService;
     private final EdmManager                     edmManager;
+    private final Assembler                      assembler;
+
+    private final IMap<UUID, EntitySet>          entitySets;
 
     @Inject
     private EventBus eventBus;
@@ -74,14 +84,18 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private LinkingQueryService linkingQueryService;
 
     public HazelcastEntityDatastore(
+            HazelcastInstance hazelcastInstance,
             EntityKeyIdService idService,
             IndexingMetadataManager pdm,
             PostgresEntityDataQueryService dataQueryService,
-            EdmManager edmManager ) {
+            EdmManager edmManager,
+            Assembler assembler ) {
         this.dataQueryService = dataQueryService;
         this.pdm = pdm;
         this.idService = idService;
         this.edmManager = edmManager;
+        this.assembler = assembler;
+        entitySets  = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name());
     }
 
     @Override
@@ -122,12 +136,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    entities.keySet() );
+                    entities.keySet() ); //todo linked
         }
         return writeEvent;
     }
@@ -145,12 +161,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    entities.keySet() );
+                    entities.keySet() ); //todo linked cases
         }
         return writeEvent;
     }
@@ -167,12 +185,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         final var writeEvent = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    entities.keySet() );
+                    entities.keySet() ); //todo linked
         }
         return writeEvent;
     }
@@ -190,20 +210,16 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService
                 .partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    entities.keySet() );
+                    entities.keySet() ); //todo linked
         }
         return writeEvent;
-    }
-
-    private static SetMultimap<UUID, Object> setMultimapFromMap( Map<UUID, Set<Object>> m ) {
-        final SetMultimap<UUID, Object> entity = HashMultimap.create();
-        m.forEach( entity::putAll );
-        return entity;
     }
 
     private void signalCreatedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
@@ -293,6 +309,16 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         }
     }
 
+    private void flagEntitySetUnsynchronized( UUID entitySetId ) {
+        EntitySet entitySet = edmManager.getEntitySet( entitySetId );
+        if ( assembler.isEntitySetMaterialized( entitySet.getOrganizationId(), entitySet.getId() )
+                && !entitySet.getFlags().contains( EntitySetFlag.DATA_UNSYNCHRONIZED ) ) {
+            entitySets.executeOnKey(
+                    entitySet.getId(),
+                    new AddFlagsToEntitySetProcessor( Set.of( EntitySetFlag.DATA_UNSYNCHRONIZED ) ) );
+        }
+    }
+
     @Timed
     @Override public WriteEvent replacePropertiesInEntities(
             UUID entitySetId,
@@ -306,12 +332,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, replacementProperties.keySet() );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    replacementProperties.keySet() );
+                    replacementProperties.keySet() ); //todo linked
         }
         return writeEvent;
     }
@@ -321,6 +349,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var writeEvent = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
         signalEntitySetDataDeleted( entitySetId );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 
@@ -329,6 +358,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var writeEvent = dataQueryService.clearEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
         signalDeletedEntities( entitySetId, entityKeyIds );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 
@@ -340,6 +370,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService.clearEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         // same as if we updated the entities
         signalCreatedEntities( entitySetId, entityKeyIds );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 
@@ -584,6 +615,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         logger.info( "Finished deletion data from entity set {}. Deleted {} rows and {} property data",
                 entitySetId, writeEvent.getNumUpdates(), propertyWriteEvent.getNumUpdates() );
         signalEntitySetDataDeleted( entitySetId );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 
@@ -597,6 +629,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         WriteEvent writeEvent = dataQueryService.deleteEntities( entitySetId, entityKeyIds );
         signalDeletedEntities( entitySetId, entityKeyIds );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         // delete entities from linking feedbacks too
         int deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks( entitySetId, entityKeyIds );
@@ -624,6 +657,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         // same as if we updated the entities
         signalCreatedEntities( entitySetId, entityKeyIds );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         logger.info( "Finished deletion of properties ( {} ) from entity set {} and ( {} ) entities. Deleted {} rows " +
                         "of property data",
