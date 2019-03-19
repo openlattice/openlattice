@@ -47,6 +47,9 @@ import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
+import com.openlattice.organizations.PrincipalSet
+import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
+import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
@@ -152,6 +155,19 @@ class Assembler(
             assemblies.executeOnKey(organizationId, DeleteOrganizationAssemblyProcessor().init(acm))
             Util.deleteSafely(assemblies, organizationId)
         }
+    }
+
+    @Subscribe
+    fun handleAddMembersToOrganization(event: MembersAddedToOrganizationEvent) {
+        assemblies.executeOnKey(
+                event.organizationId,
+                AddMembersToOrganizationAssemblyProcessor(event.newMembers).init(acm))
+    }
+
+    @Subscribe
+    fun removeMembersFromOrganization(event: MembersRemovedFromOrganizationEvent) {
+        assemblies.executeOnKey(event.organizationId,
+                RemoveMembersFromOrganizationAssemblyProcessor(event.members).init(acm))
     }
 
     fun materializeEntitySets(

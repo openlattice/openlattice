@@ -19,26 +19,10 @@
  *
  */
 
-package com.openlattice.tasks
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-enum class Task {
-    AUDIT_INITIALIZATION,
-    AUTH0_SYNC_INITIALIZATION_TASK,
-    AUTH0_SYNC_TASK,
-    AUTHORIZATION_BOOTSTRAP,
-    CLEAN_OUT_OLDER_USERS_INITIALIZATON,
-    ENTITY_VIEWS_INITIALIZER,
-    ORGANIZATION_ASSEMBLIES_INITIALIZER,
-    ORGANIZATION_BOOTSTRAP,
-    ORGANIZATION_MEMBERS_CLEANUP,
-    PERSISTENT_SEARCH_MESSENGER_TASK,
-    PRODUCTION_VIEW_INITIALIZATON,
-    POST_INITIALIZER,
-    USERS_AND_ROLES_INITIALIZATON,
-    USER_CREDENTIAL_SYNC_TASK
+package com.openlattice.organizations.events
 
-}
+import com.openlattice.organizations.PrincipalSet
+import java.util.UUID
+
+data class MembersRemovedFromOrganizationEvent(val organizationId: UUID, val members: PrincipalSet)

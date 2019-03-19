@@ -5,7 +5,6 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.SetMultimap
 import com.openlattice.mail.RenderableEmailRequest
-import com.openlattice.search.PersistentSearchMessengerHelpers
 import com.openlattice.search.requests.PersistentSearch
 import jodd.mail.EmailAttachment
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -88,7 +87,7 @@ class AlprAlertEmailRenderer {
 
         }
 
-        private fun getMapImage(coords: String?): ByteArrayOutputStream? {
+        private fun getMapImage(coords: String?, mapboxToken: String): ByteArrayOutputStream? {
             if (coords == null) {
                 return null
             }
@@ -110,7 +109,7 @@ class AlprAlertEmailRenderer {
                     .append(",")
                     .append(lat)
                     .append(",15/600x600.png?access_token=")
-                    .append(PersistentSearchMessengerHelpers.mapboxToken)
+                    .append(mapboxToken)
                     .toString()
 
             return getImage(url, PNG)
@@ -138,7 +137,7 @@ class AlprAlertEmailRenderer {
             return values.filterValues { it != null }
         }
 
-        private fun extractVehicleImages(vehicleRead: SetMultimap<FullQualifiedName, Any>): List<EmailAttachment<*>> {
+        private fun extractVehicleImages(vehicleRead: SetMultimap<FullQualifiedName, Any>, mapboxToken: String): List<EmailAttachment<*>> {
 
             val licenseImageUrl = getFirstValue(vehicleRead, LICENSE_PLATE_IMAGE_FQN)
             val vehicleImageUrl = getFirstValue(vehicleRead, VEHICLE_IMAGE_FQN)
@@ -146,7 +145,7 @@ class AlprAlertEmailRenderer {
 
             val licenseImage = getImage(licenseImageUrl, JPEG)
             val vehicleImage = getImage(vehicleImageUrl, JPEG)
-            val mapImage = getMapImage(coordinates)
+            val mapImage = getMapImage(coordinates, mapboxToken)
 
             val attachments = Lists.newArrayList<EmailAttachment<*>>()
             if (licenseImage != null) {
@@ -182,7 +181,10 @@ class AlprAlertEmailRenderer {
         }
 
         fun renderEmail(
-                persistentSearch: PersistentSearch, vehicle: SetMultimap<FullQualifiedName, Any>, userEmail: String
+                persistentSearch: PersistentSearch,
+                vehicle: SetMultimap<FullQualifiedName, Any>,
+                userEmail: String,
+                mapboxToken: String
         ): RenderableEmailRequest {
 
             val caseNum = persistentSearch.alertMetadata["caseNum"]
@@ -195,7 +197,7 @@ class AlprAlertEmailRenderer {
             templateObjects.putAll(extractVehicleInfo(vehicle))
             templateObjects["expiration"] = persistentSearch.expiration.format(dateTimeFormatter)
 
-            val attachments = extractVehicleImages(vehicle).toTypedArray()
+            val attachments = extractVehicleImages(vehicle, mapboxToken).toTypedArray()
 
             return RenderableEmailRequest(
                     Optional.of(FROM_EMAIL),
