@@ -132,14 +132,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    entities.keySet() ); //todo linked
+                    entities.keySet() );
         }
         return writeEvent;
     }
@@ -157,14 +156,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    entities.keySet() ); //todo linked cases
+                    entities.keySet() );
         }
         return writeEvent;
     }
@@ -181,14 +179,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         final var writeEvent = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    entities.keySet() ); //todo linked
+                    entities.keySet() );
         }
         return writeEvent;
     }
@@ -206,14 +203,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService
                 .partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    entities.keySet() ); //todo linked
+                    entities.keySet() );
         }
         return writeEvent;
     }
@@ -226,6 +222,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                             edmManager.getPropertyTypesForEntitySet( entitySetId ),
                             entityKeyIds ) ) );
         }
+
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
     }
 
     private void signalLinkedEntitiesUpserted(
@@ -237,8 +235,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         // When updating entity -> if no entity left with old linking id: delete old index. if left -> mark it as dirty
         //                      -> background indexing job will pick up updated entity with new linking id
         // It makes more sense to let background task (re-)index, instead of explicitly calling re-index, since an
-
         // update/create event affects all the linking entity sets, where that linking id is present
+
         Set<UUID> remainingLinkingIds = dataQueryService
                 .getEntityKeyIdsOfLinkingIds( oldLinkingIds ).stream()
                 // we cannot know, whether the old entity was already updated with a new linking id or is still there
@@ -253,18 +251,25 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         // delete
         Set<UUID> deletedLinkingIds = Sets.difference( oldLinkingIds, remainingLinkingIds );
         eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
+
+        // mark all involved linking entitysets as unsync with data
+        linkingEntitySetIds.forEach( this::flagEntitySetUnsynchronized );
     }
 
     private void signalEntitySetDataDeleted( UUID entitySetId ) {
         eventBus.post( new EntitySetDataDeletedEvent( entitySetId ) );
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesDeletedEvent( Set.of( entitySetId ), entityKeyIds ) );
-            signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         }
+        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+
+        signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
     }
 
     private void signalLinkedEntitiesDeleted( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
@@ -302,6 +307,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                         .map( Map.Entry::getKey ).collect( Collectors.toSet() );
                 pdm.markLinkingIdsAsNeedToBeIndexed( dirtyLinkingIds );
             }
+
+
+            // mark all involved linking entitysets as unsync with data
+            dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagEntitySetUnsynchronized );
         }
     }
 
@@ -328,14 +337,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, replacementProperties.keySet() );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
                             .collect( Collectors.toSet() ),
                     oldLinkingIds,
-                    replacementProperties.keySet() ); //todo linked
+                    replacementProperties.keySet() );
         }
         return writeEvent;
     }
@@ -354,7 +362,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId, Set<UUID> entityKeyIds, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var writeEvent = dataQueryService.clearEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
         signalDeletedEntities( entitySetId, entityKeyIds );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 
@@ -366,7 +373,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService.clearEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         // same as if we updated the entities
         signalCreatedEntities( entitySetId, entityKeyIds );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+
         return writeEvent;
     }
 
@@ -564,7 +571,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         WriteEvent writeEvent = dataQueryService.deleteEntities( entitySetId, entityKeyIds );
         signalDeletedEntities( entitySetId, entityKeyIds );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         // delete entities from linking feedbacks too
         int deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks( entitySetId, entityKeyIds );
@@ -592,7 +598,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 .deleteEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         // same as if we updated the entities
         signalCreatedEntities( entitySetId, entityKeyIds );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         logger.info( "Finished deletion of properties ( {} ) from entity set {} and ( {} ) entities. Deleted {} rows " +
                         "of property data",
