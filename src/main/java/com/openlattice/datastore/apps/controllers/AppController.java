@@ -81,6 +81,17 @@ public class AppController implements AppApi, AuthorizingComponent {
     @Timed
     @Override
     @RequestMapping(
+            path = TYPE_PATH,
+            method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE )
+    @ResponseStatus( HttpStatus.OK )
+    public Iterable<AppType> getAppTypes() {
+        return appService.getAppTypes();
+    }
+
+    @Timed
+    @Override
+    @RequestMapping(
             method = RequestMethod.POST,
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE )
