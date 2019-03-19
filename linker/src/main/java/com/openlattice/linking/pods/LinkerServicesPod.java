@@ -191,7 +191,6 @@ public class LinkerServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                userDirectoryService(),
                 principalService(),
                 assembler() );
     }
