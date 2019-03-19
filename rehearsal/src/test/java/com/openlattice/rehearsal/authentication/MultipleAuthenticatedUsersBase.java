@@ -38,6 +38,7 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.directory.PrincipalApi;
 import com.openlattice.edm.EdmApi;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -72,7 +73,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
 import retrofit2.Retrofit;
@@ -302,6 +303,11 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                                              EntityType entityType,
                                              boolean linking,
                                              Set<UUID> linkedEntitySetIds ) {
+        EnumSet<EntitySetFlag> flags = EnumSet.of( EntitySetFlag.EXTERNAL );
+        if(linking) {
+            flags.add( EntitySetFlag.LINKING );
+        }
+
         EntitySet newES = new EntitySet(
                 Optional.of( entitySetId ),
                 entityType.getId(),
@@ -309,10 +315,9 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
                 "foobar",
                 Optional.of( "barred" ),
                 ImmutableSet.of( "foo@bar.com", "foobar@foo.net" ),
-                Optional.of( linking ),
                 Optional.of( linkedEntitySetIds ),
-                Optional.of( true ) ,
-                Optional.empty());
+                Optional.empty(),
+                Optional.of(flags));
 
         Map<String, UUID> entitySetIds = edmApi.createEntitySets( ImmutableSet.of( newES ) );
 
