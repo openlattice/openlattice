@@ -259,7 +259,6 @@ public class DatastoreServicesPod {
                 hazelcastInstance,
                 aclKeyReservationService(),
                 authorizationManager(),
-                userDirectoryService(),
                 principalService(),
                 assembler() );
     }
