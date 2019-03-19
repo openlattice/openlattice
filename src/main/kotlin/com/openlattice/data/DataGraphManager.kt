@@ -211,6 +211,5 @@ interface DataGraphManager {
     fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<EdgeKey>
     fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<EdgeKey>
 
-    fun createEdges(edges: Set<DataEdgeKey>): WriteEvent
     fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
 }
