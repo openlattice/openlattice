@@ -1,7 +1,6 @@
 package com.openlattice.search
 
 import com.google.common.collect.SetMultimap
-import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
 import com.openlattice.data.requests.NeighborEntityDetails
@@ -9,8 +8,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.mail.MailServiceClient
-import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.LAST_WRITE_FQN
 import com.openlattice.postgres.PostgresColumn.*
@@ -18,52 +15,69 @@ import com.openlattice.postgres.PostgresTable.PERSISTENT_SEARCHES
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
-import com.openlattice.search.requests.*
-import com.zaxxer.hikari.HikariDataSource
+import com.openlattice.search.requests.DataSearchResult
+import com.openlattice.search.requests.EntityNeighborsFilter
+import com.openlattice.search.requests.PersistentSearch
+import com.openlattice.search.requests.SearchConstraints
+import com.openlattice.tasks.HazelcastFixedRateTask
+import com.openlattice.tasks.HazelcastTaskDependencies
+import com.openlattice.tasks.Task
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Scheduled
 import java.sql.ResultSet
 import java.sql.Statement
 import java.sql.Timestamp
 import java.time.OffsetDateTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Collectors
 
-private val logger = LoggerFactory.getLogger(PersistentSearchMessenger::class.java)
+private val logger = LoggerFactory.getLogger(PersistentSearchMessengerTask::class.java)
 
 const val ALERT_MESSENGER_INTERVAL_MILLIS = 60000L
 
 private val LOAD_ACTIVE_ALERTS_SQL = "SELECT * FROM ${PERSISTENT_SEARCHES.name} WHERE ${EXPIRATION_DATE.name} > now()"
 
-class PersistentSearchMessenger : Runnable {
+class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMessengerTaskDependencies>, HazelcastTaskDependencies {
 
-    @Transient
-    private val propertyTypes: IMap<UUID, PropertyType> = PersistentSearchMessengerHelpers.hazelcastInstance.getMap(HazelcastMap.PROPERTY_TYPES.name)
-    @Transient
-    private val entityTypes: IMap<UUID, EntityType> = PersistentSearchMessengerHelpers.hazelcastInstance.getMap(HazelcastMap.ENTITY_TYPES.name)
-    @Transient
-    private val entitySets: IMap<UUID, EntitySet> = PersistentSearchMessengerHelpers.hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+    override fun getInitialDelay(): Long {
+        return ALERT_MESSENGER_INTERVAL_MILLIS
+    }
+
+    override fun getPeriod(): Long {
+        return ALERT_MESSENGER_INTERVAL_MILLIS
+    }
+
+    override fun getTimeUnit(): TimeUnit {
+        return TimeUnit.MILLISECONDS
+    }
+
+    override fun getName(): String {
+        return Task.PERSISTENT_SEARCH_MESSENGER_TASK.name
+    }
+
+    override fun getDependenciesClass(): Class<out PersistentSearchMessengerTaskDependencies> {
+        return PersistentSearchMessengerTaskDependencies::class.java
+    }
 
     private fun getPropertyTypeIdsForEntitySet(entitySetId: UUID): Set<UUID> {
-        return entityTypes[entitySets[entitySetId]?.entityTypeId]?.properties.orEmpty()
+        val dependencies = getDependency()
+        return dependencies.entityTypes[dependencies.entitySets[entitySetId]?.entityTypeId]?.properties.orEmpty()
     }
 
     private fun getAuthorizedPropertyMap(principals: Set<Principal>, entitySetId: UUID): Map<UUID, PropertyType> {
-
         val accessChecks = getPropertyTypeIdsForEntitySet(entitySetId).map { AccessCheck(AclKey(entitySetId, it), EnumSet.of(Permission.READ)) }.toMutableSet()
-        return propertyTypes.getAll(PersistentSearchMessengerHelpers.authorizationManager.accessChecksForPrincipals(accessChecks, principals)
+        return getDependency().propertyTypes.getAll(getDependency().authorizationManager.accessChecksForPrincipals(accessChecks, principals)
                 .filter { it.permissions[Permission.READ]!! }
                 .map { it.aclKey[1] }
                 .collect(Collectors.toSet()))
     }
 
     private fun getAuthorizedPropertyTypeMap(securablePrincipal: SecurablePrincipal, entitySetIds: List<UUID>): Map<UUID, Map<UUID, PropertyType>> {
-        var principals = PersistentSearchMessengerHelpers.principalsManager.getAllPrincipals(securablePrincipal)
+        var principals = getDependency().principalsManager.getAllPrincipals(securablePrincipal)
                 .plus(securablePrincipal)
                 .map { it.principal }
                 .toSet()
@@ -86,13 +100,14 @@ class PersistentSearchMessenger : Runnable {
             userSecurablePrincipal: SecurablePrincipal,
             persistentSearch: PersistentSearch,
             newResults: DataSearchResult,
-            neighborsById: Map<UUID, List<NeighborEntityDetails>>
-    ) {
-        val userEmail = PersistentSearchMessengerHelpers.principalsManager.getUser(userSecurablePrincipal.principal.id).email
+            neighborsById: Map<UUID, List<NeighborEntityDetails>>) {
+        val dependencies = getDependency()
+
+        val userEmail = dependencies.principalsManager.getUser(userSecurablePrincipal.principal.id).email
         newResults.hits.forEach {
             val entityKeyId = UUID.fromString(it[DataTables.ID_FQN].first().toString())
-            val renderableEmail = PersistentSearchEmailRenderer.renderEmail(persistentSearch, it, userEmail, neighborsById.getOrDefault(entityKeyId, listOf()))
-            PersistentSearchMessengerHelpers.mailServiceClient.spool(renderableEmail)
+            val renderableEmail = PersistentSearchEmailRenderer.renderEmail(persistentSearch, it, userEmail, neighborsById.getOrDefault(entityKeyId, listOf()), dependencies)
+            dependencies.mailServiceClient.spool(renderableEmail)
         }
     }
 
@@ -112,10 +127,17 @@ class PersistentSearchMessenger : Runnable {
     }
 
     private fun findNewWritesForAlert(userAclKey: AclKey, persistentSearch: PersistentSearch): OffsetDateTime? {
-        val userSecurablePrincipal = PersistentSearchMessengerHelpers.principalsManager.getSecurablePrincipal(userAclKey)
-        val allUserPrincipals = PersistentSearchMessengerHelpers.principalsManager.getAllPrincipals(userSecurablePrincipal).map { it.principal }.toSet()
+        val dependencies = getDependency()
 
-        val entitySets = entitySets.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
+        val userSecurablePrincipal = dependencies.principalsManager.getSecurablePrincipal(userAclKey)
+        val allUserPrincipals = dependencies.principalsManager.getAllPrincipals(userSecurablePrincipal).map { it.principal }.toSet()
+
+        if (userSecurablePrincipal.principal == null || userSecurablePrincipal.principal.id == null) {
+            logger.error("Failed to send persistent search for unrecognized principal {} with aclKey {}", userSecurablePrincipal, userAclKey)
+            return null
+        }
+
+        val entitySets = dependencies.entitySets.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
                 .groupBy { it.isLinking }
 
         val authorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
@@ -124,9 +146,9 @@ class PersistentSearchMessenger : Runnable {
                 entitySets.getOrDefault(true, listOf()).map { it.id })
         val constraints = getUpdatedConstraints(persistentSearch)
 
-        val results = PersistentSearchMessengerHelpers.searchService.executeSearch(constraints,
+        val results = dependencies.searchService.executeSearch(constraints,
                 authorizedPropertyTypeMap, false)
-        val linkedResults = PersistentSearchMessengerHelpers.searchService.executeSearch(constraints,
+        val linkedResults = dependencies.searchService.executeSearch(constraints,
                 linkedAuthorizedPropertyTypeMap, true)
         val newResults = DataSearchResult(results.numHits + linkedResults.numHits,
                 results.hits + linkedResults.hits)
@@ -134,13 +156,13 @@ class PersistentSearchMessenger : Runnable {
         if (newResults.numHits > 0) {
             val neighborsById = mutableMapOf<UUID, List<NeighborEntityDetails>>()
 
-            if (results.hits.isNotEmpty()) neighborsById.putAll(PersistentSearchMessengerHelpers.searchService.executeEntityNeighborSearch(
+            if (results.hits.isNotEmpty()) neighborsById.putAll(dependencies.searchService.executeEntityNeighborSearch(
                     entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
                     EntityNeighborsFilter(getHitEntityKeyIds(results.hits)),
                     allUserPrincipals)
             )
 
-            if (linkedResults.hits.isNotEmpty()) neighborsById.putAll(PersistentSearchMessengerHelpers.searchService.executeLinkingEntityNeighborSearch(
+            if (linkedResults.hits.isNotEmpty()) neighborsById.putAll(dependencies.searchService.executeLinkingEntityNeighborSearch(
                     entitySets.getOrDefault(true, listOf()).map { it.id }.toSet(),
                     EntityNeighborsFilter(getHitEntityKeyIds(results.hits)),
                     allUserPrincipals)
@@ -154,7 +176,7 @@ class PersistentSearchMessenger : Runnable {
     }
 
     private fun updateLastReadForAlert(alertId: UUID, readDateTime: OffsetDateTime) {
-        val connection = PersistentSearchMessengerHelpers.hds.connection
+        val connection = getDependency().hds.connection
         connection.use {
             val stmt: Statement = connection.createStatement()
             stmt.execute(updateLastReadSql(readDateTime, alertId))
@@ -164,8 +186,10 @@ class PersistentSearchMessenger : Runnable {
     override fun run() {
         logger.info("Loading new writes for persistent searches and sending alerts")
 
+        val dependencies = getDependency()
+
         PostgresIterable(Supplier<StatementHolder> {
-            val connection = PersistentSearchMessengerHelpers.hds.connection
+            val connection = dependencies.hds.connection
             val stmt = connection.createStatement()
             val rs = stmt.executeQuery(LOAD_ACTIVE_ALERTS_SQL)
             StatementHolder(connection, stmt, rs)
