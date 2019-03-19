@@ -224,6 +224,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         }
 
         flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        // mark all involved linking entitysets as unsync with data
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagEntitySetUnsynchronized );
     }
 
     private void signalLinkedEntitiesUpserted(
@@ -251,9 +253,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         // delete
         Set<UUID> deletedLinkingIds = Sets.difference( oldLinkingIds, remainingLinkingIds );
         eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
-
-        // mark all involved linking entitysets as unsync with data
-        linkingEntitySetIds.forEach( this::flagEntitySetUnsynchronized );
     }
 
     private void signalEntitySetDataDeleted( UUID entitySetId ) {
@@ -261,6 +260,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
+        // mark all involved linking entitysets as unsync with data
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagEntitySetUnsynchronized );
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
@@ -270,6 +271,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
+        // mark all involved linking entitysets as unsync with data
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagEntitySetUnsynchronized );
     }
 
     private void signalLinkedEntitiesDeleted( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
@@ -307,10 +310,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                         .map( Map.Entry::getKey ).collect( Collectors.toSet() );
                 pdm.markLinkingIdsAsNeedToBeIndexed( dirtyLinkingIds );
             }
-
-
-            // mark all involved linking entitysets as unsync with data
-            dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagEntitySetUnsynchronized );
         }
     }
 
