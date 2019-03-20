@@ -33,6 +33,7 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
+import com.openlattice.data.storage.entityKeyIdColumnsList
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
@@ -314,11 +315,12 @@ class AssemblerConnectionManager(
     ) {
         materializeEntitySetsTimer.time().use {
             val entitySet = entitySets.getValue(entitySetId)
-            val propertyFqns = authorizedPropertyTypes
-                    .mapValues { quote(it.value.type.fullQualifiedNameAsString) }
-                    .values.joinToString(",")
 
-            val sql = "SELECT ${ENTITY_SET_ID.name},${ID_VALUE.name}, $propertyFqns FROM $PRODUCTION_FOREIGN_SCHEMA.${quote(
+            val selectColumns = (authorizedPropertyTypes.values
+                    .map { quote(it.type.fullQualifiedNameAsString) } + entityKeyIdColumnsList)
+                    .joinToString(",")
+
+            val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${quote(
                     entitySet.id.toString()
             )} "
 
@@ -381,9 +383,9 @@ class AssemblerConnectionManager(
             authorizedPropertiesOfPrincipal.forEach { principal, fqns ->
                 val allColumns =
                         if (fqns == authorizedPrincipalsOfProperties.keys) {
-                            setOf() // if user is authorized for all properties, grant select on whole table
+                            listOf() // if user is authorized for all properties, grant select on whole table
                         } else {
-                            setOf(ENTITY_SET_ID.name, ID_VALUE.name) + fqns.map { it.fullQualifiedNameAsString }
+                            entityKeyIdColumnsList + fqns.map { it.fullQualifiedNameAsString }
                         }
                 val grantSelectSql = grantSelectSql(tableName, principal, allColumns)
                 stmt.addBatch(grantSelectSql)
@@ -403,7 +405,7 @@ class AssemblerConnectionManager(
         }
 
         authorizedPrincipals.forEach {
-            val grantSelectSql = grantSelectSql(tableName, it, setOf())
+            val grantSelectSql = grantSelectSql(tableName, it, listOf())
             stmt.addBatch(grantSelectSql)
         }
 
@@ -417,7 +419,7 @@ class AssemblerConnectionManager(
     private fun grantSelectSql(
             entitySetTableName: String,
             principal: Principal,
-            columns: Set<String>
+            columns: List<String>
     ): String {
         val postgresUserName = if (principal.type == PrincipalType.USER) {
             buildPostgresUsername(securePrincipalsManager.getPrincipal(principal.id))
