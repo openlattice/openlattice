@@ -411,6 +411,10 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( ENTITY_SETS, LINKED_ENTITY_SETS )
                         .method( IndexMethod.GIN )
                         .ifNotExists() );
+        ORGANIZATION_ASSEMBLIES.addIndexes(
+                new PostgresColumnsIndexDefinition( ORGANIZATION_ASSEMBLIES, ENTITY_SET_IDS)
+                        .method( IndexMethod.GIN )
+                        .ifNotExists() );
 
     }
 
