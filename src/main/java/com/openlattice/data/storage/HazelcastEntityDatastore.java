@@ -315,7 +315,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void flagEntitySetUnsynchronized( UUID entitySetId ) {
         EntitySet entitySet = edmManager.getEntitySet( entitySetId );
-        if ( assembler.isEntitySetMaterialized( entitySet.getOrganizationId(), entitySet.getId() )
+        if ( assembler.isEntitySetMaterialized( entitySet.getId() )
                 && !entitySet.getFlags().contains( EntitySetFlag.DATA_UNSYNCHRONIZED ) ) {
             entitySets.executeOnKey(
                     entitySet.getId(),

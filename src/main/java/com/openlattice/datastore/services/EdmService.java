@@ -1010,7 +1010,7 @@ public class EdmService implements EdmManager {
     }
 
     private void flagEntitySetUnsynchronized( EntitySet entitySet, EntitySetFlag flag ) {
-        if ( assembler.isEntitySetMaterialized( entitySet.getOrganizationId(), entitySet.getId() )
+        if ( assembler.isEntitySetMaterialized( entitySet.getId() )
                 && !entitySet.getFlags().contains( flag ) ) {
             entitySets.executeOnKey(
                     entitySet.getId(),

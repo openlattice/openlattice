@@ -47,12 +47,11 @@ import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
-import com.openlattice.organizations.PrincipalSet
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
+import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.*
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
@@ -98,12 +97,12 @@ class Assembler(
         this.acm = assemblerConnectonManager
     }
 
-    fun getMaterializedEntitySets(organizationId: UUID): Set<UUID> {
+    fun getMaterializedEntitySetsInOrganization(organizationId: UUID): Set<UUID> {
         return assemblies[organizationId]?.entitySetIds ?: setOf()
     }
 
-    fun isEntitySetMaterialized(organizationId: UUID, entitySetId: UUID): Boolean {
-        return assemblies[organizationId]?.entitySetIds?.contains(entitySetId) ?: false
+    fun isEntitySetMaterialized(entitySetId: UUID): Boolean {
+        return assemblies.entrySet(Predicates.equal(ENTITY_SET_IDS_INDEX, entitySetId)).isNotEmpty()
     }
 
     fun getOrganizationAssembly(organizationId: UUID): OrganizationAssembly {
@@ -178,7 +177,7 @@ class Assembler(
                 organizationId,
                 MaterializeEntitySetsProcessor(authorizedPropertyTypesByEntitySet).init(acm)
         )
-        return getMaterializedEntitySets(organizationId).map {
+        return getMaterializedEntitySetsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
     }
