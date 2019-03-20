@@ -29,7 +29,6 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
@@ -42,6 +41,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 
 public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<UUID, OrganizationAssembly> {
     public static final String INITIALIZED_INDEX = "initialized";
+    public static final String ENTITY_SET_IDS_INDEX = "entitySetIds[any]";
     private final       UUID   testKey           = UUID.randomUUID();
 
     public OrganizationAssemblyMapstore( HikariDataSource hds ) {
@@ -91,6 +91,7 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         return super
                 .getMapConfig()
                 .addMapIndexConfig( new MapIndexConfig( INITIALIZED_INDEX, false ) )
+                .addMapIndexConfig( new MapIndexConfig( ENTITY_SET_IDS_INDEX, false ) )
                 .setInMemoryFormat( InMemoryFormat.OBJECT );
     }
 }
