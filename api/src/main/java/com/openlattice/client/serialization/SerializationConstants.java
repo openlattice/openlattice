@@ -50,6 +50,7 @@ public final class SerializationConstants {
     public static final String ASSOCIATION_ENTITY_SET           = "associationEntitySet";
     public static final String ASSOCIATION_ENTITY_TYPE          = "associationEntityType";
     public static final String ASSOCIATION_FILTERS              = "associationFilters";
+    public static final String ASSOCIATION_ID                   = "associationId";
     public static final String ASSOCIATION_PROPERTY_TYPES       = "associationPropertyTypes";
     public static final String ASSOCIATION_QUERIES              = "associationQueries";
     public static final String ASSOCIATION_TYPES                = "associationTypes";
