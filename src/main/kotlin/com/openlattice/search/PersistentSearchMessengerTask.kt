@@ -183,7 +183,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         }
     }
 
-    override fun run() {
+    override fun runTask() {
         logger.info("Loading new writes for persistent searches and sending alerts")
 
         val dependencies = getDependency()
