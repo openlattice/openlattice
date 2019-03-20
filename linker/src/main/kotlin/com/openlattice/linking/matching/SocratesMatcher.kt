@@ -49,11 +49,10 @@ class SocratesMatcher(
         private val fqnToIdMap: Map<FullQualifiedName, UUID>,
         private val linkingFeedbackService: PostgresLinkingFeedbackService) : Matcher {
 
-    private var localModel = ThreadLocal.withInitial { model }
-    //            Thread.currentThread().contextClassLoader.getResourceAsStream("model.bin") }
+    private var localModel = ThreadLocal.withInitial { model.clone() }
 
     override fun updateMatchingModel(model: MultiLayerNetwork) {
-        localModel = ThreadLocal.withInitial { model }
+        localModel = ThreadLocal.withInitial { model.clone() }
     }
 
     /**
