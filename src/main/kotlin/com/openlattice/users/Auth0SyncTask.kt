@@ -77,7 +77,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         return TimeUnit.MILLISECONDS
     }
 
-    override fun run() {
+    override fun runTask() {
         val ds = getDependency()
 
 
