@@ -73,7 +73,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
 import retrofit2.Retrofit;
@@ -307,7 +307,6 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
         if(linking) {
             flags.add( EntitySetFlag.LINKING );
         }
-
         EntitySet newES = new EntitySet(
                 Optional.of( entitySetId ),
                 entityType.getId(),
