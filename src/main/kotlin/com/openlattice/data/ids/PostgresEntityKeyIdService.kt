@@ -40,6 +40,8 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.BlockingQueue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.stream.Collectors
 import kotlin.collections.HashMap
 
@@ -62,9 +64,14 @@ class PostgresEntityKeyIdService(
         private val hds: HikariDataSource,
         private val idGenerationService: HazelcastIdGenerationService
 ) : EntityKeyIdService {
-    private val q: BlockingQueue<UUID> = Queues.newArrayBlockingQueue(128000)
-    private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>(HazelcastMap.ID_REF_COUNTS.name )
+    private val q: BlockingQueue<UUID> = Queues.newArrayBlockingQueue(65536)
+    private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>(HazelcastMap.ID_REF_COUNTS.name)
     private val idMap = hazelcastInstance.getMap<EntityKey, UUID>(HazelcastMap.ID_CACHE.name)
+
+    init {
+        idGenerationService.getNextIds(q.remainingCapacity()).forEach(q::put)
+    }
+
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
         checkState(ids.size == entityIds.size, "Insufficient ids generated.")
@@ -116,7 +123,7 @@ class PostgresEntityKeyIdService(
                 storeEntityKeyIds(mapOf(assignedPair))
                 assignedPair
             } else {
-                q.put(elem)
+                q.offer(elem)
                 key to assignedId
             }
         }.toMap()
