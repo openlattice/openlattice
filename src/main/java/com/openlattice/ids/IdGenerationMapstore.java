@@ -63,7 +63,7 @@ public class IdGenerationMapstore extends AbstractBasePostgresMapstore<Long, Ran
     }
 
     @Override public MapStoreConfig getMapStoreConfig() {
-        return super.getMapStoreConfig().setInitialLoadMode( InitialLoadMode.EAGER ).setWriteDelaySeconds( 5 );
+        return super.getMapStoreConfig().setInitialLoadMode( InitialLoadMode.EAGER );
     }
 
     @Override public MapConfig getMapConfig() {

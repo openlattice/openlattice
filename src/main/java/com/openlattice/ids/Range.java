@@ -48,6 +48,10 @@ public class Range {
         this( base, 0, Long.MIN_VALUE );
     }
 
+    UUID peek() {
+        return  new UUID( base | msb, lsb );
+    }
+
     /**
      * Generates the next id by incrementing the least significant bit
      */
