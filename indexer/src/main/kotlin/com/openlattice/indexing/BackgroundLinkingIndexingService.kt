@@ -162,6 +162,7 @@ class BackgroundLinkingIndexingService(
                 "AND ${LAST_INDEX.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK.name} >= ${LAST_WRITE.name} " +
                 "AND ${LAST_LINK_INDEX.name} < ${LAST_WRITE.name} " +
+                "AND ${VERSION.name} > 0 " +
                 "GROUP BY ${ENTITY_SET_ID.name} " +
                 "LIMIT $FETCH_SIZE"
     }
