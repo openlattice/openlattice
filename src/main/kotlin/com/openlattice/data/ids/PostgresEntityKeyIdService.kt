@@ -109,13 +109,15 @@ class PostgresEntityKeyIdService(
 
         return entityKeys.map { key ->
             val elem = q.take()
-            val assignedPair = key to (idMap.putIfAbsent(key, elem) ?: elem)
-            if (assignedPair.second === elem) {
+            val assignedId = idMap.putIfAbsent(key, elem)
+            return@map if (assignedId == null) {
+                val assignedPair = key to elem
                 storeEntityKeyIds(mapOf(assignedPair))
+                assignedPair
             } else {
                 q.put(elem)
+                key to assignedId
             }
-            return@map assignedPair
         }.toMap()
     }
 
