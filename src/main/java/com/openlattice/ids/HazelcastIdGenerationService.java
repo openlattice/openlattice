@@ -59,7 +59,7 @@ public class HazelcastIdGenerationService {
     }
 
     public void initializeRanges() {
-        final Map<Long, Range> ranges = new HashMap(NUM_PARTITIONS);
+        final Map<Long, Range> ranges = new HashMap<>(NUM_PARTITIONS);
         for ( long i = 0; i < NUM_PARTITIONS; ++i ) {
             ranges.put( i, new Range( i << 48L ) );
         }
