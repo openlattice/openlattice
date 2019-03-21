@@ -18,6 +18,8 @@
 
 package com.openlattice.search;
 
+import com.google.common.collect.SetMultimap;
+import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.search.requests.*;
 
 import java.util.List;
@@ -55,15 +57,16 @@ public interface SearchApi {
     String NEIGHBORS         = "/neighbors";
     String EDM               = "/edm";
     String INDEX             = "/index";
+    String IDS               = "/ids";
     String KEYWORD           = "kw";
     String ENTITY_TYPE_ID    = "eid";
     String PROPERTY_TYPE_ID  = "pid";
 
-    String ENTITY_SET_ID    = "entitySetId";
-    String ORGANIZATION_ID  = "organizationId";
-    String NUM_RESULTS      = "numResults";
-    String ENTITY_ID        = "entityId";
-    String START            = "start";
+    String ENTITY_SET_ID   = "entitySetId";
+    String ORGANIZATION_ID = "organizationId";
+    String NUM_RESULTS     = "numResults";
+    String ENTITY_ID       = "entityId";
+    String START           = "start";
 
     String ENTITY_SET_ID_PATH   = "/{" + ENTITY_SET_ID + "}";
     String ORGANIZATION_ID_PATH = "/{" + ORGANIZATION_ID + "}";
@@ -242,7 +245,7 @@ public interface SearchApi {
      * Executes a search for all neighbors of an entity that are connected by an association
      *
      * @param entitySetId the entity set id of the entity
-     * @param entityKeyId    the entity key id of the entity
+     * @param entityKeyId the entity key id of the entity
      * @return A list of objects containing information about the neighbor and association
      */
     @GET( BASE + ENTITY_SET_ID_PATH + ENTITY_ID_PATH )
@@ -254,8 +257,8 @@ public interface SearchApi {
      * Executes a search for all neighbors of multiple entities of the same entity set that are connected by an
      * association
      *
-     * @param entitySetId the entity set id of the entities
-     * @param entityKeyIds   the entity key ids of the entities
+     * @param entitySetId  the entity set id of the entities
+     * @param entityKeyIds the entity key ids of the entities
      * @return A map from each entity id to a list of objects containing information about the neighbors and
      * associations of that entity
      */
@@ -269,12 +272,17 @@ public interface SearchApi {
      * association
      *
      * @param entitySetId the entity set id of the entities
-     * @param filter   optional constraints on entityKeyIds to include and filters on src/dst/edge entity set ids
+     * @param filter      optional constraints on entityKeyIds to include and filters on src/dst/edge entity set ids
      * @return A map from each entity id to a list of objects containing information about the neighbors and
      * associations of that entity
      */
     @POST( BASE + ENTITY_SET_ID_PATH + NEIGHBORS + ADVANCED )
     Map<UUID, List<NeighborEntityDetails>> executeFilteredEntityNeighborSearch(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body EntityNeighborsFilter filter );
+
+    @POST( BASE + ENTITY_SET_ID_PATH + NEIGHBORS + ADVANCED + IDS )
+    Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeFilteredEntityNeighborIdsSearch(
             @Path( ENTITY_SET_ID ) UUID entitySetId,
             @Body EntityNeighborsFilter filter );
 

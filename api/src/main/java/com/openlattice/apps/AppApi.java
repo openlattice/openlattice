@@ -43,6 +43,9 @@ public interface AppApi {
     @GET( BASE )
     Iterable<App> getApps();
 
+    @GET( BASE + TYPE_PATH )
+    Iterable<AppType> getAppTypes();
+
     @POST( BASE )
     UUID createApp( @Body App app );
 
