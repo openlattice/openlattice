@@ -329,7 +329,7 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
                         .unique()
-                        .name( "entity_key_ids_entity_key_idx" )
+                        .name( "entity_key_ids_entity_set_id_entity_id_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, VERSION )
                         .name( "entity_key_ids_version_idx" )
