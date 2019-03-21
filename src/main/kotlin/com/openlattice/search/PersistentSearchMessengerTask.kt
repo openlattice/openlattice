@@ -115,6 +115,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         return vehicleReads
                 .flatMap { it[LAST_WRITE_FQN] }
                 .map {
+                    logger.info("New read datetime as string: {}", it)
                     val localDateTime = Timestamp.valueOf(it.toString()).toLocalDateTime()
                     return OffsetDateTime.of(localDateTime, ZoneId.systemDefault().rules.getOffset(localDateTime))
                 }
@@ -169,17 +170,21 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             )
 
             sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, newResults, neighborsById)
-            return getLatestRead(newResults.hits)
+            val lastReadDateTime = getLatestRead(newResults.hits)
+            logger.info("Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id, newResults.numHits)
         }
 
         return null
     }
 
     private fun updateLastReadForAlert(alertId: UUID, readDateTime: OffsetDateTime) {
+        logger.info("Updating persistent search alert {} for last read {}", alertId, readDateTime)
         val connection = getDependency().hds.connection
         connection.use {
             val stmt: Statement = connection.createStatement()
-            stmt.execute(updateLastReadSql(readDateTime, alertId))
+            val updateSql = updateLastReadSql(readDateTime, alertId)
+            logger.info("Update read datetime sql: {}", updateSql)
+            stmt.execute(updateSql)
         }
     }
 
