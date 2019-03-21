@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
@@ -62,8 +63,8 @@ class PostgresEntityKeyIdService(
         private val idGenerationService: HazelcastIdGenerationService
 ) : EntityKeyIdService {
     private val q: BlockingQueue<UUID> = Queues.newArrayBlockingQueue(128000)
-    private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>("")
-    private val idMap = hazelcastInstance.getMap<EntityKey, UUID>("")
+    private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>(HazelcastMap.ID_REF_COUNTS.name )
+    private val idMap = hazelcastInstance.getMap<EntityKey, UUID>(HazelcastMap.ID_CACHE.name)
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
         checkState(ids.size == entityIds.size, "Insufficient ids generated.")
