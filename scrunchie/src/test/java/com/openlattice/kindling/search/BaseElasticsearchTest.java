@@ -22,13 +22,16 @@ package com.openlattice.kindling.search;
 
 import com.clearspring.analytics.util.Lists;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Sets;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService.StaticLoader;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.SearchConfiguration;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -38,9 +41,8 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @SuppressFBWarnings( "MS_PKGPROTECT" )
 public class BaseElasticsearchTest {
@@ -56,18 +58,18 @@ public class BaseElasticsearchTest {
     protected static final String                     NAMESPACE                   = "testcsv";
     protected static final String                     SALARY                      = "salary";
     protected static final String                     EMPLOYEE_NAME               = "employee_name";
-    protected static final String                     EMPLOYEE_TITLE              = "employee_title";
-    protected static final String                     EMPLOYEE_DEPT               = "employee_dept";
-    protected static final String                     EMPLOYEE_ID                 = "employee_id";
-    protected static final String                     WEIGHT                      = "weight";
-    protected static final String                     ENTITY_SET_NAME             = "Employees";
-    protected static final FullQualifiedName          ENTITY_TYPE                 = new FullQualifiedName(
+    protected static final String            EMPLOYEE_TITLE        = "employee_title";
+    protected static final String            EMPLOYEE_DEPT         = "employee_dept";
+    protected static final String            EMPLOYEE_ID           = "employee_id";
+    protected static final String            WEIGHT                = "weight";
+    protected static final String            ENTITY_SET_NAME       = "Employees";
+    protected static final FullQualifiedName ENTITY_TYPE_FQN       = new FullQualifiedName(
             NAMESPACE,
             "employee" );
-    protected static final int                        ELASTICSEARCH_PORT          = 9300;
-    protected static final String                     ELASTICSEARCH_CLUSTER       = "loom_development";
-    protected static final String                     ELASTICSEARCH_URL           = "localhost";
-    protected static final Logger                     logger                      = LoggerFactory
+    protected static final int               ELASTICSEARCH_PORT    = 9300;
+    protected static final String            ELASTICSEARCH_CLUSTER = "loom_development";
+    protected static final String            ELASTICSEARCH_URL     = "localhost";
+    protected static final Logger            logger                = LoggerFactory
             .getLogger( BaseElasticsearchTest.class );
     protected static final UUID                       namePropertyId              = UUID
             .fromString( "12926a46-7b2d-4b9c-98db-d6a8aff047f0" );
@@ -92,6 +94,7 @@ public class BaseElasticsearchTest {
     protected static       PropertyType               salary;
     protected static       PropertyType               dept;
     protected static       PropertyType               title;
+    protected static       EntityType                 entityType;
     protected static       EntitySet                  chicagoEmployees;
     protected static       EntitySet                  entitySet2;
     protected static       Principal                  owner;
@@ -150,6 +153,22 @@ public class BaseElasticsearchTest {
         allPropertyTypesList.add( dept );
         allPropertyTypesList.add( salary );
         allPropertyTypesList.add( id );
+
+        LinkedHashSet<UUID> propertyTypeIds = allPropertyTypesList.stream().map( PropertyType::getId ).collect( Collectors
+                .toCollection(LinkedHashSet::new) );
+
+        entityType = new EntityType(
+                 ENTITY_TYPE_ID ,
+                ENTITY_TYPE_FQN,
+                "Employee",
+                Optional.of( "an employee" ),
+                ImmutableSet.of(),
+                propertyTypeIds,
+                propertyTypeIds,
+                LinkedHashMultimap.create(),
+                Optional.empty(),
+                Optional.of( SecurableObjectType.EntityType )
+        );
 
         chicagoEmployees = new EntitySet(
                 Optional.of( chicagoEmployeesEntitySetId ),
