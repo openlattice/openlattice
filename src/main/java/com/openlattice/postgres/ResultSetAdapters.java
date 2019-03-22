@@ -858,15 +858,22 @@ public final class ResultSetAdapters {
             ByteBlobDataManager byteBlobDataManager,
             Boolean linking ) throws SQLException {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
+        final Collection<PropertyType> allPropertyTypes;
 
-        UUID entitySetId = entitySetId( rs );
 
         if ( linking ) {
             final UUID entityKeyId = linkingId( rs );
             data.put( ID_FQN, entityKeyId );
+
+            allPropertyTypes = authorizedPropertyTypes.values().stream()
+                    .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
+                    .collect( Collectors.toSet() );
         } else {
             final UUID entityKeyId = id( rs );
             data.put( ID_FQN, entityKeyId );
+
+            UUID entitySetId = entitySetId( rs );
+            allPropertyTypes = authorizedPropertyTypes.get( entitySetId ).values();
         }
 
         if ( metadataOptions.contains( MetadataOption.LAST_WRITE ) ) {
@@ -876,8 +883,6 @@ public final class ResultSetAdapters {
         if ( metadataOptions.contains( MetadataOption.LAST_INDEX ) ) {
             data.put( LAST_INDEX_FQN, lastIndex( rs ) );
         }
-
-        final Collection<PropertyType> allPropertyTypes = authorizedPropertyTypes.get( entitySetId ).values();
 
         for ( PropertyType propertyType : allPropertyTypes ) {
             List<?> objects = propertyValue( rs, propertyType );
