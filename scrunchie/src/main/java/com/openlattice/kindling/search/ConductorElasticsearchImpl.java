@@ -571,7 +571,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             UUID linkingEntitySetId,
             List<PropertyType> propertyTypes,
             Set<UUID> newLinkedEntitySets ) {
-        // TODO
+        // TODO do we need this anymore?
         return false;
         //        return addMappingToEntityTypeDataIndex( linkingEntitySetId,
         //                propertyTypes,
@@ -593,14 +593,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 response.getDeleted(),
                 entityTypeId,
                 entitySetId );
-
-        //        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE ).filter(
-        //                QueryBuilders.boolQuery()
-        //                        .must( QueryBuilders.matchQuery( TYPE_FIELD, ACLS ) )
-        //                        .must( QueryBuilders.matchQuery( ENTITY_SET_ID, entitySetId.toString() ) ) )
-        //                .source( ENTITY_SET_DATA_MODEL )
-        //                .execute()
-        //                .actionGet(); // TODO -- confirm this is unnecessary
 
         return true;
     }
@@ -677,8 +669,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                     requestBuilder.add(
                             client.prepareIndex( indexName, indexType, entityId.toString() )
                                     .setSource( s, XContentType.JSON ) );
-                    //                requestBuilder.add( new IndexRequest( indexName, indexType, entityKeyId.toString() )
-                    //                        .source( s, XContentType.JSON ) );
                 }
 
                 requestBuilder.execute().actionGet();
@@ -749,7 +739,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return true;
     }
 
-    // TODO where is this used?
     @Override
     public boolean clearEntitySetData( UUID entitySetId, UUID entityTypeId ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
