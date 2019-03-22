@@ -1,5 +1,6 @@
 package com.openlattice.admin
 
+import com.openlattice.authorization.Principal
 import retrofit2.http.GET
 import retrofit2.http.Path
 
@@ -11,7 +12,10 @@ const val BASE = com.openlattice.auditing.SERVICE + CONTROLLER
 // @formatter:on
 
 const val RELOAD_CACHE = "/reload/cache"
+const val PRINCIPALS = "/principals"
 
+const val ID = "id"
+const val ID_PATH = "/{$ID}"
 const val NAME = "name"
 const val NAME_PATH = "/{$NAME}"
 
@@ -27,5 +31,8 @@ interface AdminApi {
 
     @GET(BASE + RELOAD_CACHE + NAME_PATH)
     fun reloadCache(@Path(NAME) name: String)
+
+    @GET( BASE + PRINCIPALS + ID_PATH )
+    fun getUserPrincipals( @Path(ID) principalId :String ): Set<Principal>
 
 }
