@@ -4,10 +4,14 @@ import com.hazelcast.core.HazelcastInstance
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
+import com.openlattice.authorization.Principal
+import com.openlattice.authorization.Principals
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.organizations.PrincipalSet
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.*
 import javax.inject.Inject
 
 @RestController
@@ -38,5 +42,11 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authorizationManager
+    }
+
+    @GetMapping(value = [PRINCIPALS + ID_PATH])
+    override fun getUserPrincipals(principalId: String): Set<Principal> {
+        ensureAdminAccess()
+        return Principals.getUserPrincipals(principalId)
     }
 }
