@@ -29,6 +29,12 @@ public class SearchWithConstraintsLambdaStreamSerializer extends Serializer<Sear
 
         SearchConstraintsStreamSerializer.serialize( output, object.getSearchConstraints() );
 
+        output.writeInt( (object.getEntityTypesByEntitySetId().size() ) );
+        for ( Map.Entry<UUID, UUID> entry : object.getEntityTypesByEntitySetId().entrySet()) {
+            writeUUID( output, entry.getKey() );
+            writeUUID( output, entry.getValue() );
+        }
+
         output.writeInt( object.getAuthorizedProperties().size() );
         for ( Map.Entry<UUID, DelegatedUUIDSet> entry : object.getAuthorizedProperties().entrySet() ) {
             writeUUID( output, entry.getKey() );
@@ -48,11 +54,17 @@ public class SearchWithConstraintsLambdaStreamSerializer extends Serializer<Sear
 
         SearchConstraints searchConstraints = SearchConstraintsStreamSerializer.deserialize( input );
 
-        int numEntitySets = input.readInt();
+        int entitySetsToEntityTypesMapSize = input.readInt();
+        Map<UUID, UUID> entitySetsToEntityTypes = new HashMap<>( entitySetsToEntityTypesMapSize );
+        for ( int i = 0; i < entitySetsToEntityTypesMapSize; i++ ) {
+            UUID entitySetId = readUUID( input );
+            UUID entityTypeId = readUUID( input );
+            entitySetsToEntityTypes.put( entitySetId, entityTypeId );
+        }
 
-        Map<UUID, DelegatedUUIDSet> authorizedProperties = new HashMap<>( numEntitySets );
-
-        for ( int i = 0; i < numEntitySets; i++ ) {
+        int authorizedPropertyTypesMapSize = input.readInt();
+        Map<UUID, DelegatedUUIDSet> authorizedProperties = new HashMap<>( authorizedPropertyTypesMapSize );
+        for ( int i = 0; i < authorizedPropertyTypesMapSize; i++ ) {
             UUID entitySetId = readUUID( input );
 
             int numPropertyTypes = input.readInt();
@@ -64,8 +76,9 @@ public class SearchWithConstraintsLambdaStreamSerializer extends Serializer<Sear
 
             authorizedProperties.put( entitySetId, DelegatedUUIDSet.wrap( propertyTypeIds ) );
         }
+
         boolean linking = input.readBoolean();
 
-        return new SearchWithConstraintsLambda( searchConstraints, authorizedProperties, linking );
+        return new SearchWithConstraintsLambda( searchConstraints, entitySetsToEntityTypes, authorizedProperties, linking );
     }
 }

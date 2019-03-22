@@ -40,7 +40,6 @@ import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.AccessCheck;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.EdmAuthorizationHelper;
 import com.openlattice.authorization.Permission;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.Principals;
@@ -50,31 +49,14 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
+import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.events.AppCreatedEvent;
-import com.openlattice.edm.events.AppDeletedEvent;
-import com.openlattice.edm.events.AppTypeCreatedEvent;
-import com.openlattice.edm.events.AppTypeDeletedEvent;
-import com.openlattice.edm.events.AssociationTypeCreatedEvent;
-import com.openlattice.edm.events.AssociationTypeDeletedEvent;
-import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDataDeletedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
-import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
-import com.openlattice.edm.events.EntityTypeCreatedEvent;
-import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
-import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
+import com.openlattice.edm.events.*;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -93,13 +75,7 @@ import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchResult;
 import com.openlattice.search.requests.SearchTerm;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -185,8 +161,13 @@ public class SearchService {
                         entry -> DelegatedUUIDSet.wrap( Sets.newHashSet( entry.getValue().keySet() ) ) )
                 );
 
+        Map<UUID, UUID> entityTypesByEntitySet = dataModelService
+                .getEntitySetsAsMap( Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) ) ).values()
+                .stream()
+                .collect( Collectors.toMap( EntitySet::getId, EntitySet::getEntityTypeId ) );
+
         EntityDataKeySearchResult result = elasticsearchApi
-                .executeSearch( searchConstraints, authorizedPropertiesByEntitySet, linking );
+                .executeSearch( searchConstraints, entityTypesByEntitySet, authorizedPropertiesByEntitySet, linking );
 
         SetMultimap<UUID, UUID> entityKeyIdsByEntitySetId = HashMultimap.create();
         result.getEntityDataKeys()
@@ -224,24 +205,37 @@ public class SearchService {
     @Timed
     @Subscribe
     public void deleteEntitySet( EntitySetDeletedEvent event ) {
-        elasticsearchApi.deleteEntitySet( event.getEntitySetId() );
+        elasticsearchApi.deleteEntitySet( event.getEntitySetId(), event.getEntityTypeId() );
     }
 
     @Timed
     @Subscribe
     public void deleteEntities( EntitiesDeletedEvent event ) {
-        event.getEntitySetIds().forEach(
-                entitySetId -> event.getEntityKeyIds()
-                        .stream()
-                        .map( id -> new EntityDataKey( entitySetId, id ) )
-                        .forEach( elasticsearchApi::deleteEntityData )
-        );
+        UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
+        elasticsearchApi.deleteEntityDataBulk( event.getEntitySetId(), entityTypeId, event.getEntityKeyIds() );
+    }
+
+    @Timed
+    @Subscribe
+    public void deleteLinkedEntities( LinkedEntitiesDeletedEvent event ) {
+        if ( event.getEntitySetIds().size() > 0 ) {
+            UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetIds().iterator().next() )
+                    .getId();
+
+            event.getEntitySetIds().forEach(
+                    entitySetId -> event.getEntityKeyIds()
+                            .stream()
+                            .map( id -> new EntityDataKey( entitySetId, id ) )
+                            .forEach( edk -> elasticsearchApi.deleteEntityData( edk, entityTypeId ) )
+            );
+        }
     }
 
     @Timed
     @Subscribe
     public void entitySetDataCleared( EntitySetDataDeletedEvent event ) {
-        elasticsearchApi.clearEntitySetData( event.getEntitySetId() );
+        UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
+        elasticsearchApi.clearEntitySetData( event.getEntitySetId(), entityTypeId );
     }
 
     @Timed
@@ -285,14 +279,15 @@ public class SearchService {
      */
     @Subscribe
     public void indexEntities( EntitiesUpsertedEvent event ) {
-        event.getEntities()
-                .forEach( ( entitKeyId, entity ) -> elasticsearchApi
-                        .createEntityData( new EntityDataKey( event.getEntitySetId(), entitKeyId ), entity ) );
+        UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetId() ).getId();
+        elasticsearchApi.createBulkEntityData( entityTypeId, event.getEntitySetId(), event.getEntities() );
     }
 
     private void indexLinkedEntities(
             UUID linkingEntitySetId, Map<UUID, Set<UUID>> linkingIds, Map<UUID, PropertyType> propertyTypes ) {
         if ( !linkingIds.isEmpty() ) {
+            UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( linkingEntitySetId ).getId();
+
             // linking_id/(normal)entity_set_id/property_type_id
             Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
                     linkingIds.entrySet().stream().collect(
@@ -300,7 +295,7 @@ public class SearchService {
                     linkingIds.keySet().stream().collect(
                             Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ) );
 
-            elasticsearchApi.createBulkLinkedData( linkingEntitySetId, linkedData );
+            elasticsearchApi.createBulkLinkedData( entityTypeId, linkingEntitySetId, linkedData );
         }
     }
 
@@ -315,14 +310,11 @@ public class SearchService {
     }
 
     /**
-     * If 1 or more property types are added to an entity set, all the corresponding mapping need to be updated
+     * If 1 or more property types are added to an entity type, the corresponding mapping needs to be updated
      */
     @Subscribe
-    public void addPropertyTypesToEntitySet( PropertyTypesAddedToEntitySetEvent event ) {
-        elasticsearchApi.addPropertyTypesToEntitySet(
-                event.getEntitySet().getId(),
-                event.getNewPropertyTypes(),
-                event.getLinkedEntitySetIds() );
+    public void addPropertyTypesToEntityType( PropertyTypesAddedToEntityTypeEvent event ) {
+        elasticsearchApi.addPropertyTypesToEntityType( event.getEntityType(), event.getNewPropertyTypes() );
     }
 
     /**
@@ -351,8 +343,10 @@ public class SearchService {
      */
     @Subscribe
     public void removeLinkedEntitySetsFromEntitySet( LinkedEntitySetRemovedEvent event ) {
+        EntityType entityType = dataModelService.getEntityTypeByEntitySetId( event.getLinkingEntitySetId() );
+
         if ( event.getRemainingLinkingIdsByEntitySetId().isEmpty() ) {
-            elasticsearchApi.deleteEntitySet( event.getLinkingEntitySetId() );
+            elasticsearchApi.deleteEntitySet( event.getLinkingEntitySetId(), entityType.getId() );
         } else {
             UUID linkingEntitySetId = event.getLinkingEntitySetId();
 
@@ -367,27 +361,33 @@ public class SearchService {
                     .collect( Collectors.toMap(
                             it -> it.getKey(),
                             it -> Sets.intersection( it.getValue(), removedLinkingIds ) ) );
-            Map<UUID, PropertyType> propertyTypes = dataModelService.getPropertyTypesForEntitySet( linkingEntitySetId );
+            Map<UUID, PropertyType> propertyTypes = dataModelService
+                    .getPropertyTypesAsMap( entityType.getProperties() );
 
             // Reindex documents(linking id) which are partially removed
             indexLinkedEntities( linkingEntitySetId, sharedLinkingIdsByEntitySets, propertyTypes );
 
             // Delete documents(linking id) which are fully removed
             Sets.difference( removedLinkingIds, interSection ).forEach( linkingId ->
-                    elasticsearchApi.deleteEntityData( new EntityDataKey( linkingEntitySetId, linkingId ) ) );
+                    elasticsearchApi.deleteEntityData( new EntityDataKey( linkingEntitySetId, linkingId ),
+                            entityType.getId() ) );
         }
     }
 
     @Subscribe
     public void createEntityType( EntityTypeCreatedEvent event ) {
         EntityType entityType = event.getEntityType();
-        elasticsearchApi.saveEntityTypeToElasticsearch( entityType );
+        List<PropertyType> propertyTypes = Lists
+                .newArrayList( dataModelService.getPropertyTypes( entityType.getProperties() ) );
+        elasticsearchApi.saveEntityTypeToElasticsearch( entityType, propertyTypes );
     }
 
     @Subscribe
     public void createAssociationType( AssociationTypeCreatedEvent event ) {
         AssociationType associationType = event.getAssociationType();
-        elasticsearchApi.saveAssociationTypeToElasticsearch( associationType );
+        List<PropertyType> propertyTypes = Lists
+                .newArrayList( dataModelService.getPropertyTypes( associationType.getAssociationEntityType().getProperties() ) );
+        elasticsearchApi.saveAssociationTypeToElasticsearch( associationType, propertyTypes );
     }
 
     @Subscribe
@@ -730,7 +730,8 @@ public class SearchService {
                                     .filter( entityKeyId -> entityNeighbors.containsKey( entityKeyId ) )
                                     .forEach( entityKeyId -> {
                                         entityNeighbors.get( entityKeyId ).entrySet().forEach( entry -> {
-                                            neighborIds.getOrDefault( entry.getKey(), HashMultimap.create() ).putAll( entry.getValue() );
+                                            neighborIds.getOrDefault( entry.getKey(), HashMultimap.create() )
+                                                    .putAll( entry.getValue() );
                                         } );
                                     } );
                             return neighborIds;
@@ -856,11 +857,11 @@ public class SearchService {
     }
 
     public void triggerEntitySetDataIndex( UUID entitySetId ) {
-        Set<UUID> propertyTypeIds = dataModelService.getEntityTypeByEntitySetId( entitySetId ).getProperties();
-        Map<UUID, PropertyType> propertyTypes = dataModelService.getPropertyTypesAsMap( propertyTypeIds );
+        EntityType entityType = dataModelService.getEntityTypeByEntitySetId( entitySetId );
+        Map<UUID, PropertyType> propertyTypes = dataModelService.getPropertyTypesAsMap( entityType.getProperties() );
         List<PropertyType> propertyTypeList = Lists.newArrayList( propertyTypes.values() );
 
-        elasticsearchApi.deleteEntitySet( entitySetId );
+        elasticsearchApi.deleteEntitySet( entitySetId, entityType.getId() );
         elasticsearchApi.saveEntitySetToElasticsearch(
                 dataModelService.getEntitySet( entitySetId ),
                 propertyTypeList );

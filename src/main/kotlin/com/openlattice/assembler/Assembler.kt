@@ -47,7 +47,6 @@ import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.OrganizationIntegrationAccount
-import com.openlattice.organizations.PrincipalSet
 import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask

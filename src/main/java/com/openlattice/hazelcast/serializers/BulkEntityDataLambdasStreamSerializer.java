@@ -14,9 +14,6 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.serializers.EntityDataLambdasStreamSerializer;
 import com.openlattice.conductor.rpc.BulkEntityDataLambdas;
-
-import java.util.Set;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -24,12 +21,13 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
 public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntityDataLambdas> {
-    private static final Logger logger = LoggerFactory.getLogger( EntityDataLambdasStreamSerializer.class );
-    private TypeReference ref = new TypeReference<SetMultimap<UUID, Object>>() {
+    private static final Logger        logger = LoggerFactory.getLogger( EntityDataLambdasStreamSerializer.class );
+    private              TypeReference ref    = new TypeReference<SetMultimap<UUID, Object>>() {
     };
 
     private ObjectMapper mapper;
@@ -51,6 +49,7 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
 
     @Override
     public void write( Kryo kryo, Output output, BulkEntityDataLambdas object ) {
+        writeUUID( output, object.getEntityTypeId() );
         writeUUID( output, object.getEntitySetId() );
 
         try {
@@ -70,6 +69,7 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
     @Override
     public BulkEntityDataLambdas read(
             Kryo kryo, Input input, Class<BulkEntityDataLambdas> type ) {
+        UUID entityTypeId = readUUID( input );
         UUID entitySetId = readUUID( input );
 
         int entitiesSize = input.readInt();
@@ -87,6 +87,8 @@ public class BulkEntityDataLambdasStreamSerializer extends Serializer<BulkEntity
             }
         }
 
-        return new BulkEntityDataLambdas( entitySetId, Maps.transformValues( entitiesById, Multimaps::asMap ) );
+        return new BulkEntityDataLambdas( entityTypeId,
+                entitySetId,
+                Maps.transformValues( entitiesById, Multimaps::asMap ) );
     }
 }

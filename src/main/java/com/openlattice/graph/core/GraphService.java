@@ -61,7 +61,11 @@ public interface GraphService {
 
     PostgresIterable<EdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
+    PostgresIterable<EdgeKey> getEdgeKeysOfAssociationEntitySet( UUID entitySetId );
+
     PostgresIterable<EdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
+
+    PostgresIterable<EdgeKey> getEdgeKeysContainingAssociationEntities( UUID entitySetId, Set<UUID> entityKeyIds );
 
     Iterable<EdgeKey> getEdgeKeysContainingEntity( UUID entitySetId, UUID entityKeyId );
 

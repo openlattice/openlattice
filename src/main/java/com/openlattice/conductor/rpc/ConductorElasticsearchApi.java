@@ -95,10 +95,10 @@ public interface ConductorElasticsearchApi {
     final String ORGANIZATION_TYPE = "organizationType";
     final String ORGANIZATION_ID   = "organizationId";
 
-    final String SECURABLE_OBJECT_INDEX_PREFIX = "securable_object_";
-    final String SECURABLE_OBJECT_TYPE_PREFIX  = "type_";
-    final String ACL_KEY                       = "aclKey";
-    final String PROPERTY_TYPE_ID              = "propertyTypeId";
+    final String DATA_INDEX_PREFIX = "data_";
+    final String DATA_TYPE_PREFIX  = "data_type_";
+    final String ACL_KEY           = "aclKey";
+    final String PROPERTY_TYPE_ID  = "propertyTypeId";
 
     // entity_type_index setup consts
     final String ENTITY_TYPE_INDEX = "entity_type_index";
@@ -138,98 +138,105 @@ public interface ConductorElasticsearchApi {
     final String BIDIRECTIONAL  = "bidirectional";
     final String URL            = "url";
 
-
     UUID LAST_WRITE = new UUID( 0, 0 );
+    UUID ENTITY_SET_ID_KEY = new UUID( 0, 1 );
 
-    boolean saveEntitySetToElasticsearch(
-            EntitySet entitySet,
-            List<PropertyType> propertyTypes );
+    Set<UUID> getEntityTypesWithIndices();
 
-    Set<UUID> getEntitySetWithIndices();
+    /**
+     * Entity Data Create/Update/Delete
+     **/
 
-    boolean createSecurableObjectIndex(
-            UUID entitySetId,
-            List<PropertyType> propertyTypes,
-            Optional<Set<UUID>> linkedEntitySetIds );
-
-    boolean deleteEntitySet( UUID entitySetId );
-
-    boolean clearEntitySetData( UUID entitySetId );
-
-    SearchResult executeEntitySetMetadataSearch(
-            Optional<String> optionalSearchTerm,
-            Optional<UUID> optionalEntityType,
-            Optional<Set<UUID>> optionalPropertyTypes,
-            Set<AclKey> authorizedAclKeys,
-            int start,
-            int maxHits );
-
-    boolean updateEntitySetMetadata( EntitySet entitySet );
-
-    boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes );
-
-    boolean addPropertyTypesToEntitySet( UUID entitySetId,
-                                         List<PropertyType> newPropertyTypes,
-                                         Optional<Set<UUID>> linkedEntitySetIds );
-
-    boolean addLinkedEntitySetsToEntitySet( UUID linkingEntitySetId,
-                                            List<PropertyType> propertyTypes,
-                                            Set<UUID> newLinkedEntitySets );
-
-    boolean createOrganization( Organization organization );
-
-    boolean deleteOrganization( UUID organizationId );
-
-    SearchResult executeOrganizationSearch(
-            String searchTerm,
-            Set<AclKey> authorizedOrganizationIds,
-            int start,
-            int maxHits );
-
-    boolean updateOrganization( UUID id, Optional<String> optionalTitle, Optional<String> optionalDescription );
-
+    /* Create */
     boolean createEntityData(
+            UUID entityTypeId,
             EntityDataKey edk,
             Map<UUID, Set<Object>> propertyValues );
 
-    boolean createBulkEntityData( UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById );
+    boolean createBulkEntityData( UUID entityTypeId, UUID entitySetId, Map<UUID, Map<UUID, Set<Object>>> entitiesById );
 
-    boolean createBulkLinkedData( UUID entitySetId, Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId);
+    boolean createBulkLinkedData(
+            UUID entityTypeId,
+            UUID entitySetId,
+            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId );
 
-    boolean deleteEntityData( EntityDataKey edk );
+    /* Delete */
+    boolean deleteEntitySet( UUID entitySetId, UUID entityTypeId );
+
+    boolean clearEntitySetData( UUID entitySetId, UUID entityTypeId );
+
+    boolean deleteEntityData( EntityDataKey edk, UUID entityTypeId );
+
+    boolean deleteEntityDataBulk( UUID entitySetId, UUID entityTypeId, Set<UUID> entityKeyIds );
+
+    /* Update Mappings */
+    boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes );
+
+    boolean addLinkedEntitySetsToEntitySet(
+            UUID linkingEntitySetId,
+            List<PropertyType> propertyTypes,
+            Set<UUID> newLinkedEntitySets );
+
+    /**
+     * Entity Data Search
+     **/
 
     EntityDataKeySearchResult executeSearch(
             SearchConstraints searchConstraints,
+            Map<UUID, UUID> entityTypesByEntitySetId,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
             boolean linking
     );
 
     /**
-     * Performs a capped size search across several entity sets.
-     *
-     * @param entitySetIds  The entity sets to search.
-     * @param fieldSearches The values for each field that is being searched.
-     * @param size          The size cap on the results per entity set.
-     * @param explain
-     * @return A map entity set ids to entity key ids of results for each entity set.
-     */
-    Map<UUID, Set<UUID>> searchEntitySets(
-            Iterable<UUID> entitySetIds,
-            Map<UUID, DelegatedStringSet> fieldSearches,
-            int size,
-            boolean explain );
+     * EDM / SecurableObject Create/Update/Delete
+     **/
 
-    boolean saveEntityTypeToElasticsearch( EntityType entityType );
 
-    boolean saveAssociationTypeToElasticsearch( AssociationType associationType );
+    /* Entity Sets */
+    boolean saveEntitySetToElasticsearch(
+            EntitySet entitySet,
+            List<PropertyType> propertyTypes );
 
-    boolean savePropertyTypeToElasticsearch( PropertyType propertyType );
+    boolean updateEntitySetMetadata( EntitySet entitySet );
+
+    boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes );
+
+    /* Organizations */
+    boolean createOrganization( Organization organization );
+
+    boolean deleteOrganization( UUID organizationId );
+
+    boolean updateOrganization( UUID id, Optional<String> optionalTitle, Optional<String> optionalDescription );
+
+    /* Entity Types */
+    boolean saveEntityTypeToElasticsearch( EntityType entityType, List<PropertyType> propertyTypes );
 
     boolean deleteEntityType( UUID entityTypeId );
 
+    /* Association Types */
+    boolean saveAssociationTypeToElasticsearch( AssociationType associationType, List<PropertyType> propertyTypes );
+
     boolean deleteAssociationType( UUID associationTypeId );
 
+    /* Property Types */
+    boolean savePropertyTypeToElasticsearch( PropertyType propertyType );
+
     boolean deletePropertyType( UUID propertyTypeId );
+
+    /* App Types */
+    boolean saveAppTypeToElasticsearch( AppType appType );
+
+    boolean deleteAppType( UUID appTypeId );
+
+    /* Apps */
+    boolean saveAppToElasticsearch( App app );
+
+    boolean deleteApp( UUID appId );
+
+    /**
+     * EDM / SecurableObject Metadata Searches
+     **/
 
     SearchResult executeEntityTypeSearch( String searchTerm, int start, int maxHits );
 
@@ -241,9 +248,29 @@ public interface ConductorElasticsearchApi {
 
     SearchResult executeFQNPropertyTypeSearch( String namespace, String name, int start, int maxHits );
 
-    boolean clearAllData();
+    SearchResult executeAppSearch( String searchTerm, int start, int maxHits );
 
-    double getModelScore( double[][] features );
+    SearchResult executeAppTypeSearch( String searchTerm, int start, int maxHits );
+
+    SearchResult executeEntitySetMetadataSearch(
+            Optional<String> optionalSearchTerm,
+            Optional<UUID> optionalEntityType,
+            Optional<Set<UUID>> optionalPropertyTypes,
+            Set<AclKey> authorizedAclKeys,
+            int start,
+            int maxHits );
+
+    SearchResult executeOrganizationSearch(
+            String searchTerm,
+            Set<AclKey> authorizedOrganizationIds,
+            int start,
+            int maxHits );
+
+    /**
+     * Re-indexing
+     **/
+
+    boolean clearAllData();
 
     boolean triggerPropertyTypeIndex( List<PropertyType> propertyTypes );
 
@@ -258,17 +285,5 @@ public interface ConductorElasticsearchApi {
     boolean triggerAppTypeIndex( List<AppType> appTypes );
 
     boolean triggerOrganizationIndex( List<Organization> organizations );
-
-    boolean saveAppToElasticsearch( App app );
-
-    boolean deleteApp( UUID appId );
-
-    SearchResult executeAppSearch( String searchTerm, int start, int maxHits );
-
-    boolean saveAppTypeToElasticsearch( AppType appType );
-
-    boolean deleteAppType( UUID appTypeId );
-
-    SearchResult executeAppTypeSearch( String searchTerm, int start, int maxHits );
 
 }

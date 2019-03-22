@@ -95,18 +95,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.Base64;
+import java.util.*;
 import java.util.Base64.Decoder;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -869,6 +859,8 @@ public final class ResultSetAdapters {
             Boolean linking ) throws SQLException {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
 
+        UUID entitySetId = entitySetId( rs );
+
         if ( linking ) {
             final UUID entityKeyId = linkingId( rs );
             data.put( ID_FQN, entityKeyId );
@@ -885,9 +877,8 @@ public final class ResultSetAdapters {
             data.put( LAST_INDEX_FQN, lastIndex( rs ) );
         }
 
-        final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
-                .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
-                .collect( Collectors.toSet() );
+        final Collection<PropertyType> allPropertyTypes = authorizedPropertyTypes.get( entitySetId ).values();
+
         for ( PropertyType propertyType : allPropertyTypes ) {
             List<?> objects = propertyValue( rs, propertyType );
 

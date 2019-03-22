@@ -13,29 +13,39 @@ public class SearchWithConstraintsLambda
         implements Function<ConductorElasticsearchApi, EntityDataKeySearchResult>, Serializable {
 
     private SearchConstraints           searchConstraints;
+    private Map<UUID, UUID>             entityTypesByEntitySetId;
     private Map<UUID, DelegatedUUIDSet> authorizedProperties;
     private boolean                     linking;
 
     public SearchWithConstraintsLambda(
             SearchConstraints searchConstraints,
+            Map<UUID, UUID> entityTypesByEntitySetId,
             Map<UUID, DelegatedUUIDSet> authorizedProperties,
-            boolean linkign ) {
+            boolean linking ) {
         this.searchConstraints = searchConstraints;
+        this.entityTypesByEntitySetId = entityTypesByEntitySetId;
         this.authorizedProperties = authorizedProperties;
-        this.linking = linkign;
+        this.linking = linking;
     }
 
     @Override public EntityDataKeySearchResult apply( ConductorElasticsearchApi conductorElasticsearchApi ) {
-        return conductorElasticsearchApi.executeSearch( searchConstraints, authorizedProperties, linking );
+        return conductorElasticsearchApi
+                .executeSearch( searchConstraints, entityTypesByEntitySetId, authorizedProperties, linking );
     }
 
     public SearchConstraints getSearchConstraints() {
         return searchConstraints;
     }
 
+    public Map<UUID, UUID> getEntityTypesByEntitySetId() {
+        return entityTypesByEntitySetId;
+    }
+
     public Map<UUID, DelegatedUUIDSet> getAuthorizedProperties() {
         return authorizedProperties;
     }
 
-    public boolean isLinking() { return linking; }
+    public boolean isLinking() {
+        return linking;
+    }
 }
