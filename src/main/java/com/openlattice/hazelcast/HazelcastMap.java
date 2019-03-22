@@ -38,6 +38,8 @@ public enum HazelcastMap {
     ENTITY_SET_COUNTERS( null ),
     IDS( Table.IDS ),
     ID_GENERATION( null ),
+    ID_REF_COUNTS( null ),
+    ID_CACHE( null ) ,
     INDEXING_LOCKS( null ),
     INDEXING_GRAPH_PROCESSING( null ),
     KEYS( Table.KEYS ),
