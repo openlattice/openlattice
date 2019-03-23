@@ -24,10 +24,13 @@ package com.openlattice.data.ids
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimaps
+import com.google.common.collect.Queues
 import com.google.common.collect.SetMultimap
+import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityKey
 import com.openlattice.data.EntityKeyIdService
+import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
@@ -36,6 +39,9 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.BlockingQueue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.stream.Collectors
 import kotlin.collections.HashMap
 
@@ -54,9 +60,17 @@ private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.j
 
 class PostgresEntityKeyIdService(
         hazelcastInstance: HazelcastInstance,
+        private val executor: ListeningExecutorService,
         private val hds: HikariDataSource,
         private val idGenerationService: HazelcastIdGenerationService
 ) : EntityKeyIdService {
+    private val q: BlockingQueue<UUID> = Queues.newArrayBlockingQueue(65536)
+    private val idRefCounts = hazelcastInstance.getMap<EntityKey, Long>(HazelcastMap.ID_REF_COUNTS.name)
+    private val idMap = hazelcastInstance.getMap<EntityKey, UUID>(HazelcastMap.ID_CACHE.name)
+
+    init {
+        idGenerationService.getNextIds(q.remainingCapacity()).forEach(q::put)
+    }
 
     private fun genEntityKeyIds(entityIds: Set<EntityKey>): Map<EntityKey, UUID> {
         val ids = idGenerationService.getNextIds(entityIds.size)
@@ -82,15 +96,53 @@ class PostgresEntityKeyIdService(
         return entityKeyIds
     }
 
-    override fun reserveEntityKeyIds( entityKeys: Set<EntityKey> ): Set<UUID> {
-        val entityIdsByEntitySet = entityKeys.groupBy ({ it.entitySetId },{it.entityId}).mapValues { it.value.toSet() }
+    private fun countUpEntityKeys(entityKeys: Set<EntityKey>) {
+        idRefCounts.executeOnKeys(entityKeys, IdRefCountIncrementer())
+
+    }
+
+    private fun countDownEntityKeys(entityKeys: Set<EntityKey>) {
+        idRefCounts.executeOnKeys(entityKeys, IdRefCountDecrementer())
+                .forEach { entityKey, count ->
+                    if (count == 0) {
+                        idMap.delete(entityKey)
+                    }
+                }
+    }
+
+    private fun assignEntityKeyIds(entityKeys: Set<EntityKey>): Map<EntityKey, UUID> {
+        executor.submit {
+            idGenerationService.getNextIds(entityKeys.size).forEach(q::put)
+        }
+
+        return entityKeys.map { key ->
+            val elem = q.take()
+            val assignedId = idMap.putIfAbsent(key, elem)
+            return@map if (assignedId == null) {
+                val assignedPair = key to elem
+                storeEntityKeyIds(mapOf(assignedPair))
+                assignedPair
+            } else {
+                q.offer(elem)
+                key to assignedId
+            }
+        }.toMap()
+    }
+
+    override fun reserveEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
+        val entityIdsByEntitySet = entityKeys.groupBy({ it.entitySetId },
+                                                      { it.entityId }).mapValues { it.value.toSet() }
         val existing = loadEntityKeyIds(entityIdsByEntitySet)
         val missing = entityKeys - existing.keys
 
-        val ids = idGenerationService.getNextIds(missing.size)
-        val missingMap = missing.zip( ids ).toMap()
-        storeEntityKeyIds(missingMap)
-        return entityKeys.asSequence().map { existing[it] ?: missingMap[it]!! }.toSet()
+        countUpEntityKeys(missing)
+
+        val missingMap = assignEntityKeyIds(missing)
+
+        countDownEntityKeys(missing)
+
+        return entityKeys.asSequence().map { existing[it] ?: missingMap.getValue(it) }.toSet()
+
     }
 
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
@@ -108,7 +160,7 @@ class PostgresEntityKeyIdService(
     override fun getEntityKeyId(entityKey: EntityKey): UUID {
         return loadEntityKeyId(entityKey.entitySetId, entityKey.entityId) ?: storeEntityKeyIds(
                 genEntityKeyIds(setOf(entityKey))
-        )[entityKey]!!
+        ).getValue(entityKey)
     }
 
     private fun loadEntityKeyId(entitySetId: UUID, entityId: String): UUID? {
@@ -127,15 +179,15 @@ class PostgresEntityKeyIdService(
     }
 
     private fun loadEntityKeyIds(entityIds: Map<UUID, Set<String>>): MutableMap<EntityKey, UUID> {
-        return hds.connection.use {
-            val connection = it
+        return hds.connection.use { connection ->
+
             val ids = HashMap<EntityKey, UUID>(entityIds.values.sumBy { it.size })
 
             entityIds
-                    .forEach {
+                    .forEach { (entitySetId, entityIdValues) ->
                         val ps = connection.prepareStatement(entityKeyIdsSql)
-                        ps.setObject(1, it.key)
-                        ps.setArray(2, PostgresArrays.createTextArray(connection, it.value))
+                        ps.setObject(1, entitySetId)
+                        ps.setArray(2, PostgresArrays.createTextArray(connection, entityIdValues))
                         val rs = ps.executeQuery()
                         while (rs.next()) {
                             ids[ResultSetAdapters.entityKey(rs)] = ResultSetAdapters.id(rs)
@@ -145,10 +197,12 @@ class PostgresEntityKeyIdService(
             return ids
         }
     }
+
     override fun getEntityKeyIds(
             entityKeys: Set<EntityKey>, entityKeyIds: MutableMap<EntityKey, UUID>
     ): MutableMap<EntityKey, UUID> {
-        val entityIdsByEntitySet = entityKeys.groupBy ({ it.entitySetId },{it.entityId}).mapValues { it.value.toSet() }
+        val entityIdsByEntitySet = entityKeys.groupBy({ it.entitySetId },
+                                                      { it.entityId }).mapValues { it.value.toSet() }
         entityKeyIds.putAll(loadEntityKeyIds(entityIdsByEntitySet))
 
         //Making this line O(n) is why we chose to just take a set instead of a sequence (thus allowing lazy views since copy is required anyway)
