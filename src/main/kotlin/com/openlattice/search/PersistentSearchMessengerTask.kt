@@ -126,7 +126,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
     private fun getLatestRead(vehicleReads: List<SetMultimap<FullQualifiedName, Any>>): OffsetDateTime? {
         return vehicleReads
-                .flatMap { it[LAST_WRITE_FQN] }
+                .flatMap { it[LAST_WRITE_FQN] ?: emptySet() }
                 .map {
                     logger.info("New read datetime as string: {}", it)
                     val localDateTime = Timestamp.valueOf(it.toString()).toLocalDateTime()
@@ -236,6 +236,11 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                     if (latestRead != null) {
                         ps.setObject(1, latestRead)
                         ps.setObject(2, search.id)
+                        if (logger.isDebugEnabled) {
+                            logger.debug("Updating last read for $aclKey and $search")
+                        } else {
+                            logger.info("Updating last read for $aclKey and ${search.id}")
+                        }
                         ps.executeUpdate()
                     } else {
                         0
