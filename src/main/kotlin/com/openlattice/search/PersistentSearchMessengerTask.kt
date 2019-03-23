@@ -201,21 +201,13 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
             sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, newResults, neighborsById)
             val lastReadDateTime = getLatestRead(newResults.hits)
-            logger.info("Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id, newResults.numHits)
+            logger.info(
+                    "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
+                    newResults.numHits
+            )
         }
 
         return null
-    }
-
-    private fun updateLastReadForAlert(alertId: UUID, readDateTime: OffsetDateTime) {
-        logger.info("Updating persistent search alert {} for last read {}", alertId, readDateTime)
-        val connection = getDependency().hds.connection
-        connection.use {
-            val stmt: Statement = connection.createStatement()
-            val updateSql = updateLastReadSql(readDateTime, alertId)
-            logger.info("Update read datetime sql: {}", updateSql)
-            stmt.execute(updateSql)
-        }
     }
 
     override fun runTask() {
@@ -231,7 +223,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                     StatementHolder(connection, stmt, rs)
                 }, Function<ResultSet, Pair<AclKey, PersistentSearch>> {
                     ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it)
-                }).asSequence().map { (aclKey, search) ->
+                }).forEach { (aclKey, search) ->
                     val latestRead = findNewWritesForAlert(aclKey, search)
                     if (latestRead != null) {
                         ps.setObject(1, latestRead)
@@ -241,11 +233,10 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                         } else {
                             logger.info("Updating last read for $aclKey and ${search.id}")
                         }
-                        ps.executeUpdate()
-                    } else {
-                        0
+                        ps.addBatch()
                     }
-                }.sum()
+                }
+                ps.executeBatch().sum()
             }
         }
         logger.info("Updated {} persistent searches.", totalSearchesUpdated)
