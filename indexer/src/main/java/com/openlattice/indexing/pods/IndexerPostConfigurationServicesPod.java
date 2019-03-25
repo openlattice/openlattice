@@ -106,9 +106,7 @@ public class IndexerPostConfigurationServicesPod {
     
     @Bean
     public EntityDatastore entityDatastore() {
-        return new HazelcastEntityDatastore(
-                hazelcastInstance,
-                idService(),
+        return new HazelcastEntityDatastore( idService(),
                 indexingMetadataManager(),
                 dataQueryService(),
                 edm,
