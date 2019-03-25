@@ -96,7 +96,7 @@ public class LinkerPostConfigurationServicesPod {
 
     @Bean
     public EntityKeyIdService idService() {
-        return new PostgresEntityKeyIdService( hazelcastInstance, hikariDataSource, idGeneration() );
+        return new PostgresEntityKeyIdService( hazelcastInstance, executor, hikariDataSource, idGeneration() );
     }
 
     @Bean
