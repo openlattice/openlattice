@@ -30,9 +30,22 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.commons.lang.RandomStringUtils;
 
+/**
+ *  There is currently an implication in the codebase that all Principals in this Mapstore are of type PrincipalType.USER
+ */
 public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UUID, PrincipalSet> {
+
+    public static final String ANY_PRINCIPAL_SET = "principals[any]";
+
     public OrganizationMembersMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ORGANIZATIONS_MEMBERS.name(), ORGANIZATIONS, hds );
+    }
+
+    @Override
+    public MapConfig getMapConfig() {
+        return super
+                .getMapConfig()
+                .addMapIndexConfig( new MapIndexConfig(ANY_PRINCIPAL_SET, false) );
     }
 
     @Override
