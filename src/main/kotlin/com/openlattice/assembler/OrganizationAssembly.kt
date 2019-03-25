@@ -21,19 +21,10 @@
 
 package com.openlattice.assembler
 
-import java.io.Serializable
-import java.util.*
+import java.util.UUID
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class OrganizationAssembly(
-        val organizationId: UUID,
-        val dbname: String,
-        val entitySetIds: MutableSet<UUID> = mutableSetOf(),
-        var initialized : Boolean = false
-) {
-
-
-}
+data class OrganizationAssembly(val organizationId: UUID, val dbname: String, var initialized : Boolean = false)

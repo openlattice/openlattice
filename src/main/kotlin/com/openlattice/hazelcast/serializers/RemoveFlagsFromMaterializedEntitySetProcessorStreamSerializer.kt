@@ -25,34 +25,36 @@ import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.hazelcast.processors.AddFlagsToEntitySetProcessor
+import com.openlattice.hazelcast.processors.RemoveFlagsFromMaterializedEntitySetProcessor
+import com.openlattice.organization.OrganizationEntitySetFlag
 import org.springframework.stereotype.Component
 
 @Component
-class AddFlagsToEntitySetProcessorStreamSerializer: SelfRegisteringStreamSerializer<AddFlagsToEntitySetProcessor> {
-    private val entitySetFlags = EntitySetFlag.values()
+class RemoveFlagsFromMaterializedEntitySetProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<RemoveFlagsFromMaterializedEntitySetProcessor> {
+    private val entitySetFlags = OrganizationEntitySetFlag.values()
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.ADD_FLAGS_TO_ENTITY_SET_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.REMOVE_FLAGS_FROM_ENTITY_SET_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out AddFlagsToEntitySetProcessor> {
-        return AddFlagsToEntitySetProcessor::class.java
+    override fun getClazz(): Class<out RemoveFlagsFromMaterializedEntitySetProcessor> {
+        return RemoveFlagsFromMaterializedEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: AddFlagsToEntitySetProcessor) {
+    override fun write(out: ObjectDataOutput, obj: RemoveFlagsFromMaterializedEntitySetProcessor) {
         out.writeInt(obj.flags.size)
         for (flag in obj.flags) {
             out.writeInt(flag.ordinal)
         }
     }
 
-    override fun read(input: ObjectDataInput): AddFlagsToEntitySetProcessor {
+    override fun read(input: ObjectDataInput): RemoveFlagsFromMaterializedEntitySetProcessor {
         val size = input.readInt()
-        val set = mutableSetOf<EntitySetFlag>()
+        val set = mutableSetOf<OrganizationEntitySetFlag>()
         for (i in 0 until size) {
             set.add(entitySetFlags[input.readInt()])
         }
-        return AddFlagsToEntitySetProcessor(set)
+        return RemoveFlagsFromMaterializedEntitySetProcessor(set)
     }
 }

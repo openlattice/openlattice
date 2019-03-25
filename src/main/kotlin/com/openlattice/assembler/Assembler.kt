@@ -39,10 +39,10 @@ import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyT
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.EntitySetCreatedEvent
-import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
+import com.openlattice.hazelcast.processors.AddFlagsToMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -51,6 +51,7 @@ import com.openlattice.organizations.events.MembersAddedToOrganizationEvent
 import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.*
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
@@ -83,6 +84,7 @@ class Assembler(
     private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
     private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(PROPERTY_TYPES.name)
     private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(ASSEMBLIES.name)
+    private val materializedEntitySets = hazelcast.getMap<UUID, MaterializedEntitySet>(MATERIALIZED_ENTITY_SETS.name)
     private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
     private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
     private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
@@ -98,21 +100,26 @@ class Assembler(
     }
 
     fun getMaterializedEntitySetsInOrganization(organizationId: UUID): Set<UUID> {
-        return assemblies[organizationId]?.entitySetIds ?: setOf()
+        return materializedEntitySets
+                .keySet(Predicates.equal(MaterializedEntitySetMapStore.ORGANIZATION_INDEX, organizationId))
     }
 
     fun isEntitySetMaterialized(entitySetId: UUID): Boolean {
-        return assemblies.entrySet(Predicates.equal(ENTITY_SET_IDS_INDEX, entitySetId)).isNotEmpty()
+        return materializedEntitySets.containsKey(entitySetId)
+    }
+
+    fun materializedEntitySetContainsFlag(entitySetId: UUID, flag: OrganizationEntitySetFlag): Boolean {
+        return materializedEntitySets[entitySetId]?.flags?.contains(flag) ?: false
+    }
+
+    fun flagMaterializedEntitySet(entitySetId: UUID, flag: OrganizationEntitySetFlag) {
+        if (!materializedEntitySetContainsFlag(entitySetId, flag)) {
+            materializedEntitySets.executeOnKey(entitySetId, AddFlagsToMaterializedEntitySetProcessor(setOf(flag)))
+        }
     }
 
     fun getOrganizationAssembly(organizationId: UUID): OrganizationAssembly {
         return assemblies[organizationId]!!
-    }
-
-    private fun flagAsNonMaterialized(organizationId: UUID, entitySetId: UUID) {
-        val orgAssembly = assemblies[organizationId]
-        orgAssembly?.entitySetIds!!.remove(entitySetId)
-        assemblies[organizationId] = orgAssembly
     }
 
     @Subscribe
@@ -121,20 +128,6 @@ class Assembler(
         assemblies.executeOnKey(
                 entitySetCreatedEvent.entitySet.organizationId,
                 CreateProductionForeignTableOfEntitySetProcessor(entitySetCreatedEvent.entitySet.id).init(acm))
-    }
-
-    @Subscribe
-    fun handlePropertyTypeAddedToEntitySet(propertyTypesAddedToEntitySetEvent: PropertyTypesAddedToEntitySetEvent) {
-        createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySet.id)
-        assemblies.executeOnKey(
-                propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
-                UpdateProductionForeignTableOfEntitySetProcessor(
-                        propertyTypesAddedToEntitySetEvent.entitySet.id,
-                        propertyTypesAddedToEntitySetEvent.newPropertyTypes).init(acm))
-        // flag entity set as non-materialized
-        flagAsNonMaterialized(
-                propertyTypesAddedToEntitySetEvent.entitySet.organizationId,
-                propertyTypesAddedToEntitySetEvent.entitySet.id)
     }
 
     fun createOrganization(organization: Organization) {
@@ -173,10 +166,15 @@ class Assembler(
             organizationId: UUID,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
-        assemblies.executeOnKey(
-                organizationId,
-                MaterializeEntitySetsProcessor(authorizedPropertyTypesByEntitySet).init(acm)
-        )
+        authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
+            // even if we re-materialize, we would clear all flags
+            materializedEntitySets.set(entitySetId, MaterializedEntitySet(entitySetId, organizationId))
+            materializedEntitySets.executeOnKey(
+                    organizationId,
+                    MaterializeEntitySetProcessor(entitySetId, organizationId, authorizedPropertyTypes).init(acm)
+            )
+        }
+
         return getMaterializedEntitySetsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()

@@ -23,16 +23,13 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.ORGANIZATION_ASSEMBLIES;
 
-import com.google.common.collect.ImmutableSet;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
-import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -41,7 +38,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 
 public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<UUID, OrganizationAssembly> {
     public static final String INITIALIZED_INDEX = "initialized";
-    public static final String ENTITY_SET_IDS_INDEX = "entitySetIds[any]";
     private final       UUID   testKey           = UUID.randomUUID();
 
     public OrganizationAssemblyMapstore( HikariDataSource hds ) {
@@ -49,17 +45,14 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, OrganizationAssembly value ) throws SQLException {
-        Array entitySetIds = PostgresArrays.createUuidArray( ps.getConnection(), value.getEntitySetIds() );
 
         bind( ps, key, 1 );
         ps.setString( 2, value.getDbname() );
-        ps.setArray( 3, entitySetIds );
-        ps.setBoolean( 4, value.getInitialized() );
+        ps.setBoolean( 3, value.getInitialized() );
 
         // UPDATE
-        ps.setString( 5, value.getDbname() );
-        ps.setArray( 6, entitySetIds );
-        ps.setBoolean( 7, value.getInitialized() );
+        ps.setString( 4, value.getDbname() );
+        ps.setBoolean( 5, value.getInitialized() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
@@ -80,18 +73,13 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     }
 
     @Override public OrganizationAssembly generateTestValue() {
-        return new OrganizationAssembly(
-                testKey,
-                RandomStringUtils.randomAlphanumeric( 10 ),
-                ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ),
-                false );
+        return new OrganizationAssembly( testKey, RandomStringUtils.randomAlphanumeric( 10 ), false );
     }
 
     @Override public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
                 .addMapIndexConfig( new MapIndexConfig( INITIALIZED_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ENTITY_SET_IDS_INDEX, false ) )
                 .setInMemoryFormat( InMemoryFormat.OBJECT );
     }
 }

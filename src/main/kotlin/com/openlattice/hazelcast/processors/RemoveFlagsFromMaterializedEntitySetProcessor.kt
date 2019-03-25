@@ -22,17 +22,17 @@
 package com.openlattice.hazelcast.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.assembler.MaterializedEntitySet
+import com.openlattice.organization.OrganizationEntitySetFlag
 import java.util.UUID
 
-data class RemoveFlagsFromEntitySetProcessor(val flags: Set<EntitySetFlag>)
-    : AbstractRhizomeEntryProcessor<UUID, EntitySet, EntitySet>() {
+data class RemoveFlagsFromMaterializedEntitySetProcessor(val flags: Set<OrganizationEntitySetFlag>)
+    : AbstractRhizomeEntryProcessor<UUID, MaterializedEntitySet, MaterializedEntitySet>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>?): EntitySet {
-        val entitySet = entry!!.value
-        entitySet.flags.removeAll(flags)
-        entry.setValue(entitySet)
-        return entitySet
+    override fun process(entry: MutableMap.MutableEntry<UUID, MaterializedEntitySet>?): MaterializedEntitySet {
+        val materializedEntitySet = entry!!.value
+        materializedEntitySet.flags.removeAll(flags)
+        entry.setValue(materializedEntitySet)
+        return materializedEntitySet
     }
 }

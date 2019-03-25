@@ -40,7 +40,6 @@ public class OrganizationAssemblyStreamSerializerTest
         return new OrganizationAssembly(
                 UUID.randomUUID(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
-                ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ),
                 false );
     }
 }

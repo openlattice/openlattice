@@ -34,12 +34,11 @@ import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.EntitySetDataDeletedEvent;
-import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.hazelcast.processors.AddFlagsToEntitySetProcessor;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
@@ -68,8 +67,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private final EdmManager                     edmManager;
     private final Assembler                      assembler;
 
-    private final IMap<UUID, EntitySet>          entitySets;
-
     @Inject
     private EventBus eventBus;
 
@@ -80,7 +77,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private LinkingQueryService linkingQueryService;
 
     public HazelcastEntityDatastore(
-            HazelcastInstance hazelcastInstance,
             EntityKeyIdService idService,
             IndexingMetadataManager pdm,
             PostgresEntityDataQueryService dataQueryService,
@@ -91,7 +87,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         this.idService = idService;
         this.edmManager = edmManager;
         this.assembler = assembler;
-        entitySets  = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name());
     }
 
     @Override
@@ -223,9 +218,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                             entityKeyIds ) ) );
         }
 
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagEntitySetUnsynchronized );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagMaterializedEntitySetUnsynchronized );
     }
 
     private void signalLinkedEntitiesUpserted(
@@ -257,22 +252,22 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalEntitySetDataDeleted( UUID entitySetId ) {
         eventBus.post( new EntitySetDataDeletedEvent( entitySetId ) );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagEntitySetUnsynchronized );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagMaterializedEntitySetUnsynchronized );
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesDeletedEvent( Set.of( entitySetId ), entityKeyIds ) );
         }
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagEntitySetUnsynchronized );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagMaterializedEntitySetUnsynchronized );
     }
 
     private void signalLinkedEntitiesDeleted( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
@@ -313,14 +308,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         }
     }
 
-    private void flagEntitySetUnsynchronized( UUID entitySetId ) {
-        EntitySet entitySet = edmManager.getEntitySet( entitySetId );
-        if ( assembler.isEntitySetMaterialized( entitySet.getId() )
-                && !entitySet.getFlags().contains( EntitySetFlag.DATA_UNSYNCHRONIZED ) ) {
-            entitySets.executeOnKey(
-                    entitySet.getId(),
-                    new AddFlagsToEntitySetProcessor( Set.of( EntitySetFlag.DATA_UNSYNCHRONIZED ) ) );
-        }
+    private void flagMaterializedEntitySetUnsynchronized( UUID entitySetId ) {
+        assembler.flagMaterializedEntitySet( entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED );
     }
 
     @Timed
@@ -352,7 +341,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var writeEvent = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
         signalEntitySetDataDeleted( entitySetId );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 
@@ -556,7 +545,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         logger.info( "Finished deletion data from entity set {}. Deleted {} rows and {} property data",
                 entitySetId, writeEvent.getNumUpdates(), propertyWriteEvent.getNumUpdates() );
         signalEntitySetDataDeleted( entitySetId );
-        flagEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 

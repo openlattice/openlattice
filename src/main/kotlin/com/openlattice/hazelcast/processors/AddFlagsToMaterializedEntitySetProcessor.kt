@@ -18,15 +18,20 @@
  *
  *
  */
+package com.openlattice.hazelcast.processors
 
-package com.openlattice.hazelcast.serializers
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.openlattice.assembler.MaterializedEntitySet
+import com.openlattice.organization.OrganizationEntitySetFlag
+import java.util.UUID
 
-import com.openlattice.assembler.AssemblerConnectionManager
+data class AddFlagsToMaterializedEntitySetProcessor(val flags: Set<OrganizationEntitySetFlag>)
+    : AbstractRhizomeEntryProcessor<UUID, MaterializedEntitySet, MaterializedEntitySet>() {
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-interface AssemblerConnectionManagerDependent {
-    fun init( assemblerConnectionManager: AssemblerConnectionManager)
+    override fun process(entry: MutableMap.MutableEntry<UUID, MaterializedEntitySet>?): MaterializedEntitySet {
+        val materializedEntitySet = entry!!.value
+        materializedEntitySet.flags.addAll(flags)
+        entry.setValue(materializedEntitySet)
+        return materializedEntitySet
+    }
 }

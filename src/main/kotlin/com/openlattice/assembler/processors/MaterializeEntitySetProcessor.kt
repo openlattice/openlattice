@@ -25,14 +25,14 @@ import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.OrganizationAssembly
+import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.edm.type.PropertyType
 import org.slf4j.LoggerFactory
 import java.lang.IllegalStateException
 import java.util.*
 
 
-private val logger = LoggerFactory.getLogger(MaterializeEntitySetsProcessor::class.java)
+private val logger = LoggerFactory.getLogger(MaterializeEntitySetProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
 /**
@@ -40,29 +40,28 @@ private const val NOT_INITIALIZED = "Assembler Connection Manager not initialize
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-data class MaterializeEntitySetsProcessor(
-        val authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
-) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(true), Offloadable {
+data class MaterializeEntitySetProcessor(
+        val entitySetId: UUID,
+        val organizationId: UUID,
+        val authorizedPropertyTypes: Map<UUID, PropertyType>
+) : AbstractRhizomeEntryProcessor<UUID, MaterializedEntitySet, Void?>(true), Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
-    val entitySetIds: Set<UUID> = authorizedPropertyTypesByEntitySet.keys
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
+    override fun process(entry: MutableMap.MutableEntry<UUID, MaterializedEntitySet?>): Void? {
         val organizationId = entry.key
-        val assembly = entry.value
-        if (assembly == null) {
-            logger.error("Encountered null assembly while trying to materialize entity sets.")
+        val materializedEntitySet = entry.value
+        if (materializedEntitySet == null) {
+            logger.error("Materialized entity set with id {} for organization id {} was not initialized properly.")
         } else {
-            acm?.materializeEntitySets(organizationId, authorizedPropertyTypesByEntitySet)
+            acm?.materializeEntitySets(organizationId, mapOf(entitySetId to authorizedPropertyTypes))
                     ?: throw IllegalStateException(NOT_INITIALIZED)
-            assembly.entitySetIds.addAll(entitySetIds)
-            entry.setValue(assembly)
         }
 
         return null
     }
 
-    fun init(acm: AssemblerConnectionManager): MaterializeEntitySetsProcessor {
+    fun init(acm: AssemblerConnectionManager): MaterializeEntitySetProcessor {
         this.acm = acm
         return this
     }

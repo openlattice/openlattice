@@ -18,20 +18,12 @@
  *
  *
  */
-package com.openlattice.hazelcast.processors
+package com.openlattice.assembler
 
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.organization.OrganizationEntitySetFlag
 import java.util.UUID
 
-data class AddFlagsToEntitySetProcessor(val flags: Set<EntitySetFlag>)
-    : AbstractRhizomeEntryProcessor<UUID, EntitySet, EntitySet>() {
-
-    override fun process(entry: MutableMap.MutableEntry<UUID, EntitySet>?): EntitySet {
-        val entitySet = entry!!.value
-        entitySet.flags.addAll(flags)
-        entry.setValue(entitySet)
-        return entitySet
-    }
-}
+data class MaterializedEntitySet(
+        val id: UUID,
+        val organizationId: UUID,
+        val flags: MutableSet<OrganizationEntitySetFlag> = mutableSetOf())

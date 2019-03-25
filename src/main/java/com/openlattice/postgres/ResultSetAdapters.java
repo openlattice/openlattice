@@ -41,6 +41,7 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.AceKey;
@@ -77,6 +78,7 @@ import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
@@ -129,10 +131,9 @@ public final class ResultSetAdapters {
 
     @NotNull public static OrganizationAssembly organizationAssembly( @NotNull ResultSet rs ) throws SQLException {
         final UUID organizationId = rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
-        final Set<UUID> entitySetIds = Sets.newHashSet( PostgresArrays.getUuidArray( rs, ENTITY_SET_IDS.getName() ) );
         final String dbname = rs.getString( DB_NAME.getName() );
         final boolean initialized = rs.getBoolean( INITIALIZED.getName() );
-        return new OrganizationAssembly( organizationId, dbname, entitySetIds, initialized );
+        return new OrganizationAssembly( organizationId, dbname, initialized );
     }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
@@ -284,6 +285,22 @@ public final class ResultSetAdapters {
 
             for ( String s : pStrArray ) {
                 flags.add( EntitySetFlag.valueOf( s ) );
+            }
+
+        }
+
+        return flags;
+    }
+
+    public static EnumSet<OrganizationEntitySetFlag> organizationEntitySetFlags( ResultSet rs ) throws SQLException {
+        String[] pStrArray = getTextArray( rs, ENTITY_SET_FLAGS_FIELD );
+
+        EnumSet<OrganizationEntitySetFlag> flags = EnumSet.noneOf( OrganizationEntitySetFlag.class );
+
+        if ( pStrArray != null && pStrArray.length > 0 ) {
+
+            for ( String s : pStrArray ) {
+                flags.add( OrganizationEntitySetFlag.valueOf( s ) );
             }
 
         }
@@ -1025,7 +1042,15 @@ public final class ResultSetAdapters {
                 Sets.newHashSet( PostgresArrays.getUuidArray( rs, AUDIT_RECORD_ENTITY_SET_IDS_FIELD ) ) );
     }
 
-    public static Boolean exists( ResultSet rs) throws SQLException {
+    public static Boolean exists( ResultSet rs ) throws SQLException {
         return rs.getBoolean( "exists" );
+    }
+
+    public static MaterializedEntitySet materializedEntitySet( ResultSet rs ) throws SQLException {
+        final UUID id = rs.getObject( ID.getName(), UUID.class );
+        final UUID organizationId = rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
+        final EnumSet<OrganizationEntitySetFlag> organizationEntitySetFlags = organizationEntitySetFlags( rs );
+
+        return new MaterializedEntitySet( id, organizationId, organizationEntitySetFlags );
     }
 }

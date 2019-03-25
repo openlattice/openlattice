@@ -55,8 +55,8 @@ import com.openlattice.edm.types.processors.*;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
-import com.openlattice.hazelcast.processors.AddFlagsToEntitySetProcessor;
 import com.openlattice.hazelcast.processors.RemoveEntitySetsFromLinkingEntitySetProcessor;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
@@ -390,7 +390,7 @@ public class EdmService implements EdmManager {
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
         final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
-        flagEntitySetDataUnsynchronized( linkingEntitySet );
+        flagMaterializedEntitySetDataUnsynchronized( linkingEntitySet.getId() );
 
         eventBus.post( new LinkedEntitySetAddedEvent(
                 updatedLinkingEntitySet,
@@ -410,7 +410,7 @@ public class EdmService implements EdmManager {
                 .values().stream().flatMap( Set::stream ).collect( Collectors.toSet() );
         Map<UUID, Set<UUID>> remainingLinkingIdsByEntitySetId = edmManager
                 .getLinkingIdsByEntitySetIds( updatedLinkingEntitySet.getLinkedEntitySets() );
-        flagEntitySetDataUnsynchronized( linkingEntitySet );
+        flagMaterializedEntitySetDataUnsynchronized( linkingEntitySet.getId() );
 
         eventBus.post( new LinkedEntitySetRemovedEvent(
                 linkingEntitySetId,
@@ -793,7 +793,7 @@ public class EdmService implements EdmManager {
                             } );
                 }
 
-                flagEntitySetEdmUnsynchronized( entitySet );  // add edm_unsync flag for materialized views
+                flagMaterializedEntitySetEdmUnsynchronized( esId );  // add edm_unsync flag for materialized views
 
                 eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes ) );
                 eventBus.post( new PropertyTypesAddedToEntitySetEvent(
@@ -969,7 +969,8 @@ public class EdmService implements EdmManager {
                     .newArrayList( propertyTypes.getAll( et.getProperties() ).values() );
             edmManager.getAllEntitySetsForType( et.getId() ).forEach( entitySet -> {
                 if ( isFqnUpdated ) {
-                    flagEntitySetEdmUnsynchronized( entitySet );  // add edm_unsync flag for materialized views
+                    // add edm_unsync flag for materialized views
+                    flagMaterializedEntitySetEdmUnsynchronized( entitySet.getId() );
                 }
                 eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), properties ) );
             } );
@@ -1001,21 +1002,16 @@ public class EdmService implements EdmManager {
         eventBus.post( new EntitySetMetadataUpdatedEvent( getEntitySet( entitySetId ) ) );
     }
 
-    private void flagEntitySetEdmUnsynchronized( EntitySet entitySet ) {
-        flagEntitySetUnsynchronized( entitySet, EntitySetFlag.EDM_UNSYNCHRONIZED );
+    private void flagMaterializedEntitySetEdmUnsynchronized( UUID entitySetId ) {
+        flagMaterializedEntitySetUnsynchronized( entitySetId, OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED );
     }
 
-    private void flagEntitySetDataUnsynchronized( EntitySet entitySet ) {
-        flagEntitySetUnsynchronized( entitySet, EntitySetFlag.DATA_UNSYNCHRONIZED );
+    private void flagMaterializedEntitySetDataUnsynchronized( UUID entitySetId ) {
+        flagMaterializedEntitySetUnsynchronized( entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED );
     }
 
-    private void flagEntitySetUnsynchronized( EntitySet entitySet, EntitySetFlag flag ) {
-        if ( assembler.isEntitySetMaterialized( entitySet.getId() )
-                && !entitySet.getFlags().contains( flag ) ) {
-            entitySets.executeOnKey(
-                    entitySet.getId(),
-                    new AddFlagsToEntitySetProcessor( Set.of( flag ) ) );
-        }
+    private void flagMaterializedEntitySetUnsynchronized( UUID entitySetId, OrganizationEntitySetFlag flag ) {
+        assembler.flagMaterializedEntitySet( entitySetId,  flag );
     }
 
     /**************

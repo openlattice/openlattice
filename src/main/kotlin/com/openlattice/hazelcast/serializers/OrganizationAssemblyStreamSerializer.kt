@@ -51,14 +51,12 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
         UUIDStreamSerializer.serialize(out, obj.organizationId)
         out.writeBoolean(obj.initialized)
         out.writeUTF(obj.dbname)
-        SetStreamSerializers.fastUUIDSetSerialize(out, obj.entitySetIds)
     }
 
     override fun read(input: ObjectDataInput): OrganizationAssembly {
         val organizationId = UUIDStreamSerializer.deserialize(input)
         val initialized = input.readBoolean()
         val dbname = input.readUTF()
-        val entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
-        return OrganizationAssembly(organizationId, dbname, entitySetIds, initialized)
+        return OrganizationAssembly(organizationId, dbname, initialized)
     }
 }
