@@ -66,7 +66,7 @@ open class MaterializedEntitySetMapStore(
     }
 
     override fun mapToKey(rs: ResultSet): UUID {
-        return ResultSetAdapters.organizationId(rs)
+        return ResultSetAdapters.id(rs)
     }
 
     override fun mapToValue(rs: ResultSet): MaterializedEntitySet {
