@@ -113,7 +113,7 @@ class Assembler(
     }
 
     fun flagMaterializedEntitySet(entitySetId: UUID, flag: OrganizationEntitySetFlag) {
-        if (!materializedEntitySetContainsFlag(entitySetId, flag)) {
+        if (!isEntitySetMaterialized(entitySetId) && !materializedEntitySetContainsFlag(entitySetId, flag)) {
             materializedEntitySets.executeOnKey(entitySetId, AddFlagsToMaterializedEntitySetProcessor(setOf(flag)))
         }
     }
