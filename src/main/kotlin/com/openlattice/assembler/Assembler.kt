@@ -95,8 +95,8 @@ class Assembler(
         eventBus.register(this)
     }
 
-    override fun init(assemblerConnectonManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectonManager
+    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
+        this.acm = assemblerConnectionManager
     }
 
     fun getMaterializedEntitySetsInOrganization(organizationId: UUID): Set<UUID> {
@@ -113,7 +113,7 @@ class Assembler(
     }
 
     fun flagMaterializedEntitySet(entitySetId: UUID, flag: OrganizationEntitySetFlag) {
-        if (!isEntitySetMaterialized(entitySetId) && !materializedEntitySetContainsFlag(entitySetId, flag)) {
+        if (isEntitySetMaterialized(entitySetId) && !materializedEntitySetContainsFlag(entitySetId, flag)) {
             materializedEntitySets.executeOnKey(entitySetId, AddFlagsToMaterializedEntitySetProcessor(setOf(flag)))
         }
     }
