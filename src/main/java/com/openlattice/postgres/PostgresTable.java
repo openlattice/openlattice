@@ -221,9 +221,8 @@ public final class PostgresTable {
                     .primaryKey( ORGANIZATION_ID )
                     .setUnique( DB_NAME ); //We may have to delete for citus
     public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS  =
-            new PostgresTableDefinition( "organization_assemblies" )
-                    .addColumns( ID, ORGANIZATION_ID, ENTITY_SET_FLAGS )
-                    .primaryKey( ID );
+            new PostgresTableDefinition( "materialized_entity_sets" )
+                    .addColumns( ID, ORGANIZATION_ID, ENTITY_SET_FLAGS );
     public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )
@@ -421,7 +420,10 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( ENTITY_SETS, LINKED_ENTITY_SETS )
                         .method( IndexMethod.GIN )
                         .ifNotExists() );
-
+        MATERIALIZED_ENTITY_SETS.addIndexes(
+                new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ORGANIZATION_ID )
+                        .name( "materialized_entity_sets_organization_id_idx" )
+                        .ifNotExists() );
     }
 
     private PostgresTable() {
