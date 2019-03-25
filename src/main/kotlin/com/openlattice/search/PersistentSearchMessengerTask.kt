@@ -126,8 +126,9 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
     private fun getLatestRead(vehicleReads: List<SetMultimap<FullQualifiedName, Any>>): OffsetDateTime? {
         return vehicleReads
-                .flatMap { it[LAST_WRITE_FQN] }
+                .flatMap { it[LAST_WRITE_FQN] ?: emptySet() }
                 .map {
+                    logger.info("New read datetime as string: {}", it)
                     val localDateTime = Timestamp.valueOf(it.toString()).toLocalDateTime()
                     OffsetDateTime.of(localDateTime, ZoneId.systemDefault().rules.getOffset(localDateTime))
                 }.max()
@@ -199,18 +200,14 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             )
 
             sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, newResults, neighborsById)
-            return getLatestRead(newResults.hits)
+            val lastReadDateTime = getLatestRead(newResults.hits)
+            logger.info(
+                    "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
+                    newResults.numHits
+            )
         }
 
         return null
-    }
-
-    private fun updateLastReadForAlert(alertId: UUID, readDateTime: OffsetDateTime) {
-        val connection = getDependency().hds.connection
-        connection.use {
-            val stmt: Statement = connection.createStatement()
-            stmt.execute(updateLastReadSql(readDateTime, alertId))
-        }
     }
 
     override fun runTask() {
@@ -226,16 +223,20 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                     StatementHolder(connection, stmt, rs)
                 }, Function<ResultSet, Pair<AclKey, PersistentSearch>> {
                     ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it)
-                }).asSequence().map { (aclKey, search) ->
+                }).forEach { (aclKey, search) ->
                     val latestRead = findNewWritesForAlert(aclKey, search)
                     if (latestRead != null) {
                         ps.setObject(1, latestRead)
                         ps.setObject(2, search.id)
-                        ps.executeUpdate()
-                    } else {
-                        0
+                        if (logger.isDebugEnabled) {
+                            logger.debug("Updating last read for $aclKey and $search")
+                        } else {
+                            logger.info("Updating last read for $aclKey and ${search.id}")
+                        }
+                        ps.addBatch()
                     }
-                }.sum()
+                }
+                ps.executeBatch().sum()
             }
         }
         logger.info("Updated {} persistent searches.", totalSearchesUpdated)
