@@ -64,11 +64,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
 
     @Override
     public boolean saveEntitySetToElasticsearch(
+            EntityType entityType,
             EntitySet entitySet,
             List<PropertyType> propertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.submitEntitySetToElasticsearch(
+                            entityType,
                             entitySet,
                             propertyTypes ) ) )
                     .get();
@@ -160,10 +162,10 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes ) {
+    public boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes, Set<UUID> entitySetIds ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.addPropertyTypesToEntityType( entityType, newPropertyTypes ) ) )
+                    .wrap( ElasticsearchLambdas.addPropertyTypesToEntityType( entityType, newPropertyTypes, entitySetIds ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to add property types to entity type in elasticsearch" );
@@ -173,13 +175,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
 
     @Override
     public boolean addLinkedEntitySetsToEntitySet(
-            UUID linkingEntitySetId,
+            EntityType entityType,
             List<PropertyType> propertyTypes,
             Set<UUID> newLinkedEntitySets ) {
         try {
             return executor.submit( ConductorElasticsearchCall
                     .wrap( ElasticsearchLambdas.addLinkedEntitySetsToEntitySet(
-                            linkingEntitySetId,
+                            entityType,
                             propertyTypes,
                             newLinkedEntitySets ) ) )
                     .get();
@@ -321,13 +323,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             SearchConstraints searchConstraints,
             Map<UUID, UUID> entityTypesByEntitySetId,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
-            boolean linking ) {
+            Map<UUID, DelegatedUUIDSet> linkingEntitySets ) {
         try {
             EntityDataKeySearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
                     new SearchWithConstraintsLambda( searchConstraints,
                             entityTypesByEntitySetId,
                             authorizedPropertyTypesByEntitySet,
-                            linking ) ) )
+                            linkingEntitySets ) ) )
                     .get();
             return queryResults;
 
@@ -335,6 +337,12 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             logger.debug( "unable to execute entity set data search with constraints" );
             return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
+    }
+
+    @Override
+    public Map<UUID, Set<UUID>> executeBlockingSearch(
+            UUID entityTypeId, Map<UUID, DelegatedStringSet> fieldSearches, int size, boolean explain ) {
+        throw new NotImplementedException( "BLAME MTR. This is for linking only." );
     }
 
     @Override
