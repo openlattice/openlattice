@@ -117,11 +117,10 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                         hasPrincipalType( PrincipalType.USER ),
                         hasExactPermissions( EnumSet.of( Permission.OWNER ) ) );
 
-        Map<AclKey, Set<Principal>> ownersByAclKey = aces.entrySet( p ).stream().collect( Collectors
+        aces.entrySet( p ).stream().collect( Collectors
                 .groupingBy( entry -> entry.getKey().getAclKey(),
-                        Collectors.mapping( entry -> entry.getKey().getPrincipal(), Collectors.toSet() ) ) );
-
-        ownersByAclKey.entrySet().forEach( entry -> {
+                        Collectors.mapping( entry -> entry.getKey().getPrincipal(), Collectors.toSet() ) ) )
+                .entrySet().forEach( entry -> {
             if ( Sets.difference( entry.getValue(), principals ).isEmpty() ) {
                 throw new IllegalArgumentException(
                         "Unable to remove owner permissions for aclKey " + entry.getKey().toString()
