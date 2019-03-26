@@ -23,6 +23,38 @@ public class SearchWithConstraintsLambdaStreamSerializer extends Serializer<Sear
         return new UUID( msb, lsb );
     }
 
+    private static void writeUUIDToSetUUIDMap( Output output, Map<UUID, DelegatedUUIDSet> map ) {
+        output.writeInt( map.size() );
+        for ( Map.Entry<UUID, DelegatedUUIDSet> entry : map.entrySet() ) {
+            writeUUID( output, entry.getKey() );
+
+            output.writeInt( entry.getValue().size() );
+
+            for ( UUID propertyTypeId : entry.getValue() ) {
+                writeUUID( output, propertyTypeId );
+            }
+        }
+    }
+
+    private static Map<UUID, DelegatedUUIDSet> readUUIDToSetUUIDMap( Input input ) {
+        int mapSize = input.readInt();
+        Map<UUID, DelegatedUUIDSet> map = new HashMap<>( mapSize );
+        for ( int i = 0; i < mapSize; i++ ) {
+            UUID key = readUUID( input );
+
+            int numValues = input.readInt();
+            Set<UUID> values = new HashSet<>( numValues );
+
+            for ( int j = 0; j < numValues; j++ ) {
+                values.add( readUUID( input ) );
+            }
+
+            map.put( key, DelegatedUUIDSet.wrap( values ) );
+        }
+
+        return map;
+    }
+
     @Override
     public void write(
             Kryo kryo, Output output, SearchWithConstraintsLambda object ) {
@@ -35,17 +67,9 @@ public class SearchWithConstraintsLambdaStreamSerializer extends Serializer<Sear
             writeUUID( output, entry.getValue() );
         }
 
-        output.writeInt( object.getAuthorizedProperties().size() );
-        for ( Map.Entry<UUID, DelegatedUUIDSet> entry : object.getAuthorizedProperties().entrySet() ) {
-            writeUUID( output, entry.getKey() );
+        writeUUIDToSetUUIDMap( output, object.getAuthorizedProperties() );
 
-            output.writeInt( entry.getValue().size() );
-
-            for ( UUID propertyTypeId : entry.getValue() ) {
-                writeUUID( output, propertyTypeId );
-            }
-        }
-        output.writeBoolean( object.isLinking() );
+        writeUUIDToSetUUIDMap( output, object.getLinkingEntitySets() );
     }
 
     @Override
@@ -62,23 +86,10 @@ public class SearchWithConstraintsLambdaStreamSerializer extends Serializer<Sear
             entitySetsToEntityTypes.put( entitySetId, entityTypeId );
         }
 
-        int authorizedPropertyTypesMapSize = input.readInt();
-        Map<UUID, DelegatedUUIDSet> authorizedProperties = new HashMap<>( authorizedPropertyTypesMapSize );
-        for ( int i = 0; i < authorizedPropertyTypesMapSize; i++ ) {
-            UUID entitySetId = readUUID( input );
+        Map<UUID, DelegatedUUIDSet> authorizedProperties = readUUIDToSetUUIDMap(input);
 
-            int numPropertyTypes = input.readInt();
-            Set<UUID> propertyTypeIds = new HashSet<>( numPropertyTypes );
+        Map<UUID, DelegatedUUIDSet> linkingEntitySets = readUUIDToSetUUIDMap( input );
 
-            for ( int j = 0; j < numPropertyTypes; j++ ) {
-                propertyTypeIds.add( readUUID( input ) );
-            }
-
-            authorizedProperties.put( entitySetId, DelegatedUUIDSet.wrap( propertyTypeIds ) );
-        }
-
-        boolean linking = input.readBoolean();
-
-        return new SearchWithConstraintsLambda( searchConstraints, entitySetsToEntityTypes, authorizedProperties, linking );
+        return new SearchWithConstraintsLambda( searchConstraints, entitySetsToEntityTypes, authorizedProperties, linkingEntitySets );
     }
 }

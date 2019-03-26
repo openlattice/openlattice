@@ -15,22 +15,22 @@ public class SearchWithConstraintsLambda
     private SearchConstraints           searchConstraints;
     private Map<UUID, UUID>             entityTypesByEntitySetId;
     private Map<UUID, DelegatedUUIDSet> authorizedProperties;
-    private boolean                     linking;
+    private Map<UUID, DelegatedUUIDSet> linkingEntitySets;
 
     public SearchWithConstraintsLambda(
             SearchConstraints searchConstraints,
             Map<UUID, UUID> entityTypesByEntitySetId,
             Map<UUID, DelegatedUUIDSet> authorizedProperties,
-            boolean linking ) {
+            Map<UUID, DelegatedUUIDSet> linkingEntitySets ) {
         this.searchConstraints = searchConstraints;
         this.entityTypesByEntitySetId = entityTypesByEntitySetId;
         this.authorizedProperties = authorizedProperties;
-        this.linking = linking;
+        this.linkingEntitySets = linkingEntitySets;
     }
 
     @Override public EntityDataKeySearchResult apply( ConductorElasticsearchApi conductorElasticsearchApi ) {
         return conductorElasticsearchApi
-                .executeSearch( searchConstraints, entityTypesByEntitySetId, authorizedProperties, linking );
+                .executeSearch( searchConstraints, entityTypesByEntitySetId, authorizedProperties, linkingEntitySets );
     }
 
     public SearchConstraints getSearchConstraints() {
@@ -45,7 +45,7 @@ public class SearchWithConstraintsLambda
         return authorizedProperties;
     }
 
-    public boolean isLinking() {
-        return linking;
+    public Map<UUID, DelegatedUUIDSet> getLinkingEntitySets() {
+        return linkingEntitySets;
     }
 }

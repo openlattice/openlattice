@@ -23,34 +23,20 @@ package com.openlattice.search;
 import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
-import com.openlattice.authorization.AccessCheck;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDatastore;
 import com.openlattice.data.EntityKeyIdService;
 import com.openlattice.data.events.EntitiesDeletedEvent;
-import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
+import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.data.storage.IndexingMetadataManager;
@@ -66,25 +52,20 @@ import com.openlattice.organization.Organization;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
+import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.requests.DataSearchResult;
-import com.openlattice.search.requests.EntityDataKeySearchResult;
-import com.openlattice.search.requests.EntityNeighborsFilter;
-import com.openlattice.search.requests.SearchConstraints;
-import com.openlattice.search.requests.SearchResult;
-import com.openlattice.search.requests.SearchTerm;
-
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
-
+import com.openlattice.search.requests.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
@@ -115,6 +96,9 @@ public class SearchService {
 
     @Inject
     private IndexingMetadataManager indexingMetadataManager;
+
+    @Inject
+    private EdmAuthorizationHelper authorizationHelper;
 
     public SearchService( EventBus eventBus ) {
         eventBus.register( this );
@@ -148,18 +132,32 @@ public class SearchService {
     @Timed
     public DataSearchResult executeSearch(
             SearchConstraints searchConstraints,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet,
-            boolean linking ) {
-        if ( authorizedPropertyTypesByEntitySet.values().isEmpty() ) {
-            return new DataSearchResult( 0, Lists.newArrayList() );
-        }
+            Set<Principal> principals ) { // TODO change to Optional<Map<UUID, Map<UUID, PropertyType>>> authorizedPropertyTypesByLinkingEntitySet
+
+        Set<UUID> entitySetIds = Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) );
+        Map<UUID, EntitySet> entitySetsById = dataModelService.getEntitySetsAsMap( entitySetIds );
+
+        Map<UUID, DelegatedUUIDSet> linkingEntitySets = Maps.newHashMap();
+
+        entitySetsById.values().forEach( entitySet -> {
+            if ( entitySet.isLinking() ) {
+                Set<UUID> linkedEntitySets = entitySet.getLinkedEntitySets();
+
+                entitySetIds.addAll( linkedEntitySets );
+                linkingEntitySets.put( entitySet.getId(), DelegatedUUIDSet.wrap( linkedEntitySets ) );
+            }
+        } );
+
+        Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authorizationHelper
+                .getAuthorizedPropertiesOnEntitySets( entitySetIds, EnumSet.of( Permission.READ ), principals );
 
         Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet
-                .entrySet().stream()
-                .collect( Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> DelegatedUUIDSet.wrap( Sets.newHashSet( entry.getValue().keySet() ) ) )
-                );
+                .entrySet().stream().collect( Collectors.toMap( entry -> entry.getKey(),
+                        entry -> DelegatedUUIDSet.wrap( entry.getValue().keySet() ) ) );
+
+        if ( authorizedPropertiesByEntitySet.values().isEmpty() ) {
+            return new DataSearchResult( 0, Lists.newArrayList() );
+        }
 
         Map<UUID, UUID> entityTypesByEntitySet = dataModelService
                 .getEntitySetsAsMap( Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) ) ).values()
@@ -167,7 +165,10 @@ public class SearchService {
                 .collect( Collectors.toMap( EntitySet::getId, EntitySet::getEntityTypeId ) );
 
         EntityDataKeySearchResult result = elasticsearchApi
-                .executeSearch( searchConstraints, entityTypesByEntitySet, authorizedPropertiesByEntitySet, linking );
+                .executeSearch( searchConstraints,
+                        entityTypesByEntitySet,
+                        authorizedPropertiesByEntitySet,
+                        linkingEntitySets );
 
         SetMultimap<UUID, UUID> entityKeyIdsByEntitySetId = HashMultimap.create();
         result.getEntityDataKeys()
@@ -178,7 +179,7 @@ public class SearchService {
                         entitySetId,
                         entityKeyIdsByEntitySetId.get( entitySetId ),
                         authorizedPropertyTypesByEntitySet,
-                        linking ) )
+                        entitySetsById.get( entitySetId ).isLinking() ) )
                 .flatMap( entityList -> entityList.stream() )
                 .collect( Collectors.toList() );
 
@@ -188,7 +189,8 @@ public class SearchService {
     @Timed
     @Subscribe
     public void createEntitySet( EntitySetCreatedEvent event ) {
-        elasticsearchApi.saveEntitySetToElasticsearch( event.getEntitySet(), event.getPropertyTypes() );
+        EntityType entityType = dataModelService.getEntityType( event.getEntitySet().getEntityTypeId() );
+        elasticsearchApi.saveEntitySetToElasticsearch( entityType, event.getEntitySet(), event.getPropertyTypes() );
 
         // If a linking entity set is created (and it has linked entity sets, so linked data),
         // we have to explicitly create the index and mappings for each linking id,
@@ -314,7 +316,10 @@ public class SearchService {
      */
     @Subscribe
     public void addPropertyTypesToEntityType( PropertyTypesAddedToEntityTypeEvent event ) {
-        elasticsearchApi.addPropertyTypesToEntityType( event.getEntityType(), event.getNewPropertyTypes() );
+        Set<UUID> entitySetIds = dataModelService.getEntitySetsOfType( event.getEntityType().getId() ).stream()
+                .map( EntitySet::getId ).collect( Collectors.toSet() );
+        elasticsearchApi
+                .addPropertyTypesToEntityType( event.getEntityType(), event.getNewPropertyTypes(), entitySetIds );
     }
 
     /**
@@ -323,8 +328,10 @@ public class SearchService {
      */
     @Subscribe
     public void addLinkedEntitySetsToEntitySet( LinkedEntitySetAddedEvent event ) {
+        EntityType entityType = dataModelService.getEntityType( event.getLinkingEntitySet().getEntityTypeId() );
+
         elasticsearchApi.addLinkedEntitySetsToEntitySet(
-                event.getLinkingEntitySet().getId(),
+                entityType,
                 event.getPropertyTypes(),
                 event.getNewLinkedEntitySets() );
 
@@ -386,7 +393,8 @@ public class SearchService {
     public void createAssociationType( AssociationTypeCreatedEvent event ) {
         AssociationType associationType = event.getAssociationType();
         List<PropertyType> propertyTypes = Lists
-                .newArrayList( dataModelService.getPropertyTypes( associationType.getAssociationEntityType().getProperties() ) );
+                .newArrayList( dataModelService
+                        .getPropertyTypes( associationType.getAssociationEntityType().getProperties() ) );
         elasticsearchApi.saveAssociationTypeToElasticsearch( associationType, propertyTypes );
     }
 
@@ -472,52 +480,6 @@ public class SearchService {
     }
 
     @Timed
-    public Map<UUID, List<NeighborEntityDetails>> executeLinkingEntityNeighborSearch(
-            Set<UUID> linkedEntitySetIds,
-            EntityNeighborsFilter filter,
-            Set<Principal> principals ) {
-        if ( filter.getAssociationEntitySetIds().isPresent() && filter.getAssociationEntitySetIds().get().isEmpty() ) {
-            return ImmutableMap.of();
-        }
-
-        Set<UUID> linkingIds = filter.getEntityKeyIds();
-
-        PostgresIterable<Pair<UUID, Set<UUID>>> entityKeyIdsByLinkingIds = getEntityKeyIdsByLinkingIds( linkingIds );
-
-        Set<UUID> entityKeyIds = entityKeyIdsByLinkingIds.stream()
-                .flatMap( entityKeyIdsOfLinkingId -> entityKeyIdsOfLinkingId.getRight().stream() )
-                .collect( Collectors.toSet() );
-
-        // Will return only entries, where there is at least 1 neighbor
-        Map<UUID, List<NeighborEntityDetails>> entityNeighbors = executeEntityNeighborSearch(
-                linkedEntitySetIds,
-                new EntityNeighborsFilter( entityKeyIds,
-                        filter.getSrcEntitySetIds(),
-                        filter.getDstEntitySetIds(),
-                        filter.getAssociationEntitySetIds() ),
-                principals );
-
-        if ( entityNeighbors.isEmpty() ) {
-            return entityNeighbors;
-        }
-
-        return entityKeyIdsByLinkingIds.stream()
-                .filter( entityKeyIdsOfLinkingId ->
-                        entityNeighbors.keySet().stream().anyMatch( entityKeyIdsOfLinkingId.getRight()::contains ) )
-                .collect( Collectors.toMap(
-                        Pair::getLeft, // linking_id
-                        entityKeyIdsOfLinkingId -> {
-                            ImmutableList.Builder<NeighborEntityDetails> linkedNeighbours = ImmutableList.builder();
-                            entityKeyIdsOfLinkingId.getRight().stream()
-                                    .filter( entityKeyId -> entityNeighbors.containsKey( entityKeyId ) )
-                                    .forEach( entityKeyId -> linkedNeighbours
-                                            .addAll( entityNeighbors.get( entityKeyId ) ) );
-                            return linkedNeighbours.build();
-                        }
-                ) );
-    }
-
-    @Timed
     public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearch(
             Set<UUID> entitySetIds,
             EntityNeighborsFilter filter,
@@ -531,7 +493,28 @@ public class SearchService {
             return ImmutableMap.of();
         }
 
-        Set<UUID> entityKeyIds = filter.getEntityKeyIds();
+        Collection<EntitySet> linkingEntitySets = dataModelService.getEntitySetsAsMap( entitySetIds ).values();
+        linkingEntitySets.removeIf( entitySet -> !entitySet.isLinking() );
+        Map<UUID, Set<UUID>> entityKeyIdsByLinkingId = ImmutableMap.of();
+
+        Set<UUID> entityKeyIds = Sets.newHashSet( filter.getEntityKeyIds() );
+        Set<UUID> allBaseEntitySetIds = Sets.newHashSet( entitySetIds );
+
+        if ( linkingEntitySets.size() > 0 ) {
+            entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingIds( filter.getEntityKeyIds() ).stream()
+                    .collect( Collectors.toMap( Pair::getKey, Pair::getValue ) );
+            entityKeyIdsByLinkingId.values().forEach( ids -> entityKeyIds.addAll( ids ) );
+
+            Set<UUID> authorizedLinkedEntitySetIds = authorizations
+                    .accessChecksForPrincipals( linkingEntitySets.stream()
+                            .flatMap( es -> es.getLinkedEntitySets().stream() )
+                            .map( esId -> new AccessCheck( new AclKey( esId ), EnumSet.of( Permission.READ ) ) )
+                            .collect( Collectors.toSet() ), principals )
+                    .filter( auth -> auth.getPermissions().get( Permission.READ ) )
+                    .map( auth -> auth.getAclKey().get( 0 ) )
+                    .collect( Collectors.toSet() );
+            allBaseEntitySetIds.addAll( authorizedLinkedEntitySetIds );
+        }
 
         List<Edge> edges = Lists.newArrayList();
         Set<UUID> allEntitySetIds = Sets.newHashSet();
@@ -539,7 +522,7 @@ public class SearchService {
         SetMultimap<UUID, UUID> entitySetIdToEntityKeyId = HashMultimap.create();
         Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps = Maps.newHashMap();
 
-        graphService.getEdgesAndNeighborsForVerticesBulk( entitySetIds, filter ).forEach( edge -> {
+        graphService.getEdgesAndNeighborsForVerticesBulk( allBaseEntitySetIds, filter ).forEach( edge -> {
             edges.add( edge );
             allEntitySetIds.add( edge.getEdge().getEntitySetId() );
             allEntitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
@@ -641,6 +624,14 @@ public class SearchService {
             }
         } );
         logger.info( "Neighbor entity details collected in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
+
+        /* Map linkingIds to the collection of neighbors for all entityKeyIds in the cluster */
+        entityKeyIdsByLinkingId.entrySet().forEach( entry -> entityNeighbors.put( entry.getKey(),
+                entry.getValue().stream()
+                        .flatMap( entityKeyId -> entityNeighbors.getOrDefault( entityKeyId, Lists.newArrayList() )
+                                .stream() ).collect( Collectors.toList() ) ) );
+
+        entityKeyIds.removeIf( entityKeyId -> !filter.getEntityKeyIds().contains( entityKeyId ) );
 
         logger.info( "Finished entity neighbor search in {} ms", sw2.elapsed( TimeUnit.MILLISECONDS ) );
         return entityNeighbors;
@@ -863,6 +854,7 @@ public class SearchService {
 
         elasticsearchApi.deleteEntitySet( entitySetId, entityType.getId() );
         elasticsearchApi.saveEntitySetToElasticsearch(
+                entityType,
                 dataModelService.getEntitySet( entitySetId ),
                 propertyTypeList );
 
