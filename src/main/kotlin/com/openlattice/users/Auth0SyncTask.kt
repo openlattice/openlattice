@@ -33,8 +33,11 @@ import com.openlattice.client.RetrofitFactory
 import com.openlattice.datastore.services.Auth0ManagementApi
 import com.openlattice.directory.pojo.Auth0UserBasic
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.hazelcast.processors.RemoveMemberOfOrganizationEntryProcessor
 import com.openlattice.organization.OrganizationConstants.Companion.GLOBAL_ORG_PRINCIPAL
 import com.openlattice.organization.OrganizationConstants.Companion.OPENLATTICE_ORG_PRINCIPAL
+import com.openlattice.organizations.PrincipalSet
+import com.openlattice.postgres.mapstores.OrganizationMembersMapstore
 import com.openlattice.retrofit.RhizomeRetrofitCallException
 import com.openlattice.tasks.HazelcastFixedRateTask
 import com.openlattice.tasks.HazelcastTaskDependencies
@@ -80,6 +83,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
     override fun runTask() {
         val ds = getDependency()
 
+        val membersOf: IMap<UUID, PrincipalSet> = ds.hazelcastInstance.getMap(HazelcastMap.ORGANIZATIONS_MEMBERS.name)
 
         val users: IMap<String, Auth0UserBasic> = ds.hazelcastInstance.getMap(HazelcastMap.USERS.name)
         val retrofit: Retrofit = RetrofitFactory.newClient(
@@ -141,17 +145,23 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
             return
         }
 
+        val removeUsersPredicate = Predicates.lessThan(
+                UserMapstore.LOAD_TIME_INDEX,
+                OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
+        ) as Predicate<String, Auth0UserBasic>?
+
+        /*
+         *  Need to remove members from their respective orgs here
+         */
+        membersOf.executeOnEntries( RemoveMemberOfOrganizationEntryProcessor( users.keySet( removeUsersPredicate ) ) )
+
         /*
          * If we did not see a user in any of the pages we should delete that user.
          * In the future we should consider persisting users to our own database so that we
          * don't have to load all of them at startup.
          */
-        users.removeAll(
-                Predicates.lessThan(
-                        UserMapstore.LOAD_TIME_INDEX,
-                        OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
-                ) as Predicate<String, Auth0UserBasic>?
-        )
+        users.removeAll( removeUsersPredicate )
+
     }
 
     private fun createPrincipal(
