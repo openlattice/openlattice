@@ -28,11 +28,14 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -40,8 +43,11 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     public static final String INITIALIZED_INDEX = "initialized";
     private final       UUID   testKey           = UUID.randomUUID();
 
+    private final MaterializedEntitySetMapStore materializedEntitySetsMapStore;
+
     public OrganizationAssemblyMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ASSEMBLIES.name(), ORGANIZATION_ASSEMBLIES, hds );
+        materializedEntitySetsMapStore = new MaterializedEntitySetMapStore( hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, OrganizationAssembly value ) throws SQLException {
@@ -61,7 +67,14 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     }
 
     @Override protected OrganizationAssembly mapToValue( ResultSet rs ) throws SQLException {
-        return ResultSetAdapters.organizationAssembly( rs );
+        final UUID organizationId = ResultSetAdapters.organizationId( rs );
+        final String dbName = ResultSetAdapters.dbName( rs );
+        final boolean initialized = ResultSetAdapters.initialized(rs);
+
+        final Map<UUID, Set<OrganizationEntitySetFlag>> materializedEntitySets =
+                materializedEntitySetsMapStore.loadMaterializedEntitySetsForOrganization( organizationId );
+
+        return new OrganizationAssembly(organizationId, dbName, initialized, materializedEntitySets);
     }
 
     @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
@@ -73,7 +86,11 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     }
 
     @Override public OrganizationAssembly generateTestValue() {
-        return new OrganizationAssembly( testKey, RandomStringUtils.randomAlphanumeric( 10 ), false );
+        return new OrganizationAssembly(
+                testKey,
+                RandomStringUtils.randomAlphanumeric( 10 ),
+                false,
+                Map.of() );
     }
 
     @Override public MapConfig getMapConfig() {

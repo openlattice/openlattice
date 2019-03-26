@@ -145,6 +145,7 @@ class Assembler(
         deleteOrganizationTimer.time().use {
             assemblies.executeOnKey(organizationId, DeleteOrganizationAssemblyProcessor().init(acm))
             Util.deleteSafely(assemblies, organizationId)
+            materializedEntitySets.removeAll(organizationIdPredicate(organizationId))
         }
     }
 
@@ -170,6 +171,7 @@ class Assembler(
             throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
         }
 
+        // materialize entity sets
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
             // even if we re-materialize, we would clear all flags
             materializedEntitySets.set(
@@ -180,6 +182,11 @@ class Assembler(
                     MaterializeEntitySetProcessor(authorizedPropertyTypes).init(acm)
             )
         }
+
+        // update assemblies mapstore with new materialized entity sets
+        assemblies.executeOnKey(
+                organizationId,
+                AddMaterializedEntitySetsToOrganizationProcessor(authorizedPropertyTypesByEntitySet.keys))
 
         return getMaterializedEntitySetsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
@@ -233,6 +240,12 @@ class Assembler(
 
     private fun entitySetIdPredicate(entitySetId: UUID): Predicate<*, *> {
         return Predicates.equal(MaterializedEntitySetMapStore.ENTITY_SET_ID_INDEX, entitySetId)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun organizationIdPredicate(entitySetId: UUID): Predicate<EntitySetAssemblyKey, MaterializedEntitySet> {
+        return Predicates.equal(MaterializedEntitySetMapStore.ORGANIZATION_ID_INDEX, entitySetId)
+                as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
     }
 
     /**

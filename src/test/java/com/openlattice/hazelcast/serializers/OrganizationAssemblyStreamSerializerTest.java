@@ -21,9 +21,10 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.assembler.OrganizationAssembly;
+
+import java.util.Map;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -40,6 +41,7 @@ public class OrganizationAssemblyStreamSerializerTest
         return new OrganizationAssembly(
                 UUID.randomUUID(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
-                false );
+                false,
+                Map.of());
     }
 }

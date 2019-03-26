@@ -43,7 +43,6 @@ import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
-import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;
@@ -114,7 +113,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,13 +127,6 @@ public final class ResultSetAdapters {
     private static final ObjectMapper                       mapper               = ObjectMappers.newJsonMapper();
     private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
-
-    @NotNull public static OrganizationAssembly organizationAssembly( @NotNull ResultSet rs ) throws SQLException {
-        final UUID organizationId = rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
-        final String dbname = rs.getString( DB_NAME.getName() );
-        final boolean initialized = rs.getBoolean( INITIALIZED.getName() );
-        return new OrganizationAssembly( organizationId, dbname, initialized );
-    }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -1051,7 +1042,7 @@ public final class ResultSetAdapters {
         final UUID entitySetId = entitySetId( rs );
         final UUID organizationId = organizationId( rs );
 
-        return new EntitySetAssemblyKey( entitySetId, organizationId )
+        return new EntitySetAssemblyKey( entitySetId, organizationId );
     }
 
     public static MaterializedEntitySet materializedEntitySet( ResultSet rs ) throws SQLException {
@@ -1059,5 +1050,13 @@ public final class ResultSetAdapters {
         final EnumSet<OrganizationEntitySetFlag> organizationEntitySetFlags = organizationEntitySetFlags( rs );
 
         return new MaterializedEntitySet( entitySetAssemblyKey, organizationEntitySetFlags );
+    }
+
+    public static String dbName( ResultSet rs ) throws SQLException {
+        return rs.getString( DB_NAME.getName() );
+    }
+
+    public static Boolean initialized( ResultSet rs ) throws SQLException {
+        return rs.getBoolean( INITIALIZED.getName() );
     }
 }

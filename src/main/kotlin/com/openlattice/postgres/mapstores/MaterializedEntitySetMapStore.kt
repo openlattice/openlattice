@@ -20,6 +20,7 @@
  */
 package com.openlattice.postgres.mapstores
 
+import com.google.common.collect.MapMaker
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
@@ -86,6 +87,23 @@ open class MaterializedEntitySetMapStore(
                 .addMapIndexConfig(MapIndexConfig(ENTITY_SET_ID_INDEX, false))
                 .addMapIndexConfig(MapIndexConfig(FLAGS_INDEX, false))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
+    }
+
+    fun loadMaterializedEntitySetsForOrganization(organizationId: UUID): Map<UUID, Set<OrganizationEntitySetFlag>> {
+        val result = MapMaker().makeMap<UUID, Set<OrganizationEntitySetFlag>>()
+
+        hds.connection.use { connection ->
+            prepareSelectIn( connection ).use { selectIn ->
+                selectIn.setObject(1, organizationId)
+                val results = selectIn.executeQuery()
+                while(results.next()) {
+                    val materializedEntitySet = mapToValue(results)
+                    result[materializedEntitySet.assemblyKey.entitySetId] = materializedEntitySet.flags
+                }
+            }
+        }
+
+        return result
     }
 
     override fun generateTestKey(): EntitySetAssemblyKey {

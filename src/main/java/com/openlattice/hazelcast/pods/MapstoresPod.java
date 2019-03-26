@@ -30,6 +30,7 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
@@ -119,7 +120,7 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<UUID, MaterializedEntitySet> materializedEntitySetsMapStore() {
+    public SelfRegisteringMapStore<EntitySetAssemblyKey, MaterializedEntitySet> materializedEntitySetsMapStore() {
         return new MaterializedEntitySetMapStore( hikariDataSource );
     }
 

@@ -21,10 +21,15 @@
 
 package com.openlattice.assembler
 
+import com.openlattice.organization.OrganizationEntitySetFlag
 import java.util.UUID
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class OrganizationAssembly(val organizationId: UUID, val dbname: String, var initialized : Boolean = false)
+data class OrganizationAssembly(
+        val organizationId: UUID,
+        val dbname: String,
+        var initialized : Boolean = false,
+        val materializedEntitySets: MutableMap<UUID, Set<OrganizationEntitySetFlag>> = mutableMapOf())

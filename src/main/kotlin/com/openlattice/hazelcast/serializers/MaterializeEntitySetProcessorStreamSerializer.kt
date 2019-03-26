@@ -51,9 +51,6 @@ class MaterializeEntitySetProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: MaterializeEntitySetProcessor) {
-        UUIDStreamSerializer.serialize(out, obj.entitySetId)
-        UUIDStreamSerializer.serialize(out, obj.organizationId)
-
         out.writeInt(obj.authorizedPropertyTypes.size)
 
         obj.authorizedPropertyTypes.forEach { propertyTypeId, propertyType ->
@@ -63,15 +60,12 @@ class MaterializeEntitySetProcessorStreamSerializer
     }
 
     override fun read(input: ObjectDataInput): MaterializeEntitySetProcessor {
-        val entitySetId = UUIDStreamSerializer.deserialize(input)
-        val organizationId = UUIDStreamSerializer.deserialize(input)
-
         val size = input.readInt()
         val authorizedPropertyTypes = ((0 until size).map {
             UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
         }.toMap())
 
-        return MaterializeEntitySetProcessor(entitySetId, organizationId, authorizedPropertyTypes).init(acm)
+        return MaterializeEntitySetProcessor(authorizedPropertyTypes).init(acm)
     }
 
     override fun init(assemblerConnectionManager: AssemblerConnectionManager) {

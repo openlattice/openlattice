@@ -27,7 +27,6 @@ import com.openlattice.assembler.processors.MaterializeEntitySetProcessor;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.mapstores.TestDataFactory;
 
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,6 +49,6 @@ public class MaterializeEntitySetsProcessorStreamSerializerTest extends
                 .of( TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType() )
                 .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) );
 
-        return new MaterializeEntitySetProcessor( UUID.randomUUID(), UUID.randomUUID(), propertyTypes );
+        return new MaterializeEntitySetProcessor( propertyTypes );
     }
 }
