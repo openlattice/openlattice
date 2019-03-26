@@ -120,7 +120,7 @@ class BackgroundLinkingIndexingService(
                     val linkedEntitySetIds = linkedEntitySetIdsLookup[it]!!
                     val filteredData = dataByEntitySetId
                             .filterKeys { entitySetId -> linkedEntitySetIds.contains(entitySetId) }
-                    elasticsearchApi.createBulkLinkedData(it, mapOf(linkingId to filteredData))
+                    elasticsearchApi.createBulkLinkedData(entitySets[it]!!.entityTypeId, it, mapOf(linkingId to filteredData))
                 }) {
             indexCount += dataManager.markAsIndexed(
                     linkingEntitySetIds.flatMap { linkedEntitySetIdsLookup[it]!! }
