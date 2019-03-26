@@ -84,7 +84,7 @@ public final class PostgresTable {
             .addColumns( PRINCIPAL_ID, CREDENTIAL )
             .primaryKey( PRINCIPAL_ID );
 
-    public static final PostgresTableDefinition EDGES =
+    public static final PostgresTableDefinition        EDGES                        =
             new PostgresTableDefinition( "edges" )
                     .addColumns(
                             SRC_ENTITY_SET_ID,
@@ -201,7 +201,7 @@ public final class PostgresTable {
                             DST_ENTITY_KEY_ID )
                     .distributionColumn( LINKING_ID );
 
-    public static final PostgresTableDefinition LINKING_FEEDBACK         =
+    public static final PostgresTableDefinition LINKING_FEEDBACK        =
             new PostgresTableDefinition( "linking_feedback" )
                     .addColumns(
                             SRC_ENTITY_SET_ID,
@@ -217,15 +217,15 @@ public final class PostgresTable {
     //.setUnique( NAME );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES =
             new PostgresTableDefinition( "organization_assemblies" )
-                    .addColumns( ORGANIZATION_ID, DB_NAME, ENTITY_SET_IDS, INITIALIZED)
+                    .addColumns( ORGANIZATION_ID, DB_NAME, ENTITY_SET_IDS, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID )
                     .setUnique( DB_NAME ); //We may have to delete for citus
 
-    public static final PostgresTableDefinition NAMES                   =
+    public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )
                     .primaryKey( SECURABLE_OBJECTID );
-    public static final PostgresTableDefinition ORGANIZATIONS           =
+    public static final PostgresTableDefinition ORGANIZATIONS            =
             new PostgresTableDefinition( "organizations" )
                     .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
     public static final PostgresTableDefinition PERMISSIONS              =
@@ -327,10 +327,10 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID )
                         .name( "entity_key_ids_entity_set_id_idx" )
                         .ifNotExists(),
-                //                new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
-                //                        .unique()
-                //                        .name( "entity_key_ids_entity_key_idx" )
-                //                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID, ENTITY_ID )
+                        .unique()
+                        .name( "entity_key_ids_entity_set_id_entity_id_idx" )
+                        .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, VERSION )
                         .name( "entity_key_ids_version_idx" )
                         .ifNotExists(),
