@@ -522,7 +522,11 @@ public class SearchService {
         SetMultimap<UUID, UUID> entitySetIdToEntityKeyId = HashMultimap.create();
         Map<UUID, Map<UUID, PropertyType>> entitySetsIdsToAuthorizedProps = Maps.newHashMap();
 
-        graphService.getEdgesAndNeighborsForVerticesBulk( allBaseEntitySetIds, filter ).forEach( edge -> {
+        graphService.getEdgesAndNeighborsForVerticesBulk( allBaseEntitySetIds,
+                new EntityNeighborsFilter( entityKeyIds,
+                        filter.getSrcEntitySetIds(),
+                        filter.getDstEntitySetIds(),
+                        filter.getAssociationEntitySetIds() ) ).forEach( edge -> {
             edges.add( edge );
             allEntitySetIds.add( edge.getEdge().getEntitySetId() );
             allEntitySetIds.add( entityKeyIds.contains( edge.getSrc().getEntityKeyId() ) ?
