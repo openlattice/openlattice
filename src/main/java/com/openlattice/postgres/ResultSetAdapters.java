@@ -41,6 +41,7 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
@@ -1046,11 +1047,17 @@ public final class ResultSetAdapters {
         return rs.getBoolean( "exists" );
     }
 
+    public static EntitySetAssemblyKey entitySetAssemblyKey( ResultSet rs ) throws SQLException {
+        final UUID entitySetId = entitySetId( rs );
+        final UUID organizationId = organizationId( rs );
+
+        return new EntitySetAssemblyKey( entitySetId, organizationId )
+    }
+
     public static MaterializedEntitySet materializedEntitySet( ResultSet rs ) throws SQLException {
-        final UUID id = rs.getObject( ID.getName(), UUID.class );
-        final UUID organizationId = rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
+        final EntitySetAssemblyKey entitySetAssemblyKey = entitySetAssemblyKey( rs );
         final EnumSet<OrganizationEntitySetFlag> organizationEntitySetFlags = organizationEntitySetFlags( rs );
 
-        return new MaterializedEntitySet( id, organizationId, organizationEntitySetFlags );
+        return new MaterializedEntitySet( entitySetAssemblyKey, organizationEntitySetFlags );
     }
 }

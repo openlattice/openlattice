@@ -220,9 +220,10 @@ public final class PostgresTable {
                     .addColumns( ORGANIZATION_ID, DB_NAME, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID )
                     .setUnique( DB_NAME ); //We may have to delete for citus
-    public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS  =
+    public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS =
             new PostgresTableDefinition( "materialized_entity_sets" )
-                    .addColumns( ID, ORGANIZATION_ID, ENTITY_SET_FLAGS );
+                    .addColumns( ENTITY_SET_ID, ORGANIZATION_ID, ENTITY_SET_FLAGS )
+                    .primaryKey( ENTITY_SET_ID, ORGANIZATION_ID );
     public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )

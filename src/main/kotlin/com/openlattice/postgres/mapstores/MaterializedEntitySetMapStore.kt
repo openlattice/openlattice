@@ -23,6 +23,7 @@ package com.openlattice.postgres.mapstores
 import com.hazelcast.config.InMemoryFormat
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
+import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -37,36 +38,42 @@ import kotlin.random.Random
 
 open class MaterializedEntitySetMapStore(
         hds: HikariDataSource
-) : AbstractBasePostgresMapstore<UUID, MaterializedEntitySet>(
+) : AbstractBasePostgresMapstore<EntitySetAssemblyKey, MaterializedEntitySet>(
         HazelcastMap.MATERIALIZED_ENTITY_SETS.name,
         PostgresTable.MATERIALIZED_ENTITY_SETS,
         hds) {
 
     companion object {
         @JvmStatic
-        val ORGANIZATION_INDEX = "organizationId"
-        private val testKey = UUID.randomUUID()
+        val ORGANIZATION_ID_INDEX = "__key#organizationId"
+
+        @JvmStatic
+        val ENTITY_SET_ID_INDEX = "__key#entitySetId"
+
+        @JvmStatic
+        val FLAGS_INDEX = "flags[any]"
+
+        private val testKey = EntitySetAssemblyKey(UUID.randomUUID(), UUID.randomUUID())
     }
 
-    override fun bind(ps: PreparedStatement, key: UUID, value: MaterializedEntitySet) {
+    override fun bind(ps: PreparedStatement, key: EntitySetAssemblyKey, value: MaterializedEntitySet) {
         val flags = PostgresArrays.createTextArray(ps.connection, value.flags.map { it.toString() })
 
         bind(ps, key, 1)
-        ps.setObject(2, value.organizationId)
         ps.setArray(3, flags)
 
         // UPDATE
-        ps.setObject(4, value.organizationId)
-        ps.setArray(5, flags)
+        ps.setArray(4, flags)
     }
 
-    override fun bind(ps: PreparedStatement, key: UUID, offset: Int): Int {
-        ps.setObject(offset, key)
-        return offset + 1
+    override fun bind(ps: PreparedStatement, key: EntitySetAssemblyKey, offset: Int): Int {
+        ps.setObject(offset, key.entitySetId)
+        ps.setObject(offset + 1, key.organizationId)
+        return offset + 2
     }
 
-    override fun mapToKey(rs: ResultSet): UUID {
-        return ResultSetAdapters.id(rs)
+    override fun mapToKey(rs: ResultSet): EntitySetAssemblyKey {
+        return ResultSetAdapters.entitySetAssemblyKey(rs)
     }
 
     override fun mapToValue(rs: ResultSet): MaterializedEntitySet {
@@ -75,11 +82,13 @@ open class MaterializedEntitySetMapStore(
 
     override fun getMapConfig(): MapConfig {
         return super.getMapConfig()
-                .addMapIndexConfig(MapIndexConfig(ORGANIZATION_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(ORGANIZATION_ID_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(ENTITY_SET_ID_INDEX, false))
+                .addMapIndexConfig(MapIndexConfig(FLAGS_INDEX, false))
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
-    override fun generateTestKey(): UUID {
+    override fun generateTestKey(): EntitySetAssemblyKey {
         return testKey
     }
 
@@ -93,6 +102,6 @@ open class MaterializedEntitySetMapStore(
             mutableSetOf()
         }
 
-        return MaterializedEntitySet(testKey, UUID.randomUUID(), flags)
+        return MaterializedEntitySet(testKey, flags)
     }
 }

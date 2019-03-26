@@ -25,6 +25,7 @@ import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.edm.type.PropertyType
 import org.slf4j.LoggerFactory
@@ -40,22 +41,21 @@ private const val NOT_INITIALIZED = "Assembler Connection Manager not initialize
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-data class MaterializeEntitySetProcessor(
-        val entitySetId: UUID,
-        val organizationId: UUID,
-        val authorizedPropertyTypes: Map<UUID, PropertyType>
-) : AbstractRhizomeEntryProcessor<UUID, MaterializedEntitySet, Void?>(true), Offloadable {
+data class MaterializeEntitySetProcessor(val authorizedPropertyTypes: Map<UUID, PropertyType>
+) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(true), Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, MaterializedEntitySet?>): Void? {
-        val organizationId = entry.key
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
+        val entitySetAssemblyKey = entry.key
         val materializedEntitySet = entry.value
         if (materializedEntitySet == null) {
             logger.error("Materialized entity set with id {} for organization id {} was not initialized properly.")
         } else {
-            acm?.materializeEntitySets(organizationId, mapOf(entitySetId to authorizedPropertyTypes))
-                    ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.materializeEntitySets(
+                    entitySetAssemblyKey.organizationId,
+                    mapOf(entitySetAssemblyKey.entitySetId to authorizedPropertyTypes)
+            ) ?: throw IllegalStateException(NOT_INITIALIZED)
         }
 
         return null

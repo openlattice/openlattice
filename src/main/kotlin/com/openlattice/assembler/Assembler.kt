@@ -26,10 +26,10 @@ import com.codahale.metrics.MetricRegistry.name
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.processors.*
-import com.openlattice.assembler.tasks.CleanOutOldUsersInitializationTask
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
@@ -84,7 +84,7 @@ class Assembler(
     private val entityTypes = hazelcast.getMap<UUID, EntityType>(ENTITY_TYPES.name)
     private val propertyTypes = hazelcast.getMap<UUID, PropertyType>(PROPERTY_TYPES.name)
     private val assemblies = hazelcast.getMap<UUID, OrganizationAssembly>(ASSEMBLIES.name)
-    private val materializedEntitySets = hazelcast.getMap<UUID, MaterializedEntitySet>(MATERIALIZED_ENTITY_SETS.name)
+    private val materializedEntitySets = hazelcast.getMap<EntitySetAssemblyKey, MaterializedEntitySet>(MATERIALIZED_ENTITY_SETS.name)
     private val securableObjectTypes = hazelcast.getMap<AclKey, SecurableObjectType>(SECURABLE_OBJECT_TYPES.name)
     private val principals = hazelcast.getMap<AclKey, SecurablePrincipal>(PRINCIPALS.name)
     private val createOrganizationTimer = metricRegistry.timer(name(Assembler::class.java, "createOrganization"))
@@ -100,27 +100,26 @@ class Assembler(
     }
 
     fun getMaterializedEntitySetsInOrganization(organizationId: UUID): Set<UUID> {
+        return assemblies[organizationId]?.materializedEntitySets?.keys ?: setOf()
+    }
+
+    /**
+     * Returns true, if the entity set is materialized in any of the organization assemblies
+     */
+    private fun isEntitySetMaterialized(entitySetId: UUID): Boolean {
         return materializedEntitySets
-                .keySet(Predicates.equal(MaterializedEntitySetMapStore.ORGANIZATION_INDEX, organizationId))
-    }
-
-    fun isEntitySetMaterialized(entitySetId: UUID): Boolean {
-        return materializedEntitySets.containsKey(entitySetId)
-    }
-
-    fun materializedEntitySetContainsFlag(entitySetId: UUID, flag: OrganizationEntitySetFlag): Boolean {
-        return materializedEntitySets[entitySetId]?.flags?.contains(flag) ?: false
+                .keySet(entitySetIdPredicate(entitySetId))
+                .isNotEmpty()
     }
 
     fun flagMaterializedEntitySet(entitySetId: UUID, flag: OrganizationEntitySetFlag) {
-        if (isEntitySetMaterialized(entitySetId) && !materializedEntitySetContainsFlag(entitySetId, flag)) {
-            materializedEntitySets.executeOnKey(entitySetId, AddFlagsToMaterializedEntitySetProcessor(setOf(flag)))
+        if (isEntitySetMaterialized(entitySetId)) {
+            materializedEntitySets.executeOnEntries(
+                    AddFlagsToMaterializedEntitySetProcessor(setOf(flag)),
+                    entitySetIdPredicate(entitySetId))
         }
     }
 
-    fun getOrganizationAssembly(organizationId: UUID): OrganizationAssembly {
-        return assemblies[organizationId]!!
-    }
 
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
@@ -166,12 +165,19 @@ class Assembler(
             organizationId: UUID,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
+        // check if organization is initialized
+        if (!assemblies.containsKey(organizationId) || !assemblies[organizationId]!!.initialized) {
+            throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
+        }
+
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
             // even if we re-materialize, we would clear all flags
-            materializedEntitySets.set(entitySetId, MaterializedEntitySet(entitySetId, organizationId))
+            materializedEntitySets.set(
+                    EntitySetAssemblyKey(entitySetId, organizationId),
+                    MaterializedEntitySet(EntitySetAssemblyKey(entitySetId, organizationId)))
             materializedEntitySets.executeOnKey(
-                    organizationId,
-                    MaterializeEntitySetProcessor(entitySetId, organizationId, authorizedPropertyTypes).init(acm)
+                    EntitySetAssemblyKey(entitySetId, organizationId),
+                    MaterializeEntitySetProcessor(authorizedPropertyTypes).init(acm)
             )
         }
 
@@ -223,6 +229,10 @@ class Assembler(
         } else {
             setOf()
         }
+    }
+
+    private fun entitySetIdPredicate(entitySetId: UUID): Predicate<*, *> {
+        return Predicates.equal(MaterializedEntitySetMapStore.ENTITY_SET_ID_INDEX, entitySetId)
     }
 
     /**

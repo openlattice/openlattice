@@ -20,8 +20,6 @@
  */
 package com.openlattice.assembler
 
-import com.openlattice.organization.OrganizationEntitySetFlag
+import java.util.*
 
-data class MaterializedEntitySet(
-        val assemblyKey: EntitySetAssemblyKey,
-        val flags: MutableSet<OrganizationEntitySetFlag> = mutableSetOf())
+data class EntitySetAssemblyKey(val entitySetId: UUID, val organizationId: UUID)

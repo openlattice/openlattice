@@ -30,8 +30,11 @@ data class AddFlagsToMaterializedEntitySetProcessor(val flags: Set<OrganizationE
 
     override fun process(entry: MutableMap.MutableEntry<UUID, MaterializedEntitySet>?): MaterializedEntitySet {
         val materializedEntitySet = entry!!.value
-        materializedEntitySet.flags.addAll(flags)
-        entry.setValue(materializedEntitySet)
+        val flagsHaveBeenAdded = materializedEntitySet.flags.addAll(flags)
+        if (flagsHaveBeenAdded) {
+            entry.setValue(materializedEntitySet)
+        }
+
         return materializedEntitySet
     }
 }

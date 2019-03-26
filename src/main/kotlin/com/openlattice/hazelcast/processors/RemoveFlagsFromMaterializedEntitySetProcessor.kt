@@ -31,8 +31,11 @@ data class RemoveFlagsFromMaterializedEntitySetProcessor(val flags: Set<Organiza
 
     override fun process(entry: MutableMap.MutableEntry<UUID, MaterializedEntitySet>?): MaterializedEntitySet {
         val materializedEntitySet = entry!!.value
-        materializedEntitySet.flags.removeAll(flags)
-        entry.setValue(materializedEntitySet)
+        val flagsHaveBeenRemoved = materializedEntitySet.flags.removeAll(flags)
+        if (flagsHaveBeenRemoved) {
+            entry.setValue(materializedEntitySet)
+        }
+
         return materializedEntitySet
     }
 }
