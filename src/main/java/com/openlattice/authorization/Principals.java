@@ -25,6 +25,7 @@ package com.openlattice.authorization;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -109,6 +110,10 @@ public final class Principals {
 
     public static Principal getUserPrincipal( String principalId ) {
         return new Principal( PrincipalType.USER, principalId );
+    }
+
+    public static NavigableSet<Principal> getUserPrincipals( String principalId ) {
+        return principals.getUnchecked( principalId );
     }
 
     public static NavigableSet<Principal> getCurrentPrincipals() {
