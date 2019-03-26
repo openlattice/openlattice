@@ -37,6 +37,7 @@ import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
+import com.openlattice.postgres.PostgresColumn.VERSION
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -147,7 +148,10 @@ class BackgroundIndexingService(
 
     private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
         return "SELECT * FROM ${IDS.name} " +
-                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${LAST_INDEX.name} < ${LAST_WRITE.name} LIMIT $FETCH_SIZE"
+                "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND " +
+                "${LAST_INDEX.name} < ${LAST_WRITE.name} AND " +
+                "${VERSION.name} > 0 " +
+                "LIMIT $FETCH_SIZE"
     }
 
     private fun getDirtyEntityKeyIds(entitySetId: UUID): PostgresIterable<UUID> {
