@@ -237,6 +237,11 @@ public class EdmService implements EdmManager {
         Stream<EntityType> entityTypes = entityTypeManager
                 .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
                         .of( propertyTypeId ) );
+        entityTypes.forEach( et -> Preconditions
+                .checkArgument( !et.getKey().contains( propertyTypeId ) || et.getKey().size() > 1,
+                        "Property type {} cannot be deleted because entity type {} will be left without a primary key",
+                        propertyTypeId,
+                        et.getId() ) );
         entityTypes.forEach( et -> {
             forceRemovePropertyTypesFromEntityType( et.getId(),
                     ImmutableSet.of( propertyTypeId ) );
@@ -832,6 +837,10 @@ public class EdmService implements EdmManager {
             Preconditions.checkArgument( Sets.intersection( propertyTypeIds, baseType.getProperties() ).isEmpty(),
                     "Inherited property types cannot be removed." );
         }
+        Preconditions.checkArgument( !Sets.difference( entityType.getKey(), propertyTypeIds ).isEmpty(),
+                "Removing property types {} from entity type {} will leave it with no primary keys",
+                propertyTypeIds,
+                entityType.getId() );
 
         List<UUID> childrenIds = entityTypeManager
                 .getEntityTypeChildrenIdsDeep( entityTypeId )
