@@ -1018,7 +1018,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                     .prepareSearch( getIndexName( entityTypesByEntitySetId.get( entitySetId ) ) )
                     .setQuery( query )
                     .setFrom( searchConstraints.getStart() )
-                    .setSize( searchConstraints.getMaxHits() );
+                    .setSize( searchConstraints.getMaxHits() )
+                    .setFetchSource( false );
             requests.add( request );
         }
 
@@ -1054,6 +1055,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .setFrom( 0 )
                 .setSize( size )
                 .setExplain( explain )
+                .setFetchSource( ENTITY_SET_ID_KEY.toString(), null )
                 .execute()
                 .actionGet().getHits() )
                 .map( hit -> Pair
