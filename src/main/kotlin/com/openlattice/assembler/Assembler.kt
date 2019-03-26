@@ -99,7 +99,11 @@ class Assembler(
         this.acm = assemblerConnectionManager
     }
 
-    fun getMaterializedEntitySetsInOrganization(organizationId: UUID): Set<UUID> {
+    fun getMaterializedEntitySetInOrganization(organizationId: UUID): Map<UUID, Set<OrganizationEntitySetFlag>> {
+        return assemblies[organizationId]?.materializedEntitySets ?: mapOf()
+    }
+
+    fun getMaterializedEntitySetIdsInOrganization(organizationId: UUID): Set<UUID> {
         return assemblies[organizationId]?.materializedEntitySets?.keys ?: setOf()
     }
 
@@ -188,7 +192,7 @@ class Assembler(
                 organizationId,
                 AddMaterializedEntitySetsToOrganizationProcessor(authorizedPropertyTypesByEntitySet.keys))
 
-        return getMaterializedEntitySetsInOrganization(organizationId).map {
+        return getMaterializedEntitySetIdsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
     }
