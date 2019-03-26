@@ -37,7 +37,6 @@ import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -376,31 +375,11 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
-            EntitySet es = edm.getEntitySet( entitySetId );
-            if ( es.isLinking() ) {
-                Preconditions.checkArgument(
-                        !es.getLinkedEntitySets().isEmpty(),
-                        "Linked entity sets does not consist of any entity sets." );
-                Set<UUID> authorizedEntitySets = es.getLinkedEntitySets().stream()
-                        .filter( linkedEntitySetId ->
-                                authorizations.checkIfHasPermissions( new AclKey( linkedEntitySetId ),
-                                        Principals.getCurrentPrincipals(),
-                                        EnumSet.of( Permission.READ ) ) )
-                        .collect( Collectors.toSet() );
-                if ( authorizedEntitySets.size() == 0 ) {
-                    logger.warn( "Read authorization failed for all the linked entity sets." );
-                } else {
-                    neighbors = searchService
-                            .executeEntityNeighborSearch( authorizedEntitySets,
-                                    new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ), principals )
-                            .getOrDefault( entityKeyId, ImmutableList.of() );
-                }
-            } else {
-                neighbors = searchService
-                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
-                                new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ), principals )
-                        .getOrDefault( entityKeyId, ImmutableList.of() );
-            }
+            neighbors = searchService
+                    .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ),
+                            new EntityNeighborsFilter( ImmutableSet.of( entityKeyId ) ), principals )
+                    .getOrDefault( entityKeyId, ImmutableList.of() );
+
         }
 
         UUID userId = getCurrentUserId();
@@ -469,28 +448,8 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         Map<UUID, List<NeighborEntityDetails>> result = Maps.newHashMap();
         if ( authorizations.checkIfHasPermissions( new AclKey( entitySetId ), principals,
                 EnumSet.of( Permission.READ ) ) ) {
-            EntitySet es = edm.getEntitySet( entitySetId );
-            if ( es.isLinking() ) {
-                Preconditions.checkArgument(
-                        !es.getLinkedEntitySets().isEmpty(),
-                        "Linking entity sets does not consist of any entity sets." );
-                Set<UUID> authorizedEntitySets = es.getLinkedEntitySets().stream()
-                        .filter( linkedEntitySetId ->
-                                authorizations.checkIfHasPermissions( new AclKey( linkedEntitySetId ),
-                                        Principals.getCurrentPrincipals(),
-                                        EnumSet.of( Permission.READ ) ) )
-                        .collect( Collectors.toSet() );
-                if ( authorizedEntitySets.size() == 0 ) {
-                    logger.warn( "Read authorization failed for all the linked entity sets." );
-                } else {
-                    result = searchService
-                            .executeEntityNeighborSearch( authorizedEntitySets, filter, principals );
-                }
-
-            } else {
-                result = searchService
-                        .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), filter, principals );
-            }
+            result = searchService
+                    .executeEntityNeighborSearch( ImmutableSet.of( entitySetId ), filter, principals );
         }
 
 
