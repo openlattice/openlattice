@@ -369,6 +369,10 @@ public final class ResultSetAdapters {
         return SecurableObjectType.valueOf( rs.getString( CATEGORY.getName() ) );
     }
 
+    public static int shards( ResultSet rs ) throws SQLException {
+        return rs.getInt( SHARDS.getName() );
+    }
+
     public static UUID entityTypeId( ResultSet rs ) throws SQLException {
         return rs.getObject( ENTITY_TYPE_ID.getName(), UUID.class );
     }
@@ -523,9 +527,10 @@ public final class ResultSetAdapters {
         }
         Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         Optional<SecurableObjectType> category = Optional.of( category( rs ) );
+        Optional<Integer> shards = Optional.of( shards( rs ) );
 
         return new EntityType( id, fqn, title, description, schemas, key, properties,
-                propertyTags, baseType, category );
+                propertyTags, baseType, category, shards );
     }
 
     public static EntitySet entitySet( ResultSet rs ) throws SQLException {

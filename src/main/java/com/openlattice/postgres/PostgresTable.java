@@ -134,7 +134,8 @@ public final class PostgresTable {
                             PROPERTY_TAGS,
                             BASE_TYPE,
                             SCHEMAS,
-                            CATEGORY );
+                            CATEGORY,
+                            SHARDS );
     //.setUnique( NAMESPACE, NAME );
     public static final PostgresTableDefinition        ENUM_TYPES                   =
             new PostgresTableDefinition( "enum_types" )

@@ -91,6 +91,7 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
             UUIDStreamSerializer.serialize( out, baseType.get() );
         }
         out.writeUTF( object.getCategory().toString() );
+        out.writeInt( object.getShards() );
     }
 
     public static EntityType deserialize( ObjectDataInput in ) throws IOException {
@@ -113,6 +114,7 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
             baseType = Optional.empty();
         }
         final Optional<SecurableObjectType> category = Optional.of( SecurableObjectType.valueOf( in.readUTF() ) );
+        final Optional<Integer> shards = Optional.of( in.readInt() );
 
         return new EntityType( id,
                 type,
@@ -123,6 +125,7 @@ public class EntityTypeStreamSerializer implements SelfRegisteringStreamSerializ
                 properties,
                 propertyTags,
                 baseType,
-                category );
+                category,
+                shards );
     }
 }

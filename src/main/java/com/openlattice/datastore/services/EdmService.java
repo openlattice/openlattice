@@ -272,7 +272,8 @@ public class EdmService implements EdmManager {
                 properties,
                 Optional.of( entityType.getPropertyTags() ),
                 entityType.getBaseType(),
-                Optional.ofNullable( entityType.getCategory() ) );
+                Optional.ofNullable( entityType.getCategory() ),
+                Optional.of( entityType.getShards() ) );
 
     }
 
@@ -1688,7 +1689,7 @@ public class EdmService implements EdmManager {
         diff.getDiff().getEntityTypes().forEach( et -> {
             if ( !updatedIds.contains( et.getId() ) ) {
                 createOrUpdateEntityType( et );
-                eventBus.post( new EntityTypeCreatedEvent( et ));
+                eventBus.post( new EntityTypeCreatedEvent( et ) );
             }
         } );
 

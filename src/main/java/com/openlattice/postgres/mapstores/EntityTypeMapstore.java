@@ -65,6 +65,7 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
         ps.setArray( parameterIndex++, schemas );
 
         ps.setString( parameterIndex++, value.getCategory().name() );
+        ps.setInt( parameterIndex++, value.getShards() );
 
         // UPDATE
         ps.setString( parameterIndex++, fqn.getNamespace() );
@@ -77,6 +78,8 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
         ps.setObject( parameterIndex++, value.getBaseType().orElse( null ) );
         ps.setArray( parameterIndex++, schemas );
         ps.setString( parameterIndex++, value.getCategory().name() );
+        ps.setInt( parameterIndex++, value.getShards() );
+
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {

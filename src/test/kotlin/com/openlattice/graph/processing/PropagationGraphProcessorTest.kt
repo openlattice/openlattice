@@ -40,7 +40,7 @@ class PropagationGraphProcessorTest {
         private val assocInputUUID = UUID.randomUUID()
 
         private fun getUUIDFor(name: String): UUID {
-            return when(name) {
+            return when (name) {
                 entityType -> entitytTypeUUID
                 start -> startUUID
                 end -> endUUID
@@ -51,7 +51,9 @@ class PropagationGraphProcessorTest {
             }
         }
 
-        @BeforeClass @JvmStatic fun setupEdm() {
+        @BeforeClass
+        @JvmStatic
+        fun setupEdm() {
 
             val entityTypeAnswer = object : Answer<EntityType> {
                 override fun answer(invocation: InvocationOnMock): EntityType {
@@ -59,7 +61,7 @@ class PropagationGraphProcessorTest {
                     val uuid = getUUIDFor(fqn.fullQualifiedNameAsString)
                     return EntityType(uuid, fqn, "asd", Optional.of("asd"),
                             setOf<FullQualifiedName>(), LinkedHashSet<UUID>(), LinkedHashSet<UUID>(),
-                            LinkedHashMultimap.create(), Optional.of(uuid), Optional.of(SecurableObjectType.EntityType))
+                            LinkedHashMultimap.create(), Optional.of(uuid), Optional.of(SecurableObjectType.EntityType), Optional.empty())
                 }
             }
 
@@ -105,7 +107,7 @@ class PropagationGraphProcessorTest {
 
 }
 
-class MockDurationProcessor: DurationProcessor() {
+class MockDurationProcessor : DurationProcessor() {
 
     override fun getSql(): String {
         return ""
@@ -136,7 +138,7 @@ class MockDurationProcessor: DurationProcessor() {
     }
 }
 
-class MockEndDateProcessor: BaseDurationProcessor() {
+class MockEndDateProcessor : BaseDurationProcessor() {
 
     override fun getSql(): String {
         return ""
@@ -176,7 +178,7 @@ class MockEndDateProcessor: BaseDurationProcessor() {
     }
 }
 
-class MockAssociationProcessor: AssociationProcessor {
+class MockAssociationProcessor : AssociationProcessor {
     override fun getSrcInputs(): Map<FullQualifiedName, Set<FullQualifiedName>> {
         return mapOf()
     }
