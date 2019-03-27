@@ -159,7 +159,8 @@ public class TestEdmConfigurer {
                         EMPLOYEE_SALARY_PROP_ID ) ),
                 LinkedHashMultimap.create(),
                 Optional.empty(),
-                Optional.of( SecurableObjectType.EntityType ) );
+                Optional.of( SecurableObjectType.EntityType ),
+                Optional.empty() );
     }
 
     private static void createPropertyTypes( EdmManager dms ) {

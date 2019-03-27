@@ -253,7 +253,8 @@ public class CustomCSVPopulation {
                     propertyTypeIdsSet,
                     LinkedHashMultimap.create(),
                     Optional.empty(),
-                    Optional.of( SecurableObjectType.EntityType ) );
+                    Optional.of( SecurableObjectType.EntityType ),
+                    Optional.empty() );
             // Add property types to entity type
 
             // Create Entity Type in database
