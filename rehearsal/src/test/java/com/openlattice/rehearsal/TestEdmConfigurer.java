@@ -33,10 +33,12 @@ import com.openlattice.edm.Schema;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.junit.Assert;
@@ -47,21 +49,21 @@ import org.junit.Assert;
  */
 
 public class TestEdmConfigurer {
-    public static final String DEPT                = "testcsv.dept";
-    public static final String EMPLOYED_IN_ES_NAME = "employedin";
-    public static final String EMPLOYED_IN_NAME    = "testcsv.employed_in";
-    public static final FullQualifiedName EMPLOYED_IN_FQN = new FullQualifiedName( EMPLOYED_IN_NAME );
-    public static final String ENTITY_SET_NAME     = "employees";
-    public static final String ENTITY_TYPE_NAME    = "testcsv.person";
-    public static final String ID                  = "testcsv.id";
-    public static final String NAME                = "testcsv.name";
-    public static final FullQualifiedName PERSON_FQN      = new FullQualifiedName( ENTITY_TYPE_NAME );
-    public static final String ROLE_NAME           = "testcsv.role";
-    public static final FullQualifiedName ROLE_FQN        = new FullQualifiedName( ROLE_NAME );
-    public static final String SALARY              = "testcsv.salary";
-    public static final String SCHEMA_NAME         = "testcsv.csv";
-    public static final String TITLE               = "testcsv.title";
-    protected static final PropertyType EMPLOYEE_TITLE_PROP_TYPE = new PropertyType(
+    public static final    String            DEPT                     = "testcsv.dept";
+    public static final    String            EMPLOYED_IN_ES_NAME      = "employedin";
+    public static final    String            EMPLOYED_IN_NAME         = "testcsv.employed_in";
+    public static final    FullQualifiedName EMPLOYED_IN_FQN          = new FullQualifiedName( EMPLOYED_IN_NAME );
+    public static final    String            ENTITY_SET_NAME          = "employees";
+    public static final    String            ENTITY_TYPE_NAME         = "testcsv.person";
+    public static final    String            ID                       = "testcsv.id";
+    public static final    String            NAME                     = "testcsv.name";
+    public static final    FullQualifiedName PERSON_FQN               = new FullQualifiedName( ENTITY_TYPE_NAME );
+    public static final    String            ROLE_NAME                = "testcsv.role";
+    public static final    FullQualifiedName ROLE_FQN                 = new FullQualifiedName( ROLE_NAME );
+    public static final    String            SALARY                   = "testcsv.salary";
+    public static final    String            SCHEMA_NAME              = "testcsv.csv";
+    public static final    String            TITLE                    = "testcsv.title";
+    protected static final PropertyType      EMPLOYEE_TITLE_PROP_TYPE = new PropertyType(
             new FullQualifiedName( TITLE ),
             "Title",
             Optional.of( "Title of an employee of the city of Chicago." ),
@@ -106,8 +108,8 @@ public class TestEdmConfigurer {
             ImmutableSet.of(),
             EdmPrimitiveTypeKind.Int64 );
 
-    public static EntityType      PERSON;
-    public static EntityType      ROLE;
+    public static       EntityType      PERSON;
+    public static       EntityType      ROLE;
     public static final AssociationType EMPLOYED_IN;
 
     public static UUID      PERSON_ES_ID;
@@ -134,7 +136,8 @@ public class TestEdmConfigurer {
                                         END_DATETIME_PROP_TYPE.getId() ) ),
                                 LinkedHashMultimap.create(),
                                 Optional.empty(),
-                                Optional.of( SecurableObjectType.AssociationType ) )
+                                Optional.of( SecurableObjectType.AssociationType ),
+                                Optional.empty() )
                 ),
                 Sets.newLinkedHashSet( Arrays.asList( PERSON.getId() ) ),
                 Sets.newLinkedHashSet( Arrays.asList() ),
@@ -176,7 +179,8 @@ public class TestEdmConfigurer {
                         EMPLOYEE_SALARY_PROP_ID ) ),
                 LinkedHashMultimap.create(),
                 Optional.empty(),
-                Optional.of( SecurableObjectType.EntityType )
+                Optional.of( SecurableObjectType.EntityType ),
+                Optional.empty()
         );
     }
 
@@ -192,7 +196,8 @@ public class TestEdmConfigurer {
                         EMPLOYEE_NAME_PROP_ID ) ),
                 LinkedHashMultimap.create(),
                 Optional.empty(),
-                Optional.of( SecurableObjectType.EntityType ) );
+                Optional.of( SecurableObjectType.EntityType ),
+                Optional.empty() );
     }
 
     private static void createPropertyTypes( EdmApi dms ) {
