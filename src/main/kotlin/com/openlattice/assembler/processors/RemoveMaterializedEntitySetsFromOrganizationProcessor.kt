@@ -25,7 +25,7 @@ import com.openlattice.assembler.OrganizationAssembly
 import java.lang.IllegalStateException
 import java.util.UUID
 
-data class RemoveMaterializedEntitySetsFromOrganizationProcessor(val entitySetIds: Set<UUID>)
+data class RemoveMaterializedEntitySetsFromOrganizationProcessor(val entitySetIds: List<UUID>)
     : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>() {
 
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {

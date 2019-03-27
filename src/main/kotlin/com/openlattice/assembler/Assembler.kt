@@ -123,7 +123,6 @@ class Assembler(
         }
     }
 
-
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
         createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
@@ -134,7 +133,23 @@ class Assembler(
 
     @Subscribe
     fun handleEntitySetDeleted(entitySetDeletedEvent: EntitySetDeletedEvent) {
-        // todo
+        // when entity set is deleted, we drop it's view from both openlattice and organization databases and update
+        // entity_sets and edges table in organization databases
+        if (isEntitySetMaterialized(entitySetDeletedEvent.entitySetId)) {
+            val droppedMaterializedEntitySets = materializedEntitySets.executeOnEntries(
+                    DropMaterializedEntitySetProcessor(),
+                    entitySetIdPredicate(entitySetDeletedEvent.entitySetId)).keys
+            // also remove entries from assemblies entity sets
+            droppedMaterializedEntitySets
+                    .groupBy { it.organizationId }
+                    .mapValues { it.value.map { it.entitySetId } }
+                    .forEach { organizationId, entitySetIds ->
+                        assemblies.executeOnKey(
+                                organizationId,
+                                RemoveMaterializedEntitySetsFromOrganizationProcessor(entitySetIds))
+                    }
+        }
+        dropProductionViewOfEntitySet(entitySetDeletedEvent.entitySetId)
     }
 
     @Subscribe
@@ -265,6 +280,14 @@ class Assembler(
         }
     }
 
+    private fun dropProductionViewOfEntitySet(entitySetId: UUID) {
+        hds.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
+            }
+        }
+    }
+
     fun getOrganizationIntegrationAccount(organizationId: UUID): OrganizationIntegrationAccount {
         val organizationUserId = buildOrganizationUserId(organizationId)
         val credential = this.dbCredentialService.getDbCredential(organizationUserId)
@@ -287,7 +310,7 @@ class Assembler(
     }
 
     private fun ensureEntitySetIsMaterialized(organizationId: UUID, entitySetId: UUID) {
-        if(!materializedEntitySets.containsKey(EntitySetAssemblyKey(entitySetId, organizationId))) {
+        if (!materializedEntitySets.containsKey(EntitySetAssemblyKey(entitySetId, organizationId))) {
             throw IllegalStateException("Entity set $entitySetId is not materialized for organization $organizationId")
         }
     }

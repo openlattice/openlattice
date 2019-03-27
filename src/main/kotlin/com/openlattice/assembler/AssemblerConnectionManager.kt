@@ -35,7 +35,6 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
 import com.openlattice.data.storage.entityKeyIdColumnsList
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.PostgresEdmTypeConverter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -45,8 +44,6 @@ import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresColumnDefinition
-import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
@@ -252,7 +249,7 @@ class AssemblerConnectionManager(
      * The reason we use an in the query for this function is that only entity sets that have been materialized
      * should have their edges materialized.
      */
-    private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
+    private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) { // todo: fix this to append
         materializeEdgesTimer.time().use {
             val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
             datasource.connection.use { connection ->
@@ -327,10 +324,12 @@ class AssemblerConnectionManager(
             val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
 
             datasource.connection.use { connection ->
+                val dropMaterializedEntitySet = "DROP MATERIALIZED VIEW IF EXISTS $tableName"
                 val createMaterializedViewSql = "CREATE MATERIALIZED VIEW IF NOT EXISTS $tableName AS $sql"
 
                 logger.info("Executing create materialize view sql: {}", createMaterializedViewSql)
                 connection.createStatement().use { stmt ->
+                    stmt.execute(dropMaterializedEntitySet)
                     stmt.execute(createMaterializedViewSql)
                 }
                 //Next we need to grant select on materialize view to everyone who has permission.
@@ -635,36 +634,43 @@ class AssemblerConnectionManager(
             // check if table exists and import if not
             conn.createStatement().use { stmt ->
                 // re-import materialized view of entity set
-                updateProductionViewTables(stmt, setOf(DataTables.quote(entitySetId.toString())))
+                updateProductionViewTables(stmt, setOf(entitySetIdTableName(entitySetId)))
                 // (re)-import public tables
                 updatePublicTables(stmt, PUBLIC_TABLES)
             }
         }
     }
 
-    private fun checkIfProductionViewsSchemaExists(connection: Connection, entitySetId: UUID): Boolean {
-        val stmt = connection
-                .prepareStatement("SELECT EXISTS " +
-                        "(SELECT 1 FROM ( SELECT to_regclass(?) AS name) AS foo WHERE foo.name IS NOT NULL)")
-        stmt.setObject(1, "$PRODUCTION_FOREIGN_SCHEMA.${DataTables.quote(entitySetId.toString())}")
+    fun dropMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {
+        // we drop materialized view of entity set from organization database, update edges and entity_sets table
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        connect(dbName).use { datasource ->
+            datasource.connection.createStatement().use { stmt ->
+                stmt.execute(dropProductionViewSchemaSql(entitySetIdTableName(entitySetId)))
 
-        val rs = stmt.executeQuery()
-        rs.next()
-        return ResultSetAdapters.exists(rs)
+                // update entity_sets and edges
+                updatePublicTables(stmt, setOf(ENTITY_SETS.name, EDGES.name))
+                stmt.execute(deleteEntitySetFromMaterializedEdgesSql(entitySetId))
+            }
+        }
     }
 
     private fun updatePublicTables(stmt: Statement, tables: Set<String>) {
         tables.forEach {
-            stmt.execute("DROP FOREIGN TABLE IF EXISTS $PUBLIC_SCHEMA.$it CASCADE")
+            stmt.execute(dropProductionViewSchemaSql(it))
         }
         stmt.execute(importPublicSchemaSql(tables))
     }
 
     private fun updateProductionViewTables(stmt: Statement, tables: Set<String>) {
         tables.forEach {
-            stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$it CASCADE")
+            stmt.execute(dropProductionViewSchemaSql(it))
         }
         stmt.execute(importProductionViewsSchemaSql(tables))
+    }
+
+    private fun dropProductionViewSchemaSql(table: String): String {
+        return "DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$table CASCADE"
     }
 
     private fun importProductionViewsSchemaSql(limitTo: Set<String>): String {
@@ -676,10 +682,20 @@ class AssemblerConnectionManager(
     }
 
     private fun importForeignSchema(from: String, limitTo: Set<String>): String {
-        val limitToSql = if(limitTo.isEmpty()) "" else "LIMIT TO ( ${limitTo.joinToString(", ")} )"
+        val limitToSql = if (limitTo.isEmpty()) "" else "LIMIT TO ( ${limitTo.joinToString(", ")} )"
         return "IMPORT FOREIGN SCHEMA $from $limitToSql FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
     }
 
+    private fun deleteEntitySetFromMaterializedEdgesSql(entitySetId: UUID): String {
+        return "DELETE FROM $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name} " +
+                "WHERE ${SRC_ENTITY_SET_ID.name} = '$entitySetId' " +
+                "OR ${DST_ENTITY_SET_ID.name} = '$entitySetId' " +
+                "OR ${EDGE_ENTITY_SET_ID.name} = '$entitySetId'"
+    }
+
+    private fun entitySetIdTableName(entitySetId: UUID): String {
+        return DataTables.quote(entitySetId.toString())
+    }
 }
 
 const val MATERIALIZED_VIEWS_SCHEMA = "openlattice"

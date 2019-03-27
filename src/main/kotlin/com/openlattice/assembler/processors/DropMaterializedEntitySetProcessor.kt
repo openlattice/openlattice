@@ -18,7 +18,6 @@
  *
  *
  */
-
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
@@ -27,31 +26,26 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
-import com.openlattice.edm.type.PropertyType
-import java.util.*
 
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-data class SynchronizeMaterializedEntitySetProcessor(val authorizedPropertyTypes: Map<UUID, PropertyType>) :
-        AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
+class DropMaterializedEntitySetProcessor
+    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
+
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
     override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
-        val organizationId = entry.key.organizationId
-        val entitySetId = entry.key.entitySetId
+        val entitySetAssemblyKey = entry.key
         val materializedEntitySet = entry.value
         if (materializedEntitySet == null) {
-            throw IllegalStateException("Encountered null materialized entity set while trying to synchronize " +
-                    "materialized view for entity set $entitySetId in organization $organizationId.")
+            throw IllegalStateException("Encountered null materialized entity set while trying to drop materialized " +
+                    "entity set for entity set ${entitySetAssemblyKey.entitySetId} in organization " +
+                    "${entitySetAssemblyKey.organizationId}.")
         } else {
-            acm?.materializeEntitySets(organizationId, mapOf(entitySetId to authorizedPropertyTypes))
+            acm?.dropMaterializedEntitySet(entitySetAssemblyKey.organizationId, entitySetAssemblyKey.entitySetId)
                     ?: throw IllegalStateException(NOT_INITIALIZED)
-
-            // Clear edm and data unsync flags.
-            // Note: if we will have other flags, we only need to remove these 2 and not clear all!
-            materializedEntitySet.flags.clear()
-            entry.setValue(materializedEntitySet)
+            entry.setValue(null)
         }
 
         return null
@@ -61,9 +55,16 @@ data class SynchronizeMaterializedEntitySetProcessor(val authorizedPropertyTypes
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): SynchronizeMaterializedEntitySetProcessor {
+    fun init(acm: AssemblerConnectionManager): DropMaterializedEntitySetProcessor {
         this.acm = acm
         return this
     }
 
+    override fun equals(other: Any?): Boolean {
+        return (other != null && other is DropMaterializedEntitySetProcessor)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
 }
