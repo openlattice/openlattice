@@ -170,7 +170,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 orgPrincipal.getPrincipal(),
                 SecurableObjectType.EntitySet,
                 EnumSet.of( Permission.MATERIALIZE ) );
-        final var materialized = assembler.getMaterializedEntitySetInOrganization( organizationId );
+        final var materialized = assembler.getMaterializedEntitySetsInOrganization( organizationId );
 
         final Map<UUID, Set<OrganizationEntitySetFlag>> entitySets = new HashMap<>( 2 * internal.size() );
 
