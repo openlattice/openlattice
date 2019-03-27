@@ -800,7 +800,7 @@ public class EdmService implements EdmManager {
 
                 flagMaterializedEntitySetEdmUnsynchronized( esId );  // add edm_unsync flag for materialized views
 
-                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes ) );
+                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes, false ) );
                 eventBus.post( new PropertyTypesAddedToEntitySetEvent(
                         entitySet,
                         Lists.newArrayList( propertyTypes.values() ),
@@ -981,7 +981,7 @@ public class EdmService implements EdmManager {
                     // add edm_unsync flag for materialized views
                     flagMaterializedEntitySetEdmUnsynchronized( entitySet.getId() );
                 }
-                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), properties ) );
+                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), properties, isFqnUpdated ) );
             } );
         } );
 

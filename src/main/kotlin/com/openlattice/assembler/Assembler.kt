@@ -38,8 +38,7 @@ import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.events.EntitySetCreatedEvent
-import com.openlattice.edm.events.EntitySetDeletedEvent
+import com.openlattice.edm.events.*
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
@@ -137,6 +136,26 @@ class Assembler(
     fun handleEntitySetDeleted(entitySetDeletedEvent: EntitySetDeletedEvent) {
         // todo
     }
+
+    @Subscribe
+    fun handlePropertyTypeAddedToEntitySet(propertyTypesAddedToEntitySetEvent: PropertyTypesAddedToEntitySetEvent) {
+        // when property type is added to entity set, we need to update (re-create) the production view (olviews) of the
+        // entity set in openlattice db
+        if (isEntitySetMaterialized(propertyTypesAddedToEntitySetEvent.entitySet.id)) {
+            createOrUpdateProductionViewOfEntitySet(propertyTypesAddedToEntitySetEvent.entitySet.id)
+        }
+    }
+
+    @Subscribe
+    fun handlePropertyTypeFqnChanged(propertyTypesInEntitySetUpdatedEvent: PropertyTypesInEntitySetUpdatedEvent) {
+        // when property type fqn changes, we need to update (re-create) the production view (olviews) of the entity set
+        // in openlattice db
+        if (propertyTypesInEntitySetUpdatedEvent.fqnUpdated
+                && isEntitySetMaterialized(propertyTypesInEntitySetUpdatedEvent.entitySetId)) {
+            createOrUpdateProductionViewOfEntitySet(propertyTypesInEntitySetUpdatedEvent.entitySetId)
+        }
+    }
+
 
     fun createOrganization(organization: Organization) {
         createOrganization(organization.id, organization.principal.id)
