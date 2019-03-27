@@ -40,6 +40,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -232,24 +233,61 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Set<UUID> entitySetIds ) {
+        final var authorizedPropertyTypesByEntitySet =
+                getAuthorizedPropertiesForMaterialization( organizationId, entitySetIds );
+        return assembler.materializeEntitySets( organizationId, authorizedPropertyTypesByEntitySet );
+    }
+
+    @Override
+    @PostMapping( ID_PATH + SET_ID_PATH + SYNCHRONIZE )
+    public Void synchronizeEdmChanges(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId ) {
+        // we basically re-materialize in this case
+        final var authorizedPropertyTypesByEntitySet =
+                getAuthorizedPropertiesForMaterialization( organizationId, Set.of( entitySetId ) );
+
+        assembler.synchronizeMaterializedEntitySet( organizationId, authorizedPropertyTypesByEntitySet );
+        return null;
+    }
+
+    @Override
+    @PostMapping( ID_PATH + SET_ID_PATH + REFRESH )
+    public Void refreshDataChanges(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId ) {
+        // check materialization rights on entity set, no need to check properties
+        // changes in materialization right on those are propagated immediately
+        ensureOwner( organizationId );
+        final var organizationPrincipal = organizations.getOrganizationPrincipal( organizationId );
+
+        if ( organizationPrincipal == null ) {
+            throw new ResourceNotFoundException( "Organization does not exist." );
+        }
+        ensureMaterialize( entitySetId, organizationPrincipal );
+
+        assembler.refreshMaterializedEntitySet( organizationId, entitySetId );
+        return null;
+    }
+
+    private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesForMaterialization(
+            UUID organizationId,
+            Set<UUID> entitySetIds) {
         // materialize should be a property level permission that can only be granted to organization principals and
         // the person requesting materialize should be the owner of the organization
         ensureOwner( organizationId );
-
         final var organizationPrincipal = organizations.getOrganizationPrincipal( organizationId );
+
         if ( organizationPrincipal == null ) {
             //This will be rare, since it is unlikely you have access to an organization that does not exist.
             throw new ResourceNotFoundException( "Organization does not exist." );
         }
 
-        entitySetIds.forEach( entitySetId -> ensureMaterialize(entitySetId, organizationPrincipal) );
-        final var authorizedPropertyTypesByEntitySet = authzHelper.getAuthorizedPropertiesOnEntitySets(
+        entitySetIds.forEach( entitySetId -> ensureMaterialize( entitySetId, organizationPrincipal ) );
+        return authzHelper.getAuthorizedPropertiesOnEntitySets(
                 entitySetIds,
                 EnumSet.of( Permission.MATERIALIZE ),
                 Set.of( organizationPrincipal.getPrincipal() ) );
-
-        return assembler
-                .materializeEntitySets( organizationPrincipal.getId(), authorizedPropertyTypesByEntitySet );
     }
 
     @Override
