@@ -167,7 +167,8 @@ public class BaseElasticsearchTest {
                 propertyTypeIds,
                 LinkedHashMultimap.create(),
                 Optional.empty(),
-                Optional.of( SecurableObjectType.EntityType )
+                Optional.of( SecurableObjectType.EntityType ),
+                Optional.empty()
         );
 
         chicagoEmployees = new EntitySet(

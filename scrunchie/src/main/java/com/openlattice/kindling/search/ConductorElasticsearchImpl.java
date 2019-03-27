@@ -170,7 +170,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     // @formatter:off
-    private XContentBuilder getMetaphoneSettings() throws IOException {
+    private XContentBuilder getMetaphoneSettings( int numShards ) throws IOException {
     	XContentBuilder settings = XContentFactory.jsonBuilder()
     	        .startObject()
         	        .startObject( ANALYSIS )
@@ -193,7 +193,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 	        .endObject()
                 	    .endObject()
         	        .endObject()
-        	        .field( NUM_SHARDS, 5 )
+        	        .field( NUM_SHARDS, numShards )
         	        .field( NUM_REPLICAS, 2 )
     	        .endObject();
     	return settings;
@@ -231,7 +231,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         try {
             client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
-                    .setSettings( getMetaphoneSettings() )
+                    .setSettings( getMetaphoneSettings( 5 ) )
                     .addMapping( ENTITY_SET_TYPE, mapping )
                     .execute().actionGet();
             return true;
@@ -454,8 +454,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     /*** ENTITY DATA INDEX CREATE / DELETE / UPDATE ***/
 
-    public boolean createEntityTypeDataIndex( UUID entityTypeId, List<PropertyType> propertyTypes ) {
+    public boolean createEntityTypeDataIndex( EntityType entityType, List<PropertyType> propertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
+
+        UUID entityTypeId = entityType.getId();
 
         String indexName = getIndexName( entityTypeId );
         String typeName = getTypeName( entityTypeId );
@@ -473,7 +475,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         try {
             client.admin().indices().prepareCreate( indexName )
-                    .setSettings( getMetaphoneSettings() )
+                    .setSettings( getMetaphoneSettings( entityType.getShards() ) )
                     .addMapping( typeName, entityTypeMapping )
                     .execute().actionGet();
         } catch ( IOException e ) {
@@ -1123,7 +1125,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     @Override
     public boolean saveEntityTypeToElasticsearch( EntityType entityType, List<PropertyType> propertyTypes ) {
         saveObjectToElasticsearch( ENTITY_TYPE_INDEX, ENTITY_TYPE, entityType, entityType.getId().toString() );
-        return createEntityTypeDataIndex( entityType.getId(), propertyTypes );
+        return createEntityTypeDataIndex( entityType, propertyTypes );
     }
 
     @Override
@@ -1141,7 +1143,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 associationType,
                 entityType.getId().toString() );
 
-        return createEntityTypeDataIndex( entityType.getId(), propertyTypes );
+        return createEntityTypeDataIndex( entityType, propertyTypes );
     }
 
     @Override
