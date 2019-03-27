@@ -229,12 +229,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( authorizationManager(),
-                dcs(),
-                hikariDataSource,
-                metricRegistry,
-                hazelcastInstance,
-                eventBus );
+        return new Assembler( dcs(), hikariDataSource, metricRegistry, hazelcastInstance, eventBus );
     }
 
     @Bean
