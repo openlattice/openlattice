@@ -247,7 +247,10 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         final var authorizedPropertyTypesByEntitySet =
                 getAuthorizedPropertiesForMaterialization( organizationId, Set.of( entitySetId ) );
 
-        assembler.synchronizeMaterializedEntitySet( organizationId, authorizedPropertyTypesByEntitySet );
+        assembler.synchronizeMaterializedEntitySet(
+                organizationId,
+                authorizedPropertyTypesByEntitySet.keySet().iterator().next(),
+                authorizedPropertyTypesByEntitySet.values().iterator().next());
         return null;
     }
 
