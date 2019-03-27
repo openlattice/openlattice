@@ -39,6 +39,7 @@ import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyT
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.events.EntitySetCreatedEvent
+import com.openlattice.edm.events.EntitySetDeletedEvent
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
@@ -71,7 +72,6 @@ private val logger = LoggerFactory.getLogger(Assembler::class.java)
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class Assembler(
-        val authz: AuthorizationManager,
         private val dbCredentialService: DbCredentialService,
         val hds: HikariDataSource,
         metricRegistry: MetricRegistry,
@@ -99,7 +99,7 @@ class Assembler(
         this.acm = assemblerConnectionManager
     }
 
-    fun getMaterializedEntitySetInOrganization(organizationId: UUID): Map<UUID, Set<OrganizationEntitySetFlag>> {
+    fun getMaterializedEntitySetsInOrganization(organizationId: UUID): Map<UUID, Set<OrganizationEntitySetFlag>> {
         return assemblies[organizationId]?.materializedEntitySets ?: mapOf()
     }
 
@@ -131,6 +131,11 @@ class Assembler(
         assemblies.executeOnKey(
                 entitySetCreatedEvent.entitySet.organizationId,
                 CreateProductionForeignTableOfEntitySetProcessor(entitySetCreatedEvent.entitySet.id).init(acm))
+    }
+
+    @Subscribe
+    fun handleEntitySetDeleted(entitySetDeletedEvent: EntitySetDeletedEvent) {
+        // todo
     }
 
     fun createOrganization(organization: Organization) {
@@ -171,9 +176,7 @@ class Assembler(
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
         // check if organization is initialized
-        if (!assemblies.containsKey(organizationId) || !assemblies[organizationId]!!.initialized) {
-            throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
-        }
+        ensureAssemblyInitialized(organizationId)
 
         // materialize entity sets
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
@@ -195,6 +198,16 @@ class Assembler(
         return getMaterializedEntitySetIdsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
+    }
+
+    fun synchronizeMaterializedEntitySet(
+            organizationId: UUID,
+            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>) {
+        // TODO
+    }
+
+    fun refreshMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {
+        // todo
     }
 
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
@@ -239,6 +252,12 @@ class Assembler(
             setOf(OrganizationEntitySetFlag.INTERNAL)
         } else {
             setOf()
+        }
+    }
+
+    private fun ensureAssemblyInitialized(organizationId: UUID) {
+        if (!assemblies.containsKey(organizationId) || !assemblies[organizationId]!!.initialized) {
+            throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
         }
     }
 
