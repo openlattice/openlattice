@@ -43,7 +43,7 @@ class DropMaterializedEntitySetProcessor
                     "entity set for entity set ${entitySetAssemblyKey.entitySetId} in organization " +
                     "${entitySetAssemblyKey.organizationId}.")
         } else {
-            acm?.dropMaterializedEntitySet(entitySetAssemblyKey.organizationId, entitySetAssemblyKey.entitySetId)
+            acm?.dematerializeEntitySets(entitySetAssemblyKey.organizationId, setOf(entitySetAssemblyKey.entitySetId))
                     ?: throw IllegalStateException(NOT_INITIALIZED)
             entry.setValue(null)
         }

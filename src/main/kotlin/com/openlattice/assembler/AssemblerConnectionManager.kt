@@ -246,7 +246,7 @@ class AssemblerConnectionManager(
     }
 
     /**
-     * The reason we use an in the query for this function is that only entity sets that have been materialized
+     * The reason we use an "IN" the query for this function is that only entity sets that have been materialized
      * should have their edges materialized.
      */
     private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) { // todo: fix this to append
@@ -440,8 +440,22 @@ class AssemblerConnectionManager(
     /**
      * Removes a materialized entity set from atlas.
      */
-    fun dematerializeEntitySets(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
-        TODO("Drop the materialize view for the specified entity sets.")
+    fun dematerializeEntitySets(organizationId: UUID, entitySetIds: Set<UUID>) {
+        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        connect(dbName).use { datasource ->
+            entitySetIds.forEach { dropMaterializedEntitySet(datasource, it) }
+        }
+    }
+
+    fun dropMaterializedEntitySet(datasource: HikariDataSource, entitySetId: UUID) {
+        // we drop materialized view of entity set from organization database, update edges and entity_sets table
+        datasource.connection.createStatement().use { stmt ->
+            stmt.execute(dropProductionViewSchemaSql(entitySetIdTableName(entitySetId)))
+
+            // update entity_sets and edges
+            updatePublicTables(stmt, setOf(ENTITY_SETS.name, EDGES.name))
+            stmt.execute(deleteEntitySetFromMaterializedEdgesSql(entitySetId))
+        }
     }
 
     internal fun exists(dbname: String): Boolean {
@@ -641,19 +655,17 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun dropMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {
-        // we drop materialized view of entity set from organization database, update edges and entity_sets table
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-        connect(dbName).use { datasource ->
-            datasource.connection.createStatement().use { stmt ->
-                stmt.execute(dropProductionViewSchemaSql(entitySetIdTableName(entitySetId)))
+    private fun checkIfTableExists(connection: Connection, table: String): Boolean {
+        val stmt = connection
+                .prepareStatement("SELECT EXISTS " +
+                        "(SELECT 1 FROM ( SELECT to_regclass(?) AS name) AS foo WHERE foo.name IS NOT NULL)")
+        stmt.setObject(1, table)
 
-                // update entity_sets and edges
-                updatePublicTables(stmt, setOf(ENTITY_SETS.name, EDGES.name))
-                stmt.execute(deleteEntitySetFromMaterializedEdgesSql(entitySetId))
-            }
-        }
+        val rs = stmt.executeQuery()
+        rs.next()
+        return ResultSetAdapters.exists(rs)
     }
+
 
     private fun updatePublicTables(stmt: Statement, tables: Set<String>) {
         tables.forEach {
