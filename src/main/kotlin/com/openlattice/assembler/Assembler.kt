@@ -202,8 +202,14 @@ class Assembler(
 
     fun synchronizeMaterializedEntitySet(
             organizationId: UUID,
-            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>) {
-        // TODO
+            entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>) {
+        ensureAssemblyInitialized(organizationId)
+        ensureEntitySetIsMaterialized(organizationId, entitySetId)
+
+        materializedEntitySets.executeOnKey(
+                EntitySetAssemblyKey(entitySetId, organizationId),
+                SynchronizeMaterializedEntitySetProcessor(authorizedPropertyTypes))
     }
 
     fun refreshMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {
@@ -258,6 +264,12 @@ class Assembler(
     private fun ensureAssemblyInitialized(organizationId: UUID) {
         if (!assemblies.containsKey(organizationId) || !assemblies[organizationId]!!.initialized) {
             throw IllegalStateException("Organization assembly is not initialized for organization $organizationId")
+        }
+    }
+
+    private fun ensureEntitySetIsMaterialized(organizationId: UUID, entitySetId: UUID) {
+        if(!materializedEntitySets.containsKey(EntitySetAssemblyKey(entitySetId, organizationId))) {
+            throw IllegalStateException("Entity set $entitySetId is not materialized for organization $organizationId")
         }
     }
 

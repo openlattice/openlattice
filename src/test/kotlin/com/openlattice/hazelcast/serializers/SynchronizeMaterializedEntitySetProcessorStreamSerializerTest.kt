@@ -23,23 +23,25 @@ package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.UpdateProductionForeignTableOfEntitySetProcessor
+import com.openlattice.assembler.processors.SynchronizeMaterializedEntitySetProcessor
 import com.openlattice.mapstores.TestDataFactory
 import org.mockito.Mockito
-import java.util.UUID
 
-class UpdateProductionForeignTableOfEntitySetProcessorStreamSerializerTest : AbstractStreamSerializerTest
-<UpdateProductionForeignTableOfEntitySetProcessorStreamSerializer, UpdateProductionForeignTableOfEntitySetProcessor>() {
+class SynchronizeMaterializedEntitySetProcessorStreamSerializerTest : AbstractStreamSerializerTest
+<SynchronizeMaterializedEntitySetProcessorStreamSerializer, SynchronizeMaterializedEntitySetProcessor>() {
 
-    override fun createSerializer(): UpdateProductionForeignTableOfEntitySetProcessorStreamSerializer {
-        val processorSerializer = UpdateProductionForeignTableOfEntitySetProcessorStreamSerializer()
+    override fun createSerializer(): SynchronizeMaterializedEntitySetProcessorStreamSerializer {
+        val processorSerializer = SynchronizeMaterializedEntitySetProcessorStreamSerializer()
         processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
         return processorSerializer
     }
 
-    override fun createInput(): UpdateProductionForeignTableOfEntitySetProcessor {
-        return UpdateProductionForeignTableOfEntitySetProcessor(
-                UUID.randomUUID(),
-                listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType()))
+    override fun createInput(): SynchronizeMaterializedEntitySetProcessor {
+        val propertyTypes =
+                listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType())
+                        .map { it.id to it }
+                        .toMap()
+
+        return SynchronizeMaterializedEntitySetProcessor(propertyTypes)
     }
 }

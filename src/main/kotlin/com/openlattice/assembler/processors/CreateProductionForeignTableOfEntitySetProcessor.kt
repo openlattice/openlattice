@@ -47,7 +47,7 @@ data class CreateProductionForeignTableOfEntitySetProcessor(val entitySetId: UUI
             logger.error("Encountered null assembly while trying to create $PRODUCTION_FOREIGN_SCHEMA foreign table " +
                     "for entity set $entitySetId.")
         } else {
-            acm?.createProductionForeignSchemaOfEntitySetIfNotExists(organizationId, entitySetId)
+            acm?.createOrUpdateProductionForeignSchemaOfEntitySet(organizationId, entitySetId)
                     ?: throw IllegalStateException(NOT_INITIALIZED)
         }
 

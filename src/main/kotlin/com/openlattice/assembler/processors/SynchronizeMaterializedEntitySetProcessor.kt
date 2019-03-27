@@ -24,33 +24,35 @@ package com.openlattice.assembler.processors
 import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.OrganizationAssembly
-import com.openlattice.assembler.PRODUCTION_FOREIGN_SCHEMA
+import com.openlattice.assembler.*
 import com.openlattice.edm.type.PropertyType
 import org.slf4j.LoggerFactory
 import java.lang.IllegalStateException
 import java.util.UUID
 
-private val logger = LoggerFactory.getLogger(UpdateProductionForeignTableOfEntitySetProcessor::class.java)
+private val logger = LoggerFactory.getLogger(SynchronizeMaterializedEntitySetProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-data class UpdateProductionForeignTableOfEntitySetProcessor(
-        val entitySetId: UUID,
-        val newPropertyTypes: List<PropertyType>) :
-        AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+data class SynchronizeMaterializedEntitySetProcessor(val authorizedPropertyTypes: Map<UUID, PropertyType>) :
+        AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
-        val organizationId = entry.key
-        val assembly = entry.value
-        if (assembly == null) {
-            logger.error("Encountered null assembly while trying to update $PRODUCTION_FOREIGN_SCHEMA foreign table " +
-                    "for entity set $entitySetId with new properties $newPropertyTypes.")
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
+        val organizationId = entry.key.organizationId
+        val entitySetId = entry.key.entitySetId
+        val materializedEntitySet = entry.value
+        if (materializedEntitySet == null) {
+            logger.error("Encountered null materialized entity set while trying to synchronize materialized view for " +
+                    "entity set $entitySetId in organization $organizationId.")
         } else {
-            acm?.updateProductionForeignSchemaOfEntitySet(organizationId, entitySetId, newPropertyTypes)
+            acm?.materializeEntitySets(organizationId, mapOf(entitySetId to authorizedPropertyTypes))
                     ?: throw IllegalStateException(NOT_INITIALIZED)
+
+            // Clear edm and data unsync flags.
+            // Note: if we will have other flags, we only need to remove these 2 and not clear all!
+            materializedEntitySet.flags.clear()
+            entry.setValue(materializedEntitySet)
         }
 
         return null
@@ -60,7 +62,7 @@ data class UpdateProductionForeignTableOfEntitySetProcessor(
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): UpdateProductionForeignTableOfEntitySetProcessor {
+    fun init(acm: AssemblerConnectionManager): SynchronizeMaterializedEntitySetProcessor {
         this.acm = acm
         return this
     }

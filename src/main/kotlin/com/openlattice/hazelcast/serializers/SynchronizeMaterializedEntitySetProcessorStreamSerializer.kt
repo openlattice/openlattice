@@ -25,41 +25,39 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.UpdateProductionForeignTableOfEntitySetProcessor
+import com.openlattice.assembler.processors.SynchronizeMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class UpdateProductionForeignTableOfEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<UpdateProductionForeignTableOfEntitySetProcessor>,
+class SynchronizeMaterializedEntitySetProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<SynchronizeMaterializedEntitySetProcessor>,
         AssemblerConnectionManagerDependent {
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.UPDATE_PRODUCTION_FOREIGN_TABLE_OF_ENTITY_SET_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.SYNCHRONIZE_MATERIALIZED_ENTITY_SET_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out UpdateProductionForeignTableOfEntitySetProcessor> {
-        return UpdateProductionForeignTableOfEntitySetProcessor::class.java
+    override fun getClazz(): Class<out SynchronizeMaterializedEntitySetProcessor> {
+        return SynchronizeMaterializedEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: UpdateProductionForeignTableOfEntitySetProcessor) {
-        UUIDStreamSerializer.serialize(out, obj.entitySetId)
-        out.writeInt(obj.newPropertyTypes.size)
-        obj.newPropertyTypes.forEach {
-            PropertyTypeStreamSerializer.serialize(out, it)
+    override fun write(out: ObjectDataOutput, obj: SynchronizeMaterializedEntitySetProcessor) {
+        out.writeInt(obj.authorizedPropertyTypes.size)
+
+        obj.authorizedPropertyTypes.forEach { propertyTypeId, propertyType ->
+            UUIDStreamSerializer.serialize(out, propertyTypeId)
+            PropertyTypeStreamSerializer.serialize(out, propertyType)
         }
-
     }
 
-    override fun read(input: ObjectDataInput): UpdateProductionForeignTableOfEntitySetProcessor {
-        val entitySetId = UUIDStreamSerializer.deserialize(input)
-        val newPropertyTypesSize = input.readInt()
-        val newPropertyTypes = (0 until newPropertyTypesSize).map {
-            PropertyTypeStreamSerializer.deserialize(input)
-        }
-
-        return UpdateProductionForeignTableOfEntitySetProcessor(entitySetId, newPropertyTypes).init(acm)
+    override fun read(input: ObjectDataInput): SynchronizeMaterializedEntitySetProcessor {
+        val size = input.readInt()
+        val authorizedPropertyTypes = ((0 until size).map {
+            UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
+        }.toMap())
+        return SynchronizeMaterializedEntitySetProcessor(authorizedPropertyTypes).init(acm)
     }
 
     override fun init(assemblerConnectionManager: AssemblerConnectionManager) {

@@ -299,7 +299,7 @@ class AssemblerConnectionManager(
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ) {
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
-            createProductionForeignSchemaOfEntitySetIfNotExists(datasource, entitySetId)
+            createOrUpdateProductionForeignSchemaOfEntitySet(datasource, entitySetId)
             materialize(datasource, entitySetId, authorizedPropertyTypes)
         }
 
@@ -616,29 +616,28 @@ class AssemblerConnectionManager(
                 logger.info("Created user mapping. ")
                 statement.execute(importProductionViewsSchemaSql(setOf()))
                 statement.execute(
-                        importPublicSchemaSql(setOf(EDGES.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name))
+                        importPublicSchemaSql(PUBLIC_TABLES)
                 )
                 logger.info("Imported foreign schema")
             }
         }
     }
 
-    fun createProductionForeignSchemaOfEntitySetIfNotExists(organizationId: UUID, entitySetId: UUID) {
+    fun createOrUpdateProductionForeignSchemaOfEntitySet(organizationId: UUID, entitySetId: UUID) {
         val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
         connect(dbname).use { datasource ->
-            createProductionForeignSchemaOfEntitySetIfNotExists(datasource, entitySetId)
+            createOrUpdateProductionForeignSchemaOfEntitySet(datasource, entitySetId)
         }
     }
 
-    private fun createProductionForeignSchemaOfEntitySetIfNotExists(dataSource: HikariDataSource, entitySetId: UUID) {
+    private fun createOrUpdateProductionForeignSchemaOfEntitySet(dataSource: HikariDataSource, entitySetId: UUID) {
         dataSource.connection.use { conn ->
             // check if table exists and import if not
-            if (!checkIfProductionViewsSchemaExists(conn, entitySetId)) {
-                conn.createStatement().use { stmt ->
-                    stmt.execute(importProductionViewsSchemaSql(setOf(DataTables.quote(entitySetId.toString()))))
-                    // (re)-import entity_sets
-                    updatePublicTables(stmt, setOf(PostgresTable.ENTITY_SETS.name))
-                }
+            conn.createStatement().use { stmt ->
+                // re-import materialized view of entity set
+                updateProductionViewTables(stmt, setOf(DataTables.quote(entitySetId.toString())))
+                // (re)-import public tables
+                updatePublicTables(stmt, PUBLIC_TABLES)
             }
         }
     }
@@ -654,36 +653,31 @@ class AssemblerConnectionManager(
         return ResultSetAdapters.exists(rs)
     }
 
-    fun updateProductionForeignSchemaOfEntitySet(
-            organizationId: UUID, entitySetId: UUID, newPropertyTypes: List<PropertyType>) {
-        val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-        connect(dbname).use { datasource ->
-            datasource.connection.use { conn ->
-                conn.createStatement().use { stmt ->
-                    // add new columns
-                    newPropertyTypes.forEach {
-                        val newColumn = PostgresColumnDefinition(
-                                quote(it.type.fullQualifiedNameAsString),
-                                PostgresEdmTypeConverter.map(it.datatype))
-                        stmt.execute("ALTER FOREIGN TABLE $PRODUCTION_FOREIGN_SCHEMA.\"$entitySetId\" ADD COLUMN ${newColumn.sql()}")
-                    }
-
-                    // (re)-import entity_sets, property_types, entity_types
-                    val publicTables = mutableSetOf(
-                            PostgresTable.ENTITY_SETS.name,
-                            PostgresTable.PROPERTY_TYPES.name,
-                            PostgresTable.ENTITY_TYPES.name)
-                    updatePublicTables(stmt, publicTables)
-                }
-            }
+    private fun updatePublicTables(stmt: Statement, tables: Set<String>) {
+        tables.forEach {
+            stmt.execute("DROP FOREIGN TABLE IF EXISTS $PUBLIC_SCHEMA.$it CASCADE")
         }
+        stmt.execute(importPublicSchemaSql(tables))
     }
 
-    private fun updatePublicTables(stmt: Statement, tables: Set<String>) {
+    private fun updateProductionViewTables(stmt: Statement, tables: Set<String>) {
         tables.forEach {
             stmt.execute("DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$it CASCADE")
         }
-        stmt.execute(importPublicSchemaSql(tables))
+        stmt.execute(importProductionViewsSchemaSql(tables))
+    }
+
+    private fun importProductionViewsSchemaSql(limitTo: Set<String>): String {
+        return importForeignSchema(PRODUCTION_VIEWS_SCHEMA, limitTo)
+    }
+
+    private fun importPublicSchemaSql(limitTo: Set<String>): String {
+        return importForeignSchema(PUBLIC_SCHEMA, limitTo)
+    }
+
+    private fun importForeignSchema(from: String, limitTo: Set<String>): String {
+        val limitToSql = if(limitTo.isEmpty()) "" else "LIMIT TO ( ${limitTo.joinToString(", ")} )"
+        return "IMPORT FOREIGN SCHEMA $from $limitToSql FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
     }
 
 }
@@ -695,6 +689,7 @@ const val PUBLIC_SCHEMA = "public"
 const val PRODUCTION_SERVER = "olprod"
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
+val PUBLIC_TABLES = setOf(EDGES.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name)
 
 
 private val PRINCIPALS_SQL = "SELECT acl_key FROM principals WHERE ${PRINCIPAL_TYPE.name} = ?"
@@ -709,19 +704,6 @@ internal fun createSchema(datasource: HikariDataSource, schema: String) {
 
 internal fun createOpenlatticeSchema(datasource: HikariDataSource) {
     createSchema(datasource, SCHEMA)
-}
-
-internal fun importProductionViewsSchemaSql(limitTo: Set<String>): String {
-    return importForeignSchema(PRODUCTION_VIEWS_SCHEMA, limitTo)
-}
-
-internal fun importPublicSchemaSql(limitTo: Set<String>): String {
-    return importForeignSchema(PUBLIC_SCHEMA, limitTo)
-}
-
-internal fun importForeignSchema(from: String, limitTo: Set<String>): String {
-    val limitToSql = if(limitTo.isEmpty()) "" else "LIMIT TO ( ${limitTo.joinToString(", ")} )"
-    return "IMPORT FOREIGN SCHEMA $from $limitToSql FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
 }
 
 
