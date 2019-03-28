@@ -459,7 +459,7 @@ class AssemblerConnectionManager(
 
             // update entity_sets and edges
             updatePublicTables(stmt, setOf(ENTITY_SETS.name, EDGES.name))
-            stmt.execute(deleteEntitySetFromMaterializedEdgesSql(entitySetId))
+            stmt.execute(refreshMaterializedEdges())
         }
     }
 
@@ -703,11 +703,8 @@ class AssemblerConnectionManager(
         return "IMPORT FOREIGN SCHEMA $from $limitToSql FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
     }
 
-    private fun deleteEntitySetFromMaterializedEdgesSql(entitySetId: UUID): String {
-        return "DELETE FROM $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name} " +
-                "WHERE ${SRC_ENTITY_SET_ID.name} = '$entitySetId' " +
-                "OR ${DST_ENTITY_SET_ID.name} = '$entitySetId' " +
-                "OR ${EDGE_ENTITY_SET_ID.name} = '$entitySetId'"
+    private fun refreshMaterializedEdges(): String {
+        return "REFRESH MATERIALIZED VIEW $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
     }
 
     private fun entitySetIdTableName(entitySetId: UUID): String {
