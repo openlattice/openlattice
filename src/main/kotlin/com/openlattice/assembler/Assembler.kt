@@ -262,7 +262,7 @@ class Assembler(
         val entitySetAssemblyKey = materializedEntitySets[EntitySetAssemblyKey(entitySetId, organizationId)]!!
 
         // Only allow refresh if edm is in sync and data is not already refreshed
-        if(!entitySetAssemblyKey.flags.contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+        if (!entitySetAssemblyKey.flags.contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
                 && entitySetAssemblyKey.flags.contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)) {
             logger.info("Refreshing materialized $entitySetId")
 
@@ -274,6 +274,7 @@ class Assembler(
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
         logger.info("Create or update view of $entitySetId in $PRODUCTION_VIEWS_SCHEMA")
         val entitySet = entitySets.getValue(entitySetId)
+        val entitySetIds = if (entitySet.isLinking) entitySet.linkedEntitySets else setOf(entitySetId)
         val authorizedPropertyTypes = propertyTypes
                 .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)
         val propertyFqns = authorizedPropertyTypes.mapValues {
@@ -281,7 +282,7 @@ class Assembler(
         }
 
         val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                mapOf(entitySetId to Optional.empty()),
+                entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
                 propertyFqns,
                 authorizedPropertyTypes.values.map(PropertyType::getId),
                 mapOf(entitySetId to authorizedPropertyTypes.keys),
