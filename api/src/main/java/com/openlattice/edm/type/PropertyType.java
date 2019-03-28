@@ -24,10 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
+
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -37,10 +39,10 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 public class PropertyType extends AbstractSchemaAssociatedSecurableType {
 
     protected final   boolean              multiValued;
-//    protected final   boolean              postgresIndexed;
     protected         EdmPrimitiveTypeKind datatype;
     protected         boolean              piiField;
     protected         Analyzer             analyzer;
+    protected         boolean              postgresIndexed;
     private transient int                  h = 0;
 
     @JsonCreator
@@ -53,7 +55,8 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.DATATYPE_FIELD ) EdmPrimitiveTypeKind datatype,
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
             @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
-            @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer ) {
+            @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer,
+            @JsonProperty( SerializationConstants.INDEXED ) Optional<Boolean> postgresIndexed ) {
         super(
                 id,
                 fqn,
@@ -64,6 +67,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
         this.analyzer = analyzer.orElse( Analyzer.STANDARD );
+        this.postgresIndexed = postgresIndexed.orElse( true );
     }
 
     public PropertyType(
@@ -74,8 +78,18 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             Set<FullQualifiedName> schemas,
             EdmPrimitiveTypeKind datatype,
             Optional<Boolean> piiField,
-            Optional<Analyzer> analyzer ) {
-        this( Optional.of( id ), fqn, title, description, schemas, datatype, piiField, Optional.empty(), analyzer );
+            Optional<Analyzer> analyzer,
+            Optional<Boolean> postgresIndexed ) {
+        this( Optional.of( id ),
+                fqn,
+                title,
+                description,
+                schemas,
+                datatype,
+                piiField,
+                Optional.empty(),
+                analyzer,
+                postgresIndexed );
     }
 
     public PropertyType(
@@ -94,6 +108,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 datatype,
                 piiField,
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -112,6 +127,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 datatype,
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -127,6 +143,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 description,
                 schemas,
                 datatype,
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
@@ -150,6 +167,11 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     @JsonProperty( SerializationConstants.ANALYZER )
     public Analyzer getAnalyzer() {
         return analyzer;
+    }
+
+    @JsonProperty( SerializationConstants.INDEXED )
+    public boolean isPostgresIndexed() {
+        return postgresIndexed;
     }
 
     @JsonIgnore

@@ -57,7 +57,8 @@ public class EnumType extends PropertyType {
             @JsonProperty( SerializationConstants.FLAGS_FIELD ) boolean flags,
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
             @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
-            @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer ) {
+            @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer,
+            @JsonProperty( SerializationConstants.INDEXED ) Optional<Boolean> postgresIndexed ) {
         super(
                 id,
                 fqn,
@@ -67,7 +68,8 @@ public class EnumType extends PropertyType {
                 datatype.orElse( EdmPrimitiveTypeKind.Int32 ),
                 piiField,
                 multiValued,
-                analyzer );
+                analyzer,
+                postgresIndexed );
         Preconditions.checkState( ALLOWED_UNDERLYING_TYPES.contains( this.datatype ),
                 "%s is not one of %s",
                 this.datatype,

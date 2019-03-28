@@ -213,7 +213,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Date,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( Analyzer.STANDARD ) );
+                Optional.of( Analyzer.STANDARD ),
+                Optional.of( r.nextBoolean() ) );
     }
 
     public static PropertyType dateTimePropertyType() {
@@ -225,7 +226,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( Analyzer.STANDARD ) );
+                Optional.of( Analyzer.STANDARD ),
+                Optional.of( r.nextBoolean() ) );
     }
 
     public static PropertyType propertyType() {
@@ -237,7 +239,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                Optional.of( r.nextBoolean() ) );
     }
 
     public static PropertyType binaryPropertyType() {
@@ -249,7 +252,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                Optional.of( r.nextBoolean() ) );
     }
 
     public static Organization organization() {
@@ -428,7 +432,8 @@ public final class TestDataFactory {
                 false,
                 Optional.of( true ),
                 Optional.empty(),
-                Optional.of( Analyzer.METAPHONE ) );
+                Optional.of( Analyzer.METAPHONE ),
+                Optional.of( true ) );
     }
 
     public static PropertyType propertyType( EdmPrimitiveTypeKind type ) {
@@ -442,7 +447,8 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                        Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                        Optional.of( r.nextBoolean() ) );
             default:
                 return new PropertyType(
                         UUID.randomUUID(),
@@ -452,7 +458,8 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.empty() );
+                        Optional.empty(),
+                        Optional.of( r.nextBoolean() ) );
         }
     }
 
