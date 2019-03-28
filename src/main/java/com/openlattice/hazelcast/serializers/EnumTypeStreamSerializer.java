@@ -55,6 +55,7 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
         out.writeBoolean( object.isPIIfield() );
         out.writeBoolean( object.isMultiValued() );
         out.writeInt( object.getAnalyzer().ordinal() );
+        out.writeBoolean( object.isPostgresIndexed() );
     }
 
     @Override
@@ -72,6 +73,8 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );
         Optional<Boolean> multiValued = Optional.of( in.readBoolean() );
         Optional<Analyzer> analyzer = Optional.of( analyzers[ in.readInt() ] );
+        Optional<Boolean> indexed = Optional.of( in.readBoolean() );
+
         return new EnumType( id,
                 type,
                 title,
@@ -82,7 +85,8 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
                 flags,
                 piiField,
                 multiValued,
-                analyzer );
+                analyzer,
+                indexed );
     }
 
     @Override
