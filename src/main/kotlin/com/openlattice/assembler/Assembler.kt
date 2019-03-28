@@ -126,9 +126,6 @@ class Assembler(
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
         createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
-        assemblies.executeOnKey(
-                entitySetCreatedEvent.entitySet.organizationId,
-                CreateProductionForeignTableOfEntitySetProcessor(entitySetCreatedEvent.entitySet.id).init(acm))
     }
 
     @Subscribe
@@ -229,6 +226,9 @@ class Assembler(
                 organizationId,
                 AddMaterializedEntitySetsToOrganizationProcessor(authorizedPropertyTypesByEntitySet.keys))
 
+        // materialize edges with by including all the materialized entity sets in organization
+        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
+
         return getMaterializedEntitySetIdsInOrganization(organizationId).map {
             it to (setOf(OrganizationEntitySetFlag.MATERIALIZED) + getInternalEntitySetFlag(organizationId, it))
         }.toMap()
@@ -244,6 +244,9 @@ class Assembler(
         materializedEntitySets.executeOnKey(
                 EntitySetAssemblyKey(entitySetId, organizationId),
                 SynchronizeMaterializedEntitySetProcessor(authorizedPropertyTypes))
+
+        // materialize edges with by including all the materialized entity sets in organization
+        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
     }
 
     fun refreshMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {

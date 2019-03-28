@@ -36,6 +36,6 @@ class RemoveMaterializedEntitySetsFromOrganizationProcessorStreamSerializerTest
 
     override fun createInput(): RemoveMaterializedEntitySetsFromOrganizationProcessor {
         return RemoveMaterializedEntitySetsFromOrganizationProcessor(
-                (0..Random.nextInt(3)).map { UUID.randomUUID() }.toSet())
+                (0..Random.nextInt(3)).map { UUID.randomUUID() })
     }
 }

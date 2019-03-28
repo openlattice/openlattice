@@ -245,11 +245,20 @@ class AssemblerConnectionManager(
         }
     }
 
+    fun materializeEdges(organizationId: UUID, entitySetIds: Set<UUID>) {
+        materializeAllTimer.time().use {
+            connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
+                materializeEdges(datasource, entitySetIds)
+            }
+        }
+    }
+
     /**
      * The reason we use an "IN" the query for this function is that only entity sets that have been materialized
      * should have their edges materialized.
+     * For every edge materialization we use every entity set, that has been materialized within an organization.
      */
-    private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) { // todo: fix this to append
+    private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
         materializeEdgesTimer.time().use {
             val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
             datasource.connection.use { connection ->
@@ -263,7 +272,7 @@ class AssemblerConnectionManager(
                                     "OR ${DST_ENTITY_SET_ID.name} IN ($clause) " +
                                     "OR ${EDGE_ENTITY_SET_ID.name} IN ($clause) "
                     )
-
+                    // TODO: when roles are ready grant select to member role of org
                     val selectGrantedResults = grantSelectForEdges(stmt, tableName, entitySetIds)
 
                     logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
@@ -283,9 +292,7 @@ class AssemblerConnectionManager(
                 materializeEntitySets(datasource, authorizedPropertyTypesByEntitySet)
             }
             return authorizedPropertyTypesByEntitySet.mapValues {
-                EnumSet.of(
-                        OrganizationEntitySetFlag.MATERIALIZED
-                )
+                EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED)
             }
         }
     }
@@ -299,8 +306,6 @@ class AssemblerConnectionManager(
             createOrUpdateProductionForeignSchemaOfEntitySet(datasource, entitySetId)
             materialize(datasource, entitySetId, authorizedPropertyTypes)
         }
-
-        materializeEdges(datasource, authorizedPropertyTypesByEntitySet.keys)
     }
 
     /**

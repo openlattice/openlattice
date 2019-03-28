@@ -22,6 +22,7 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.ListStreamSerializers
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.processors.RemoveMaterializedEntitySetsFromOrganizationProcessor
@@ -44,6 +45,7 @@ class RemoveMaterializedEntitySetsFromOrganizationProcessorStreamSerializer
     }
 
     override fun read(input: ObjectDataInput): RemoveMaterializedEntitySetsFromOrganizationProcessor {
-        return RemoveMaterializedEntitySetsFromOrganizationProcessor(SetStreamSerializers.fastUUIDSetDeserialize(input))
+        return RemoveMaterializedEntitySetsFromOrganizationProcessor(
+                ListStreamSerializers.fastUUIDListDeserialize(input))
     }
 }

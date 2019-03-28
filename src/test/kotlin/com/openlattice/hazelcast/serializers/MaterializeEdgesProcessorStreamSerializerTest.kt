@@ -23,20 +23,19 @@ package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.CreateProductionForeignTableOfEntitySetProcessor
+import com.openlattice.assembler.processors.MaterializeEdgesProcessor
 import org.mockito.Mockito
-import java.util.UUID
 
-class CreateProductionForeignTableOfEntitySetProcessorStreamSerializerTest : AbstractStreamSerializerTest
-<CreateProductionForeignTableOfEntitySetProcessorStreamSerializer, CreateProductionForeignTableOfEntitySetProcessor>() {
+class MaterializeEdgesProcessorStreamSerializerTest : AbstractStreamSerializerTest
+<MaterializeEdgesProcessorStreamSerializer, MaterializeEdgesProcessor>() {
 
-    override fun createSerializer(): CreateProductionForeignTableOfEntitySetProcessorStreamSerializer {
-        val processorSerializer = CreateProductionForeignTableOfEntitySetProcessorStreamSerializer()
-        processorSerializer.init( Mockito.mock( AssemblerConnectionManager::class.java ) )
+    override fun createSerializer(): MaterializeEdgesProcessorStreamSerializer {
+        val processorSerializer = MaterializeEdgesProcessorStreamSerializer()
+        processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
         return processorSerializer
     }
 
-    override fun createInput(): CreateProductionForeignTableOfEntitySetProcessor {
-        return CreateProductionForeignTableOfEntitySetProcessor(UUID.randomUUID())
+    override fun createInput(): MaterializeEdgesProcessor {
+        return MaterializeEdgesProcessor()
     }
 }
