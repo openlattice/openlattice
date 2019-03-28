@@ -226,7 +226,7 @@ class Assembler(
                 organizationId,
                 AddMaterializedEntitySetsToOrganizationProcessor(authorizedPropertyTypesByEntitySet.keys))
 
-        // materialize edges with by including all the materialized entity sets in organization
+        // materialize edges by including all the materialized entity sets in organization
         assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
 
         return getMaterializedEntitySetIdsInOrganization(organizationId).map {
@@ -241,19 +241,38 @@ class Assembler(
         ensureAssemblyInitialized(organizationId)
         ensureEntitySetIsMaterialized(organizationId, entitySetId)
 
-        materializedEntitySets.executeOnKey(
-                EntitySetAssemblyKey(entitySetId, organizationId),
-                SynchronizeMaterializedEntitySetProcessor(authorizedPropertyTypes))
+        // check if it's not already in sync
+        if (materializedEntitySets[EntitySetAssemblyKey(entitySetId, organizationId)]!!.flags
+                        .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)) {
+            logger.info("Synchronizing materialized entity set $entitySetId")
 
-        // materialize edges with by including all the materialized entity sets in organization
-        assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
+            materializedEntitySets.executeOnKey(
+                    EntitySetAssemblyKey(entitySetId, organizationId),
+                    SynchronizeMaterializedEntitySetProcessor(authorizedPropertyTypes))
+
+            // materialize edges with by including all the materialized entity sets in organization
+            assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
+        }
     }
 
     fun refreshMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {
-        // todo
+        ensureAssemblyInitialized(organizationId)
+        ensureEntitySetIsMaterialized(organizationId, entitySetId)
+
+        val entitySetAssemblyKey = materializedEntitySets[EntitySetAssemblyKey(entitySetId, organizationId)]!!
+
+        // Only allow refresh if edm is in sync and data is not already refreshed
+        if(!entitySetAssemblyKey.flags.contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+                && entitySetAssemblyKey.flags.contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)) {
+            logger.info("Refreshing materialized $entitySetId")
+
+            // todo
+
+        }
     }
 
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
+        logger.info("Create or update view of $entitySetId in $PRODUCTION_VIEWS_SCHEMA")
         val entitySet = entitySets.getValue(entitySetId)
         val authorizedPropertyTypes = propertyTypes
                 .getAll(entityTypes.getValue(entitySets.getValue(entitySetId).entityTypeId).properties)

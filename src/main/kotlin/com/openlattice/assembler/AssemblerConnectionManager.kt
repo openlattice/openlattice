@@ -246,10 +246,10 @@ class AssemblerConnectionManager(
     }
 
     fun materializeEdges(organizationId: UUID, entitySetIds: Set<UUID>) {
-        materializeAllTimer.time().use {
-            connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
-                materializeEdges(datasource, entitySetIds)
-            }
+        connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
+            // re-import foreign view edges before creating materialized view
+            updatePublicTables(datasource, setOf(EDGES.name))
+            materializeEdges(datasource, entitySetIds)
         }
     }
 
@@ -260,9 +260,10 @@ class AssemblerConnectionManager(
      */
     private fun materializeEdges(datasource: HikariDataSource, entitySetIds: Set<UUID>) {
         materializeEdgesTimer.time().use {
-            val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
             datasource.connection.use { connection ->
                 connection.createStatement().use { stmt ->
+                    val clause = entitySetIds.joinToString { entitySetId -> "'$entitySetId'" }
+
                     val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
                     stmt.execute("DROP MATERIALIZED VIEW IF EXISTS $tableName")
                     stmt.execute(
@@ -303,7 +304,11 @@ class AssemblerConnectionManager(
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ) {
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
-            createOrUpdateProductionForeignSchemaOfEntitySet(datasource, entitySetId)
+            // re-import materialized view of entity set
+            updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySetId)))
+            // (re)-import property_types and entity_types in case of property type change
+            updatePublicTables(datasource, setOf(ENTITY_TYPES.name, PROPERTY_TYPES.name))
+
             materialize(datasource, entitySetId, authorizedPropertyTypes)
         }
     }
@@ -454,11 +459,12 @@ class AssemblerConnectionManager(
 
     fun dropMaterializedEntitySet(datasource: HikariDataSource, entitySetId: UUID) {
         // we drop materialized view of entity set from organization database, update edges and entity_sets table
+        // update entity_sets and edges
+        updatePublicTables(datasource, setOf(ENTITY_SETS.name, EDGES.name))
+
         datasource.connection.createStatement().use { stmt ->
             stmt.execute(dropProductionViewSchemaSql(entitySetIdTableName(entitySetId)))
-
-            // update entity_sets and edges
-            updatePublicTables(stmt, setOf(ENTITY_SETS.name, EDGES.name))
+            // refresh materialized edges
             stmt.execute(refreshMaterializedEdges())
         }
     }
@@ -641,49 +647,26 @@ class AssemblerConnectionManager(
         }
     }
 
-    fun createOrUpdateProductionForeignSchemaOfEntitySet(organizationId: UUID, entitySetId: UUID) {
-        val dbname = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-        connect(dbname).use { datasource ->
-            createOrUpdateProductionForeignSchemaOfEntitySet(datasource, entitySetId)
-        }
-    }
-
-    private fun createOrUpdateProductionForeignSchemaOfEntitySet(dataSource: HikariDataSource, entitySetId: UUID) {
-        dataSource.connection.use { conn ->
-            // check if table exists and import if not
-            conn.createStatement().use { stmt ->
-                // re-import materialized view of entity set
-                updateProductionViewTables(stmt, setOf(entitySetIdTableName(entitySetId)))
-                // (re)-import public tables
-                updatePublicTables(stmt, PUBLIC_TABLES)
+    private fun updatePublicTables(datasource: HikariDataSource, tables: Set<String>) {
+        datasource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                tables.forEach {
+                    stmt.execute(dropProductionViewSchemaSql(it))
+                }
+                stmt.execute(importPublicSchemaSql(tables))
             }
         }
     }
 
-    private fun checkIfTableExists(connection: Connection, table: String): Boolean {
-        val stmt = connection
-                .prepareStatement("SELECT EXISTS " +
-                        "(SELECT 1 FROM ( SELECT to_regclass(?) AS name) AS foo WHERE foo.name IS NOT NULL)")
-        stmt.setObject(1, table)
-
-        val rs = stmt.executeQuery()
-        rs.next()
-        return ResultSetAdapters.exists(rs)
-    }
-
-
-    private fun updatePublicTables(stmt: Statement, tables: Set<String>) {
-        tables.forEach {
-            stmt.execute(dropProductionViewSchemaSql(it))
+    private fun updateProductionViewTables(datasource: HikariDataSource, tables: Set<String>) {
+        datasource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                tables.forEach {
+                    stmt.execute(dropProductionViewSchemaSql(it))
+                }
+                stmt.execute(importProductionViewsSchemaSql(tables))
+            }
         }
-        stmt.execute(importPublicSchemaSql(tables))
-    }
-
-    private fun updateProductionViewTables(stmt: Statement, tables: Set<String>) {
-        tables.forEach {
-            stmt.execute(dropProductionViewSchemaSql(it))
-        }
-        stmt.execute(importProductionViewsSchemaSql(tables))
     }
 
     private fun dropProductionViewSchemaSql(table: String): String {
