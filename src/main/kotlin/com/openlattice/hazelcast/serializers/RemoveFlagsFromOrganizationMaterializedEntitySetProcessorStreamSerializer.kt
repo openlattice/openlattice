@@ -23,38 +23,41 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.edm.set.EntitySetFlag
+import com.openlattice.assembler.processors.RemoveFlagsFromOrganizationMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.hazelcast.processors.RemoveFlagsFromMaterializedEntitySetProcessor
 import com.openlattice.organization.OrganizationEntitySetFlag
 import org.springframework.stereotype.Component
 
 @Component
-class RemoveFlagsFromMaterializedEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<RemoveFlagsFromMaterializedEntitySetProcessor> {
+class RemoveFlagsFromOrganizationMaterializedEntitySetProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<RemoveFlagsFromOrganizationMaterializedEntitySetProcessor> {
     private val entitySetFlags = OrganizationEntitySetFlag.values()
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.REMOVE_FLAGS_FROM_ENTITY_SET_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out RemoveFlagsFromMaterializedEntitySetProcessor> {
-        return RemoveFlagsFromMaterializedEntitySetProcessor::class.java
+    override fun getClazz(): Class<out RemoveFlagsFromOrganizationMaterializedEntitySetProcessor> {
+        return RemoveFlagsFromOrganizationMaterializedEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: RemoveFlagsFromMaterializedEntitySetProcessor) {
+    override fun write(out: ObjectDataOutput, obj: RemoveFlagsFromOrganizationMaterializedEntitySetProcessor) {
+        UUIDStreamSerializer.serialize(out, obj.entitySetId)
+
         out.writeInt(obj.flags.size)
         for (flag in obj.flags) {
             out.writeInt(flag.ordinal)
         }
     }
 
-    override fun read(input: ObjectDataInput): RemoveFlagsFromMaterializedEntitySetProcessor {
+    override fun read(input: ObjectDataInput): RemoveFlagsFromOrganizationMaterializedEntitySetProcessor {
+        val entitySetId = UUIDStreamSerializer.deserialize(input)
+
         val size = input.readInt()
-        val set = mutableSetOf<OrganizationEntitySetFlag>()
+        val flags = mutableSetOf<OrganizationEntitySetFlag>()
         for (i in 0 until size) {
-            set.add(entitySetFlags[input.readInt()])
+            flags.add(entitySetFlags[input.readInt()])
         }
-        return RemoveFlagsFromMaterializedEntitySetProcessor(set)
+        return RemoveFlagsFromOrganizationMaterializedEntitySetProcessor(entitySetId, flags)
     }
 }

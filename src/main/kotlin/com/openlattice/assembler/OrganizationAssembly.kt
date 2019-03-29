@@ -32,4 +32,4 @@ data class OrganizationAssembly(
         val organizationId: UUID,
         val dbname: String,
         var initialized : Boolean = false,
-        val materializedEntitySets: MutableMap<UUID, Set<OrganizationEntitySetFlag>> = mutableMapOf())
+        val materializedEntitySets: MutableMap<UUID, MutableSet<OrganizationEntitySetFlag>> = mutableMapOf())

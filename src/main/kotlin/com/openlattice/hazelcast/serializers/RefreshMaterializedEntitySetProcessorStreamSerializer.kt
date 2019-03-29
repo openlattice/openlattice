@@ -23,37 +23,31 @@ package com.openlattice.hazelcast.serializers
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.assembler.processors.AddFlagsToMaterializedEntitySetProcessor
+import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.processors.RefreshMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
-import com.openlattice.organization.OrganizationEntitySetFlag
 import org.springframework.stereotype.Component
 
 @Component
-class AddFlagsToMaterializedEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<AddFlagsToMaterializedEntitySetProcessor> {
-    private val entitySetFlags = OrganizationEntitySetFlag.values()
+class RefreshMaterializedEntitySetProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<RefreshMaterializedEntitySetProcessor>, AssemblerConnectionManagerDependent {
+    private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.ADD_FLAGS_TO_ENTITY_SET_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.REFRESH_MATERIALIZED_ENTITY_SET_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out AddFlagsToMaterializedEntitySetProcessor> {
-        return AddFlagsToMaterializedEntitySetProcessor::class.java
+    override fun getClazz(): Class<out RefreshMaterializedEntitySetProcessor> {
+        return RefreshMaterializedEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: AddFlagsToMaterializedEntitySetProcessor) {
-        out.writeInt(obj.flags.size)
-        for (flag in obj.flags) {
-            out.writeInt(flag.ordinal)
-        }
+    override fun write(out: ObjectDataOutput, obj: RefreshMaterializedEntitySetProcessor) {}
+
+    override fun read(input: ObjectDataInput): RefreshMaterializedEntitySetProcessor {
+        return RefreshMaterializedEntitySetProcessor().init(acm)
     }
 
-    override fun read(input: ObjectDataInput): AddFlagsToMaterializedEntitySetProcessor {
-        val size = input.readInt()
-        val set = mutableSetOf<OrganizationEntitySetFlag>()
-        for (i in 0 until size) {
-            set.add(entitySetFlags[input.readInt()])
-        }
-        return AddFlagsToMaterializedEntitySetProcessor(set)
+    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
+        this.acm = assemblerConnectionManager
     }
 }

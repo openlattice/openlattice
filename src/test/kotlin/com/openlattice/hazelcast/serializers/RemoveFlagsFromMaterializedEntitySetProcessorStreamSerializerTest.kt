@@ -21,20 +21,22 @@
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
-import com.openlattice.hazelcast.processors.RemoveFlagsFromMaterializedEntitySetProcessor
+import com.openlattice.assembler.processors.RemoveFlagsFromOrganizationMaterializedEntitySetProcessor
 import com.openlattice.organization.OrganizationEntitySetFlag
+import java.util.*
 import kotlin.random.Random
 
 class RemoveFlagsFromMaterializedEntitySetProcessorStreamSerializerTest
-    : AbstractStreamSerializerTest<RemoveFlagsFromMaterializedEntitySetProcessorStreamSerializer,
-        RemoveFlagsFromMaterializedEntitySetProcessor>() {
-    override fun createSerializer(): RemoveFlagsFromMaterializedEntitySetProcessorStreamSerializer {
-        return RemoveFlagsFromMaterializedEntitySetProcessorStreamSerializer()
+    : AbstractStreamSerializerTest<RemoveFlagsFromOrganizationMaterializedEntitySetProcessorStreamSerializer,
+        RemoveFlagsFromOrganizationMaterializedEntitySetProcessor>() {
+    override fun createSerializer(): RemoveFlagsFromOrganizationMaterializedEntitySetProcessorStreamSerializer {
+        return RemoveFlagsFromOrganizationMaterializedEntitySetProcessorStreamSerializer()
     }
 
-    override fun createInput(): RemoveFlagsFromMaterializedEntitySetProcessor {
+    override fun createInput(): RemoveFlagsFromOrganizationMaterializedEntitySetProcessor {
         val entitySetFlags = OrganizationEntitySetFlag.values()
-        return RemoveFlagsFromMaterializedEntitySetProcessor(
+        return RemoveFlagsFromOrganizationMaterializedEntitySetProcessor(
+                UUID.randomUUID(),
                 setOf(
                         entitySetFlags[Random.nextInt(entitySetFlags.size)],
                         entitySetFlags[Random.nextInt(entitySetFlags.size)]))

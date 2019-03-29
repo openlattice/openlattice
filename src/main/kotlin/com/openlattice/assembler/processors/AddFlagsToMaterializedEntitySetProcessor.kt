@@ -18,21 +18,21 @@
  *
  *
  */
-
-package com.openlattice.hazelcast.processors
+package com.openlattice.assembler.processors
 
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.organization.OrganizationEntitySetFlag
-import java.util.UUID
 
-data class RemoveFlagsFromMaterializedEntitySetProcessor(val flags: Set<OrganizationEntitySetFlag>)
-    : AbstractRhizomeEntryProcessor<UUID, MaterializedEntitySet, MaterializedEntitySet>() {
+data class AddFlagsToMaterializedEntitySetProcessor(val flags: Set<OrganizationEntitySetFlag>)
+    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, MaterializedEntitySet>() {
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, MaterializedEntitySet>?): MaterializedEntitySet {
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet>?)
+            : MaterializedEntitySet {
         val materializedEntitySet = entry!!.value
-        val flagsHaveBeenRemoved = materializedEntitySet.flags.removeAll(flags)
-        if (flagsHaveBeenRemoved) {
+        val flagsHaveBeenAdded = materializedEntitySet.flags.addAll(flags)
+        if (flagsHaveBeenAdded) {
             entry.setValue(materializedEntitySet)
         }
 

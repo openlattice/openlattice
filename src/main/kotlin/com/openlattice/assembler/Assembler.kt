@@ -31,18 +31,22 @@ import com.hazelcast.query.Predicates
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.processors.*
 import com.openlattice.assembler.tasks.UsersAndRolesInitializationTask
-import com.openlattice.authorization.*
+import com.openlattice.authorization.AclKey
+import com.openlattice.authorization.DbCredentialService
+import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.events.*
+import com.openlattice.edm.events.EntitySetCreatedEvent
+import com.openlattice.edm.events.EntitySetDeletedEvent
+import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
-import com.openlattice.hazelcast.processors.AddFlagsToMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.serializers.AssemblerConnectionManagerDependent
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -52,7 +56,7 @@ import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
-import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.*
+import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask
@@ -250,7 +254,14 @@ class Assembler(
                     EntitySetAssemblyKey(entitySetId, organizationId),
                     SynchronizeMaterializedEntitySetProcessor(authorizedPropertyTypes))
 
-            // materialize edges with by including all the materialized entity sets in organization
+            // remove flag also from organization entity sets
+            assemblies.executeOnKey(organizationId,
+                    RemoveFlagsFromOrganizationMaterializedEntitySetProcessor(
+                            entitySetId,
+                            EnumSet.of(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED,
+                                    OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)))
+
+            // re-materialize edges with by including all the materialized entity sets in organization
             assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
         }
     }
@@ -259,15 +270,21 @@ class Assembler(
         ensureAssemblyInitialized(organizationId)
         ensureEntitySetIsMaterialized(organizationId, entitySetId)
 
-        val entitySetAssemblyKey = materializedEntitySets[EntitySetAssemblyKey(entitySetId, organizationId)]!!
+        val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
 
         // Only allow refresh if edm is in sync and data is not already refreshed
-        if (!entitySetAssemblyKey.flags.contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
-                && entitySetAssemblyKey.flags.contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)) {
-            logger.info("Refreshing materialized $entitySetId")
+        if (!materializedEntitySets[entitySetAssemblyKey]!!.flags.contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+                && materializedEntitySets[entitySetAssemblyKey]!!.flags.contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)) {
+            logger.info("Refreshing materialized entity set $entitySetId")
 
-            // todo
+            materializedEntitySets.executeOnKey(entitySetAssemblyKey, RefreshMaterializedEntitySetProcessor())
+            // remove flag also from organization entity sets
+            assemblies.executeOnKey(organizationId,
+                    RemoveFlagsFromOrganizationMaterializedEntitySetProcessor(
+                            entitySetId, EnumSet.of(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)))
 
+            // re-materialize edges (with possible new edges)
+            assemblies.executeOnKey(organizationId, MaterializeEdgesProcessor())
         }
     }
 

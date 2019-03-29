@@ -22,7 +22,7 @@
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
-import com.openlattice.hazelcast.processors.AddFlagsToMaterializedEntitySetProcessor
+import com.openlattice.assembler.processors.AddFlagsToMaterializedEntitySetProcessor
 import com.openlattice.organization.OrganizationEntitySetFlag
 import kotlin.random.Random
 

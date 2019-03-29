@@ -327,9 +327,7 @@ class AssemblerConnectionManager(
                     .map { quote(it.type.fullQualifiedNameAsString) } + entityKeyIdColumnsList)
                     .joinToString(",")
 
-            val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${quote(
-                    entitySet.id.toString()
-            )} "
+            val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
 
             val tableName = "$MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
 
@@ -445,6 +443,29 @@ class AssemblerConnectionManager(
         return "GRANT SELECT $onProperties " +
                 "ON $entitySetTableName " +
                 "TO ${DataTables.quote(postgresUserName)}"
+    }
+
+    /**
+     * Synchronize data changes in entity set materialized view in organization database
+     */
+    fun refreshEntitySet(organizationId: UUID, entitySetId: UUID) {
+        connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
+            // re-import materialized view of entity set
+            updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySetId)))
+
+            datasource.connection.createStatement().use { stmt ->
+                val entitySet = entitySets.getValue(entitySetId)
+                stmt.execute(refreshMaterializedEntitySet(entitySet))
+            }
+        }
+    }
+
+    private fun refreshMaterializedEntitySet(entitySet: EntitySet): String {
+        return "REFRESH MATERIALIZED VIEW $MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
+    }
+
+    private fun refreshMaterializedEdges(): String {
+        return "REFRESH MATERIALIZED VIEW $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
     }
 
     /**
@@ -684,10 +705,6 @@ class AssemblerConnectionManager(
     private fun importForeignSchema(from: String, limitTo: Set<String>): String {
         val limitToSql = if (limitTo.isEmpty()) "" else "LIMIT TO ( ${limitTo.joinToString(", ")} )"
         return "IMPORT FOREIGN SCHEMA $from $limitToSql FROM SERVER $PRODUCTION_SERVER INTO $PRODUCTION_FOREIGN_SCHEMA"
-    }
-
-    private fun refreshMaterializedEdges(): String {
-        return "REFRESH MATERIALIZED VIEW $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
     }
 
     private fun entitySetIdTableName(entitySetId: UUID): String {
