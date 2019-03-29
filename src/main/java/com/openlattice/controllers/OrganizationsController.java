@@ -249,7 +249,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
         assembler.synchronizeMaterializedEntitySet(
                 organizationId,
-                authorizedPropertyTypesByEntitySet.keySet().iterator().next(),
+                entitySetId,
                 authorizedPropertyTypesByEntitySet.values().iterator().next());
         return null;
     }
@@ -259,17 +259,15 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Void refreshDataChanges(
             @PathVariable( ID ) UUID organizationId,
             @PathVariable( SET_ID ) UUID entitySetId ) {
-        // check materialization rights on entity set, no need to check properties
-        // changes in materialization right on those are propagated immediately
-        ensureOwner( organizationId );
-        final var organizationPrincipal = organizations.getOrganizationPrincipal( organizationId );
+        // we need authorized property types to re-build materialized view, since the only way to refresh it is
+        // to drop and re-import cascade to organization database
+        final var authorizedPropertyTypesByEntitySet =
+                getAuthorizedPropertiesForMaterialization( organizationId, Set.of( entitySetId ) );
 
-        if ( organizationPrincipal == null ) {
-            throw new ResourceNotFoundException( "Organization does not exist." );
-        }
-        ensureMaterialize( entitySetId, organizationPrincipal );
-
-        assembler.refreshMaterializedEntitySet( organizationId, entitySetId );
+        assembler.refreshMaterializedEntitySet(
+                organizationId,
+                entitySetId,
+                authorizedPropertyTypesByEntitySet.values().iterator().next() );
         return null;
     }
 
