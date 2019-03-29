@@ -26,11 +26,13 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
+import java.util.*
 
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-class RefreshMaterializedEntitySetProcessor
+data class RefreshMaterializedEntitySetProcessor(val authorizedPropertyTypes: Map<UUID, PropertyType>)
     : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
 
     @Transient
@@ -44,7 +46,8 @@ class RefreshMaterializedEntitySetProcessor
             throw IllegalStateException("Encountered null materialized entity set while trying to refresh data in " +
                     "materialized view for entity set $entitySetId in organization $organizationId.")
         } else {
-            acm?.refreshEntitySet(organizationId, entitySetId) ?: throw IllegalStateException(NOT_INITIALIZED)
+            acm?.refreshEntitySet(organizationId, entitySetId, authorizedPropertyTypes)
+                    ?: throw IllegalStateException(NOT_INITIALIZED)
 
             // Clear data unsync flag
             materializedEntitySet.flags.remove(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
@@ -62,13 +65,4 @@ class RefreshMaterializedEntitySetProcessor
         this.acm = acm
         return this
     }
-
-    override fun equals(other: Any?): Boolean {
-        return (other != null && other is RefreshMaterializedEntitySetProcessor)
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
-
 }

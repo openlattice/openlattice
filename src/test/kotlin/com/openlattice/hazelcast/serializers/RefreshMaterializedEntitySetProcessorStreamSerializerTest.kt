@@ -18,16 +18,19 @@
  *
  *
  */
+
 package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.processors.RefreshMaterializedEntitySetProcessor
+import com.openlattice.mapstores.TestDataFactory
 import org.mockito.Mockito
 
 class RefreshMaterializedEntitySetProcessorStreamSerializerTest
     : AbstractStreamSerializerTest<RefreshMaterializedEntitySetProcessorStreamSerializer,
         RefreshMaterializedEntitySetProcessor>() {
+
     override fun createSerializer(): RefreshMaterializedEntitySetProcessorStreamSerializer {
         val processorSerializer = RefreshMaterializedEntitySetProcessorStreamSerializer()
         processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
@@ -35,6 +38,10 @@ class RefreshMaterializedEntitySetProcessorStreamSerializerTest
     }
 
     override fun createInput(): RefreshMaterializedEntitySetProcessor {
-        return RefreshMaterializedEntitySetProcessor()
+        val propertyTypes =
+                listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType())
+                        .map { it.id to it }
+                        .toMap()
+        return RefreshMaterializedEntitySetProcessor(propertyTypes)
     }
 }

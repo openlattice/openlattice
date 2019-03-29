@@ -149,6 +149,9 @@ class Assembler(
                                 organizationId,
                                 RemoveMaterializedEntitySetsFromOrganizationProcessor(entitySetIds))
                     }
+
+            // re-materialize edges
+            assemblies.executeOnKey(entitySetDeletedEvent.entitySetId, MaterializeEdgesProcessor())
         }
         dropProductionViewOfEntitySet(entitySetDeletedEvent.entitySetId)
     }
@@ -266,7 +269,7 @@ class Assembler(
         }
     }
 
-    fun refreshMaterializedEntitySet(organizationId: UUID, entitySetId: UUID) {
+    fun refreshMaterializedEntitySet(organizationId: UUID, entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>) {
         ensureAssemblyInitialized(organizationId)
         ensureEntitySetIsMaterialized(organizationId, entitySetId)
 
@@ -277,7 +280,9 @@ class Assembler(
                 && materializedEntitySets[entitySetAssemblyKey]!!.flags.contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)) {
             logger.info("Refreshing materialized entity set $entitySetId")
 
-            materializedEntitySets.executeOnKey(entitySetAssemblyKey, RefreshMaterializedEntitySetProcessor())
+            materializedEntitySets.executeOnKey(
+                    entitySetAssemblyKey,
+                    RefreshMaterializedEntitySetProcessor(authorizedPropertyTypes))
             // remove flag also from organization entity sets
             assemblies.executeOnKey(organizationId,
                     RemoveFlagsFromOrganizationMaterializedEntitySetProcessor(

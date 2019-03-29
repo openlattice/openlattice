@@ -41,10 +41,22 @@ class RefreshMaterializedEntitySetProcessorStreamSerializer
         return RefreshMaterializedEntitySetProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: RefreshMaterializedEntitySetProcessor) {}
+    override fun write(out: ObjectDataOutput, obj: RefreshMaterializedEntitySetProcessor) {
+        out.writeInt(obj.authorizedPropertyTypes.size)
+
+        obj.authorizedPropertyTypes.forEach { propertyTypeId, propertyType ->
+            UUIDStreamSerializer.serialize(out, propertyTypeId)
+            PropertyTypeStreamSerializer.serialize(out, propertyType)
+        }
+    }
 
     override fun read(input: ObjectDataInput): RefreshMaterializedEntitySetProcessor {
-        return RefreshMaterializedEntitySetProcessor().init(acm)
+        val size = input.readInt()
+        val authorizedPropertyTypes = ((0 until size).map {
+            UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
+        }.toMap())
+
+        return RefreshMaterializedEntitySetProcessor(authorizedPropertyTypes).init(acm)
     }
 
     override fun init(assemblerConnectionManager: AssemblerConnectionManager) {

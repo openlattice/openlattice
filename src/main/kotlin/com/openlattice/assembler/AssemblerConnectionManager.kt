@@ -448,24 +448,14 @@ class AssemblerConnectionManager(
     /**
      * Synchronize data changes in entity set materialized view in organization database
      */
-    fun refreshEntitySet(organizationId: UUID, entitySetId: UUID) {
+    fun refreshEntitySet(organizationId: UUID, entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>) {
         connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
             // re-import materialized view of entity set
             updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySetId)))
 
-            datasource.connection.createStatement().use { stmt ->
-                val entitySet = entitySets.getValue(entitySetId)
-                stmt.execute(refreshMaterializedEntitySet(entitySet))
-            }
+            // re-materialize entity set
+            materialize(datasource, entitySetId, authorizedPropertyTypes)
         }
-    }
-
-    private fun refreshMaterializedEntitySet(entitySet: EntitySet): String {
-        return "REFRESH MATERIALIZED VIEW $MATERIALIZED_VIEWS_SCHEMA.${quote(entitySet.name)}"
-    }
-
-    private fun refreshMaterializedEdges(): String {
-        return "REFRESH MATERIALIZED VIEW $MATERIALIZED_VIEWS_SCHEMA.${EDGES.name}"
     }
 
     /**
@@ -480,13 +470,10 @@ class AssemblerConnectionManager(
 
     fun dropMaterializedEntitySet(datasource: HikariDataSource, entitySetId: UUID) {
         // we drop materialized view of entity set from organization database, update edges and entity_sets table
-        // update entity_sets and edges
         updatePublicTables(datasource, setOf(ENTITY_SETS.name, EDGES.name))
 
         datasource.connection.createStatement().use { stmt ->
             stmt.execute(dropProductionViewSchemaSql(entitySetIdTableName(entitySetId)))
-            // refresh materialized edges
-            stmt.execute(refreshMaterializedEdges())
         }
     }
 
