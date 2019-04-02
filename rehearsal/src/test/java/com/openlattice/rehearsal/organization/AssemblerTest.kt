@@ -2,27 +2,21 @@ package com.openlattice.rehearsal.organization
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
-import com.google.common.collect.LinkedHashMultimap
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
-import com.openlattice.edm.set.EntitySetFlag
-import com.openlattice.edm.type.EntityType
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.commons.lang.RandomStringUtils
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
 import java.time.OffsetDateTime
-import java.util.UUID
-import java.util.EnumSet
-import java.util.Optional
+import java.util.*
 
 private const val numberOfEntities = 10
 
@@ -110,9 +104,12 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         // add property type
         val pt = createPropertyType()
-        Assert.assertFalse(edmApi.getEntitySet(es1.id).flags.contains(EntitySetFlag.EDM_UNSYNCHRONIZED))
+
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
         edmApi.addPropertyTypeToEntityType(et.id, pt.id)
-        Assert.assertTrue(edmApi.getEntitySet(es1.id).flags.contains(EntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
 
 
         val es2 = createEntitySet(et)
@@ -122,7 +119,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationsApi.assembleEntitySets(organizationID, setOf(es2.id))
 
         // change property type fqn
-        Assert.assertFalse(edmApi.getEntitySet(es2.id).flags.contains(EntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
         edmApi.updatePropertyTypeMetadata(
                 et.properties.first(),
                 MetadataUpdate(Optional.empty(),
@@ -135,7 +133,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty()))
-        Assert.assertTrue(edmApi.getEntitySet(es2.id).flags.contains(EntitySetFlag.EDM_UNSYNCHRONIZED))
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
     }
 
     private fun grantMaterializePermissions(organization: Organization, entitySet: EntitySet, properties: Set<UUID>) {
