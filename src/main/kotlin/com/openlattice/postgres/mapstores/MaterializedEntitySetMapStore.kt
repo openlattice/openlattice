@@ -35,7 +35,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.util.UUID
+import java.util.*
 import kotlin.random.Random
 
 open class MaterializedEntitySetMapStore(
@@ -114,12 +114,10 @@ open class MaterializedEntitySetMapStore(
 
     override fun generateTestValue(): MaterializedEntitySet {
         val organizationEntitySetFlags = OrganizationEntitySetFlag.values()
-        val flags = if (Random.nextBoolean()) {
-            (0..Random.nextInt(1, organizationEntitySetFlags.size))
-                    .map { organizationEntitySetFlags[it] }
-                    .toMutableSet()
-        } else {
-            mutableSetOf()
+        val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
+        if (Random.nextBoolean()) {
+            (0 until Random.nextInt(2, organizationEntitySetFlags.size))
+                    .forEach { flags.add(organizationEntitySetFlags[it]) }
         }
 
         return MaterializedEntitySet(testKey, flags)

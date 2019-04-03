@@ -21,7 +21,8 @@
 package com.openlattice.assembler
 
 import com.openlattice.organization.OrganizationEntitySetFlag
+import java.util.EnumSet
 
 data class MaterializedEntitySet(
         val assemblyKey: EntitySetAssemblyKey,
-        val flags: MutableSet<OrganizationEntitySetFlag> = mutableSetOf())
+        val flags: EnumSet<OrganizationEntitySetFlag> = EnumSet.noneOf(OrganizationEntitySetFlag::class.java))
