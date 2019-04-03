@@ -18,8 +18,20 @@
  *
  *
  */
-package com.openlattice.assembler
+package com.openlattice.hazelcast.serializers
 
+import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
+import com.openlattice.assembler.EntitySetAssemblyKey
 import java.util.UUID
 
-data class EntitySetAssemblyKey(val entitySetId: UUID, val organizationId: UUID)
+class EntitySetAssemblyKeyStreamSerializerTest
+    : AbstractStreamSerializerTest<EntitySetAssemblyKeyStreamSerializer, EntitySetAssemblyKey>() {
+
+    override fun createSerializer(): EntitySetAssemblyKeyStreamSerializer {
+        return EntitySetAssemblyKeyStreamSerializer()
+    }
+
+    override fun createInput(): EntitySetAssemblyKey {
+        return EntitySetAssemblyKey(UUID.randomUUID(), UUID.randomUUID())
+    }
+}
