@@ -4,13 +4,16 @@ import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
+import com.openlattice.data.UpdateType
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import com.openlattice.rehearsal.data.numberOfEntries
 import org.apache.commons.lang.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -94,33 +97,37 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
     }
 
     @Test
-    fun testEdmUnsyncFlagging() {
+    fun testEdmUnsync() {
         val et = createEntityType()
         val es1 = createEntitySet(et)
-        // add permission to materialize entity set to organization principal
-        grantMaterializePermissions(organization, es1, setOf())
+
         // materialize entity set
+        grantMaterializePermissions(organization, es1, setOf())
         organizationsApi.assembleEntitySets(organizationID, setOf(es1.id))
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
 
         // add property type
         val pt = createPropertyType()
-
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
-                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
         edmApi.addPropertyTypeToEntityType(et.id, pt.id)
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        grantMaterializePermissions(organization, es1, et.properties)
+        organizationsApi.synchronizeEdmChanges(organizationID, es1.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        // todo test if new column is there
 
 
         val es2 = createEntitySet(et)
-        // add permission to materialize entity set to organization principal
-        grantMaterializePermissions(organization, es2, setOf())
         // materialize entity set
+        grantMaterializePermissions(organization, es2, setOf())
         organizationsApi.assembleEntitySets(organizationID, setOf(es2.id))
 
-        // change property type fqn
+
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        // change property type fqn
         edmApi.updatePropertyTypeMetadata(
                 et.properties.first(),
                 MetadataUpdate(Optional.empty(),
@@ -135,8 +142,61 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         Optional.empty()))
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        organizationsApi.synchronizeEdmChanges(organizationID, es1.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+                .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+        // todo test if column has new name
     }
 
+    @Test
+    fun testDataUnsync() {
+        val testEntityCount = 20
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        // materialize entity set with all it's properties
+        grantMaterializePermissions(organization, es, et.properties)
+        organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+
+        // add data
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        val testData = TestDataFactory.randomStringEntityData(testEntityCount, et.properties).values.toList()
+        val ids = dataApi.createEntities(es.id, testData)
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        // refresh
+        organizationsApi.refreshDataChanges(organizationID, es.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        // todo test if data is in org database
+
+
+        // update data
+        val newTestData = TestDataFactory.randomStringEntityData(20, et.properties).values.toList()
+        dataApi.updateEntitiesInEntitySet(es.id, ids.zip(newTestData).toMap(), UpdateType.Replace)
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        // refresh
+        organizationsApi.refreshDataChanges(organizationID, es.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        // todo test if updated data is in org database
+
+        // delete data
+        dataApi.deleteEntities(es.id, ids.subList(0, testEntityCount/2).toSet(), DeleteType.Hard)
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        // refresh
+        organizationsApi.refreshDataChanges(organizationID, es.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        // todo test if data is deleted org database
+    }
+
+    /**
+     * Add permission to materialize entity set and it's properties to organization principal
+     */
     private fun grantMaterializePermissions(organization: Organization, entitySet: EntitySet, properties: Set<UUID>) {
         val newPermissions = EnumSet.of(Permission.MATERIALIZE)
         val entitySetAcl = Acl(AclKey(entitySet.id), setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX)))
