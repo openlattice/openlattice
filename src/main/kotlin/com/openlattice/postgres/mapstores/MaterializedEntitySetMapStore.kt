@@ -29,6 +29,7 @@ import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
@@ -93,10 +94,11 @@ open class MaterializedEntitySetMapStore(
         val result = MapMaker().makeMap<UUID, Set<OrganizationEntitySetFlag>>()
 
         hds.connection.use { connection ->
-            prepareSelectIn( connection ).use { selectIn ->
+            val selectInQuery = table.selectInQuery(listOf(), listOf(ORGANIZATION_ID), 1)
+            connection.prepareStatement(selectInQuery).use { selectIn ->
                 selectIn.setObject(1, organizationId)
                 val results = selectIn.executeQuery()
-                while(results.next()) {
+                while (results.next()) {
                     val materializedEntitySet = mapToValue(results)
                     result[materializedEntitySet.assemblyKey.entitySetId] = materializedEntitySet.flags
                 }
