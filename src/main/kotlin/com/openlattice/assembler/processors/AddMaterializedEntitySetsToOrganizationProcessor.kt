@@ -24,7 +24,7 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.organization.OrganizationEntitySetFlag
 import java.lang.IllegalStateException
-import java.util.UUID
+import java.util.*
 
 data class AddMaterializedEntitySetsToOrganizationProcessor(val entitySetIds: Set<UUID>)
     : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void>() {
@@ -35,7 +35,8 @@ data class AddMaterializedEntitySetsToOrganizationProcessor(val entitySetIds: Se
             throw IllegalStateException("Encountered null assembly while trying to add materialized entity sets to " +
                     "organization ${entry.key}.")
         } else {
-            assembly.materializedEntitySets.putAll(entitySetIds.map { it to mutableSetOf<OrganizationEntitySetFlag>() })
+            assembly.materializedEntitySets.putAll(entitySetIds
+                    .map { it to EnumSet.noneOf(OrganizationEntitySetFlag::class.java) })
             entry.setValue(assembly)
         }
 
