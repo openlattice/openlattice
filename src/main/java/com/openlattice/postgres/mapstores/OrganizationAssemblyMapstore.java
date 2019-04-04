@@ -34,6 +34,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -71,7 +72,7 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         final String dbName = ResultSetAdapters.dbName( rs );
         final boolean initialized = ResultSetAdapters.initialized(rs);
 
-        final Map<UUID, Set<OrganizationEntitySetFlag>> materializedEntitySets =
+        final Map<UUID, EnumSet<OrganizationEntitySetFlag>> materializedEntitySets =
                 materializedEntitySetsMapStore.loadMaterializedEntitySetsForOrganization( organizationId );
 
         return new OrganizationAssembly(organizationId, dbName, initialized, materializedEntitySets);

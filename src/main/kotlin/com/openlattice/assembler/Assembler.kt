@@ -219,11 +219,9 @@ class Assembler(
         // materialize entity sets
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
             // even if we re-materialize, we would clear all flags
-            materializedEntitySets.set(
-                    EntitySetAssemblyKey(entitySetId, organizationId),
-                    MaterializedEntitySet(EntitySetAssemblyKey(entitySetId, organizationId)))
-            materializedEntitySets.executeOnKey(
-                    EntitySetAssemblyKey(entitySetId, organizationId),
+            val materializedEntitySetKey = EntitySetAssemblyKey(entitySetId, organizationId)
+            materializedEntitySets.set(materializedEntitySetKey, MaterializedEntitySet(materializedEntitySetKey))
+            materializedEntitySets.executeOnKey(materializedEntitySetKey,
                     MaterializeEntitySetProcessor(authorizedPropertyTypes).init(acm)
             )
         }

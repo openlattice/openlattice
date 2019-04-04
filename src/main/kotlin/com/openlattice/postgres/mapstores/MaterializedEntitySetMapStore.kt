@@ -90,8 +90,8 @@ open class MaterializedEntitySetMapStore(
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
-    fun loadMaterializedEntitySetsForOrganization(organizationId: UUID): Map<UUID, Set<OrganizationEntitySetFlag>> {
-        val result = MapMaker().makeMap<UUID, Set<OrganizationEntitySetFlag>>()
+    fun loadMaterializedEntitySetsForOrganization(organizationId: UUID): Map<UUID, EnumSet<OrganizationEntitySetFlag>> {
+        val result = MapMaker().makeMap<UUID, EnumSet<OrganizationEntitySetFlag>>()
 
         hds.connection.use { connection ->
             val selectInQuery = table.selectInQuery(listOf(), listOf(ORGANIZATION_ID), 1)

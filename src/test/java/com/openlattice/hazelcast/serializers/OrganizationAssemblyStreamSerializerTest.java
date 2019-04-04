@@ -24,8 +24,11 @@ package com.openlattice.hazelcast.serializers;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.assembler.OrganizationAssembly;
 
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.UUID;
+
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
@@ -42,6 +45,6 @@ public class OrganizationAssemblyStreamSerializerTest
                 UUID.randomUUID(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
                 false,
-                Map.of());
+                Map.of( UUID.randomUUID(), EnumSet.noneOf( OrganizationEntitySetFlag.class ) ) );
     }
 }
