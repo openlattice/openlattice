@@ -40,7 +40,7 @@ public interface DataApi {
 
     String ASSOCIATION           = "association";
 
-    int    MAX_BATCH_SIZE        = 500;
+    int    MAX_BATCH_SIZE        = 10_000;
     String COUNT                 = "count";
     String ENTITY_KEY_ID         = "entityKeyId";
     String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
