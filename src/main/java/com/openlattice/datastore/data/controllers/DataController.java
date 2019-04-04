@@ -670,6 +670,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+
+        if ( entityKeyIds.size() == dgm.getEntitySetSize( entitySetId ) ) {
+            return deleteAllEntitiesFromEntitySet( entitySetId, deleteType );
+        }
+
         WriteEvent writeEvent;
         if ( deleteType == DeleteType.Hard ) {
             // access checks for entity set and properties
