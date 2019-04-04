@@ -671,8 +671,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
 
-        if ( entityKeyIds.size() == dgm.getEntitySetSize( entitySetId ) ) {
-            return deleteAllEntitiesFromEntitySet( entitySetId, deleteType );
+        if ( entityKeyIds.size() > MAX_BATCH_SIZE ) {
+            throw new IllegalArgumentException( "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
         }
 
         WriteEvent writeEvent;
