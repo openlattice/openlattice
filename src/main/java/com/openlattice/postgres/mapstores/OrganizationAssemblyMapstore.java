@@ -36,12 +36,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 
 public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<UUID, OrganizationAssembly> {
     public static final String INITIALIZED_INDEX = "initialized";
+    public static final String MATERIALIZED_ENTITY_SETS_ID_INDEX = "materializedEntitySets.keySet[any]";
     private final       UUID   testKey           = UUID.randomUUID();
 
     private final MaterializedEntitySetMapStore materializedEntitySetsMapStore;
@@ -98,6 +98,7 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         return super
                 .getMapConfig()
                 .addMapIndexConfig( new MapIndexConfig( INITIALIZED_INDEX, false ) )
+                .addMapIndexConfig( new MapIndexConfig( MATERIALIZED_ENTITY_SETS_ID_INDEX, false ) )
                 .setInMemoryFormat( InMemoryFormat.OBJECT );
     }
 }

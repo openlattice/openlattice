@@ -56,6 +56,7 @@ import com.openlattice.organizations.events.MembersRemovedFromOrganizationEvent
 import com.openlattice.organizations.tasks.OrganizationsInitializationTask
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.mapstores.MaterializedEntitySetMapStore
+import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore
 import com.openlattice.postgres.mapstores.OrganizationAssemblyMapstore.INITIALIZED_INDEX
 import com.openlattice.tasks.HazelcastInitializationTask
 import com.openlattice.tasks.HazelcastTaskDependencies
@@ -124,6 +125,9 @@ class Assembler(
             materializedEntitySets.executeOnEntries(
                     AddFlagsToMaterializedEntitySetProcessor(setOf(flag)),
                     entitySetIdPredicate(entitySetId))
+            assemblies.executeOnEntries(
+                    AddFlagsToOrganizationMaterializedEntitySetProcessor(entitySetId, setOf(flag)),
+                    entitySetIdInOrganizationPr4edicate(entitySetId))
         }
     }
 
@@ -366,6 +370,10 @@ class Assembler(
     private fun organizationIdPredicate(entitySetId: UUID): Predicate<EntitySetAssemblyKey, MaterializedEntitySet> {
         return Predicates.equal(MaterializedEntitySetMapStore.ORGANIZATION_ID_INDEX, entitySetId)
                 as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
+    }
+
+    private fun entitySetIdInOrganizationPr4edicate(entitySetId: UUID): Predicate<*,*> {
+        return Predicates.equal(OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX, entitySetId)
     }
 
     /**
