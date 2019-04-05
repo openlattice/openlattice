@@ -2,6 +2,7 @@ package com.openlattice.rehearsal.organization
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
+import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
@@ -12,18 +13,22 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
+import com.openlattice.postgres.*
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import com.openlattice.rehearsal.data.numberOfEntries
 import org.apache.commons.lang.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
+import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.util.*
 
 private const val numberOfEntities = 10
 
 class AssemblerTest : MultipleAuthenticatedUsersBase() {
+
+    private val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
+
     companion object {
         private lateinit var organization: Organization
         private lateinit var organizationID: UUID
@@ -48,8 +53,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             //create organization
             organizationID = organizationsApi.createOrganizationIfNotExists(organization)
         }
-
     }
+
 
     @Test
     fun testCreateMaterializedViews() {
@@ -112,29 +117,37 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         edmApi.addPropertyTypeToEntityType(et.id, pt.id)
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
-        grantMaterializePermissions(organization, es1, et.properties)
+        grantMaterializePermissions(organization, es1, setOf(pt.id))
         organizationsApi.synchronizeEdmChanges(organizationID, es1.id)
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
-        // todo test if new column is there
+        // check if new column is there
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1))
+                Assert.assertTrue(rs.metaData.getColumnName(1) == pt.type.fullQualifiedNameAsString)
+            }
+        }
 
 
         val es2 = createEntitySet(et)
         // materialize entity set
-        grantMaterializePermissions(organization, es2, setOf())
+        grantMaterializePermissions(organization, es2, et.properties)
         organizationsApi.assembleEntitySets(organizationID, setOf(es2.id))
 
 
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
         // change property type fqn
+        val propertyToChange = et.properties.first()
+        val newFqn = TestDataFactory.fqn()
         edmApi.updatePropertyTypeMetadata(
-                et.properties.first(),
+                propertyToChange,
                 MetadataUpdate(Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.of(TestDataFactory.fqn()),
+                        Optional.of(newFqn),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -142,38 +155,85 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         Optional.empty()))
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
-        organizationsApi.synchronizeEdmChanges(organizationID, es1.id)
-        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
+        organizationsApi.synchronizeEdmChanges(organizationID, es2.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
-        // todo test if column has new name
+        // check if column has new name
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager
+                        .selectFromEntitySetSql(es2, setOf(edmApi.getPropertyType(propertyToChange))))
+                Assert.assertTrue(rs.metaData.getColumnName(1) == newFqn.fullQualifiedNameAsString)
+            }
+        }
     }
 
     @Test
     fun testDataUnsync() {
-        val testEntityCount = 20
         val et = createEntityType()
         val es = createEntitySet(et)
+        val propertyFqns = edmApi.getPropertyTypesForEntitySet(es.id)
+                .map { it.key to it.value.type.fullQualifiedNameAsString }.toMap()
 
         // materialize entity set with all it's properties
         grantMaterializePermissions(organization, es, et.properties)
         organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+        // data is not supposed to be there, only the columns
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name) {
+                        Assert.assertTrue(propertyFqns.values.contains(columnName))
+                    }
+                }
+                // no data is there yet
+                Assert.assertFalse(rs.next())
+            }
+        }
 
         // add data
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
-        val testData = TestDataFactory.randomStringEntityData(testEntityCount, et.properties).values.toList()
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
         val ids = dataApi.createEntities(es.id, testData)
+        val testDataWithIds = ids.zip(testData).toMap()
+
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
         // refresh
         organizationsApi.refreshDataChanges(organizationID, es.id)
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
-        // todo test if data is in org database
+        // check if data is in org database
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+
+                var index = 0
+                Assert.assertTrue(rs.next())
+                Assert.assertEquals(es.id, ResultSetAdapters.entitySetId(rs))
+                do {
+                    val id = ResultSetAdapters.id(rs)
+                    Assert.assertTrue(ids.contains(id))
+                    propertyFqns.forEach { propertyId, fqn ->
+                        Assert.assertEquals(
+                                testDataWithIds.getValue(id).getValue(propertyId).first(),
+                                getStringResult(rs, fqn))
+                    }
+                    index++
+
+                } while (rs.next())
+                Assert.assertEquals(numberOfEntities, index)
+            }
+        }
 
 
         // update data
-        val newTestData = TestDataFactory.randomStringEntityData(20, et.properties).values.toList()
+        val newTestData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
+        val newTestDataWithIds = ids.zip(newTestData).toMap()
         dataApi.updateEntitiesInEntitySet(es.id, ids.zip(newTestData).toMap(), UpdateType.Replace)
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
@@ -181,17 +241,45 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationsApi.refreshDataChanges(organizationID, es.id)
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
-        // todo test if updated data is in org database
+        // check if data is updated in org database
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
 
-        // delete data
-        dataApi.deleteEntities(es.id, ids.subList(0, testEntityCount/2).toSet(), DeleteType.Hard)
+                var index = 0
+                Assert.assertTrue(rs.next())
+                Assert.assertEquals(es.id, ResultSetAdapters.entitySetId(rs))
+                do {
+                    val id = ResultSetAdapters.id(rs)
+                    Assert.assertTrue(ids.contains(id))
+                    propertyFqns.forEach { propertyId, fqn ->
+                        Assert.assertEquals(
+                                newTestDataWithIds.getValue(id).getValue(propertyId).first(),
+                                getStringResult(rs, fqn))
+                    }
+                    index++
+
+                } while (rs.next())
+                Assert.assertEquals(numberOfEntities, index)
+            }
+        }
+
+        // delete first half of data
+        dataApi.deleteEntities(es.id, ids.toSet(), DeleteType.Hard)
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
         // refresh
         organizationsApi.refreshDataChanges(organizationID, es.id)
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
-        // todo test if data is deleted org database
+        // check if data is deleted in org database
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                // no data is there
+                Assert.assertFalse(rs.next())
+            }
+        }
     }
 
     /**
@@ -209,5 +297,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX)))
             permissionsApi.updateAcl(AclData(propertyTypeAcl, Action.ADD))
         }
+    }
+
+    private fun getStringResult(rs: ResultSet, column: String): String {
+        return PostgresArrays.getTextArray(rs, column).get(0)
     }
 }

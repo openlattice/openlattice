@@ -1,0 +1,74 @@
+/*
+ * Copyright (C) 2019. OpenLattice, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * You can contact the owner of the copyright at support@openlattice.com
+ *
+ *
+ */
+package com.openlattice.rehearsal.organization
+
+import com.openlattice.assembler.AssemblerConfiguration
+import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.pods.AssemblerConfigurationPod
+import com.openlattice.edm.EntitySet
+import com.openlattice.edm.type.PropertyType
+import com.openlattice.postgres.DataTables
+import com.openlattice.rehearsal.application.TestServer
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import java.sql.ResultSet
+import java.util.*
+
+class TestAssemblerConnectionManager {
+
+    companion object {
+        private var assemblerConfiguration: AssemblerConfiguration
+
+        init {
+            val testsServer = TestServer(AssemblerConfigurationPod::class.java)
+            testsServer.sprout("local")
+            assemblerConfiguration = testsServer.context.getBean(AssemblerConfiguration::class.java)
+        }
+
+        @JvmStatic
+        fun connect(organizationId: UUID): HikariDataSource {
+            val dbName = "org_${organizationId.toString().replace("-", "").toLowerCase()}"
+            val config = assemblerConfiguration.server.clone() as Properties
+            config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
+                "${(jdbcUrl as String).removeSuffix(
+                        "/"
+                )}/$dbName" + if (assemblerConfiguration.ssl) {
+                    "?ssl=true"
+                } else {
+                    ""
+                }
+            }
+            return HikariDataSource(HikariConfig(config))
+        }
+
+
+        @JvmStatic
+        fun selectFromEntitySetSql(entitySet: EntitySet, properties: Set<PropertyType> = setOf()): String {
+            val columnsToSelect = if (properties.isEmpty()) {
+                "*"
+            } else {
+                properties.map { it.type.fullQualifiedNameAsString }.joinToString(",") { DataTables.quote(it) }
+            }
+            return "SELECT $columnsToSelect FROM " +
+                    "${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${DataTables.quote(entitySet.name)}"
+        }
+    }
+}
