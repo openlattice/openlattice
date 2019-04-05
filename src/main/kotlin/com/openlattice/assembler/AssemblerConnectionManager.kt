@@ -92,6 +92,14 @@ class AssemblerConnectionManager(
         eventBus.register(this)
     }
 
+    companion object {
+        @JvmStatic val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
+        @JvmStatic val PRODUCTION_FOREIGN_SCHEMA = "prod"
+        @JvmStatic val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
+        @JvmStatic val PUBLIC_SCHEMA = "public"
+        @JvmStatic val PRODUCTION_SERVER = "olprod"
+    }
+
     fun connect(dbname: String): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
         config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
@@ -698,12 +706,6 @@ class AssemblerConnectionManager(
         return DataTables.quote(entitySetId.toString())
     }
 }
-
-const val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
-const val PRODUCTION_FOREIGN_SCHEMA = "prod"
-const val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
-const val PUBLIC_SCHEMA = "public"
-const val PRODUCTION_SERVER = "olprod"
 
 val MEMBER_ORG_DATABASE_PERMISSIONS = setOf("CREATE", "CONNECT", "TEMPORARY", "TEMP")
 val PUBLIC_TABLES = setOf(EDGES.name, PROPERTY_TYPES.name, ENTITY_TYPES.name, ENTITY_SETS.name)

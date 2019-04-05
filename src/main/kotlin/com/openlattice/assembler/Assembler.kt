@@ -296,7 +296,7 @@ class Assembler(
     }
 
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
-        logger.info("Create or update view of $entitySetId in $PRODUCTION_VIEWS_SCHEMA")
+        logger.info("Create or update view of $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
         val entitySet = entitySets.getValue(entitySetId)
         val entitySetIds = if (entitySet.isLinking) entitySet.linkedEntitySets else setOf(entitySetId)
         val authorizedPropertyTypes = propertyTypes
@@ -320,8 +320,8 @@ class Assembler(
         //Drop and recreate the view with the latest schema
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
-                stmt.execute("CREATE OR REPLACE VIEW $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\" AS $sql")
+                stmt.execute("DROP VIEW IF EXISTS ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.\"$entitySetId\"")
+                stmt.execute("CREATE OR REPLACE VIEW ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.\"$entitySetId\" AS $sql")
                 return@use
             }
         }
@@ -330,7 +330,7 @@ class Assembler(
     private fun dropProductionViewOfEntitySet(entitySetId: UUID) {
         hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.execute("DROP VIEW IF EXISTS $PRODUCTION_VIEWS_SCHEMA.\"$entitySetId\"")
+                stmt.execute("DROP VIEW IF EXISTS ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}.\"$entitySetId\"")
             }
         }
     }
