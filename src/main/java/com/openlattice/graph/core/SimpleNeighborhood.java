@@ -20,8 +20,8 @@
 
 package com.openlattice.graph.core;
 
+import com.openlattice.data.DataEdgeKey;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
@@ -33,7 +33,7 @@ import java.util.stream.Stream;
  */
 public class SimpleNeighborhood {
     private final UUID               srcEntityKeyId;
-    private final Map<EdgeKey, Edge> neighborhood;
+    private final Map<DataEdgeKey, Edge> neighborhood;
 
     public SimpleNeighborhood( UUID srcEntityKeyId, Stream<Edge> edges  ) {
         this.srcEntityKeyId = srcEntityKeyId;

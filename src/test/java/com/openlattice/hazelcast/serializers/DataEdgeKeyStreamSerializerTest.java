@@ -20,21 +20,24 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.graph.edge.EdgeKey;
-import com.openlattice.hazelcast.serializers.EdgeKeyStreamSerializer;
+import com.openlattice.data.DataEdgeKey;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.mapstores.TestDataFactory;
-import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EdgeKeyStreamSerializerTest extends AbstractStreamSerializerTest<EdgeKeyStreamSerializer, EdgeKey> {
-    @Override protected EdgeKeyStreamSerializer createSerializer() {
-        return new EdgeKeyStreamSerializer();
+public class DataEdgeKeyStreamSerializerTest extends AbstractStreamSerializerTest<DataEdgeKeyStreamSerializer, DataEdgeKey> {
+    @Override
+    protected DataEdgeKeyStreamSerializer createSerializer() {
+        return new DataEdgeKeyStreamSerializer();
     }
 
-    @Override protected EdgeKey createInput() {
-        return new EdgeKey( TestDataFactory.entityDataKey(),TestDataFactory.entityDataKey(), TestDataFactory.entityDataKey() );
+    @Override
+    protected DataEdgeKey createInput() {
+        return new DataEdgeKey(
+                TestDataFactory.entityDataKey(),
+                TestDataFactory.entityDataKey(),
+                TestDataFactory.entityDataKey() );
     }
 }

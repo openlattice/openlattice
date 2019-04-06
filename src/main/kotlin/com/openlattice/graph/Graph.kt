@@ -38,7 +38,6 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
-import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
@@ -96,7 +95,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     /* Delete  */
 
-    override fun clearEdges(keys: MutableSet<EdgeKey>): Int {
+    override fun clearEdges(keys: MutableSet<DataEdgeKey>): Int {
         val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(CLEAR_SQL)
@@ -148,7 +147,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    override fun deleteEdges(keys: Set<EdgeKey>): WriteEvent {
+    override fun deleteEdges(keys: Set<DataEdgeKey>): WriteEvent {
         val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(deleteEdgesSql(keys))
@@ -183,7 +182,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    private fun deleteEdgesSql(keys: Set<EdgeKey>): String {
+    private fun deleteEdgesSql(keys: Set<DataEdgeKey>): String {
         val sql = "DELETE FROM ${EDGES.name} WHERE " +
                 (keys.joinToString(" OR ") {
                     " ( ${SRC_ENTITY_SET_ID.name} = '${it.src.entitySetId}' AND ${SRC_ENTITY_KEY_ID.name} = '${it.src.entityKeyId}' " +
@@ -197,11 +196,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     /* Select */
 
-    override fun getEdgesAsMap(keys: MutableSet<EdgeKey>?): MutableMap<EdgeKey, Edge> {
+    override fun getEdgesAsMap(keys: MutableSet<DataEdgeKey>?): MutableMap<DataEdgeKey, Edge> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun getEdge(key: EdgeKey): Edge? {
+    override fun getEdge(key: DataEdgeKey): Edge? {
         val iter = getEdges(setOf(key)).iterator()
         return if (iter.hasNext()) {
             iter.next()
@@ -210,7 +209,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    override fun getEdges(keys: Set<EdgeKey>): Stream<Edge> {
+    override fun getEdges(keys: Set<DataEdgeKey>): Stream<Edge> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.getConnection()
@@ -236,7 +235,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     override fun getEntitiesForDestination(
             srcEntitySetIds: List<UUID>, edgeEntitySetIds: List<UUID>, dstEntityKeyIds: Set<UUID>
-    ): PostgresIterable<EdgeKey> {
+    ): PostgresIterable<DataEdgeKey> {
         val query = "SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name}, ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name}, ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} " +
                 "FROM ${EDGES.name} WHERE " +
                 "${SRC_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) AND " +
@@ -256,11 +255,12 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     logger.info(stmt.toString())
                     StatementHolder(connection, stmt, rs)
                 },
-                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+                Function<ResultSet, DataEdgeKey> { ResultSetAdapters.edgeKey(it) }
         )
     }
 
-    override fun getEdgeKeysContainingEntities( entitySetId: UUID, entityKeyIds: Set<UUID> ): PostgresIterable<EdgeKey> {
+    override fun getEdgeKeysContainingEntities( entitySetId: UUID, entityKeyIds: Set<UUID> )
+            : PostgresIterable<DataEdgeKey> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
@@ -274,11 +274,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
-                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+                Function<ResultSet, DataEdgeKey> { ResultSetAdapters.edgeKey(it) }
         )
     }
 
-    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<EdgeKey> {
+    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
@@ -289,11 +289,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
-                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+                Function<ResultSet, DataEdgeKey> { ResultSetAdapters.edgeKey(it) }
         )
     }
 
-    override fun getEdgeKeysContainingEntity(entitySetId: UUID, entityKeyId: UUID): Iterable<EdgeKey> {
+    override fun getEdgeKeysContainingEntity(entitySetId: UUID, entityKeyId: UUID): Iterable<DataEdgeKey> {
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
@@ -305,7 +305,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
-                Function<ResultSet, EdgeKey> { ResultSetAdapters.edgeKey(it) }
+                Function<ResultSet, DataEdgeKey> { ResultSetAdapters.edgeKey(it) }
         )
     }
 
@@ -862,7 +862,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
 }
 
 
-private fun selectEdges(keys: Set<EdgeKey>): String {
+private fun selectEdges(keys: Set<DataEdgeKey>): String {
     return "$SELECT_SQL(" +
             keys
                     .asSequence()

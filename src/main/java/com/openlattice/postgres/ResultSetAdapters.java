@@ -52,13 +52,7 @@ import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.Entity;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDataMetadata;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.PropertyMetadata;
-import com.openlattice.data.PropertyUsageSummary;
-import com.openlattice.data.PropertyValueKey;
+import com.openlattice.data.*;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
@@ -72,7 +66,6 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.graph.query.GraphQueryState;
 import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
@@ -194,21 +187,21 @@ public final class ResultSetAdapters {
     }
 
     public static Edge edge( ResultSet rs ) throws SQLException {
-        EdgeKey key = edgeKey( rs );
+        DataEdgeKey key = edgeKey( rs );
         long version = rs.getLong( VERSION.getName() );
         List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
         return new Edge( key, version, versions );
     }
 
-    public static EdgeKey edgeKey( ResultSet rs ) throws SQLException {
-        UUID srcEntitySetId = (UUID) rs.getObject( "src_entity_set_id" );
-        UUID srcEntityKeyId = (UUID) rs.getObject( "src_entity_key_id" );
-        UUID dstEntitySetId = (UUID) rs.getObject( "dst_entity_set_id" );
-        UUID dstEntityKeyId = (UUID) rs.getObject( "dst_entity_key_id" );
-        UUID edgeEntitySetId = (UUID) rs.getObject( "edge_entity_set_id" );
-        UUID edgeEntityKeyId = (UUID) rs.getObject( "edge_entity_key_id" );
+    public static DataEdgeKey edgeKey( ResultSet rs ) throws SQLException {
+        UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID.getName() );
+        UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID.getName() );
+        UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID.getName() );
+        UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID.getName() );
+        UUID edgeEntitySetId = (UUID) rs.getObject( EDGE_ENTITY_SET_ID.getName() );
+        UUID edgeEntityKeyId = (UUID) rs.getObject( EDGE_ENTITY_KEY_ID.getName() );
 
-        return new EdgeKey( new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
+        return new DataEdgeKey( new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
                 new EntityDataKey( dstEntitySetId, dstEntityKeyId ),
                 new EntityDataKey( edgeEntitySetId, edgeEntityKeyId ) );
     }

@@ -21,7 +21,9 @@
 
 package com.openlattice.data
 
-import com.google.common.collect.*
+import com.google.common.collect.ListMultimap
+import com.google.common.collect.Multimaps
+import com.google.common.collect.SetMultimap
 import com.google.common.eventbus.EventBus
 import com.google.common.util.concurrent.ListenableFuture
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
@@ -32,7 +34,6 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
-import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -143,18 +144,19 @@ open class DataGraphService(
         return graphService.getEdgesAndNeighborsForVertex(entitySetId, entityKeyId)
     }
 
-    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<EdgeKey> {
+    override fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey> {
         return graphService.getEdgeKeysOfEntitySet(entitySetId)
     }
 
-    override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<EdgeKey> {
+    override fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>)
+            : PostgresIterable<DataEdgeKey> {
         return graphService.getEdgeKeysContainingEntities(entitySetId, entityKeyIds)
     }
 
 
     /* Delete */
 
-    private val groupEdges: (List<EdgeKey>) -> Map<UUID, Set<UUID>> = { edges ->
+    private val groupEdges: (List<DataEdgeKey>) -> Map<UUID, Set<UUID>> = { edges ->
         edges.map { it.edge }.groupBy { it.entitySetId }.mapValues { it.value.map { it.entityKeyId }.toSet() }
     }
 
@@ -179,7 +181,7 @@ open class DataGraphService(
 
     override fun clearAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<EdgeKey>,
+            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent> {
         var associationDeleteCount = 0
@@ -258,7 +260,7 @@ open class DataGraphService(
 
     override fun deleteAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<EdgeKey>,
+            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>): List<WriteEvent> {
         var associationDeleteCount = 0
         val writeEvents = ArrayList<WriteEvent>()
