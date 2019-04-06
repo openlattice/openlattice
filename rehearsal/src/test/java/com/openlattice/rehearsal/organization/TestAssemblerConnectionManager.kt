@@ -26,6 +26,7 @@ import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.rehearsal.application.TestServer
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -69,6 +70,11 @@ class TestAssemblerConnectionManager {
             }
             return "SELECT $columnsToSelect FROM " +
                     "${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${DataTables.quote(entitySet.name)}"
+        }
+
+        @JvmStatic
+        fun selectAllEdgesSql(): String {
+            return "SELECT * FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name}"
         }
     }
 }

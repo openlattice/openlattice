@@ -2,7 +2,6 @@ package com.openlattice.rehearsal.organization
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
-import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
@@ -13,7 +12,9 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
-import com.openlattice.postgres.*
+import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn
+import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.commons.lang.RandomStringUtils
 import org.junit.Assert
@@ -125,7 +126,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es1))
-                Assert.assertTrue(rs.metaData.getColumnName(1) == pt.type.fullQualifiedNameAsString)
+                Assert.assertTrue(rs.metaData.getColumnName(3) == pt.type.fullQualifiedNameAsString)
             }
         }
 
@@ -226,6 +227,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     index++
 
                 } while (rs.next())
+
                 Assert.assertEquals(numberOfEntities, index)
             }
         }
@@ -260,6 +262,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     index++
 
                 } while (rs.next())
+
                 Assert.assertEquals(numberOfEntities, index)
             }
         }
@@ -280,6 +283,101 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 Assert.assertFalse(rs.next())
             }
         }
+    }
+
+    @Test
+    fun testMaterializeEdges() {
+        // create entity sets
+        val src = createEntityType()
+        val dst = createEntityType()
+        val edge = createEdgeEntityType()
+
+        val esSrc = createEntitySet(src)
+        val esDst = createEntitySet(dst)
+        val esEdge = createEntitySet(edge)
+
+
+        // grant permissions to materialize
+        grantMaterializePermissions(organization, esSrc, src.properties)
+        grantMaterializePermissions(organization, esEdge, edge.properties)
+
+        // materialize src entity set
+        organizationsApi.assembleEntitySets(organizationID, setOf(esSrc.id))
+
+        // edges should be there but empty
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectAllEdgesSql())
+                Assert.assertFalse(rs.next())
+            }
+        }
+
+
+        // add data and edges
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntities, src.properties)
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntities, dst.properties)
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntities, edge.properties)
+
+        val entitiesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val idsSrc = dataApi.createEntities(esSrc.id, entitiesSrc)
+
+        val entitiesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entitiesDst)
+
+        val entitiesEdge = ImmutableList.copyOf(testDataEdge.values)
+        val idsEdge = dataApi.createEntities(esEdge.id, entitiesEdge)
+
+        val edges = idsSrc.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(esSrc.id, idsSrc[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdge.id, idsEdge[index])
+            )
+        }.toSet()
+        dataApi.createAssociations(edges)
+
+        // re-materialize src entity set
+        organizationsApi.assembleEntitySets(organizationID, setOf(esSrc.id))
+
+        // edges should contain all ids
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectAllEdgesSql())
+
+                var index = 0
+                Assert.assertTrue(rs.next())
+                do {
+                    val edgeKey = ResultSetAdapters.edgeKey(rs)
+                    Assert.assertTrue(edges.contains(edgeKey))
+
+                    index++
+                } while (rs.next())
+
+                Assert.assertEquals(numberOfEntities, index)
+            }
+        }
+
+        // materialize other entity set too
+        organizationsApi.assembleEntitySets(organizationID, setOf(esEdge.id))
+
+        // edges should contain same ids as before
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectAllEdgesSql())
+
+                var index = 0
+                Assert.assertTrue(rs.next())
+                do {
+                    val edgeKey = ResultSetAdapters.edgeKey(rs)
+                    Assert.assertTrue(edges.contains(edgeKey))
+
+                    index++
+                } while (rs.next())
+
+                Assert.assertEquals(numberOfEntities, index)
+            }
+        }
+
     }
 
     /**
