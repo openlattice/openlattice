@@ -48,7 +48,7 @@ public class DataEdgeKeyStreamSerializer implements SelfRegisteringStreamSeriali
     }
 
     @Override public int getTypeId() {
-        return StreamSerializerTypeIds.EDGE_KEY.ordinal();
+        return StreamSerializerTypeIds.DATA_EDGE_KEY.ordinal();
     }
 
     @Override public void destroy() {
