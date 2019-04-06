@@ -2055,9 +2055,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/role"
+                $ref: "#/components/role"
     delete:
       summary: Remove role for an organization
       operationId: deleteRole

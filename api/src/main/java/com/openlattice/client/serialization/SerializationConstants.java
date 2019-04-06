@@ -201,6 +201,7 @@ public final class SerializationConstants {
     public static final String SEARCH_TERM                      = "searchTerm";
     public static final String SECOND                           = "second";
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
+    public static final String SHARDS                           = "shards";
     public static final String SRC                              = "src";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";
     public static final String SRC_ENTITY_KEY_ID                = "srcEntityKeyId";
