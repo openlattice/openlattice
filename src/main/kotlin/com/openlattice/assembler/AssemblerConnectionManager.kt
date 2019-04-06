@@ -331,8 +331,8 @@ class AssemblerConnectionManager(
         materializeEntitySetsTimer.time().use {
             val entitySet = entitySets.getValue(entitySetId)
 
-            val selectColumns = (authorizedPropertyTypes.values
-                    .map { quote(it.type.fullQualifiedNameAsString) } + entityKeyIdColumnsList)
+            val selectColumns = (entityKeyIdColumnsList + authorizedPropertyTypes.values
+                    .map { quote(it.type.fullQualifiedNameAsString) })
                     .joinToString(",")
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
