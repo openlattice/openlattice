@@ -20,12 +20,6 @@
 
 package com.openlattice.datastore.data.controllers;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.WRITE_PERMISSION;
-import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
-
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Preconditions;
@@ -36,19 +30,8 @@ import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.authorization.*;
-import com.openlattice.data.*;
 import com.openlattice.controllers.exceptions.ForbiddenException;
-import com.openlattice.data.DataApi;
-import com.openlattice.data.DataAssociation;
-import com.openlattice.data.DataEdge;
-import com.openlattice.data.DataEdgeKey;
-import com.openlattice.data.DataGraph;
-import com.openlattice.data.DataGraphIds;
-import com.openlattice.data.DataGraphManager;
-import com.openlattice.data.DeleteType;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntitySetData;
-import com.openlattice.data.UpdateType;
+import com.openlattice.data.*;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
@@ -56,22 +39,9 @@ import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.web.mediatypes.CustomMediaType;
-
-import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
@@ -84,17 +54,22 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
+import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.Maps.transformValues;
+import static com.openlattice.authorization.EdmAuthorizationHelper.*;
 
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
@@ -746,7 +721,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     private List<WriteEvent> clearAssociations(UUID entitySetId , Optional<Set<UUID>> entityKeyIds) {
         // collect association entity key ids
-        final PostgresIterable<EdgeKey> associationsEdgeKeys = collectAssociations(entitySetId, entityKeyIds);
+        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations(entitySetId, entityKeyIds);
 
         // access checks
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
@@ -767,7 +742,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     private List<WriteEvent> deleteAssociations(UUID entitySetId, Optional<Set<UUID>> entityKeyIds) {
         // collect association entity key ids
-        final PostgresIterable<EdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds );
+        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = collectAssociations( entitySetId, entityKeyIds );
 
         // access checks
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();
@@ -786,7 +761,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return dgm.deleteAssociationsBatch( entitySetId, associationsEdgeKeys, authorizedPropertyTypes );
     }
 
-    private PostgresIterable<EdgeKey> collectAssociations(
+    private PostgresIterable<DataEdgeKey> collectAssociations(
             UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
         return ( entityKeyIds.isPresent() )
                 ? dgm.getEdgesConnectedToEntities( entitySetId, entityKeyIds.get() )
