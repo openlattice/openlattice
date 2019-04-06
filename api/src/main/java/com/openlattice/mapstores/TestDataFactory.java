@@ -148,7 +148,8 @@ public final class TestDataFactory {
                         .union( k, propertyTypes ) ),
                 propertyTags,
                 Optional.ofNullable( parentId ),
-                Optional.of( entityTypeCategory ) );
+                Optional.of( entityTypeCategory ),
+                Optional.of( RandomUtils.nextInt( 1, 5 ) ) );
     }
 
     public static AssociationType associationType( PropertyType... keys ) {
@@ -476,6 +477,7 @@ public final class TestDataFactory {
                 Stream.concat( Stream.of( key ), Stream.of( propertyTypes ) ).map( PropertyType::getId )
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
                 propertyTags,
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
     }
