@@ -52,7 +52,6 @@ import com.openlattice.organization.Organization;
 import com.openlattice.organizations.events.OrganizationCreatedEvent;
 import com.openlattice.organizations.events.OrganizationDeletedEvent;
 import com.openlattice.organizations.events.OrganizationUpdatedEvent;
-import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
@@ -220,15 +219,18 @@ public class SearchService {
     @Timed
     @Subscribe
     public void deleteLinkedEntities( LinkedEntitiesDeletedEvent event ) {
-        if ( event.getEntitySetIds().size() > 0 ) {
-            UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( event.getEntitySetIds().iterator().next() )
-                    .getId();
+        if ( event.getLinkedEntitySetIds().size() > 0 ) {
+            Map<UUID, UUID> entitySetIdsToEntityTypeIds = dataModelService
+                    .getEntitySetsAsMap( event.getLinkedEntitySetIds() ).values().stream()
+                    .collect( Collectors.toMap( EntitySet::getId, EntitySet::getEntityTypeId ) );
 
-            event.getEntitySetIds().forEach(
-                    entitySetId -> event.getEntityKeyIds()
-                            .stream()
-                            .map( id -> new EntityDataKey( entitySetId, id ) )
-                            .forEach( edk -> elasticsearchApi.deleteEntityData( edk, entityTypeId ) )
+            event.getLinkedEntitySetIds().forEach( entitySetId -> {
+                        UUID entityTypeId = entitySetIdsToEntityTypeIds.get( entitySetId );
+                        event.getEntityKeyIds()
+                                .stream()
+                                .map( id -> new EntityDataKey( entitySetId, id ) )
+                                .forEach( edk -> elasticsearchApi.deleteEntityData( edk, entityTypeId ) );
+                    }
             );
         }
     }
