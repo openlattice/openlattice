@@ -815,9 +815,9 @@ private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?)"
 
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
+        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
+        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ))"
 
 private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${SRC_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${SRC_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) ) OR " +
