@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
+import com.hazelcast.aggregation.Aggregators;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
@@ -112,21 +113,28 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     }
 
     private void ensureAclKeysHaveOtherUserOwners( Set<AclKey> aclKeys, Set<Principal> principals ) {
-        Predicate p = Predicates
-                .and( hasAnyAclKeys( aclKeys ),
-                        hasPrincipalType( PrincipalType.USER ),
-                        hasExactPermissions( EnumSet.of( Permission.OWNER ) ) );
+        Set<Principal> userPrincipals = principals.stream().filter( p -> p.getType().equals( PrincipalType.USER ) )
+                .collect( Collectors.toSet() );
 
-        aces.entrySet( p ).stream().collect( Collectors
-                .groupingBy( entry -> entry.getKey().getAclKey(),
-                        Collectors.mapping( entry -> entry.getKey().getPrincipal(), Collectors.toSet() ) ) )
-                .entrySet().forEach( entry -> {
-            if ( Sets.difference( entry.getValue(), principals ).isEmpty() ) {
-                throw new IllegalArgumentException(
-                        "Unable to remove owner permissions for aclKey " + entry.getKey().toString()
-                                + " as it will be left without an owner of type USER" );
+        if ( userPrincipals.size() > 0 ) {
+
+            Predicate principalsUserOwnerPredicate = Predicates.and( hasAnyAclKeys( aclKeys ),
+                    hasExactPermissions( EnumSet.of( Permission.OWNER ) ),
+                    hasAnyPrincipals( userPrincipals ) );
+
+            Predicate allUserOwnersPredicate = Predicates.and( hasAnyAclKeys( aclKeys ),
+                    hasExactPermissions( EnumSet.of( Permission.OWNER ) ),
+                    hasPrincipalType( PrincipalType.USER ) );
+
+            long principalsUserOwnerPermissionCount = aces
+                    .aggregate( Aggregators.count(), principalsUserOwnerPredicate );
+            long allUserOwnerPermissionCount = aces.aggregate( Aggregators.count(), allUserOwnersPredicate );
+
+            if ( principalsUserOwnerPermissionCount == allUserOwnerPermissionCount ) {
+                throw new IllegalStateException(
+                        "Unable to remove owner permissions as a securable object will be left without an owner of type USER" );
             }
-        } );
+        }
     }
 
     @Override
