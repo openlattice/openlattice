@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.openlattice.postgres.IndexMethod;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -42,7 +43,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     protected         EdmPrimitiveTypeKind datatype;
     protected         boolean              piiField;
     protected         Analyzer             analyzer;
-    protected         boolean              postgresIndexed;
+    protected         IndexMethod          postgresIndexType;
     private transient int                  h = 0;
 
     @JsonCreator
@@ -56,7 +57,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
             @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
             @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer,
-            @JsonProperty( SerializationConstants.INDEXED ) Optional<Boolean> postgresIndexed ) {
+            @JsonProperty( SerializationConstants.INDEXED ) Optional<IndexMethod> postgresIndexType ) {
         super(
                 id,
                 fqn,
@@ -67,7 +68,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
         this.analyzer = analyzer.orElse( Analyzer.STANDARD );
-        this.postgresIndexed = postgresIndexed.orElse( true );
+        this.postgresIndexType = postgresIndexType.orElse( IndexMethod.BTREE );
     }
 
     public PropertyType(
@@ -79,7 +80,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             EdmPrimitiveTypeKind datatype,
             Optional<Boolean> piiField,
             Optional<Analyzer> analyzer,
-            Optional<Boolean> postgresIndexed ) {
+            Optional<IndexMethod> postgresIndexType ) {
         this( Optional.of( id ),
                 fqn,
                 title,
@@ -89,7 +90,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 piiField,
                 Optional.empty(),
                 analyzer,
-                postgresIndexed );
+                postgresIndexType );
     }
 
     public PropertyType(
@@ -170,8 +171,8 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     }
 
     @JsonProperty( SerializationConstants.INDEXED )
-    public boolean isPostgresIndexed() {
-        return postgresIndexed;
+    public IndexMethod getPostgresIndexType() {
+        return postgresIndexType;
     }
 
     @JsonIgnore
