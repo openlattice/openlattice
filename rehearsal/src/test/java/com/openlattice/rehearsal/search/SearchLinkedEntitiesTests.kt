@@ -10,7 +10,6 @@ import com.openlattice.search.requests.DataSearchResult
 import com.openlattice.search.requests.Search
 import com.openlattice.search.requests.SearchConstraints
 import com.openlattice.search.requests.SearchDetails
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -70,7 +69,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val result1 = searchApi.searchEntitySetData(simpleSearchConstraint1)
         Assert.assertTrue(result1.numHits > 0)
         Assert.assertTrue(result1.hits.map {
-            it[FullQualifiedName("nc.PersonGivenName")]
+            it[EdmTestConstants.personGivenNameFqn]
         }.contains(setOf("Beverly")))
 
         val simpleSearchConstraint2 = SearchConstraints
@@ -78,9 +77,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val result2 = searchApi.searchEntitySetData(simpleSearchConstraint2)
 
         Assert.assertTrue(result2.numHits > 0)
-        Assert.assertTrue(result2.hits.flatMap {
-            it[FullQualifiedName("nc.PersonGivenName")]
-        }.contains("Fermin"))
+        Assert.assertTrue(result2.hits.flatMap { it[EdmTestConstants.personGivenNameFqn] }.contains("Fermin"))
 
         edmApi.deleteEntitySet(esLinked.id)
     }
@@ -102,8 +99,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val result1 = searchApi.searchEntitySetData(advancedSearchConstraint1)
 
         Assert.assertTrue(result1.numHits > 0)
-        Assert.assertTrue(result1.hits.map { it[FullQualifiedName("nc.PersonSurName")] }
-                .contains(setOf("Qwe")))
+        Assert.assertTrue(result1.hits.map { it[EdmTestConstants.personSurnameFqn] }.contains(setOf("Qwe")))
 
         val advancedSearchConstraint2 = SearchConstraints.advancedSearchConstraints(
                 arrayOf(esLinked.id),
@@ -113,8 +109,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val result2 = searchApi.searchEntitySetData(advancedSearchConstraint2)
 
         Assert.assertTrue(result2.numHits > 0)
-        Assert.assertTrue(result2.hits.flatMap { it[FullQualifiedName("nc.PersonSurName")] }
-                .contains("Morris"))
+        Assert.assertTrue(result2.hits.flatMap { it[EdmTestConstants.personSurnameFqn] }.contains("Morris"))
 
         edmApi.deleteEntitySet(esLinked.id)
     }
@@ -193,10 +188,8 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val resultsA = searchApi.searchEntitySetData(simpleSearchConstraint)
 
         Assert.assertTrue(resultsAB.numHits > resultsA.numHits)
-        Assert.assertTrue(resultsAB.hits.map { it[FullQualifiedName("nc.PersonSurName")] }
-                .contains(setOf("Qwe")))
-        Assert.assertFalse(resultsA.hits.map { it[FullQualifiedName("nc.PersonSurName")] }
-                .contains(setOf("Qwe")))
+        Assert.assertTrue(resultsAB.hits.map { it[EdmTestConstants.personSurnameFqn] }.contains(setOf("Qwe")))
+        Assert.assertFalse(resultsA.hits.map { it[EdmTestConstants.personSurnameFqn] }.contains(setOf("Qwe")))
 
         //redo import
         importDataSet(importedEntitySets.values.last().first, importedEntitySets.values.last().second)
@@ -224,10 +217,9 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         Thread.sleep(60000L) // wait for indexing
         val resultsAB = searchApi.searchEntitySetData(simpleSearchConstraint)
 
-        Assert.assertTrue(resultsAB.hits.flatMap { it[FullQualifiedName("nc.PersonSurName")] }.toSet()
-                .containsAll(resultsA1.hits.flatMap { it[FullQualifiedName("nc.PersonSurName")] }.toSet()))
-        Assert.assertTrue(resultsAB.hits.flatMap { it[FullQualifiedName("nc.PersonSurName")] }
-                .contains("Qwe"))
+        Assert.assertTrue(resultsAB.hits.flatMap { it[EdmTestConstants.personSurnameFqn] }.toSet()
+                .containsAll(resultsA1.hits.flatMap { it[EdmTestConstants.personSurnameFqn] }.toSet()))
+        Assert.assertTrue(resultsAB.hits.flatMap { it[EdmTestConstants.personSurnameFqn] }.contains("Qwe"))
 
         entitySetsApi.removeEntitySetsFromLinkingEntitySet(esLinked.id, setOf(socratesBId))
         Thread.sleep(60000L) // wait for indexing
@@ -278,9 +270,9 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         // Create
         val testDataProperties = setOf(
-                UUID.fromString("d0935a7e-efd3-4903-b673-0869ef527dea"), // middle name
-                UUID.fromString("e9a0b4dc-5298-47c1-8837-20af172379a5"), // given name
-                UUID.fromString("7b038634-a0b4-4ce1-a04f-85d1775937aa")) // surname
+                EdmTestConstants.personMiddleNameId,
+                EdmTestConstants.personGivenNameId,
+                EdmTestConstants.personSurnameId)
         val entityData = testDataProperties.map { it to setOf("test") }.toMap()
         val newAEntityIds = dataApi.createEntities(socratesAId, listOf(entityData))
 
@@ -293,9 +285,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         val result2 = searchApi.searchEntitySetData(simpleSearchConstraint)
         logger.info(result2.hits.toString())
 
-        Assert.assertTrue(result2.hits
-                .map { it[FullQualifiedName("nc.PersonGivenName")] }
-                .any { it.contains("test") })
+        Assert.assertTrue(result2.hits.map { it[EdmTestConstants.personGivenNameFqn] }.any { it.contains("test") })
 
 
         // Update
@@ -315,10 +305,10 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         Assert.assertEquals(result2.numHits, result3.numHits)
         Assert.assertTrue(result3.hits
-                .map { it[FullQualifiedName("nc.PersonGivenName")] }
+                .map { it[EdmTestConstants.personGivenNameFqn] }
                 .any { it.contains("newtest") })
         Assert.assertTrue(result3.hits
-                .map { it[FullQualifiedName("nc.PersonGivenName")] }
+                .map { it[EdmTestConstants.personGivenNameFqn] }
                 .none { it.contains("test") })
 
         // Delete:
@@ -340,15 +330,11 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         if (testDataGotLinked) {
             Assert.assertTrue(result4.hits.any {
-                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest", "newtestt")
+                it[EdmTestConstants.personGivenNameFqn] == setOf("newtest", "newtestt")
             })
         } else {
-            Assert.assertTrue(result4.hits.any {
-                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest")
-            })
-            Assert.assertTrue(result4.hits.any {
-                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtestt")
-            })
+            Assert.assertTrue(result4.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtest") })
+            Assert.assertTrue(result4.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtestt") })
         }
 
         dataApi.deleteEntity(socratesBId, newBEntityIds.first(), DeleteType.Soft) // delete first entity with value newtestt
@@ -363,15 +349,11 @@ class SearchLinkedEntitiesTests : SetupTestData() {
         logger.info(result5.hits.toString())
         if (testDataGotLinked) {
             Assert.assertTrue(result5.hits.any {
-                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest", "newtestt")
+                it[EdmTestConstants.personGivenNameFqn] == setOf("newtest", "newtestt")
             })
         } else {
-            Assert.assertTrue(result5.hits.any {
-                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest")
-            })
-            Assert.assertTrue(result5.hits.any {
-                it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtestt")
-            })
+            Assert.assertTrue(result5.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtest") })
+            Assert.assertTrue(result5.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtestt") })
         }
 
         dataApi.deleteEntity(socratesBId, newBEntityIds.last(), DeleteType.Soft) // delete last entity with value newtestt
@@ -379,12 +361,8 @@ class SearchLinkedEntitiesTests : SetupTestData() {
 
         val result6 = searchApi.searchEntitySetData(simpleSearchConstraint)
         logger.info(result6.hits.toString())
-        Assert.assertTrue(result6.hits.none {
-            it[FullQualifiedName("nc.PersonGivenName")].contains("newtestt")
-        })
-        Assert.assertTrue(result6.hits.any {
-            it[FullQualifiedName("nc.PersonGivenName")] == setOf("newtest")
-        })
+        Assert.assertTrue(result6.hits.none { it[EdmTestConstants.personGivenNameFqn].contains("newtestt") })
+        Assert.assertTrue(result6.hits.any { it[EdmTestConstants.personGivenNameFqn] == setOf("newtest") })
 
         edmApi.deleteEntitySet(esLinked.id)
     }

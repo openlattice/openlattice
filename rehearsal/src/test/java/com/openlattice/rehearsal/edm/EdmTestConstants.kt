@@ -30,9 +30,10 @@ private const val PERSON_NAME = "person"
 
 private const val PERSON_GIVEN_NAME_NAMESPACE = "nc"
 private const val PERSON_GIVEN_NAME_NAME = "PersonGivenName"
-
 private const val PERSON_MIDDLE_NAME_NAMESPACE = "nc"
 private const val PERSON_MIDDLE_NAME_NAME = "PersonMiddleName"
+private const val PERSON_SURNAME_NAMESPACE = "nc"
+private const val PERSON_SURNAME_NAME = "PersonSurName"
 
 class EdmTestConstants : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -42,6 +43,8 @@ class EdmTestConstants : MultipleAuthenticatedUsersBase() {
         val personGivenNameFqn: FullQualifiedName
         val personMiddleNameId: UUID
         val personMiddleNameFqn: FullQualifiedName
+        val personSurnameId: UUID
+        val personSurnameFqn: FullQualifiedName
 
         init {
             loginAs("admin")
@@ -49,9 +52,10 @@ class EdmTestConstants : MultipleAuthenticatedUsersBase() {
 
             personGivenNameId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
             personGivenNameFqn = FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
-
             personMiddleNameId = edmApi.getPropertyTypeId(PERSON_MIDDLE_NAME_NAMESPACE, PERSON_MIDDLE_NAME_NAME)
             personMiddleNameFqn = FullQualifiedName(PERSON_MIDDLE_NAME_NAMESPACE, PERSON_MIDDLE_NAME_NAME)
+            personSurnameId = edmApi.getPropertyTypeId(PERSON_SURNAME_NAMESPACE, PERSON_SURNAME_NAME)
+            personSurnameFqn = FullQualifiedName(PERSON_SURNAME_NAMESPACE, PERSON_SURNAME_NAME)
         }
     }
 
