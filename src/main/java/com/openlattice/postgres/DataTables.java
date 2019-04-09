@@ -125,8 +125,9 @@ public class DataTables {
                 .name( quote( idxPrefix + "_id_idx" ) )
                 .ifNotExists();
 
-        if ( propertyType.isPostgresIndexed() ) {
+        if ( !propertyType.getPostgresIndexType().equals( IndexMethod.NONE ) ) {
             PostgresIndexDefinition valueIndex = new PostgresColumnsIndexDefinition( ptd, valueColumn )
+                    .method( propertyType.getPostgresIndexType() )
                     .name( quote( idxPrefix + "_value_idx" ) )
                     .ifNotExists();
 

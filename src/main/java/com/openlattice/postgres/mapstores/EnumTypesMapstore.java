@@ -44,7 +44,7 @@ public class EnumTypesMapstore extends AbstractBasePostgresMapstore<UUID, EnumTy
         ps.setBoolean( parameterIndex++, value.isPIIfield() );
         ps.setString( parameterIndex++, value.getAnalyzer().name() );
         ps.setBoolean( parameterIndex++, value.isMultiValued() );
-        ps.setBoolean( parameterIndex++, value.isPostgresIndexed() );
+        ps.setString( parameterIndex++, value.getPostgresIndexType().name() );
 
         // UPDATE
         ps.setString( parameterIndex++, fqn.getNamespace() );
@@ -58,7 +58,7 @@ public class EnumTypesMapstore extends AbstractBasePostgresMapstore<UUID, EnumTy
         ps.setBoolean( parameterIndex++, value.isPIIfield() );
         ps.setString( parameterIndex++, value.getAnalyzer().name() );
         ps.setBoolean( parameterIndex++, value.isMultiValued() );
-        ps.setBoolean( parameterIndex++, value.isPostgresIndexed() );
+        ps.setString( parameterIndex++, value.getPostgresIndexType().name() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {

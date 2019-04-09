@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.openlattice.postgres.IndexMethod;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
@@ -42,8 +43,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerializer<PropertyType> {
 
-    private static final EdmPrimitiveTypeKind[] edmTypes  = EdmPrimitiveTypeKind.values();
-    private static final Analyzer[]             analyzers = Analyzer.values();
+    private static final EdmPrimitiveTypeKind[] edmTypes     = EdmPrimitiveTypeKind.values();
+    private static final Analyzer[]             analyzers    = Analyzer.values();
+    private static final IndexMethod[]          indexMethods = IndexMethod.values();
 
     @Override
     public void write( ObjectDataOutput out, PropertyType object ) throws IOException {
@@ -71,7 +73,7 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         out.writeInt( object.getDatatype().ordinal() );
         out.writeBoolean( object.isPIIfield() );
         out.writeInt( object.getAnalyzer().ordinal() );
-        out.writeBoolean( object.isPostgresIndexed() );
+        out.writeInt( object.getPostgresIndexType().ordinal() );
     }
 
     public static PropertyType deserialize( ObjectDataInput in ) throws IOException {
@@ -84,8 +86,8 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         EdmPrimitiveTypeKind datatype = edmTypes[ in.readInt() ];
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );
         Optional<Analyzer> analyzer = Optional.of( analyzers[ in.readInt() ] );
-        Optional<Boolean> postgresIndexed = Optional.of( in.readBoolean() );
-        return new PropertyType( id, type, title, description, schemas, datatype, piiField, analyzer, postgresIndexed );
+        Optional<IndexMethod> indexMethod = Optional.of( indexMethods[ in.readInt() ] );
+        return new PropertyType( id, type, title, description, schemas, datatype, piiField, analyzer, indexMethod );
     }
 
     @Override

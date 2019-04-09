@@ -27,11 +27,14 @@ import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.EnumType;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
+
 import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import com.openlattice.postgres.IndexMethod;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
@@ -39,8 +42,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer<EnumType> {
 
-    private static final EdmPrimitiveTypeKind[] edmTypes  = EdmPrimitiveTypeKind.values();
-    private static final Analyzer[]             analyzers = Analyzer.values();
+    private static final EdmPrimitiveTypeKind[] edmTypes     = EdmPrimitiveTypeKind.values();
+    private static final Analyzer[]             analyzers    = Analyzer.values();
+    private static final IndexMethod[]          indexMethods = IndexMethod.values();
 
     @Override
     public void write( ObjectDataOutput out, EnumType object ) throws IOException {
@@ -55,7 +59,7 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
         out.writeBoolean( object.isPIIfield() );
         out.writeBoolean( object.isMultiValued() );
         out.writeInt( object.getAnalyzer().ordinal() );
-        out.writeBoolean( object.isPostgresIndexed() );
+        out.writeInt( object.getPostgresIndexType().ordinal() );
     }
 
     @Override
@@ -73,7 +77,7 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );
         Optional<Boolean> multiValued = Optional.of( in.readBoolean() );
         Optional<Analyzer> analyzer = Optional.of( analyzers[ in.readInt() ] );
-        Optional<Boolean> indexed = Optional.of( in.readBoolean() );
+        Optional<IndexMethod> indexMethod = Optional.of( indexMethods[ in.readInt() ] );
 
         return new EnumType( id,
                 type,
@@ -86,7 +90,7 @@ public class EnumTypeStreamSerializer implements SelfRegisteringStreamSerializer
                 piiField,
                 multiValued,
                 analyzer,
-                indexed );
+                indexMethod );
     }
 
     @Override
