@@ -36,7 +36,7 @@ interface EntitySetsApi {
         const val BASE = SERVICE + CONTROLLER
 
         const val SET_ID = "setId"
-        const val SET_ID_PATH = "/{ $SET_ID }"
+        const val SET_ID_PATH = "/{$SET_ID}"
 
         const val LINKING = "/linking"
     }
