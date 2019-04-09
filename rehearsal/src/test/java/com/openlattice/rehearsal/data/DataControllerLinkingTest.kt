@@ -21,17 +21,15 @@
 
 package com.openlattice.rehearsal.data
 
-import com.google.common.collect.*
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.SetMultimap
 import com.openlattice.data.DeleteType
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.SetupTestData
-import com.openlattice.rehearsal.edm.PERSON_GIVEN_NAME_NAME
-import com.openlattice.rehearsal.edm.PERSON_GIVEN_NAME_NAMESPACE
-import com.openlattice.rehearsal.edm.PERSON_NAME
-import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
+import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.AfterClass
@@ -69,7 +67,7 @@ class DataControllerLinkingTest : SetupTestData() {
             }
 
             loginAs("admin")
-            personEt = edmApi.getEntityType(edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME))
+            personEt = EdmTestConstants.personEt
         }
 
         @JvmStatic
@@ -94,7 +92,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         val esLinked = createEntitySet(personEt, true, setOf(esId1, esId2))
 
-        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
+        val personGivenNamePropertyId = EdmTestConstants.personGivenNameId
         val givenNames = mapOf(personGivenNamePropertyId to
                 (1..numberOfEntries).map { RandomStringUtils.randomAscii(5) }.toSet())
 
@@ -123,7 +121,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         Assert.assertEquals(
                 givenNames[personGivenNamePropertyId],
-                data.first()[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)]
+                data.first()[EdmTestConstants.personGivenNameFqn]
         )
     }
 
@@ -137,7 +135,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         val esLinked = createEntitySet(personEt, true, setOf(esId1, esId2))
 
-        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
+        val personGivenNamePropertyId = EdmTestConstants.personGivenNameId
         val givenNames = mapOf(personGivenNamePropertyId to
                 (1..numberOfEntries).map { RandomStringUtils.randomAscii(5) }.toSet())
 
@@ -163,14 +161,13 @@ class DataControllerLinkingTest : SetupTestData() {
         val linkingIds = data.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }
         val indexedData = index(data)
 
-        val personGivenNameFqn = FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
         linkingIds.forEach {
             val ess = EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.of(setOf(it)))
             val linkedEntity = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinked.id, ess, FileType.json))
 
             Assert.assertArrayEquals(
-                    arrayOf(indexedData[it]?.get(personGivenNameFqn)),
-                    arrayOf(linkedEntity.first().get(personGivenNameFqn))
+                    arrayOf(indexedData[it]?.get(EdmTestConstants.personGivenNameFqn)),
+                    arrayOf(linkedEntity.first().get(EdmTestConstants.personGivenNameFqn))
             )
         }
     }

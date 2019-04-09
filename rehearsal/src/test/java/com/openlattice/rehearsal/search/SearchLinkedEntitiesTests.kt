@@ -5,8 +5,7 @@ import com.openlattice.data.DeleteType
 import com.openlattice.data.UpdateType
 import com.openlattice.edm.type.EntityType
 import com.openlattice.rehearsal.SetupTestData
-import com.openlattice.rehearsal.edm.PERSON_NAME
-import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
+import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.DataSearchResult
 import com.openlattice.search.requests.Search
 import com.openlattice.search.requests.SearchConstraints
@@ -42,7 +41,7 @@ class SearchLinkedEntitiesTests : SetupTestData() {
             }
 
             loginAs("admin")
-            personEt = edmApi.getEntityType(edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME))
+            personEt = EdmTestConstants.personEt
         }
 
         @JvmStatic
