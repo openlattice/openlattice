@@ -20,7 +20,6 @@
  */
 package com.openlattice.rehearsal.organization
 
-import com.google.common.collect.ImmutableSet
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
@@ -31,6 +30,7 @@ import com.openlattice.data.requests.FileType
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.type.EntityType
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.mapstores.TestDataFactory.fqn
 import com.openlattice.mapstores.TestDataFactory.randomStringEntityData
 import com.openlattice.organization.Organization
@@ -61,7 +61,6 @@ class AssemblerLinkingTest : SetupTestData() {
     companion object {
         private lateinit var organization: Organization
         private lateinit var organizationID: UUID
-        private lateinit var organizationName: String
         private lateinit var personEt: EntityType
 
         // use empty entity sets to be linked
@@ -83,18 +82,7 @@ class AssemblerLinkingTest : SetupTestData() {
             loginAs("admin")
             personEt = EdmTestConstants.personEt
 
-            organizationName = RandomStringUtils.randomAlphanumeric(5)
-            organization = Organization(
-                    Optional.of(UUID.randomUUID()),
-                    Principal(PrincipalType.ORGANIZATION, organizationName),
-                    organizationName,
-                    Optional.of("$organizationName description"),
-                    ImmutableSet.of("tests1@openlattice.com"),
-                    ImmutableSet.of(user1, user2, user3),
-                    ImmutableSet.of(),
-                    ImmutableSet.of(UUID.randomUUID()))
-
-            //create organization
+            organization = TestDataFactory.organization()
             organizationID = organizationsApi.createOrganizationIfNotExists(organization)
         }
 
@@ -218,6 +206,34 @@ class AssemblerLinkingTest : SetupTestData() {
     }
 
     @Test
+    fun testAddAndRemoveLinkedEntitySets() {
+        // clear normal entity sets and create linking entity set
+        val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
+
+        dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
+        dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
+
+        val esLinking = createEntitySet(personEt, true, setOf(esId1))
+
+        // materialize entity set with all it's properties
+        grantMaterializePermissions(organization, esLinking, personEt.properties)
+        organizationsApi.assembleEntitySets(organizationID, setOf(esLinking.id))
+
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+
+
+        // add entity set to linking entity set
+        entitySetsApi.addEntitySetsToLinkingEntitySet(esLinking.id, setOf(esId2))
+
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+
+        // todo finish this once we change materialization of entity sets LATTICE-1929
+    }
+
+    @Test
     fun testDataUnsync() {
         // clear normal entity sets and create linking entity set
         val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
@@ -235,6 +251,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
+                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
                 // all columns are there
                 (1..rs.metaData.columnCount).forEach {
@@ -281,6 +298,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
+                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
 
                 var index = 0
@@ -334,6 +352,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is updated in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
+                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
 
                 var index = 0
@@ -374,6 +393,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is deleted in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
+                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
                 // no data is there
                 Assert.assertFalse(rs.next())
@@ -403,6 +423,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // edges should be there but empty
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
+                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 Assert.assertFalse(rs.next())
             }
@@ -440,6 +461,7 @@ class AssemblerLinkingTest : SetupTestData() {
         // edges should be still empty, since we materialize only the linking entity set
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
+                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 Assert.assertFalse(rs.next())
             }

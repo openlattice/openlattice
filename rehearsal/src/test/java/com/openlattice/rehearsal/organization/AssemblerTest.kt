@@ -1,7 +1,6 @@
 package com.openlattice.rehearsal.organization
 
 import com.google.common.collect.ImmutableList
-import com.google.common.collect.ImmutableSet
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
@@ -16,7 +15,6 @@ import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import org.apache.commons.lang.RandomStringUtils
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -33,25 +31,14 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
     companion object {
         private lateinit var organization: Organization
         private lateinit var organizationID: UUID
-        private lateinit var organizationName: String
 
         @JvmStatic
         @BeforeClass
         fun init() {
             loginAs("admin")
 
-            organizationName = RandomStringUtils.randomAlphanumeric(5)
-            organization = Organization(
-                    Optional.of(UUID.randomUUID()),
-                    Principal(PrincipalType.ORGANIZATION, organizationName),
-                    organizationName,
-                    Optional.of("$organizationName description"),
-                    ImmutableSet.of("tests1@openlattice.com"),
-                    ImmutableSet.of(user1, user2, user3),
-                    ImmutableSet.of(),
-                    ImmutableSet.of(UUID.randomUUID()))
-
             //create organization
+            organization = TestDataFactory.organization()
             organizationID = organizationsApi.createOrganizationIfNotExists(organization)
         }
     }
