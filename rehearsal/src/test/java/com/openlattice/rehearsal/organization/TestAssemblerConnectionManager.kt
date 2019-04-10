@@ -26,6 +26,7 @@ import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
+import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.rehearsal.application.TestServer
 import com.zaxxer.hikari.HikariConfig
@@ -61,6 +62,10 @@ class TestAssemblerConnectionManager {
         }
 
 
+        /**
+         * Generates SQL query for selecting properties of materialized entity sets.
+         * If properties are left empty, the query will select all columns.
+         */
         @JvmStatic
         fun selectFromEntitySetSql(entitySet: EntitySet, properties: Set<PropertyType> = setOf()): String {
             val columnsToSelect = if (properties.isEmpty()) {
@@ -72,9 +77,21 @@ class TestAssemblerConnectionManager {
                     "${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${DataTables.quote(entitySet.name)}"
         }
 
+        /**
+         * Generates SQL query for selecting all edges that contain any of the entity set ids provided.
+         * If entitySetIds are left empty, the query will select all rows.
+         */
         @JvmStatic
-        fun selectAllEdgesSql(): String {
-            return "SELECT * FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name}"
+        fun selectEdgesOfEntitySetsSql(entitySetIds: Set<UUID> = setOf()): String {
+            return "SELECT * FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name} " +
+                    if (entitySetIds.isEmpty()) {
+                        ""
+                    } else {
+                        val setIdsClause = entitySetIds.joinToString("','", "('", "')")
+                        "WHERE ${PostgresColumn.SRC_ENTITY_SET_ID.name} IN $setIdsClause " +
+                                "OR ${PostgresColumn.EDGE_ENTITY_SET_ID.name} IN $setIdsClause " +
+                                "OR ${PostgresColumn.DST_ENTITY_SET_ID.name} IN $setIdsClause"
+                    }
         }
     }
 }

@@ -52,9 +52,8 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-private val numberOfEntries = 10
+private const val numberOfEntries = 10
 private val random = Random()
-private val OL_ID_FQN = FullQualifiedName("openlattice", "@id")
 
 class DataControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -93,10 +92,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         Assert.assertEquals(numberOfEntries.toLong(), results1.size.toLong())
         results1.forEach {
-            val id = it[OL_ID_FQN].first()
+            val id = it[DataTables.ID_FQN].first()
             val originalData = entities.getValue(UUID.fromString(id as String))
             it.forEach { fqn, value ->
-                if (fqn != OL_ID_FQN) {
+                if (fqn != DataTables.ID_FQN) {
                     val propertyId = edmApi.getPropertyTypeId(fqn.namespace, fqn.name)
                     Assert.assertEquals(originalData.getValue(propertyId).first(), value)
                 }
@@ -303,7 +302,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     edgesCreatedData[numberOfEntries - index - 1].data.mapValues { it.value.toMutableSet() }.toMutableMap()
             )
             de.asMap()
-                    .filter { it.key.name != OL_ID_FQN.name }
+                    .filter { it.key.name != DataTables.ID_FQN.name }
                     .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
         }
     }
@@ -632,10 +631,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             it[EdmTestConstants.personGivenNameFqn] == entries.first().values
         })
         Assert.assertTrue(loadedEntries1.none {
-            it[OL_ID_FQN].first() == newEntityIds.first().toString()
+            it[DataTables.ID_FQN].first() == newEntityIds.first().toString()
         })
         Assert.assertTrue(loadedEntriesEdge1.none {
-            it[OL_ID_FQN].first() == idsEdge.first().toString()
+            it[DataTables.ID_FQN].first() == idsEdge.first().toString()
         })
 
         // soft delete last entity
@@ -657,10 +656,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             it[EdmTestConstants.personGivenNameFqn] == entries.last().values
         })
         Assert.assertTrue(loadedEntries2.none {
-            it[OL_ID_FQN].last() == newEntityIds.last().toString()
+            it[DataTables.ID_FQN].last() == newEntityIds.last().toString()
         })
         Assert.assertTrue(loadedEntriesEdge2.none {
-            it[OL_ID_FQN].last() == idsEdge.last().toString()
+            it[DataTables.ID_FQN].last() == idsEdge.last().toString()
         })
     }
 

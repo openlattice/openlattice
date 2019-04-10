@@ -236,7 +236,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // update data
         val newTestData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
         val newTestDataWithIds = ids.zip(newTestData).toMap()
-        dataApi.updateEntitiesInEntitySet(es.id, ids.zip(newTestData).toMap(), UpdateType.Replace)
+        dataApi.updateEntitiesInEntitySet(es.id, newTestDataWithIds, UpdateType.Replace)
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
         // refresh
@@ -267,7 +267,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             }
         }
 
-        // delete first half of data
+        // delete data
         dataApi.deleteEntities(es.id, ids.toSet(), DeleteType.Hard)
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
@@ -307,7 +307,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // edges should be there but empty
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectAllEdgesSql())
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 Assert.assertFalse(rs.next())
             }
         }
@@ -342,7 +342,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // edges should contain all ids
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectAllEdgesSql())
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql(setOf(esSrc.id)))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -363,7 +363,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // edges should contain same ids as before
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectAllEdgesSql())
+                val rs = stmt.executeQuery(
+                        TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql(setOf(esSrc.id, esEdge.id)))
 
                 var index = 0
                 Assert.assertTrue(rs.next())
@@ -398,6 +399,6 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
     }
 
     private fun getStringResult(rs: ResultSet, column: String): String {
-        return PostgresArrays.getTextArray(rs, column).get(0)
+        return PostgresArrays.getTextArray(rs, column)[0]
     }
 }
