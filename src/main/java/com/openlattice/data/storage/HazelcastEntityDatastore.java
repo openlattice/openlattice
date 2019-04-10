@@ -341,7 +341,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             UUID entitySetId, Map<UUID, PropertyType> authorizedPropertyTypes ) {
         final var writeEvent = dataQueryService.clearEntitySet( entitySetId, authorizedPropertyTypes );
         signalEntitySetDataDeleted( entitySetId );
-        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 
@@ -545,7 +544,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         logger.info( "Finished deletion data from entity set {}. Deleted {} rows and {} property data",
                 entitySetId, writeEvent.getNumUpdates(), propertyWriteEvent.getNumUpdates() );
         signalEntitySetDataDeleted( entitySetId );
-        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
         return writeEvent;
     }
 
