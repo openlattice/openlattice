@@ -20,7 +20,6 @@
  */
 package com.openlattice.rehearsal.organization
 
-import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableSet
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
@@ -377,6 +376,71 @@ class AssemblerLinkingTest : SetupTestData() {
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
                 // no data is there
+                Assert.assertFalse(rs.next())
+            }
+        }
+    }
+
+    @Test
+    fun testMaterializeEdges() {
+        // clear normal entity sets and create linking entity set
+        val esId = edmApi.getEntitySetId(importedEntitySets.keys.first())
+        dataApi.deleteAllEntitiesFromEntitySet(esId, DeleteType.Hard)
+
+        val esLinking = createEntitySet(personEt, true, setOf(esId))
+
+        // create edge and dst entity sets
+        val dst = createEntityType()
+        val edge = createEdgeEntityType()
+
+        val esDst = createEntitySet(dst)
+        val esEdge = createEntitySet(edge)
+
+        // materialize linking entity set
+        grantMaterializePermissions(organization, esLinking, personEt.properties)
+        organizationsApi.assembleEntitySets(organizationID, setOf(esLinking.id))
+
+        // edges should be there but empty
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
+                Assert.assertFalse(rs.next())
+            }
+        }
+
+        // add data to edges
+        val givenNames = listOf(mapOf(EdmTestConstants.personGivenNameId to
+                (1..numberOfEntities).map { RandomStringUtils.randomAscii(5) }.toSet()))
+        val ids = dataApi.createEntities(esId, givenNames)
+
+        val testDataDst = randomStringEntityData(numberOfEntities, dst.properties).values.toList()
+        val idsDst = dataApi.createEntities(esDst.id, testDataDst)
+
+        val testDataEdge = randomStringEntityData(numberOfEntities, edge.properties).values.toList()
+        val idsEdge = dataApi.createEntities(esEdge.id, testDataEdge)
+
+        val edges = ids.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(esId, ids[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdge.id, idsEdge[index])
+            )
+        }.toSet()
+        dataApi.createAssociations(edges)
+
+        // wait while linking finishes
+        Thread.sleep(5000)
+        while (!checkLinkingFinished(setOf(importedEntitySets.keys.first()))) {
+            Thread.sleep(2000)
+        }
+
+        // re-materialize linking entity set
+        organizationsApi.assembleEntitySets(organizationID, setOf(esLinking.id))
+
+        // edges should be still empty, since we materialize only the linking entity set
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 Assert.assertFalse(rs.next())
             }
         }
