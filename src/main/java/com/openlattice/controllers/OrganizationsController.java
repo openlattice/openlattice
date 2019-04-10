@@ -250,7 +250,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         assembler.synchronizeMaterializedEntitySet(
                 organizationId,
                 entitySetId,
-                authorizedPropertyTypesByEntitySet.values().iterator().next());
+                authorizedPropertyTypesByEntitySet.get( entitySetId ) );
         return null;
     }
 
@@ -267,7 +267,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         assembler.refreshMaterializedEntitySet(
                 organizationId,
                 entitySetId,
-                authorizedPropertyTypesByEntitySet.values().iterator().next() );
+                authorizedPropertyTypesByEntitySet.get( entitySetId ) );
         return null;
     }
 
