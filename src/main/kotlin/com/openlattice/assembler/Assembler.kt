@@ -127,7 +127,7 @@ class Assembler(
                     entitySetIdPredicate(entitySetId))
             assemblies.executeOnEntries(
                     AddFlagsToOrganizationMaterializedEntitySetProcessor(entitySetId, setOf(flag)),
-                    entitySetIdInOrganizationPr4edicate(entitySetId))
+                    entitySetIdInOrganizationPredicate(entitySetId))
         }
     }
 
@@ -372,7 +372,7 @@ class Assembler(
                 as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
     }
 
-    private fun entitySetIdInOrganizationPr4edicate(entitySetId: UUID): Predicate<*,*> {
+    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<*,*> {
         return Predicates.equal(OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX, entitySetId)
     }
 
