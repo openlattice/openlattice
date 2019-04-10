@@ -118,19 +118,14 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
         if ( userPrincipals.size() > 0 ) {
 
-            Predicate principalsUserOwnerPredicate = Predicates.and( hasAnyAclKeys( aclKeys ),
+            Predicate allOtherUserOwnersPredicate = Predicates.and( hasAnyAclKeys( aclKeys ),
                     hasExactPermissions( EnumSet.of( Permission.OWNER ) ),
-                    hasAnyPrincipals( userPrincipals ) );
-
-            Predicate allUserOwnersPredicate = Predicates.and( hasAnyAclKeys( aclKeys ),
-                    hasExactPermissions( EnumSet.of( Permission.OWNER ) ),
+                    Predicates.not( hasAnyPrincipals( userPrincipals ) ),
                     hasPrincipalType( PrincipalType.USER ) );
 
-            long principalsUserOwnerPermissionCount = aces
-                    .aggregate( Aggregators.count(), principalsUserOwnerPredicate );
-            long allUserOwnerPermissionCount = aces.aggregate( Aggregators.count(), allUserOwnersPredicate );
+            long allOtherUserOwnersCount = aces.aggregate( Aggregators.count(), allOtherUserOwnersPredicate );
 
-            if ( principalsUserOwnerPermissionCount == allUserOwnerPermissionCount ) {
+            if ( allOtherUserOwnersCount == 0 ) {
                 throw new IllegalStateException(
                         "Unable to remove owner permissions as a securable object will be left without an owner of type USER" );
             }
