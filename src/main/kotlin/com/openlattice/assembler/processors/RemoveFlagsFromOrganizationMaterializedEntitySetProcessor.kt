@@ -37,7 +37,7 @@ data class RemoveFlagsFromOrganizationMaterializedEntitySetProcessor(
     override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
         val assembly = entry.value
         if (assembly == null) {
-            throw IllegalStateException("\"Encountered null assembly while trying to remove flags.")
+            throw IllegalStateException("Encountered null assembly while trying to remove flags.")
         } else {
             assembly.materializedEntitySets[entitySetId]?.removeAll(flags)
                     ?: logger.error("Organization ${entry.key} has no materialized entity set $entitySetId")
