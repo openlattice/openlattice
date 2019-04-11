@@ -8,7 +8,7 @@ import retrofit2.http.Path
 // @formatter:off
 const val SERVICE = "/datastore"
 const val CONTROLLER = "/admin"
-const val BASE = com.openlattice.auditing.SERVICE + CONTROLLER
+const val BASE = SERVICE + CONTROLLER
 // @formatter:on
 
 const val RELOAD_CACHE = "/reload/cache"

@@ -38,8 +38,9 @@ public interface DataApi {
     String BASE                  = SERVICE + CONTROLLER;
     // @formatter:on
 
-    String ASSOCIATION = "association";
+    String ASSOCIATION           = "association";
 
+    int    MAX_BATCH_SIZE        = 10_000;
     String COUNT                 = "count";
     String ENTITY_KEY_ID         = "entityKeyId";
     String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";

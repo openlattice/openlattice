@@ -21,6 +21,7 @@ package com.openlattice.edm.type;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -60,7 +61,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 title,
                 description,
                 schemas );
-        this.datatype = datatype;
+        this.datatype = Preconditions.checkNotNull( datatype, "PropertyType datatype cannot be null" );
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
         this.analyzer = analyzer.orElse( Analyzer.STANDARD );

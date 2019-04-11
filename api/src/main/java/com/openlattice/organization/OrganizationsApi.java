@@ -70,6 +70,11 @@ public interface OrganizationsApi {
     String USER_ID           = "userId";
     String USER_ID_PATH      = "/{" + USER_ID + ":.*}";
 
+    String SYNCHRONIZE       = "/synchronize";
+    String REFRESH           = "/refresh";
+    String SET_ID            = "setId";
+    String SET_ID_PATH       = "/{" + SET_ID + "}";
+
 
     @GET( BASE )
     Iterable<Organization> getOrganizations();
@@ -119,6 +124,24 @@ public interface OrganizationsApi {
     Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @Path( ID ) UUID organizationId,
             @Body Set<UUID> entitySetIds );
+
+    /**
+     * Synchronizes EDM changes to the requested materialized entity set in the organization.
+     *
+     * @param organizationId The id of the organization in which to synchronize the materialized entity set.
+     * @param entitySetId    The id of the entity set to synchronize.
+     */
+    @POST( BASE + ID_PATH + SET_ID_PATH + SYNCHRONIZE )
+    Void synchronizeEdmChanges( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
+
+    /**
+     * Refreshes the requested materialized entity set with data changes in the organization.
+     *
+     * @param organizationId The id of the organization in which to refresh the materialized entity sets data.
+     * @param entitySetId    The id of the entity set to refresh.
+     */
+    @POST( BASE + ID_PATH + SET_ID_PATH + REFRESH )
+    Void refreshDataChanges( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
 
     @PUT( BASE + ID_PATH + TITLE )
     Void updateTitle( @Path( ID ) UUID organziationId, @Body String title );
