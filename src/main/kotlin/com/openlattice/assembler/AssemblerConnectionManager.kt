@@ -481,7 +481,7 @@ class AssemblerConnectionManager(
         updatePublicTables(datasource, setOf(ENTITY_SETS.name, EDGES.name))
 
         datasource.connection.createStatement().use { stmt ->
-            stmt.execute(dropProductionViewSchemaSql(entitySetIdTableName(entitySetId)))
+            stmt.execute(dropProductionForeignSchemaSql(entitySetIdTableName(entitySetId)))
         }
     }
 
@@ -667,7 +667,7 @@ class AssemblerConnectionManager(
         datasource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 tables.forEach {
-                    stmt.execute(dropProductionViewSchemaSql(it))
+                    stmt.execute(dropProductionForeignSchemaSql(it))
                 }
                 stmt.execute(importPublicSchemaSql(tables))
             }
@@ -678,14 +678,14 @@ class AssemblerConnectionManager(
         datasource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 tables.forEach {
-                    stmt.execute(dropProductionViewSchemaSql(it))
+                    stmt.execute(dropProductionForeignSchemaSql(it))
                 }
                 stmt.execute(importProductionViewsSchemaSql(tables))
             }
         }
     }
 
-    private fun dropProductionViewSchemaSql(table: String): String {
+    private fun dropProductionForeignSchemaSql(table: String): String {
         return "DROP FOREIGN TABLE IF EXISTS $PRODUCTION_FOREIGN_SCHEMA.$table CASCADE"
     }
 
