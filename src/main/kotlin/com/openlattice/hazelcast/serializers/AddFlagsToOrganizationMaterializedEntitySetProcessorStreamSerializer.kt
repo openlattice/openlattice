@@ -31,6 +31,8 @@ import org.springframework.stereotype.Component
 @Component
 class AddFlagsToOrganizationMaterializedEntitySetProcessorStreamSerializer
     : SelfRegisteringStreamSerializer<AddFlagsToOrganizationMaterializedEntitySetProcessor> {
+    private val entitySetFlags = OrganizationEntitySetFlag.values()
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.ADD_FLAGS_TO_ORGANIZATION_MATERIALIZED_ENTITY_SET_PROCESSOR.ordinal
     }
@@ -43,8 +45,8 @@ class AddFlagsToOrganizationMaterializedEntitySetProcessorStreamSerializer
         UUIDStreamSerializer.serialize(out, obj.entitySetId)
 
         out.writeInt(obj.flags.size)
-        for (flag in obj.flags) {
-            out.writeInt(flag.ordinal)
+        obj.flags.forEach {
+            out.writeInt(it.ordinal)
         }
     }
 
@@ -54,7 +56,7 @@ class AddFlagsToOrganizationMaterializedEntitySetProcessorStreamSerializer
         val size = input.readInt()
         val flags = LinkedHashSet<OrganizationEntitySetFlag>(size)
         (0 until size).forEach { _ ->
-            flags.add(OrganizationEntitySetFlag.values()[input.readInt()])
+            flags.add(entitySetFlags[input.readInt()])
         }
 
         return AddFlagsToOrganizationMaterializedEntitySetProcessor(entitySetId, flags)

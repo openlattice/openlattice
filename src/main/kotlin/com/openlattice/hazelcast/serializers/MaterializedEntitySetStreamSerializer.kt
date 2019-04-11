@@ -31,6 +31,7 @@ import java.util.EnumSet
 
 @Component
 class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<MaterializedEntitySet> {
+    private val entitySetFlags = OrganizationEntitySetFlag.values()
 
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.MATERIALIZED_ENTITY_SET.ordinal
@@ -44,8 +45,8 @@ class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<Ma
         EntitySetAssemblyKeyStreamSerializer().write(out, obj.assemblyKey)
 
         out.writeInt(obj.flags.size)
-        obj.flags.forEach { flag ->
-            out.writeUTF(flag.toString())
+        obj.flags.forEach {
+            out.writeInt(it.ordinal)
         }
     }
 
@@ -54,7 +55,7 @@ class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<Ma
 
         val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
         (0 until input.readInt()).forEach { _ ->
-            flags.add(OrganizationEntitySetFlag.valueOf(input.readUTF()))
+            flags.add(entitySetFlags[input.readInt()])
         }
 
         return MaterializedEntitySet(key, flags)

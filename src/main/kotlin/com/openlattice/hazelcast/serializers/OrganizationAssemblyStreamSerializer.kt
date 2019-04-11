@@ -36,6 +36,8 @@ import java.util.*
  */
 @Component
 class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<OrganizationAssembly> {
+    private val entitySetFlags = OrganizationEntitySetFlag.values()
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.ORGANIZATION_ASSEMBLY.ordinal
     }
@@ -56,9 +58,10 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
         out.writeInt(obj.materializedEntitySets.size)
         obj.materializedEntitySets.forEach { entitySetId, flags ->
             UUIDStreamSerializer.serialize(out, entitySetId)
+
             out.writeInt(flags.size)
-            flags.forEach { flag ->
-                out.writeUTF(flag.toString())
+            flags.forEach {
+                out.writeInt(it.ordinal)
             }
         }
     }
@@ -71,9 +74,10 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
         val materializedEntitySets = mutableMapOf<UUID, EnumSet<OrganizationEntitySetFlag>>()
         (0 until input.readInt()).forEach { _ ->
             val entitySetId = UUIDStreamSerializer.deserialize(input)
+
             val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
             (0 until input.readInt()).forEach { _ ->
-                flags.add(OrganizationEntitySetFlag.valueOf(input.readUTF()))
+                flags.add(entitySetFlags[input.readInt()])
             }
 
             materializedEntitySets[entitySetId] = flags

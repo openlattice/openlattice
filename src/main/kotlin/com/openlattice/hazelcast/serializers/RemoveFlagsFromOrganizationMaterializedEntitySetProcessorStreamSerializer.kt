@@ -45,8 +45,8 @@ class RemoveFlagsFromOrganizationMaterializedEntitySetProcessorStreamSerializer
         UUIDStreamSerializer.serialize(out, obj.entitySetId)
 
         out.writeInt(obj.flags.size)
-        for (flag in obj.flags) {
-            out.writeInt(flag.ordinal)
+        obj.flags.forEach {
+            out.writeInt(it.ordinal)
         }
     }
 
@@ -54,10 +54,11 @@ class RemoveFlagsFromOrganizationMaterializedEntitySetProcessorStreamSerializer
         val entitySetId = UUIDStreamSerializer.deserialize(input)
 
         val size = input.readInt()
-        val flags = mutableSetOf<OrganizationEntitySetFlag>()
-        for (i in 0 until size) {
+        val flags = LinkedHashSet<OrganizationEntitySetFlag>(size)
+        (0 until size).forEach { _ ->
             flags.add(entitySetFlags[input.readInt()])
         }
+
         return RemoveFlagsFromOrganizationMaterializedEntitySetProcessor(entitySetId, flags)
     }
 }

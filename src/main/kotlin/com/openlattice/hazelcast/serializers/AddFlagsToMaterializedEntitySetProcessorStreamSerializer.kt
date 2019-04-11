@@ -43,17 +43,18 @@ class AddFlagsToMaterializedEntitySetProcessorStreamSerializer
 
     override fun write(out: ObjectDataOutput, obj: AddFlagsToMaterializedEntitySetProcessor) {
         out.writeInt(obj.flags.size)
-        for (flag in obj.flags) {
-            out.writeInt(flag.ordinal)
+        obj.flags.forEach {
+            out.writeInt(it.ordinal)
         }
     }
 
     override fun read(input: ObjectDataInput): AddFlagsToMaterializedEntitySetProcessor {
         val size = input.readInt()
-        val set = mutableSetOf<OrganizationEntitySetFlag>()
-        for (i in 0 until size) {
+        val set = LinkedHashSet<OrganizationEntitySetFlag>(size)
+        (0 until size).forEach { _ ->
             set.add(entitySetFlags[input.readInt()])
         }
+
         return AddFlagsToMaterializedEntitySetProcessor(set)
     }
 }
