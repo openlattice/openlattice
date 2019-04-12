@@ -797,10 +797,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         final Set<UUID> entityKeyIds = filter.getEntityKeyIds();
 
         final Set<UUID> filteringNeighborEntitySetIds = Stream
-                .of(
-                        filter.getSrcEntitySetIds().orElse( Set.of() ),
-                        filter.getAssociationEntitySetIds().orElse( Set.of() ),
-                        filter.getDstEntitySetIds().orElse( Set.of() ) )
+                .of( filter.getSrcEntitySetIds().orElse( Set.of() ), filter.getDstEntitySetIds().orElse( Set.of() ) )
                 .flatMap( Set::stream )
                 .collect( Collectors.toSet() );
 
@@ -839,10 +836,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         Map<UUID, Set<EntityDataKey>> entitySetIdToEntityDataKeysMap = dgm
                 .getEdgesConnectedToEntities( entitySetId, entityKeyIds )
                 .stream()
-                .filter( edge -> filteringNeighborEntitySetIds.contains( edge.getSrc().getEntitySetId() )
-                        || filteringNeighborEntitySetIds.contains( edge.getEdge().getEntitySetId() )
-                        || filteringNeighborEntitySetIds.contains( edge.getDst().getEntitySetId() ) )
-                .flatMap( edge -> Stream.of( edge.getSrc(), edge.getDst(), edge.getEdge() ) )
+                .filter( edge ->
+                        ( edge.getDst().getEntitySetId().equals( entitySetId )
+                                && filteringNeighborEntitySetIds.contains( edge.getSrc().getEntitySetId() ) )
+                                || ( edge.getSrc().getEntitySetId().equals( entitySetId )
+                                && filteringNeighborEntitySetIds.contains( edge.getDst().getEntitySetId() ) ) )
+                .flatMap( edge -> Stream.of( edge.getSrc(), edge.getDst() ) )
                 .collect( Collectors.groupingBy( EntityDataKey::getEntitySetId, Collectors.toSet() ) );
 
         /*
@@ -855,11 +854,13 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         WriteEvent writeEvent;
         if(deleteType == DeleteType.Hard) {
+            deleteAssociations( entitySetId, Optional.of( entityKeyIds ) );
             writeEvent = dgm.deleteEntities(
                     entitySetId,
                     entityKeyIds,
                     authorizedPropertyTypesOfEntitySets.get( entitySetId ) );
         } else {
+            clearAssociations( entitySetId, Optional.of( entityKeyIds ) );
             writeEvent = dgm.clearEntities(
                     entitySetId,
                     entityKeyIds,
@@ -884,34 +885,42 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         List<AuditableEvent> neighborDeleteEvents = Lists.newArrayList();
 
-        for ( Map.Entry<UUID, Set<EntityDataKey>> entry : entitySetIdToEntityDataKeysMap.entrySet() ) {
-            WriteEvent neighborWriteEvent;
-            if(deleteType == DeleteType.Hard) {
-                neighborWriteEvent = dgm.deleteEntities(
-                        entry.getKey(),
-                        entry.getValue().stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
-                        authorizedPropertyTypesOfEntitySets.get( entry.getKey() ) );
-            } else {
-                neighborWriteEvent = dgm.clearEntities(
-                        entry.getKey(),
-                        entry.getValue().stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
-                        authorizedPropertyTypesOfEntitySets.get( entry.getKey() ) );
-            }
+        numUpdates += entitySetIdToEntityDataKeysMap.entrySet().stream().mapToInt( entry -> {
+                    final UUID neighborEntitySetId = entry.getKey();
+                    final Set<EntityDataKey> neighborEntityDataKeys = entry.getValue();
 
-            numUpdates += neighborWriteEvent.getNumUpdates();
-            neighborDeleteEvents.add( new AuditableEvent(
-                    getCurrentUserId(),
-                    new AclKey( entry.getKey() ),
-                    AuditEventType.DELETE_ENTITY_AS_PART_OF_NEIGHBORHOOD,
-                    "Entity deleted using delete type " + deleteType.toString() + " as part of " +
-                            "neighborhood delete through DataApi.clearEntityAndNeighborEntities",
-                    Optional.of( entry.getValue().stream().map( EntityDataKey::getEntityKeyId )
-                            .collect( Collectors.toSet() ) ),
-                    ImmutableMap.of(),
-                    getDateTimeFromLong( neighborWriteEvent.getVersion() ),
-                    Optional.empty()
-            ) );
-        }
+                    WriteEvent neighborWriteEvent;
+
+                    if ( deleteType == DeleteType.Hard ) {
+                        deleteAssociations( neighborEntitySetId, Optional.of( entityKeyIds ) );
+                        neighborWriteEvent = dgm.deleteEntities(
+                                neighborEntitySetId,
+                                neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
+                                authorizedPropertyTypesOfEntitySets.get( neighborEntitySetId ) );
+                    } else {
+                        clearAssociations( entitySetId, Optional.of( entityKeyIds ) );
+                        neighborWriteEvent = dgm.clearEntities(
+                                neighborEntitySetId,
+                                neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
+                                authorizedPropertyTypesOfEntitySets.get( neighborEntitySetId ) );
+                    }
+
+                    neighborDeleteEvents.add( new AuditableEvent(
+                            getCurrentUserId(),
+                            new AclKey( neighborEntitySetId ),
+                            AuditEventType.DELETE_ENTITY_AS_PART_OF_NEIGHBORHOOD,
+                            "Entity deleted using delete type " + deleteType.toString() + " as part of " +
+                                    "neighborhood delete through DataApi.clearEntityAndNeighborEntities",
+                            Optional.of( neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId )
+                                    .collect( Collectors.toSet() ) ),
+                            ImmutableMap.of(),
+                            getDateTimeFromLong( neighborWriteEvent.getVersion() ),
+                            Optional.empty()
+                    ) );
+
+                   return neighborWriteEvent.getNumUpdates();
+                }
+        ).sum();
 
         recordEvents( neighborDeleteEvents );
 
