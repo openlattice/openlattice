@@ -670,6 +670,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+
+        if ( entityKeyIds.size() > MAX_BATCH_SIZE ) {
+            throw new IllegalArgumentException( "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
+        }
+
         WriteEvent writeEvent;
         if ( deleteType == DeleteType.Hard ) {
             // access checks for entity set and properties
