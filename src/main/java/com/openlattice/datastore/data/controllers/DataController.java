@@ -805,6 +805,9 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
 
         final Set<UUID> entityKeyIds = filter.getEntityKeyIds();
+        if ( entityKeyIds.size() > MAX_BATCH_SIZE ) {
+            throw new IllegalArgumentException( "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
+        }
 
         // we don't include associations in filtering, since they will be deleted anyways with deleting the entities
         final Set<UUID> filteringNeighborEntitySetIds = Stream
@@ -838,7 +841,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .stream()
                 .collect( Collectors.toMap(
                         Function.identity(),
-                        esId -> getAuthorizedPropertyTypesForDelete(esId, Optional.empty(), deleteType) ));
+                        esId -> getAuthorizedPropertyTypesForDelete( esId, Optional.empty(), deleteType ) ) );
 
         /*
          * 2 - collect all neighbor entities, organized by EntitySet
@@ -855,6 +858,13 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .flatMap( edge -> Stream.of( edge.getSrc(), edge.getDst() ) )
                 .collect( Collectors.groupingBy( EntityDataKey::getEntitySetId, Collectors.toSet() ) );
 
+        entitySetIdToEntityDataKeysMap.values().forEach( neighborEntityKeyIds -> {
+                    if ( neighborEntityKeyIds.size() > MAX_BATCH_SIZE ) {
+                        throw new IllegalArgumentException( "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
+                    }
+                }
+        );
+
         /*
          * 3 - delete all entities
          */
@@ -864,7 +874,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         long numUpdates = 0;
 
         WriteEvent writeEvent;
-        if(deleteType == DeleteType.Hard) {
+        if ( deleteType == DeleteType.Hard ) {
             deleteAssociations( entitySetId, Optional.of( entityKeyIds ) );
             writeEvent = dgm.deleteEntities(
                     entitySetId,
@@ -929,7 +939,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                             Optional.empty()
                     ) );
 
-                   return neighborWriteEvent.getNumUpdates();
+                    return neighborWriteEvent.getNumUpdates();
                 }
         ).sum();
 
