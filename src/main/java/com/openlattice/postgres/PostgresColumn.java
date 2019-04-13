@@ -190,7 +190,7 @@ public final class PostgresColumn {
     public static final String                   INDEXED_FIELD                     = "indexed";
     public static final PostgresColumnDefinition INDEXED                           = new PostgresColumnDefinition(
             INDEXED_FIELD,
-            BOOLEAN );
+            TEXT );
     public static final String                   INITIALIZED_FIELD                 = "initialized";
     public static final PostgresColumnDefinition INITIALIZED                       =
             new PostgresColumnDefinition( INITIALIZED_FIELD, BOOLEAN );
