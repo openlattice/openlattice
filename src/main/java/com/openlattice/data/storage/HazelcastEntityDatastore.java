@@ -262,7 +262,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
-            eventBus.post( new EntitiesDeletedEvent( Set.of( entitySetId ), entityKeyIds ) );
+            eventBus.post( new EntitiesDeletedEvent( entitySetId, entityKeyIds ) );
             signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         }
         markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
