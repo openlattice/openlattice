@@ -794,8 +794,14 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+        // Note: this function is only useful for deleting src/dst entities and their neighboring entities
+        // (along with associations connected to all of them), not associations.
+        // If called with an association entity set, it will simplify down to a basic delete call.
+
+
         final Set<UUID> entityKeyIds = filter.getEntityKeyIds();
 
+        // we don't include associations in filtering, since they will be deleted anyways with deleting the entities
         final Set<UUID> filteringNeighborEntitySetIds = Stream
                 .of( filter.getSrcEntitySetIds().orElse( Set.of() ), filter.getDstEntitySetIds().orElse( Set.of() ) )
                 .flatMap( Set::stream )
