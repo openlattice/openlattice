@@ -41,7 +41,8 @@ import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
-import com.openlattice.assembler.OrganizationAssembly;
+import com.openlattice.assembler.EntitySetAssemblyKey;
+import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;
@@ -51,13 +52,7 @@ import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.SecurablePrincipal;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
-import com.openlattice.data.Entity;
-import com.openlattice.data.EntityDataKey;
-import com.openlattice.data.EntityDataMetadata;
-import com.openlattice.data.EntityKey;
-import com.openlattice.data.PropertyMetadata;
-import com.openlattice.data.PropertyUsageSummary;
-import com.openlattice.data.PropertyValueKey;
+import com.openlattice.data.*;
 import com.openlattice.data.storage.ByteBlobDataManager;
 import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.EntitySet;
@@ -71,12 +66,12 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.graph.query.GraphQueryState;
 import com.openlattice.graph.query.GraphQueryState.State;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.EntityKeyPair;
 import com.openlattice.linking.EntityLinkingFeedback;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.PrincipalSet;
 import com.openlattice.requests.Request;
@@ -111,7 +106,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,14 +120,6 @@ public final class ResultSetAdapters {
     private static final ObjectMapper                       mapper               = ObjectMappers.newJsonMapper();
     private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
-
-    @NotNull public static OrganizationAssembly organizationAssembly( @NotNull ResultSet rs ) throws SQLException {
-        final UUID organizationId = rs.getObject( ORGANIZATION_ID.getName(), UUID.class );
-        final Set<UUID> entitySetIds = Sets.newHashSet( PostgresArrays.getUuidArray( rs, ENTITY_SET_IDS.getName() ) );
-        final String dbname = rs.getString( DB_NAME.getName() );
-        final boolean initialized = rs.getBoolean( INITIALIZED.getName() );
-        return new OrganizationAssembly( organizationId, dbname, entitySetIds, initialized );
-    }
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -201,21 +187,21 @@ public final class ResultSetAdapters {
     }
 
     public static Edge edge( ResultSet rs ) throws SQLException {
-        EdgeKey key = edgeKey( rs );
+        DataEdgeKey key = edgeKey( rs );
         long version = rs.getLong( VERSION.getName() );
         List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
         return new Edge( key, version, versions );
     }
 
-    public static EdgeKey edgeKey( ResultSet rs ) throws SQLException {
-        UUID srcEntitySetId = (UUID) rs.getObject( "src_entity_set_id" );
-        UUID srcEntityKeyId = (UUID) rs.getObject( "src_entity_key_id" );
-        UUID dstEntitySetId = (UUID) rs.getObject( "dst_entity_set_id" );
-        UUID dstEntityKeyId = (UUID) rs.getObject( "dst_entity_key_id" );
-        UUID edgeEntitySetId = (UUID) rs.getObject( "edge_entity_set_id" );
-        UUID edgeEntityKeyId = (UUID) rs.getObject( "edge_entity_key_id" );
+    public static DataEdgeKey edgeKey( ResultSet rs ) throws SQLException {
+        UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID.getName() );
+        UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID.getName() );
+        UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID.getName() );
+        UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID.getName() );
+        UUID edgeEntitySetId = (UUID) rs.getObject( EDGE_ENTITY_SET_ID.getName() );
+        UUID edgeEntityKeyId = (UUID) rs.getObject( EDGE_ENTITY_KEY_ID.getName() );
 
-        return new EdgeKey( new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
+        return new DataEdgeKey( new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
                 new EntityDataKey( dstEntitySetId, dstEntityKeyId ),
                 new EntityDataKey( edgeEntitySetId, edgeEntityKeyId ) );
     }
@@ -284,6 +270,22 @@ public final class ResultSetAdapters {
 
             for ( String s : pStrArray ) {
                 flags.add( EntitySetFlag.valueOf( s ) );
+            }
+
+        }
+
+        return flags;
+    }
+
+    public static EnumSet<OrganizationEntitySetFlag> organizationEntitySetFlags( ResultSet rs ) throws SQLException {
+        String[] pStrArray = getTextArray( rs, ENTITY_SET_FLAGS_FIELD );
+
+        EnumSet<OrganizationEntitySetFlag> flags = EnumSet.noneOf( OrganizationEntitySetFlag.class );
+
+        if ( pStrArray != null && pStrArray.length > 0 ) {
+
+            for ( String s : pStrArray ) {
+                flags.add( OrganizationEntitySetFlag.valueOf( s ) );
             }
 
         }
@@ -499,6 +501,7 @@ public final class ResultSetAdapters {
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
         Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
+        Optional<Boolean> postgresIndexed = Optional.ofNullable( indexed( rs ) );
 
         return new PropertyType( Optional.of( id ),
                 fqn,
@@ -508,7 +511,8 @@ public final class ResultSetAdapters {
                 datatype,
                 pii,
                 multiValued,
-                analyzer );
+                analyzer,
+                postgresIndexed );
     }
 
     public static EntityType entityType( ResultSet rs ) throws SQLException {
@@ -634,6 +638,7 @@ public final class ResultSetAdapters {
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
         Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
+        Optional<Boolean> postgresIndexed = Optional.ofNullable( indexed( rs ) );
 
         return new EnumType( id,
                 fqn,
@@ -645,11 +650,16 @@ public final class ResultSetAdapters {
                 flags,
                 pii,
                 multiValued,
-                analyzer );
+                analyzer,
+                postgresIndexed );
     }
 
     public static Boolean multiValued( ResultSet rs ) throws SQLException {
         return rs.getBoolean( MULTI_VALUED.getName() );
+    }
+
+    public static Boolean indexed(ResultSet rs ) throws SQLException {
+        return rs.getBoolean( INDEXED.getName() );
     }
 
     public static Status status( ResultSet rs ) throws SQLException {
@@ -1025,7 +1035,29 @@ public final class ResultSetAdapters {
                 Sets.newHashSet( PostgresArrays.getUuidArray( rs, AUDIT_RECORD_ENTITY_SET_IDS_FIELD ) ) );
     }
 
-    public static Boolean exists( ResultSet rs) throws SQLException {
+    public static Boolean exists( ResultSet rs ) throws SQLException {
         return rs.getBoolean( "exists" );
+    }
+
+    public static EntitySetAssemblyKey entitySetAssemblyKey( ResultSet rs ) throws SQLException {
+        final UUID entitySetId = entitySetId( rs );
+        final UUID organizationId = organizationId( rs );
+
+        return new EntitySetAssemblyKey( entitySetId, organizationId );
+    }
+
+    public static MaterializedEntitySet materializedEntitySet( ResultSet rs ) throws SQLException {
+        final EntitySetAssemblyKey entitySetAssemblyKey = entitySetAssemblyKey( rs );
+        final EnumSet<OrganizationEntitySetFlag> organizationEntitySetFlags = organizationEntitySetFlags( rs );
+
+        return new MaterializedEntitySet( entitySetAssemblyKey, organizationEntitySetFlags );
+    }
+
+    public static String dbName( ResultSet rs ) throws SQLException {
+        return rs.getString( DB_NAME.getName() );
+    }
+
+    public static Boolean initialized( ResultSet rs ) throws SQLException {
+        return rs.getBoolean( INITIALIZED.getName() );
     }
 }

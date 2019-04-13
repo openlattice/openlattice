@@ -18,39 +18,34 @@
  *
  *
  */
-
 package com.openlattice.assembler.processors
 
 import com.hazelcast.core.Offloadable
 import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.OrganizationAssembly
-import com.openlattice.assembler.PRODUCTION_FOREIGN_SCHEMA
-import com.openlattice.edm.type.PropertyType
-import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
-import java.util.UUID
+import com.openlattice.assembler.EntitySetAssemblyKey
+import com.openlattice.assembler.MaterializedEntitySet
 
-private val logger = LoggerFactory.getLogger(UpdateProductionForeignTableOfEntitySetProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-data class UpdateProductionForeignTableOfEntitySetProcessor(
-        val entitySetId: UUID,
-        val newPropertyTypes: List<PropertyType>) :
-        AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+class DropMaterializedEntitySetProcessor
+    : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
+
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
-    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly?>): Void? {
-        val organizationId = entry.key
-        val assembly = entry.value
-        if (assembly == null) {
-            logger.error("Encountered null assembly while trying to update $PRODUCTION_FOREIGN_SCHEMA foreign table " +
-                    "for entity set $entitySetId with new properties $newPropertyTypes.")
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
+        val entitySetAssemblyKey = entry.key
+        val materializedEntitySet = entry.value
+        if (materializedEntitySet == null) {
+            throw IllegalStateException("Encountered null materialized entity set while trying to drop materialized " +
+                    "entity set for entity set ${entitySetAssemblyKey.entitySetId} in organization " +
+                    "${entitySetAssemblyKey.organizationId}.")
         } else {
-            acm?.updateProductionForeignSchemaOfEntitySet(organizationId, entitySetId, newPropertyTypes)
+            acm?.dematerializeEntitySets(entitySetAssemblyKey.organizationId, setOf(entitySetAssemblyKey.entitySetId))
                     ?: throw IllegalStateException(NOT_INITIALIZED)
+            entry.setValue(null)
         }
 
         return null
@@ -60,9 +55,16 @@ data class UpdateProductionForeignTableOfEntitySetProcessor(
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): UpdateProductionForeignTableOfEntitySetProcessor {
+    fun init(acm: AssemblerConnectionManager): DropMaterializedEntitySetProcessor {
         this.acm = acm
         return this
     }
 
+    override fun equals(other: Any?): Boolean {
+        return (other != null && other is DropMaterializedEntitySetProcessor)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
 }

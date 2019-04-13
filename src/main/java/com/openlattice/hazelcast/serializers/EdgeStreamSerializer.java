@@ -23,8 +23,8 @@ package com.openlattice.hazelcast.serializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.data.DataEdgeKey;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,7 +42,7 @@ public class EdgeStreamSerializer implements SelfRegisteringStreamSerializer<Edg
     }
 
     @Override public void write( ObjectDataOutput out, Edge object ) throws IOException {
-        EdgeKeyStreamSerializer.serialize( out, object.getKey() );
+        DataEdgeKeyStreamSerializer.serialize( out, object.getKey() );
         out.writeLong( object.getVersion() );
         out.writeInt( object.getVersions().size() );
         for ( long v : object.getVersions() ) {
@@ -51,7 +51,7 @@ public class EdgeStreamSerializer implements SelfRegisteringStreamSerializer<Edg
     }
 
     @Override public Edge read( ObjectDataInput in ) throws IOException {
-        final EdgeKey key = EdgeKeyStreamSerializer.deserialize( in );
+        final DataEdgeKey key = DataEdgeKeyStreamSerializer.deserialize( in );
 
         final long version = in.readLong();
         final int size = in.readInt();

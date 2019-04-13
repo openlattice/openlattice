@@ -32,7 +32,6 @@ import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
 import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
 import static com.openlattice.postgres.PostgresDatatype.UUID;
 import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY_ARRAY;
 
 import com.openlattice.edm.type.Analyzer;
 
@@ -159,9 +158,6 @@ public final class PostgresColumn {
     public static final String                   ENTITY_SET_FLAGS_FIELD            = "flags";
     public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
             new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY );
-    public static final String                   ENTITY_SET_IDS_FIELD              = "entity_set_ids";
-    public static final PostgresColumnDefinition ENTITY_SET_IDS                    =
-            new PostgresColumnDefinition( ENTITY_SET_IDS_FIELD, UUID_ARRAY ).notNull();
     public static final String                   ENTITY_SET_ID_FIELD               = "entity_set_id";
     public static final PostgresColumnDefinition ENTITY_SET_ID                     =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
@@ -202,6 +198,10 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey();
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
+    public static final String                   INDEXED_FIELD                     = "indexed";
+    public static final PostgresColumnDefinition INDEXED                           = new PostgresColumnDefinition(
+            INDEXED_FIELD,
+            BOOLEAN );
     public static final String                   INITIALIZED_FIELD                 = "initialized";
     public static final PostgresColumnDefinition INITIALIZED                       =
             new PostgresColumnDefinition( INITIALIZED_FIELD, BOOLEAN );
