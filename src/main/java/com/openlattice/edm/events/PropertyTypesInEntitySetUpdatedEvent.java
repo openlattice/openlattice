@@ -28,21 +28,36 @@ import java.util.UUID;
 import com.openlattice.edm.type.PropertyType;
 
 public class PropertyTypesInEntitySetUpdatedEvent {
-    
+
     private UUID entitySetId;
     private List<PropertyType> updatedPropertyTypes;
-    
-    public PropertyTypesInEntitySetUpdatedEvent( UUID entitySetId, List<PropertyType> updatedPropertyTypes ) {
+    private Boolean isFqnUpdated;
+
+    /**
+     * @param entitySetId          The id of the entity set, which has this property type.
+     * @param updatedPropertyTypes The list of {@link PropertyType}s which were updated.
+     * @param isFqnUpdated         True, if the updatedPropertyTypes
+     *                             {@link org.apache.olingo.commons.api.edm.FullQualifiedName} has changed.
+     */
+    public PropertyTypesInEntitySetUpdatedEvent(
+            UUID entitySetId,
+            List<PropertyType> updatedPropertyTypes,
+            Boolean isFqnUpdated ) {
         this.entitySetId = entitySetId;
         this.updatedPropertyTypes = updatedPropertyTypes;
+        this.isFqnUpdated = isFqnUpdated;
     }
-    
+
     public UUID getEntitySetId() {
         return entitySetId;
     }
-    
+
     public List<PropertyType> getUpdatedPropertyTypes() {
         return updatedPropertyTypes;
+    }
+
+    public Boolean getFqnUpdated() {
+        return isFqnUpdated;
     }
 
 }

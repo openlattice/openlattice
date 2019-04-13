@@ -21,12 +21,21 @@
 
 package com.openlattice.hazelcast.serializers
 
+import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
+import com.openlattice.assembler.processors.MaterializeEdgesProcessor
+import org.mockito.Mockito
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-interface AssemblerConnectionManagerDependent {
-    fun init( assemblerConnectionManager: AssemblerConnectionManager)
+class MaterializeEdgesProcessorStreamSerializerTest : AbstractStreamSerializerTest
+<MaterializeEdgesProcessorStreamSerializer, MaterializeEdgesProcessor>() {
+
+    override fun createSerializer(): MaterializeEdgesProcessorStreamSerializer {
+        val processorSerializer = MaterializeEdgesProcessorStreamSerializer()
+        processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
+        return processorSerializer
+    }
+
+    override fun createInput(): MaterializeEdgesProcessor {
+        return MaterializeEdgesProcessor()
+    }
 }

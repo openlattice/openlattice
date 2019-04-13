@@ -18,18 +18,11 @@
  *
  *
  */
-
 package com.openlattice.assembler
 
 import com.openlattice.organization.OrganizationEntitySetFlag
-import java.util.*
+import java.util.EnumSet
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-data class OrganizationAssembly(
-        val organizationId: UUID,
-        val dbname: String,
-        var initialized : Boolean = false,
-        val materializedEntitySets: MutableMap<UUID, EnumSet<OrganizationEntitySetFlag>> = mutableMapOf())
+data class MaterializedEntitySet(
+        val assemblyKey: EntitySetAssemblyKey,
+        val flags: EnumSet<OrganizationEntitySetFlag> = EnumSet.noneOf(OrganizationEntitySetFlag::class.java))

@@ -25,20 +25,23 @@ package com.openlattice.data.storage;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
-import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
+import com.openlattice.assembler.Assembler;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.EntitySetDataDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
-import com.openlattice.postgres.JsonDeserializer;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,13 +49,12 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.Maps.newHashMap;
-import static com.google.common.collect.Maps.transformValues;
+
 
 public class HazelcastEntityDatastore implements EntityDatastore {
     private static final int    BATCH_INDEX_THRESHOLD = 256;
@@ -63,6 +65,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     private final IndexingMetadataManager        pdm;
     private final PostgresEntityDataQueryService dataQueryService;
     private final EdmManager                     edmManager;
+    private final Assembler                      assembler;
 
     @Inject
     private EventBus eventBus;
@@ -77,11 +80,13 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             EntityKeyIdService idService,
             IndexingMetadataManager pdm,
             PostgresEntityDataQueryService dataQueryService,
-            EdmManager edmManager ) {
+            EdmManager edmManager,
+            Assembler assembler ) {
         this.dataQueryService = dataQueryService;
         this.pdm = pdm;
         this.idService = idService;
         this.edmManager = edmManager;
+        this.assembler = assembler;
     }
 
     @Override
@@ -122,6 +127,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
@@ -145,6 +151,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         WriteEvent writeEvent = dataQueryService.upsertEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
@@ -167,6 +174,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
         final var writeEvent = dataQueryService.replaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
@@ -190,6 +198,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService
                 .partialReplaceEntities( entitySetId, entities, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, entities.keySet() );
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
@@ -200,12 +209,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return writeEvent;
     }
 
-    private static SetMultimap<UUID, Object> setMultimapFromMap( Map<UUID, Set<Object>> m ) {
-        final SetMultimap<UUID, Object> entity = HashMultimap.create();
-        m.forEach( entity::putAll );
-        return entity;
-    }
-
     private void signalCreatedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
 
@@ -214,6 +217,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                             edmManager.getPropertyTypesForEntitySet( entitySetId ),
                             entityKeyIds ) ) );
         }
+
+        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
+        // mark all involved linking entitysets as unsync with data
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalLinkedEntitiesUpserted(
@@ -225,8 +232,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         // When updating entity -> if no entity left with old linking id: delete old index. if left -> mark it as dirty
         //                      -> background indexing job will pick up updated entity with new linking id
         // It makes more sense to let background task (re-)index, instead of explicitly calling re-index, since an
-
         // update/create event affects all the linking entity sets, where that linking id is present
+
         Set<UUID> remainingLinkingIds = dataQueryService
                 .getEntityKeyIdsOfLinkingIds( oldLinkingIds ).stream()
                 // we cannot know, whether the old entity was already updated with a new linking id or is still there
@@ -245,14 +252,22 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalEntitySetDataDeleted( UUID entitySetId ) {
         eventBus.post( new EntitySetDataDeletedEvent( entitySetId ) );
+        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
+
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
+        // mark all involved linking entitysets as unsync with data
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesDeletedEvent( Set.of( entitySetId ), entityKeyIds ) );
-            signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         }
+        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
+
+        signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
+        // mark all involved linking entitysets as unsync with data
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalLinkedEntitiesDeleted( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
@@ -293,6 +308,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         }
     }
 
+    private void markMaterializedEntitySetDirty( UUID entitySetId ) {
+        assembler.flagMaterializedEntitySet( entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED );
+    }
+
     @Timed
     @Override public WriteEvent replacePropertiesInEntities(
             UUID entitySetId,
@@ -306,6 +325,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService
                 .replacePropertiesInEntities( entitySetId, replacementProperties, authorizedPropertyTypes );
         signalCreatedEntities( entitySetId, replacementProperties.keySet() );
+
         if ( !oldLinkingIds.isEmpty() ) {
             signalLinkedEntitiesUpserted(
                     dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).stream()
@@ -340,6 +360,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         final var writeEvent = dataQueryService.clearEntityData( entitySetId, entityKeyIds, authorizedPropertyTypes );
         // same as if we updated the entities
         signalCreatedEntities( entitySetId, entityKeyIds );
+
         return writeEvent;
     }
 
@@ -510,67 +531,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return dataQueryService.getLinkingEntitySetIds( linkingId );
     }
 
-    @Deprecated
-    @Timed
-    public Stream<UUID> createEntityData(
-            UUID entitySetId,
-            Map<String, SetMultimap<UUID, Object>> entities,
-            Map<UUID, PropertyType> authorizedPropertyTypes ) {
-
-        return entities.entrySet().stream().map(
-                entity -> {
-                    // Get an id for this object
-                    final UUID id = idService.getEntityKeyId( entitySetId, entity.getKey() );
-                    return createData(
-                            entitySetId,
-                            authorizedPropertyTypes,
-                            id,
-                            entity.getValue() );
-                } );
-    }
-
-    /* creating */
-    @Timed
-    public UUID createData(
-            UUID entitySetId,
-            Map<UUID, PropertyType> authorizedPropertyTypes,
-            UUID entityKeyId,
-            SetMultimap<UUID, Object> entityDetails ) {
-        //TODO: Keep full local copy of PropertyTypes EDM
-        Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType = transformValues( authorizedPropertyTypes,
-                PropertyType::getDatatype );
-        Set<UUID> authorizedProperties = authorizedPropertiesWithDataType.keySet();
-        // does not write the row if some property values that user is trying to write to are not authorized.
-        //TODO: Don't fail silently
-        //TODO: Move all access checks up to controller.
-        if ( !authorizedProperties.containsAll( entityDetails.keySet() ) ) {
-            String msg = String
-                    .format( "Entity %s not written because the following properties are not authorized: %s",
-                            entityKeyId,
-                            Sets.difference( entityDetails.keySet(), authorizedProperties ) );
-            logger.error( msg );
-            throw new ForbiddenException( msg );
-        }
-
-        SetMultimap<UUID, Object> normalizedPropertyValues;
-        try {
-            normalizedPropertyValues = JsonDeserializer.validateFormatAndNormalize( Multimaps.asMap( entityDetails ),
-                    authorizedPropertiesWithDataType );
-        } catch ( Exception e ) {
-            logger.error( "Entity {} not written because some property values are of invalid format.",
-                    entityKeyId,
-                    e );
-            return null;
-        }
-
-        // write the data
-        dataQueryService.upsertEntities( entitySetId,
-                ImmutableMap.of( entityKeyId, Multimaps.asMap( normalizedPropertyValues ) ),
-                authorizedPropertyTypes );
-        signalCreatedEntities( entitySetId, ImmutableSet.of( entityKeyId ) );
-        return entityKeyId;
-    }
-
     /**
      * Delete data of an entity set across ALL sync Ids.
      */
@@ -633,66 +593,4 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return propertyWriteEvent;
     }
 
-    public static SetMultimap<Object, Object> fromEntityDataValue(
-            EntityDataKey dataKey,
-            EntityDataValue dataValue,
-            long count,
-            Map<UUID, PropertyType> propertyTypes ) {
-        SetMultimap entityData = fromEntityDataValue( dataValue, propertyTypes );
-        entityData.put( "id", dataKey.getEntityKeyId() );
-        entityData.put( "count", count );
-        return entityData;
-    }
-
-    public static SetMultimap<Object, Object> fromEntityDataValue(
-            EntityDataKey dataKey,
-            EntityDataValue dataValue,
-            Map<UUID, PropertyType> propertyTypes ) {
-        SetMultimap entityData = fromEntityDataValue( dataValue, propertyTypes );
-        entityData.put( "id", dataKey.getEntityKeyId() );
-        return entityData;
-    }
-
-    public static SetMultimap<FullQualifiedName, Object> fromEntity(
-            Entity edv,
-            Map<UUID, PropertyType> propertyTypes ) {
-        SetMultimap<FullQualifiedName, Object> entityData = HashMultimap.create();
-        final var entityDataByUUID = edv.getProperties();
-
-        for ( Entry<UUID, PropertyType> propertyTypeEntry : propertyTypes.entrySet() ) {
-            UUID propertyTypeId = propertyTypeEntry.getKey();
-            entityData.put( propertyTypeEntry.getValue().getType(), entityDataByUUID.get( propertyTypeId ) );
-        }
-        return entityData;
-    }
-
-    public static SetMultimap<FullQualifiedName, Object> fromEntityDataValue(
-            EntityDataValue edv,
-            Map<UUID, PropertyType> propertyTypes ) {
-        SetMultimap<FullQualifiedName, Object> entityData = HashMultimap.create();
-        Map<UUID, Map<Object, PropertyMetadata>> properties = edv.getProperties();
-        for ( Entry<UUID, PropertyType> propertyTypeEntry : propertyTypes.entrySet() ) {
-            UUID propertyTypeId = propertyTypeEntry.getKey();
-            Map<Object, PropertyMetadata> valueMap = properties.get( propertyTypeId );
-            if ( valueMap != null ) {
-                PropertyType propertyType = propertyTypeEntry.getValue();
-                entityData.putAll( propertyType.getType(), valueMap.keySet() );
-            }
-        }
-        return entityData;
-    }
-
-    public static SetMultimap<UUID, Object> fromEntityDataValue(
-            EntityDataValue edv,
-            Set<UUID> authorizedPropertyTypes ) {
-        SetMultimap<UUID, Object> entityData = HashMultimap.create();
-        Map<UUID, Map<Object, PropertyMetadata>> properties = edv.getProperties();
-        for ( UUID propertyTypeId : authorizedPropertyTypes ) {
-            Map<Object, PropertyMetadata> valueMap = properties.get( propertyTypeId );
-            if ( valueMap != null ) {
-                entityData.putAll( propertyTypeId, valueMap.keySet() );
-            }
-        }
-        return entityData;
-    }
 }

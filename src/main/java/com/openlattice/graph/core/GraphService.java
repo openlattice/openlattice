@@ -27,7 +27,6 @@ import com.openlattice.data.WriteEvent;
 import com.openlattice.data.analytics.IncrementableWeightId;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
-import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.search.requests.EntityNeighborsFilter;
 
@@ -41,29 +40,29 @@ public interface GraphService {
 
     WriteEvent createEdges( Set<DataEdgeKey> keys );
 
-    int clearEdges( Set<EdgeKey> keys );
+    int clearEdges( Set<DataEdgeKey> keys );
 
     int clearVerticesInEntitySet( UUID entitySetId );
 
     int clearVertices( UUID entitySetId, Set<UUID> vertices );
 
-    WriteEvent deleteEdges( Set<EdgeKey> keys );
+    WriteEvent deleteEdges( Set<DataEdgeKey> keys );
 
     int deleteVerticesInEntitySet( UUID entitySetId );
 
     int deleteVertices( UUID entitySetId, Set<UUID> vertices );
 
-    Edge getEdge( EdgeKey key );
+    Edge getEdge( DataEdgeKey key );
 
-    Map<EdgeKey, Edge> getEdgesAsMap( Set<EdgeKey> keys );
+    Map<DataEdgeKey, Edge> getEdgesAsMap( Set<DataEdgeKey> keys );
 
-    Stream<Edge> getEdges( Set<EdgeKey> keys );
+    Stream<Edge> getEdges( Set<DataEdgeKey> keys );
 
-    PostgresIterable<EdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
+    PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
-    PostgresIterable<EdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
+    PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
 
-    Iterable<EdgeKey> getEdgeKeysContainingEntity( UUID entitySetId, UUID entityKeyId );
+    Iterable<DataEdgeKey> getEdgeKeysContainingEntity( UUID entitySetId, UUID entityKeyId );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 
@@ -97,5 +96,8 @@ public interface GraphService {
 
     List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
 
-    PostgresIterable<EdgeKey> getEntitiesForDestination(List<UUID> srcEntitySetIds, List<UUID> edgeEntitySetIds, Set<UUID> dstEntityKeyIds);
+    PostgresIterable<DataEdgeKey> getEntitiesForDestination(
+            List<UUID> srcEntitySetIds,
+            List<UUID> edgeEntitySetIds,
+            Set<UUID> dstEntityKeyIds);
 }

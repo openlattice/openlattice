@@ -18,41 +18,46 @@
  *
  *
  */
-
 package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.AddMembersToOrganizationAssemblyProcessor
+import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.organization.OrganizationEntitySetFlag
 import org.springframework.stereotype.Component
+import java.util.EnumSet
 
 @Component
-class AddMembersToOrganizationAssemblyProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<AddMembersToOrganizationAssemblyProcessor>,
-        AssemblerConnectionManagerDependent {
-
-    private lateinit var acm: AssemblerConnectionManager
+class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<MaterializedEntitySet> {
+    private val entitySetFlags = OrganizationEntitySetFlag.values()
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.ADD_MEMBERS_TO_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.MATERIALIZED_ENTITY_SET.ordinal
     }
 
-    override fun getClazz(): Class<out AddMembersToOrganizationAssemblyProcessor> {
-        return AddMembersToOrganizationAssemblyProcessor::class.java
+    override fun getClazz(): Class<out MaterializedEntitySet> {
+        return MaterializedEntitySet::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: AddMembersToOrganizationAssemblyProcessor) {
-        PrincipalSetStreamSerializer().write(out, obj.newMembers)
+    override fun write(out: ObjectDataOutput, obj: MaterializedEntitySet) {
+        EntitySetAssemblyKeyStreamSerializer().write(out, obj.assemblyKey)
+
+        out.writeInt(obj.flags.size)
+        obj.flags.forEach {
+            out.writeInt(it.ordinal)
+        }
     }
 
-    override fun read(input: ObjectDataInput): AddMembersToOrganizationAssemblyProcessor {
-        return AddMembersToOrganizationAssemblyProcessor(PrincipalSetStreamSerializer().read(input)).init(acm)
-    }
+    override fun read(input: ObjectDataInput): MaterializedEntitySet {
+        val key = EntitySetAssemblyKeyStreamSerializer().read(input)
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+        val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
+        (0 until input.readInt()).forEach { _ ->
+            flags.add(entitySetFlags[input.readInt()])
+        }
+
+        return MaterializedEntitySet(key, flags)
     }
 }

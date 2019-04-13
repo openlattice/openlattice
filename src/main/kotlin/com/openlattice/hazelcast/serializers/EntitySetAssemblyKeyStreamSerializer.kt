@@ -18,41 +18,31 @@
  *
  *
  */
-
 package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.AddMembersToOrganizationAssemblyProcessor
+import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class AddMembersToOrganizationAssemblyProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<AddMembersToOrganizationAssemblyProcessor>,
-        AssemblerConnectionManagerDependent {
-
-    private lateinit var acm: AssemblerConnectionManager
-
+class EntitySetAssemblyKeyStreamSerializer : SelfRegisteringStreamSerializer<EntitySetAssemblyKey> {
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.ADD_MEMBERS_TO_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.ENTITY_SET_ASSEMBLY_KEY.ordinal
     }
 
-    override fun getClazz(): Class<out AddMembersToOrganizationAssemblyProcessor> {
-        return AddMembersToOrganizationAssemblyProcessor::class.java
+    override fun getClazz(): Class<out EntitySetAssemblyKey> {
+        return EntitySetAssemblyKey::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: AddMembersToOrganizationAssemblyProcessor) {
-        PrincipalSetStreamSerializer().write(out, obj.newMembers)
+    override fun write(out: ObjectDataOutput, obj: EntitySetAssemblyKey) {
+        UUIDStreamSerializer.serialize(out, obj.entitySetId)
+        UUIDStreamSerializer.serialize(out, obj.organizationId)
     }
 
-    override fun read(input: ObjectDataInput): AddMembersToOrganizationAssemblyProcessor {
-        return AddMembersToOrganizationAssemblyProcessor(PrincipalSetStreamSerializer().read(input)).init(acm)
-    }
-
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
+    override fun read(input: ObjectDataInput): EntitySetAssemblyKey {
+        return EntitySetAssemblyKey(UUIDStreamSerializer.deserialize(input), UUIDStreamSerializer.deserialize(input))
     }
 }

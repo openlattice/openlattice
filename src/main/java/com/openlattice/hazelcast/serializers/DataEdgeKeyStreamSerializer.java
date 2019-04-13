@@ -23,8 +23,8 @@ package com.openlattice.hazelcast.serializers;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
+import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.EntityDataKey;
-import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
@@ -33,36 +33,36 @@ import org.springframework.stereotype.Component;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 @Component
-public class EdgeKeyStreamSerializer implements SelfRegisteringStreamSerializer<EdgeKey> {
+public class DataEdgeKeyStreamSerializer implements SelfRegisteringStreamSerializer<DataEdgeKey> {
 
-    @Override public Class<EdgeKey> getClazz() {
-        return EdgeKey.class;
+    @Override public Class<DataEdgeKey> getClazz() {
+        return DataEdgeKey.class;
     }
 
-    @Override public void write( ObjectDataOutput out, EdgeKey object ) throws IOException {
+    @Override public void write( ObjectDataOutput out, DataEdgeKey object ) throws IOException {
         serialize( out, object );
     }
 
-    @Override public EdgeKey read( ObjectDataInput in ) throws IOException {
+    @Override public DataEdgeKey read( ObjectDataInput in ) throws IOException {
         return deserialize( in );
     }
 
     @Override public int getTypeId() {
-        return StreamSerializerTypeIds.EDGE_KEY.ordinal();
+        return StreamSerializerTypeIds.DATA_EDGE_KEY.ordinal();
     }
 
     @Override public void destroy() {
 
     }
 
-    public static EdgeKey deserialize( ObjectDataInput in ) throws IOException {
+    public static DataEdgeKey deserialize( ObjectDataInput in ) throws IOException {
         final EntityDataKey src = EntityDataKeyStreamSerializer.deserialize( in );
         final EntityDataKey dst = EntityDataKeyStreamSerializer.deserialize( in );
         final EntityDataKey edge = EntityDataKeyStreamSerializer.deserialize( in );
-        return new EdgeKey( src, dst, edge );
+        return new DataEdgeKey( src, dst, edge );
     }
 
-    public static void serialize( ObjectDataOutput out, EdgeKey object ) throws IOException {
+    public static void serialize( ObjectDataOutput out, DataEdgeKey object ) throws IOException {
         EntityDataKeyStreamSerializer.serialize( out, object.getSrc() );
         EntityDataKeyStreamSerializer.serialize( out, object.getDst() );
         EntityDataKeyStreamSerializer.serialize( out, object.getEdge() );

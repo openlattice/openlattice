@@ -18,18 +18,24 @@
  *
  *
  */
+package com.openlattice.assembler.processors
 
-package com.openlattice.assembler
-
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.organization.OrganizationEntitySetFlag
-import java.util.*
+import java.util.UUID
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-data class OrganizationAssembly(
-        val organizationId: UUID,
-        val dbname: String,
-        var initialized : Boolean = false,
-        val materializedEntitySets: MutableMap<UUID, EnumSet<OrganizationEntitySetFlag>> = mutableMapOf())
+data class AddFlagsToOrganizationMaterializedEntitySetProcessor(
+        val entitySetId: UUID,
+        val flags: Set<OrganizationEntitySetFlag>) : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>() {
+
+    override fun process(entry: MutableMap.MutableEntry<UUID, OrganizationAssembly>?): Void? {
+        val assembly = entry!!.value
+        val flagsHaveBeenAdded = assembly.materializedEntitySets[entitySetId]!!.addAll(flags)
+        if (flagsHaveBeenAdded) {
+            entry.setValue(assembly)
+        }
+
+        return null
+    }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,29 +16,22 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
+package com.openlattice.hazelcast.serializers
 
-package com.openlattice.graph.core;
+import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
+import com.openlattice.assembler.EntitySetAssemblyKey
+import java.util.UUID
 
-import com.openlattice.data.DataEdgeKey;
-import com.openlattice.graph.edge.Edge;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+class EntitySetAssemblyKeyStreamSerializerTest
+    : AbstractStreamSerializerTest<EntitySetAssemblyKeyStreamSerializer, EntitySetAssemblyKey>() {
 
-/**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-public class SimpleNeighborhood {
-    private final UUID               srcEntityKeyId;
-    private final Map<DataEdgeKey, Edge> neighborhood;
-
-    public SimpleNeighborhood( UUID srcEntityKeyId, Stream<Edge> edges  ) {
-        this.srcEntityKeyId = srcEntityKeyId;
-        neighborhood = edges.collect( Collectors.toMap( Edge::getKey , Function.identity() ) );
+    override fun createSerializer(): EntitySetAssemblyKeyStreamSerializer {
+        return EntitySetAssemblyKeyStreamSerializer()
     }
 
-
+    override fun createInput(): EntitySetAssemblyKey {
+        return EntitySetAssemblyKey(UUID.randomUUID(), UUID.randomUUID())
+    }
 }

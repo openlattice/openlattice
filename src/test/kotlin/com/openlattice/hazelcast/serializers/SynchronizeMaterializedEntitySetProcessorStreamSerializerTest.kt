@@ -23,20 +23,25 @@ package com.openlattice.hazelcast.serializers
 
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.CreateProductionForeignTableOfEntitySetProcessor
+import com.openlattice.assembler.processors.SynchronizeMaterializedEntitySetProcessor
+import com.openlattice.mapstores.TestDataFactory
 import org.mockito.Mockito
-import java.util.UUID
 
-class CreateProductionForeignTableOfEntitySetProcessorStreamSerializerTest : AbstractStreamSerializerTest
-<CreateProductionForeignTableOfEntitySetProcessorStreamSerializer, CreateProductionForeignTableOfEntitySetProcessor>() {
+class SynchronizeMaterializedEntitySetProcessorStreamSerializerTest : AbstractStreamSerializerTest
+<SynchronizeMaterializedEntitySetProcessorStreamSerializer, SynchronizeMaterializedEntitySetProcessor>() {
 
-    override fun createSerializer(): CreateProductionForeignTableOfEntitySetProcessorStreamSerializer {
-        val processorSerializer = CreateProductionForeignTableOfEntitySetProcessorStreamSerializer()
-        processorSerializer.init( Mockito.mock( AssemblerConnectionManager::class.java ) )
+    override fun createSerializer(): SynchronizeMaterializedEntitySetProcessorStreamSerializer {
+        val processorSerializer = SynchronizeMaterializedEntitySetProcessorStreamSerializer()
+        processorSerializer.init(Mockito.mock(AssemblerConnectionManager::class.java))
         return processorSerializer
     }
 
-    override fun createInput(): CreateProductionForeignTableOfEntitySetProcessor {
-        return CreateProductionForeignTableOfEntitySetProcessor(UUID.randomUUID())
+    override fun createInput(): SynchronizeMaterializedEntitySetProcessor {
+        val propertyTypes =
+                listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType())
+                        .map { it.id to it }
+                        .toMap()
+
+        return SynchronizeMaterializedEntitySetProcessor(propertyTypes)
     }
 }
