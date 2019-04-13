@@ -25,33 +25,31 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.CreateProductionForeignTableOfEntitySetProcessor
+import com.openlattice.assembler.processors.MaterializeEdgesProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class CreateProductionForeignTableOfEntitySetProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<CreateProductionForeignTableOfEntitySetProcessor>,
-        AssemblerConnectionManagerDependent {
+class MaterializeEdgesProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<MaterializeEdgesProcessor>, AssemblerConnectionManagerDependent {
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.CREATE_PRODUCTION_FOREIGN_TABLE_OF_ENTITY_SET_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.MATERIALIZE_EDGES_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out CreateProductionForeignTableOfEntitySetProcessor> {
-        return CreateProductionForeignTableOfEntitySetProcessor::class.java
+    override fun getClazz(): Class<out MaterializeEdgesProcessor> {
+        return MaterializeEdgesProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: CreateProductionForeignTableOfEntitySetProcessor) {
-        UUIDStreamSerializer.serialize(out, obj.entitySetId)
+    override fun write(out: ObjectDataOutput, obj: MaterializeEdgesProcessor) {
     }
 
-    override fun read(input: ObjectDataInput): CreateProductionForeignTableOfEntitySetProcessor {
-        return CreateProductionForeignTableOfEntitySetProcessor(UUIDStreamSerializer.deserialize(input)).init(acm)
+    override fun read(input: ObjectDataInput): MaterializeEdgesProcessor {
+        return MaterializeEdgesProcessor().init(acm)
     }
 
-    override fun init(assemblerConnectonManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectonManager
+    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
+        this.acm = assemblerConnectionManager
     }
 }

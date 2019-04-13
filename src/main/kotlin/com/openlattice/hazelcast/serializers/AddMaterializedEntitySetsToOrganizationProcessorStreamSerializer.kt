@@ -18,41 +18,34 @@
  *
  *
  */
-
 package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
+import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
-import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.AddMembersToOrganizationAssemblyProcessor
+import com.openlattice.assembler.processors.AddMaterializedEntitySetsToOrganizationProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class AddMembersToOrganizationAssemblyProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<AddMembersToOrganizationAssemblyProcessor>,
-        AssemblerConnectionManagerDependent {
-
-    private lateinit var acm: AssemblerConnectionManager
+class AddMaterializedEntitySetsToOrganizationProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<AddMaterializedEntitySetsToOrganizationProcessor> {
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.ADD_MEMBERS_TO_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.ADD_MATERIALIZED_ENTITY_SETS_TO_ORGANIZATION_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out AddMembersToOrganizationAssemblyProcessor> {
-        return AddMembersToOrganizationAssemblyProcessor::class.java
+    override fun getClazz(): Class<out AddMaterializedEntitySetsToOrganizationProcessor> {
+        return AddMaterializedEntitySetsToOrganizationProcessor::class.java
     }
 
-    override fun write(out: ObjectDataOutput, obj: AddMembersToOrganizationAssemblyProcessor) {
-        PrincipalSetStreamSerializer().write(out, obj.newMembers)
+    override fun write(out: ObjectDataOutput, obj: AddMaterializedEntitySetsToOrganizationProcessor) {
+        SetStreamSerializers.fastUUIDSetSerialize(out, obj.entitySetIds)
     }
 
-    override fun read(input: ObjectDataInput): AddMembersToOrganizationAssemblyProcessor {
-        return AddMembersToOrganizationAssemblyProcessor(PrincipalSetStreamSerializer().read(input)).init(acm)
+    override fun read(input: ObjectDataInput): AddMaterializedEntitySetsToOrganizationProcessor {
+       return AddMaterializedEntitySetsToOrganizationProcessor(SetStreamSerializers.fastUUIDSetDeserialize(input))
     }
 
-    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectionManager
-    }
 }

@@ -21,10 +21,14 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.assembler.OrganizationAssembly;
+
+import java.util.EnumSet;
+import java.util.Map;
 import java.util.UUID;
+
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
@@ -40,7 +44,7 @@ public class OrganizationAssemblyStreamSerializerTest
         return new OrganizationAssembly(
                 UUID.randomUUID(),
                 RandomStringUtils.randomAlphanumeric( 10 ),
-                ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ),
-                false );
+                false,
+                Map.of( UUID.randomUUID(), EnumSet.noneOf( OrganizationEntitySetFlag.class ) ) );
     }
 }

@@ -37,7 +37,8 @@ private val logger = LoggerFactory.getLogger(PostgresQueries::class.java)
 const val ENTITIES_TABLE_ALIAS = "entity_key_ids"
 const val LEFT_JOIN = "LEFT JOIN"
 const val INNER_JOIN = "INNER JOIN"
-val entityKeyIdColumns = listOf(ENTITY_SET_ID.name, ID_VALUE.name).joinToString(",")
+val entityKeyIdColumnsList = listOf(ENTITY_SET_ID.name, ID_VALUE.name)
+val entityKeyIdColumns = entityKeyIdColumnsList.joinToString(",")
 
 internal class PostgresQueries
 

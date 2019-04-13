@@ -22,17 +22,19 @@
 
 package com.openlattice.graph.edge;
 
+import com.openlattice.data.DataEdgeKey;
 import com.openlattice.data.EntityDataKey;
+
 import java.util.List;
 import java.util.Objects;
 
 public class Edge {
-    private final EdgeKey key;
+    private final DataEdgeKey key;
     private final long          version;
     private final List<Long>    versions;
 
     public Edge(
-            EdgeKey key,
+            DataEdgeKey key,
             long version,
             List<Long> versions ) {
         this.key = key;
@@ -40,7 +42,7 @@ public class Edge {
         this.versions = versions;
     }
 
-    public EdgeKey getKey() {
+    public DataEdgeKey getKey() {
         return key;
     }
 

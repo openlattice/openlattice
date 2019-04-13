@@ -24,31 +24,39 @@ import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.AssemblerConnectionManager
-import com.openlattice.assembler.processors.RemoveMembersFromOrganizationAssemblyProcessor
+import com.openlattice.assembler.processors.RefreshMaterializedEntitySetProcessor
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import org.springframework.stereotype.Component
 
 @Component
-class RemoveMembersFromOrganizationAssemblyProcessorStreamSerializer
-    : SelfRegisteringStreamSerializer<RemoveMembersFromOrganizationAssemblyProcessor>,
-        AssemblerConnectionManagerDependent {
+class RefreshMaterializedEntitySetProcessorStreamSerializer
+    : SelfRegisteringStreamSerializer<RefreshMaterializedEntitySetProcessor>, AssemblerConnectionManagerDependent {
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
-        return StreamSerializerTypeIds.REMOVE_MEMBERS_FROM_ORGANIZATION_ASSEMBLY_PROCESSOR.ordinal
+        return StreamSerializerTypeIds.REFRESH_MATERIALIZED_ENTITY_SET_PROCESSOR.ordinal
     }
 
-    override fun getClazz(): Class<out RemoveMembersFromOrganizationAssemblyProcessor> {
-        return RemoveMembersFromOrganizationAssemblyProcessor::class.java
+    override fun getClazz(): Class<out RefreshMaterializedEntitySetProcessor> {
+        return RefreshMaterializedEntitySetProcessor::class.java
     }
 
+    override fun write(out: ObjectDataOutput, obj: RefreshMaterializedEntitySetProcessor) {
+        out.writeInt(obj.authorizedPropertyTypes.size)
 
-    override fun write(out: ObjectDataOutput, obj: RemoveMembersFromOrganizationAssemblyProcessor) {
-        PrincipalSetStreamSerializer().write(out, obj.members)
+        obj.authorizedPropertyTypes.forEach { propertyTypeId, propertyType ->
+            UUIDStreamSerializer.serialize(out, propertyTypeId)
+            PropertyTypeStreamSerializer.serialize(out, propertyType)
+        }
     }
 
-    override fun read(input: ObjectDataInput): RemoveMembersFromOrganizationAssemblyProcessor {
-        return RemoveMembersFromOrganizationAssemblyProcessor(PrincipalSetStreamSerializer().read(input)).init(acm)
+    override fun read(input: ObjectDataInput): RefreshMaterializedEntitySetProcessor {
+        val size = input.readInt()
+        val authorizedPropertyTypes = ((0 until size).map {
+            UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
+        }.toMap())
+
+        return RefreshMaterializedEntitySetProcessor(authorizedPropertyTypes).init(acm)
     }
 
     override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
