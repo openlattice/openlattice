@@ -218,9 +218,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                             entityKeyIds ) ) );
         }
 
-        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagMaterializedEntitySetUnsynchronized );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalLinkedEntitiesUpserted(
@@ -252,22 +252,22 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalEntitySetDataDeleted( UUID entitySetId ) {
         eventBus.post( new EntitySetDataDeletedEvent( entitySetId ) );
-        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagMaterializedEntitySetUnsynchronized );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
             eventBus.post( new EntitiesDeletedEvent( Set.of( entitySetId ), entityKeyIds ) );
         }
-        flagMaterializedEntitySetUnsynchronized(entitySetId); // mark entityset as unsync with data
+        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::flagMaterializedEntitySetUnsynchronized );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalLinkedEntitiesDeleted( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
@@ -308,7 +308,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         }
     }
 
-    private void flagMaterializedEntitySetUnsynchronized( UUID entitySetId ) {
+    private void markMaterializedEntitySetDirty( UUID entitySetId ) {
         assembler.flagMaterializedEntitySet( entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED );
     }
 
