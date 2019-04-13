@@ -495,7 +495,7 @@ public final class ResultSetAdapters {
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
         Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
-        Optional<Boolean> postgresIndexed = Optional.ofNullable( indexed( rs ) );
+        Optional<IndexMethod> indexMethod = Optional.ofNullable( indexMethod( rs ) );
 
         return new PropertyType( Optional.of( id ),
                 fqn,
@@ -506,7 +506,7 @@ public final class ResultSetAdapters {
                 pii,
                 multiValued,
                 analyzer,
-                postgresIndexed );
+                indexMethod );
     }
 
     public static EntityType entityType( ResultSet rs ) throws SQLException {
@@ -633,7 +633,7 @@ public final class ResultSetAdapters {
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
         Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
-        Optional<Boolean> postgresIndexed = Optional.ofNullable( indexed( rs ) );
+        Optional<IndexMethod> indexMethod = Optional.ofNullable( indexMethod( rs ) );
 
         return new EnumType( id,
                 fqn,
@@ -646,15 +646,15 @@ public final class ResultSetAdapters {
                 pii,
                 multiValued,
                 analyzer,
-                postgresIndexed );
+                indexMethod );
     }
 
     public static Boolean multiValued( ResultSet rs ) throws SQLException {
         return rs.getBoolean( MULTI_VALUED.getName() );
     }
 
-    public static Boolean indexed(ResultSet rs ) throws SQLException {
-        return rs.getBoolean( INDEXED.getName() );
+    public static IndexMethod indexMethod(ResultSet rs ) throws SQLException {
+        return IndexMethod.valueOf( rs.getString( INDEXED.getName() ) );
     }
 
     public static Status status( ResultSet rs ) throws SQLException {
