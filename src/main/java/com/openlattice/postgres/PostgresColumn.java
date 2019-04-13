@@ -198,6 +198,10 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey();
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
+    public static final String                   INDEXED_FIELD                     = "indexed";
+    public static final PostgresColumnDefinition INDEXED                           = new PostgresColumnDefinition(
+            INDEXED_FIELD,
+            BOOLEAN );
     public static final String                   INITIALIZED_FIELD                 = "initialized";
     public static final PostgresColumnDefinition INITIALIZED                       =
             new PostgresColumnDefinition( INITIALIZED_FIELD, BOOLEAN );

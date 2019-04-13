@@ -149,7 +149,8 @@ public final class PostgresTable {
                             FLAGS,
                             PII,
                             ANALYZER,
-                            MULTI_VALUED );
+                            MULTI_VALUED,
+                            INDEXED );
     public static final PostgresTableDefinition        GRAPH_QUERIES                =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
@@ -277,7 +278,8 @@ public final class PostgresTable {
                             SCHEMAS,
                             PII,
                             ANALYZER,
-                            MULTI_VALUED );
+                            MULTI_VALUED,
+                            INDEXED );
     public static final PostgresTableDefinition REQUESTS                 =
             new PostgresTableDefinition( "requests" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
