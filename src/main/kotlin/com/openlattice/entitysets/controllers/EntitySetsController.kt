@@ -59,6 +59,7 @@ constructor(
                 edmManager.getEntitySet(linkingEntitySetId).isLinking,
                 "Can't add linked entity sets to a not linking entity set")
         checkLinkedEntitySets(entitySetIds)
+        ensureValidLinkedEntitySets(entitySetIds)
 
         return edmManager.addLinkedEntitySets(linkingEntitySetId, entitySetIds)
     }
@@ -89,7 +90,9 @@ constructor(
     private fun checkLinkedEntitySets(entitySetIds: Set<UUID>) {
         checkNotNull(entitySetIds)
         Preconditions.checkState(!entitySetIds.isEmpty(), "Linked entity sets is empty")
+    }
 
+    private fun ensureValidLinkedEntitySets(entitySetIds: Set<UUID>) {
         val entityTypeId = edmManager.getEntityType(FullQualifiedName(PERSON_FQN)).id
         Preconditions.checkState(
                 entitySetIds.stream()
@@ -97,6 +100,10 @@ constructor(
                         .allMatch { entityTypeId == it },
                 "Linked entity sets are of differing entity types than %s :{}",
                 PERSON_FQN, entitySetIds)
+
+        Preconditions.checkState(
+                entitySetIds.all { !edmManager.getEntitySet(it).isLinking },
+                "Cannot add linking entity set as linked entity set.")
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
