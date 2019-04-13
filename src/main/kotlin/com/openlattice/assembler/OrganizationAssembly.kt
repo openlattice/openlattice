@@ -21,7 +21,7 @@
 
 package com.openlattice.assembler
 
-import java.io.Serializable
+import com.openlattice.organization.OrganizationEntitySetFlag
 import java.util.*
 
 /**
@@ -31,9 +31,5 @@ import java.util.*
 data class OrganizationAssembly(
         val organizationId: UUID,
         val dbname: String,
-        val entitySetIds: MutableSet<UUID> = mutableSetOf(),
-        var initialized : Boolean = false
-) {
-
-
-}
+        var initialized : Boolean = false,
+        val materializedEntitySets: MutableMap<UUID, EnumSet<OrganizationEntitySetFlag>> = mutableMapOf())

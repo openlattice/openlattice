@@ -149,7 +149,8 @@ public final class PostgresTable {
                             FLAGS,
                             PII,
                             ANALYZER,
-                            MULTI_VALUED );
+                            MULTI_VALUED,
+                            INDEXED );
     public static final PostgresTableDefinition        GRAPH_QUERIES                =
             new PostgresTableDefinition( "graph_queries" )
                     .addColumns( QUERY_ID, QUERY, STATE, START_TIME )
@@ -217,10 +218,13 @@ public final class PostgresTable {
     //.setUnique( NAME );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES =
             new PostgresTableDefinition( "organization_assemblies" )
-                    .addColumns( ORGANIZATION_ID, DB_NAME, ENTITY_SET_IDS, INITIALIZED )
+                    .addColumns( ORGANIZATION_ID, DB_NAME, INITIALIZED )
                     .primaryKey( ORGANIZATION_ID )
                     .setUnique( DB_NAME ); //We may have to delete for citus
-
+    public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS =
+            new PostgresTableDefinition( "materialized_entity_sets" )
+                    .addColumns( ENTITY_SET_ID, ORGANIZATION_ID, ENTITY_SET_FLAGS )
+                    .primaryKey( ENTITY_SET_ID, ORGANIZATION_ID );
     public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )
                     .addColumns( SECURABLE_OBJECTID, NAME )
@@ -274,7 +278,8 @@ public final class PostgresTable {
                             SCHEMAS,
                             PII,
                             ANALYZER,
-                            MULTI_VALUED );
+                            MULTI_VALUED,
+                            INDEXED );
     public static final PostgresTableDefinition REQUESTS                 =
             new PostgresTableDefinition( "requests" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
@@ -431,7 +436,10 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( ENTITY_SETS, LINKED_ENTITY_SETS )
                         .method( IndexMethod.GIN )
                         .ifNotExists() );
-
+        MATERIALIZED_ENTITY_SETS.addIndexes(
+                new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ORGANIZATION_ID )
+                        .name( "materialized_entity_sets_organization_id_idx" )
+                        .ifNotExists() );
     }
 
     private PostgresTable() {

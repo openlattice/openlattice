@@ -1,7 +1,5 @@
-
-
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +16,10 @@
  *
  * You can contact the owner of the copyright at support@openlattice.com
  *
+ *
  */
+package com.openlattice.assembler
 
-package com.openlattice.hazelcast;
+import java.util.UUID
 
-import com.kryptnostic.rhizome.core.RhizomeApplicationServer;
-
-public class TestServer extends RhizomeApplicationServer {
-    public TestServer( Class<?>... pods) {
-        super( pods );
-    }
-}
+data class EntitySetAssemblyKey(val entitySetId: UUID, val organizationId: UUID)

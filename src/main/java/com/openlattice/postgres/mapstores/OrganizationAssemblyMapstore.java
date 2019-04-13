@@ -23,43 +23,43 @@ package com.openlattice.postgres.mapstores;
 
 import static com.openlattice.postgres.PostgresTable.ORGANIZATION_ASSEMBLIES;
 
-import com.google.common.collect.ImmutableSet;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.openlattice.assembler.OrganizationAssembly;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.mapstores.TestDataFactory;
-import com.openlattice.postgres.PostgresArrays;
+import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
-import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.EnumSet;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 
 public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<UUID, OrganizationAssembly> {
     public static final String INITIALIZED_INDEX = "initialized";
+    public static final String MATERIALIZED_ENTITY_SETS_ID_INDEX = "materializedEntitySets.keySet[any]";
     private final       UUID   testKey           = UUID.randomUUID();
+
+    private final MaterializedEntitySetMapStore materializedEntitySetsMapStore;
 
     public OrganizationAssemblyMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ASSEMBLIES.name(), ORGANIZATION_ASSEMBLIES, hds );
+        materializedEntitySetsMapStore = new MaterializedEntitySetMapStore( hds );
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, OrganizationAssembly value ) throws SQLException {
-        Array entitySetIds = PostgresArrays.createUuidArray( ps.getConnection(), value.getEntitySetIds() );
 
         bind( ps, key, 1 );
         ps.setString( 2, value.getDbname() );
-        ps.setArray( 3, entitySetIds );
-        ps.setBoolean( 4, value.getInitialized() );
+        ps.setBoolean( 3, value.getInitialized() );
 
         // UPDATE
-        ps.setString( 5, value.getDbname() );
-        ps.setArray( 6, entitySetIds );
-        ps.setBoolean( 7, value.getInitialized() );
+        ps.setString( 4, value.getDbname() );
+        ps.setBoolean( 5, value.getInitialized() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {
@@ -68,7 +68,14 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     }
 
     @Override protected OrganizationAssembly mapToValue( ResultSet rs ) throws SQLException {
-        return ResultSetAdapters.organizationAssembly( rs );
+        final UUID organizationId = ResultSetAdapters.organizationId( rs );
+        final String dbName = ResultSetAdapters.dbName( rs );
+        final boolean initialized = ResultSetAdapters.initialized(rs);
+
+        final Map<UUID, EnumSet<OrganizationEntitySetFlag>> materializedEntitySets =
+                materializedEntitySetsMapStore.loadMaterializedEntitySetsForOrganization( organizationId );
+
+        return new OrganizationAssembly(organizationId, dbName, initialized, materializedEntitySets);
     }
 
     @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
@@ -83,14 +90,15 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
         return new OrganizationAssembly(
                 testKey,
                 RandomStringUtils.randomAlphanumeric( 10 ),
-                ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ),
-                false );
+                false,
+                Map.of() );
     }
 
     @Override public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
                 .addMapIndexConfig( new MapIndexConfig( INITIALIZED_INDEX, false ) )
+                .addMapIndexConfig( new MapIndexConfig( MATERIALIZED_ENTITY_SETS_ID_INDEX, false ) )
                 .setInMemoryFormat( InMemoryFormat.OBJECT );
     }
 }

@@ -30,7 +30,6 @@ import com.openlattice.data.integration.Entity
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
-import com.openlattice.graph.edge.EdgeKey
 import com.openlattice.postgres.streams.PostgresIterable
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -88,7 +87,7 @@ interface DataGraphManager {
      */
     fun clearAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<EdgeKey>,
+            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent>
 
@@ -114,7 +113,7 @@ interface DataGraphManager {
      */
     fun deleteAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<EdgeKey>,
+            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent>
 
@@ -208,9 +207,8 @@ interface DataGraphManager {
     fun getNeighborEntitySetIds(entitySetId: Set<UUID>): Set<UUID>
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
-    fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<EdgeKey>
-    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<EdgeKey>
+    fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey>
+    fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<DataEdgeKey>
 
-    fun createEdges(edges: Set<DataEdgeKey>): WriteEvent
     fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
 }

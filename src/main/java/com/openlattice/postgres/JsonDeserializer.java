@@ -76,8 +76,14 @@ public class JsonDeserializer {
             EdmPrimitiveTypeKind dataType,
             UUID propertyTypeId,
             Object value ) {
+
         if ( value == null ) {
             return null;
+        }
+
+        if ( dataType == null ) {
+            logger.error( "received a null datatype for property type {}", propertyTypeId.toString() );
+            throw new NullPointerException( propertyTypeId.toString() );
         }
 
         switch ( dataType ) {

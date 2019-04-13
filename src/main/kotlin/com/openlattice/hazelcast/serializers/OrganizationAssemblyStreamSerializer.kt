@@ -23,11 +23,12 @@ package com.openlattice.hazelcast.serializers
 
 import com.hazelcast.nio.ObjectDataInput
 import com.hazelcast.nio.ObjectDataOutput
-import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer
 import com.openlattice.assembler.OrganizationAssembly
 import com.openlattice.hazelcast.StreamSerializerTypeIds
+import com.openlattice.organization.OrganizationEntitySetFlag
 import org.springframework.stereotype.Component
+import java.util.*
 
 /**
  *
@@ -35,6 +36,8 @@ import org.springframework.stereotype.Component
  */
 @Component
 class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<OrganizationAssembly> {
+    private val entitySetFlags = OrganizationEntitySetFlag.values()
+
     override fun getTypeId(): Int {
         return StreamSerializerTypeIds.ORGANIZATION_ASSEMBLY.ordinal
     }
@@ -51,14 +54,35 @@ class OrganizationAssemblyStreamSerializer : SelfRegisteringStreamSerializer<Org
         UUIDStreamSerializer.serialize(out, obj.organizationId)
         out.writeBoolean(obj.initialized)
         out.writeUTF(obj.dbname)
-        SetStreamSerializers.fastUUIDSetSerialize(out, obj.entitySetIds)
+
+        out.writeInt(obj.materializedEntitySets.size)
+        obj.materializedEntitySets.forEach { entitySetId, flags ->
+            UUIDStreamSerializer.serialize(out, entitySetId)
+
+            out.writeInt(flags.size)
+            flags.forEach {
+                out.writeInt(it.ordinal)
+            }
+        }
     }
 
     override fun read(input: ObjectDataInput): OrganizationAssembly {
         val organizationId = UUIDStreamSerializer.deserialize(input)
         val initialized = input.readBoolean()
-        val dbname = input.readUTF()
-        val entitySetIds = SetStreamSerializers.fastUUIDSetDeserialize(input)
-        return OrganizationAssembly(organizationId, dbname, entitySetIds, initialized)
+        val dbName = input.readUTF()
+
+        val materializedEntitySets = mutableMapOf<UUID, EnumSet<OrganizationEntitySetFlag>>()
+        (0 until input.readInt()).forEach { _ ->
+            val entitySetId = UUIDStreamSerializer.deserialize(input)
+
+            val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
+            (0 until input.readInt()).forEach { _ ->
+                flags.add(entitySetFlags[input.readInt()])
+            }
+
+            materializedEntitySets[entitySetId] = flags
+        }
+
+        return OrganizationAssembly(organizationId, dbName, initialized, materializedEntitySets)
     }
 }
