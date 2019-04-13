@@ -26,17 +26,12 @@ import com.hazelcast.spi.ExecutionService
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.OrganizationAssembly
-import com.openlattice.assembler.PRODUCTION_FOREIGN_SCHEMA
-import org.slf4j.LoggerFactory
-import java.lang.IllegalStateException
 import java.util.UUID
 
 
-private val logger = LoggerFactory.getLogger(CreateProductionForeignTableOfEntitySetProcessor::class.java)
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-data class CreateProductionForeignTableOfEntitySetProcessor(val entitySetId: UUID) :
-        AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
+class MaterializeEdgesProcessor : AbstractRhizomeEntryProcessor<UUID, OrganizationAssembly, Void?>(), Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
@@ -44,10 +39,10 @@ data class CreateProductionForeignTableOfEntitySetProcessor(val entitySetId: UUI
         val organizationId = entry.key
         val assembly = entry.value
         if (assembly == null) {
-            logger.error("Encountered null assembly while trying to create $PRODUCTION_FOREIGN_SCHEMA foreign table " +
-                    "for entity set $entitySetId.")
+            throw IllegalStateException("Encountered null assembly while trying to materialize edges for " +
+                    "organization $organizationId.")
         } else {
-            acm?.createProductionForeignSchemaOfEntitySetIfNotExists(organizationId, entitySetId)
+            acm?.materializeEdges(organizationId, assembly.materializedEntitySets.keys)
                     ?: throw IllegalStateException(NOT_INITIALIZED)
         }
 
@@ -58,9 +53,17 @@ data class CreateProductionForeignTableOfEntitySetProcessor(val entitySetId: UUI
         return ExecutionService.OFFLOADABLE_EXECUTOR
     }
 
-    fun init(acm: AssemblerConnectionManager): CreateProductionForeignTableOfEntitySetProcessor {
+    fun init(acm: AssemblerConnectionManager): MaterializeEdgesProcessor {
         this.acm = acm
         return this
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return (other != null && other is MaterializeEdgesProcessor)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
     }
 
 }

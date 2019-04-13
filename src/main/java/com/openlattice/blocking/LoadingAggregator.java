@@ -2,13 +2,16 @@ package com.openlattice.blocking;
 
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
 import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
 import com.hazelcast.core.IMap;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityDataValue;
+import com.openlattice.data.PropertyMetadata;
 import com.openlattice.data.storage.HazelcastEntityDatastore;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
@@ -16,6 +19,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class LoadingAggregator
@@ -54,11 +58,24 @@ public class LoadingAggregator
         LinkingEntity entity = ( entities.containsKey( graphEntityPair ) ) ?
                 entities.get( graphEntityPair ) : new LinkingEntity( Maps.newHashMap() );
 
-        entity.addAll( HazelcastEntityDatastore
-                .fromEntityDataValue( input.getValue(), authorizedPropertyTypes.get( entitySetId ).keySet() ) );
+        entity.addAll( fromEntityDataValue( input.getValue(), authorizedPropertyTypes.get( entitySetId ).keySet() ) );
 
         entities.put( graphEntityPair, entity );
 
+    }
+
+    private SetMultimap<UUID, Object> fromEntityDataValue(
+            EntityDataValue edv,
+            Set<UUID> authorizedPropertyTypes ) {
+        SetMultimap<UUID, Object> entityData = HashMultimap.create();
+        Map<UUID, Map<Object, PropertyMetadata>> properties = edv.getProperties();
+        for ( UUID propertyTypeId : authorizedPropertyTypes ) {
+            Map<Object, PropertyMetadata> valueMap = properties.get( propertyTypeId );
+            if ( valueMap != null ) {
+                entityData.putAll( propertyTypeId, valueMap.keySet() );
+            }
+        }
+        return entityData;
     }
 
     @Override public void combine( Aggregator aggregator ) {

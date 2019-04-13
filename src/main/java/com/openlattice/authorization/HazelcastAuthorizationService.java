@@ -22,18 +22,14 @@
 
 package com.openlattice.authorization;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.Maps.transformValues;
-import static com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX;
-
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
-import com.hazelcast.aggregation.Aggregator;
+import com.hazelcast.aggregation.Aggregators;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
@@ -47,6 +43,9 @@ import com.openlattice.authorization.processors.PermissionRemover;
 import com.openlattice.authorization.processors.SecurableObjectTypeUpdater;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
+import com.openlattice.organizations.PrincipalSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -54,9 +53,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.openlattice.organizations.PrincipalSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.Maps.transformValues;
+import static com.openlattice.authorization.mapstores.PermissionMapstore.ACL_KEY_INDEX;
 
 public class HazelcastAuthorizationService implements AuthorizationManager {
     private static final Logger logger = LoggerFactory.getLogger( AuthorizationManager.class );
@@ -112,11 +112,32 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
                 new PermissionMerger( permissions, securableObjectType, expirationDate ) );
     }
 
+    private void ensureAclKeysHaveOtherUserOwners( Set<AclKey> aclKeys, Set<Principal> principals ) {
+        Set<Principal> userPrincipals = principals.stream().filter( p -> p.getType().equals( PrincipalType.USER ) )
+                .collect( Collectors.toSet() );
+
+        if ( userPrincipals.size() > 0 ) {
+
+            Predicate allOtherUserOwnersPredicate = Predicates.and( hasAnyAclKeys( aclKeys ),
+                    hasExactPermissions( EnumSet.of( Permission.OWNER ) ),
+                    Predicates.not( hasAnyPrincipals( userPrincipals ) ),
+                    hasPrincipalType( PrincipalType.USER ) );
+
+            long allOtherUserOwnersCount = aces.aggregate( Aggregators.count(), allOtherUserOwnersPredicate );
+
+            if ( allOtherUserOwnersCount == 0 ) {
+                throw new IllegalStateException(
+                        "Unable to remove owner permissions as a securable object will be left without an owner of type USER" );
+            }
+        }
+    }
+
     @Override
     public void removePermission(
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions ) {
+        ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
         aces.executeOnKey( new AceKey( key, principal ), new PermissionRemover( permissions ) );
     }
 
@@ -125,6 +146,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             AclKey key,
             Principal principal,
             EnumSet<Permission> permissions ) {
+        if ( !permissions.contains( Permission.OWNER ) )
+            ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
         OffsetDateTime expirationDate = OffsetDateTime.MAX;
         SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
@@ -137,6 +160,8 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
             Principal principal,
             EnumSet<Permission> permissions,
             OffsetDateTime expirationDate ) {
+        if ( !permissions.contains( Permission.OWNER ) )
+            ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( key ), ImmutableSet.of( principal ) );
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
         SecurableObjectType securableObjectType = securableObjectTypes.getOrDefault( key, SecurableObjectType.Unknown );
         aces.set( new AceKey( key, principal ), new AceValue( permissions, securableObjectType, expirationDate ) );
@@ -145,11 +170,14 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     @Override
     public void setPermission( Set<AclKey> aclKeys, Set<Principal> principals, EnumSet<Permission> permissions ) {
         //This should be a rare call to overwrite all permissions, so it's okay to do a read before write.
-        Map<AclKey, SecurableObjectType> securableObejctTypesForAclKeys = securableObjectTypes.getAll( aclKeys );
+        if ( !permissions.contains( Permission.OWNER ) )
+            ensureAclKeysHaveOtherUserOwners( aclKeys, principals );
+
+        Map<AclKey, SecurableObjectType> securableObjectTypesForAclKeys = securableObjectTypes.getAll( aclKeys );
 
         Map<AceKey, AceValue> newPermissions = new HashMap<>( aclKeys.size() * principals.size() );
         for ( AclKey aclKey : aclKeys ) {
-            SecurableObjectType objectType = securableObejctTypesForAclKeys
+            SecurableObjectType objectType = securableObjectTypesForAclKeys
                     .getOrDefault( aclKey, SecurableObjectType.Unknown );
 
             AceValue aceValue = new AceValue( permissions, objectType, OffsetDateTime.MAX );
@@ -488,6 +516,10 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
 
     private static Predicate hasPrincipal( Principal principal ) {
         return Predicates.equal( PermissionMapstore.PRINCIPAL_INDEX, principal );
+    }
+
+    private static Predicate hasPrincipalType( PrincipalType type ) {
+        return Predicates.equal( PermissionMapstore.PRINCIPAL_TYPE_INDEX, type );
     }
 
 }

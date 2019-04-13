@@ -41,9 +41,9 @@ class ProductionViewSchemaInitializationTask : HazelcastInitializationTask<Assem
     override fun initialize(dependencies: AssemblerDependencies) {
         dependencies.hds.connection.use { conn ->
             conn.createStatement().use { stmt ->
-                stmt.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_VIEWS_SCHEMA")
+                stmt.execute("CREATE SCHEMA IF NOT EXISTS ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
             }
-            logger.info("Created $PRODUCTION_VIEWS_SCHEMA schema if it didn't exist.")
+            logger.info("Created ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA} schema if it didn't exist.")
         }
     }
 

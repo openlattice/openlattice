@@ -52,7 +52,7 @@ class AddMembersToOrganizationAssemblyProcessorStreamSerializer
         return AddMembersToOrganizationAssemblyProcessor(PrincipalSetStreamSerializer().read(input)).init(acm)
     }
 
-    override fun init(assemblerConnectonManager: AssemblerConnectionManager) {
-        this.acm = assemblerConnectonManager
+    override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
+        this.acm = assemblerConnectionManager
     }
 }

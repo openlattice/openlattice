@@ -22,8 +22,6 @@
 package com.openlattice.assembler
 
 import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.MetricRegistry.*
-import com.codahale.metrics.Timer
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.DbCredentialService
@@ -32,7 +30,6 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
 import com.openlattice.tasks.HazelcastTaskDependencies
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 
@@ -52,25 +49,5 @@ data class AssemblerDependencies(
         val metricRegistry: MetricRegistry
 
 ) : HazelcastTaskDependencies {
-    val target: HikariDataSource = connect("postgres")
-    val materializeAllTimer: Timer =
-            metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeAll"))
-    val materializeEntitySetsTimer: Timer =
-            metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeEntitySets"))
-    val materializeEdgesTimer: Timer =
-            metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeEdges"))
-
-    private fun connect(dbname: String): HikariDataSource {
-        val config = assemblerConfiguration.server.clone() as Properties
-        config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
-            "${(jdbcUrl as String).removeSuffix(
-                    "/"
-            )}/$dbname" + if (assemblerConfiguration.ssl) {
-                "?ssl=true"
-            } else {
-                ""
-            }
-        }
-        return HikariDataSource(HikariConfig(config))
-    }
+    val target: HikariDataSource = assemblerConnectionManager.connect("postgres")
 }

@@ -57,6 +57,7 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
         ps.setBoolean( parameterIndex++, value.isPIIfield() );
         ps.setString( parameterIndex++, value.getAnalyzer().name() );
         ps.setBoolean( parameterIndex++, value.isMultiValued() );
+        ps.setString( parameterIndex++, value.getPostgresIndexType().name() );
 
         //UPDATE
         ps.setString( parameterIndex++, fqn.getNamespace() );
@@ -70,6 +71,7 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
         ps.setBoolean( parameterIndex++, value.isPIIfield() );
         ps.setString( parameterIndex++, value.getAnalyzer().name() );
         ps.setBoolean( parameterIndex++, value.isMultiValued() );
+        ps.setString( parameterIndex++, value.getPostgresIndexType().name() );
     }
 
     @Override protected int bind( PreparedStatement ps, UUID key, int parameterIndex ) throws SQLException {

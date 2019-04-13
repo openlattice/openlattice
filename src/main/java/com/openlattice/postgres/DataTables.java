@@ -20,22 +20,17 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.PostgresColumn.*;
-import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
-
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.openlattice.authorization.Permission;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.PostgresEdmTypeConverter;
 import com.openlattice.edm.type.PropertyType;
-import java.util.Arrays;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
 import java.util.Base64;
 import java.util.Base64.Encoder;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import static com.openlattice.postgres.PostgresColumn.*;
+import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -63,26 +58,19 @@ public class DataTables {
             .withDefault( "'-infinity'" )
             .notNull();
 
-    public static final  FullQualifiedName                  LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
+    public static final  FullQualifiedName        LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
             "@lastWrite" );
-    public static final  PostgresColumnDefinition           OWNERS         = new PostgresColumnDefinition(
+    public static final  PostgresColumnDefinition OWNERS         = new PostgresColumnDefinition(
             "owners",
             PostgresDatatype.UUID );
-    public static final  PostgresColumnDefinition           READERS        = new PostgresColumnDefinition(
+    public static final  PostgresColumnDefinition READERS        = new PostgresColumnDefinition(
             "readers",
             PostgresDatatype.UUID );
-    public static final  String                             VALUE_FIELD    = "value";
-    public static final  PostgresColumnDefinition           WRITERS        = new PostgresColumnDefinition(
+    public static final  String                   VALUE_FIELD    = "value";
+    public static final  PostgresColumnDefinition WRITERS        = new PostgresColumnDefinition(
             "writers",
             PostgresDatatype.UUID );
-    private static final Encoder                            encoder        = Base64.getEncoder();
-
-    public static final Set<FullQualifiedName> unindexedProperties = Sets
-            .newConcurrentHashSet( Arrays
-                    .asList(
-                            new FullQualifiedName( "incident.narrative" ),
-                            new FullQualifiedName( "person.picture" ),
-                            new FullQualifiedName( "person.mugshot" ) ) );
+    private static final Encoder                  encoder        = Base64.getEncoder();
 
     public static String propertyTableName( UUID propertyTypeId ) {
         return "pt_" + propertyTypeId.toString();
@@ -137,9 +125,9 @@ public class DataTables {
                 .name( quote( idxPrefix + "_id_idx" ) )
                 .ifNotExists();
 
-        //Byte arrays are generally too large to be indexed by postgres
-        if ( !unindexedProperties.contains( propertyType.getDatatype().getFullQualifiedName() ) ) {
+        if ( !propertyType.getPostgresIndexType().equals( IndexMethod.NONE ) ) {
             PostgresIndexDefinition valueIndex = new PostgresColumnsIndexDefinition( ptd, valueColumn )
+                    .method( propertyType.getPostgresIndexType() )
                     .name( quote( idxPrefix + "_value_idx" ) )
                     .ifNotExists();
 
