@@ -74,7 +74,7 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
                         false ),
                         ImmutableMap.of( chicagoEmployeesEntitySetId, ENTITY_TYPE_ID ),
                         ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes ),
-                        false );
+                        ImmutableMap.of() );
     }
 
     @Test
@@ -91,7 +91,7 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
                         false ),
                         ImmutableMap.of( chicagoEmployeesEntitySetId, ENTITY_TYPE_ID, entitySet2Id, ENTITY_TYPE_ID ),
                         ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes, entitySet2Id, authorizedPropertyTypes ),
-                        false );
+                        ImmutableMap.of() );
     }
 
     @Test
