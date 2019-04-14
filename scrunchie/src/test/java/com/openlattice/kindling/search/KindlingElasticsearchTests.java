@@ -72,8 +72,9 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
                         50,
                         "police",
                         false ),
+                        ImmutableMap.of( chicagoEmployeesEntitySetId, ENTITY_TYPE_ID ),
                         ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes ),
-                        false );
+                        ImmutableMap.of() );
     }
 
     @Test
@@ -88,8 +89,9 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
                         50,
                         "12347",
                         false ),
+                        ImmutableMap.of( chicagoEmployeesEntitySetId, ENTITY_TYPE_ID, entitySet2Id, ENTITY_TYPE_ID ),
                         ImmutableMap.of( chicagoEmployeesEntitySetId, authorizedPropertyTypes, entitySet2Id, authorizedPropertyTypes ),
-                        false );
+                        ImmutableMap.of() );
     }
 
     @Test
@@ -107,8 +109,9 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
 
     @BeforeClass
     public static void createIndicesAndData() {
-        elasticsearchApi.saveEntitySetToElasticsearch( chicagoEmployees, propertyTypesList );
-        elasticsearchApi.saveEntitySetToElasticsearch( entitySet2, propertyTypesList );
+        elasticsearchApi.saveEntityTypeToElasticsearch( entityType, allPropertyTypesList );
+        elasticsearchApi.saveEntitySetToElasticsearch( entityType, chicagoEmployees, propertyTypesList );
+        elasticsearchApi.saveEntitySetToElasticsearch( entityType, entitySet2, propertyTypesList );
         elasticsearchApi.createOrganization( organization );
         createEntityData();
     }
@@ -132,25 +135,25 @@ public class KindlingElasticsearchTests extends BaseElasticsearchTest {
         propertyValues3.put( employeeDeptPropertyId, Sets.newHashSet( "POLICE" ) );
         propertyValues3.put( salaryPropertyId, Sets.newHashSet( "93240" ) );
         propertyValues3.put( employeeIdPropertyId, Sets.newHashSet( "12347" ) );
-        elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
+        elasticsearchApi.createEntityData( ENTITY_TYPE_ID, new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
                 Multimaps.asMap( propertyValues1 ) );
-        elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
+        elasticsearchApi.createEntityData( ENTITY_TYPE_ID, new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
                 Multimaps.asMap( propertyValues2 ) );
-        elasticsearchApi.createEntityData( new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
+        elasticsearchApi.createEntityData( ENTITY_TYPE_ID, new EntityDataKey( chicagoEmployeesEntitySetId, UUID.randomUUID() ),
                 Multimaps.asMap( propertyValues3 ) );
 
         SetMultimap<UUID, Object> entitySet2PropertyValues = HashMultimap.create();
         entitySet2PropertyValues.put( employeeDeptPropertyId, Sets.newHashSet( "POLICE" ) );
         entitySet2PropertyValues.put( employeeIdPropertyId, Sets.newHashSet( "12347" ) );
         elasticsearchApi
-                .createEntityData( new EntityDataKey( entitySet2Id, UUID.randomUUID() ),
+                .createEntityData( ENTITY_TYPE_ID, new EntityDataKey( entitySet2Id, UUID.randomUUID() ),
                         Multimaps.asMap( entitySet2PropertyValues ) );
     }
 
     @AfterClass
     public static void deleteIndices() {
-        elasticsearchApi.deleteEntitySet( chicagoEmployeesEntitySetId );
-        elasticsearchApi.deleteEntitySet( entitySet2Id );
+        elasticsearchApi.deleteEntitySet( chicagoEmployeesEntitySetId, ENTITY_TYPE_ID );
+        elasticsearchApi.deleteEntitySet( entitySet2Id, ENTITY_TYPE_ID );
         elasticsearchApi.deleteOrganization( organizationId );
     }
 

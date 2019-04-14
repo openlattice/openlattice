@@ -25,10 +25,7 @@ import com.dataloom.streams.StreamUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
 import com.openlattice.authorization.AclKey;
@@ -45,10 +42,9 @@ import com.openlattice.organization.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.openlattice.search.requests.*;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
-import org.deeplearning4j.util.ModelSerializer;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
@@ -68,10 +64,10 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.elasticsearch.search.SearchHit;
-import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -83,7 +79,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.stream.Collectors.toSet;
 
 public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     // @formatter:off
@@ -107,8 +103,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         mapper.configure( SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false );
     }
 
-    private final MultiLayerNetwork                   net;
-    private final ThreadLocal                         modelThread;
     private       Client                              client;
     private       ElasticsearchTransportClientFactory factory;
     private       boolean                             connected = true;
@@ -123,29 +117,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     public ConductorElasticsearchImpl(
             SearchConfiguration config,
-            Client someClient ) {
-        this( config, Optional.of( someClient ) );
-    }
-
-    public ConductorElasticsearchImpl(
-            SearchConfiguration config,
             Optional<Client> someClient ) {
         init( config );
         client = someClient.orElseGet( factory::getClient );
         initializeIndices();
-
-        MultiLayerNetwork network;
-        try {
-            network = ModelSerializer
-                    .restoreMultiLayerNetwork(
-                            Thread.currentThread().getContextClassLoader().getResourceAsStream( "model.bin" ) );
-        } catch ( IOException e ) {
-            network = null;
-            logger.error( "Unable to load neural net", e );
-        }
-        this.net = checkNotNull( network );
-
-        modelThread = ThreadLocal.withInitial( net::clone );
     }
 
     private void init( SearchConfiguration config ) {
@@ -154,6 +129,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         port = config.getElasticsearchPort();
         factory = new ElasticsearchTransportClientFactory( server, port, cluster );
     }
+
+    /* INDEX CREATION */
 
     public void initializeIndices() {
         for ( String indexName : DEFAULT_INDICES ) {
@@ -185,15 +162,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public Set<UUID> getEntitySetWithIndices() {
+    public Set<UUID> getEntityTypesWithIndices() {
         return Stream.of( client.admin().indices().prepareGetIndex().setFeatures().get().getIndices() )
-                .filter( s -> s.startsWith( SECURABLE_OBJECT_INDEX_PREFIX ) )
-                .map( s -> UUID.fromString( s.substring( SECURABLE_OBJECT_INDEX_PREFIX.length() ) ) )
-                .collect( Collectors.toSet() );
+                .filter( s -> s.startsWith( DATA_INDEX_PREFIX ) )
+                .map( s -> UUID.fromString( s.substring( DATA_INDEX_PREFIX.length() ) ) )
+                .collect( toSet() );
     }
 
     // @formatter:off
-    private XContentBuilder getMetaphoneSettings() throws IOException {
+    private XContentBuilder getMetaphoneSettings( int numShards ) throws IOException {
     	XContentBuilder settings = XContentFactory.jsonBuilder()
     	        .startObject()
         	        .startObject( ANALYSIS )
@@ -216,7 +193,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 	        .endObject()
                 	    .endObject()
         	        .endObject()
-        	        .field( NUM_SHARDS, 3 )
+        	        .field( NUM_SHARDS, numShards )
         	        .field( NUM_REPLICAS, 2 )
     	        .endObject();
     	return settings;
@@ -254,7 +231,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         try {
             client.admin().indices().prepareCreate( ENTITY_SET_DATA_MODEL )
-                    .setSettings( getMetaphoneSettings() )
+                    .setSettings( getMetaphoneSettings( 5 ) )
                     .addMapping( ENTITY_SET_TYPE, mapping )
                     .execute().actionGet();
             return true;
@@ -289,7 +266,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         client.admin().indices().prepareCreate( ORGANIZATIONS )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 3 )
+                        .put( NUM_SHARDS, 5 )
                         .put( NUM_REPLICAS, 2 ) )
                 .addMapping( ORGANIZATION_TYPE, organizationMapping )
                 .execute().actionGet();
@@ -309,7 +286,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         mapping.put( ENTITY_TYPE, Maps.newHashMap() );
         client.admin().indices().prepareCreate( ENTITY_TYPE_INDEX )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 3 )
+                        .put( NUM_SHARDS, 5 )
                         .put( NUM_REPLICAS, 2 ) )
                 .addMapping( ENTITY_TYPE, mapping )
                 .execute().actionGet();
@@ -329,7 +306,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         mapping.put( ASSOCIATION_TYPE, Maps.newHashMap() );
         client.admin().indices().prepareCreate( ASSOCIATION_TYPE_INDEX )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 3 )
+                        .put( NUM_SHARDS, 5 )
                         .put( NUM_REPLICAS, 2 ) )
                 .addMapping( ASSOCIATION_TYPE, mapping )
                 .execute().actionGet();
@@ -349,7 +326,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         mapping.put( PROPERTY_TYPE, Maps.newHashMap() );
         client.admin().indices().prepareCreate( PROPERTY_TYPE_INDEX )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 3 )
+                        .put( NUM_SHARDS, 5 )
                         .put( NUM_REPLICAS, 2 ) )
                 .addMapping( PROPERTY_TYPE, mapping )
                 .execute().actionGet();
@@ -369,7 +346,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         mapping.put( APP, Maps.newHashMap() );
         client.admin().indices().prepareCreate( APP_INDEX )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 3 )
+                        .put( NUM_SHARDS, 5 )
                         .put( NUM_REPLICAS, 2 ) )
                 .addMapping( APP, mapping )
                 .execute().actionGet();
@@ -389,7 +366,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         mapping.put( APP_TYPE, Maps.newHashMap() );
         client.admin().indices().prepareCreate( APP_TYPE_INDEX )
                 .setSettings( Settings.builder()
-                        .put( NUM_SHARDS, 3 )
+                        .put( NUM_SHARDS, 5 )
                         .put( NUM_REPLICAS, 2 ) )
                 .addMapping( APP_TYPE, mapping )
                 .execute().actionGet();
@@ -467,23 +444,23 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return fieldMapping;
     }
 
-    private String getIndexName( UUID securableObjectId ) {
-        return SECURABLE_OBJECT_INDEX_PREFIX + securableObjectId.toString();
+    private String getIndexName( UUID entityTypeId ) {
+        return DATA_INDEX_PREFIX + entityTypeId.toString();
     }
 
-    private String getTypeName( UUID securableObjectId ) {
-        return SECURABLE_OBJECT_TYPE_PREFIX + securableObjectId.toString();
+    private String getTypeName( UUID entityTypeId ) {
+        return DATA_TYPE_PREFIX + entityTypeId.toString();
     }
 
-    @Override
-    public boolean createSecurableObjectIndex(
-            UUID entitySetId,
-            List<PropertyType> propertyTypes,
-            Optional<Set<UUID>> linkedEntitySetIds ) {
+    /*** ENTITY DATA INDEX CREATE / DELETE / UPDATE ***/
+
+    public boolean createEntityTypeDataIndex( EntityType entityType, List<PropertyType> propertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        String indexName = getIndexName( entitySetId );
-        String typeName = getTypeName( entitySetId );
+        UUID entityTypeId = entityType.getId();
+
+        String indexName = getIndexName( entityTypeId );
+        String typeName = getTypeName( entityTypeId );
 
         boolean exists = client.admin().indices()
                 .prepareExists( indexName ).execute().actionGet().isExists();
@@ -491,173 +468,95 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             return true;
         }
 
-        final Map<String, Object> securableObjectMapping = prepareSecurableObjectProperties(
+        final Map<String, Object> entityTypeMapping = prepareEntityTypeDataMappings(
                 typeName,
                 propertyTypes,
-                linkedEntitySetIds );
+                ImmutableSet.of() );
 
         try {
             client.admin().indices().prepareCreate( indexName )
-                    .setSettings( getMetaphoneSettings() )
-                    .addMapping( typeName, securableObjectMapping )
+                    .setSettings( getMetaphoneSettings( entityType.getShards() ) )
+                    .addMapping( typeName, entityTypeMapping )
                     .execute().actionGet();
         } catch ( IOException e ) {
-            logger.debug( "unable to create securable object index" );
+            logger.debug( "unable to create entity type data index for {}", entityTypeId );
         }
         return true;
     }
 
-    private boolean addMappingToSecurableObjectIndex(
-            UUID entitySetId,
+    private boolean addMappingToEntityTypeDataIndex(
+            EntityType entityType,
             List<PropertyType> propertyTypes,
-            Optional<Set<UUID>> linkedEntitySetIds ) {
+            Set<UUID> entitySetIds ) {
 
-        String indexName = getIndexName( entitySetId );
-        String typeName = getTypeName( entitySetId );
+        String indexName = getIndexName( entityType.getId() );
+        String typeName = getTypeName( entityType.getId() );
 
-        final Map<String, Object> securableObjectMapping = prepareSecurableObjectProperties(
+        final Map<String, Object> entityTypeDataMapping = prepareEntityTypeDataMappings(
                 typeName,
                 propertyTypes,
-                linkedEntitySetIds );
+                entitySetIds );
 
         PutMappingRequest request = new PutMappingRequest( indexName );
         request.type( typeName );
-        request.source( securableObjectMapping );
+        request.source( entityTypeDataMapping );
         try {
             client.admin().indices().putMapping( request ).actionGet();
         } catch ( IllegalStateException e ) {
-            logger.debug( "unable to add mapping to securable object index" );
+            logger.debug( "unable to add mapping to entity type data index for {}", entityType.getId() );
         }
         return true;
     }
 
-    private Map<String, Object> prepareSecurableObjectProperties(
+    private Map<String, Object> prepareEntityTypeDataMappings(
             String typeName,
             List<PropertyType> propertyTypes,
-            Optional<Set<UUID>> linkedEntitySetIds ) {
+            Set<UUID> entitySetIds ) {
         // securable_object_row type mapping
-        Map<String, Object> securableObjectMapping = Maps.newHashMap();
-        Map<String, Object> securableObjectData = Maps.newHashMap();
+        Map<String, Object> entityTypeDataMapping = Maps.newHashMap();
+        Map<String, Object> fieldMappings = Maps.newHashMap();
         Map<String, Object> properties = Maps.newHashMap();
 
-        if ( linkedEntitySetIds.isPresent() ) {
-            linkedEntitySetIds.get().forEach( ( linkedEntitySetId ) -> {
-                for ( PropertyType propertyType : propertyTypes ) {
-                    if ( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ) {
-                        properties.put(
-                                linkedEntitySetId.toString() + "." + propertyType.getId().toString(),
-                                getFieldMapping( propertyType ) );
-                    }
-                }
-            } );
-        } else {
+        properties.put( ENTITY_SET_ID_KEY.toString(), ImmutableMap.of( TYPE, KEYWORD ) );
+
+        entitySetIds.forEach( ( linkedEntitySetId ) -> {
             for ( PropertyType propertyType : propertyTypes ) {
+
                 if ( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ) {
-                    properties.put( propertyType.getId().toString(), getFieldMapping( propertyType ) );
+                    properties.put(
+                            linkedEntitySetId.toString() + "." + propertyType.getId().toString(),
+                            getFieldMapping( propertyType ) );
                 }
             }
-        }
+        } );
 
-        securableObjectData.put( ES_PROPERTIES, properties );
-        securableObjectMapping.put( typeName, securableObjectData );
+        fieldMappings.put( ES_PROPERTIES, properties );
+        entityTypeDataMapping.put( typeName, fieldMappings );
 
-        return securableObjectMapping;
+        return entityTypeDataMapping;
     }
 
     @Override
     public boolean saveEntitySetToElasticsearch(
+            EntityType entityType,
             EntitySet entitySet,
             List<PropertyType> propertyTypes ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
         Map<String, Object> entitySetDataModel = Maps.newHashMap();
         entitySetDataModel.put( ENTITY_SET, entitySet );
         entitySetDataModel.put( PROPERTY_TYPES, propertyTypes );
+
         try {
             String s = ObjectMappers.getJsonMapper().writeValueAsString( entitySetDataModel );
             client.prepareIndex( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySet.getId().toString() )
                     .setSource( s, XContentType.JSON )
                     .execute().actionGet();
-            createSecurableObjectIndex(
-                    entitySet.getId(),
-                    propertyTypes,
-                    ( entitySet.isLinking() ) ? Optional.of( entitySet.getLinkedEntitySets() ) : Optional.empty() );
+
+            addMappingToEntityTypeDataIndex( entityType, propertyTypes, ImmutableSet.of( entitySet.getId() ) );
+
             return true;
         } catch ( JsonProcessingException e ) {
             logger.debug( "error saving entity set to elasticsearch" );
-        }
-        return false;
-    }
-
-    @SuppressWarnings( "unchecked" )
-    @Override
-    public SearchResult executeEntitySetMetadataSearch(
-            Optional<String> optionalSearchTerm,
-            Optional<UUID> optionalEntityType,
-            Optional<Set<UUID>> optionalPropertyTypes,
-            Set<AclKey> authorizedAclKeys,
-            int start,
-            int maxHits ) {
-        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
-
-        BoolQueryBuilder query = new BoolQueryBuilder();
-
-        if ( optionalSearchTerm.isPresent() ) {
-            String searchTerm = optionalSearchTerm.get();
-            Map<String, Float> fieldsMap = Maps.newHashMap();
-            fieldsMap.put( ENTITY_SET + "." + ID, 1F );
-            fieldsMap.put( ENTITY_SET + "." + NAME, 1F );
-            fieldsMap.put( ENTITY_SET + "." + TITLE, 1F );
-            fieldsMap.put( ENTITY_SET + "." + DESCRIPTION, 1F );
-
-            query.must( QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) ).fields( fieldsMap )
-                    .lenient( true ).fuzziness( Fuzziness.AUTO ) );
-        }
-
-        if ( optionalEntityType.isPresent() ) {
-            UUID eid = optionalEntityType.get();
-            query.must( QueryBuilders.matchQuery( ENTITY_SET + "." + ENTITY_TYPE_ID, eid.toString() ) );
-        } else if ( optionalPropertyTypes.isPresent() ) {
-            Set<UUID> propertyTypes = optionalPropertyTypes.get();
-            for ( UUID pid : propertyTypes ) {
-                query.must( QueryBuilders.nestedQuery( PROPERTY_TYPES,
-                        QueryBuilders.matchQuery( PROPERTY_TYPES + "." + ID, pid.toString() ),
-                        ScoreMode.Avg ) );
-            }
-        }
-
-        query.filter( QueryBuilders.idsQuery()
-                .addIds( authorizedAclKeys.stream().map( aclKey -> aclKey.get( 0 ).toString() )
-                        .toArray( String[]::new ) ) );
-        SearchResponse response = client.prepareSearch( ENTITY_SET_DATA_MODEL )
-                .setTypes( ENTITY_SET_TYPE )
-                .setQuery( query )
-                .setFetchSource( new String[] { ENTITY_SET, PROPERTY_TYPES }, null )
-                .setFrom( start )
-                .setSize( maxHits )
-                .execute()
-                .actionGet();
-
-        List<Map<String, Object>> hits = Lists.newArrayList();
-        response.getHits().forEach( hit -> hits.add( hit.getSourceAsMap() ) );
-        return new SearchResult( response.getHits().getTotalHits(), hits );
-    }
-
-    @Override
-    public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes ) {
-        if ( !verifyElasticsearchConnection() ) { return false; }
-
-        Map<String, Object> propertyTypes = Maps.newHashMap();
-        propertyTypes.put( PROPERTY_TYPES, updatedPropertyTypes );
-        try {
-            String s = ObjectMappers.getJsonMapper().writeValueAsString( propertyTypes );
-            UpdateRequest updateRequest = new UpdateRequest(
-                    ENTITY_SET_DATA_MODEL,
-                    ENTITY_SET_TYPE,
-                    entitySetId.toString() ).doc( s, XContentType.JSON );
-            client.update( updateRequest ).actionGet();
-            return true;
-        } catch ( IOException e ) {
-            logger.debug( "error updating property types of entity set in elasticsearch" );
         }
         return false;
     }
@@ -666,98 +565,49 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
      * Add new mappings to existing index.
      * Updating the entity set model is handled in {@link #updatePropertyTypesInEntitySet(UUID, List)}
      *
-     * @param entitySetId        the id of the entity set to which the new proprties are added
-     * @param newPropertyTypes   the ids of the new properties
-     * @param linkedEntitySetIds if it's a linking entity set, the ids of the linked entity sets, otherwise empty
+     * @param entityType       the entity type to which the new properties are added
+     * @param newPropertyTypes the ids of the new properties
      */
     @Override
-    public boolean addPropertyTypesToEntitySet(
-            UUID entitySetId,
+    public boolean addPropertyTypesToEntityType(
+            EntityType entityType,
             List<PropertyType> newPropertyTypes,
-            Optional<Set<UUID>> linkedEntitySetIds ) {
-        return addMappingToSecurableObjectIndex( entitySetId, newPropertyTypes, linkedEntitySetIds );
+            Set<UUID> entitySetIds ) {
+        saveObjectToElasticsearch( ENTITY_TYPE_INDEX, ENTITY_TYPE, entityType, entityType.getId().toString() );
+        return addMappingToEntityTypeDataIndex( entityType, newPropertyTypes, entitySetIds );
     }
 
     @Override
     public boolean addLinkedEntitySetsToEntitySet(
-            UUID linkingEntitySetId,
+            EntityType entityType,
             List<PropertyType> propertyTypes,
             Set<UUID> newLinkedEntitySets ) {
-        return addMappingToSecurableObjectIndex( linkingEntitySetId,
+        return addMappingToEntityTypeDataIndex( entityType,
                 propertyTypes,
-                Optional.of( newLinkedEntitySets ) );
+                newLinkedEntitySets );
     }
 
     @Override
-    public boolean deleteEntitySet( UUID entitySetId ) {
+    public boolean deleteEntitySet( UUID entitySetId, UUID entityTypeId ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         client.prepareDelete( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySetId.toString() ).execute().actionGet();
 
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE ).filter(
-                QueryBuilders.boolQuery()
-                        .must( QueryBuilders.matchQuery( TYPE_FIELD, ACLS ) )
-                        .must( QueryBuilders.matchQuery( ENTITY_SET_ID, entitySetId.toString() ) ) )
-                .source( ENTITY_SET_DATA_MODEL )
-                .execute()
-                .actionGet();
+        BulkByScrollResponse response = DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
+                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId.toString() ) )
+                .source( getIndexName( entityTypeId ) )
+                .get();
 
-        client.admin().indices()
-                .delete( new DeleteIndexRequest( getIndexName( entitySetId ) ) );
-
-        return true;
-    }
-
-    @Override
-    public boolean clearEntitySetData( UUID entitySetId ) {
-        if ( !verifyElasticsearchConnection() ) { return false; }
-
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE ).filter( QueryBuilders.matchAllQuery() )
-                .source( getIndexName( entitySetId ) )
-                .execute()
-                .actionGet();
+        logger.info( "Deleted {} documents from index {} for entity set {}",
+                response.getDeleted(),
+                entityTypeId,
+                entitySetId );
 
         return true;
     }
 
-    @Override
-    public Map<UUID, Set<UUID>> searchEntitySets(
-            Iterable<UUID> entitySetIds,
-            Map<UUID, DelegatedStringSet> fieldSearches,
-            int size,
-            boolean explain ) {
-        if ( !verifyElasticsearchConnection() ) { return null; }
-
-        BoolQueryBuilder query = new BoolQueryBuilder();
-        fieldSearches.entrySet().stream().forEach( entry -> {
-            BoolQueryBuilder fieldQuery = new BoolQueryBuilder();
-            entry.getValue().stream().forEach( searchTerm -> fieldQuery.should(
-                    QueryBuilders.matchQuery( entry.getKey().toString(), searchTerm ).fuzziness( Fuzziness.AUTO )
-                            .lenient( true ) ) );
-            fieldQuery.minimumShouldMatch( 1 );
-            query.should( fieldQuery );
-        } );
-
-        query.minimumShouldMatch( 1 );
-
-        return StreamUtil.stream( entitySetIds )
-                .parallel()
-                .collect(
-                        Collectors.toConcurrentMap( Function.identity(), entitySetId ->
-                                Stream.of( client.prepareSearch( getIndexName( entitySetId ) )
-                                        .setQuery( query )
-                                        .setFrom( 0 )
-                                        .setSize( size )
-                                        .setExplain( explain )
-                                        .execute()
-                                        .actionGet().getHits().getHits() )
-                                        .map( SearchHit::getId )
-                                        .map( UUID::fromString )
-                                        .collect( Collectors.toSet() ) ) );
-    }
-
-    private UUID getEntitySetIdFromIndex( String index ) {
-        return UUID.fromString( index.substring( SECURABLE_OBJECT_INDEX_PREFIX.length() ) );
+    private UUID getEntitySetIdFromHit( SearchHit hit ) {
+        return UUID.fromString( hit.getMatchedQueries()[ 0 ] );
     }
 
     /**
@@ -781,17 +631,20 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     }
 
+    /*** ENTITY DATA CREATE/DELETE ***/
+
     @Override
-    public boolean createEntityData( EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
+    public boolean createEntityData( UUID entityTypeId, EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        UUID entitySetId = edk.getEntitySetId();
+        UUID entitySetId = edk.getEntitySetId(); // TODO add entity set ids
         UUID entityKeyId = edk.getEntityKeyId();
 
         try {
-            final byte[] s = mapper.writeValueAsBytes( propertyValues );
+            final byte[] s = mapper.writeValueAsBytes( ImmutableMap
+                    .of( entitySetId, propertyValues, ENTITY_SET_ID_KEY, entitySetId ) );
 
-            client.prepareIndex( getIndexName( entitySetId ), getTypeName( entitySetId ), entityKeyId.toString() )
+            client.prepareIndex( getIndexName( entityTypeId ), getTypeName( entityTypeId ), entityKeyId.toString() )
                     .setSource( s, XContentType.JSON )
                     .execute().actionGet();
         } catch ( JsonProcessingException e ) {
@@ -804,24 +657,26 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean createBulkEntityData(
+            UUID entityTypeId,
             UUID entitySetId,
             Map<UUID, Map<UUID, Set<Object>>> entitiesById ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         if ( !entitiesById.isEmpty() ) {
             try {
-                String indexName = getIndexName( entitySetId );
-                String indexType = getTypeName( entitySetId );
+                String indexName = getIndexName( entityTypeId );
+                String indexType = getTypeName( entityTypeId );
 
                 BulkRequestBuilder requestBuilder = client.prepareBulk();
                 for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entitiesByIdEntry : entitiesById.entrySet() ) {
-                    final UUID entityId = entitiesByIdEntry.getKey();
-                    final byte[] s = mapper.writeValueAsBytes( entitiesByIdEntry.getValue() );
+
+                    final UUID entityKeyId = entitiesByIdEntry.getKey();
+
+                    final byte[] s = mapper.writeValueAsBytes( ImmutableMap
+                            .of( entitySetId, entitiesByIdEntry.getValue(), ENTITY_SET_ID_KEY, entitySetId ) );
                     requestBuilder.add(
-                            client.prepareIndex( indexName, indexType, entityId.toString() )
+                            client.prepareIndex( indexName, indexType, entityKeyId.toString() )
                                     .setSource( s, XContentType.JSON ) );
-                    //                requestBuilder.add( new IndexRequest( indexName, indexType, entityKeyId.toString() )
-                    //                        .source( s, XContentType.JSON ) );
                 }
 
                 requestBuilder.execute().actionGet();
@@ -835,14 +690,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean createBulkLinkedData(
+            UUID entityTypeId,
             UUID linkingEntitySetId,
             Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingId ) { // linking_id/entity_set_id/property_id
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         if ( !entitiesByLinkingId.isEmpty() ) {
             try {
-                String indexName = getIndexName( linkingEntitySetId );
-                String indexType = getTypeName( linkingEntitySetId );
+                String indexName = getIndexName( entityTypeId );
+                String indexType = getTypeName( entityTypeId );
 
                 BulkRequestBuilder requestBuilder = client.prepareBulk();
                 for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingIdEntry : entitiesByLinkingId
@@ -865,80 +721,53 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     @Override
-    public boolean deleteEntityData( EntityDataKey edk ) {
+    public boolean deleteEntityData( EntityDataKey edk, UUID entityTypeId ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        UUID entitySetId = edk.getEntitySetId();
-        UUID entityId = edk.getEntityKeyId(); // either entityKeyId or linkingId
+        UUID entityKeyId = edk.getEntityKeyId(); // either entityKeyId or linkingId
 
-        client.prepareDelete( getIndexName( entitySetId ), getTypeName( entitySetId ), entityId.toString() )
+        client.prepareDelete( getIndexName( entityTypeId ), getTypeName( entityTypeId ), entityKeyId.toString() )
                 .execute()
                 .actionGet();
         return true;
     }
 
     @Override
-    public boolean updateEntitySetMetadata( EntitySet entitySet ) {
+    public boolean deleteEntityDataBulk( UUID entitySetId, UUID entityTypeId, Set<UUID> entityKeyIds ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        Map<String, Object> entitySetObj = Maps.newHashMap();
-        entitySetObj.put( ENTITY_SET, entitySet );
-        try {
-            String s = ObjectMappers.getJsonMapper().writeValueAsString( entitySetObj );
-            UpdateRequest updateRequest = new UpdateRequest(
-                    ENTITY_SET_DATA_MODEL,
-                    ENTITY_SET_TYPE,
-                    entitySet.getId().toString() ).doc( s, XContentType.JSON );
-            client.update( updateRequest ).actionGet();
-            return true;
-        } catch ( IOException e ) {
-            logger.debug( "error updating entity set metadata in elasticsearch" );
-        }
-        return false;
-    }
+        String index = getIndexName( entityTypeId );
+        String type = getTypeName( entityTypeId );
 
-    @Override
-    public boolean createOrganization( Organization organization ) {
-        if ( !verifyElasticsearchConnection() ) { return false; }
+        BulkRequestBuilder request = client.prepareBulk();
+        entityKeyIds.forEach( entityKeyId -> request.add( new DeleteRequest( index, type, entityKeyId.toString() ) ) );
 
-        Map<String, Object> organizationObject = Maps.newHashMap();
-        organizationObject.put( ID, organization.getId() );
-        organizationObject.put( TITLE, organization.getTitle() );
-        organizationObject.put( DESCRIPTION, organization.getDescription() );
-        UUID organizationId = organization.getSecurablePrincipal().getId();
-        try {
-            String s = ObjectMappers.getJsonMapper().writeValueAsString( organizationObject );
-            client.prepareIndex( ORGANIZATIONS, ORGANIZATION_TYPE, organizationId.toString() )
-                    .setSource( s, XContentType.JSON )
-                    .execute().actionGet();
-            return true;
-        } catch ( JsonProcessingException e ) {
-            logger.debug( "error creating organization in elasticsearch" );
-        }
-        return false;
-    }
-
-    @Override
-    public boolean deleteOrganization( UUID organizationId ) {
-        if ( !verifyElasticsearchConnection() ) { return false; }
-
-        client.prepareDelete( ORGANIZATIONS, ORGANIZATION_TYPE, organizationId.toString() ).execute().actionGet();
-
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE ).filter(
-                QueryBuilders.boolQuery()
-                        .must( QueryBuilders.matchQuery( TYPE_FIELD, ACLS ) )
-                        .must( QueryBuilders.matchQuery( ORGANIZATION_ID, organizationId.toString() ) ) )
-                .source( ORGANIZATIONS )
-                .execute()
-                .actionGet();
+        request.execute().actionGet();
 
         return true;
     }
+
+    @Override
+    public boolean clearEntitySetData( UUID entitySetId, UUID entityTypeId ) {
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
+        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
+                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId ) )
+                .source( getIndexName( entityTypeId ) )
+                .execute()
+                .actionGet();
+
+        // TODO linked entity set data
+
+        return true;
+    }
+
+    /*** ENTITY DATA SEARCH HELPERS ***/
 
     private EntityDataKeySearchResult getEntityDataKeySearchResult( SearchResponse response ) {
         Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
         for ( SearchHit hit : response.getHits() ) {
-            entityDataKeys.add( new EntityDataKey( getEntitySetIdFromIndex( hit.getIndex() ),
+            entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
                     UUID.fromString( hit.getId() ) ) );
         }
         return new EntityDataKeySearchResult( response.getHits().getTotalHits(), entityDataKeys );
@@ -949,7 +778,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         var totalHits = 0;
         for ( MultiSearchResponse.Item item : response.getResponses() ) {
             for ( SearchHit hit : item.getResponse().getHits() ) {
-                entityDataKeys.add( new EntityDataKey( getEntitySetIdFromIndex( hit.getIndex() ),
+                entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
                         UUID.fromString( hit.getId() ) ) );
             }
             totalHits += item.getResponse().getHits().totalHits;
@@ -960,9 +789,29 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     /**
      * Creates for each authorized property type a map with key of that property type id and puts 1 weights as value.
      */
-    private static Map<UUID, Map<String, Float>> getFieldsMap( DelegatedUUIDSet authorizedPropertyTypes ) {
+    private static Map<UUID, Map<String, Float>> getFieldsMap(
+            UUID entitySetId,
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
+            Optional<Set<UUID>> linkedEntitySets ) {
         Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
-        authorizedPropertyTypes.forEach( id -> fieldsMap.put( id, Map.of( id.toString(), 1F ) ) );
+        authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( id -> {
+
+            if ( linkedEntitySets.isPresent() ) {
+                linkedEntitySets.get().forEach( linkedEntitySetId -> {
+
+                    if ( authorizedPropertyTypesByEntitySet
+                            .getOrDefault( linkedEntitySetId, DelegatedUUIDSet.wrap( ImmutableSet.of() ) )
+                            .contains( id ) ) {
+                        Map<String, Float> propertyTypeMap = fieldsMap.getOrDefault( id, Maps.newHashMap() );
+                        propertyTypeMap.put( linkedEntitySetId.toString() + "." + id.toString(), 1F );
+                        fieldsMap.put( id, propertyTypeMap );
+                    }
+                } );
+
+            } else {
+                fieldsMap.put( id, Map.of( entitySetId.toString() + "." + id.toString(), 1F ) );
+            }
+        } );
         return fieldsMap;
     }
 
@@ -1024,10 +873,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .lenient( true );
     }
 
-    private QueryBuilder getGeoDistanceSearchQuery( Constraint constraints, Set<UUID> authorizedProperties ) {
+    private QueryBuilder getGeoDistanceSearchQuery(
+            Constraint constraints,
+            Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
         UUID propertyTypeId = constraints.getPropertyTypeId().get();
-        if ( !authorizedProperties.contains( propertyTypeId ) ) {
+        if ( authorizedFieldsMap.getOrDefault( propertyTypeId, ImmutableMap.of() ).size() == 0 ) {
             return null;
         }
 
@@ -1035,39 +886,56 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         double longitude = constraints.getLongitude().get();
         double radius = constraints.getRadius().get();
 
-        return QueryBuilders
-                .geoDistanceQuery( propertyTypeId.toString() )
-                .point( latitude, longitude )
-                .distance( radius, DistanceUnit.fromString( constraints.getDistanceUnit().get().name() ) );
+        BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
+
+        authorizedFieldsMap.get( propertyTypeId ).keySet().forEach( fieldName ->
+                query.should( QueryBuilders
+                        .geoDistanceQuery( fieldName )
+                        .point( latitude, longitude )
+                        .distance( radius, DistanceUnit.fromString( constraints.getDistanceUnit().get().name() ) ) )
+        );
+
+        return query;
     }
 
-    private QueryBuilder getGeoPolygonSearchQuery( Constraint constraints, Set<UUID> authorizedProperties ) {
+    private QueryBuilder getGeoPolygonSearchQuery(
+            Constraint constraints,
+            Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
         UUID propertyTypeId = constraints.getPropertyTypeId().get();
-        if ( !authorizedProperties.contains( propertyTypeId ) ) {
+        if ( authorizedFieldsMap.getOrDefault( propertyTypeId, ImmutableMap.of() ).size() == 0 ) {
             return null;
         }
 
-        QueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
+        BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
 
         for ( List<List<Double>> zone : constraints.getZones().get() ) {
             List<GeoPoint> polygon = zone.stream().map( pair -> new GeoPoint( pair.get( 1 ), pair.get( 0 ) ) )
                     .collect( Collectors.toList() );
-            ( (BoolQueryBuilder) query ).should( QueryBuilders.geoPolygonQuery( propertyTypeId.toString(), polygon ) );
+
+            authorizedFieldsMap.get( propertyTypeId ).keySet()
+                    .forEach( fieldName -> query.should( QueryBuilders.geoPolygonQuery( fieldName, polygon ) ) );
         }
 
         return query;
     }
 
-    private QueryBuilder getWriteDateTimeFilterQuery( Constraint constraint ) {
-        RangeQueryBuilder query = QueryBuilders.rangeQuery( LAST_WRITE.toString() );
+    private QueryBuilder getWriteDateTimeFilterQuery( UUID[] entitySetIds, Constraint constraint ) {
+        BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
 
-        if ( constraint.getStartDate().isPresent() ) {
-            query.gt( constraint.getStartDate().get().toString() );
-        }
+        for ( int i = 0; i < entitySetIds.length; i++ ) {
+            RangeQueryBuilder rangeQuery = QueryBuilders
+                    .rangeQuery( entitySetIds[ i ].toString() + "." + LAST_WRITE.toString() );
 
-        if ( constraint.getEndDate().isPresent() ) {
-            query.lte( constraint.getEndDate().get().toString() );
+            if ( constraint.getStartDate().isPresent() ) {
+                rangeQuery.gt( constraint.getStartDate().get().toString() );
+            }
+
+            if ( constraint.getEndDate().isPresent() ) {
+                rangeQuery.lte( constraint.getEndDate().get().toString() );
+            }
+
+            query.should( rangeQuery );
         }
 
         return query;
@@ -1090,11 +958,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                         break;
 
                     case geoDistance:
-                        subQuery.should( getGeoDistanceSearchQuery( constraint, authorizedFieldsMap.keySet() ) );
+                        subQuery.should( getGeoDistanceSearchQuery( constraint, authorizedFieldsMap ) );
                         break;
 
                     case geoPolygon:
-                        subQuery.should( getGeoPolygonSearchQuery( constraint, authorizedFieldsMap.keySet() ) );
+                        subQuery.should( getGeoPolygonSearchQuery( constraint, authorizedFieldsMap ) );
                         break;
 
                     case simple:
@@ -1102,7 +970,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                         break;
 
                     case writeDateTimeFilter:
-                        subQuery.should( getWriteDateTimeFilterQuery( constraint ) );
+                        subQuery.should( getWriteDateTimeFilterQuery( searchConstraints.getEntitySetIds(),
+                                constraint ) );
                         break;
 
                 }
@@ -1114,66 +983,108 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return query;
     }
 
+    /*** ENTITY DATA SEARCH ***/
+
     @Override
     public EntityDataKeySearchResult executeSearch(
             SearchConstraints searchConstraints,
+            Map<UUID, UUID> entityTypesByEntitySetId,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
-            boolean linking ) {
+            Map<UUID, DelegatedUUIDSet> linkingEntitySets ) {
         if ( !verifyElasticsearchConnection() ) {
             return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
 
-        return ( linking ) ? executeLinkingSearch( searchConstraints, authorizedPropertyTypesByEntitySet ) :
-                executeNormalSearch( searchConstraints, authorizedPropertyTypesByEntitySet );
-    }
-
-    /**
-     * Executes entity data search on multiple entity sets
-     *
-     * @param searchConstraints
-     * @param authorizedPropertyTypesByEntitySet authorized properties for each entity set individually
-     */
-    private EntityDataKeySearchResult executeNormalSearch(
-            SearchConstraints searchConstraints,
-            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
-
         MultiSearchRequest requests = new MultiSearchRequest().maxConcurrentSearchRequests( MAX_CONCURRENT_SEARCHES );
-        authorizedPropertyTypesByEntitySet.keySet().forEach(
-                ( entitySetId ) -> {
-                    Map<UUID, Map<String, Float>> authorizedFieldsMap =
-                            getFieldsMap( authorizedPropertyTypesByEntitySet.get( entitySetId ) );
-                    QueryBuilder query = getQueryForSearch( searchConstraints, authorizedFieldsMap );
 
-                    SearchRequestBuilder request = client
-                            .prepareSearch( getIndexName( entitySetId ) )
-                            .setQuery( query )
-                            .setFrom( searchConstraints.getStart() )
-                            .setSize( searchConstraints.getMaxHits() );
-                    requests.add( request );
-                }
-        );
+        for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
+            UUID entitySetId = searchConstraints.getEntitySetIds()[ i ];
+
+            Map<UUID, Map<String, Float>> authorizedFieldsMap =
+                    getFieldsMap( entitySetId,
+                            authorizedPropertyTypesByEntitySet,
+                            Optional.ofNullable( linkingEntitySets.get( entitySetId ) ) );
+
+            BoolQueryBuilder query = new BoolQueryBuilder().queryName( entitySetId.toString() )
+                    .must( getQueryForSearch( searchConstraints, authorizedFieldsMap ) );
+
+            if ( linkingEntitySets.containsKey( entitySetId ) ) {
+                query.mustNot( QueryBuilders.existsQuery( ENTITY_SET_ID_KEY
+                        .toString() ) ); // this field will not exist for linked entity documents
+            } else {
+                query.must( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(),
+                        entitySetId.toString() ) ); // match entity set id
+            }
+
+            SearchRequestBuilder request = client
+                    .prepareSearch( getIndexName( entityTypesByEntitySetId.get( entitySetId ) ) )
+                    .setQuery( query )
+                    .setFrom( searchConstraints.getStart() )
+                    .setSize( searchConstraints.getMaxHits() )
+                    .setFetchSource( false );
+            requests.add( request );
+        }
 
         MultiSearchResponse response = client.multiSearch( requests ).actionGet();
         return getEntityDataKeySearchResult( response );
     }
 
+    @Override
+    public Map<UUID, Set<UUID>> executeBlockingSearch(
+            UUID entityTypeId,
+            Map<UUID, DelegatedStringSet> fieldSearches,
+            int size,
+            boolean explain ) {
+        if ( !verifyElasticsearchConnection() ) { return null; }
+
+        BoolQueryBuilder valuesQuery = new BoolQueryBuilder();
+        fieldSearches.entrySet().stream().forEach( entry -> {
+            BoolQueryBuilder fieldQuery = new BoolQueryBuilder();
+            entry.getValue().stream().forEach( searchTerm -> fieldQuery.should(
+                    QueryBuilders.matchQuery( entry.getKey().toString(), searchTerm ).fuzziness( Fuzziness.AUTO )
+                            .lenient( true ) ) );
+            fieldQuery.minimumShouldMatch( 1 );
+            valuesQuery.should( fieldQuery );
+        } );
+
+        valuesQuery.minimumShouldMatch( 1 );
+
+        BoolQueryBuilder query = QueryBuilders.boolQuery().must( valuesQuery )
+                .must( QueryBuilders.existsQuery( ENTITY_SET_ID_KEY.toString() ) );
+
+        return StreamUtil.stream( client.prepareSearch( getIndexName( entityTypeId ) )
+                .setQuery( query )
+                .setFrom( 0 )
+                .setSize( size )
+                .setExplain( explain )
+                .setFetchSource( ENTITY_SET_ID_KEY.toString(), null )
+                .execute()
+                .actionGet().getHits() )
+                .map( hit -> Pair
+                        .of( UUID.fromString( hit.getSourceAsMap().get( ENTITY_SET_ID_KEY.toString() ).toString() ),
+                                UUID.fromString( hit.getId() ) ) )
+                .collect( Collectors.groupingBy( Pair::getKey, Collectors.mapping( Pair::getValue, toSet() ) ) );
+    }
+
     /**
      * Executes entity data search on multiple linking entity sets containing 1 or more linked entity sets
      *
-     * @param searchConstraints                  SearchConstraints containing the linking entity set ids (NOT linked)
+     * @param searchConstraints                  SearchConstraints containing the linking entity set ids (NOT linked) // TODO
      * @param authorizedPropertyTypesByEntitySet authorized properties for each linked entity set individually
      */
     private EntityDataKeySearchResult executeLinkingSearch(
             SearchConstraints searchConstraints,
+            Map<UUID, UUID> entityTypesByEntitySetId,
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
+
         Map<UUID, Map<String, Float>> authorizedFieldsMap = getLinkingFieldsMap( authorizedPropertyTypesByEntitySet );
         QueryBuilder query = getQueryForSearch( searchConstraints, authorizedFieldsMap );
         if ( query == null ) {
             return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
 
-        String[] indexNames = Arrays.stream( searchConstraints.getEntitySetIds() )
-                .map( this::getIndexName ).toArray( String[]::new );
+        String[] indexNames = Sets.newHashSet( entityTypesByEntitySetId.values() ).stream().map( this::getIndexName )
+                .toArray( String[]::new );
 
         SearchResponse response = client
                 .prepareSearch( indexNames )
@@ -1186,40 +1097,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return getEntityDataKeySearchResult( response );
     }
 
-    @Override
-    public SearchResult executeOrganizationSearch(
-            String searchTerm,
-            Set<AclKey> authorizedOrganizationIds,
-            int start,
-            int maxHits ) {
-        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
-
-        BoolQueryBuilder query = new BoolQueryBuilder()
-                .should( QueryBuilders.matchQuery( TITLE, searchTerm ).fuzziness( Fuzziness.AUTO ) )
-                .should( QueryBuilders.matchQuery( DESCRIPTION, searchTerm ).fuzziness( Fuzziness.AUTO ) )
-                .minimumShouldMatch( 1 );
-
-        query.filter( QueryBuilders.idsQuery()
-                .addIds( authorizedOrganizationIds.stream().map( aclKey -> aclKey.get( 0 ).toString() )
-                        .toArray( String[]::new ) ) );
-
-        SearchResponse response = client.prepareSearch( ORGANIZATIONS )
-                .setTypes( ORGANIZATION_TYPE )
-                .setQuery( query )
-                .setFrom( start )
-                .setSize( maxHits )
-                .execute()
-                .actionGet();
-
-        List<Map<String, Object>> hits = Lists.newArrayList();
-        for ( SearchHit hit : response.getHits() ) {
-            Map<String, Object> hitMap = hit.getSourceAsMap();
-            hitMap.put( "id", hit.getId() );
-            hits.add( hitMap );
-        }
-
-        return new SearchResult( response.getHits().getTotalHits(), hits );
-    }
+    /*** EDM OBJECT CRUD TRIGGERING INDEX UPDATES ***/
 
     @Override
     public boolean updateOrganization( UUID id, Optional<String> optionalTitle, Optional<String> optionalDescription ) {
@@ -1244,43 +1122,28 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return false;
     }
 
-    public boolean verifyElasticsearchConnection() {
-        if ( connected ) {
-            if ( !factory.isConnected( client ) ) {
-                connected = false;
-            }
-        } else {
-            client = factory.getClient();
-            if ( client != null ) {
-                connected = true;
-            }
-        }
-        return connected;
-    }
-
-    @Scheduled(
-            fixedRate = 1800000 )
-    public void verifyRunner() throws UnknownHostException {
-        verifyElasticsearchConnection();
+    @Override
+    public boolean saveEntityTypeToElasticsearch( EntityType entityType, List<PropertyType> propertyTypes ) {
+        saveObjectToElasticsearch( ENTITY_TYPE_INDEX, ENTITY_TYPE, entityType, entityType.getId().toString() );
+        return createEntityTypeDataIndex( entityType, propertyTypes );
     }
 
     @Override
-    public boolean saveEntityTypeToElasticsearch( EntityType entityType ) {
-        return saveObjectToElasticsearch( ENTITY_TYPE_INDEX, ENTITY_TYPE, entityType, entityType.getId().toString() );
-    }
-
-    @Override
-    public boolean saveAssociationTypeToElasticsearch( AssociationType associationType ) {
+    public boolean saveAssociationTypeToElasticsearch(
+            AssociationType associationType,
+            List<PropertyType> propertyTypes ) {
         EntityType entityType = associationType.getAssociationEntityType();
         if ( entityType == null ) {
             logger.debug( "An association type must have an entity type present in order to save to elasticsearch" );
             return false;
         }
 
-        return saveObjectToElasticsearch( ASSOCIATION_TYPE_INDEX,
+        saveObjectToElasticsearch( ASSOCIATION_TYPE_INDEX,
                 ASSOCIATION_TYPE,
                 associationType,
                 entityType.getId().toString() );
+
+        return createEntityTypeDataIndex( entityType, propertyTypes );
     }
 
     @Override
@@ -1303,11 +1166,17 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean deleteEntityType( UUID entityTypeId ) {
+        client.admin().indices()
+                .delete( new DeleteIndexRequest( getIndexName( entityTypeId ) ) );
+
         return deleteObjectById( ENTITY_TYPE_INDEX, ENTITY_TYPE, entityTypeId.toString() );
     }
 
     @Override
     public boolean deleteAssociationType( UUID associationTypeId ) {
+        client.admin().indices()
+                .delete( new DeleteIndexRequest( getIndexName( associationTypeId ) ) );
+
         return deleteObjectById( ASSOCIATION_TYPE_INDEX, ASSOCIATION_TYPE, associationTypeId.toString() );
     }
 
@@ -1325,6 +1194,86 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean deleteAppType( UUID appTypeId ) {
         return deleteObjectById( APP_TYPE_INDEX, APP_TYPE, appTypeId.toString() );
     }
+
+    @Override
+    public boolean updateEntitySetMetadata( EntitySet entitySet ) {
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
+        Map<String, Object> entitySetObj = Maps.newHashMap();
+        entitySetObj.put( ENTITY_SET, entitySet );
+        try {
+            String s = ObjectMappers.getJsonMapper().writeValueAsString( entitySetObj );
+            UpdateRequest updateRequest = new UpdateRequest(
+                    ENTITY_SET_DATA_MODEL,
+                    ENTITY_SET_TYPE,
+                    entitySet.getId().toString() ).doc( s, XContentType.JSON );
+            client.update( updateRequest ).actionGet();
+            return true;
+        } catch ( IOException e ) {
+            logger.debug( "error updating entity set metadata in elasticsearch" );
+        }
+        return false;
+    }
+
+    @Override
+    public boolean updatePropertyTypesInEntitySet( UUID entitySetId, List<PropertyType> updatedPropertyTypes ) {
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
+        Map<String, Object> propertyTypes = Maps.newHashMap();
+        propertyTypes.put( PROPERTY_TYPES, updatedPropertyTypes );
+        try {
+            String s = ObjectMappers.getJsonMapper().writeValueAsString( propertyTypes );
+            UpdateRequest updateRequest = new UpdateRequest(
+                    ENTITY_SET_DATA_MODEL,
+                    ENTITY_SET_TYPE,
+                    entitySetId.toString() ).doc( s, XContentType.JSON );
+            client.update( updateRequest ).actionGet();
+            return true;
+        } catch ( IOException e ) {
+            logger.debug( "error updating property types of entity set in elasticsearch" );
+        }
+        return false;
+    }
+
+    @Override
+    public boolean createOrganization( Organization organization ) {
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
+        Map<String, Object> organizationObject = Maps.newHashMap();
+        organizationObject.put( ID, organization.getId() );
+        organizationObject.put( TITLE, organization.getTitle() );
+        organizationObject.put( DESCRIPTION, organization.getDescription() );
+        UUID organizationId = organization.getSecurablePrincipal().getId();
+        try {
+            String s = ObjectMappers.getJsonMapper().writeValueAsString( organizationObject );
+            client.prepareIndex( ORGANIZATIONS, ORGANIZATION_TYPE, organizationId.toString() )
+                    .setSource( s, XContentType.JSON )
+                    .execute().actionGet();
+            return true;
+        } catch ( JsonProcessingException e ) {
+            logger.debug( "error creating organization in elasticsearch" );
+        }
+        return false;
+    }
+
+    @Override
+    public boolean deleteOrganization( UUID organizationId ) {
+        if ( !verifyElasticsearchConnection() ) { return false; }
+
+        client.prepareDelete( ORGANIZATIONS, ORGANIZATION_TYPE, organizationId.toString() ).execute().actionGet();
+
+        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE ).filter(
+                QueryBuilders.boolQuery()
+                        .must( QueryBuilders.matchQuery( TYPE_FIELD, ACLS ) )
+                        .must( QueryBuilders.matchQuery( ORGANIZATION_ID, organizationId.toString() ) ) )
+                .source( ORGANIZATIONS )
+                .execute()
+                .actionGet();
+
+        return true;
+    }
+
+    /*** METADATA SEARCHES ***/
 
     @Override
     public SearchResult executeEntityTypeSearch( String searchTerm, int start, int maxHits ) {
@@ -1364,6 +1313,97 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public SearchResult executeFQNPropertyTypeSearch( String namespace, String name, int start, int maxHits ) {
         return executeFQNSearch( PROPERTY_TYPE_INDEX, PROPERTY_TYPE, namespace, name, start, maxHits );
     }
+
+    @Override
+    public SearchResult executeOrganizationSearch(
+            String searchTerm,
+            Set<AclKey> authorizedOrganizationIds,
+            int start,
+            int maxHits ) {
+        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
+
+        BoolQueryBuilder query = new BoolQueryBuilder()
+                .should( QueryBuilders.matchQuery( TITLE, searchTerm ).fuzziness( Fuzziness.AUTO ) )
+                .should( QueryBuilders.matchQuery( DESCRIPTION, searchTerm ).fuzziness( Fuzziness.AUTO ) )
+                .minimumShouldMatch( 1 );
+
+        query.filter( QueryBuilders.idsQuery()
+                .addIds( authorizedOrganizationIds.stream().map( aclKey -> aclKey.get( 0 ).toString() )
+                        .toArray( String[]::new ) ) );
+
+        SearchResponse response = client.prepareSearch( ORGANIZATIONS )
+                .setTypes( ORGANIZATION_TYPE )
+                .setQuery( query )
+                .setFrom( start )
+                .setSize( maxHits )
+                .execute()
+                .actionGet();
+
+        List<Map<String, Object>> hits = Lists.newArrayList();
+        for ( SearchHit hit : response.getHits() ) {
+            Map<String, Object> hitMap = hit.getSourceAsMap();
+            hitMap.put( "id", hit.getId() );
+            hits.add( hitMap );
+        }
+
+        return new SearchResult( response.getHits().getTotalHits(), hits );
+    }
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public SearchResult executeEntitySetMetadataSearch(
+            Optional<String> optionalSearchTerm,
+            Optional<UUID> optionalEntityType,
+            Optional<Set<UUID>> optionalPropertyTypes,
+            Set<AclKey> authorizedAclKeys,
+            int start,
+            int maxHits ) {
+        if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
+
+        BoolQueryBuilder query = new BoolQueryBuilder();
+
+        if ( optionalSearchTerm.isPresent() ) {
+            String searchTerm = optionalSearchTerm.get();
+            Map<String, Float> fieldsMap = Maps.newHashMap();
+            fieldsMap.put( ENTITY_SET + "." + ID, 1F );
+            fieldsMap.put( ENTITY_SET + "." + NAME, 1F );
+            fieldsMap.put( ENTITY_SET + "." + TITLE, 1F );
+            fieldsMap.put( ENTITY_SET + "." + DESCRIPTION, 1F );
+
+            query.must( QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) ).fields( fieldsMap )
+                    .lenient( true ).fuzziness( Fuzziness.AUTO ) );
+        }
+
+        if ( optionalEntityType.isPresent() ) {
+            UUID eid = optionalEntityType.get();
+            query.must( QueryBuilders.matchQuery( ENTITY_SET + "." + ENTITY_TYPE_ID, eid.toString() ) );
+        } else if ( optionalPropertyTypes.isPresent() ) {
+            Set<UUID> propertyTypes = optionalPropertyTypes.get();
+            for ( UUID pid : propertyTypes ) {
+                query.must( QueryBuilders.nestedQuery( PROPERTY_TYPES,
+                        QueryBuilders.matchQuery( PROPERTY_TYPES + "." + ID, pid.toString() ),
+                        ScoreMode.Avg ) );
+            }
+        }
+
+        query.filter( QueryBuilders.idsQuery()
+                .addIds( authorizedAclKeys.stream().map( aclKey -> aclKey.get( 0 ).toString() )
+                        .toArray( String[]::new ) ) );
+        SearchResponse response = client.prepareSearch( ENTITY_SET_DATA_MODEL )
+                .setTypes( ENTITY_SET_TYPE )
+                .setQuery( query )
+                .setFetchSource( new String[] { ENTITY_SET, PROPERTY_TYPES }, null )
+                .setFrom( start )
+                .setSize( maxHits )
+                .execute()
+                .actionGet();
+
+        List<Map<String, Object>> hits = Lists.newArrayList();
+        response.getHits().forEach( hit -> hits.add( hit.getSourceAsMap() ) );
+        return new SearchResult( response.getHits().getTotalHits(), hits );
+    }
+
+    /*** RE-INDEXING ***/
 
     @Override
     public boolean triggerPropertyTypeIndex( List<PropertyType> propertyTypes ) {
@@ -1432,7 +1472,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     @Override
     public boolean clearAllData() {
         client.admin().indices()
-                .delete( new DeleteIndexRequest( SECURABLE_OBJECT_INDEX_PREFIX + "*" ) );
+                .delete( new DeleteIndexRequest( DATA_INDEX_PREFIX + "*" ) );
         DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
                 .filter( QueryBuilders.matchAllQuery() ).source( ENTITY_SET_DATA_MODEL,
                 ENTITY_TYPE_INDEX,
@@ -1444,12 +1484,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .get();
         return true;
     }
-
-    @Override
-    public double getModelScore( double[][] features ) {
-        return ( (MultiLayerNetwork) modelThread.get() ).output( Nd4j.create( features ) ).getDouble( 1 );
-    }
-
 
 
     /* HELPERS */
@@ -1605,6 +1639,26 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
 
         return true;
+    }
+
+    public boolean verifyElasticsearchConnection() {
+        if ( connected ) {
+            if ( !factory.isConnected( client ) ) {
+                connected = false;
+            }
+        } else {
+            client = factory.getClient();
+            if ( client != null ) {
+                connected = true;
+            }
+        }
+        return connected;
+    }
+
+    @Scheduled(
+            fixedRate = 1800000 )
+    public void verifyRunner() throws UnknownHostException {
+        verifyElasticsearchConnection();
     }
 
 }
