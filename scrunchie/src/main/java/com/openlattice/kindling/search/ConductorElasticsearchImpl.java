@@ -594,7 +594,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         client.prepareDelete( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySetId.toString() ).execute().actionGet();
 
         BulkByScrollResponse response = DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
-                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId ) )
+                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId.toString() ) )
                 .source( getIndexName( entityTypeId ) )
                 .get();
 
