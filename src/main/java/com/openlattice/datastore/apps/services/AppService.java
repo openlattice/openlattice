@@ -106,7 +106,7 @@ public class AppService {
 
     public UUID createApp( App app ) {
         reservations.reserveIdAndValidateType( app, app::getName );
-        apps.putIfAbsent( app.getId(), app );
+        apps.put( app.getId(), app );
         eventBus.post( new AppCreatedEvent( app ) );
         return app.getId();
     }

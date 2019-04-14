@@ -106,7 +106,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
         val columnTitles = getEntitySetColumns(edm.getEntityTypeByEntitySetId(entitySetId).id)
 
         //TODO: Make this more concise
-        return if (entitySet.isLinking) {
+        if (entitySet.isLinking) {
             checkArgument(
                     !entitySet.linkedEntitySets.isEmpty(),
                     "Linked entity sets does not consist of any entity sets."
@@ -232,7 +232,7 @@ class AnalysisController : AnalysisApi, AuthorizingComponent {
             setOf(entitySetId)
         }
 
-        return analysisService!!.getNeighborTypes(allEntitySetIds)
+        return analysisService.getNeighborTypes(allEntitySetIds)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager? {
