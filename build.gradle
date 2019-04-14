@@ -88,6 +88,10 @@ applicationDefaultJvmArgs += [ "--add-modules", "java.se",
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
+checkstyle {
+    toolVersion = '7.4'
+}
+
 tasks.withType(Checkstyle) {
     reports {
         xml.enabled = false

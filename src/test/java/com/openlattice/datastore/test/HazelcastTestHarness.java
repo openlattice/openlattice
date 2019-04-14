@@ -38,10 +38,10 @@ import com.hazelcast.map.AbstractEntryProcessor;
 
 public class HazelcastTestHarness {
 
-	protected static HazelcastInstance hazelcast = null;
+	private static HazelcastInstance hazelcast = null;
 
 	@BeforeClass
-	public static final void initHazelcast() {
+	public static void initHazelcast() {
 		if (hazelcast == null) {
 			Config config = new Config("test");
 			config.setGroupConfig(new GroupConfig("test", "rogue"));
@@ -54,7 +54,7 @@ public class HazelcastTestHarness {
 	}
 
 	@AfterClass
-	public static final void shutdownHazelcast() {
+	public static void shutdownHazelcast() {
 		hazelcast.shutdown();
 		hazelcast = null;
 	}

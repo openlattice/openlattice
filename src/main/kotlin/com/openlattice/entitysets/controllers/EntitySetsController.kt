@@ -26,9 +26,7 @@ import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.entitysets.EntitySetsApi
 import org.apache.olingo.commons.api.edm.FullQualifiedName
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
 
@@ -43,12 +41,15 @@ constructor(
     private val PERSON_FQN = "general.person"
 
     @RequestMapping(path = [EntitySetsApi.LINKING + EntitySetsApi.SET_ID_PATH], method = [RequestMethod.PUT])
-    override fun addEntitySetsToLinkingEntitySet(linkingEntitySetId: UUID, entitySetIds: Set<UUID>): Int {
+    override fun addEntitySetsToLinkingEntitySet(
+            @PathVariable(EntitySetsApi.SET_ID) linkingEntitySetId: UUID,
+            @RequestBody entitySetIds: Set<UUID>
+    ): Int {
         return addEntitySets(linkingEntitySetId, entitySetIds)
     }
 
     @RequestMapping(path = [EntitySetsApi.LINKING], method = [RequestMethod.POST])
-    override fun addEntitySetsToLinkingEntitySets(entitySetIds: Map<UUID, Set<UUID>>): Int {
+    override fun addEntitySetsToLinkingEntitySets(@RequestBody entitySetIds: Map<UUID, Set<UUID>>): Int {
         return entitySetIds.map { addEntitySets(it.key, it.value) }.sum()
     }
 
@@ -58,17 +59,21 @@ constructor(
                 edmManager.getEntitySet(linkingEntitySetId).isLinking,
                 "Can't add linked entity sets to a not linking entity set")
         checkLinkedEntitySets(entitySetIds)
+        ensureValidLinkedEntitySets(entitySetIds)
 
         return edmManager.addLinkedEntitySets(linkingEntitySetId, entitySetIds)
     }
 
     @RequestMapping(path = [EntitySetsApi.LINKING + EntitySetsApi.SET_ID_PATH], method = [RequestMethod.DELETE])
-    override fun removeEntitySetsFromLinkingEntitySet(linkingEntitySetId: UUID, entitySetIds: Set<UUID>): Int {
+    override fun removeEntitySetsFromLinkingEntitySet(
+            @PathVariable(EntitySetsApi.SET_ID) linkingEntitySetId: UUID,
+            @RequestBody entitySetIds: Set<UUID>
+    ): Int {
         return removeEntitySets(linkingEntitySetId, entitySetIds)
     }
 
     @RequestMapping(path = [EntitySetsApi.LINKING], method = [RequestMethod.DELETE])
-    override fun removeEntitySetsFromLinkingEntitySets(entitySetIds: Map<UUID, Set<UUID>>): Int {
+    override fun removeEntitySetsFromLinkingEntitySets(@RequestBody entitySetIds: Map<UUID, Set<UUID>>): Int {
         return entitySetIds.map { removeEntitySets(it.key, it.value) }.sum()
     }
 
@@ -85,7 +90,9 @@ constructor(
     private fun checkLinkedEntitySets(entitySetIds: Set<UUID>) {
         checkNotNull(entitySetIds)
         Preconditions.checkState(!entitySetIds.isEmpty(), "Linked entity sets is empty")
+    }
 
+    private fun ensureValidLinkedEntitySets(entitySetIds: Set<UUID>) {
         val entityTypeId = edmManager.getEntityType(FullQualifiedName(PERSON_FQN)).id
         Preconditions.checkState(
                 entitySetIds.stream()
@@ -93,6 +100,10 @@ constructor(
                         .allMatch { entityTypeId == it },
                 "Linked entity sets are of differing entity types than %s :{}",
                 PERSON_FQN, entitySetIds)
+
+        Preconditions.checkState(
+                entitySetIds.all { !edmManager.getEntitySet(it).isLinking },
+                "Cannot add linking entity set as linked entity set.")
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
