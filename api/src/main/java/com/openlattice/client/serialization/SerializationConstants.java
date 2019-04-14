@@ -129,6 +129,7 @@ public final class SerializationConstants {
     public static final String IDS                              = "ids";
     public static final String ID_FIELD                         = "id";
     public static final String INCLUDE_FIELD                    = "include";
+    public static final String INDEXED                          = "indexed";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";
