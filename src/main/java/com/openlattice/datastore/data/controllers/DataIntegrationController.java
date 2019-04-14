@@ -216,7 +216,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
-        return dgm.createEdges( edges ).getNumUpdates();
+        return dgm.createAssociations( edges ).getNumUpdates();
     }
 
     private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {

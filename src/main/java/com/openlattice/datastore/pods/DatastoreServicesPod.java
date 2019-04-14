@@ -192,7 +192,8 @@ public class DatastoreServicesPod {
                 pgEdmManager(),
                 entityTypeManager(),
                 schemaManager(),
-                auditingConfiguration );
+                auditingConfiguration,
+                assembler() );
     }
 
     @Bean
@@ -222,17 +223,13 @@ public class DatastoreServicesPod {
         return new HazelcastEntityDatastore( idService(),
                 postgresDataManager(),
                 dataQueryService(),
-                dataModelService() );
+                dataModelService(),
+                assembler() );
     }
 
     @Bean
     public Assembler assembler() {
-        return new Assembler( authorizationManager(),
-                dcs(),
-                hikariDataSource,
-                metricRegistry,
-                hazelcastInstance,
-                eventBus );
+        return new Assembler( dcs(), hikariDataSource, metricRegistry, hazelcastInstance, eventBus );
     }
 
     @Bean
@@ -320,7 +317,6 @@ public class DatastoreServicesPod {
     @Bean
     public DataGraphManager dataGraphService() {
         return new DataGraphService(
-                hazelcastInstance,
                 eventBus,
                 graphApi(),
                 idService(),

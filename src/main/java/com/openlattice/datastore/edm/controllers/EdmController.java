@@ -46,7 +46,6 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.*;
-import com.openlattice.graph.edge.EdgeKey;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.web.mediatypes.CustomMediaType;
@@ -66,7 +65,6 @@ import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.kryptnostic.rhizome.configuration.ConfigurationConstants.Environments.TEST_PROFILE;
@@ -494,7 +492,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
     private List<WriteEvent> deleteAssociationsOfEntitySet( UUID entitySetId ) {
         // collect association entity key ids
-        final PostgresIterable<EdgeKey> associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet( entitySetId );
+        final PostgresIterable<DataEdgeKey> associationsEdgeKeys = dgm.getEdgeKeysOfEntitySet( entitySetId );
 
         // access checks
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes = new HashMap<>();

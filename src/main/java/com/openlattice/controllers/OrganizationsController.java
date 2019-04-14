@@ -40,6 +40,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -169,7 +170,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 orgPrincipal.getPrincipal(),
                 SecurableObjectType.EntitySet,
                 EnumSet.of( Permission.MATERIALIZE ) );
-        final var materialized = assembler.getMaterializedEntitySets( organizationId );
+        final var materialized = assembler.getMaterializedEntitySetsInOrganization( organizationId );
 
         final Map<UUID, Set<OrganizationEntitySetFlag>> entitySets = new HashMap<>( 2 * internal.size() );
 
@@ -190,14 +191,38 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
         }
 
-        if ( flagFilter.contains( OrganizationEntitySetFlag.MATERIALIZED ) ) {
-            materialized.forEach( entitySetId -> entitySets
-                    .merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.MATERIALIZED ), ( lhs, rhs ) -> {
-                        lhs.addAll( rhs );
-                        return lhs;
-                    } ) );
+        if ( flagFilter.contains( OrganizationEntitySetFlag.MATERIALIZED )
+                || flagFilter.contains( OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED )
+                || flagFilter.contains( OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED ) ) {
+            materialized.forEach( ( entitySetId, flags ) -> {
+                if ( flagFilter.contains( OrganizationEntitySetFlag.MATERIALIZED ) ) {
+                    entitySets.merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.MATERIALIZED ),
+                            ( lhs, rhs ) -> {
+                                lhs.addAll( rhs );
+                                return lhs;
+                            } );
+                }
 
+                if ( flagFilter.contains( OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED )
+                        && flags.contains( OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED ) ) {
+                    entitySets.merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED ),
+                            ( lhs, rhs ) -> {
+                                lhs.addAll( rhs );
+                                return lhs;
+                            } );
+                }
+
+                if ( flagFilter.contains( OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED )
+                        && flags.contains( OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED ) ) {
+                    entitySets.merge( entitySetId, EnumSet.of( OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED ),
+                            ( lhs, rhs ) -> {
+                                lhs.addAll( rhs );
+                                return lhs;
+                            } );
+                }
+            } );
         }
+
         return entitySets;
     }
 
@@ -208,24 +233,62 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @PathVariable( ID ) UUID organizationId,
             @RequestBody Set<UUID> entitySetIds ) {
+        final var authorizedPropertyTypesByEntitySet =
+                getAuthorizedPropertiesForMaterialization( organizationId, entitySetIds );
+        return assembler.materializeEntitySets( organizationId, authorizedPropertyTypesByEntitySet );
+    }
+
+    @Override
+    @PostMapping( ID_PATH + SET_ID_PATH + SYNCHRONIZE )
+    public Void synchronizeEdmChanges(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId ) {
+        // we basically re-materialize in this case
+        final var authorizedPropertyTypesByEntitySet =
+                getAuthorizedPropertiesForMaterialization( organizationId, Set.of( entitySetId ) );
+
+        assembler.synchronizeMaterializedEntitySet(
+                organizationId,
+                entitySetId,
+                authorizedPropertyTypesByEntitySet.get( entitySetId ) );
+        return null;
+    }
+
+    @Override
+    @PostMapping( ID_PATH + SET_ID_PATH + REFRESH )
+    public Void refreshDataChanges(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId ) {
+        // we need authorized property types to re-build materialized view, since the only way to refresh it is
+        // to drop and re-import cascade to organization database
+        final var authorizedPropertyTypesByEntitySet =
+                getAuthorizedPropertiesForMaterialization( organizationId, Set.of( entitySetId ) );
+
+        assembler.refreshMaterializedEntitySet(
+                organizationId,
+                entitySetId,
+                authorizedPropertyTypesByEntitySet.get( entitySetId ) );
+        return null;
+    }
+
+    private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesForMaterialization(
+            UUID organizationId,
+            Set<UUID> entitySetIds) {
         // materialize should be a property level permission that can only be granted to organization principals and
         // the person requesting materialize should be the owner of the organization
         ensureOwner( organizationId );
-
         final var organizationPrincipal = organizations.getOrganizationPrincipal( organizationId );
+
         if ( organizationPrincipal == null ) {
             //This will be rare, since it is unlikely you have access to an organization that does not exist.
             throw new ResourceNotFoundException( "Organization does not exist." );
         }
 
-        entitySetIds.forEach( entitySetId -> ensureMaterialize(entitySetId, organizationPrincipal) );
-        final var authorizedPropertyTypesByEntitySet = authzHelper.getAuthorizedPropertiesOnEntitySets(
+        entitySetIds.forEach( entitySetId -> ensureMaterialize( entitySetId, organizationPrincipal ) );
+        return authzHelper.getAuthorizedPropertiesOnEntitySets(
                 entitySetIds,
                 EnumSet.of( Permission.MATERIALIZE ),
                 Set.of( organizationPrincipal.getPrincipal() ) );
-
-        return assembler
-                .materializeEntitySets( organizationPrincipal.getId(), authorizedPropertyTypesByEntitySet );
     }
 
     @Override
