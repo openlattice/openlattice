@@ -39,7 +39,7 @@ import com.openlattice.postgres.PostgresPod;
 import com.openlattice.tasks.pods.TaskSchedulerPod;
 
 public class Datastore extends BaseRhizomeServer {
-    public static final Class<?>[] datastorePods = new Class<?>[] {
+    private static final Class<?>[] datastorePods = new Class<?>[] {
             ByteBlobServicePod.class,
             DatastoreServicesPod.class,
             SharedStreamSerializersPod.class,
@@ -49,10 +49,10 @@ public class Datastore extends BaseRhizomeServer {
             AuditingConfigurationPod.class,
             TaskSchedulerPod.class
     };
-    public static final Class<?>[] rhizomePods   = new Class<?>[] {
+    private static final Class<?>[] rhizomePods   = new Class<?>[] {
             RegistryBasedHazelcastInstanceConfigurationPod.class,
             Auth0Pod.class };
-    public static final Class<?>[] webPods       = new Class<?>[] {
+    private static final Class<?>[] webPods       = new Class<?>[] {
             DatastoreServletsPod.class,
             DatastoreSecurityPod.class, };
 

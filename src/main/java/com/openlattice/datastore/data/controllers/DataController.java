@@ -36,6 +36,7 @@ import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.authorization.*;
+import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.data.*;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.DataApi;
@@ -285,9 +286,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 writeEvent = dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
                 break;
             default:
-                auditEventType = null;
-                writeEvent = new WriteEvent( 0, 0 );
-                break;
+                throw new BadRequestException( "Unsupported UpdateType: \"" + updateType + "\'" );
         }
 
         recordEvent( new AuditableEvent(
@@ -670,6 +669,11 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
+
+        if ( entityKeyIds.size() > MAX_BATCH_SIZE ) {
+            throw new IllegalArgumentException( "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
+        }
+
         WriteEvent writeEvent;
         if ( deleteType == DeleteType.Hard ) {
             // access checks for entity set and properties
