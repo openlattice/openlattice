@@ -100,7 +100,7 @@ class BackgroundIndexingService(
         //Keep number of indexing jobs under control
         if (taskLock.tryLock()) {
             try {
-                ensureAllEntitySetIndexesExist()
+                ensureAllEntityTypeIndicesExist()
                 val w = Stopwatch.createStarted()
                 //We shuffle entity sets to make sure we have a chance to work share and index everything
                 val lockedEntitySets = entitySets.values
@@ -129,20 +129,19 @@ class BackgroundIndexingService(
         }
     }
 
-    private fun ensureAllEntitySetIndexesExist() {
-        val existingIndices = elasticsearchApi.entitySetWithIndices
-        val missingIndices = entitySets.keys - existingIndices
+    private fun ensureAllEntityTypeIndicesExist() {
+        val existingIndices = elasticsearchApi.entityTypesWithIndices
+        val missingIndices = entityTypes.keys - existingIndices
         if (missingIndices.isNotEmpty()) {
-            val missingEntitySets = entitySets.getAll(missingIndices)
-            logger.info("The following entity sets where missing indices: {}", missingEntitySets)
-            missingEntitySets.values.forEach { es ->
-                val missingEntitySetPropertyTypes =
-                        propertyTypes.getAll(entityTypes.getValue(es.entityTypeId).properties)
-                elasticsearchApi.saveEntitySetToElasticsearch(
-                        es,
-                        missingEntitySetPropertyTypes.values.toList()
+            val missingEntityTypes = entityTypes.getAll(missingIndices)
+            logger.info("The following entity types were missing indices: {}", missingEntityTypes)
+            missingEntityTypes.values.forEach { et ->
+                val missingEntityTypePropertyTypes = propertyTypes.getAll(et.properties)
+                elasticsearchApi.saveEntityTypeToElasticsearch(
+                        et,
+                        missingEntityTypePropertyTypes.values.toList()
                 )
-                logger.info("Created missing index for entity set ${es.name} with id ${es.entityTypeId}")
+                logger.info("Created missing index for entity type ${et.type} with id ${et.id}")
             }
         }
     }
@@ -221,7 +220,7 @@ class BackgroundIndexingService(
 
         val indexCount: Int
 
-        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.id, entitiesById)) {
+        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
             indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
