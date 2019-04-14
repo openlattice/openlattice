@@ -40,6 +40,7 @@ class BulkLinkedDataLambdasStreamSerializer(
     }
 
     override fun write(kryo: Kryo, output: Output, data: BulkLinkedDataLambdas) {
+        writeUUID(output, data.entityTypeId)
         writeUUID(output, data.linkingEntitySetId)
 
         try {
@@ -62,6 +63,7 @@ class BulkLinkedDataLambdasStreamSerializer(
 
 
     override fun read(kryo: Kryo, input: Input, type: Class<BulkLinkedDataLambdas>): BulkLinkedDataLambdas {
+        val entityTypeId = readUUID(input)
         val linkedEntitySetId = readUUID(input)
 
         val linkingIdsSize = input.readInt()
@@ -86,6 +88,6 @@ class BulkLinkedDataLambdasStreamSerializer(
             entitiesByLinkingId[linkingId] = Maps.transformValues(entitiesByEntitySetId, Multimaps::asMap)
         }
 
-        return BulkLinkedDataLambdas(linkedEntitySetId, entitiesByLinkingId)
+        return BulkLinkedDataLambdas(entityTypeId, linkedEntitySetId, entitiesByLinkingId)
     }
 }

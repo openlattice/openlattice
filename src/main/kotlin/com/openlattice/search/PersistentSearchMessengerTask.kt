@@ -1,13 +1,9 @@
 package com.openlattice.search
 
 import com.google.common.collect.SetMultimap
-import com.hazelcast.core.IMap
 import com.openlattice.authorization.*
 import com.openlattice.data.requests.NeighborEntityDetails
-import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.LAST_WRITE_FQN
 import com.openlattice.postgres.PostgresColumn.*
@@ -81,16 +77,6 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                         .collect(Collectors.toSet()))
     }
 
-    private fun getAuthorizedPropertyTypeMap(
-            securablePrincipal: SecurablePrincipal, entitySetIds: List<UUID>
-    ): Map<UUID, Map<UUID, PropertyType>> {
-        var principals = getDependency().principalsManager.getAllPrincipals(securablePrincipal)
-                .plus(securablePrincipal)
-                .map { it.principal }
-                .toSet()
-        return entitySetIds.map { it to getAuthorizedPropertyMap(principals, it) }.toMap()
-    }
-
     private fun getUpdatedConstraints(persistentSearch: PersistentSearch): SearchConstraints {
         val constraints: SearchConstraints = persistentSearch.searchConstraints
         val timeFilterConstraintGroup = SearchConstraints.writeDateTimeFilterConstraints(
@@ -144,7 +130,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         val userSecurablePrincipal = dependencies.principalsManager.getSecurablePrincipal(userAclKey)
         val allUserPrincipals = dependencies.principalsManager.getAllPrincipals(
                 userSecurablePrincipal
-        ).map { it.principal }.toSet()
+        ).map { it.principal }.toSet().plus(userSecurablePrincipal.principal)
 
         if (userSecurablePrincipal.principal == null || userSecurablePrincipal.principal.id == null) {
             logger.error(
@@ -157,30 +143,11 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         val entitySets = dependencies.entitySets.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
                 .groupBy { it.isLinking }
 
-        val authorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
-                                                                     entitySets.getOrDefault(
-                                                                             false, listOf()
-                                                                     ).map { it.id })
-        val linkedAuthorizedPropertyTypeMap = getAuthorizedPropertyTypeMap(userSecurablePrincipal,
-                                                                           entitySets.getOrDefault(
-                                                                                   true, listOf()
-                                                                           ).map { it.id })
         val constraints = getUpdatedConstraints(persistentSearch)
 
-        val results = dependencies.searchService.executeSearch(
-                constraints,
-                authorizedPropertyTypeMap, false
-        )
-        val linkedResults = dependencies.searchService.executeSearch(
-                constraints,
-                linkedAuthorizedPropertyTypeMap, true
-        )
-        val newResults = DataSearchResult(
-                results.numHits + linkedResults.numHits,
-                results.hits + linkedResults.hits
-        )
+        val results = dependencies.searchService.executeSearch(constraints, allUserPrincipals)
 
-        if (newResults.numHits > 0) {
+        if (results.numHits > 0) {
             val neighborsById = mutableMapOf<UUID, List<NeighborEntityDetails>>()
 
             if (results.hits.isNotEmpty()) neighborsById.putAll(
@@ -190,21 +157,11 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                             allUserPrincipals
                     )
             )
-
-            if (linkedResults.hits.isNotEmpty()) neighborsById.putAll(
-                    dependencies.searchService.executeLinkingEntityNeighborSearch(
-                            entitySets.getOrDefault(true, listOf()).map { it.id }.toSet(),
-                            EntityNeighborsFilter(getHitEntityKeyIds(results.hits)),
-                            allUserPrincipals
-                    )
-            )
-
-            sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, newResults, neighborsById)
-            val lastReadDateTime = getLatestRead(newResults.hits)
+            sendAlertsForNewWrites(userSecurablePrincipal, persistentSearch, results, neighborsById)
+            val lastReadDateTime = getLatestRead(results.hits)
             logger.info(
                     "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
-                    newResults.numHits
-            )
+                    results.numHits)
         }
 
         return null

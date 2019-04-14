@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2018. OpenLattice, Inc.
  *
@@ -20,25 +18,26 @@
  *
  */
 
-package com.openlattice.edm.events;
+package com.openlattice.data.events;
 
+import java.util.Set;
 import java.util.UUID;
 
-public class EntitySetDeletedEvent {
-	
-	private UUID entitySetId;
-	private UUID entityTypeId;
-	
-	public EntitySetDeletedEvent( UUID entitySetId, UUID entityTypeId ) {
-		this.entitySetId = entitySetId;
-		this.entityTypeId = entityTypeId;
-	}
-	
-	public UUID getEntitySetId() {
-		return entitySetId;
-	}
+public class LinkedEntitiesDeletedEvent {
 
-	public UUID getEntityTypeId() {
-		return entityTypeId;
-	}
+    private final Set<UUID> linkedEntitySetIds;
+    private final Set<UUID> entityKeyIds;
+
+    public LinkedEntitiesDeletedEvent( Set<UUID> linkedEntitySetIds, Set<UUID> entityKeyIds ) {
+        this.linkedEntitySetIds = linkedEntitySetIds;
+        this.entityKeyIds = entityKeyIds;
+    }
+
+    public Set<UUID> getLinkedEntitySetIds() {
+        return linkedEntitySetIds;
+    }
+
+    public Set<UUID> getEntityKeyIds() {
+        return entityKeyIds;
+    }
 }

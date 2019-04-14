@@ -30,6 +30,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.search.requests.SearchResult;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -42,18 +43,11 @@ public class ElasticsearchLambdas implements Serializable {
     private static final long serialVersionUID = -4180766624983725307L;
 
     public static Function<ConductorElasticsearchApi, Boolean> submitEntitySetToElasticsearch(
+            EntityType entityType,
             EntitySet entitySet,
             List<PropertyType> propertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .saveEntitySetToElasticsearch( entitySet, propertyTypes );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> createSecurableObjectIndex(
-            UUID entitySetId,
-            List<PropertyType> propertyTypes,
-            Optional<Set<UUID>> linkedEntitySetIds ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .createSecurableObjectIndex( entitySetId, propertyTypes, linkedEntitySetIds );
+                .saveEntitySetToElasticsearch( entityType, entitySet, propertyTypes );
     }
 
     public static Function<ConductorElasticsearchApi, SearchResult> executeEntitySetMetadataQuery(
@@ -72,14 +66,16 @@ public class ElasticsearchLambdas implements Serializable {
                         maxHits );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> deleteEntitySet( UUID entitySetId ) {
+    public static Function<ConductorElasticsearchApi, Boolean> deleteEntitySet( UUID entitySetId, UUID entityTypeId ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteEntitySet( entitySetId );
+                .deleteEntitySet( entitySetId, entityTypeId );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> clearEntitySetData( UUID entitySetId ) {
+    public static Function<ConductorElasticsearchApi, Boolean> clearEntitySetData(
+            UUID entitySetId,
+            UUID entityTypeId ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .clearEntitySetData( entitySetId );
+                .clearEntitySetData( entitySetId, entityTypeId );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> createOrganization( Organization organization ) {
@@ -121,30 +117,32 @@ public class ElasticsearchLambdas implements Serializable {
                 .updatePropertyTypesInEntitySet( entitySetId, newPropertyTypes );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> addPropertyTypesToEntitySet(
-            UUID entitySetId,
+    public static Function<ConductorElasticsearchApi, Boolean> addPropertyTypesToEntityType(
+            EntityType entityType,
             List<PropertyType> newPropertyTypes,
-            Optional<Set<UUID>> linkedEntitySetIds ) {
-        return ( Function<ConductorElasticsearchApi, Boolean> & Serializable ) ( api ) -> api
-                .addPropertyTypesToEntitySet( entitySetId, newPropertyTypes, linkedEntitySetIds );
+            Set<UUID> entitySetIds ) {
+        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
+                .addPropertyTypesToEntityType( entityType, newPropertyTypes, entitySetIds );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> addLinkedEntitySetsToEntitySet(
-            UUID linkingEntitySetId,
+            EntityType entityType,
             List<PropertyType> propertyTypes,
             Set<UUID> newLinkedEntitySets ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .addLinkedEntitySetsToEntitySet( linkingEntitySetId, propertyTypes, newLinkedEntitySets );
+                .addLinkedEntitySetsToEntitySet( entityType, propertyTypes, newLinkedEntitySets );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> saveEntityTypeToElasticsearch( EntityType entityType ) {
+    public static Function<ConductorElasticsearchApi, Boolean> saveEntityTypeToElasticsearch(
+            EntityType entityType,
+            List<PropertyType> propertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .saveEntityTypeToElasticsearch( entityType );
+                .saveEntityTypeToElasticsearch( entityType, propertyTypes );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> saveAssociationTypeToElasticsearch( AssociationType associationType ) {
+    public static Function<ConductorElasticsearchApi, Boolean> saveAssociationTypeToElasticsearch( AssociationType associationType, List<PropertyType> propertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .saveAssociationTypeToElasticsearch( associationType );
+                .saveAssociationTypeToElasticsearch( associationType, propertyTypes );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> savePropertyTypeToElasticsearch( PropertyType propertyType ) {
@@ -245,19 +243,24 @@ public class ElasticsearchLambdas implements Serializable {
                 .executeFQNPropertyTypeSearch( namespace, name, start, maxHits );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> deleteEntityData( EntityDataKey edk ) {
+    public static Function<ConductorElasticsearchApi, Boolean> deleteEntityData(
+            EntityDataKey edk,
+            UUID entityTypeId ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteEntityData( edk );
+                .deleteEntityData( edk, entityTypeId );
+    }
+
+    public static Function<ConductorElasticsearchApi, Boolean> deleteEntityDataBulk(
+            UUID entitySetId,
+            UUID entityTypeId,
+            Set<UUID> entityKeyIds ) {
+        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
+                .deleteEntityDataBulk( entitySetId, entityTypeId, entityKeyIds );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> clearAllData() {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .clearAllData();
-    }
-
-    public static Function<ConductorElasticsearchApi, Double> getModelScore( double[][] features ) {
-        return (Function<ConductorElasticsearchApi, Double> & Serializable) ( api ) -> api
-                .getModelScore( features );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> triggerPropertyTypeIndex( List<PropertyType> propertyTypes ) {
@@ -298,6 +301,6 @@ public class ElasticsearchLambdas implements Serializable {
     }
 
     public static <T> Function<ConductorElasticsearchApi, Set<UUID>> getEntitySetsWithIndices() {
-        return (Function<ConductorElasticsearchApi, Set<UUID>> & Serializable) ConductorElasticsearchApi::getEntitySetWithIndices;
+        return (Function<ConductorElasticsearchApi, Set<UUID>> & Serializable) ConductorElasticsearchApi::getEntityTypesWithIndices;
     }
 }

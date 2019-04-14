@@ -21,7 +21,9 @@
 
 package com.openlattice.data
 
+import com.google.common.collect.ImmutableMap
 import com.openlattice.data.storage.*
+import com.openlattice.postgres.DataTables
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -112,7 +114,7 @@ class PostgresEntityDataQueryServiceTest {
                 Pair(UUID.fromString("f950d05a-f4f2-451b-8c6d-56e78bba8b42"), "nc.PersonRace"),
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), "housing.updatedat"),
                 Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity")
-        );
+        ).mapValues { DataTables.quote(it.value) };
         val entityKeyIds = sequenceOf(
                 "73170000-0000-0000-8000-0000000004a9",
                 "4d9b0000-0000-0000-8000-00000000005d"
@@ -122,13 +124,16 @@ class PostgresEntityDataQueryServiceTest {
         val version = Instant.now().minusMillis(1382400000).toEpochMilli()
         logger.info(
                 "Entity set query: {}",
-                selectEntitySetWithPropertyTypesAndVersion(
-                        entitySetId,
-                        Optional.of(entityKeyIds),
+                selectEntitySetWithCurrentVersionOfPropertyTypes(
+                        ImmutableMap.of(entitySetId, Optional.of(entityKeyIds) ),
                         propertyTypeMap,
+                        propertyTypeMap.keys,
+                        ImmutableMap.of( entitySetId, propertyTypeMap.keys ),
+                        ImmutableMap.of(),
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
-                        version,
-                        propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
+                        propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap(),
+                        false,
+                        false
                 )
         )
 //        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))

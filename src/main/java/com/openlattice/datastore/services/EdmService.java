@@ -277,7 +277,8 @@ public class EdmService implements EdmManager {
                 properties,
                 Optional.of( entityType.getPropertyTags() ),
                 entityType.getBaseType(),
-                Optional.ofNullable( entityType.getCategory() ) );
+                Optional.ofNullable( entityType.getCategory() ),
+                Optional.of( entityType.getShards() ) );
 
     }
 
@@ -362,7 +363,7 @@ public class EdmService implements EdmManager {
         Util.deleteSafely( entitySets, entitySetId );
         aclKeyReservations.release( entitySetId );
         syncIds.remove( entitySetId );
-        eventBus.post( new EntitySetDeletedEvent( entitySetId ) );
+        eventBus.post( new EntitySetDeletedEvent( entitySetId, entityType.getId() ) );
         logger.info( "Entity set {}({}) deleted successfully", entitySet.getName(), entitySetId );
     }
 
@@ -751,6 +752,8 @@ public class EdmService implements EdmManager {
     @Override
     public void addPropertyTypesToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
         Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
+
+        List<PropertyType> newPropertyTypes = Lists.newArrayList( propertyTypes.getAll( propertyTypeIds ).values() );
         Stream<UUID> childrenIds = entityTypeManager.getEntityTypeChildrenIdsDeep( entityTypeId );
         Map<UUID, Boolean> childrenIdsToLocks = childrenIds
                 .collect( Collectors.toMap( Functions.<UUID>identity()::apply, propertyTypes::tryLock ) );
@@ -803,12 +806,13 @@ public class EdmService implements EdmManager {
                 eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), allPropertyTypes, false ) );
                 eventBus.post( new PropertyTypesAddedToEntitySetEvent(
                         entitySet,
-                        Lists.newArrayList( propertyTypes.values() ),
+                        newPropertyTypes,
                         ( entitySet.isLinking() )
                                 ? Optional.of( entitySet.getLinkedEntitySets() ) : Optional.empty() ) );
             }
 
             EntityType entityType = getEntityType( id );
+            eventBus.post( new PropertyTypesAddedToEntityTypeEvent( entityType, newPropertyTypes ) );
             if ( !entityType.getCategory().equals( SecurableObjectType.AssociationType ) ) {
                 eventBus.post( new EntityTypeCreatedEvent( entityType ) );
             } else {
@@ -1701,16 +1705,23 @@ public class EdmService implements EdmManager {
         } );
 
         diff.getDiff().getPropertyTypes().forEach( pt -> {
-            if ( !updatedIds.contains( pt.getId() ) ) { createOrUpdatePropertyType( pt ); }
+            if ( !updatedIds.contains( pt.getId() ) ) {
+                createOrUpdatePropertyType( pt );
+                eventBus.post( new PropertyTypeCreatedEvent( pt ) );
+            }
         } );
 
         diff.getDiff().getEntityTypes().forEach( et -> {
-            if ( !updatedIds.contains( et.getId() ) ) { createOrUpdateEntityType( et ); }
+            if ( !updatedIds.contains( et.getId() ) ) {
+                createOrUpdateEntityType( et );
+                eventBus.post( new EntityTypeCreatedEvent( et ) );
+            }
         } );
 
         diff.getDiff().getAssociationTypes().forEach( at -> {
             if ( !updatedIds.contains( at.getAssociationEntityType().getId() ) ) {
                 createOrUpdateAssociationType( at );
+                eventBus.post( new AssociationTypeCreatedEvent( at ) );
             }
         } );
     }

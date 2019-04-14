@@ -22,8 +22,6 @@
 
 package com.openlattice.conductor.rpc;
 
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.data.EntityDataKey;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -37,19 +35,26 @@ public class EntityDataLambdas implements Function<ConductorElasticsearchApi, Bo
     private static final long serialVersionUID = -1071651645473672891L;
 
     @SuppressFBWarnings( value = "SE_BAD_FIELD", justification = "Custom Stream Serializer is implemented" )
-    private EntityDataKey            edk;
+    private EntityDataKey          edk;
+    private UUID                   entityTypeId;
     private Map<UUID, Set<Object>> propertyValues;
 
     public EntityDataLambdas(
+            UUID entityTypeId,
             EntityDataKey edk,
             Map<UUID, Set<Object>> propertyValues ) {
+        this.entityTypeId = entityTypeId;
         this.edk = edk;
         this.propertyValues = propertyValues;
     }
 
     @Override
     public Boolean apply( ConductorElasticsearchApi api ) {
-        return api.createEntityData( edk, propertyValues );
+        return api.createEntityData( entityTypeId, edk, propertyValues );
+    }
+
+    public UUID getEntityTypeId() {
+        return entityTypeId;
     }
 
     public EntityDataKey getEntityDataKey() {

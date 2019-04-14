@@ -20,20 +20,9 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.PostgresDatatype.BIGINT;
-import static com.openlattice.postgres.PostgresDatatype.BIGINT_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.BOOLEAN;
-import static com.openlattice.postgres.PostgresDatatype.BYTEA;
-import static com.openlattice.postgres.PostgresDatatype.DECIMAL;
-import static com.openlattice.postgres.PostgresDatatype.INTEGER_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.JSONB;
-import static com.openlattice.postgres.PostgresDatatype.TEXT;
-import static com.openlattice.postgres.PostgresDatatype.TEXT_ARRAY;
-import static com.openlattice.postgres.PostgresDatatype.TIMESTAMPTZ;
-import static com.openlattice.postgres.PostgresDatatype.UUID;
-import static com.openlattice.postgres.PostgresDatatype.UUID_ARRAY;
-
 import com.openlattice.edm.type.Analyzer;
+
+import static com.openlattice.postgres.PostgresDatatype.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -201,7 +190,7 @@ public final class PostgresColumn {
     public static final String                   INDEXED_FIELD                     = "indexed";
     public static final PostgresColumnDefinition INDEXED                           = new PostgresColumnDefinition(
             INDEXED_FIELD,
-            BOOLEAN );
+            TEXT );
     public static final String                   INITIALIZED_FIELD                 = "initialized";
     public static final PostgresColumnDefinition INITIALIZED                       =
             new PostgresColumnDefinition( INITIALIZED_FIELD, BOOLEAN );
@@ -228,12 +217,12 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
-    public static final String                   LAST_WRITE_FIELD            = "last_write";
-    public static final String                   LINKED_FIELD                = "linked";
-    public static final PostgresColumnDefinition LINKED                      =
+    public static final String                   LAST_WRITE_FIELD                  = "last_write";
+    public static final String                   LINKED_FIELD                      = "linked";
+    public static final PostgresColumnDefinition LINKED                            =
             new PostgresColumnDefinition( LINKED_FIELD, BOOLEAN ).notNull();
-    public static final String                   LINKED_ENTITY_SETS_FIELD    = "linked_entity_sets";
-    public static final PostgresColumnDefinition LINKED_ENTITY_SETS          =
+    public static final String                   LINKED_ENTITY_SETS_FIELD          = "linked_entity_sets";
+    public static final PostgresColumnDefinition LINKED_ENTITY_SETS                =
             new PostgresColumnDefinition( LINKED_ENTITY_SETS_FIELD, UUID_ARRAY );
     public static final String                   LINKING_FIELD                     = "linking";
     public static final PostgresColumnDefinition LINKING                           =
@@ -332,6 +321,10 @@ public final class PostgresColumn {
     public static final String                   SECURABLE_OBJECT_TYPE_FIELD       = "securable_object_type";
     public static final PostgresColumnDefinition SECURABLE_OBJECT_TYPE             =
             new PostgresColumnDefinition( SECURABLE_OBJECT_TYPE_FIELD, TEXT ).notNull();
+    public static final String                   SHARDS_FIELD                      = "shards";
+    public static final PostgresColumnDefinition SHARDS                            = new PostgresColumnDefinition(
+            SHARDS_FIELD,
+            INTEGER ).notNull();
     public static final String                   SHOW_FIELD                        = "show";
     public static final PostgresColumnDefinition SHOW                              =
             new PostgresColumnDefinition( SHOW_FIELD, BOOLEAN ).notNull();

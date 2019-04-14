@@ -30,6 +30,7 @@ import com.hazelcast.core.IMap;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
+import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
@@ -247,7 +248,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         }
         // delete
         Set<UUID> deletedLinkingIds = Sets.difference( oldLinkingIds, remainingLinkingIds );
-        eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
+        eventBus.post( new LinkedEntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
     }
 
     private void signalEntitySetDataDeleted( UUID entitySetId ) {
@@ -261,7 +262,8 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
         if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
-            eventBus.post( new EntitiesDeletedEvent( Set.of( entitySetId ), entityKeyIds ) );
+            eventBus.post( new EntitiesDeletedEvent( entitySetId, entityKeyIds ) );
+            signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         }
         markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
 
@@ -296,7 +298,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                         .map( Map.Entry::getKey ).collect( Collectors.toSet() );
                 Set<UUID> linkingEntitySetIds = dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
                         .stream().collect( Collectors.toSet() );
-                eventBus.post( new EntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
+                eventBus.post( new LinkedEntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
             }
 
             // reindex

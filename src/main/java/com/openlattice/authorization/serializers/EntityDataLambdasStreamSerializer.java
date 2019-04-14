@@ -44,6 +44,7 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
     @Override
     public void write(
             Kryo kryo, Output output, EntityDataLambdas object ) {
+        writeUUID( output, object.getEntityTypeId() );
         writeUUID( output, object.getEntityDataKey().getEntitySetId() );
         writeUUID( output, object.getEntityDataKey().getEntityKeyId() );
 
@@ -59,6 +60,7 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
     @Override
     public EntityDataLambdas read(
             Kryo kryo, Input input, Class<EntityDataLambdas> type ) {
+        UUID entityTypeId = readUUID( input );
         UUID entitySetId = readUUID( input );
         UUID entityKeyId = readUUID( input );
         EntityDataKey edk = new EntityDataKey( entitySetId, entityKeyId );
@@ -71,6 +73,6 @@ public class EntityDataLambdasStreamSerializer extends Serializer<EntityDataLamb
             logger.debug( "Unable to deserialize entity with id: {}", entityKeyId );
         }
 
-        return new EntityDataLambdas( edk, Multimaps.asMap(propertyValues) );
+        return new EntityDataLambdas( entityTypeId, edk, Multimaps.asMap( propertyValues ) );
     }
 }

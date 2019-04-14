@@ -90,18 +90,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.Base64;
+import java.util.*;
 import java.util.Base64.Decoder;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -381,6 +371,10 @@ public final class ResultSetAdapters {
         return SecurableObjectType.valueOf( rs.getString( CATEGORY.getName() ) );
     }
 
+    public static int shards( ResultSet rs ) throws SQLException {
+        return rs.getInt( SHARDS.getName() );
+    }
+
     public static UUID entityTypeId( ResultSet rs ) throws SQLException {
         return rs.getObject( ENTITY_TYPE_ID.getName(), UUID.class );
     }
@@ -501,7 +495,7 @@ public final class ResultSetAdapters {
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
         Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
-        Optional<Boolean> postgresIndexed = Optional.ofNullable( indexed( rs ) );
+        Optional<IndexMethod> indexMethod = Optional.ofNullable( indexMethod( rs ) );
 
         return new PropertyType( Optional.of( id ),
                 fqn,
@@ -512,7 +506,7 @@ public final class ResultSetAdapters {
                 pii,
                 multiValued,
                 analyzer,
-                postgresIndexed );
+                indexMethod );
     }
 
     public static EntityType entityType( ResultSet rs ) throws SQLException {
@@ -537,9 +531,10 @@ public final class ResultSetAdapters {
         }
         Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
         Optional<SecurableObjectType> category = Optional.of( category( rs ) );
+        Optional<Integer> shards = Optional.of( shards( rs ) );
 
         return new EntityType( id, fqn, title, description, schemas, key, properties,
-                propertyTags, baseType, category );
+                propertyTags, baseType, category, shards );
     }
 
     public static EntitySet entitySet( ResultSet rs ) throws SQLException {
@@ -638,7 +633,7 @@ public final class ResultSetAdapters {
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
         Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
-        Optional<Boolean> postgresIndexed = Optional.ofNullable( indexed( rs ) );
+        Optional<IndexMethod> indexMethod = Optional.ofNullable( indexMethod( rs ) );
 
         return new EnumType( id,
                 fqn,
@@ -651,15 +646,15 @@ public final class ResultSetAdapters {
                 pii,
                 multiValued,
                 analyzer,
-                postgresIndexed );
+                indexMethod );
     }
 
     public static Boolean multiValued( ResultSet rs ) throws SQLException {
         return rs.getBoolean( MULTI_VALUED.getName() );
     }
 
-    public static Boolean indexed(ResultSet rs ) throws SQLException {
-        return rs.getBoolean( INDEXED.getName() );
+    public static IndexMethod indexMethod(ResultSet rs ) throws SQLException {
+        return IndexMethod.valueOf( rs.getString( INDEXED.getName() ) );
     }
 
     public static Status status( ResultSet rs ) throws SQLException {
@@ -878,13 +873,22 @@ public final class ResultSetAdapters {
             ByteBlobDataManager byteBlobDataManager,
             Boolean linking ) throws SQLException {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
+        final Collection<PropertyType> allPropertyTypes;
+
 
         if ( linking ) {
             final UUID entityKeyId = linkingId( rs );
             data.put( ID_FQN, entityKeyId );
+
+            allPropertyTypes = authorizedPropertyTypes.values().stream()
+                    .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
+                    .collect( Collectors.toSet() );
         } else {
             final UUID entityKeyId = id( rs );
             data.put( ID_FQN, entityKeyId );
+
+            UUID entitySetId = entitySetId( rs );
+            allPropertyTypes = authorizedPropertyTypes.get( entitySetId ).values();
         }
 
         if ( metadataOptions.contains( MetadataOption.LAST_WRITE ) ) {
@@ -895,9 +899,6 @@ public final class ResultSetAdapters {
             data.put( LAST_INDEX_FQN, lastIndex( rs ) );
         }
 
-        final Set<PropertyType> allPropertyTypes = authorizedPropertyTypes.values().stream()
-                .flatMap( propertyTypesOfEntitySet -> propertyTypesOfEntitySet.values().stream() )
-                .collect( Collectors.toSet() );
         for ( PropertyType propertyType : allPropertyTypes ) {
             List<?> objects = propertyValue( rs, propertyType );
 
