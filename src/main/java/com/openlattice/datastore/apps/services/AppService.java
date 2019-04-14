@@ -106,7 +106,7 @@ public class AppService {
 
     public UUID createApp( App app ) {
         reservations.reserveIdAndValidateType( app, app::getName );
-        apps.putIfAbsent( app.getId(), app );
+        apps.put( app.getId(), app );
         eventBus.post( new AppCreatedEvent( app ) );
         return app.getId();
     }
@@ -136,20 +136,25 @@ public class AppService {
         return nameAttempt;
     }
 
+    private String formatEntitySetName( String prefix, FullQualifiedName appTypeFqn ) {
+        String name = prefix + "_" + appTypeFqn.getNamespace() + "_" + appTypeFqn.getName();
+        name = name.toLowerCase().replaceAll( "[^a-z0-9_]", "" );
+        return getNextAvailableName( name );
+    }
+
     private UUID generateEntitySet( UUID organizationId, UUID appTypeId, String prefix, Principal principal ) {
         AppType appType = getAppType( appTypeId );
-        String name = getNextAvailableName( prefix.concat( "_" ).concat( appType.getType().getNamespace() )
-                .concat( "_" )
-                .concat( appType.getType().getName() ) );
-        String title = prefix.concat( " " ).concat( appType.getTitle() );
-        Optional<String> description = Optional.of( prefix.concat( " " ).concat( appType.getDescription() ) );
+        String name = formatEntitySetName( prefix, appType.getType() );
+        String title = appType.getTitle() + " (" + prefix + ")";
+        String description =
+                "Auto-generated for organization" + organizationId.toString() + "\n\n" + appType.getDescription();
         EnumSet<EntitySetFlag> flags = EnumSet.noneOf( EntitySetFlag.class );
 
         EntitySet entitySet = new EntitySet( Optional.empty(),
                 appType.getEntityTypeId(),
                 name,
                 title,
-                description,
+                Optional.of( description ),
                 ImmutableSet.of(),
                 Optional.empty(),
                 Optional.of( organizationId ),

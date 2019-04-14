@@ -36,6 +36,7 @@ import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.authorization.*;
+import com.openlattice.controllers.exceptions.BadRequestException;
 import com.openlattice.data.*;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.DataApi;
@@ -286,9 +287,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 writeEvent = dgm.mergeEntities( entitySetId, entities, authorizedPropertyTypes );
                 break;
             default:
-                auditEventType = null;
-                writeEvent = new WriteEvent( 0, 0 );
-                break;
+                throw new BadRequestException( "Unsupported UpdateType: \"" + updateType + "\'" );
         }
 
         recordEvent( new AuditableEvent(

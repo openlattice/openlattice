@@ -90,6 +90,6 @@ class AnalysisService : AuthorizingComponent {
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
-        return authorizationManager
+        return authorizations
     }
 }
