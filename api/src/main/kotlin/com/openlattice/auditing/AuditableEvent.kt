@@ -42,7 +42,7 @@ import java.util.*
  */
 data class AuditableEvent(
         val principal: UUID,
-        val aclKey:AclKey,
+        val aclKey: AclKey,
         val eventType: AuditEventType,
         val description: String,
         val entities: Optional<Set<UUID>>,

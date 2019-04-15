@@ -23,13 +23,14 @@ package com.openlattice.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.client.serialization.SerializationConstants;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-public class EntityDataKey {
+public class EntityDataKey implements Comparable<EntityDataKey> {
     private final UUID entitySetId;
     private final UUID entityKeyId;
 
@@ -72,5 +73,13 @@ public class EntityDataKey {
                 "entitySetId=" + entitySetId +
                 ", entityKeyId=" + entityKeyId +
                 '}';
+    }
+
+    @Override
+    public int compareTo( @NotNull EntityDataKey o ) {
+        if(!entitySetId.equals( o.entitySetId )) {
+            return entitySetId.compareTo( o.entitySetId );
+        }
+        return entityKeyId.compareTo( o.entityKeyId );
     }
 }

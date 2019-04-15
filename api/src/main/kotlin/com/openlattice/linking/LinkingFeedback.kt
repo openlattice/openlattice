@@ -19,16 +19,17 @@
  *
  */
 
-package com.openlattice.organization
+package com.openlattice.linking
+
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.openlattice.client.serialization.SerializationConstants
+import com.openlattice.data.EntityDataKey
 
 /**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ * Represents the manual feedback given on linked entities with the same linking id within a linking entity set.
  */
-enum class OrganizationEntitySetFlag {
-    INTERNAL,
-    EXTERNAL,
-    MATERIALIZED,
-    EDM_UNSYNCHRONIZED,
-    DATA_UNSYNCHRONIZED
-}
+data class LinkingFeedback(
+        @JsonProperty(SerializationConstants.LINKING_ENTITY) val linkingEntityDataKey: EntityDataKey,
+        @JsonProperty(SerializationConstants.LINK) val link: Set<EntityDataKey>,
+        @JsonProperty(SerializationConstants.UNLINK) val unlink: Set<EntityDataKey>
+)

@@ -18,31 +18,28 @@
 
 package com.openlattice.edm.type;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.SetMultimap;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
-import com.openlattice.graph.query.GraphQueryState.Option;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import java.util.*;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * An entity type describes the set of property collections.
  */
 public class EntityType extends ComplexType {
+    private static final int DEFAULT_SHARDS = 5;
+
     private final     LinkedHashSet<UUID> key;
     private final     Optional<UUID>      baseType;
     private transient int                 h = 0;
+    private final     int                 shards;
 
     @JsonCreator
     public EntityType(
@@ -56,7 +53,8 @@ public class EntityType extends ComplexType {
             @JsonProperty( SerializationConstants.PROPERTY_TAGS )
                     Optional<LinkedHashMultimap<UUID, String>> propertyTags,
             @JsonProperty( SerializationConstants.BASE_TYPE_FIELD ) Optional<UUID> baseType,
-            @JsonProperty( SerializationConstants.CATEGORY ) Optional<SecurableObjectType> category ) {
+            @JsonProperty( SerializationConstants.CATEGORY ) Optional<SecurableObjectType> category,
+            @JsonProperty( SerializationConstants.SHARDS ) Optional<Integer> shards ) {
         super(
                 id,
                 type,
@@ -73,7 +71,9 @@ public class EntityType extends ComplexType {
         Preconditions
                 .checkArgument( properties.containsAll( key ) || baseType.isPresent(),
                         "Properties must include all the key property types" );
+        Preconditions.checkArgument( shards.isEmpty() || shards.get() > 0 || shards.get() < 20 );
         this.baseType = baseType;
+        this.shards = shards.orElse( DEFAULT_SHARDS );
     }
 
     public EntityType(
@@ -86,7 +86,8 @@ public class EntityType extends ComplexType {
             LinkedHashSet<UUID> properties,
             LinkedHashMultimap<UUID, String> propertyTags,
             Optional<UUID> baseType,
-            Optional<SecurableObjectType> category ) {
+            Optional<SecurableObjectType> category,
+            Optional<Integer> shards ) {
         this( Optional.of( id ),
                 type,
                 title,
@@ -96,7 +97,8 @@ public class EntityType extends ComplexType {
                 properties,
                 Optional.of( propertyTags ),
                 baseType,
-                category );
+                category,
+                shards );
     }
 
     public EntityType(
@@ -108,7 +110,8 @@ public class EntityType extends ComplexType {
             LinkedHashSet<UUID> properties,
             LinkedHashMultimap<UUID, String> propertyTags,
             Optional<UUID> baseType,
-            Optional<SecurableObjectType> category ) {
+            Optional<SecurableObjectType> category,
+            Optional<Integer> shards ) {
         this(
                 Optional.empty(),
                 type,
@@ -119,13 +122,16 @@ public class EntityType extends ComplexType {
                 properties,
                 Optional.empty(),
                 baseType,
-                category );
+                category,
+                shards );
     }
 
     @Override public String toString() {
         return "EntityType{" +
                 "key=" + key +
                 ", baseType=" + baseType +
+                ", h=" + h +
+                ", shards=" + shards +
                 ", propertyTags=" + propertyTags +
                 ", properties=" + properties +
                 ", schemas=" + schemas +
@@ -147,6 +153,11 @@ public class EntityType extends ComplexType {
         return baseType;
     }
 
+    @JsonProperty( SerializationConstants.SHARDS )
+    public int getShards() {
+        return shards;
+    }
+
     public void addPrimaryKeys( Set<UUID> propertyTypeIds ) {
         key.addAll( checkNotNull( propertyTypeIds, "Property type ids cannot be null." ) );
     }
@@ -155,27 +166,21 @@ public class EntityType extends ComplexType {
         key.removeAll( checkNotNull( propertyTypeIds, "Property type ids cannot be null." ) );
     }
 
-    @Override
-    public boolean equals( Object o ) {
-        if ( this == o ) { return true; }
-        if ( o == null || getClass() != o.getClass() ) { return false; }
-        if ( !super.equals( o ) ) { return false; }
-
+    @Override public boolean equals( Object o ) {
+        if ( this == o )
+            return true;
+        if ( o == null || getClass() != o.getClass() )
+            return false;
+        if ( !super.equals( o ) )
+            return false;
         EntityType that = (EntityType) o;
-
-        if ( !key.equals( that.key ) ) { return false; }
-        return baseType.equals( that.baseType );
+        return h == that.h &&
+                shards == that.shards &&
+                Objects.equals( key, that.key ) &&
+                Objects.equals( baseType, that.baseType );
     }
 
-    @Override
-    public int hashCode() {
-        if ( h == 0 ) {
-            int result = super.hashCode();
-            result = 31 * result + key.hashCode();
-            result = 31 * result + baseType.hashCode();
-            h = result;
-        }
-        return h;
+    @Override public int hashCode() {
+        return Objects.hash( super.hashCode(), key, baseType, h, shards );
     }
-
 }

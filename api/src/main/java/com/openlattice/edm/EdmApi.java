@@ -98,8 +98,6 @@ public interface EdmApi {
     String SRC_PATH              = "/src";
     String DST_PATH              = "/dst";
     String DIFF_PATH             = "/diff";
-    String VERSION_PATH          = "/version";
-    String NEW_PATH              = "/new";
     String CLEAR_PATH            = "/clear";
     String FORCE_PATH            = "/force";
     String KEY_PATH              = "/key";
@@ -151,12 +149,6 @@ public interface EdmApi {
      */
     @POST( BASE + DIFF_PATH )
     EntityDataModelDiff getEntityDataModelDiff( EntityDataModel edm );
-
-    /**
-     * Returns the current entity data model version
-     */
-    @GET( BASE + VERSION_PATH )
-    UUID getEntityDataModelVersion();
 
     /**
      * Gets information for any SecurableObjectType given its type and ID.
@@ -476,6 +468,15 @@ public interface EdmApi {
      */
     @GET( BASE + IDS_PATH + ENTITY_SETS_PATH + NAME_PATH )
     UUID getEntitySetId( @Path( NAME ) String entitySetName );
+
+    /**
+     * Get IDs for entity sets given their names.
+     *
+     * @param entitySetNames The names of the entity sets.
+     * @return Ids of entity sets.
+     */
+    @POST( BASE + IDS_PATH + ENTITY_SETS_PATH )
+    Map<String, UUID> getEntitySetIds( @Body Set<String> entitySetNames );
 
     /**
      * Get ID for property type with given namespace and name.

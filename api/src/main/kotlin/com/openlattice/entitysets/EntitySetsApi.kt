@@ -15,76 +15,60 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * You can contact the owner of the copyright at support@openlattice.com
- *
- *
  */
 
 package com.openlattice.entitysets
 
 import retrofit2.http.*
-import java.util.*
 
+import java.util.UUID
 
-/*
-* These determine the service routing for the LB
-*/
-const val SERVICE = "/datastore"
-const val CONTROLLER = "/entity_sets"
-const val BASE = SERVICE + CONTROLLER
-
-const val ID = "id"
-const val LEVEL = "level"
-const val ID_PATH = "/$ID"
-
-const val LINKED_PATH = "/linked"
-const val ID_PATH_PARAM = "/{$ID}"
-
-enum class Level {
-    ID,
-    FULL
-}
 
 /**
- * This API is for managing entity set metadata.
+ * This API is for managing entity sets.
  */
 interface EntitySetsApi {
 
-    /**
-     * Retrieves the underlying linked entity sets for a given set.
-     * @param entitySetId The id of the linking entity set .
-     * @param level Determines the amount of information returned by the call.
-     *
-     * @exception 404 If the entity set specified by entitySetId is not found.
-     * @exception 400 If the entity set is not a linking entity set.
-     * @return Either a Set<UUID> or a Set<EntitySet> depending on the level provided in the API call.
-     */
-    @GET(BASE + ID_PATH_PARAM + LINKED_PATH)
-    fun getLinkingEntitySets(@Path(ID) entitySetId: UUID, @Query(LEVEL) level: Level): Set<Any>
+    companion object {
+        /* These determine the service routing */
+        const val SERVICE = "/datastore"
+        const val CONTROLLER = "/entity_sets"
+        const val BASE = SERVICE + CONTROLLER
+
+        const val SET_ID = "setId"
+        const val SET_ID_PATH = "/{$SET_ID}"
+
+        const val LINKING = "/linking"
+    }
 
     /**
-     * Adds one ore more linked enitty to a given set.
-     *
-     * @param entitySetId The id of the linking entity set .
-     * @param level Determines the amount of information returned by the call.
-     * @return Either a Set<UUID> or a Set<EntitySet> depending on the level provided in the API call.
-     *
-     * @exception 404 If the entity set specified by entitySetId is not found.
-     * @exception 400 If the entity set is not a linking entity set.
+     * Adds the entity sets as linked entity sets to the linking entity set
+     * @param linkingEntitySetId the id of the linking entity set
+     * @param entitysetIds the ids of the entity sets to be linked
      */
-    @PUT(BASE + ID_PATH + LINKED_PATH)
-    fun addLinkingEntitySets(@Path(ID) entitySetId: UUID, @Body linkedEntitySets: Set<UUID>): Int
+    @PUT(BASE + LINKING + SET_ID_PATH)
+    fun addEntitySetsToLinkingEntitySet(@Path(SET_ID) linkingEntitySetId: UUID, @Body entitySetIds: Set<UUID>): Int
 
     /**
-     * Removes one or more linked entity sets from a given set.
-     *
-     * @param entitySetId  The id of the linking entity set .
-     * @param level Determines the amount of information returned by the call.
-     * @return 200 OK and the number of entity sets actually removed.
-     *
-     * @exception 404 If the entity set specified by entitySetId is not found.
-     * @exception 400 If the entity set is not a linking entity set.
+     * Adds the entity sets as linked entity sets to the linking entity sets
+     * @param entitysetIds mapping of the ids of the entity sets to be linked with keys of the linking entity sets
      */
-    @DELETE(BASE + ID_PATH + LINKED_PATH)
-    fun removeLinkingEntitySets(@Path(ID) entitySetId: UUID, @Body linkedEntitySets: Set<UUID>): Int
+    @POST(BASE + LINKING)
+    fun addEntitySetsToLinkingEntitySets(@Body entitySetIds: Map<UUID, Set<UUID>>): Int
+
+    /**
+     * Removes/unlinks the linked entity sets from the linking entity set
+     * @param linkingEntitySetId the id of the linking entity set
+     * @param entitysetIds the ids of the entity sets to be removed/unlinked
+     */
+    @HTTP(method = "DELETE", path = BASE + LINKING + SET_ID_PATH, hasBody = true)
+    fun removeEntitySetsFromLinkingEntitySet(@Path(SET_ID) linkingEntitySetId: UUID, @Body entitySetIds: Set<UUID>): Int
+
+    /**
+     * Removes/unlinks the linked entity sets as from the linking entity sets
+     * @param entitysetIds mapping of the ids of the entity sets to be unlinked with keys of the linking entity sets
+     */
+    @HTTP(method = "DELETE", path = BASE + LINKING, hasBody = true)
+    fun removeEntitySetsFromLinkingEntitySets(@Body entitySetIds: Map<UUID, Set<UUID>>): Int
 
 }

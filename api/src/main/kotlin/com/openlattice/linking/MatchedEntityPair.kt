@@ -19,16 +19,22 @@
  *
  */
 
-package com.openlattice.organization
+package com.openlattice.linking
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-enum class OrganizationEntitySetFlag {
-    INTERNAL,
-    EXTERNAL,
-    MATERIALIZED,
-    EDM_UNSYNCHRONIZED,
-    DATA_UNSYNCHRONIZED
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.openlattice.client.serialization.SerializationConstants
+
+data class MatchedEntityPair(
+        @JsonProperty(SerializationConstants.ENTITY_KEY_IDS) val entityPair: EntityKeyPair,
+        @JsonProperty(SerializationConstants.MATCH) val match: Double) {
+
+    override fun equals(other: Any?): Boolean {
+        if(other == null) return false
+        if(other !is MatchedEntityPair) return false
+        return entityPair == other.entityPair
+    }
+
+    override fun hashCode(): Int {
+        return entityPair.hashCode()
+    }
 }

@@ -19,16 +19,10 @@
  *
  */
 
-package com.openlattice.organization
+package com.openlattice.linking
 
-/**
- *
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-enum class OrganizationEntitySetFlag {
-    INTERNAL,
-    EXTERNAL,
-    MATERIALIZED,
-    EDM_UNSYNCHRONIZED,
-    DATA_UNSYNCHRONIZED
+enum class FeedbackType {
+    Positive,
+    Negative,
+    All
 }

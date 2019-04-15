@@ -36,6 +36,7 @@ import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.postgres.IndexMethod;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -66,6 +67,7 @@ public final class TestDataFactory {
     private static final Action[]              actions              = Action.values();
     private static final RequestStatus[]       requestStatuses      = RequestStatus.values();
     private static final Analyzer[]            analyzers            = Analyzer.values();
+    private static final IndexMethod[]         indexMethods         = IndexMethod.values();
     private static final Random                r                    = new Random();
 
     private TestDataFactory() {
@@ -148,7 +150,8 @@ public final class TestDataFactory {
                         .union( k, propertyTypes ) ),
                 propertyTags,
                 Optional.ofNullable( parentId ),
-                Optional.of( entityTypeCategory ) );
+                Optional.of( entityTypeCategory ),
+                Optional.of( RandomUtils.nextInt( 1, 5 ) ) );
     }
 
     public static AssociationType associationType( PropertyType... keys ) {
@@ -213,7 +216,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Date,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( Analyzer.STANDARD ) );
+                Optional.of( Analyzer.STANDARD ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static PropertyType dateTimePropertyType() {
@@ -225,7 +229,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( Analyzer.STANDARD ) );
+                Optional.of( Analyzer.STANDARD ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static PropertyType propertyType() {
@@ -237,7 +242,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static PropertyType binaryPropertyType() {
@@ -249,7 +255,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static Organization organization() {
@@ -428,7 +435,8 @@ public final class TestDataFactory {
                 false,
                 Optional.of( true ),
                 Optional.empty(),
-                Optional.of( Analyzer.METAPHONE ) );
+                Optional.of( Analyzer.METAPHONE ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static PropertyType propertyType( EdmPrimitiveTypeKind type ) {
@@ -442,7 +450,8 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                        Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                        Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
             default:
                 return new PropertyType(
                         UUID.randomUUID(),
@@ -452,7 +461,8 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.empty() );
+                        Optional.empty(),
+                        Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
         }
     }
 
@@ -469,6 +479,7 @@ public final class TestDataFactory {
                 Stream.concat( Stream.of( key ), Stream.of( propertyTypes ) ).map( PropertyType::getId )
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
                 propertyTags,
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
     }

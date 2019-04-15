@@ -22,6 +22,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
+import com.openlattice.search.requests.EntityNeighborsFilter;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.*;
 
@@ -38,8 +39,9 @@ public interface DataApi {
     String BASE                  = SERVICE + CONTROLLER;
     // @formatter:on
 
-    String ASSOCIATION = "association";
+    String ASSOCIATION           = "association";
 
+    int    MAX_BATCH_SIZE        = 10_000;
     String COUNT                 = "count";
     String ENTITY_KEY_ID         = "entityKeyId";
     String ENTITY_KEY_ID_PATH    = "{" + ENTITY_KEY_ID + "}";
@@ -170,16 +172,18 @@ public interface DataApi {
 
 
     /**
-     * Clears the Entity matching the given Entity id and all of its neighbor Entities
+     * Deletes the entities matching the given entity ids and all of its neighbor entities provided in the filter.
      *
-     * @param vertexEntitySetId the id of the EntitySet to delete from
-     * @param vertexEntityKeyId the id of the Entity to delete
+     * @param entitySetId The id of the EntitySet to delete from.
+     * @param filter EntityNeighboursFilter containing which ids of entities to delete and entity set ids of neighbours
+     *               to delete from.
+     * @param deleteType  The delete type to perform (soft or hard delete).
      */
-    @DELETE( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + NEIGHBORS )
-    Long clearEntityAndNeighborEntities(
-            @Path( ENTITY_SET_ID ) UUID vertexEntitySetId,
-            @Path( ENTITY_KEY_ID ) UUID vertexEntityKeyId
-    );
+    @POST( BASE + "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + NEIGHBORS )
+    Long deleteEntitiesAndNeighbors(
+            @Path( ENTITY_SET_ID ) UUID entitySetId,
+            @Body EntityNeighborsFilter filter,
+            @Query( TYPE ) DeleteType deleteType );
 
     /**
      * Deletes all entities from an entity set.
