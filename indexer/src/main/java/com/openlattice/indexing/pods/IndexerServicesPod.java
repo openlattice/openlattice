@@ -33,15 +33,7 @@ import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizationQueryService;
-import com.openlattice.authorization.DbCredentialService;
-import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
-import com.openlattice.authorization.HazelcastAclKeyReservationService;
-import com.openlattice.authorization.HazelcastAuthorizationService;
-import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.*;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
@@ -157,6 +149,7 @@ public class IndexerServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
+                edmAuthorizationHelper(),
                 organizationsManager(),
                 dbcs(),
                 hazelcastInstance,
@@ -177,6 +170,11 @@ public class IndexerServicesPod {
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
         return new Auth0TokenProvider( auth0Configuration );
+    }
+
+    @Bean
+    public EdmAuthorizationHelper edmAuthorizationHelper() {
+        return new EdmAuthorizationHelper( dataModelService(), authorizationManager() );
     }
 
     @Bean
