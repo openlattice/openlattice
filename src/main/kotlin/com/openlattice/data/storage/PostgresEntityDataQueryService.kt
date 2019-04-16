@@ -111,54 +111,20 @@ class PostgresEntityDataQueryService(
         ).toMap()
     }
 
-    fun streamableEntitySet(
-            entitySetIds: Set<UUID>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            metadataOptions: Set<MetadataOption>,
-            version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false
-    ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
-        return if (linking) {
-            streamableLinkingEntitySet(
-                    entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
-                    authorizedPropertyTypes,
-                    metadataOptions,
-                    version
-            )
-        } else {
-            streamableEntitySet(
-                    entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
-                    authorizedPropertyTypes,
-                    metadataOptions,
-                    version
-            )
-        }
-    }
-
     @JvmOverloads
     fun streamableEntitySet(
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: Set<MetadataOption>,
-            version: Optional<Long> = Optional.empty(),
-            linking: Boolean = false
+            version: Optional<Long> = Optional.empty()
     ): PostgresIterable<SetMultimap<FullQualifiedName, Any>> {
-        return if (linking) {
-            streamableLinkingEntitySet(
-                    mapOf(entitySetId to Optional.of(entityKeyIds)),
-                    authorizedPropertyTypes,
-                    metadataOptions,
-                    version
-            )
-        } else {
-            streamableEntitySet(
-                    mapOf(entitySetId to Optional.of(entityKeyIds)),
-                    authorizedPropertyTypes,
-                    metadataOptions,
-                    version
-            )
-        }
+        return streamableEntitySet(
+                mapOf(entitySetId to Optional.of(entityKeyIds)),
+                authorizedPropertyTypes,
+                metadataOptions,
+                version
+        )
     }
 
     fun entitySetDataWithEntityKeyIdsAndPropertyTypeIds(

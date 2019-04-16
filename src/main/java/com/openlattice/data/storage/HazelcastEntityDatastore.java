@@ -415,8 +415,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 ids,
                 authorizedPropertyTypes,
                 EnumSet.of( MetadataOption.LAST_WRITE ),
-                Optional.empty(),
-                false ).stream();
+                Optional.empty() ).stream();
     }
 
     @Override
@@ -506,8 +505,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                                         e.getValue(),
                                         Map.of( e.getKey(), authorizedPropertyTypesByEntitySet.get( e.getKey() ) ),
                                         EnumSet.noneOf( MetadataOption.class ),
-                                        Optional.empty(),
-                                        false )
+                                        Optional.empty() )
                         )
                 );
 
