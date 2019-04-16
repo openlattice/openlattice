@@ -34,6 +34,7 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
 import com.openlattice.data.storage.entityKeyIdColumnsList
+import com.openlattice.data.storage.linkingEntityKeyIdColumnsList
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
@@ -72,6 +73,7 @@ class AssemblerConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration,
         private val hds: HikariDataSource,
         private val securePrincipalsManager: SecurePrincipalsManager,
+        private val edmAuthorizationHelper: EdmAuthorizationHelper,
         private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
         hazelcastInstance: HazelcastInstance,
@@ -325,15 +327,15 @@ class AssemblerConnectionManager(
      * Materializes an entity set on atlas.
      */
     private fun materialize(
-            datasource: HikariDataSource, entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ) {
+            datasource: HikariDataSource,
+            entitySetId: UUID,
+            authorizedPropertyTypes: Map<UUID, PropertyType>) {
         materializeEntitySetsTimer.time().use {
             val entitySet = entitySets.getValue(entitySetId)
 
-            val selectColumns = (entityKeyIdColumnsList + authorizedPropertyTypes.values
-                    .map { quote(it.type.fullQualifiedNameAsString) })
-                    .joinToString(",")
+            val selectColumns = ((if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
+                    authorizedPropertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) }
+                    ).joinToString(",")
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
 
@@ -367,42 +369,42 @@ class AssemblerConnectionManager(
             entitySetId: UUID,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): IntArray {
-
+        val entitySet = entitySets.getValue(entitySetId)
         val permissions = EnumSet.of(Permission.READ)
+
         // collect all principals of type user, role, which have read access on entityset
         val authorizedPrincipals = securePrincipalsManager
                 .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), permissions)
                 .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
                 .toSet()
-        // on every property type collect all principals of type user, role, which have read access
-        val authorizedPrincipalsOfProperties = authorizedPropertyTypes.values.map {
-            it.type to securePrincipalsManager
-                    .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId, it.id), permissions)
-                    .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
-        }.toMap()
 
-        // collect all authorized property types for principals which have read access on entity set
-        val authorizedPropertiesOfPrincipal = authorizedPrincipals
-                .map { it to mutableSetOf<FullQualifiedName>() }.toMap()
-        authorizedPrincipalsOfProperties.forEach { fqn, principals ->
-            principals.forEach {
-                authorizedPropertiesOfPrincipal[it]?.add(fqn)
+        val propertyCheckFunction: (Principal) -> (Map<UUID, PropertyType>) = if (entitySet.isLinking) {
+            { principal ->
+                edmAuthorizationHelper.getAuthorizedPropertiesOnLinkingEntitySet(
+                        entitySet, permissions, setOf(principal))
+                        .filter { authorizedPropertyTypes.keys.contains(it.key) }
+            }
+        } else {
+            { principal ->
+                edmAuthorizationHelper.getAuthorizedPropertiesOnEntitySets(
+                        setOf(entitySetId), permissions, setOf(principal))[entitySetId]!!
+                        .filter { authorizedPropertyTypes.keys.contains(it.key) }
             }
         }
 
-        // filter principals with no properties authorized
-        authorizedPrincipalsOfProperties.filter { it.value.isEmpty() }
+        // collect all authorized property types for principals which have read access on entity set
+        val authorizedPropertiesOfPrincipal = authorizedPrincipals
+                .map { it to propertyCheckFunction(it).values }
+                .filter { !it.second.isEmpty() } // filter principals with no properties authorized
+                .toMap()
 
         // prepare batch queries
         return connection.createStatement().use { stmt ->
-            authorizedPropertiesOfPrincipal.forEach { principal, fqns ->
-                val allColumns =
-                        if (fqns == authorizedPrincipalsOfProperties.keys) {
-                            listOf() // if user is authorized for all properties, grant select on whole table
-                        } else {
-                            entityKeyIdColumnsList + fqns.map { it.fullQualifiedNameAsString }
-                        }
-                val grantSelectSql = grantSelectSql(tableName, principal, allColumns)
+            authorizedPropertiesOfPrincipal.forEach { principal, propertyTypes ->
+                val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
+                        propertyTypes.map { it.type.fullQualifiedNameAsString }
+                val grantSelectSql = grantSelectSql(tableName, principal, columns)
+
                 stmt.addBatch(grantSelectSql)
             }
             stmt.executeBatch()
