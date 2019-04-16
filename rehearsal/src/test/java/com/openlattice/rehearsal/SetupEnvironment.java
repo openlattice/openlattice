@@ -149,13 +149,6 @@ public class SetupEnvironment {
 //        TestEdmConfigurer.setupDatamodel( retrofit.create( EdmApi.class ) );
     }
 
-    @Test
-    public void testLoadUser() {
-        PrincipalApi pApi = retrofit.create( PrincipalApi.class );
-        Auth0UserBasic adminUser = pApi.getUser( admin.getId() );
-        Assert.assertTrue( adminUser.getRoles().contains( "admin" ) );
-    }
-
     public static Auth0UserBasic getUserInfo( Principal principal ) {
         PrincipalApi pApi = retrofit.create( PrincipalApi.class );
         return pApi.getUser( principal.getId() );

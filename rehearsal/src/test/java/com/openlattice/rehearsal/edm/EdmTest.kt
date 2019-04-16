@@ -28,10 +28,9 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import java.util.UUID
+import java.lang.reflect.UndeclaredThrowableException
 import java.util.*
 import kotlin.collections.LinkedHashSet
-import java.lang.reflect.UndeclaredThrowableException
 
 
 /**
@@ -39,19 +38,11 @@ import java.lang.reflect.UndeclaredThrowableException
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-const val PERSON_NAMESPACE = "general"
-const val PERSON_NAME = "person"
-
-const val PERSON_GIVEN_NAME_NAMESPACE = "nc"
-const val PERSON_GIVEN_NAME_NAME = "PersonGivenName"
-
-const val PERSON_MIDDLE_NAME_NAMESPACE = "nc"
-const val PERSON_MIDDLE_NAME_NAME = "PersonMiddleName"
-
-
 class EdmTest : MultipleAuthenticatedUsersBase() {
     companion object {
-        @JvmStatic @BeforeClass fun init() {
+        @JvmStatic
+        @BeforeClass
+        fun init() {
             loginAs("admin")
         }
     }
@@ -61,54 +52,53 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testAddAndRemoveLinkedEntitySets() {
         val pt = createPropertyType()
-        val et = createEntityType( pt.id )
-        val linkingEs = createEntitySet( et, true, setOf() )
+        val et = createEntityType(pt.id)
+        val linkingEs = createEntitySet(et, true, setOf())
 
-        val personEntityTypeId = edmApi.getEntityTypeId( PERSON_NAMESPACE, PERSON_NAME )
-        val personEt = edmApi.getEntityType( personEntityTypeId )
-        val es = createEntitySet( personEt )
+        val es = createEntitySet(EdmTestConstants.personEt)
 
-        entitySetsApi.addEntitySetsToLinkingEntitySet( linkingEs.id, setOf<UUID>(es.id) )
-        Assert.assertEquals( es.id, edmApi.getEntitySet( linkingEs.id ).linkedEntitySets.single() )
+        entitySetsApi.addEntitySetsToLinkingEntitySet(linkingEs.id, setOf<UUID>(es.id))
+        Assert.assertEquals(es.id, edmApi.getEntitySet(linkingEs.id).linkedEntitySets.single())
 
-        entitySetsApi.removeEntitySetsFromLinkingEntitySet( linkingEs.id, setOf(es.id) )
-        Assert.assertEquals( setOf<UUID>(), edmApi.getEntitySet( linkingEs.id ).linkedEntitySets )
+        entitySetsApi.removeEntitySetsFromLinkingEntitySet(linkingEs.id, setOf(es.id))
+        Assert.assertEquals(setOf<UUID>(), edmApi.getEntitySet(linkingEs.id).linkedEntitySets)
     }
 
     @Test
     fun testChecksOnAddAndRemoveLinkedEntitySets() {
         // entity set is not linking
         val pt = createPropertyType()
-        val et = createEntityType( pt.id )
-        val nonLinkingEs = createEntitySet( et, false, setOf() )
-        val es = createEntitySet( et )
+        val et = createEntityType(pt.id)
+        val nonLinkingEs = createEntitySet(et, false, setOf())
+        val es = createEntitySet(et)
         try {
-            entitySetsApi.addEntitySetsToLinkingEntitySet( nonLinkingEs.id, setOf<UUID>(es.id) )
+            entitySetsApi.addEntitySetsToLinkingEntitySet(nonLinkingEs.id, setOf<UUID>(es.id))
             Assert.fail("Should have thrown Exception but did not!")
-        } catch( e: UndeclaredThrowableException ) {
-            Assert.assertTrue( e.undeclaredThrowable.message!!
-                    .contains( "Can't add linked entity sets to a not linking entity set", true ) )
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Can't add linked entity sets to a not linking entity set", true))
         }
 
         // add non-person entity set
-        val linkingEs = createEntitySet( et, true, setOf() )
+        val linkingEs = createEntitySet(et, true, setOf())
         try {
-            entitySetsApi.addEntitySetsToLinkingEntitySet( linkingEs.id, setOf<UUID>(es.id) )
+            entitySetsApi.addEntitySetsToLinkingEntitySet(linkingEs.id, setOf<UUID>(es.id))
             Assert.fail("Should have thrown Exception but did not!")
-        } catch( e: UndeclaredThrowableException ) {
-            Assert.assertTrue( e.undeclaredThrowable.message!!
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains(
-                            "Linked entity sets are of differing entity types than $PERSON_NAMESPACE.$PERSON_NAME",
-                            true ) )
+                            "Linked entity sets are of differing entity types than " +
+                                    EdmTestConstants.personEt.type.fullQualifiedNameAsString,
+                            true))
         }
 
         // remove empty
         try {
-            entitySetsApi.removeEntitySetsFromLinkingEntitySet( linkingEs.id, setOf() )
+            entitySetsApi.removeEntitySetsFromLinkingEntitySet(linkingEs.id, setOf())
             Assert.fail("Should have thrown Exception but did not!")
-        } catch( e: UndeclaredThrowableException ) {
-            Assert.assertTrue( e.undeclaredThrowable.message!!
-                    .contains( "Linked entity sets is empty", true ) )
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Linked entity sets is empty", true))
         }
 
     }
@@ -129,30 +119,27 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testGetEntityTypeIdByFqn() {
-        val validFqns = setOf( "a.a", "a.a.a", "aaaa.aa", "A.A", "AAA.AAA", "A_a.a_A", "123.456", "\"\',!.: +-_" )
+        val validFqns = setOf("a.a", "a.a.a", "aaaa.aa", "A.A", "AAA.AAA", "A_a.a_A", "123.456", "\"\',!.: +-_")
         val entityTypeFqns = edmApi.entityTypes.map { it.type.fullQualifiedNameAsString }
         val entityTypeFqnsToIds = edmApi.entityTypes.associate { it.type.fullQualifiedNameAsString to it.id }
         validFqns.forEach {
-            val expectedId  = if( entityTypeFqns.contains( it ) ) {
+            val expectedId = if (entityTypeFqns.contains(it)) {
                 entityTypeFqnsToIds[it]
             } else {
-                createEntityType( FullQualifiedName( it ) ).id
+                createEntityType(FullQualifiedName(it)).id
             }
 
-            val actualId = edmApi.getEntityTypeId(FullQualifiedName( it ))
-            Assert.assertEquals( expectedId, actualId )
+            val actualId = edmApi.getEntityTypeId(FullQualifiedName(it))
+            Assert.assertEquals(expectedId, actualId)
         }
     }
 
     @Test
     fun testDeleteEntitySet() {
-        val personEntityTypeId = edmApi.getEntityTypeId(com.openlattice.rehearsal.edm.PERSON_NAMESPACE, com.openlattice.rehearsal.edm.PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
+        val es1 = createEntitySet(EdmTestConstants.personEt)
+        val linkedEs = createEntitySet(EdmTestConstants.personEt, true, setOf(es1.id))
 
-        val es1 = createEntitySet(personEt)
-        val linkedEs = createEntitySet(personEt, true, setOf(es1.id))
-
-        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
+        val personGivenNamePropertyId = EdmTestConstants.personGivenNameId
         val entries = (1..numberOfEntries)
                 .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
         dataApi.createEntities(es1.id, entries)
@@ -164,9 +151,9 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
         try {
             edmApi.getEntitySet(es1.id)
             Assert.fail("Should have thrown Exception but did not!")
-        } catch( e: UndeclaredThrowableException ) {
-            Assert.assertTrue( e.undeclaredThrowable.message!!
-                    .contains("Object [${es1.id}] is not accessible.", true ) )
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Object [${es1.id}] is not accessible.", true))
         }
 
         val updatedLinkedEs = edmApi.getEntitySet(linkedEs.id)

@@ -28,8 +28,7 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.linking.FeedbackType
 import com.openlattice.linking.LinkingFeedback
 import com.openlattice.rehearsal.SetupTestData
-import com.openlattice.rehearsal.edm.PERSON_NAME
-import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
+import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.SearchConstraints
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.*
@@ -70,7 +69,7 @@ class LinkingFeedbackTest : SetupTestData() {
             }
 
             loginAs("admin")
-            personEt = edmApi.getEntityType(edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME))
+            personEt = EdmTestConstants.personEt
 
             val importedEntitySetKeysIterator = importedEntitySets.keys.iterator()
             linkingEntitySet = createEntitySet(

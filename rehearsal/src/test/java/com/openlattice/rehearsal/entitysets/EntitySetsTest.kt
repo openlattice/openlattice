@@ -1,8 +1,7 @@
 package com.openlattice.rehearsal.entitysets
 
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import com.openlattice.rehearsal.edm.PERSON_NAME
-import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
+import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
@@ -19,17 +18,13 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         }
     }
 
-    private val numberOfEntries = 10
-
     @Test
     fun testAddAndRemoveLinkedEntitySets() {
         val pt = createPropertyType()
         val et = createEntityType(pt.id)
         val linkingEs = createEntitySet(et, true, setOf())
 
-        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
-        val es = createEntitySet(personEt)
+        val es = createEntitySet(EdmTestConstants.personEt)
 
         entitySetsApi.addEntitySetsToLinkingEntitySet(linkingEs.id, setOf<UUID>(es.id))
         Assert.assertEquals(es.id, edmApi.getEntitySet(linkingEs.id).linkedEntitySets.single())
@@ -61,7 +56,8 @@ class EntitySetsTest : MultipleAuthenticatedUsersBase() {
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains(
-                            "Linked entity sets are of differing entity types than $PERSON_NAMESPACE.$PERSON_NAME",
+                            "Linked entity sets are of differing entity types than " +
+                                    EdmTestConstants.personEt.type.fullQualifiedNameAsString,
                             true))
         }
 

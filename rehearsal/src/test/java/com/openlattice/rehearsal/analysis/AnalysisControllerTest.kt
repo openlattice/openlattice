@@ -1,27 +1,20 @@
 package com.openlattice.rehearsal.analysis
 
 import com.google.common.collect.ArrayListMultimap
-import com.google.common.collect.ImmutableList
 import com.google.common.collect.ListMultimap
-import com.google.common.collect.Multimaps
 import com.openlattice.data.DataEdge
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import com.openlattice.rehearsal.edm.PERSON_NAME
-import com.openlattice.rehearsal.edm.PERSON_NAMESPACE
-import org.apache.olingo.commons.api.edm.EdmPrimitiveType
+import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.slf4j.LoggerFactory
 import java.util.*
 
 
 class AnalysisControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
-        val logger = LoggerFactory.getLogger(AnalysisControllerTest::class.java)
-
         @JvmStatic
         @BeforeClass
         fun init() {
@@ -34,7 +27,7 @@ class AnalysisControllerTest : MultipleAuthenticatedUsersBase() {
         val numberOfEntries = 10
 
         // Create linking entityset and add person entityset to it
-        val personEntityTypeId = edmApi.getEntityTypeId( PERSON_NAMESPACE, PERSON_NAME )
+        val personEntityTypeId = EdmTestConstants.personEt.id
         val personEt = edmApi.getEntityType( personEntityTypeId )
         val personEs = createEntitySet( personEt )
 
@@ -47,7 +40,7 @@ class AnalysisControllerTest : MultipleAuthenticatedUsersBase() {
         val esEdge = MultipleAuthenticatedUsersBase.createEntitySet(edge)
         val src = MultipleAuthenticatedUsersBase.createEntityType()
         val esSrc = MultipleAuthenticatedUsersBase.createEntitySet(src)
-        val at = MultipleAuthenticatedUsersBase.createAssociationType(edge, setOf(src), setOf(personEt))
+        MultipleAuthenticatedUsersBase.createAssociationType(edge, setOf(src), setOf(personEt))
 
         // Create entries for src, dst
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
