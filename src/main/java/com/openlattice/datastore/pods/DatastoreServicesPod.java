@@ -371,6 +371,7 @@ public class DatastoreServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
+                edmAuthorizationHelper(),
                 organizationsManager(),
                 dcs(),
                 hazelcastInstance,
