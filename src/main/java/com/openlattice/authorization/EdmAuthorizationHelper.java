@@ -125,6 +125,26 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     }
 
     /**
+     * @see EdmAuthorizationHelper#getAuthorizedPropertiesOnLinkingEntitySet(EntitySet, EnumSet, Set)
+     */
+    public Map<UUID, PropertyType> getAuthorizedPropertiesOnLinkingEntitySet(
+            EntitySet linkingEntitySet,
+            EnumSet<Permission> requiredPermissions ) {
+        if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
+            return ImmutableMap.of();
+        } else {
+            final var authorizedPropertyTypesOfNormalEntitySets = getAuthorizedPropertiesOnEntitySets(
+                    linkingEntitySet.getLinkedEntitySets(), requiredPermissions, Principals.getCurrentPrincipals() );
+
+            return authorizedPropertyTypesOfNormalEntitySets
+                    .values().stream()
+                    .reduce( ( properties, nextProperties ) ->
+                            Maps.difference( properties, nextProperties ).entriesInCommon() )
+                    .orElse( Maps.newHashMap() );
+        }
+    }
+
+    /**
      * Returns authorized property types for entity sets.
      * Note: entity sets are assumed to have same entity type
      *
