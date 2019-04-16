@@ -23,6 +23,7 @@
 package com.openlattice.authorization;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.util.Preconditions;
 import com.openlattice.datastore.services.EdmManager;
@@ -112,7 +113,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     }
 
     /**
-     * @see EdmAuthorizationHelper#getAuthorizedPropertiesOnEntitySets
+     * @see EdmAuthorizationHelper#getAuthorizedPropertiesOnEntitySets(Set, EnumSet, Set)
      */
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
             Set<UUID> entitySetIds,
@@ -143,6 +144,33 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
                 requiredPermissions,
                 principals );
+    }
+
+    /**
+     * Returns authorized property types for a linking entity set, which is the intersection of authorized propertie on
+     * each its normal entity sets.
+     *
+     * @param linkingEntitySet    the linking entity set to check for
+     * @param requiredPermissions the permissions to check for
+     * @param principals          the principals to check against
+     * @return Map of authorized property types
+     */
+    public Map<UUID, PropertyType> getAuthorizedPropertiesOnLinkingEntitySet(
+            EntitySet linkingEntitySet,
+            EnumSet<Permission> requiredPermissions,
+            Set<Principal> principals ) {
+        if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
+            return ImmutableMap.of();
+        } else {
+            final var authorizedPropertyTypesOfNormalEntitySets = getAuthorizedPropertiesOnEntitySets(
+                    linkingEntitySet.getLinkedEntitySets(), requiredPermissions, principals );
+
+            return authorizedPropertyTypesOfNormalEntitySets
+                    .values().stream()
+                    .reduce( ( properties, nextProperties ) ->
+                            Maps.difference( properties, nextProperties ).entriesInCommon() )
+                    .orElse( Maps.newHashMap() );
+        }
     }
 
     private Set<UUID> getAuthorizedPropertiesOnEntitySet(
