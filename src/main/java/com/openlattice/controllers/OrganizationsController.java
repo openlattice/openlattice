@@ -23,6 +23,7 @@ package com.openlattice.controllers;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.AclKey;
@@ -40,6 +41,7 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
+import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
@@ -273,7 +275,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesForMaterialization(
             UUID organizationId,
-            Set<UUID> entitySetIds) {
+            Set<UUID> entitySetIds ) {
         // materialize should be a property level permission that can only be granted to organization principals and
         // the person requesting materialize should be the owner of the organization
         ensureOwner( organizationId );
@@ -285,10 +287,33 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         }
 
         entitySetIds.forEach( entitySetId -> ensureMaterialize( entitySetId, organizationPrincipal ) );
-        return authzHelper.getAuthorizedPropertiesOnEntitySets(
-                entitySetIds,
-                EnumSet.of( Permission.MATERIALIZE ),
-                Set.of( organizationPrincipal.getPrincipal() ) );
+
+        final var groupedEntitySets = entitySetIds.stream()
+                .map( edm::getEntitySet )
+                .collect( Collectors.groupingBy( EntitySet::isLinking ) );
+
+        // first collect authorized property types of normal entity sets
+        final var authorizedPropertyTypesOfEntitySets = authzHelper.getAuthorizedPropertiesOnEntitySets(
+                        groupedEntitySets.get( false ).stream().map( EntitySet::getId ).collect( Collectors.toSet() ),
+                        EnumSet.of( Permission.MATERIALIZE ),
+                        Set.of( organizationPrincipal.getPrincipal() ) );
+
+        // for each linking entity set, check materialization on normal entity sets and get the intersection of their
+        // authorized property types
+        groupedEntitySets.get( true ).forEach( linkingEntitySet -> {
+                    linkingEntitySet.getLinkedEntitySets().forEach( entitySetId ->
+                            ensureMaterialize( entitySetId, organizationPrincipal ) );
+
+                    authorizedPropertyTypesOfEntitySets.put(
+                            linkingEntitySet.getId(),
+                            authzHelper.getAuthorizedPropertiesOnLinkingEntitySet(
+                                    linkingEntitySet,
+                                    EnumSet.of( Permission.MATERIALIZE ),
+                                    Set.of( organizationPrincipal.getPrincipal() ) ) );
+                }
+        );
+
+        return authorizedPropertyTypesOfEntitySets;
     }
 
     @Override
