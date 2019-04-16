@@ -31,11 +31,11 @@ import com.openlattice.data.*
 import com.openlattice.data.requests.EntitySetSelection
 import com.openlattice.data.requests.FileType
 import com.openlattice.edm.requests.MetadataUpdate
+import com.openlattice.edm.type.EntityType
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import com.openlattice.rehearsal.edm.*
-import com.openlattice.search.requests.Search
 import com.openlattice.search.requests.SearchTerm
 import org.apache.commons.lang.RandomStringUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -52,9 +52,8 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 
-private val numberOfEntries = 10
+private const val numberOfEntries = 10
 private val random = Random()
-private val OL_ID_FQN = FullQualifiedName("openlattice", "@id")
 
 class DataControllerTest : MultipleAuthenticatedUsersBase() {
     companion object {
@@ -68,10 +67,14 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                         }
                 )
 
+        lateinit var personEt: EntityType
+
         @JvmStatic
         @BeforeClass
         fun init() {
             loginAs("admin")
+
+            personEt = EdmTestConstants.personEt
         }
     }
 
@@ -89,10 +92,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         Assert.assertEquals(numberOfEntries.toLong(), results1.size.toLong())
         results1.forEach {
-            val id = it[OL_ID_FQN].first()
+            val id = it[DataTables.ID_FQN].first()
             val originalData = entities.getValue(UUID.fromString(id as String))
             it.forEach { fqn, value ->
-                if (fqn != OL_ID_FQN) {
+                if (fqn != DataTables.ID_FQN) {
                     val propertyId = edmApi.getPropertyTypeId(fqn.namespace, fqn.name)
                     Assert.assertEquals(originalData.getValue(propertyId).first(), value)
                 }
@@ -290,7 +293,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         )
 
         // when loading entitysets, the result is grouped by entity key id
-        val stringEntityKeyIds = createdEdges.values().map { it.toString() }
+        createdEdges.values().map { it.toString() }
 
         val actualEdgeData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
         val edgesCreatedData = Multimaps.asMap(edgesToBeCreated).entries.first().value
@@ -299,7 +302,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                     edgesCreatedData[numberOfEntries - index - 1].data.mapValues { it.value.toMutableSet() }.toMutableMap()
             )
             de.asMap()
-                    .filter { it.key.name != OL_ID_FQN.name }
+                    .filter { it.key.name != DataTables.ID_FQN.name }
                     .forEach { fqn, data -> Assert.assertEquals(data, edgeDataLookup[fqn]) }
         }
     }
@@ -369,7 +372,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         )
 
         //added transformValues()
-        val ids = MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
+        MultipleAuthenticatedUsersBase.dataApi.createEntities(es.id, testData)
         val ess = EntitySetSelection(Optional.of(et.properties))
         val results = Sets.newHashSet(
                 MultipleAuthenticatedUsersBase.dataApi
@@ -476,14 +479,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testNotAuthorizedDelete() {
-        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
-
         val es = createEntitySet(personEt)
 
-        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
         val entries = (1..numberOfEntries)
-                .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
+                .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
+                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -540,8 +540,8 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         // add user1 as owner for all property types in entityset
         personEt.properties.forEach {
-            val acl = Acl(AclKey(es.id, it), setOf(Ace(user1, newPermissions, OffsetDateTime.MAX)))
-            permissionsApi.updateAcl(AclData(acl, Action.ADD))
+            val propertyAcl = Acl(AclKey(es.id, it), setOf(Ace(user1, newPermissions, OffsetDateTime.MAX)))
+            permissionsApi.updateAcl(AclData(propertyAcl, Action.ADD))
         }
 
         try {
@@ -557,14 +557,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testDeleteEntities() {
-        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
-
         val es = createEntitySet(personEt)
 
-        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
         val entries = (1..numberOfEntries)
-                .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
+                .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
+                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
@@ -576,20 +573,17 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         Assert.assertEquals(numberOfEntries - 1, loadedEntries.size)
         Assert.assertTrue(loadedEntries.none {
-            it[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)] == entries.first().values
+            it[EdmTestConstants.personGivenNameFqn] == entries.first().values
         })
     }
 
     @Test
     fun testDeleteEntitiesWithAssociations() {
-        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
-
         val es = createEntitySet(personEt)
 
-        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
         val entries = (1..numberOfEntries)
-                .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
+                .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
+                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -634,13 +628,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries - 1, loadedEntriesEdge1.size)
         Assert.assertEquals(numberOfEntries, loadedEntriesDst1.size)
         Assert.assertTrue(loadedEntries1.none {
-            it[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)] == entries.first().values
+            it[EdmTestConstants.personGivenNameFqn] == entries.first().values
         })
         Assert.assertTrue(loadedEntries1.none {
-            it[OL_ID_FQN].first() == newEntityIds.first().toString()
+            it[DataTables.ID_FQN].first() == newEntityIds.first().toString()
         })
         Assert.assertTrue(loadedEntriesEdge1.none {
-            it[OL_ID_FQN].first() == idsEdge.first().toString()
+            it[DataTables.ID_FQN].first() == idsEdge.first().toString()
         })
 
         // soft delete last entity
@@ -659,27 +653,24 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries - 2, loadedEntriesEdge2.size)
         Assert.assertEquals(numberOfEntries, loadedEntriesDst.size)
         Assert.assertTrue(loadedEntries2.none {
-            it[FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)] == entries.last().values
+            it[EdmTestConstants.personGivenNameFqn] == entries.last().values
         })
         Assert.assertTrue(loadedEntries2.none {
-            it[OL_ID_FQN].last() == newEntityIds.last().toString()
+            it[DataTables.ID_FQN].last() == newEntityIds.last().toString()
         })
         Assert.assertTrue(loadedEntriesEdge2.none {
-            it[OL_ID_FQN].last() == idsEdge.last().toString()
+            it[DataTables.ID_FQN].last() == idsEdge.last().toString()
         })
     }
 
     @Test
     fun testDeleteAllDataInEntitySet() {
         // hard delete entityset data
-        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
-
         val es = createEntitySet(personEt)
 
-        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
         val entries = (1..numberOfEntries)
-                .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
+                .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
+                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -767,18 +758,13 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testDeleteEntityProperties() {
-        val personEntityTypeId = edmApi.getEntityTypeId(PERSON_NAMESPACE, PERSON_NAME)
-        val personEt = edmApi.getEntityType(personEntityTypeId)
-
         val es = createEntitySet(personEt)
 
-        val personGivenNamePropertyId = edmApi.getPropertyTypeId(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME)
-        val personMiddleNamePropertyId = edmApi.getPropertyTypeId(PERSON_MIDDLE_NAME_NAMESPACE, PERSON_MIDDLE_NAME_NAME)
         val people = (1..numberOfEntries)
                 .map {
                     mapOf(
-                            personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5)),
-                            personMiddleNamePropertyId to setOf(RandomStringUtils.randomAscii(5))
+                            EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)),
+                            EdmTestConstants.personMiddleNameId to setOf(RandomStringUtils.randomAscii(5))
                     )
                 }.toList()
 
@@ -787,14 +773,11 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
 
         val entityId = newEntityIds[0]
-        dataApi.deleteEntityProperties(es.id, entityId, setOf(personGivenNamePropertyId), DeleteType.Hard)
+        dataApi.deleteEntityProperties(es.id, entityId, setOf(EdmTestConstants.personGivenNameId), DeleteType.Hard)
 
         val loadedEntity = dataApi.getEntity(es.id, entityId)
 
         Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
-        Assert.assertFalse(
-                loadedEntity.keySet()
-                        .contains(FullQualifiedName(PERSON_GIVEN_NAME_NAMESPACE, PERSON_GIVEN_NAME_NAME))
-        )
+        Assert.assertFalse(loadedEntity.keySet().contains(EdmTestConstants.personGivenNameFqn))
     }
 }
