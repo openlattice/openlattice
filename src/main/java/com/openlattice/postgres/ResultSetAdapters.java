@@ -654,7 +654,7 @@ public final class ResultSetAdapters {
     }
 
     public static IndexMethod indexMethod(ResultSet rs ) throws SQLException {
-        return IndexMethod.valueOf( rs.getString( INDEXED.getName() ) );
+        return IndexMethod.valueOf( rs.getString( INDEX_TYPE.getName() ) );
     }
 
     public static Status status( ResultSet rs ) throws SQLException {
