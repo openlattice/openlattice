@@ -511,7 +511,12 @@ public final class ResultSetAdapters {
     }
 
     public static Set<String> enumValues( ResultSet rs ) throws SQLException {
-        return ImmutableSet.copyOf( PostgresArrays.getTextArray( rs, ENUM_VALUES_FIELD ) );
+        final var values = PostgresArrays.getTextArray( rs, ENUM_VALUES_FIELD );
+        if ( values == null || values.length == 0 ) {
+            return null;
+        } else {
+            return ImmutableSet.copyOf( values );
+        }
     }
 
     public static EntityType entityType( ResultSet rs ) throws SQLException {
