@@ -794,22 +794,17 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
             Optional<Set<UUID>> linkedEntitySets ) {
         Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
-        authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( id -> {
+        authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( ptId -> {
 
             if ( linkedEntitySets.isPresent() ) {
                 linkedEntitySets.get().forEach( linkedEntitySetId -> {
-
-                    if ( authorizedPropertyTypesByEntitySet
-                            .getOrDefault( linkedEntitySetId, DelegatedUUIDSet.wrap( ImmutableSet.of() ) )
-                            .contains( id ) ) {
-                        Map<String, Float> propertyTypeMap = fieldsMap.getOrDefault( id, Maps.newHashMap() );
-                        propertyTypeMap.put( linkedEntitySetId.toString() + "." + id.toString(), 1F );
-                        fieldsMap.put( id, propertyTypeMap );
-                    }
+                    Map<String, Float> propertyTypeMap = fieldsMap.getOrDefault( ptId, Maps.newHashMap() );
+                    propertyTypeMap.put( linkedEntitySetId.toString() + "." + ptId.toString(), 1F );
+                    fieldsMap.put( ptId, propertyTypeMap );
                 } );
 
             } else {
-                fieldsMap.put( id, Map.of( entitySetId.toString() + "." + id.toString(), 1F ) );
+                fieldsMap.put( ptId, Map.of( entitySetId.toString() + "." + ptId.toString(), 1F ) );
             }
         } );
         return fieldsMap;
