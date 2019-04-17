@@ -60,3 +60,4 @@ If a new subproject needs to be added:
 * commit, push, and submit a pull request. `git commit -a -m "Added subproject" && git push --set-upstream origin feature/test` 
 
 
+git ftw

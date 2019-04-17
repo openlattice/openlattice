@@ -43,3 +43,15 @@
 [submodule "launchpad"]
 	path = launchpad
 	url = git@github.com:openlattice/launchpad.git
+[submodule "shuttle"]
+	path = shuttle
+	url = git@github.com:openlattice/shuttle.git
+[submodule "indexer"]
+	path = indexer
+	url = git@github.com:openlattice/indexer.git
+[submodule "transporter"]
+	path = transporter
+	url = git@github.com:openlattice/transporter.git
+[submodule "linker"]
+	path = linker
+	url = git@github.com:openlattice/linker.git
