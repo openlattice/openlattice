@@ -66,7 +66,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
             @JsonProperty( SerializationConstants.SCHEMAS ) Set<FullQualifiedName> schemas,
             @JsonProperty( SerializationConstants.DATATYPE_FIELD ) EdmPrimitiveTypeKind datatype,
-            @JsonProperty( SerializationConstants.ENUM_VALUES ) Optional<Set<?>> enumValues,
+            @JsonProperty( SerializationConstants.ENUM_VALUES ) Optional<Set<String>> enumValues,
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
             @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
             @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer,
