@@ -23,7 +23,7 @@ package com.openlattice.controllers;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.AclKey;
@@ -294,13 +294,14 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
         // first collect authorized property types of normal entity sets
         final var authorizedPropertyTypesOfEntitySets = authzHelper.getAuthorizedPropertiesOnEntitySets(
-                        groupedEntitySets.get( false ).stream().map( EntitySet::getId ).collect( Collectors.toSet() ),
-                        EnumSet.of( Permission.MATERIALIZE ),
-                        Set.of( organizationPrincipal.getPrincipal() ) );
+                groupedEntitySets.getOrDefault( false, Lists.newArrayList() ).stream().map( EntitySet::getId )
+                        .collect( Collectors.toSet() ),
+                EnumSet.of( Permission.MATERIALIZE ),
+                Set.of( organizationPrincipal.getPrincipal() ) );
 
         // for each linking entity set, check materialization on normal entity sets and get the intersection of their
         // authorized property types
-        groupedEntitySets.get( true ).forEach( linkingEntitySet -> {
+        groupedEntitySets.getOrDefault( true, Lists.newArrayList() ).forEach( linkingEntitySet -> {
                     linkingEntitySet.getLinkedEntitySets().forEach( entitySetId ->
                             ensureMaterialize( entitySetId, organizationPrincipal ) );
 
