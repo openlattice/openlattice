@@ -66,6 +66,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+
 public class SearchService {
     private static final Logger logger = LoggerFactory.getLogger( SearchService.class );
 
@@ -114,7 +116,7 @@ public class SearchService {
         Set<AclKey> authorizedEntitySetIds = authorizations
                 .getAuthorizedObjectsOfType( Principals.getCurrentPrincipals(),
                         SecurableObjectType.EntitySet,
-                        EnumSet.of( Permission.READ ) ).collect( Collectors.toSet() );
+                        READ_PERMISSION ).collect( Collectors.toSet() );
         if ( authorizedEntitySetIds.size() == 0 ) {
             return new SearchResult( 0, Lists.newArrayList() );
         }
@@ -131,27 +133,33 @@ public class SearchService {
     @Timed
     public DataSearchResult executeSearch(
             SearchConstraints searchConstraints,
-            Set<Principal> principals ) { // TODO change to Optional<Map<UUID, Map<UUID, PropertyType>>> authorizedPropertyTypesByLinkingEntitySet
+            Set<Principal> principals ) {
 
-        Set<UUID> entitySetIds = Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) );
-        Map<UUID, EntitySet> entitySetsById = dataModelService.getEntitySetsAsMap( entitySetIds );
+        final Set<UUID> entitySetIds = Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) );
+        final Map<UUID, EntitySet> entitySetsById = dataModelService.getEntitySetsAsMap( entitySetIds );
+        final var groupedEntitySets = entitySetsById.values().stream()
+                .collect( Collectors.groupingBy( EntitySet::isLinking ) );
 
-        Map<UUID, DelegatedUUIDSet> linkingEntitySets = Maps.newHashMap();
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authorizationHelper
+                .getAuthorizedPropertiesOnEntitySets(
+                        groupedEntitySets.get( false ).stream().map( EntitySet::getId ).collect( Collectors.toSet() ),
+                        READ_PERMISSION,
+                        principals );
 
-        entitySetsById.values().forEach( entitySet -> {
-            if ( entitySet.isLinking() ) {
-                Set<UUID> linkedEntitySets = entitySet.getLinkedEntitySets();
+        final Map<UUID, DelegatedUUIDSet> linkingEntitySets = Maps.newHashMap();
+        groupedEntitySets.get( true ).forEach( linkingEntitySet -> {
+                    final var linkingEntitySetId = linkingEntitySet.getId();
+                    linkingEntitySets.put( linkingEntitySetId,
+                            DelegatedUUIDSet.wrap( linkingEntitySet.getLinkedEntitySets() ) );
+                    // authorized properties should be the same within 1 linking entity set for each normal entity set
+                    authorizedPropertyTypesByEntitySet.put( linkingEntitySetId,
+                            authorizationHelper.getAuthorizedPropertiesOnLinkingEntitySet( linkingEntitySet,
+                                    READ_PERMISSION ) );
+                }
+        );
 
-                entitySetIds.addAll( linkedEntitySets );
-                linkingEntitySets.put( entitySet.getId(), DelegatedUUIDSet.wrap( linkedEntitySets ) );
-            }
-        } );
-
-        Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authorizationHelper
-                .getAuthorizedPropertiesOnEntitySets( entitySetIds, EnumSet.of( Permission.READ ), principals );
-
-        Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet
-                .entrySet().stream().collect( Collectors.toMap( entry -> entry.getKey(),
+        final Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet
+                .entrySet().stream().collect( Collectors.toMap( Map.Entry::getKey,
                         entry -> DelegatedUUIDSet.wrap( entry.getValue().keySet() ) ) );
 
         if ( authorizedPropertiesByEntitySet.values().isEmpty() ) {
@@ -163,11 +171,11 @@ public class SearchService {
                 .stream()
                 .collect( Collectors.toMap( EntitySet::getId, EntitySet::getEntityTypeId ) );
 
-        EntityDataKeySearchResult result = elasticsearchApi
-                .executeSearch( searchConstraints,
-                        entityTypesByEntitySet,
-                        authorizedPropertiesByEntitySet,
-                        linkingEntitySets );
+        EntityDataKeySearchResult result = elasticsearchApi.executeSearch(
+                searchConstraints,
+                entityTypesByEntitySet,
+                authorizedPropertiesByEntitySet,
+                linkingEntitySets );
 
         SetMultimap<UUID, UUID> entityKeyIdsByEntitySetId = HashMultimap.create();
         result.getEntityDataKeys()
@@ -175,11 +183,11 @@ public class SearchService {
 
         List<SetMultimap<FullQualifiedName, Object>> results = entityKeyIdsByEntitySetId.keySet().parallelStream()
                 .map( entitySetId -> getResults(
-                        entitySetId,
+                        entitySetsById.get( entitySetId ),
                         entityKeyIdsByEntitySetId.get( entitySetId ),
                         authorizedPropertyTypesByEntitySet,
                         entitySetsById.get( entitySetId ).isLinking() ) )
-                .flatMap( entityList -> entityList.stream() )
+                .flatMap( List::stream )
                 .collect( Collectors.toList() );
 
         return new DataSearchResult( result.getNumHits(), results );
@@ -253,7 +261,7 @@ public class SearchService {
         Set<AclKey> authorizedOrganizationIds = authorizations
                 .getAuthorizedObjectsOfType( Principals.getCurrentPrincipals(),
                         SecurableObjectType.Organization,
-                        EnumSet.of( Permission.READ ) ).collect( Collectors.toSet() );
+                        READ_PERMISSION ).collect( Collectors.toSet() );
         if ( authorizedOrganizationIds.size() == 0 ) {
             return new SearchResult( 0, Lists.newArrayList() );
         }
@@ -510,7 +518,7 @@ public class SearchService {
             Set<UUID> authorizedLinkedEntitySetIds = authorizations
                     .accessChecksForPrincipals( linkingEntitySets.stream()
                             .flatMap( es -> es.getLinkedEntitySets().stream() )
-                            .map( esId -> new AccessCheck( new AclKey( esId ), EnumSet.of( Permission.READ ) ) )
+                            .map( esId -> new AccessCheck( new AclKey( esId ), READ_PERMISSION ) )
                             .collect( Collectors.toSet() ), principals )
                     .filter( auth -> auth.getPermissions().get( Permission.READ ) )
                     .map( auth -> auth.getAclKey().get( 0 ) )
@@ -539,7 +547,7 @@ public class SearchService {
         sw1.reset().start();
 
         Set<UUID> authorizedEntitySetIds = authorizations.accessChecksForPrincipals( allEntitySetIds.stream()
-                .map( esId -> new AccessCheck( new AclKey( esId ), EnumSet.of( Permission.READ ) ) )
+                .map( esId -> new AccessCheck( new AclKey( esId ), READ_PERMISSION ) )
                 .collect( Collectors.toSet() ), principals )
                 .filter( auth -> auth.getPermissions().get( Permission.READ ) ).map( auth -> auth.getAclKey().get( 0 ) )
                 .collect( Collectors.toSet() );
@@ -561,7 +569,7 @@ public class SearchService {
         Set<AccessCheck> accessChecks = entitySetsById.values().stream()
                 .flatMap( entitySet -> entityTypesById.get( entitySet.getEntityTypeId() ).getProperties().stream()
                         .map( propertyTypeId -> new AccessCheck( new AclKey( entitySet.getId(), propertyTypeId ),
-                                EnumSet.of( Permission.READ ) ) ) ).collect( Collectors.toSet() );
+                                READ_PERMISSION ) ) ).collect( Collectors.toSet() );
 
         authorizations.accessChecksForPrincipals( accessChecks, principals ).forEach( auth -> {
             if ( auth.getPermissions().get( Permission.READ ) ) {
@@ -781,7 +789,7 @@ public class SearchService {
         } );
 
         Set<UUID> unauthorizedEntitySetIds = authorizations.accessChecksForPrincipals( allEntitySetIds.stream()
-                .map( esId -> new AccessCheck( new AclKey( esId ), EnumSet.of( Permission.READ ) ) )
+                .map( esId -> new AccessCheck( new AclKey( esId ), READ_PERMISSION ) )
                 .collect( Collectors.toSet() ), principals )
                 .filter( auth -> !auth.getPermissions().get( Permission.READ ) )
                 .map( auth -> auth.getAclKey().get( 0 ) )
@@ -805,19 +813,24 @@ public class SearchService {
     }
 
     private List<SetMultimap<FullQualifiedName, Object>> getResults(
-            UUID entitySetId,
+            EntitySet entitySet,
             Set<UUID> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             boolean linking ) {
         if ( entityKeyIds.size() == 0 ) { return ImmutableList.of(); }
         if ( linking ) {
-            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetIds = authorizedPropertyTypes.keySet().stream()
-                    .collect( Collectors.toMap( esId -> esId, esId -> Optional.of( entityKeyIds ) ) );
-            return dataManager.getLinkingEntities( linkingIdsByEntitySetIds, authorizedPropertyTypes )
+            final var linkingIdsByEntitySetIds = entitySet.getLinkedEntitySets().stream().collect(
+                    Collectors.toMap( Function.identity(), normalEntitySetId -> Optional.of( entityKeyIds ) ) );
+            final var authorizedPropertiesOfNormalEntitySets = entitySet.getLinkedEntitySets().stream().collect(
+                    Collectors.toMap(
+                            Function.identity(),
+                            normalEntitySetId -> authorizedPropertyTypes.get( entitySet.getId() ) ) );
+
+            return dataManager.getLinkingEntities( linkingIdsByEntitySetIds, authorizedPropertiesOfNormalEntitySets )
                     .collect( Collectors.toList() );
         } else {
             return dataManager
-                    .getEntities( entitySetId, ImmutableSet.copyOf( entityKeyIds ), authorizedPropertyTypes )
+                    .getEntities( entitySet.getId(), ImmutableSet.copyOf( entityKeyIds ), authorizedPropertyTypes )
                     .collect( Collectors.toList() );
         }
     }
