@@ -209,9 +209,6 @@ public interface EdmApi {
     @DELETE( PROPERTY_TYPE_BASE_PATH + ID_PATH + FORCE_PATH )
     Void forceDeletePropertyType( @Path( ID ) UUID propertyTypeId );
 
-    @DELETE( BASE + ENUM_TYPE_PATH + ID_PATH )
-    Void deleteEnumType( @Path( ID ) UUID enumTypeId );
-
     @GET( BASE + COMPLEX_TYPE_PATH )
     Iterable<ComplexType> getComplexTypes();
 
