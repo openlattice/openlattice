@@ -48,7 +48,8 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             EdmPrimitiveTypeKind.SByte,
             EdmPrimitiveTypeKind.Int16,
             EdmPrimitiveTypeKind.Int32,
-            EdmPrimitiveTypeKind.Int64 );
+            EdmPrimitiveTypeKind.Int64,
+            EdmPrimitiveTypeKind.String );
 
     protected final   boolean               multiValued;
     private final     LinkedHashSet<String> enumValues = new LinkedHashSet<>();
@@ -181,6 +182,11 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         return piiField;
     }
 
+    @JsonIgnore
+    public void setPii( boolean pii ) {
+        this.piiField = pii;
+    }
+
     @JsonProperty( SerializationConstants.MULTI_VALUED )
     public boolean isMultiValued() {
         return multiValued;
@@ -199,11 +205,6 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     @JsonProperty( SerializationConstants.ENUM_VALUES )
     public LinkedHashSet<String> getEnumValues() {
         return enumValues;
-    }
-
-    @JsonIgnore
-    public void setPii( boolean pii ) {
-        this.piiField = pii;
     }
 
     @Override public boolean equals( Object o ) {
