@@ -28,13 +28,11 @@ import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
@@ -210,18 +208,6 @@ public interface EdmApi {
      */
     @DELETE( PROPERTY_TYPE_BASE_PATH + ID_PATH + FORCE_PATH )
     Void forceDeletePropertyType( @Path( ID ) UUID propertyTypeId );
-
-    @GET( BASE + ENUM_TYPE_PATH )
-    Iterable<EnumType> getEnumTypes();
-
-    @POST( BASE + ENUM_TYPE_PATH )
-    UUID createEnumType( @Body EnumType enumType );
-
-    @GET( BASE + ENUM_TYPE_PATH + ID_PATH )
-    EnumType getEnumType( @Path( ID ) UUID enumTypeId );
-
-    @DELETE( BASE + ENUM_TYPE_PATH + ID_PATH )
-    Void deleteEnumType( @Path( ID ) UUID enumTypeId );
 
     @GET( BASE + COMPLEX_TYPE_PATH )
     Iterable<ComplexType> getComplexTypes();

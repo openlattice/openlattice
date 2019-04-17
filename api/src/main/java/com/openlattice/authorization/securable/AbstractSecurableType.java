@@ -35,6 +35,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public abstract class AbstractSecurableType extends AbstractSecurableObject {
+
+    private static final int MAX_FQN_LENGTH = 63;
+
     //This is only a descriptive property so relax finality.
     protected FullQualifiedName type;
 
@@ -55,6 +58,8 @@ public abstract class AbstractSecurableType extends AbstractSecurableObject {
         checkNotNull( type, "Type cannot be null." );
         checkArgument( StringUtils.isNotBlank( type.getNamespace() ), "Namespace of type is missing." );
         checkArgument( StringUtils.isNotBlank( type.getName() ), "Name of type is missing." );
+        checkArgument( type.getFullQualifiedNameAsString().length() <= MAX_FQN_LENGTH,
+                "Type FQN cannot be longer than " + String.valueOf( MAX_FQN_LENGTH ) + " characters" );
         this.type = type;
     }
 

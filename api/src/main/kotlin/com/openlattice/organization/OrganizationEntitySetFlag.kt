@@ -28,5 +28,7 @@ package com.openlattice.organization
 enum class OrganizationEntitySetFlag {
     INTERNAL,
     EXTERNAL,
-    MATERIALIZED
+    MATERIALIZED,
+    EDM_UNSYNCHRONIZED,
+    DATA_UNSYNCHRONIZED
 }

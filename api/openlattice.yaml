@@ -1335,6 +1335,42 @@ paths:
                   items:
                     $ref: "#/components/neighborEntityDetails"
 
+  /datastore/search/{entitySetId}/neighbors/advanced/ids:
+    post:
+      summary: Executes a search for all neighbors of multiple entities of the same entity set that are connected by an association and returns a simple version of the neighborDetails
+      operationId: executeFilteredEntityNeighborIdSearch
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/neighborSearchFilter"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A list of objects containing information about the neighbor and association."
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      $ref: "#/components/neighborEntityDetailsReduced"
+  
   #####################
   ## DIRECTORY API"s ##
   #####################
@@ -2021,9 +2057,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/role"
+                $ref: "#/components/role"
     delete:
       summary: Remove role for an organization
       operationId: deleteRole
@@ -2476,17 +2510,6 @@ components:
         title: This is the title of the entitySet
         contacts: ["support@openlattice.com"]
         description: This is a more elaborate description of the entity set.
-    entityWithId:
-      allOf:
-        - type: list
-          items:
-            type: object
-            additionalProperties:
-              type: string
-        - type: object
-          properties:
-            openlattice.@id:
-              type: string
     neighborDetails:
       type: object
       properties:
@@ -2507,6 +2530,17 @@ components:
           type: string
         neighbourDetails:
             $ref: "#/components/neighborDetails"
+    neighborEntityIds:
+      type: object
+      properties:
+        associationId:
+          type: string
+          format: uuid
+        neighborId:
+          type: string
+          format: uuid
+        src:
+          type: boolean
     neighborSearchFilter:
       type: object
       properties:

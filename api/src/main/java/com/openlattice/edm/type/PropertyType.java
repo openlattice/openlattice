@@ -18,16 +18,28 @@
 
 package com.openlattice.edm.type;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
+import com.google.common.base.Preconditions;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
+
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import com.openlattice.postgres.IndexMethod;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -35,13 +47,21 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PropertyType extends AbstractSchemaAssociatedSecurableType {
+    private static final EnumSet<EdmPrimitiveTypeKind> ALLOWED_UNDERLYING_TYPES = EnumSet.of(
+            EdmPrimitiveTypeKind.Byte,
+            EdmPrimitiveTypeKind.SByte,
+            EdmPrimitiveTypeKind.Int16,
+            EdmPrimitiveTypeKind.Int32,
+            EdmPrimitiveTypeKind.Int64,
+            EdmPrimitiveTypeKind.String );
 
-    protected final   boolean              multiValued;
-//    protected final   boolean              postgresIndexed;
-    protected         EdmPrimitiveTypeKind datatype;
-    protected         boolean              piiField;
-    protected         Analyzer             analyzer;
-    private transient int                  h = 0;
+    protected final   boolean               multiValued;
+    private final     LinkedHashSet<String> enumValues = new LinkedHashSet<>();
+    protected         EdmPrimitiveTypeKind  datatype;
+    protected         boolean               piiField;
+    protected         Analyzer              analyzer;
+    protected         IndexMethod           postgresIndexType;
+    private transient int                   h          = 0;
 
     @JsonCreator
     public PropertyType(
@@ -51,19 +71,27 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
             @JsonProperty( SerializationConstants.SCHEMAS ) Set<FullQualifiedName> schemas,
             @JsonProperty( SerializationConstants.DATATYPE_FIELD ) EdmPrimitiveTypeKind datatype,
+            @JsonProperty( SerializationConstants.ENUM_VALUES ) Optional<Set<String>> enumValues,
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
             @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
-            @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer ) {
+            @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer,
+            @JsonProperty( SerializationConstants.INDEXED ) Optional<IndexMethod> postgresIndexType ) {
         super(
                 id,
                 fqn,
                 title,
                 description,
                 schemas );
-        this.datatype = datatype;
+        this.datatype = Preconditions.checkNotNull( datatype, "PropertyType datatype cannot be null" );
+        if ( enumValues.isPresent() ) {
+            checkArgument( ALLOWED_UNDERLYING_TYPES.contains( datatype ), "Only certain types are allowed" );
+            checkArgument( enumValues.get().size() > 0, "At least one enum value must be specified." );
+            this.enumValues.addAll( enumValues.get() );
+        }
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
         this.analyzer = analyzer.orElse( Analyzer.STANDARD );
+        this.postgresIndexType = postgresIndexType.orElse( IndexMethod.BTREE );
     }
 
     public PropertyType(
@@ -74,8 +102,19 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             Set<FullQualifiedName> schemas,
             EdmPrimitiveTypeKind datatype,
             Optional<Boolean> piiField,
-            Optional<Analyzer> analyzer ) {
-        this( Optional.of( id ), fqn, title, description, schemas, datatype, piiField, Optional.empty(), analyzer );
+            Optional<Analyzer> analyzer,
+            Optional<IndexMethod> postgresIndexType ) {
+        this( Optional.of( id ),
+                fqn,
+                title,
+                description,
+                schemas,
+                datatype,
+                Optional.empty(),
+                piiField,
+                Optional.empty(),
+                analyzer,
+                postgresIndexType );
     }
 
     public PropertyType(
@@ -92,7 +131,9 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 description,
                 schemas,
                 datatype,
+                Optional.empty(),
                 piiField,
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
     }
@@ -110,6 +151,8 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 description,
                 schemas,
                 datatype,
+                Optional.empty(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
@@ -129,6 +172,8 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
                 datatype,
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 Optional.empty() );
     }
 
@@ -138,8 +183,13 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     }
 
     @JsonProperty( SerializationConstants.PII_FIELD )
-    public boolean isPIIfield() {
+    public boolean isPii() {
         return piiField;
+    }
+
+    @JsonIgnore
+    public void setPii( boolean pii ) {
+        this.piiField = pii;
     }
 
     @JsonProperty( SerializationConstants.MULTI_VALUED )
@@ -152,9 +202,15 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         return analyzer;
     }
 
-    @JsonIgnore
-    public void setPii( boolean pii ) {
-        this.piiField = pii;
+    @JsonProperty( SerializationConstants.INDEXED )
+    public IndexMethod getPostgresIndexType() {
+        return postgresIndexType;
+    }
+
+    @JsonProperty( SerializationConstants.ENUM_VALUES )
+    @JsonInclude(value = Include.NON_EMPTY)
+    public LinkedHashSet<String> getEnumValues() {
+        return enumValues;
     }
 
     @Override public boolean equals( Object o ) {

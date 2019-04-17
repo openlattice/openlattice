@@ -18,8 +18,23 @@
 
 package com.openlattice.mapstores;
 
-import com.openlattice.authorization.*;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.openlattice.authorization.Ace;
+import com.openlattice.authorization.AceValue;
+import com.openlattice.authorization.Acl;
+import com.openlattice.authorization.AclData;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Action;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.PrincipalType;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -32,10 +47,10 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.roles.Role;
+import com.openlattice.postgres.IndexMethod;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -45,15 +60,19 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
@@ -66,6 +85,7 @@ public final class TestDataFactory {
     private static final Action[]              actions              = Action.values();
     private static final RequestStatus[]       requestStatuses      = RequestStatus.values();
     private static final Analyzer[]            analyzers            = Analyzer.values();
+    private static final IndexMethod[]         indexMethods         = IndexMethod.values();
     private static final Random                r                    = new Random();
 
     private TestDataFactory() {
@@ -148,7 +168,8 @@ public final class TestDataFactory {
                         .union( k, propertyTypes ) ),
                 propertyTags,
                 Optional.ofNullable( parentId ),
-                Optional.of( entityTypeCategory ) );
+                Optional.of( entityTypeCategory ),
+                Optional.of( RandomUtils.nextInt( 1, 5 ) ) );
     }
 
     public static AssociationType associationType( PropertyType... keys ) {
@@ -213,7 +234,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Date,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( Analyzer.STANDARD ) );
+                Optional.of( Analyzer.STANDARD ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static PropertyType dateTimePropertyType() {
@@ -225,7 +247,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( Analyzer.STANDARD ) );
+                Optional.of( Analyzer.STANDARD ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static PropertyType propertyType() {
@@ -237,7 +260,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static PropertyType binaryPropertyType() {
@@ -249,7 +273,8 @@ public final class TestDataFactory {
                 ImmutableSet.of(),
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
-                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
     }
 
     public static Organization organization() {
@@ -416,21 +441,6 @@ public final class TestDataFactory {
                 SecurableObjectType.ComplexType );
     }
 
-    public static EnumType enumType() {
-        return new EnumType(
-                Optional.of( UUID.randomUUID() ),
-                fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( "test enum type" ),
-                Sets.newLinkedHashSet( Arrays.asList( "Blue", "Red", "Green" ) ),
-                ImmutableSet.of( fqn(), fqn(), fqn() ),
-                Optional.of( EdmPrimitiveTypeKind.Int32 ),
-                false,
-                Optional.of( true ),
-                Optional.empty(),
-                Optional.of( Analyzer.METAPHONE ) );
-    }
-
     public static PropertyType propertyType( EdmPrimitiveTypeKind type ) {
         switch ( type ) {
             case String:
@@ -442,7 +452,8 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ) );
+                        Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
+                        Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
             default:
                 return new PropertyType(
                         UUID.randomUUID(),
@@ -452,7 +463,8 @@ public final class TestDataFactory {
                         ImmutableSet.of(),
                         type,
                         Optional.of( r.nextBoolean() ),
-                        Optional.empty() );
+                        Optional.empty(),
+                        Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
         }
     }
 
@@ -469,6 +481,7 @@ public final class TestDataFactory {
                 Stream.concat( Stream.of( key ), Stream.of( propertyTypes ) ).map( PropertyType::getId )
                         .collect( Collectors.toCollection( LinkedHashSet::new ) ),
                 propertyTags,
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty() );
     }
