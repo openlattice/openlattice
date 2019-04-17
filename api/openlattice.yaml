@@ -352,7 +352,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/entityType"
+              $ref: "#/components/metaDataUpdate"
       tags:
         - edm
       security:
@@ -641,7 +641,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/propertyType"
+              $ref: "#/components/metaDataUpdate"
       responses:
         "200":
           description: Success
@@ -981,7 +981,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/propertyUsageSummary"
+                type: array
+                items:
+                  $ref: "#/components/propertyUsageSummary"
 
   # schema
 
@@ -2388,6 +2390,8 @@ components:
             type: string
         description:
           type: string
+        type:
+          $ref: "#/components/fullQualifiedName"
         linking:
           type: boolean
         linked_entity_sets:
