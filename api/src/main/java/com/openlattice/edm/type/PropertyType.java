@@ -22,7 +22,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
 import com.google.common.base.Preconditions;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -82,6 +86,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         if ( enumValues.isPresent() ) {
             checkArgument( ALLOWED_UNDERLYING_TYPES.contains( datatype ), "Only certain types are allowed" );
             checkArgument( enumValues.get().size() > 0, "At least one enum value must be specified." );
+            this.enumValues.addAll( enumValues.get() );
         }
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
@@ -203,6 +208,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     }
 
     @JsonProperty( SerializationConstants.ENUM_VALUES )
+    @JsonInclude(value = Include.NON_EMPTY)
     public LinkedHashSet<String> getEnumValues() {
         return enumValues;
     }
