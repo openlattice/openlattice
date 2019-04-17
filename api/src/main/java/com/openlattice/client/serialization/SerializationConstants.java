@@ -112,6 +112,7 @@ public final class SerializationConstants {
     public static final String ENTITY_TYPES                     = "entityTypes";
     public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
+    public static final String ENUM_VALUES                      = "enumValues";
     public static final String EXACT                            = "exact";
     public static final String EXACT_SEARCH_FIELDS              = "exactSearchFields";
     public static final String EXPIRATION                       = "expiration";
@@ -138,12 +139,12 @@ public final class SerializationConstants {
     public static final String LAST_READ                        = "lastRead";
     public static final String LAST_WRITE                       = "lastWrite";
     public static final String LATITUDE                         = "latitude";
+    public static final String LINK                             = "link";
     public static final String LINKED                           = "linked";
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
-    public static final String LINKING_FEEDBACK                 = "linkingFeedback";
-    public static final String LINK                             = "link";
     public static final String LINKING_ENTITY                   = "linkingEntity";
+    public static final String LINKING_FEEDBACK                 = "linkingFeedback";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
@@ -173,7 +174,7 @@ public final class SerializationConstants {
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
-    public static final String PII_FIELD                        = "piiField";
+    public static final String PII_FIELD                        = "pii";
     public static final String PRESENT                          = "present";
     public static final String PRINCIPAL                        = "principal";
     public static final String PRINCIPAL_PATHS                  = "principalPaths";
