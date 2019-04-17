@@ -111,6 +111,7 @@ import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
+import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -293,9 +294,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void forceDeletePropertyType( UUID propertyTypeId ) {
-        Stream<EntityType> entityTypes = entityTypeManager
-                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
-                        .of( propertyTypeId ) );
+        final var entityTypes = getEntityTypesContainPropertyType( propertyTypeId );
         entityTypes.forEach( et -> Preconditions
                 .checkArgument( !et.getKey().contains( propertyTypeId ) || et.getKey().size() > 1,
                         "Property type {} cannot be deleted because entity type {} will be left without a primary key",
@@ -309,6 +308,10 @@ public class EdmService implements EdmManager {
         propertyTypes.delete( propertyTypeId );
         aclKeyReservations.release( propertyTypeId );
         eventBus.post( new PropertyTypeDeletedEvent( propertyTypeId ) );
+    }
+
+    private Collection<EntityType> getEntityTypesContainPropertyType( UUID propertyTypeId ) {
+        return entityTypes.values( Predicates.equal( EntityTypeMapstore.PROPERTIES_INDEX, propertyTypeId ) );
     }
 
     private EntityType getEntityTypeWithBaseType( EntityType entityType ) {

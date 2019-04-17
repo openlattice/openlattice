@@ -225,6 +225,7 @@ public class PostgresTypeManager {
                 .flatMap( StreamUtil::stream );
     }
 
+    @Deprecated
     private Iterable<EntityType> getEntityTypesContainingPropertyType( UUID propertyId ) {
         try ( Connection connection = hds.getConnection();
                 PreparedStatement ps = connection.prepareStatement( entityTypesContainPropertyType ) ) {
