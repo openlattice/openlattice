@@ -146,7 +146,8 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ENTITY_KEY_IDS_FIELD, UUID_ARRAY );
     public static final String                   ENTITY_SET_FLAGS_FIELD            = "flags";
     public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
-            new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY );
+            new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY )
+            .withDefault( "'{}'" );
     public static final String                   ENTITY_SET_ID_FIELD               = "entity_set_id";
     public static final PostgresColumnDefinition ENTITY_SET_ID                     =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
