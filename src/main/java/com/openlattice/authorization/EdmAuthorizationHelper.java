@@ -22,7 +22,6 @@
 
 package com.openlattice.authorization;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.hazelcast.util.Preconditions;
@@ -131,7 +130,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             EntitySet linkingEntitySet,
             EnumSet<Permission> requiredPermissions ) {
         if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
-            return ImmutableMap.of();
+            return Maps.newHashMap();
         } else {
             final var authorizedPropertyTypesOfNormalEntitySets = getAuthorizedPropertiesOnEntitySets(
                     linkingEntitySet.getLinkedEntitySets(), requiredPermissions, Principals.getCurrentPrincipals() );
@@ -158,7 +157,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             EnumSet<Permission> requiredPermissions,
             Set<Principal> principals ) {
         return ( entitySetIds.isEmpty() )
-                ? ImmutableMap.of()
+                ? Maps.newHashMap()
                 : getAuthorizedPropertyTypes(
                 entitySetIds,
                 getAllPropertiesOnEntitySet( entitySetIds.iterator().next() ),
@@ -180,7 +179,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             EnumSet<Permission> requiredPermissions,
             Set<Principal> principals ) {
         if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
-            return ImmutableMap.of();
+            return Maps.newHashMap();
         } else {
             final var authorizedPropertyTypesOfNormalEntitySets = getAuthorizedPropertiesOnEntitySets(
                     linkingEntitySet.getLinkedEntitySets(), requiredPermissions, principals );

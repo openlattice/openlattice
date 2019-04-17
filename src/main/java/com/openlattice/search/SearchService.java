@@ -142,12 +142,13 @@ public class SearchService {
 
         final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authorizationHelper
                 .getAuthorizedPropertiesOnEntitySets(
-                        groupedEntitySets.get( false ).stream().map( EntitySet::getId ).collect( Collectors.toSet() ),
+                        groupedEntitySets.getOrDefault( false, Lists.newArrayList() ).stream()
+                                .map( EntitySet::getId ).collect( Collectors.toSet() ),
                         READ_PERMISSION,
                         principals );
 
         final Map<UUID, DelegatedUUIDSet> linkingEntitySets = Maps.newHashMap();
-        groupedEntitySets.get( true ).forEach( linkingEntitySet -> {
+        groupedEntitySets.getOrDefault( true, Lists.newArrayList() ).forEach( linkingEntitySet -> {
                     final var linkingEntitySetId = linkingEntitySet.getId();
                     linkingEntitySets.put( linkingEntitySetId,
                             DelegatedUUIDSet.wrap( linkingEntitySet.getLinkedEntitySets() ) );
