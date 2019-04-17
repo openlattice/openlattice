@@ -589,8 +589,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 aclKey,
                 Set.of(principal.getPrincipal()),
                 EnumSet.of( Permission.MATERIALIZE ) ) ) {
-            throw new ForbiddenException( "Object " + aclKey.toString() + " is not accessible by " +
-                    principal.getPrincipal().getId()  + " ." );
+            throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
+                    "principal" + principal.getPrincipal().getId()  + " ." );
         }
 
         return aclKey;
