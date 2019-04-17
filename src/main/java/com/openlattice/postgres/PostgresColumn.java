@@ -159,6 +159,11 @@ public final class PostgresColumn {
     public static final String                   ENTITY_TYPE_ID_FIELD              = "entity_type_id";
     public static final PostgresColumnDefinition ENTITY_TYPE_ID                    =
             new PostgresColumnDefinition( ENTITY_TYPE_ID_FIELD, UUID ).notNull();
+    public static final String                   ENUM_VALUES_FIELD                 = "enum_values";
+    public static final PostgresColumnDefinition ENUM_VALUES                       =
+            new PostgresColumnDefinition( ENUM_VALUES_FIELD, TEXT_ARRAY )
+                    .withDefault( "'{}'" )
+                    .notNull();
     public static final String                   EVENT_TYPE_FIELD                  = "event_type";
     public static final PostgresColumnDefinition EVENT_TYPE                        =
             new PostgresColumnDefinition( EVENT_TYPE_FIELD, TEXT );

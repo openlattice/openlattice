@@ -71,7 +71,7 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
                 object.getSchemas(),
                 ( FullQualifiedName schema ) -> FullQualifiedNameStreamSerializer.serialize( out, schema ) );
         out.writeInt( object.getDatatype().ordinal() );
-        out.writeBoolean( object.isPIIfield() );
+        out.writeBoolean( object.isPii() );
         out.writeInt( object.getAnalyzer().ordinal() );
         out.writeInt( object.getPostgresIndexType().ordinal() );
     }

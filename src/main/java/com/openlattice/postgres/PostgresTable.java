@@ -276,6 +276,7 @@ public final class PostgresTable {
                             DATATYPE,
                             TITLE,
                             DESCRIPTION,
+                            ENUM_VALUES,
                             SCHEMAS,
                             PII,
                             ANALYZER,
