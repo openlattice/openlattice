@@ -4,7 +4,9 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.Property;
 import com.openlattice.data.storage.BinaryDataWithContentType;
+import com.openlattice.edm.type.PropertyType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -16,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import kotlin.Pair;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.geo.Geospatial.Dimension;
@@ -34,7 +37,7 @@ public class JsonDeserializer {
 
     public static SetMultimap<UUID, Object> validateFormatAndNormalize(
             Map<UUID, Set<Object>> propertyValues,
-            Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType ) {
+            Map<UUID, PropertyType> authorizedPropertiesWithDataType ) {
         return validateFormatAndNormalize( propertyValues,
                 authorizedPropertiesWithDataType,
                 () -> "No additional info." );
@@ -42,16 +45,36 @@ public class JsonDeserializer {
 
     public static SetMultimap<UUID, Object> validateFormatAndNormalize(
             final Map<UUID, Set<Object>> propertyValues,
-            final Map<UUID, EdmPrimitiveTypeKind> authorizedPropertiesWithDataType,
-            Supplier<String> lazyMessage ) {
+            final Map<UUID, PropertyType> authorizedPropertiesWithDataType,
+            final Supplier<String> lazyMessage ) {
 
         SetMultimap<UUID, Object> normalizedPropertyValues = HashMultimap.create();
 
         for ( Map.Entry<UUID, Set<Object>> entry : propertyValues.entrySet() ) {
-            UUID propertyTypeId = entry.getKey();
-            EdmPrimitiveTypeKind dataType = authorizedPropertiesWithDataType.get( propertyTypeId );
+            final UUID propertyTypeId = entry.getKey();
+            final PropertyType propertyType = authorizedPropertiesWithDataType.get( propertyTypeId );
+            final EdmPrimitiveTypeKind dataType = propertyType.getDatatype();
             Set<Object> valueSet = entry.getValue();
             if ( valueSet != null ) {
+                //If enum values are specified for this property type, make sure only valid enum values have been
+                //provided for parsing.
+                if ( !propertyType.getEnumValues().isEmpty() ) {
+                    final var enumValues = propertyType.getEnumValues();
+
+                    final var invalidEnumValues =
+                            valueSet.stream()
+                                    .filter( value -> !enumValues.contains( value ) )
+                                    .collect( Collectors.toList() );
+
+                    if ( !invalidEnumValues.isEmpty() ) {
+                        String errMsg =
+                                "Received invalid enum values " + invalidEnumValues.toString() + " for property type "
+                                        + propertyType.getType().getFullQualifiedNameAsString();
+                        logger.error( errMsg );
+                        throw new IllegalStateException( errMsg );
+                    }
+                }
+
                 for ( Object value : valueSet ) {
                     final var normalizedValue = validateFormatAndNormalize( dataType, propertyTypeId, value );
                     if ( normalizedValue != null ) {

@@ -26,6 +26,8 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.SetMultimap;
 import com.openlattice.data.integration.Entity;
+import com.openlattice.edm.type.PropertyType;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.JsonDeserializer;
 import java.io.IOException;
 import java.util.UUID;
@@ -78,13 +80,13 @@ public class TestJacksonSerialization  {
     @Test
     public void testNull() throws IOException {
         final Entity entity = ObjectMappers.getJsonMapper().readValue(json, Entity.class);
-        ImmutableMap.Builder<UUID, EdmPrimitiveTypeKind> builder = ImmutableMap.builder();
+        ImmutableMap.Builder<UUID, PropertyType> builder = ImmutableMap.builder();
 
-        builder.put( p0, EdmPrimitiveTypeKind.String );
-        builder.put( p1, EdmPrimitiveTypeKind.String );
-        builder.put( p2, EdmPrimitiveTypeKind.String );
-        builder.put( p3, EdmPrimitiveTypeKind.String );
-        builder.put( p4, EdmPrimitiveTypeKind.String );
+        builder.put( p0, TestDataFactory.propertyType( EdmPrimitiveTypeKind.String ));
+        builder.put( p1, TestDataFactory.propertyType( EdmPrimitiveTypeKind.String ));
+        builder.put( p2, TestDataFactory.propertyType( EdmPrimitiveTypeKind.String ));
+        builder.put( p3, TestDataFactory.propertyType( EdmPrimitiveTypeKind.String ));
+        builder.put( p4, TestDataFactory.propertyType( EdmPrimitiveTypeKind.String ));
 
         SetMultimap<UUID, Object> details = JsonDeserializer.validateFormatAndNormalize( entity.getDetails(), builder.build() );
         Assert.assertTrue( details.get( p1 ).stream().allMatch( Predicates.notNull()::test ) );
