@@ -274,6 +274,11 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testMaterializeEdges() {
+        // create new organization to test empty edges
+        val organization = TestDataFactory.organization()
+        val organizationID = organizationsApi.createOrganizationIfNotExists(organization)
+        val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
+
         // create entity sets
         val src = createEntityType()
         val dst = createEntityType()
