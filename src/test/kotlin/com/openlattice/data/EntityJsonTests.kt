@@ -26,6 +26,8 @@ import com.google.common.base.Predicate
 import com.google.common.base.Predicates
 import com.google.common.collect.ImmutableMap
 import com.openlattice.data.integration.Entity
+import com.openlattice.edm.type.PropertyType
+import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.JsonDeserializer
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.junit.Assert
@@ -81,13 +83,13 @@ class EntityJsonTests {
     @Throws(IOException::class)
     fun testNull() {
         val entity = ObjectMappers.getJsonMapper().readValue(json, Entity::class.java)
-        val builder = ImmutableMap.builder<UUID, EdmPrimitiveTypeKind>()
+        val builder = ImmutableMap.builder<UUID, PropertyType>()
 
-        builder.put(p0, EdmPrimitiveTypeKind.String)
-        builder.put(p1, EdmPrimitiveTypeKind.String)
-        builder.put(p2, EdmPrimitiveTypeKind.String)
-        builder.put(p3, EdmPrimitiveTypeKind.String)
-        builder.put(p4, EdmPrimitiveTypeKind.String)
+        builder.put(p0, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
+        builder.put(p1, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
+        builder.put(p2, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
+        builder.put(p3, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
+        builder.put(p4, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
 
         val details = JsonDeserializer.validateFormatAndNormalize(entity.details, builder.build())
         Assert.assertTrue(details.get(p1).all { it != null })
@@ -98,13 +100,13 @@ class EntityJsonTests {
     @Throws(IOException::class)
     fun testInjectedNull() {
         val entity = ObjectMappers.getJsonMapper().readValue(json, Entity::class.java)
-        val builder = ImmutableMap.builder<UUID, EdmPrimitiveTypeKind>()
+        val builder = ImmutableMap.builder<UUID, PropertyType>()
 
-        builder.put(p0, EdmPrimitiveTypeKind.String)
-        builder.put(p1, EdmPrimitiveTypeKind.String)
-        builder.put(p2, EdmPrimitiveTypeKind.String)
-        builder.put(p3, EdmPrimitiveTypeKind.String)
-        builder.put(p4, EdmPrimitiveTypeKind.String)
+        builder.put(p1, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
+        builder.put(p0, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
+        builder.put(p2, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
+        builder.put(p3, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
+        builder.put(p4, TestDataFactory.propertyType(EdmPrimitiveTypeKind.String))
 
         entity.details.put( p1 , null )
 

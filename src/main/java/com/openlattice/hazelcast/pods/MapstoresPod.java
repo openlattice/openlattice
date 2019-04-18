@@ -55,7 +55,6 @@ import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
@@ -147,11 +146,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, ComplexType> complexTypeMapstore() {
         return new ComplexTypeMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, EnumType> enumTypeMapstore() {
-        return new EnumTypesMapstore( hikariDataSource );
     }
 
     @Bean

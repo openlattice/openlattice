@@ -22,10 +22,20 @@
 
 package com.openlattice.datastore.services;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -35,23 +45,63 @@ import com.openlattice.assembler.Assembler;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
 import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.AuditingTypes;
-import com.openlattice.authorization.*;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.Permission;
+import com.openlattice.authorization.Principal;
+import com.openlattice.authorization.Principals;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.controllers.exceptions.TypeExistsException;
 import com.openlattice.controllers.exceptions.TypeNotFoundException;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.datastore.util.Util;
-import com.openlattice.edm.*;
-import com.openlattice.edm.events.*;
+import com.openlattice.edm.EntityDataModel;
+import com.openlattice.edm.EntityDataModelDiff;
+import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.PostgresEdmManager;
+import com.openlattice.edm.Schema;
+import com.openlattice.edm.events.AssociationTypeCreatedEvent;
+import com.openlattice.edm.events.AssociationTypeDeletedEvent;
+import com.openlattice.edm.events.ClearAllDataEvent;
+import com.openlattice.edm.events.EntitySetCreatedEvent;
+import com.openlattice.edm.events.EntitySetDeletedEvent;
+import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
+import com.openlattice.edm.events.EntityTypeCreatedEvent;
+import com.openlattice.edm.events.EntityTypeDeletedEvent;
+import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
+import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
+import com.openlattice.edm.events.PropertyTypeCreatedEvent;
+import com.openlattice.edm.events.PropertyTypeDeletedEvent;
+import com.openlattice.edm.events.PropertyTypeMetaDataUpdatedEvent;
+import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
+import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent;
+import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
-import com.openlattice.edm.type.*;
-import com.openlattice.edm.types.processors.*;
+import com.openlattice.edm.type.AssociationDetails;
+import com.openlattice.edm.type.AssociationType;
+import com.openlattice.edm.type.ComplexType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.PropertyType;
+import com.openlattice.edm.types.processors.AddDstEntityTypesToAssociationTypeProcessor;
+import com.openlattice.edm.types.processors.AddPrimaryKeysToEntityTypeProcessor;
+import com.openlattice.edm.types.processors.AddPropertyTypesToEntityTypeProcessor;
+import com.openlattice.edm.types.processors.AddSrcEntityTypesToAssociationTypeProcessor;
+import com.openlattice.edm.types.processors.RemoveDstEntityTypesFromAssociationTypeProcessor;
+import com.openlattice.edm.types.processors.RemovePrimaryKeysFromEntityTypeProcessor;
+import com.openlattice.edm.types.processors.RemovePropertyTypesFromEntityTypeProcessor;
+import com.openlattice.edm.types.processors.RemoveSrcEntityTypesFromAssociationTypeProcessor;
+import com.openlattice.edm.types.processors.ReorderPropertyTypesInEntityTypeProcessor;
+import com.openlattice.edm.types.processors.UpdateEntitySetMetadataProcessor;
+import com.openlattice.edm.types.processors.UpdateEntitySetPropertyMetadataProcessor;
+import com.openlattice.edm.types.processors.UpdateEntityTypeMetadataProcessor;
+import com.openlattice.edm.types.processors.UpdatePropertyTypeMetadataProcessor;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.hazelcast.HazelcastUtils;
 import com.openlattice.hazelcast.processors.AddEntitySetsToLinkingEntitySetProcessor;
@@ -61,23 +111,30 @@ import com.openlattice.postgres.DataTables;
 import com.openlattice.postgres.PostgresQuery;
 import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
+import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.inject.Inject;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import javax.inject.Inject;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EdmService implements EdmManager {
 
@@ -85,7 +142,6 @@ public class EdmService implements EdmManager {
 
     private final IMap<UUID, PropertyType>                              propertyTypes;
     private final IMap<UUID, ComplexType>                               complexTypes;
-    private final IMap<UUID, EnumType>                                  enumTypes;
     private final IMap<UUID, EntityType>                                entityTypes;
     private final IMap<UUID, EntitySet>                                 entitySets;
     private final IMap<String, UUID>                                    aclKeys;
@@ -128,7 +184,6 @@ public class EdmService implements EdmManager {
         this.hds = hds;
         this.propertyTypes = hazelcastInstance.getMap( HazelcastMap.PROPERTY_TYPES.name() );
         this.complexTypes = hazelcastInstance.getMap( HazelcastMap.COMPLEX_TYPES.name() );
-        this.enumTypes = hazelcastInstance.getMap( HazelcastMap.ENUM_TYPES.name() );
         this.entityTypes = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPES.name() );
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
         this.names = hazelcastInstance.getMap( HazelcastMap.NAMES.name() );
@@ -239,9 +294,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void forceDeletePropertyType( UUID propertyTypeId ) {
-        Stream<EntityType> entityTypes = entityTypeManager
-                .getEntityTypesContainingPropertyTypesAsStream( ImmutableSet
-                        .of( propertyTypeId ) );
+        final var entityTypes = getEntityTypesContainPropertyType( propertyTypeId );
         entityTypes.forEach( et -> Preconditions
                 .checkArgument( !et.getKey().contains( propertyTypeId ) || et.getKey().size() > 1,
                         "Property type {} cannot be deleted because entity type {} will be left without a primary key",
@@ -255,6 +308,10 @@ public class EdmService implements EdmManager {
         propertyTypes.delete( propertyTypeId );
         aclKeyReservations.release( propertyTypeId );
         eventBus.post( new PropertyTypeDeletedEvent( propertyTypeId ) );
+    }
+
+    private Collection<EntityType> getEntityTypesContainPropertyType( UUID propertyTypeId ) {
+        return entityTypes.values( Predicates.equal( EntityTypeMapstore.PROPERTIES_INDEX, propertyTypeId ) );
     }
 
     private EntityType getEntityTypeWithBaseType( EntityType entityType ) {
@@ -571,31 +628,8 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public void createEnumTypeIfNotExists( EnumType enumType ) {
-        aclKeyReservations.reserveIdAndValidateType( enumType );
-        enumTypes.putIfAbsent( enumType.getId(), enumType );
-    }
-
-    @Override
-    public Stream<EnumType> getEnumTypes() {
-        return entityTypeManager.getEnumTypeIds()
-                .parallel()
-                .map( enumTypes::get );
-    }
-
-    @Override
-    public EnumType getEnumType( UUID enumTypeId ) {
-        return enumTypes.get( enumTypeId );
-    }
-
-    @Override
     public Set<EntityType> getEntityTypeHierarchy( UUID entityTypeId ) {
         return getTypeHierarchy( entityTypeId, HazelcastUtils.getter( entityTypes ), EntityType::getBaseType );
-    }
-
-    @Override
-    public void deleteEnumType( UUID enumTypeId ) {
-        enumTypes.delete( enumTypeId );
     }
 
     @Override
@@ -985,7 +1019,9 @@ public class EdmService implements EdmManager {
                     // add edm_unsync flag for materialized views
                     markMaterializedEntitySetDirtyWithEdmChanges( entitySet.getId() );
                 }
-                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), properties, isFqnUpdated ) );
+                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(),
+                        properties,
+                        isFqnUpdated ) );
             } );
         } );
 
@@ -1024,7 +1060,7 @@ public class EdmService implements EdmManager {
     }
 
     private void markMaterializedEntitySetDirty( UUID entitySetId, OrganizationEntitySetFlag flag ) {
-        assembler.flagMaterializedEntitySet( entitySetId,  flag );
+        assembler.flagMaterializedEntitySet( entitySetId, flag );
     }
 
     /**************
@@ -1163,7 +1199,7 @@ public class EdmService implements EdmManager {
     @Override
     public Set<UUID> getPropertyTypeIdsOfEntityTypeWithPIIField( UUID entityTypeId ) {
         return getPropertyTypeIdsOfEntityType( entityTypeId ).stream()
-                .filter( ptId -> getPropertyType( ptId ).isPIIfield() ).collect( Collectors.toSet() );
+                .filter( ptId -> getPropertyType( ptId ).isPii() ).collect( Collectors.toSet() );
     }
 
     @Override
@@ -1256,8 +1292,8 @@ public class EdmService implements EdmManager {
                     ? Optional.empty() : Optional.of( pt.getDescription() );
             Optional<FullQualifiedName> optionalFqnUpdate = ( fqn.equals( existing.getType() ) )
                     ? Optional.empty() : Optional.of( fqn );
-            Optional<Boolean> optionalPiiUpdate = ( pt.isPIIfield() == existing.isPIIfield() )
-                    ? Optional.empty() : Optional.of( pt.isPIIfield() );
+            Optional<Boolean> optionalPiiUpdate = ( pt.isPii() == existing.isPii() )
+                    ? Optional.empty() : Optional.of( pt.isPii() );
             updatePropertyTypeMetadata( existing.getId(), new MetadataUpdate(
                     optionalTitleUpdate,
                     optionalDescriptionUpdate,
@@ -1400,7 +1436,7 @@ public class EdmService implements EdmManager {
                     propertyTypesById.put( pt.getId(), pt );
                 } else if ( !pt.getTitle().equals( existing.getTitle() )
                         || !pt.getDescription().equals( existing.getDescription() )
-                        || !pt.isPIIfield() == existing.isPIIfield() ) { updatedPropertyTypes.add( pt ); }
+                        || !pt.isPii() == existing.isPii() ) { updatedPropertyTypes.add( pt ); }
             }
         } );
 

@@ -419,9 +419,9 @@ class PostgresEntityDataQueryService(
          */
 
 
-        val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
-            propertyType.datatype
-        }
+//        val dataTypes = authorizedPropertyTypes.mapValues { (_, propertyType) ->
+//            propertyType.datatype
+//        }
 
         val updatedPropertyCounts = entities.entries.parallelStream().mapToInt { (entityKeyId, rawValue) ->
             hds.connection.use { connection ->
@@ -429,7 +429,7 @@ class PostgresEntityDataQueryService(
                     rawValue
                 } else {
                     asMap(JsonDeserializer
-                                  .validateFormatAndNormalize(rawValue, dataTypes)
+                                  .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
                                   { "Entity set $entitySetId with entity key id $entityKeyId" })
                 }
 
@@ -451,7 +451,8 @@ class PostgresEntityDataQueryService(
                         values.map { value ->
                             //Binary data types get stored in S3 bucket
                             val (propertyHash, insertValue) =
-                                    if (dataTypes[propertyTypeId] == EdmPrimitiveTypeKind.Binary) {
+                                    if (authorizedPropertyTypes
+                                                    .getValue(propertyTypeId).datatype == EdmPrimitiveTypeKind.Binary) {
                                         if (awsPassthrough) {
                                             //Data is being stored in AWS directly the value will be the url fragment
                                             //of where the data will be stored in AWS.
@@ -475,7 +476,10 @@ class PostgresEntityDataQueryService(
                                                     .hashObject(s3Key, EdmPrimitiveTypeKind.String) to s3Key
                                         }
                                     } else {
-                                        PostgresDataHasher.hashObject(value, dataTypes[propertyTypeId]) to value
+                                        PostgresDataHasher.hashObject(
+                                                value,
+                                                authorizedPropertyTypes.getValue(propertyTypeId).datatype
+                                        ) to value
                                     }
                             upsert.setObject(1, entityKeyId)
                             upsert.setBytes(2, propertyHash)

@@ -5,6 +5,9 @@ import static com.openlattice.postgres.PostgresTable.ENTITY_TYPES;
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapIndexConfig;
+import com.hazelcast.config.MapStoreConfig;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.mapstores.TestDataFactory;
@@ -20,7 +23,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.postgresql.util.PGobject;
 
 public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, EntityType> {
-
+    public static final String PROPERTIES_INDEX = "properties[any]";
     private final ObjectMapper mapper;
 
     public EntityTypeMapstore( HikariDataSource hds ) {
@@ -93,6 +96,11 @@ public class EntityTypeMapstore extends AbstractBasePostgresMapstore<UUID, Entit
 
     @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {
         return ResultSetAdapters.id( rs );
+    }
+
+    @Override public MapConfig getMapConfig() {
+        return super.getMapConfig()
+                .addMapIndexConfig( new MapIndexConfig( PROPERTIES_INDEX, false ) );
     }
 
     @Override public UUID generateTestKey() {
