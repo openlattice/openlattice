@@ -752,7 +752,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
-                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId ) )
+                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId.toString() ) )
                 .source( getIndexName( entityTypeId ) )
                 .execute()
                 .actionGet();
