@@ -15,7 +15,7 @@ import java.util.*
 import javax.inject.Inject
 
 @RestController
-@RequestMapping(com.openlattice.auditing.CONTROLLER)
+@RequestMapping(CONTROLLER)
 class AdminController : AdminApi, AuthorizingComponent {
 
     @Inject
