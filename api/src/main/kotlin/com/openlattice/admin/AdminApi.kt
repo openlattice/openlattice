@@ -8,16 +8,16 @@ import retrofit2.http.Path
 // @formatter:off
 const val SERVICE = "/datastore"
 const val CONTROLLER = "/admin"
-const val BASE = com.openlattice.admin.indexing.SERVICE + com.openlattice.admin.indexing.CONTROLLER
+const val BASE = SERVICE + CONTROLLER
 // @formatter:on
 
 const val RELOAD_CACHE = "/reload/cache"
 const val PRINCIPALS = "/principals"
 
 const val ID = "id"
-const val ID_PATH = "/{${com.openlattice.admin.indexing.ID}}"
+const val ID_PATH = "/{${ID}}"
 const val NAME = "name"
-const val NAME_PATH = "/{${com.openlattice.admin.indexing.NAME}}"
+const val NAME_PATH = "/{${NAME}}"
 
 interface AdminApi {
 
