@@ -981,7 +981,9 @@ public class EdmService implements EdmManager {
                     // add edm_unsync flag for materialized views
                     markMaterializedEntitySetDirtyWithEdmChanges( entitySet.getId() );
                 }
-                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(), properties, isFqnUpdated ) );
+                eventBus.post( new PropertyTypesInEntitySetUpdatedEvent( entitySet.getId(),
+                        properties,
+                        isFqnUpdated ) );
             } );
         } );
 
@@ -1020,7 +1022,7 @@ public class EdmService implements EdmManager {
     }
 
     private void markMaterializedEntitySetDirty( UUID entitySetId, OrganizationEntitySetFlag flag ) {
-        assembler.flagMaterializedEntitySet( entitySetId,  flag );
+        assembler.flagMaterializedEntitySet( entitySetId, flag );
     }
 
     /**************
