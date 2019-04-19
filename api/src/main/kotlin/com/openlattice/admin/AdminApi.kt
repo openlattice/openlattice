@@ -23,8 +23,7 @@ interface AdminApi {
 
 
     /**
-     * Retrieve all the events record for a particular entity set in a given time window.
-     * @param auditEntitySet The
+     * Reload the all the in meory caches.
      */
     @GET(BASE + RELOAD_CACHE)
     fun reloadCache()
