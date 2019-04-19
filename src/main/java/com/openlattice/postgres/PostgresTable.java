@@ -276,6 +276,7 @@ public final class PostgresTable {
                             DATATYPE,
                             TITLE,
                             DESCRIPTION,
+                            ENUM_VALUES,
                             SCHEMAS,
                             PII,
                             ANALYZER,
@@ -405,12 +406,7 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( APPS, ID )
                         .name( "apps_id_idx" )
                         .ifNotExists() );
-        ENTITY_QUERIES.addIndexes(
-                new PostgresColumnsIndexDefinition( ENTITY_QUERIES, ID_VALUE )
-                        .name( "entity_queries_id_idx" )
-                        .ifNotExists(),
-                new PostgresColumnsIndexDefinition( ENTITY_QUERIES, CLAUSES )
-                        .name( "" ) );
+        
         GRAPH_QUERIES.addIndexes(
                 new PostgresColumnsIndexDefinition( GRAPH_QUERIES, START_TIME )
                         .name( "graph_queries_expiry_idx" )

@@ -40,7 +40,7 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
     }
 
     @Override protected void bind( PreparedStatement ps, UUID key, PropertyType value ) throws SQLException {
-        int parameterIndex = bind( ps, key, 1);
+        int parameterIndex = bind( ps, key, 1 );
         FullQualifiedName fqn = value.getType();
         ps.setString( parameterIndex++, fqn.getNamespace() );
         ps.setString( parameterIndex++, fqn.getName() );
@@ -49,12 +49,15 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
         ps.setString( parameterIndex++, value.getTitle() );
         ps.setString( parameterIndex++, value.getDescription() );
 
+        Array enumValues = PostgresArrays.createTextArray( ps.getConnection(), value.getEnumValues() );
+        ps.setArray( parameterIndex++, enumValues );
+
         Array schemas = PostgresArrays.createTextArray(
                 ps.getConnection(),
                 value.getSchemas().stream().map( FullQualifiedName::getFullQualifiedNameAsString ) );
 
         ps.setArray( parameterIndex++, schemas );
-        ps.setBoolean( parameterIndex++, value.isPIIfield() );
+        ps.setBoolean( parameterIndex++, value.isPii() );
         ps.setString( parameterIndex++, value.getAnalyzer().name() );
         ps.setBoolean( parameterIndex++, value.isMultiValued() );
         ps.setString( parameterIndex++, value.getPostgresIndexType().name() );
@@ -66,9 +69,10 @@ public class PropertyTypeMapstore extends AbstractBasePostgresMapstore<UUID, Pro
         ps.setString( parameterIndex++, value.getDatatype().name() );
         ps.setString( parameterIndex++, value.getTitle() );
         ps.setString( parameterIndex++, value.getDescription() );
+        ps.setArray( parameterIndex++, enumValues );
 
         ps.setArray( parameterIndex++, schemas );
-        ps.setBoolean( parameterIndex++, value.isPIIfield() );
+        ps.setBoolean( parameterIndex++, value.isPii() );
         ps.setString( parameterIndex++, value.getAnalyzer().name() );
         ps.setBoolean( parameterIndex++, value.isMultiValued() );
         ps.setString( parameterIndex++, value.getPostgresIndexType().name() );

@@ -63,7 +63,6 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.query.GraphQueryState;
@@ -491,6 +490,7 @@ public final class ResultSetAdapters {
         EdmPrimitiveTypeKind datatype = datatype( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( rs ) );
+        Optional<Set<String>> enumValues = Optional.ofNullable( enumValues( rs ) );
         Set<FullQualifiedName> schemas = schemas( rs );
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
         Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
@@ -503,10 +503,20 @@ public final class ResultSetAdapters {
                 description,
                 schemas,
                 datatype,
+                enumValues,
                 pii,
                 multiValued,
                 analyzer,
                 indexMethod );
+    }
+
+    public static Set<String> enumValues( ResultSet rs ) throws SQLException {
+        final var values = PostgresArrays.getTextArray( rs, ENUM_VALUES_FIELD );
+        if ( values == null || values.length == 0 ) {
+            return null;
+        } else {
+            return ImmutableSet.copyOf( values );
+        }
     }
 
     public static EntityType entityType( ResultSet rs ) throws SQLException {
@@ -618,42 +628,11 @@ public final class ResultSetAdapters {
         return new EntitySetPropertyKey( entitySetId, propertyTypeId );
     }
 
-    public static EnumType enumType( ResultSet rs ) throws SQLException {
-        Optional<UUID> id = Optional.of( id( rs ) );
-        FullQualifiedName fqn = fqn( rs );
-        String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
-        LinkedHashSet<String> members = members( rs );
-        Set<FullQualifiedName> schemas = schemas( rs );
-        String datatypeStr = rs.getString( DATATYPE.getName() );
-        Optional<EdmPrimitiveTypeKind> datatype = ( datatypeStr == null ) ?
-                Optional.empty() :
-                Optional.ofNullable( EdmPrimitiveTypeKind.valueOf( datatypeStr ) );
-        boolean flags = flags( rs );
-        Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
-        Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
-        Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
-        Optional<IndexMethod> indexMethod = Optional.ofNullable( indexMethod( rs ) );
-
-        return new EnumType( id,
-                fqn,
-                title,
-                description,
-                members,
-                schemas,
-                datatype,
-                flags,
-                pii,
-                multiValued,
-                analyzer,
-                indexMethod );
-    }
-
     public static Boolean multiValued( ResultSet rs ) throws SQLException {
         return rs.getBoolean( MULTI_VALUED.getName() );
     }
 
-    public static IndexMethod indexMethod(ResultSet rs ) throws SQLException {
+    public static IndexMethod indexMethod( ResultSet rs ) throws SQLException {
         return IndexMethod.valueOf( rs.getString( INDEX_TYPE.getName() ) );
     }
 
@@ -874,7 +853,6 @@ public final class ResultSetAdapters {
             Boolean linking ) throws SQLException {
         final SetMultimap<FullQualifiedName, Object> data = HashMultimap.create();
         final Collection<PropertyType> allPropertyTypes;
-
 
         if ( linking ) {
             final UUID entityKeyId = linkingId( rs );
