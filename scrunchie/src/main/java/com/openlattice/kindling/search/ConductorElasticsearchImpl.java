@@ -806,13 +806,16 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return ENTITY + "." + propertyTypeId.toString();
     }
 
-    private QueryBuilder getAdvancedSearchQuery(
+    private BoolQueryBuilder getAdvancedSearchQuery(
             Constraint constraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
+        boolean isEmpty = true;
+
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
-        constraints.getSearches().get().forEach( search -> {
+        for ( SearchDetails search : constraints.getSearches().get() ) {
             if ( authorizedFieldsMap.keySet().contains( search.getPropertyType() ) ) {
+                isEmpty = false;
 
                 QueryStringQueryBuilder queryString = QueryBuilders
                         .queryStringQuery( search.getSearchTerm() )
@@ -825,7 +828,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                     query.should( queryString );
                 }
             }
-        } );
+        }
 
         return query;
     }
@@ -846,7 +849,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .lenient( true );
     }
 
-    private QueryBuilder getGeoDistanceSearchQuery(
+    private BoolQueryBuilder getGeoDistanceSearchQuery(
             Constraint constraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
@@ -871,7 +874,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return query;
     }
 
-    private QueryBuilder getGeoPolygonSearchQuery(
+    private BoolQueryBuilder getGeoPolygonSearchQuery(
             Constraint constraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
@@ -919,6 +922,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
         BoolQueryBuilder query = QueryBuilders.boolQuery();
 
+        if ( authorizedFieldsMap.size() == 0 ) {
+            return null;
+        }
+
         for ( ConstraintGroup constraintGroup : searchConstraints.getConstraintGroups() ) {
             BoolQueryBuilder subQuery = QueryBuilders.boolQuery()
                     .minimumShouldMatch( constraintGroup.getMinimumMatches() );
@@ -927,15 +934,24 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
                 switch ( constraint.getSearchType() ) {
                     case advanced:
-                        subQuery.should( getAdvancedSearchQuery( constraint, authorizedFieldsMap ) );
+                        BoolQueryBuilder advancedSearchQuery = getAdvancedSearchQuery( constraint,
+                                authorizedFieldsMap );
+                        if ( advancedSearchQuery.hasClauses() )
+                            subQuery.should( advancedSearchQuery );
                         break;
 
                     case geoDistance:
-                        subQuery.should( getGeoDistanceSearchQuery( constraint, authorizedFieldsMap ) );
+                        BoolQueryBuilder geoDistanceSearchQuery = getGeoDistanceSearchQuery( constraint,
+                                authorizedFieldsMap );
+                        if ( geoDistanceSearchQuery.hasClauses() )
+                            subQuery.should( geoDistanceSearchQuery );
                         break;
 
                     case geoPolygon:
-                        subQuery.should( getGeoPolygonSearchQuery( constraint, authorizedFieldsMap ) );
+                        BoolQueryBuilder geoPolygonSearchQuery = getGeoPolygonSearchQuery( constraint,
+                                authorizedFieldsMap );
+                        if ( geoPolygonSearchQuery.hasClauses() )
+                            subQuery.should( geoPolygonSearchQuery );
                         break;
 
                     case simple:
@@ -948,6 +964,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                         break;
 
                 }
+
+            }
+
+            if ( !subQuery.hasClauses() ) {
+                return null;
             }
 
             query.must( QueryBuilders.nestedQuery( ENTITY, subQuery, ScoreMode.Total ) );
@@ -986,26 +1007,34 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Map<UUID, Map<String, Float>> authorizedFieldsMap =
                     getFieldsMap( entitySetId, authorizedPropertyTypesByEntitySet, normalEntitySets );
 
-            BoolQueryBuilder query = new BoolQueryBuilder().queryName( entitySetId.toString() )
-                    .must( getQueryForSearch( normalEntitySets.orElse( ImmutableSet.of( entitySetId ) ),
-                            searchConstraints,
-                            authorizedFieldsMap ) );
+            QueryBuilder searchQuery = getQueryForSearch( normalEntitySets.orElse( ImmutableSet.of( entitySetId ) ),
+                    searchConstraints,
+                    authorizedFieldsMap );
 
-            if ( linkingEntitySets.containsKey( entitySetId ) ) {
-                query.mustNot( QueryBuilders
-                        .existsQuery( ENTITY_SET_ID_FIELD ) ); // this field will not exist for linked entity documents
-            } else {
-                query.must( QueryBuilders
-                        .termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) ); // match entity set id
+            if ( searchQuery != null ) {
+
+                BoolQueryBuilder query = new BoolQueryBuilder().queryName( entitySetId.toString() ).must( searchQuery );
+
+                if ( linkingEntitySets.containsKey( entitySetId ) ) {
+                    query.mustNot( QueryBuilders
+                            .existsQuery( ENTITY_SET_ID_FIELD ) ); // this field will not exist for linked entity documents
+                } else {
+                    query.must( QueryBuilders
+                            .termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) ); // match entity set id
+                }
+
+                SearchRequestBuilder request = client
+                        .prepareSearch( getIndexName( entityTypesByEntitySetId.get( entitySetId ) ) )
+                        .setQuery( query )
+                        .setFrom( searchConstraints.getStart() )
+                        .setSize( searchConstraints.getMaxHits() )
+                        .setFetchSource( false );
+                requests.add( request );
             }
+        }
 
-            SearchRequestBuilder request = client
-                    .prepareSearch( getIndexName( entityTypesByEntitySetId.get( entitySetId ) ) )
-                    .setQuery( query )
-                    .setFrom( searchConstraints.getStart() )
-                    .setSize( searchConstraints.getMaxHits() )
-                    .setFetchSource( false );
-            requests.add( request );
+        if ( requests.requests().isEmpty() ) {
+            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
 
         MultiSearchResponse response = client.multiSearch( requests ).actionGet();
