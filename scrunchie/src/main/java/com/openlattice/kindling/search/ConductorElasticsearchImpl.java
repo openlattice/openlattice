@@ -925,6 +925,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
             for ( Constraint constraint : constraintGroup.getConstraints() ) {
 
+                QueryBuilder constraintQuery;
+
                 switch ( constraint.getSearchType() ) {
                     case advanced:
                         subQuery.should( getAdvancedSearchQuery( constraint, authorizedFieldsMap ) );
@@ -950,10 +952,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 }
             }
 
-            query.must( subQuery );
+            query.must( QueryBuilders.nestedQuery( ENTITY, subQuery, ScoreMode.Total ) );
         }
 
-        query.must( QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY ), entitySetId.toString() ) );
+        query.must( QueryBuilders.nestedQuery( ENTITY,
+                QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY ), entitySetId.toString() ),
+                ScoreMode.None ) );
         return query;
     }
 
@@ -980,9 +984,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                             Optional.ofNullable( linkingEntitySets.get( entitySetId ) ) );
 
             BoolQueryBuilder query = new BoolQueryBuilder().queryName( entitySetId.toString() )
-                    .must( QueryBuilders.nestedQuery( ENTITY,
-                            getQueryForSearch( entitySetId, searchConstraints, authorizedFieldsMap ),
-                            ScoreMode.Total ) );
+                    .must( getQueryForSearch( entitySetId, searchConstraints, authorizedFieldsMap ) );
 
             if ( linkingEntitySets.containsKey( entitySetId ) ) {
                 query.mustNot( QueryBuilders
