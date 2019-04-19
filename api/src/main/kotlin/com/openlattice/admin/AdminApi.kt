@@ -15,9 +15,9 @@ const val RELOAD_CACHE = "/reload/cache"
 const val PRINCIPALS = "/principals"
 
 const val ID = "id"
-const val ID_PATH = "/{$ID}"
+const val ID_PATH = "/{${ID}}"
 const val NAME = "name"
-const val NAME_PATH = "/{$NAME}"
+const val NAME_PATH = "/{${NAME}}"
 
 interface AdminApi {
 
@@ -32,7 +32,7 @@ interface AdminApi {
     @GET(BASE + RELOAD_CACHE + NAME_PATH)
     fun reloadCache(@Path(NAME) name: String)
 
-    @GET( BASE + PRINCIPALS + ID_PATH )
-    fun getUserPrincipals( @Path(ID) principalId :String ): Set<Principal>
+    @GET(BASE + PRINCIPALS + ID_PATH)
+    fun getUserPrincipals(@Path(ID) principalId: String): Set<Principal>
 
 }
