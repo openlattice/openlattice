@@ -163,13 +163,13 @@ class BackgroundIndexingService(
         }, Function<ResultSet, UUID> { ResultSetAdapters.id(it) })
     }
 
-    private fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
+    internal fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
         return propertyTypes
                 .getAll(entityTypes[entityTypeId]?.properties ?: setOf())
                 .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
     }
 
-    private fun indexEntitySet(entitySet: EntitySet): Int {
+    internal fun indexEntitySet(entitySet: EntitySet, entityKeyIds: Optional<Iterable<UUID>> = Optional.empty()): Int {
         logger.info(
                 "Starting indexing for entity set {} with id {}",
                 entitySet.name,
@@ -177,7 +177,7 @@ class BackgroundIndexingService(
         )
 
         val esw = Stopwatch.createStarted()
-        val entityKeyIds = getDirtyEntityKeyIds(entitySet.id)
+        val entityKeyIds = entityKeyIds.orElseGet { getDirtyEntityKeyIds(entitySet.id) }
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
         var indexCount = 0
@@ -202,10 +202,11 @@ class BackgroundIndexingService(
         return indexCount
     }
 
-    private fun indexEntities(
+    internal fun indexEntities(
             entitySet: EntitySet,
             batchToIndex: Set<UUID>,
-            propertyTypeMap: Map<UUID, PropertyType>
+            propertyTypeMap: Map<UUID, PropertyType>,
+            markAsIndexed: Boolean = true
     ): Int {
         val esb = Stopwatch.createStarted()
         val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
@@ -220,8 +221,14 @@ class BackgroundIndexingService(
 
         val indexCount: Int
 
-        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
-            indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
+        if (entitiesById.isNotEmpty() &&
+                elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
+            indexCount = if (markAsIndexed) {
+                dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
+            } else {
+                batchToIndex.size
+            }
+
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
@@ -238,7 +245,7 @@ class BackgroundIndexingService(
 
     }
 
-    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
+    internal fun tryLockEntitySet(entitySet: EntitySet): Boolean {
         return indexingLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
     }
 

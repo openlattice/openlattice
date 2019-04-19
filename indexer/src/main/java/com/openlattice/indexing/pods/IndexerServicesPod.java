@@ -53,6 +53,7 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.indexing.IndexingService;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -222,6 +223,7 @@ public class IndexerServicesPod {
                 auditingConfiguration,
                 assembler() );
     }
+
 
     @PostConstruct
     void initPrincipals() {
