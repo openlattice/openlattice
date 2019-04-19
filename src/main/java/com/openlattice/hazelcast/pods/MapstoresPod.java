@@ -243,6 +243,11 @@ public class MapstoresPod {
     }
 
     @Bean
+    public QueueConfigurer indexingQueueConfigurer() {
+        return config -> config.setMaxSize( 100000 ).setBackupCount( 1 );
+    }
+
+    @Bean
     public SelfRegisteringMapStore<UUID, App> appMapstore() {
         return new AppMapstore( hikariDataSource );
     }

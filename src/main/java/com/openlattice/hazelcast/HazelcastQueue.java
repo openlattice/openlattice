@@ -27,5 +27,6 @@ package com.openlattice.hazelcast;
  */
 public enum HazelcastQueue {
     EMAIL_SPOOL,
+    INDEXING,
     SIGNAL
 }

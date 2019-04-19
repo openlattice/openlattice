@@ -18,22 +18,22 @@
  *
  */
 
-package com.openlattice.organizations.processors;
+package com.openlattice.hazelcast.serializers;
 
+import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
 import com.google.common.collect.ImmutableSet;
-import com.kryptnostic.rhizome.hazelcast.processors.AbstractMerger;
+import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 
 import java.util.UUID;
 
-public class OrganizationAppMerger extends AbstractMerger<UUID, DelegatedUUIDSet, UUID> {
-    private static final long serialVersionUID = 5640080326387143549L;
-
-    public OrganizationAppMerger( Iterable<UUID> objects ) {
-        super( objects );
+public class UUIDKeyToUUIDSetMergerStreamSerializerTest
+        extends AbstractStreamSerializerTest<UUIDKeyToUUIDSetMergerStreamSerializer, UUIDKeyToUUIDSetMerger> {
+    @Override protected UUIDKeyToUUIDSetMergerStreamSerializer createSerializer() {
+        return new UUIDKeyToUUIDSetMergerStreamSerializer();
     }
 
-    @Override protected DelegatedUUIDSet newEmptyCollection() {
-        return new DelegatedUUIDSet( ImmutableSet.of() );
+    @Override protected UUIDKeyToUUIDSetMerger createInput() {
+        return new UUIDKeyToUUIDSetMerger( DelegatedUUIDSet.wrap( ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ) );
     }
 }
