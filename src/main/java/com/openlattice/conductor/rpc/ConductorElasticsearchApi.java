@@ -64,12 +64,10 @@ public interface ConductorElasticsearchApi {
     String METAPHONE_ANALYZER = "MetaphoneAnalyzer";
 
     String MAPPING_PROPERTIES = "properties";
-    String PARENT             = "_parent";
     String TYPE               = "type";
     String OBJECT             = "object";
     String NESTED             = "nested";
     String INDEX              = "index";
-    String NOT_ANALYZED       = "not_analyzed";
 
     // datatypes
     String TEXT      = "text";
@@ -82,7 +80,6 @@ public interface ConductorElasticsearchApi {
     String BYTE      = "byte";
     String DATE      = "date";
     String BOOLEAN   = "boolean";
-    String BINARY    = "binary";
     String GEO_POINT = "geo_point";
 
     // entity_set_data_model setup consts
@@ -97,8 +94,6 @@ public interface ConductorElasticsearchApi {
 
     String DATA_INDEX_PREFIX = "data_";
     String DATA_TYPE_PREFIX  = "data_type_";
-    String ACL_KEY           = "aclKey";
-    String PROPERTY_TYPE_ID  = "propertyTypeId";
 
     // entity_type_index setup consts
     String ENTITY_TYPE_INDEX = "entity_type_index";
@@ -124,7 +119,6 @@ public interface ConductorElasticsearchApi {
     // entity set field consts
     String TYPE_FIELD     = "_type";
     String ENTITY_SET     = "entitySet";
-    String ENTITY_SET_ID  = "entitySetId";
     String PROPERTY_TYPES = "propertyTypes";
     String ACLS           = "acls";
     String NAME           = "name";
@@ -133,9 +127,6 @@ public interface ConductorElasticsearchApi {
     String DESCRIPTION    = "description";
     String ENTITY_TYPE_ID = "entityTypeId";
     String ID             = "id";
-    String SRC            = "src";
-    String DST            = "dst";
-    String BIDIRECTIONAL  = "bidirectional";
     String URL            = "url";
 
     // entity type data nested fields
