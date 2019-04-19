@@ -398,10 +398,6 @@ public class EdmService implements EdmManager {
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
         markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
 
-        eventBus.post( new LinkedEntitySetAddedEvent(
-                updatedLinkingEntitySet,
-                newLinkedEntitySets,
-                Lists.newArrayList( getPropertyTypesForEntitySet( linkingEntitySetId ).values() ) ) );
         return updatedLinkingEntitySet.getLinkedEntitySets().size() - startSize;
     }
 

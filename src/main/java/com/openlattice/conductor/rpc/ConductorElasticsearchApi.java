@@ -63,13 +63,13 @@ public interface ConductorElasticsearchApi {
     String SHINGLE_FILTER     = "shingle_filter";
     String METAPHONE_ANALYZER = "MetaphoneAnalyzer";
 
-    String ES_PROPERTIES = "properties";
-    String PARENT        = "_parent";
-    String TYPE          = "type";
-    String OBJECT        = "object";
-    String NESTED        = "nested";
-    String INDEX         = "index";
-    String NOT_ANALYZED  = "not_analyzed";
+    String MAPPING_PROPERTIES = "properties";
+    String PARENT             = "_parent";
+    String TYPE               = "type";
+    String OBJECT             = "object";
+    String NESTED             = "nested";
+    String INDEX              = "index";
+    String NOT_ANALYZED       = "not_analyzed";
 
     // datatypes
     String TEXT      = "text";
@@ -138,6 +138,10 @@ public interface ConductorElasticsearchApi {
     String BIDIRECTIONAL  = "bidirectional";
     String URL            = "url";
 
+    // entity type data nested fields
+    String ENTITY              = "entity";
+    String ENTITY_SET_ID_FIELD = "entitySetId";
+
     UUID LAST_WRITE        = new UUID( 0, 0 );
     UUID ENTITY_SET_ID_KEY = new UUID( 0, 1 );
 
@@ -170,15 +174,7 @@ public interface ConductorElasticsearchApi {
     boolean deleteEntityDataBulk( UUID entitySetId, UUID entityTypeId, Set<UUID> entityKeyIds );
 
     /* Update Mappings */
-    boolean addPropertyTypesToEntityType(
-            EntityType entityType,
-            List<PropertyType> newPropertyTypes,
-            Set<UUID> entitySetIds );
-
-    boolean addLinkedEntitySetsToEntitySet(
-            EntityType entityType,
-            List<PropertyType> propertyTypes,
-            Set<UUID> newLinkedEntitySets );
+    boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes );
 
     /**
      * Entity Data Search
