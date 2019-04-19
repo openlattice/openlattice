@@ -914,7 +914,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private QueryBuilder getQueryForSearch(
-            UUID entitySetId,
+            Set<UUID> entitySetIds,
             SearchConstraints searchConstraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
         BoolQueryBuilder query = QueryBuilders.boolQuery();
@@ -924,8 +924,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                     .minimumShouldMatch( constraintGroup.getMinimumMatches() );
 
             for ( Constraint constraint : constraintGroup.getConstraints() ) {
-
-                QueryBuilder constraintQuery;
 
                 switch ( constraint.getSearchType() ) {
                     case advanced:
@@ -955,9 +953,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             query.must( QueryBuilders.nestedQuery( ENTITY, subQuery, ScoreMode.Total ) );
         }
 
-        query.must( QueryBuilders.nestedQuery( ENTITY,
-                QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY ), entitySetId.toString() ),
-                ScoreMode.None ) );
+        BoolQueryBuilder entitySetQuery = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
+        entitySetIds.forEach( entitySetId -> {
+            entitySetQuery
+                    .should( QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY ), entitySetId.toString() ) );
+        } );
+
+        query.must( QueryBuilders.nestedQuery( ENTITY, entitySetQuery, ScoreMode.Max ) );
+
         return query;
     }
 
@@ -978,13 +981,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
             UUID entitySetId = searchConstraints.getEntitySetIds()[ i ];
 
+            Optional<Set<UUID>> normalEntitySets = Optional.ofNullable( linkingEntitySets.get( entitySetId ) );
+
             Map<UUID, Map<String, Float>> authorizedFieldsMap =
-                    getFieldsMap( entitySetId,
-                            authorizedPropertyTypesByEntitySet,
-                            Optional.ofNullable( linkingEntitySets.get( entitySetId ) ) );
+                    getFieldsMap( entitySetId, authorizedPropertyTypesByEntitySet, normalEntitySets );
 
             BoolQueryBuilder query = new BoolQueryBuilder().queryName( entitySetId.toString() )
-                    .must( getQueryForSearch( entitySetId, searchConstraints, authorizedFieldsMap ) );
+                    .must( getQueryForSearch( normalEntitySets.orElse( ImmutableSet.of( entitySetId ) ),
+                            searchConstraints,
+                            authorizedFieldsMap ) );
 
             if ( linkingEntitySets.containsKey( entitySetId ) ) {
                 query.mustNot( QueryBuilders
