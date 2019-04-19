@@ -70,7 +70,6 @@ import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
 import com.openlattice.edm.events.EntityTypeCreatedEvent;
 import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
 import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
 import com.openlattice.edm.events.PropertyTypeCreatedEvent;
 import com.openlattice.edm.events.PropertyTypeDeletedEvent;
