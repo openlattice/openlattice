@@ -147,7 +147,7 @@ class BackgroundIndexingService(
     }
 
     private fun getEntityDataKeysQuery(entitySetId: UUID): String {
-        return "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId'"
+        return "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' WHERE ${VERSION.name} > 0"
     }
 
     private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
