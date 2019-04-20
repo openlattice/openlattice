@@ -146,12 +146,26 @@ class BackgroundIndexingService(
         }
     }
 
+    private fun getEntityDataKeysQuery(entitySetId: UUID): String {
+        return "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId'"
+    }
+
     private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
         return "SELECT * FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND " +
                 "${LAST_INDEX.name} < ${LAST_WRITE.name} AND " +
                 "${VERSION.name} > 0 " +
                 "LIMIT $FETCH_SIZE"
+    }
+
+    private fun getEntityDataKeys(entitySetId: UUID): PostgresIterable<UUID> {
+        return PostgresIterable(Supplier<StatementHolder> {
+            val connection = hds.connection
+            val stmt = connection.createStatement()
+            stmt.fetchSize = 64000
+            val rs = stmt.executeQuery(getEntityDataKeysQuery(entitySetId))
+            StatementHolder(connection, stmt, rs)
+        }, Function<ResultSet, UUID> { ResultSetAdapters.id(it) })
     }
 
     private fun getDirtyEntityKeyIds(entitySetId: UUID): PostgresIterable<UUID> {
@@ -169,7 +183,9 @@ class BackgroundIndexingService(
                 .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
     }
 
-    internal fun indexEntitySet(entitySet: EntitySet, entityKeyIds: Optional<Iterable<UUID>> = Optional.empty()): Int {
+    internal fun indexEntitySet(
+            entitySet: EntitySet, reindexAll: Boolean = false, entityKeyIds: Optional<Iterable<UUID>> = Optional.empty()
+    ): Int {
         logger.info(
                 "Starting indexing for entity set {} with id {}",
                 entitySet.name,
@@ -177,7 +193,13 @@ class BackgroundIndexingService(
         )
 
         val esw = Stopwatch.createStarted()
-        val entityKeyIds = entityKeyIds.orElseGet { getDirtyEntityKeyIds(entitySet.id) }
+        val entityKeyIds = entityKeyIds.orElseGet {
+            if (reindexAll) {
+                getEntityDataKeys(entitySet.id)
+            } else {
+                getDirtyEntityKeyIds(entitySet.id)
+            }
+        }
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
         var indexCount = 0

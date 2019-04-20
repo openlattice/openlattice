@@ -71,9 +71,7 @@ class IndexingService(
                                 )
                             },
                             {
-                                backgroundIndexingService.indexEntitySet(
-                                        entitySet,
-                                        entityKeyIds.map { it.asIterable() })
+                                backgroundIndexingService.indexEntitySet(entitySet, true)
                             })
 
                     indexingJobs.delete(entitySet.id)
