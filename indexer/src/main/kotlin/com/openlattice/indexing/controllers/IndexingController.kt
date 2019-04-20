@@ -37,6 +37,7 @@ import javax.inject.Inject
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@RestController
 @RequestMapping(CONTROLLER)
 class IndexingController : IndexAdminApi, AuthorizingComponent {
     @Inject

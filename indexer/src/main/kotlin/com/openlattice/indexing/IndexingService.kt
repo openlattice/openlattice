@@ -90,10 +90,11 @@ class IndexingService(
 
     fun queueForIndexing(entities: Map<UUID, Set<UUID>>): Int {
         entities.forEach { entitySetId, entityKeyIds ->
+            logger.info( "Creating job to index entity set {} for the following entities {}", entitySetId, entityKeyIds)
             indexingJobs.executeOnKey(entitySetId, UUIDKeyToUUIDSetMerger(entityKeyIds))
             indexingQueue.put(entitySetId)
         }
-        return 0
+        return entities.size
     }
 
     fun clearIndexingJobs(): Int {
