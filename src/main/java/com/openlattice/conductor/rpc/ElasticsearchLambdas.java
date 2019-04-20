@@ -119,18 +119,9 @@ public class ElasticsearchLambdas implements Serializable {
 
     public static Function<ConductorElasticsearchApi, Boolean> addPropertyTypesToEntityType(
             EntityType entityType,
-            List<PropertyType> newPropertyTypes,
-            Set<UUID> entitySetIds ) {
+            List<PropertyType> newPropertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .addPropertyTypesToEntityType( entityType, newPropertyTypes, entitySetIds );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> addLinkedEntitySetsToEntitySet(
-            EntityType entityType,
-            List<PropertyType> propertyTypes,
-            Set<UUID> newLinkedEntitySets ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .addLinkedEntitySetsToEntitySet( entityType, propertyTypes, newLinkedEntitySets );
+                .addPropertyTypesToEntityType( entityType, newPropertyTypes );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> saveEntityTypeToElasticsearch(
@@ -140,7 +131,9 @@ public class ElasticsearchLambdas implements Serializable {
                 .saveEntityTypeToElasticsearch( entityType, propertyTypes );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> saveAssociationTypeToElasticsearch( AssociationType associationType, List<PropertyType> propertyTypes ) {
+    public static Function<ConductorElasticsearchApi, Boolean> saveAssociationTypeToElasticsearch(
+            AssociationType associationType,
+            List<PropertyType> propertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .saveAssociationTypeToElasticsearch( associationType, propertyTypes );
     }

@@ -318,30 +318,7 @@ public class SearchService {
      */
     @Subscribe
     public void addPropertyTypesToEntityType( PropertyTypesAddedToEntityTypeEvent event ) {
-        Set<UUID> entitySetIds = dataModelService.getEntitySetsOfType( event.getEntityType().getId() ).stream()
-                .map( EntitySet::getId ).collect( Collectors.toSet() );
-        elasticsearchApi
-                .addPropertyTypesToEntityType( event.getEntityType(), event.getNewPropertyTypes(), entitySetIds );
-    }
-
-    /**
-     * Handles indexing when 1 or more entity sets are linked/added to a linking entity set.
-     * All documents/linking ids need to be (re-)indexed for this linking entity set
-     */
-    @Subscribe
-    public void addLinkedEntitySetsToEntitySet( LinkedEntitySetAddedEvent event ) {
-        EntityType entityType = dataModelService.getEntityType( event.getLinkingEntitySet().getEntityTypeId() );
-
-        elasticsearchApi.addLinkedEntitySetsToEntitySet(
-                entityType,
-                event.getPropertyTypes(),
-                event.getNewLinkedEntitySets() );
-
-        indexLinkedEntities(
-                event.getLinkingEntitySet().getId(),
-                dataManager.getLinkingIdsByEntitySetIds( event.getLinkingEntitySet().getLinkedEntitySets() ),
-                event.getPropertyTypes().stream().collect(
-                        Collectors.toMap( PropertyType::getId, Function.identity() ) ) );
+        elasticsearchApi.addPropertyTypesToEntityType( event.getEntityType(), event.getNewPropertyTypes() );
     }
 
     /**
