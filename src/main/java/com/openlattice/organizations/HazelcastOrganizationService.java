@@ -49,7 +49,7 @@ import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.events.*;
 import com.openlattice.organizations.processors.EmailDomainsMerger;
 import com.openlattice.organizations.processors.EmailDomainsRemover;
-import com.openlattice.organizations.processors.OrganizationAppMerger;
+import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
 import com.openlattice.organizations.processors.OrganizationAppRemover;
 import com.openlattice.organizations.processors.OrganizationMemberMerger;
 import com.openlattice.organizations.processors.OrganizationMemberRemover;
@@ -374,7 +374,7 @@ public class HazelcastOrganizationService {
 
     public void addAppToOrg( UUID organizationId, UUID appId ) {
         apps.executeOnKey( organizationId,
-                new OrganizationAppMerger( DelegatedUUIDSet.wrap( ImmutableSet.of( appId ) ) ) );
+                new UUIDKeyToUUIDSetMerger( DelegatedUUIDSet.wrap( ImmutableSet.of( appId ) ) ) );
     }
 
     public void removeAppFromOrg( UUID organizationId, UUID appId ) {
