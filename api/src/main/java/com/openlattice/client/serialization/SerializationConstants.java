@@ -72,7 +72,7 @@ public final class SerializationConstants {
     public static final String CONSTRAINTS                      = "constraints";
     public static final String CONTACTS                         = "contacts";
     public static final String COUNT                            = "count";
-    public static final String CURRENT_ENTITY_SET                     = "currentEntitySet";
+    public static final String CURRENT_ENTITY_SET               = "currentEntitySet";
     public static final String DATA                             = "data";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
     public static final String DATATYPE_FIELD                   = "datatype";
@@ -130,8 +130,8 @@ public final class SerializationConstants {
     public static final String IDS                              = "ids";
     public static final String ID_FIELD                         = "id";
     public static final String INCLUDE_FIELD                    = "include";
-    public static final String INDEXED                          = "indexed";
-    public static final String INDEXING                          = "indexing";
+    public static final String INDEXING                         = "indexing";
+    public static final String INDEX_TYPE                       = "indexType";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";

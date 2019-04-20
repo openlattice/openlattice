@@ -28,7 +28,7 @@ import java.util.*
 
 
 // @formatter:off
-const val SERVICE = "/datastore"
+const val SERVICE = "/indexer"
 const val CONTROLLER = "/index"
 const val BASE = SERVICE + CONTROLLER
 // @formatter:on

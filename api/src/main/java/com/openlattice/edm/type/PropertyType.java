@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
 import com.google.common.base.Preconditions;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -75,7 +73,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
             @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
             @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer,
-            @JsonProperty( SerializationConstants.INDEXED ) Optional<IndexMethod> postgresIndexType ) {
+            @JsonProperty( SerializationConstants.INDEX_TYPE ) Optional<IndexMethod> postgresIndexType ) {
         super(
                 id,
                 fqn,
@@ -202,7 +200,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         return analyzer;
     }
 
-    @JsonProperty( SerializationConstants.INDEXED )
+    @JsonProperty( SerializationConstants.INDEX_TYPE )
     public IndexMethod getPostgresIndexType() {
         return postgresIndexType;
     }
