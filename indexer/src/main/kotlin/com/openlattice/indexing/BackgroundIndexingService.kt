@@ -183,9 +183,7 @@ class BackgroundIndexingService(
                 .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
     }
 
-    internal fun indexEntitySet(
-            entitySet: EntitySet, reindexAll: Boolean = false
-    ): Int {
+    internal fun indexEntitySet(entitySet: EntitySet, reindexAll: Boolean = false): Int {
         logger.info(
                 "Starting indexing for entity set {} with id {}",
                 entitySet.name,
@@ -208,7 +206,7 @@ class BackgroundIndexingService(
             updateExpiration(entitySet)
             while (entityKeyIdsIterator.hasNext()) {
                 val batch = getBatch(entityKeyIdsIterator)
-                indexCount += indexEntities(entitySet, batch, propertyTypes)
+                indexCount += indexEntities(entitySet, batch, propertyTypes, !reindexAll)
             }
             entityKeyIdsIterator = entityKeyIds.iterator()
         }
