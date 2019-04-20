@@ -60,7 +60,7 @@ class IndexingController : IndexAdminApi, AuthorizingComponent {
             value = [REINDEX], consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun reindex(reindexRequest: Map<UUID, Set<UUID>>): IndexingState {
+    override fun reindex(@RequestBody reindexRequest: Map<UUID, Set<UUID>>): IndexingState {
         ensureAdminAccess()
         indexingService.queueForIndexing(reindexRequest)
         return indexingService.getIndexingState()
@@ -70,7 +70,7 @@ class IndexingController : IndexAdminApi, AuthorizingComponent {
             value = [REINDEX], consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-    override fun updateReindex(reindexRequest: Map<UUID, Set<UUID>>): IndexingState {
+    override fun updateReindex(@RequestBody reindexRequest: Map<UUID, Set<UUID>>): IndexingState {
         ensureAdminAccess()
         indexingService.setForIndexing(reindexRequest)
         return indexingService.getIndexingState()
