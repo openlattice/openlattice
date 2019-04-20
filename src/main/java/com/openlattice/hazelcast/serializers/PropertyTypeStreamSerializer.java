@@ -35,7 +35,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.openlattice.postgres.IndexMethod;
+import com.openlattice.postgres.IndexType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.springframework.stereotype.Component;
@@ -43,9 +43,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerializer<PropertyType> {
 
-    private static final EdmPrimitiveTypeKind[] edmTypes     = EdmPrimitiveTypeKind.values();
-    private static final Analyzer[]             analyzers    = Analyzer.values();
-    private static final IndexMethod[]          indexMethods = IndexMethod.values();
+    private static final EdmPrimitiveTypeKind[] edmTypes    = EdmPrimitiveTypeKind.values();
+    private static final Analyzer[]             analyzers   = Analyzer.values();
+    private static final IndexType[]            INDEX_TYPES = IndexType.values();
 
     @Override
     public void write( ObjectDataOutput out, PropertyType object ) throws IOException {
@@ -86,7 +86,7 @@ public class PropertyTypeStreamSerializer implements SelfRegisteringStreamSerial
         EdmPrimitiveTypeKind datatype = edmTypes[ in.readInt() ];
         Optional<Boolean> piiField = Optional.of( in.readBoolean() );
         Optional<Analyzer> analyzer = Optional.of( analyzers[ in.readInt() ] );
-        Optional<IndexMethod> indexMethod = Optional.of( indexMethods[ in.readInt() ] );
+        Optional<IndexType> indexMethod = Optional.of( INDEX_TYPES[ in.readInt() ] );
         return new PropertyType( id, type, title, description, schemas, datatype, piiField, analyzer, indexMethod );
     }
 
