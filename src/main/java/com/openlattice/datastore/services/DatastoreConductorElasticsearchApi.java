@@ -162,31 +162,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes, Set<UUID> entitySetIds ) {
+    public boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.addPropertyTypesToEntityType( entityType, newPropertyTypes, entitySetIds ) ) )
+                    .wrap( ElasticsearchLambdas.addPropertyTypesToEntityType( entityType, newPropertyTypes ) ) )
                     .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to add property types to entity type in elasticsearch" );
-            return false;
-        }
-    }
-
-    @Override
-    public boolean addLinkedEntitySetsToEntitySet(
-            EntityType entityType,
-            List<PropertyType> propertyTypes,
-            Set<UUID> newLinkedEntitySets ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.addLinkedEntitySetsToEntitySet(
-                            entityType,
-                            propertyTypes,
-                            newLinkedEntitySets ) ) )
-                    .get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to update property types in entity set in elasticsearch" );
             return false;
         }
     }
