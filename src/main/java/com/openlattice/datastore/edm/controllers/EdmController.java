@@ -578,46 +578,11 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     }
 
     @Override
-    @PostMapping(
-            path = ENUM_TYPE_PATH,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
-    public UUID createEnumType( @RequestBody EnumType enumType ) {
-        ensureAdminAccess();
-        modelService.createEnumTypeIfNotExists( enumType );
-        return enumType.getId();
-    }
-
-    @Override
-    @GetMapping(
-            path = ENUM_TYPE_PATH,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public Iterable<EnumType> getEnumTypes() {
-        return modelService.getEnumTypes()::iterator;
-    }
-
-    @Override
-    @GetMapping(
-            path = ENUM_TYPE_PATH + ID_PATH,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public EnumType getEnumType( @PathVariable( ID ) UUID enumTypeId ) {
-        return modelService.getEnumType( enumTypeId );
-    }
-
-    @Override
     @GetMapping(
             path = ENTITY_TYPE_PATH + ID_PATH + HIERARCHY_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Set<EntityType> getEntityTypeHierarchy( @PathVariable( ID ) UUID entityTypeId ) {
         return modelService.getEntityTypeHierarchy( entityTypeId );
-    }
-
-    @Override
-    @DeleteMapping(
-            path = ENUM_TYPE_PATH + ID_PATH )
-    public Void deleteEnumType( @PathVariable( ID ) UUID enumTypeId ) {
-        ensureAdminAccess();
-        modelService.deleteEnumType( enumTypeId );
-        return null;
     }
 
     @Override
