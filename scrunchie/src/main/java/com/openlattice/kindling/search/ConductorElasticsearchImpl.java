@@ -745,14 +745,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     /*** ENTITY DATA SEARCH HELPERS ***/
 
-    private EntityDataKeySearchResult getEntityDataKeySearchResult( SearchResponse response ) {
-        Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
-        for ( SearchHit hit : response.getHits() ) {
-            entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
-                    UUID.fromString( hit.getId() ) ) );
-        }
-        return new EntityDataKeySearchResult( response.getHits().getTotalHits(), entityDataKeys );
-    }
+//    private EntityDataKeySearchResult getEntityDataKeySearchResult( SearchResponse response ) {
+//        Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
+//        for ( SearchHit hit : response.getHits() ) {
+//            entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
+//                    UUID.fromString( hit.getId() ) ) );
+//        }
+//        return new EntityDataKeySearchResult( response.getHits().getTotalHits(), entityDataKeys );
+//    }
 
     private EntityDataKeySearchResult getEntityDataKeySearchResult( MultiSearchResponse response ) {
         Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
