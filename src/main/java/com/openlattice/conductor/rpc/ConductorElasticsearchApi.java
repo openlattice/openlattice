@@ -92,7 +92,7 @@ public interface ConductorElasticsearchApi {
     String ORGANIZATION_TYPE = "organizationType";
     String ORGANIZATION_ID   = "organizationId";
 
-    String DATA_INDEX_PREFIX = "data_";
+    String DATA_INDEX_PREFIX = "entity_data_";
     String DATA_TYPE_PREFIX  = "data_type_";
 
     // entity_type_index setup consts
