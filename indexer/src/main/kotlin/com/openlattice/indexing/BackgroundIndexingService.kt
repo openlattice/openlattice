@@ -184,7 +184,7 @@ class BackgroundIndexingService(
     }
 
     internal fun indexEntitySet(
-            entitySet: EntitySet, reindexAll: Boolean = false, entityKeyIds: Optional<Iterable<UUID>> = Optional.empty()
+            entitySet: EntitySet, reindexAll: Boolean = false
     ): Int {
         logger.info(
                 "Starting indexing for entity set {} with id {}",
@@ -193,13 +193,12 @@ class BackgroundIndexingService(
         )
 
         val esw = Stopwatch.createStarted()
-        val entityKeyIds = entityKeyIds.orElseGet {
-            if (reindexAll) {
+        val entityKeyIds = if (reindexAll) {
                 getEntityDataKeys(entitySet.id)
             } else {
                 getDirtyEntityKeyIds(entitySet.id)
             }
-        }
+
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
         var indexCount = 0
