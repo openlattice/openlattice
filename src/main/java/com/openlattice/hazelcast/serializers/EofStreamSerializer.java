@@ -24,7 +24,6 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.openlattice.hazelcast.aggregators.EntitySetAggregator;
 import com.openlattice.hazelcast.stream.HazelcastStreamSink;
 import com.openlattice.hazelcast.stream.HazelcastStreamSink.Eof;
 import java.io.IOException;

@@ -21,7 +21,7 @@
 package com.openlattice.hazelcast.serializers;
 
 import com.openlattice.hazelcast.StreamSerializerTypeIds;
-import com.openlattice.organizations.processors.OrganizationAppMerger;
+import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.hazelcast.serializers.SetStreamSerializers;
@@ -30,21 +30,21 @@ import java.io.IOException;
 import org.springframework.stereotype.Component;
 
 @Component
-public class OrganizationAppMergerStreamSerializer implements SelfRegisteringStreamSerializer<OrganizationAppMerger> {
-    @Override public Class<? extends OrganizationAppMerger> getClazz() {
-        return OrganizationAppMerger.class;
+public class UUIDKeyToUUIDSetMergerStreamSerializer implements SelfRegisteringStreamSerializer<UUIDKeyToUUIDSetMerger> {
+    @Override public Class<? extends UUIDKeyToUUIDSetMerger> getClazz() {
+        return UUIDKeyToUUIDSetMerger.class;
     }
 
     @Override public void write(
-            ObjectDataOutput out, OrganizationAppMerger object ) throws IOException {
+            ObjectDataOutput out, UUIDKeyToUUIDSetMerger object ) throws IOException {
         SetStreamSerializers.serialize(
                 out,
                 object.getBackingCollection(),
                 elem -> UUIDStreamSerializer.serialize( out, elem ) );
     }
 
-    @Override public OrganizationAppMerger read( ObjectDataInput in ) throws IOException {
-        return new OrganizationAppMerger(
+    @Override public UUIDKeyToUUIDSetMerger read( ObjectDataInput in ) throws IOException {
+        return new UUIDKeyToUUIDSetMerger(
                 SetStreamSerializers.deserialize( in, UUIDStreamSerializer::deserialize )
         );
     }
