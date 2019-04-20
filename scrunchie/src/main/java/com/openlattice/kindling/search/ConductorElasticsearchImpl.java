@@ -226,7 +226,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         properties.put( ENTITY_SET + "." + NAME, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
         properties.put( ENTITY_SET + "." + TITLE, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
         properties.put( ENTITY_SET + "." + DESCRIPTION, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
-        entitySetData.put( ES_PROPERTIES, properties );
+        entitySetData.put( MAPPING_PROPERTIES, properties );
         mapping.put( ENTITY_SET_TYPE, entitySetData );
 
         try {
@@ -261,7 +261,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> organizationData = Maps.newHashMap();
         Map<String, Object> organizationMapping = Maps.newHashMap();
         properties.put( ORGANIZATION, objectField );
-        organizationData.put( ES_PROPERTIES, properties );
+        organizationData.put( MAPPING_PROPERTIES, properties );
         organizationMapping.put( ORGANIZATION_TYPE, organizationData );
 
         client.admin().indices().prepareCreate( ORGANIZATIONS )
@@ -380,11 +380,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 fieldMapping.put( TYPE, BOOLEAN );
                 break;
             }
+            case SByte:
             case Byte: {
-                fieldMapping.put( TYPE, BYTE );
-                break;
-            }
-            case SByte: {
                 fieldMapping.put( TYPE, BYTE );
                 break;
             }
@@ -392,16 +389,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 fieldMapping.put( TYPE, FLOAT );
                 break;
             }
+            case Double:
             case Single: {
                 fieldMapping.put( TYPE, DOUBLE );
-                break;
-            }
-            case Double: {
-                fieldMapping.put( TYPE, DOUBLE );
-                break;
-            }
-            case Guid: {
-                fieldMapping.put( TYPE, KEYWORD );
                 break;
             }
             case Int16: {
@@ -432,6 +422,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 fieldMapping.put( TYPE, GEO_POINT );
                 break;
             }
+            case Guid:
             default: {
                 fieldMapping.put( INDEX, "false" );
                 fieldMapping.put( TYPE, KEYWORD );
@@ -468,10 +459,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             return true;
         }
 
-        final Map<String, Object> entityTypeMapping = prepareEntityTypeDataMappings(
-                typeName,
-                propertyTypes,
-                ImmutableSet.of() );
+        final Map<String, Object> entityTypeMapping = prepareEntityTypeDataMappings( typeName, propertyTypes );
 
         try {
             client.admin().indices().prepareCreate( indexName )
@@ -486,16 +474,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     private boolean addMappingToEntityTypeDataIndex(
             EntityType entityType,
-            List<PropertyType> propertyTypes,
-            Set<UUID> entitySetIds ) {
+            List<PropertyType> propertyTypes ) {
 
         String indexName = getIndexName( entityType.getId() );
         String typeName = getTypeName( entityType.getId() );
 
-        final Map<String, Object> entityTypeDataMapping = prepareEntityTypeDataMappings(
-                typeName,
-                propertyTypes,
-                entitySetIds );
+        final Map<String, Object> entityTypeDataMapping = prepareEntityTypeDataMappings( typeName, propertyTypes );
 
         PutMappingRequest request = new PutMappingRequest( indexName );
         request.type( typeName );
@@ -510,27 +494,33 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     private Map<String, Object> prepareEntityTypeDataMappings(
             String typeName,
-            List<PropertyType> propertyTypes,
-            Set<UUID> entitySetIds ) {
+            List<PropertyType> propertyTypes ) {
+        Map<String, Object> keywordMapping = ImmutableMap.of( TYPE, KEYWORD );
         // securable_object_row type mapping
         Map<String, Object> entityTypeDataMapping = Maps.newHashMap();
         Map<String, Object> fieldMappings = Maps.newHashMap();
         Map<String, Object> properties = Maps.newHashMap();
+        Map<String, Object> entityMapping = Maps.newHashMap();
+        Map<String, Object> entityPropertiesMapping = Maps.newHashMap();
 
-        properties.put( ENTITY_SET_ID_KEY.toString(), ImmutableMap.of( TYPE, KEYWORD ) );
+        entityPropertiesMapping.put( ENTITY_SET_ID_KEY.toString(), keywordMapping );
+        entityPropertiesMapping.put( LAST_WRITE.toString(), keywordMapping );
 
-        entitySetIds.forEach( ( linkedEntitySetId ) -> {
-            for ( PropertyType propertyType : propertyTypes ) {
+        for ( PropertyType propertyType : propertyTypes ) {
 
-                if ( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ) {
-                    properties.put(
-                            linkedEntitySetId.toString() + "." + propertyType.getId().toString(),
-                            getFieldMapping( propertyType ) );
-                }
+            if ( !propertyType.getDatatype().equals( EdmPrimitiveTypeKind.Binary ) ) {
+                entityPropertiesMapping.put( propertyType.getId().toString(), getFieldMapping( propertyType ) );
             }
-        } );
+        }
 
-        fieldMappings.put( ES_PROPERTIES, properties );
+        entityMapping.put( MAPPING_PROPERTIES, entityPropertiesMapping );
+        entityMapping.put( TYPE, NESTED );
+
+        properties.put( ENTITY, entityMapping );
+        properties.put( ENTITY_SET_ID_FIELD, keywordMapping );
+
+        fieldMappings.put( MAPPING_PROPERTIES, properties );
+
         entityTypeDataMapping.put( typeName, fieldMappings );
 
         return entityTypeDataMapping;
@@ -552,8 +542,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                     .setSource( s, XContentType.JSON )
                     .execute().actionGet();
 
-            addMappingToEntityTypeDataIndex( entityType, propertyTypes, ImmutableSet.of( entitySet.getId() ) );
-
             return true;
         } catch ( JsonProcessingException e ) {
             logger.debug( "error saving entity set to elasticsearch" );
@@ -569,22 +557,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
      * @param newPropertyTypes the ids of the new properties
      */
     @Override
-    public boolean addPropertyTypesToEntityType(
-            EntityType entityType,
-            List<PropertyType> newPropertyTypes,
-            Set<UUID> entitySetIds ) {
+    public boolean addPropertyTypesToEntityType( EntityType entityType, List<PropertyType> newPropertyTypes ) {
         saveObjectToElasticsearch( ENTITY_TYPE_INDEX, ENTITY_TYPE, entityType, entityType.getId().toString() );
-        return addMappingToEntityTypeDataIndex( entityType, newPropertyTypes, entitySetIds );
-    }
-
-    @Override
-    public boolean addLinkedEntitySetsToEntitySet(
-            EntityType entityType,
-            List<PropertyType> propertyTypes,
-            Set<UUID> newLinkedEntitySets ) {
-        return addMappingToEntityTypeDataIndex( entityType,
-                propertyTypes,
-                newLinkedEntitySets );
+        return addMappingToEntityTypeDataIndex( entityType, newPropertyTypes );
     }
 
     @Override
@@ -594,7 +569,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         client.prepareDelete( ENTITY_SET_DATA_MODEL, ENTITY_SET_TYPE, entitySetId.toString() ).execute().actionGet();
 
         BulkByScrollResponse response = DeleteByQueryAction.INSTANCE.newRequestBuilder( client )
-                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId.toString() ) )
+                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) )
                 .source( getIndexName( entityTypeId ) )
                 .get();
 
@@ -610,49 +585,61 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return UUID.fromString( hit.getMatchedQueries()[ 0 ] );
     }
 
-    /**
-     * Return a byte array of values with formatting the property ids(keys)
-     * to {@literal <}entitySetId.propertyTypeId> for linked indices.
-     *
-     * @param entityValuesByEntitySet map of values for each entity set for a linking id
-     * @return byte array of values
-     * @throws JsonProcessingException
-     */
-    private byte[] getFieldMappings( Map<UUID, Map<UUID, Set<Object>>> entityValuesByEntitySet )
-            throws JsonProcessingException {
-        Map<String, Set<Object>> formattedEntityValues = Maps.newHashMap();
-        entityValuesByEntitySet.forEach(
-                ( entitySetId, propertyData ) ->
-                        propertyData.forEach( ( propertyTypeId, data ) ->
-                                formattedEntityValues.put( entitySetId + "." + propertyTypeId, data ) )
-        );
+    /*** ENTITY DATA CREATE/DELETE ***/
 
-        return mapper.writeValueAsBytes( formattedEntityValues );
+    private byte[] formatLinkedEntity( Map<UUID, Map<UUID, Set<Object>>> entityValuesByEntitySet ) {
 
+        List<Map<Object, Object>> documents = entityValuesByEntitySet.entrySet().stream().flatMap( esEntry -> {
+            UUID entitySetId = esEntry.getKey();
+            Map<UUID, Set<Object>> entity = esEntry.getValue();
+
+            List<Map<Object, Object>> values = Lists.newArrayList();
+            entity.entrySet().forEach( entry -> values.add( ImmutableMap.of( entry.getKey(), entry.getValue() ) ) );
+            values.add( ImmutableMap.of( ENTITY_SET_ID_KEY, entitySetId ) );
+
+            return values.stream();
+        } ).collect( Collectors.toList() );
+
+        try {
+            return mapper.writeValueAsBytes( ImmutableMap.of( ENTITY, documents ) );
+
+        } catch ( JsonProcessingException e ) {
+            logger.debug( "error creating entity data" );
+            return null;
+        }
     }
 
-    /*** ENTITY DATA CREATE/DELETE ***/
+    private byte[] formatEntity( UUID entitySetId, Map<UUID, Set<Object>> entity ) {
+
+        List<Map<Object, Object>> values = Lists.newArrayList();
+        entity.entrySet().forEach( entry -> values.add( ImmutableMap.of( entry.getKey(), entry.getValue() ) ) );
+        values.add( ImmutableMap.of( ENTITY_SET_ID_KEY, entitySetId ) );
+
+        try {
+            return mapper.writeValueAsBytes( ImmutableMap.of( ENTITY, values, ENTITY_SET_ID_FIELD, entitySetId ) );
+
+        } catch ( JsonProcessingException e ) {
+            logger.debug( "error creating entity data" );
+            return null;
+        }
+    }
 
     @Override
     public boolean createEntityData( UUID entityTypeId, EntityDataKey edk, Map<UUID, Set<Object>> propertyValues ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        UUID entitySetId = edk.getEntitySetId(); // TODO add entity set ids
+        UUID entitySetId = edk.getEntitySetId();
         UUID entityKeyId = edk.getEntityKeyId();
 
-        try {
-            final byte[] s = mapper.writeValueAsBytes( ImmutableMap
-                    .of( entitySetId, propertyValues, ENTITY_SET_ID_KEY, entitySetId ) );
+        byte[] data = formatEntity( entitySetId, propertyValues );
 
+        if ( data != null ) {
             client.prepareIndex( getIndexName( entityTypeId ), getTypeName( entityTypeId ), entityKeyId.toString() )
-                    .setSource( s, XContentType.JSON )
+                    .setSource( data, XContentType.JSON )
                     .execute().actionGet();
-        } catch ( JsonProcessingException e ) {
-            logger.debug( "error creating entity data in elasticsearch" );
-            return false;
         }
 
-        return true;
+        return data != null;
     }
 
     @Override
@@ -663,27 +650,25 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         if ( !entitiesById.isEmpty() ) {
-            try {
-                String indexName = getIndexName( entityTypeId );
-                String indexType = getTypeName( entityTypeId );
+            String indexName = getIndexName( entityTypeId );
+            String indexType = getTypeName( entityTypeId );
 
-                BulkRequestBuilder requestBuilder = client.prepareBulk();
-                for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entitiesByIdEntry : entitiesById.entrySet() ) {
+            BulkRequestBuilder requestBuilder = client.prepareBulk();
+            for ( Map.Entry<UUID, Map<UUID, Set<Object>>> entitiesByIdEntry : entitiesById.entrySet() ) {
 
-                    final UUID entityKeyId = entitiesByIdEntry.getKey();
+                final UUID entityKeyId = entitiesByIdEntry.getKey();
 
-                    final byte[] s = mapper.writeValueAsBytes( ImmutableMap
-                            .of( entitySetId, entitiesByIdEntry.getValue(), ENTITY_SET_ID_KEY, entitySetId ) );
+                byte[] data = formatEntity( entitySetId, entitiesByIdEntry.getValue() );
+
+                if ( data != null ) {
                     requestBuilder.add(
                             client.prepareIndex( indexName, indexType, entityKeyId.toString() )
-                                    .setSource( s, XContentType.JSON ) );
+                                    .setSource( data, XContentType.JSON ) );
                 }
-
-                requestBuilder.execute().actionGet();
-            } catch ( JsonProcessingException e ) {
-                logger.debug( "Error creating bulk entity data in elasticsearch for entity set {}", entitySetId, e );
-                return false;
             }
+
+            requestBuilder.execute().actionGet();
+
         }
         return true;
     }
@@ -696,26 +681,22 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         if ( !entitiesByLinkingId.isEmpty() ) {
-            try {
-                String indexName = getIndexName( entityTypeId );
-                String indexType = getTypeName( entityTypeId );
+            String indexName = getIndexName( entityTypeId );
+            String indexType = getTypeName( entityTypeId );
 
-                BulkRequestBuilder requestBuilder = client.prepareBulk();
-                for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingIdEntry : entitiesByLinkingId
-                        .entrySet() ) {
-                    final UUID linkingId = entitiesByLinkingIdEntry.getKey();
-                    final byte[] s = getFieldMappings( entitiesByLinkingIdEntry.getValue() );
-                    requestBuilder.add(
-                            client.prepareIndex( indexName, indexType, linkingId.toString() )
-                                    .setSource( s, XContentType.JSON ) );
-                }
-                requestBuilder.execute().actionGet();
-            } catch ( JsonProcessingException e ) {
-                logger.debug( "Error creating bulk linked data in elasticsearch for entity set {}",
-                        linkingEntitySetId,
-                        e );
-                return false;
+            BulkRequestBuilder requestBuilder = client.prepareBulk();
+            for ( Map.Entry<UUID, Map<UUID, Map<UUID, Set<Object>>>> entitiesByLinkingIdEntry : entitiesByLinkingId
+                    .entrySet() ) {
+                final UUID linkingId = entitiesByLinkingIdEntry.getKey();
+
+                final byte[] data = formatLinkedEntity( entitiesByLinkingIdEntry.getValue() );
+
+                requestBuilder.add(
+                        client.prepareIndex( indexName, indexType, linkingId.toString() )
+                                .setSource( data, XContentType.JSON ) );
             }
+            requestBuilder.execute().actionGet();
+
         }
         return true;
     }
@@ -752,7 +733,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
-                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId.toString() ) )
+                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) )
                 .source( getIndexName( entityTypeId ) )
                 .execute()
                 .actionGet();
@@ -764,14 +745,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     /*** ENTITY DATA SEARCH HELPERS ***/
 
-    private EntityDataKeySearchResult getEntityDataKeySearchResult( SearchResponse response ) {
-        Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
-        for ( SearchHit hit : response.getHits() ) {
-            entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
-                    UUID.fromString( hit.getId() ) ) );
-        }
-        return new EntityDataKeySearchResult( response.getHits().getTotalHits(), entityDataKeys );
-    }
+//    private EntityDataKeySearchResult getEntityDataKeySearchResult( SearchResponse response ) {
+//        Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
+//        for ( SearchHit hit : response.getHits() ) {
+//            entityDataKeys.add( new EntityDataKey( getEntitySetIdFromHit( hit ),
+//                    UUID.fromString( hit.getId() ) ) );
+//        }
+//        return new EntityDataKeySearchResult( response.getHits().getTotalHits(), entityDataKeys );
+//    }
 
     private EntityDataKeySearchResult getEntityDataKeySearchResult( MultiSearchResponse response ) {
         Set<EntityDataKey> entityDataKeys = Sets.newHashSet();
@@ -794,65 +775,60 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
             Optional<Set<UUID>> linkedEntitySets ) {
         Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
-        authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( id -> {
+        authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( propertyTypeId -> {
+
+            String fieldName = getFieldName( propertyTypeId );
 
             if ( linkedEntitySets.isPresent() ) {
-                linkedEntitySets.get().forEach( linkedEntitySetId -> {
 
-                    if ( authorizedPropertyTypesByEntitySet
-                            .getOrDefault( linkedEntitySetId, DelegatedUUIDSet.wrap( ImmutableSet.of() ) )
-                            .contains( id ) ) {
-                        Map<String, Float> propertyTypeMap = fieldsMap.getOrDefault( id, Maps.newHashMap() );
-                        propertyTypeMap.put( linkedEntitySetId.toString() + "." + id.toString(), 1F );
-                        fieldsMap.put( id, propertyTypeMap );
+                boolean isAuthorized = true;
+
+                for ( UUID normalEntitySetId : linkedEntitySets.get() ) {
+                    if ( !authorizedPropertyTypesByEntitySet
+                            .getOrDefault( normalEntitySetId, DelegatedUUIDSet.wrap( ImmutableSet.of() ) )
+                            .contains( propertyTypeId ) ) {
+                        isAuthorized = false;
                     }
-                } );
+                }
+
+                if ( isAuthorized ) {
+                    fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
+                }
 
             } else {
-                fieldsMap.put( id, Map.of( entitySetId.toString() + "." + id.toString(), 1F ) );
+                fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
             }
         } );
         return fieldsMap;
     }
 
-    /**
-     * Creates for each authorized property type id a map with keys, that are the combinations of all the entity set ids
-     * and that property type id across the input and values of 1 for weights.
-     */
-    private static Map<UUID, Map<String, Float>> getLinkingFieldsMap(
-            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
-        Map<UUID, Map<String, Float>> authorizedFieldsMap = Maps.newHashMap();
-        authorizedPropertyTypesByEntitySet
-                .forEach( ( entitySetId, propertyTypeIds ) ->
-                        propertyTypeIds.forEach( propertyId -> {
-                            String field = entitySetId.toString() + "." + propertyId.toString();
-                            Map<String, Float> fieldsMap = authorizedFieldsMap
-                                    .putIfAbsent( propertyId, Maps.newHashMap( Map.of( field, 1F ) ) );
-                            if ( !( fieldsMap == null ) ) {
-                                authorizedFieldsMap.get( propertyId ).put( field, 1F );
-                            }
-                        } )
-                );
-
-        return authorizedFieldsMap;
+    private static String getFieldName( UUID propertyTypeId ) {
+        return ENTITY + "." + propertyTypeId.toString();
     }
 
-    private QueryBuilder getAdvancedSearchQuery(
+    private BoolQueryBuilder getAdvancedSearchQuery(
             Constraint constraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
+        boolean isEmpty = true;
+
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
-        constraints.getSearches().get().forEach( search -> {
+        for ( SearchDetails search : constraints.getSearches().get() ) {
             if ( authorizedFieldsMap.keySet().contains( search.getPropertyType() ) ) {
+                isEmpty = false;
+
                 QueryStringQueryBuilder queryString = QueryBuilders
                         .queryStringQuery( search.getSearchTerm() )
                         .fields( authorizedFieldsMap.get( search.getPropertyType() ) ).lenient( true );
+
                 if ( search.getExactMatch() ) {
                     query.must( queryString );
                     query.minimumShouldMatch( 0 );
-                } else { query.should( queryString ); }
+                } else {
+                    query.should( queryString );
+                }
             }
-        } );
+        }
 
         return query;
     }
@@ -873,7 +849,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                 .lenient( true );
     }
 
-    private QueryBuilder getGeoDistanceSearchQuery(
+    private BoolQueryBuilder getGeoDistanceSearchQuery(
             Constraint constraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
@@ -898,7 +874,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         return query;
     }
 
-    private QueryBuilder getGeoPolygonSearchQuery(
+    private BoolQueryBuilder getGeoPolygonSearchQuery(
             Constraint constraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
@@ -924,8 +900,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
 
         for ( int i = 0; i < entitySetIds.length; i++ ) {
-            RangeQueryBuilder rangeQuery = QueryBuilders
-                    .rangeQuery( entitySetIds[ i ].toString() + "." + LAST_WRITE.toString() );
+            RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery( getFieldName( LAST_WRITE ) );
 
             if ( constraint.getStartDate().isPresent() ) {
                 rangeQuery.gt( constraint.getStartDate().get().toString() );
@@ -942,9 +917,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     }
 
     private QueryBuilder getQueryForSearch(
+            Set<UUID> entitySetIds,
             SearchConstraints searchConstraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
         BoolQueryBuilder query = QueryBuilders.boolQuery();
+
+        if ( authorizedFieldsMap.size() == 0 ) {
+            return null;
+        }
 
         for ( ConstraintGroup constraintGroup : searchConstraints.getConstraintGroups() ) {
             BoolQueryBuilder subQuery = QueryBuilders.boolQuery()
@@ -954,15 +934,24 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
                 switch ( constraint.getSearchType() ) {
                     case advanced:
-                        subQuery.should( getAdvancedSearchQuery( constraint, authorizedFieldsMap ) );
+                        BoolQueryBuilder advancedSearchQuery = getAdvancedSearchQuery( constraint,
+                                authorizedFieldsMap );
+                        if ( advancedSearchQuery.hasClauses() )
+                            subQuery.should( advancedSearchQuery );
                         break;
 
                     case geoDistance:
-                        subQuery.should( getGeoDistanceSearchQuery( constraint, authorizedFieldsMap ) );
+                        BoolQueryBuilder geoDistanceSearchQuery = getGeoDistanceSearchQuery( constraint,
+                                authorizedFieldsMap );
+                        if ( geoDistanceSearchQuery.hasClauses() )
+                            subQuery.should( geoDistanceSearchQuery );
                         break;
 
                     case geoPolygon:
-                        subQuery.should( getGeoPolygonSearchQuery( constraint, authorizedFieldsMap ) );
+                        BoolQueryBuilder geoPolygonSearchQuery = getGeoPolygonSearchQuery( constraint,
+                                authorizedFieldsMap );
+                        if ( geoPolygonSearchQuery.hasClauses() )
+                            subQuery.should( geoPolygonSearchQuery );
                         break;
 
                     case simple:
@@ -975,10 +964,23 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
                         break;
 
                 }
+
             }
 
-            query.must( subQuery );
+            if ( !subQuery.hasClauses() ) {
+                return null;
+            }
+
+            query.must( QueryBuilders.nestedQuery( ENTITY, subQuery, ScoreMode.Total ) );
         }
+
+        BoolQueryBuilder entitySetQuery = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
+        entitySetIds.forEach( entitySetId -> {
+            entitySetQuery
+                    .should( QueryBuilders.termQuery( getFieldName( ENTITY_SET_ID_KEY ), entitySetId.toString() ) );
+        } );
+
+        query.must( QueryBuilders.nestedQuery( ENTITY, entitySetQuery, ScoreMode.Max ) );
 
         return query;
     }
@@ -1000,29 +1002,39 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
             UUID entitySetId = searchConstraints.getEntitySetIds()[ i ];
 
+            Optional<Set<UUID>> normalEntitySets = Optional.ofNullable( linkingEntitySets.get( entitySetId ) );
+
             Map<UUID, Map<String, Float>> authorizedFieldsMap =
-                    getFieldsMap( entitySetId,
-                            authorizedPropertyTypesByEntitySet,
-                            Optional.ofNullable( linkingEntitySets.get( entitySetId ) ) );
+                    getFieldsMap( entitySetId, authorizedPropertyTypesByEntitySet, normalEntitySets );
 
-            BoolQueryBuilder query = new BoolQueryBuilder().queryName( entitySetId.toString() )
-                    .must( getQueryForSearch( searchConstraints, authorizedFieldsMap ) );
+            QueryBuilder searchQuery = getQueryForSearch( normalEntitySets.orElse( ImmutableSet.of( entitySetId ) ),
+                    searchConstraints,
+                    authorizedFieldsMap );
 
-            if ( linkingEntitySets.containsKey( entitySetId ) ) {
-                query.mustNot( QueryBuilders.existsQuery( ENTITY_SET_ID_KEY
-                        .toString() ) ); // this field will not exist for linked entity documents
-            } else {
-                query.must( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(),
-                        entitySetId.toString() ) ); // match entity set id
+            if ( searchQuery != null ) {
+
+                BoolQueryBuilder query = new BoolQueryBuilder().queryName( entitySetId.toString() ).must( searchQuery );
+
+                if ( linkingEntitySets.containsKey( entitySetId ) ) {
+                    query.mustNot( QueryBuilders
+                            .existsQuery( ENTITY_SET_ID_FIELD ) ); // this field will not exist for linked entity documents
+                } else {
+                    query.must( QueryBuilders
+                            .termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) ); // match entity set id
+                }
+
+                SearchRequestBuilder request = client
+                        .prepareSearch( getIndexName( entityTypesByEntitySetId.get( entitySetId ) ) )
+                        .setQuery( query )
+                        .setFrom( searchConstraints.getStart() )
+                        .setSize( searchConstraints.getMaxHits() )
+                        .setFetchSource( false );
+                requests.add( request );
             }
+        }
 
-            SearchRequestBuilder request = client
-                    .prepareSearch( getIndexName( entityTypesByEntitySetId.get( entitySetId ) ) )
-                    .setQuery( query )
-                    .setFrom( searchConstraints.getStart() )
-                    .setSize( searchConstraints.getMaxHits() )
-                    .setFetchSource( false );
-            requests.add( request );
+        if ( requests.requests().isEmpty() ) {
+            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
         }
 
         MultiSearchResponse response = client.multiSearch( requests ).actionGet();
@@ -1038,63 +1050,34 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return null; }
 
         BoolQueryBuilder valuesQuery = new BoolQueryBuilder();
+
         fieldSearches.entrySet().stream().forEach( entry -> {
+
             BoolQueryBuilder fieldQuery = new BoolQueryBuilder();
             entry.getValue().stream().forEach( searchTerm -> fieldQuery.should(
-                    QueryBuilders.matchQuery( entry.getKey().toString(), searchTerm ).fuzziness( Fuzziness.AUTO )
+                    QueryBuilders.matchQuery( getFieldName( entry.getKey() ), searchTerm ).fuzziness( Fuzziness.AUTO )
                             .lenient( true ) ) );
             fieldQuery.minimumShouldMatch( 1 );
-            valuesQuery.should( fieldQuery );
+            valuesQuery.should( QueryBuilders.nestedQuery( ENTITY, fieldQuery, ScoreMode.Avg ) );
         } );
 
         valuesQuery.minimumShouldMatch( 1 );
 
         BoolQueryBuilder query = QueryBuilders.boolQuery().must( valuesQuery )
-                .must( QueryBuilders.existsQuery( ENTITY_SET_ID_KEY.toString() ) );
+                .must( QueryBuilders.existsQuery( ENTITY_SET_ID_FIELD ) );
 
         return StreamUtil.stream( client.prepareSearch( getIndexName( entityTypeId ) )
                 .setQuery( query )
                 .setFrom( 0 )
                 .setSize( size )
                 .setExplain( explain )
-                .setFetchSource( ENTITY_SET_ID_KEY.toString(), null )
+                .setFetchSource( ENTITY_SET_ID_FIELD, null )
                 .execute()
                 .actionGet().getHits() )
                 .map( hit -> Pair
-                        .of( UUID.fromString( hit.getSourceAsMap().get( ENTITY_SET_ID_KEY.toString() ).toString() ),
+                        .of( UUID.fromString( hit.getSourceAsMap().get( ENTITY_SET_ID_FIELD ).toString() ),
                                 UUID.fromString( hit.getId() ) ) )
                 .collect( Collectors.groupingBy( Pair::getKey, Collectors.mapping( Pair::getValue, toSet() ) ) );
-    }
-
-    /**
-     * Executes entity data search on multiple linking entity sets containing 1 or more linked entity sets
-     *
-     * @param searchConstraints                  SearchConstraints containing the linking entity set ids (NOT linked) // TODO
-     * @param authorizedPropertyTypesByEntitySet authorized properties for each linked entity set individually
-     */
-    private EntityDataKeySearchResult executeLinkingSearch(
-            SearchConstraints searchConstraints,
-            Map<UUID, UUID> entityTypesByEntitySetId,
-            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
-
-        Map<UUID, Map<String, Float>> authorizedFieldsMap = getLinkingFieldsMap( authorizedPropertyTypesByEntitySet );
-        QueryBuilder query = getQueryForSearch( searchConstraints, authorizedFieldsMap );
-        if ( query == null ) {
-            return new EntityDataKeySearchResult( 0, Sets.newHashSet() );
-        }
-
-        String[] indexNames = Sets.newHashSet( entityTypesByEntitySetId.values() ).stream().map( this::getIndexName )
-                .toArray( String[]::new );
-
-        SearchResponse response = client
-                .prepareSearch( indexNames )
-                .setQuery( query )
-                .setFrom( searchConstraints.getStart() )
-                .setSize( searchConstraints.getMaxHits() )
-                .execute()
-                .actionGet();
-
-        return getEntityDataKeySearchResult( response );
     }
 
     /*** EDM OBJECT CRUD TRIGGERING INDEX UPDATES ***/
