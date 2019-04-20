@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.hazelcast.processors.AbstractMerger;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 
+import java.util.HashSet;
 import java.util.UUID;
 
 public class UUIDKeyToUUIDSetMerger extends AbstractMerger<UUID, DelegatedUUIDSet, UUID> {
@@ -34,6 +35,6 @@ public class UUIDKeyToUUIDSetMerger extends AbstractMerger<UUID, DelegatedUUIDSe
     }
 
     @Override protected DelegatedUUIDSet newEmptyCollection() {
-        return new DelegatedUUIDSet( ImmutableSet.of() );
+        return new DelegatedUUIDSet( new HashSet<>() );
     }
 }
