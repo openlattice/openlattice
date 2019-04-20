@@ -471,7 +471,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     @Test
     fun testLoadDataAuthorizations() {
         // create data with admin
-        loginAs("admin")
         val et = createEntityType()
         val es = createEntitySet(et)
 
@@ -483,6 +482,8 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val indexExpected = entries.mapIndexed { index, data -> ids[index] to keyByFqn(data) }.toMap()
         val ess = EntitySetSelection(Optional.of(et.properties), Optional.of(HashSet(ids)))
 
+
+        /* loadEntitySetData */
 
         // try to read data with no permissions on it
         try {
@@ -509,7 +510,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         // add permission on 1 property
         val pt1 = edmApi.getPropertyType(et.properties.first())
-        val pt1ReadAcl = Acl(AclKey(es.id, et.properties.first()), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        val pt1ReadAcl = Acl(AclKey(es.id, pt1.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(pt1ReadAcl, Action.ADD))
         loginAs("user1")
         val pt1Data = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
@@ -536,6 +537,89 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }
 
         Assert.assertEquals(indexExpected, indexActualAll)
+        loginAs("admin")
+
+
+        /* getEntity */
+
+        val et2 = createEntityType()
+        val es2 = createEntitySet(et2)
+
+        val testData2 = TestDataFactory.randomStringEntityData(1, et2.properties)
+
+        val entries2 = ImmutableList.copyOf(testData2.values)
+        val id = dataApi.createEntities(es2.id, entries2)[0]
+        val property = et2.properties.first()
+
+        // try to read data with no permissions on it
+        try {
+            loginAs("user1")
+            dataApi.getEntity(es2.id, id)
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Object [${es2.id}] is not accessible.", true))
+        }
+
+        try {
+            dataApi.getEntity(es2.id, id, property)
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Object [${es2.id}] is not accessible.", true))
+        } finally {
+            loginAs("admin")
+        }
+
+        // add permission to read entityset but none of the properties
+        val es2ReadAcl = Acl(AclKey(es2.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(es2ReadAcl, Action.ADD))
+
+        loginAs("user1")
+        val noData2 = dataApi.getEntity(es2.id, id).asMap()
+        Assert.assertEquals(1, noData2.size)
+        noData2.forEach { Assert.assertEquals(DataTables.ID_FQN, it.key) }
+
+        try {
+            dataApi.getEntity(es2.id, id, property)
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Object [${es2.id}, $property] is not accessible.", true))
+        } finally {
+            loginAs("admin")
+        }
+
+
+        // add permission on 1 property
+        val pt = edmApi.getPropertyType(property)
+        val ptReadAcl = Acl(AclKey(es2.id, pt.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(ptReadAcl, Action.ADD))
+
+        loginAs("user1")
+        val ptData1 = dataApi.getEntity(es2.id, id).asMap()
+        Assert.assertEquals(1, ptData1[DataTables.ID_FQN]!!.size)
+        Assert.assertEquals(setOf(DataTables.ID_FQN, pt.type), ptData1.keys)
+        val ptData2 =  dataApi.getEntity(es2.id, id, property)
+        Assert.assertEquals(1, ptData2.size)
+        Assert.assertEquals(entries2[0][property], ptData2)
+        loginAs("admin")
+
+
+        // add permission on all properties
+        et2.properties.forEach {
+            permissionsApi.updateAcl(AclData(
+                    Acl(AclKey(es2.id, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
+                    Action.ADD))
+        }
+
+        loginAs("user1")
+        val dataAll1 = dataApi.getEntity(es2.id, id).asMap()
+        Assert.assertEquals(1, dataAll1[DataTables.ID_FQN]!!.size)
+        val fqns = et2.properties.map { edmApi.getPropertyType(it).type }.toMutableSet()
+        fqns.add(DataTables.ID_FQN)
+        Assert.assertEquals(fqns, dataAll1.keys)
+        val dataAll2 =  dataApi.getEntity(es2.id, id, property)
+        Assert.assertEquals(1, dataAll2.size)
+        Assert.assertEquals(entries2[0][property], dataAll2)
+
         loginAs("admin")
     }
 
