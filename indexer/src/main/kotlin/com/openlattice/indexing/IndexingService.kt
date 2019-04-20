@@ -89,13 +89,20 @@ class IndexingService(
     }
 
     fun queueForIndexing(entities: Map<UUID, Set<UUID>>): Int {
-        entities.forEach { entitySetId, entityKeyIds ->
-            logger.info( "Creating job to index entity set {} for the following entities {}", entitySetId, entityKeyIds)
+        val entitiesForIndexing = if (entities.isEmpty()) {
+            entitySets.keys.map { it to emptySet<UUID>() }.toMap()
+        } else {
+            entities
+        }
+
+        entitiesForIndexing.forEach { entitySetId, entityKeyIds ->
+            logger.info("Creating job to index entity set {} for the following entities {}", entitySetId, entityKeyIds)
             indexingJobs.putIfAbsent(entitySetId, DelegatedUUIDSet.wrap(HashSet()))
             indexingJobs.executeOnKey(entitySetId, UUIDKeyToUUIDSetMerger(entityKeyIds))
             indexingQueue.put(entitySetId)
         }
-        return entities.size
+
+        return entitiesForIndexing.size
     }
 
     fun clearIndexingJobs(): Int {
