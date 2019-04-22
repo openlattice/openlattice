@@ -44,7 +44,7 @@ public class IdCatchupEntryProcessor extends AbstractRhizomeEntryProcessor<Integ
     private final HikariDataSource hds;
 
     public IdCatchupEntryProcessor( HikariDataSource hds ) {
-        this.hds = checkNotNull(hds);
+        this.hds = checkNotNull( hds );
     }
 
     @Override
@@ -64,7 +64,7 @@ public class IdCatchupEntryProcessor extends AbstractRhizomeEntryProcessor<Integ
             entry.setValue( range );
             logger.info( "Caught up range with base {} by {} increments", range.getBase(), counter );
         } catch ( SQLException e ) {
-            logger.error( "Error catching up ranges." );
+            logger.error( "Error catching up ranges.", e );
         }
         return null;
     }
@@ -77,6 +77,8 @@ public class IdCatchupEntryProcessor extends AbstractRhizomeEntryProcessor<Integ
 
     public boolean exists( PreparedStatement ps, UUID id ) throws SQLException {
         ps.setObject( 1, id );
+        //Count query always guaranteed to have one row.
+        ps.executeQuery().next();
         return ResultSetAdapters.count( ps.executeQuery() ) > 0;
     }
 }
