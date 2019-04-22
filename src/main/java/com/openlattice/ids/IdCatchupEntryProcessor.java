@@ -78,8 +78,9 @@ public class IdCatchupEntryProcessor extends AbstractRhizomeEntryProcessor<Integ
     public boolean exists( PreparedStatement ps, UUID id ) throws SQLException {
         ps.setObject( 1, id );
         //Count query always guaranteed to have one row.
-        ps.executeQuery().next();
-        return ResultSetAdapters.count( ps.executeQuery() ) > 0;
+        final var rs = ps.executeQuery();
+        rs.next()
+        return ResultSetAdapters.count( rs ) > 0;
     }
 }
 
