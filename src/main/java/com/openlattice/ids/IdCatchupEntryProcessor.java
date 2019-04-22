@@ -79,7 +79,7 @@ public class IdCatchupEntryProcessor extends AbstractRhizomeEntryProcessor<Integ
         ps.setObject( 1, id );
         //Count query always guaranteed to have one row.
         final var rs = ps.executeQuery();
-        rs.next()
+        rs.next();
         return ResultSetAdapters.count( rs ) > 0;
     }
 }
