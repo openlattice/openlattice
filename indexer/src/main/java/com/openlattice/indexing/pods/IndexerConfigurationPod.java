@@ -27,6 +27,7 @@ import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.kryptnostic.rhizome.configuration.service.ConfigurationService;
 import com.openlattice.ResourceConfigurationLoader;
 import com.openlattice.conductor.rpc.ConductorConfiguration;
+import com.openlattice.indexing.configuration.IndexerConfiguration;
 import java.io.IOException;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -41,32 +42,32 @@ import org.springframework.context.annotation.Profile;
  */
 @Configuration
 public class IndexerConfigurationPod {
-    private static final Logger               logger = LoggerFactory.getLogger( IndexerConfigurationPod.class );
+    private static final Logger logger = LoggerFactory.getLogger( IndexerConfigurationPod.class );
 
     @Inject
-    private              ConfigurationService configurationService;
+    private ConfigurationService configurationService;
 
     @Autowired( required = false )
-    private              AmazonS3             s3;
+    private AmazonS3 s3;
 
     @Autowired( required = false )
     private AmazonLaunchConfiguration awsLaunchConfig;
 
-    @Bean( name = "conductorConfiguration" )
+    @Bean( name = "indexConfiguration" )
     @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
-    public ConductorConfiguration getLocalConductorConfiguration() throws IOException {
-        ConductorConfiguration config = configurationService.getConfiguration( ConductorConfiguration.class );
+    public IndexerConfiguration getLocalIndexerConfiguration() throws IOException {
+        IndexerConfiguration config = configurationService.getConfiguration( IndexerConfiguration.class );
         logger.info( "Using local conductor configuration: {}", config );
         return config;
     }
 
     @Bean( name = "conductorConfiguration" )
     @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
-    public ConductorConfiguration getAwsConductorConfiguration() throws IOException {
-        ConductorConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
+    public IndexerConfiguration getAwsIndexerConfiguration() throws IOException {
+        IndexerConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,
                 awsLaunchConfig.getBucket(),
                 awsLaunchConfig.getFolder(),
-                ConductorConfiguration.class );
+                IndexerConfiguration.class );
 
         logger.info( "Using aws conductor configuration: {}", config );
         return config;

@@ -25,9 +25,6 @@ import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.admin.indexing.IndexingState
-import com.openlattice.conductor.rpc.ConductorElasticsearchApi
-import com.openlattice.data.storage.IndexingMetadataManager
-import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
@@ -45,13 +42,21 @@ private val logger = LoggerFactory.getLogger(IndexingService::class.java)
  */
 class IndexingService(
         private val backgroundIndexingService: BackgroundIndexingService,
-        private val executor: ListeningExecutorService,
+        executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance
 ) {
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
     private val indexingJobs = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.INDEXING_JOBS.name)
     private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
     private val indexingLock = ReentrantLock()
+
+    init {
+        //Add back in jobs that did not complete but are still registered.
+        val jobIds = indexingJobs.keys
+        jobIds.removeIf(indexingQueue::contains)
+        queueForIndexing(jobIds.map { it to emptySet<UUID>() }.toMap())
+    }
+
     private val indexingWorker = executor.submit {
         while (true) {
             try {
@@ -73,7 +78,6 @@ class IndexingService(
                             {
                                 backgroundIndexingService.indexEntitySet(entitySet, true)
                             })
-
                     indexingJobs.delete(entitySet.id)
                 } catch (ex: Exception) {
                     logger.error("Error while indexing entity set ${entitySet.name} ($entitySetId)")

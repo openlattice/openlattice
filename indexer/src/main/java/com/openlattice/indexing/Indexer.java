@@ -52,7 +52,6 @@ public class Indexer extends BaseRhizomeServer {
             PlasmaCoupling.class,
             MailServicePod.class,
             Auth0Pod.class,
-            CassandraTablesPod.class,
             MapstoresPod.class,
             JdbcPod.class,
             PostgresTablesPod.class,

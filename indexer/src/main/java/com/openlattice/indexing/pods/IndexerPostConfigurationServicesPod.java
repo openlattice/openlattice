@@ -39,6 +39,7 @@ import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
 import com.openlattice.indexing.IndexingService;
+import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -57,7 +58,7 @@ public class IndexerPostConfigurationServicesPod {
     private HazelcastInstance hazelcastInstance;
 
     @Inject
-    private ConductorConfiguration conductorConfiguration;
+    private IndexerConfiguration indexerConfiguration;
 
     @Inject
     private HikariDataSource hikariDataSource;
@@ -121,8 +122,10 @@ public class IndexerPostConfigurationServicesPod {
 
     @Bean
     public BackgroundIndexingService backgroundIndexingService() {
-        return new BackgroundIndexingService( hikariDataSource,
+        return new BackgroundIndexingService(
                 hazelcastInstance,
+                indexerConfiguration,
+                hikariDataSource,
                 dataQueryService(),
                 elasticsearchApi,
                 indexingMetadataManager() );
