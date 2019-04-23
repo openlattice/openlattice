@@ -39,7 +39,7 @@ private val key = SimpleConfigurationKey("indexer.yaml")
 data class IndexerConfiguration(
         @JsonProperty("search") val searchConfiguration: SearchConfiguration,
         @JsonProperty("error-reporting-email") val errorReportingEmail: String,
-        @JsonProperty("background-indexing") val backgroundIndexingEnabled: Boolean = false
+        @JsonProperty("background-indexing") val backgroundIndexingEnabled: Boolean = true
 ) : Configuration {
     companion object {
         @JvmStatic
