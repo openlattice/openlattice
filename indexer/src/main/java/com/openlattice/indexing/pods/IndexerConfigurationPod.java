@@ -53,7 +53,7 @@ public class IndexerConfigurationPod {
     @Autowired( required = false )
     private AmazonLaunchConfiguration awsLaunchConfig;
 
-    @Bean( name = "indexConfiguration" )
+    @Bean( name = "indexerConfiguration" )
     @Profile( Profiles.LOCAL_CONFIGURATION_PROFILE )
     public IndexerConfiguration getLocalIndexerConfiguration() throws IOException {
         IndexerConfiguration config = configurationService.getConfiguration( IndexerConfiguration.class );
@@ -61,7 +61,7 @@ public class IndexerConfigurationPod {
         return config;
     }
 
-    @Bean( name = "conductorConfiguration" )
+    @Bean( name = "indexerConfiguration" )
     @Profile( { Profiles.AWS_CONFIGURATION_PROFILE, Profiles.AWS_TESTING_PROFILE } )
     public IndexerConfiguration getAwsIndexerConfiguration() throws IOException {
         IndexerConfiguration config = ResourceConfigurationLoader.loadConfigurationFromS3( s3,

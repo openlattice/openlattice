@@ -28,7 +28,7 @@ import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
 import com.openlattice.conductor.rpc.SearchConfiguration
 
 
-private val key = SimpleConfigurationKey("conductor.yaml")
+private val key = SimpleConfigurationKey("indexer.yaml")
 
 /**
  * In
