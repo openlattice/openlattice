@@ -27,27 +27,41 @@ import com.hazelcast.core.IMap
 import com.openlattice.admin.indexing.IndexingState
 import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.type.EntityType
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger
+import com.openlattice.postgres.PostgresColumn.ENTITY_KEY_IDS
+import com.openlattice.postgres.ResultSetAdapters
+import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.postgres.streams.StatementHolder
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
+import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
+import java.util.function.Function
+import java.util.function.Supplier
 
 private val logger = LoggerFactory.getLogger(IndexingService::class.java)
+private val LB_UUID = UUID(0, 0)
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class IndexingService(
-        private val indexingMetadataManager: IndexingMetadataManager,
+        private val hds: HikariDataSource,
+        private val backgroundIndexingService: BackgroundIndexingService,
         executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance
 ) {
     private val entitySets: IMap<UUID, EntitySet> = hazelcastInstance.getMap(HazelcastMap.ENTITY_SETS.name)
+    private val propertyTypes = hazelcastInstance.getMap<UUID, PropertyType>(HazelcastMap.PROPERTY_TYPES.name)
+    private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
     private val indexingJobs = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.INDEXING_JOBS.name)
+    private val indexingProgress = hazelcastInstance.getMap<UUID, UUID>("")
     private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
     private val indexingLock = ReentrantLock()
 
@@ -55,6 +69,8 @@ class IndexingService(
         //Add back in jobs that did not complete but are still registered.
         val jobIds = indexingJobs.keys
         jobIds.removeIf(indexingQueue::contains)
+        logger.info("Re-adding the following jobs that were registered but not in the queue: {}", jobIds)
+
         queueForIndexing(jobIds.map { it to emptySet<UUID>() }.toMap())
     }
 
@@ -63,10 +79,18 @@ class IndexingService(
             try {
                 val entitySetId = indexingQueue.take()
                 val entitySet = entitySets.getValue(entitySetId)
-                logger.info("Marking entity set ${entitySet.name} ($entitySet.id) as needing indexing.")
-                val entityKeyIds = Optional.ofNullable(indexingJobs[entitySetId] as Set<UUID>?)
-                indexingMetadataManager.markAsNeedsToBeIndexed(mapOf(entitySetId to entityKeyIds), false)
-                indexingJobs.delete(entitySet.id)
+                val propertyTypeMap = propertyTypes.getAll(entityTypes.getValue(entitySet.entityTypeId).properties)
+                val cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
+                val entityKeyIds = indexingJobs[entitySetId] ?: getNextBatch(
+                        entitySetId, cursor, cursor != LB_UUID
+                ).toSortedSet()
+
+                if (entityKeyIds.isEmpty()) {
+                    logger.info("Indexing entity set ${entitySet.name} ($entitySet.id) starting at $cursor.")
+                    backgroundIndexingService.indexEntities(entitySet, entityKeyIds, propertyTypeMap, false)
+                    indexingJobs.delete(entitySet.id)
+                    indexingProgress.delete(entitySet.id)
+                }
             } catch (ex: Exception) {
                 logger.error("Error while marking entity set as needing indexing.", ex)
             }
@@ -92,6 +116,32 @@ class IndexingService(
         }
 
         return entitiesForIndexing.size
+    }
+
+    private fun getNextBatchQuery(entitySetId: UUID, useLowerbound: Boolean): String {
+        val lowerboundSql = if (useLowerbound) {
+            "AND id > ?"
+        } else {
+            ""
+        }
+
+        return "SELECT id FROM ${ENTITY_KEY_IDS.name} WHERE entity_set_id = ? $lowerboundSql ORDER BY id LIMIT 8000"
+    }
+
+
+    private fun getNextBatch(entitySetId: UUID, cursor: UUID, useLowerbound: Boolean): PostgresIterable<UUID> {
+        return PostgresIterable(
+                Supplier {
+                    val connection = hds.connection
+                    val ps = connection.prepareStatement(getNextBatchQuery(entitySetId, useLowerbound))
+                    ps.setObject(1, entitySetId)
+                    if (useLowerbound) {
+                        ps.setObject(2, cursor)
+                    }
+                    StatementHolder(connection, ps, ps.executeQuery())
+                }, Function { ResultSetAdapters.id(it) }
+        )
+
     }
 
     fun clearIndexingJobs(): Int {
