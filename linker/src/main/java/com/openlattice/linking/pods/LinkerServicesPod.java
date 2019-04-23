@@ -165,6 +165,7 @@ public class LinkerServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
+                authorizationManager(),
                 edmAuthorizationHelper(),
                 organizationsManager(),
                 dbcs(),
