@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.admin.indexing.IndexingState
+import com.openlattice.data.storage.IndexingMetadataManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
@@ -41,7 +42,7 @@ private val logger = LoggerFactory.getLogger(IndexingService::class.java)
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 class IndexingService(
-        private val backgroundIndexingService: BackgroundIndexingService,
+        private val indexingMetadataManager: IndexingMetadataManager,
         executor: ListeningExecutorService,
         hazelcastInstance: HazelcastInstance
 ) {
@@ -61,29 +62,13 @@ class IndexingService(
         while (true) {
             try {
                 val entitySetId = indexingQueue.take()
-                indexingLock.lock()
                 val entitySet = entitySets.getValue(entitySetId)
-                val entityKeyIds = Optional.ofNullable(indexingJobs[entitySetId])
-                val propertyTypes = backgroundIndexingService.getPropertyTypeForEntityType(entitySet.entityTypeId)
-                try {
-                    entityKeyIds.ifPresentOrElse(
-                            { entityKeyIds ->
-                                backgroundIndexingService.indexEntities(
-                                        entitySet,
-                                        entityKeyIds,
-                                        propertyTypes,
-                                        false
-                                )
-                            },
-                            {
-                                backgroundIndexingService.indexEntitySet(entitySet, true)
-                            })
-                    indexingJobs.delete(entitySet.id)
-                } catch (ex: Exception) {
-                    logger.error("Error while indexing entity set ${entitySet.name} ($entitySetId)")
-                }
-            } finally {
-                indexingLock.unlock()
+                logger.info("Marking entity set ${entitySet.name} ($entitySet.id) as needing indexing.")
+                val entityKeyIds = Optional.ofNullable(indexingJobs[entitySetId] as Set<UUID>?)
+                indexingMetadataManager.markAsNeedsToBeIndexed(mapOf(entitySetId to entityKeyIds), false)
+                indexingJobs.delete(entitySet.id)
+            } catch (ex: Exception) {
+                logger.error("Error while marking entity set as needing indexing.", ex)
             }
         }
     }
@@ -113,7 +98,6 @@ class IndexingService(
         try {
             indexingLock.lock()
             val size = indexingJobs.size
-
             indexingQueue.clear()
             indexingJobs.clear()
             return size
