@@ -149,6 +149,7 @@ public class IndexerServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
+                authorizationManager(),
                 edmAuthorizationHelper(),
                 organizationsManager(),
                 dbcs(),
