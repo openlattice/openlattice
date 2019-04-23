@@ -137,6 +137,7 @@ public class IndexerPostConfigurationServicesPod {
                 entityDatastore(),
                 elasticsearchApi,
                 indexingMetadataManager(),
+                indexerConfiguration,
                 hazelcastInstance );
     }
 
