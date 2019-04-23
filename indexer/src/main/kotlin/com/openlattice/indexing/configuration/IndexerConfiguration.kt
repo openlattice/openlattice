@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
 import com.kryptnostic.rhizome.configuration.SimpleConfigurationKey
+import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 import com.openlattice.conductor.rpc.SearchConfiguration
 
 
@@ -34,6 +35,7 @@ private val key = SimpleConfigurationKey("indexer.yaml")
  * In
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@ReloadableConfiguration(uri = "indexer.yaml")
 data class IndexerConfiguration(
         @JsonProperty("search") val searchConfiguration: SearchConfiguration,
         @JsonProperty("error-reporting-email") val errorReportingEmail: String,
