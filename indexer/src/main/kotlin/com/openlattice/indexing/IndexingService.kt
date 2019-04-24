@@ -71,7 +71,10 @@ class IndexingService(
         val jobIds = indexingJobs.keys
         jobIds.removeIf(indexingQueue::contains)
         logger.info("Re-adding the following jobs that were registered but not in the queue: {}", jobIds)
-        queueForIndexing(jobIds.map { it to emptySet<UUID>() }.toMap())
+        if (jobIds.isNotEmpty()) {
+            //If jobIds is empty it will add all entity sets for indexing.
+            queueForIndexing(jobIds.map { it to emptySet<UUID>() }.toMap())
+        }
     }
 
     private val indexingWorker = executor.submit {
@@ -84,11 +87,12 @@ class IndexingService(
                         )
 
                         var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
-                        var entityKeyIds = indexingJobs[entitySetId] ?: getNextBatch(
-                                entitySetId,
-                                cursor,
-                                cursor != LB_UUID
-                        ).toSet()
+                        var entityKeyIds: Set<UUID> = indexingJobs.getValue(entitySetId)
+
+                        //An empty set of ids means all keys
+                        if (entityKeyIds.isEmpty()) {
+                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != LB_UUID).toSet()
+                        }
 
                         while (entityKeyIds.isNotEmpty()) {
                             logger.info("Indexing entity set ${entitySet.name} ($entitySet.id) starting at $cursor.")
