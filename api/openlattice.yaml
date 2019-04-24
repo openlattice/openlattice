@@ -78,15 +78,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/EDMdiff"
-  /datastore/edm/version/:
-    get:
-      summary: Returns the current entity data model version.
-      operationId: getEntityDataModelVersion
-      tags:
-        - edm
-      responses:
-        "200":
-          description: "Success"
 
   # entity sets
 
@@ -2380,9 +2371,6 @@ components:
     EDM:
       type: object
       properties:
-        version:
-          type: string
-          format: uuid
         namespaces:
           type: array
           items:
