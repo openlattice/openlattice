@@ -43,6 +43,7 @@ import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Function
 import java.util.function.Supplier
+import java.util.stream.Stream
 
 private val logger = LoggerFactory.getLogger(IndexingService::class.java)
 private val LB_UUID = UUID(0, 0)
@@ -61,7 +62,7 @@ class IndexingService(
     private val propertyTypes = hazelcastInstance.getMap<UUID, PropertyType>(HazelcastMap.PROPERTY_TYPES.name)
     private val entityTypes = hazelcastInstance.getMap<UUID, EntityType>(HazelcastMap.ENTITY_TYPES.name)
     private val indexingJobs = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.INDEXING_JOBS.name)
-    private val indexingProgress = hazelcastInstance.getMap<UUID, UUID>("")
+    private val indexingProgress = hazelcastInstance.getMap<UUID, UUID>(HazelcastMap.INDEXING_PROGRESS.name)
     private val indexingQueue = hazelcastInstance.getQueue<UUID>(HazelcastQueue.INDEXING.name)
     private val indexingLock = ReentrantLock()
 
@@ -70,31 +71,48 @@ class IndexingService(
         val jobIds = indexingJobs.keys
         jobIds.removeIf(indexingQueue::contains)
         logger.info("Re-adding the following jobs that were registered but not in the queue: {}", jobIds)
-
         queueForIndexing(jobIds.map { it to emptySet<UUID>() }.toMap())
     }
 
     private val indexingWorker = executor.submit {
-        while (true) {
-            try {
-                val entitySetId = indexingQueue.take()
-                val entitySet = entitySets.getValue(entitySetId)
-                val propertyTypeMap = propertyTypes.getAll(entityTypes.getValue(entitySet.entityTypeId).properties)
-                val cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
-                val entityKeyIds = indexingJobs[entitySetId] ?: getNextBatch(
-                        entitySetId, cursor, cursor != LB_UUID
-                ).toSortedSet()
+        Stream.generate { indexingQueue.take() }
+                .parallel().forEach { entitySetId ->
+                    try {
+                        val entitySet = entitySets.getValue(entitySetId)
+                        val propertyTypeMap = propertyTypes.getAll(
+                                entityTypes.getValue(entitySet.entityTypeId).properties
+                        )
 
-                if (entityKeyIds.isEmpty()) {
-                    logger.info("Indexing entity set ${entitySet.name} ($entitySet.id) starting at $cursor.")
-                    backgroundIndexingService.indexEntities(entitySet, entityKeyIds, propertyTypeMap, false)
-                    indexingJobs.delete(entitySet.id)
-                    indexingProgress.delete(entitySet.id)
+                        var cursor = indexingProgress.getOrPut(entitySetId) { LB_UUID }
+                        var entityKeyIds = indexingJobs[entitySetId] ?: getNextBatch(
+                                entitySetId,
+                                cursor,
+                                cursor != LB_UUID
+                        ).toSet()
+
+                        while (entityKeyIds.isNotEmpty()) {
+                            logger.info("Indexing entity set ${entitySet.name} ($entitySet.id) starting at $cursor.")
+                            backgroundIndexingService.indexEntities(entitySet, entityKeyIds, propertyTypeMap, false)
+                            val cursor = entityKeyIds.max()!!
+
+                            indexingProgress.set(entitySetId, cursor)
+
+                            entityKeyIds = getNextBatch(entitySetId, cursor, cursor != LB_UUID).toSortedSet()
+                        }
+
+                        //We're done re-indexing this set.
+                        try {
+                            indexingLock.lock()
+                            indexingJobs.delete(entitySetId)
+                            indexingProgress.delete(entitySetId)
+                        } finally{
+                            indexingLock.unlock()
+                        }
+                    } catch (ex: Exception) {
+                        logger.error("Error while marking entity set as needing indexing.", ex)
+                    }
                 }
-            } catch (ex: Exception) {
-                logger.error("Error while marking entity set as needing indexing.", ex)
-            }
-        }
+
     }
 
     fun getIndexingState(): IndexingState {
