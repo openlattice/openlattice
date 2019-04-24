@@ -125,7 +125,7 @@ public class DataTables {
                 .name( quote( idxPrefix + "_id_idx" ) )
                 .ifNotExists();
 
-        if ( !propertyType.getPostgresIndexType().equals( IndexMethod.NONE ) ) {
+        if ( !propertyType.getPostgresIndexType().equals( IndexType.NONE ) ) {
             PostgresIndexDefinition valueIndex = new PostgresColumnsIndexDefinition( ptd, valueColumn )
                     .method( propertyType.getPostgresIndexType() )
                     .name( quote( idxPrefix + "_value_idx" ) )
@@ -147,7 +147,7 @@ public class DataTables {
         //in a specific version seems like a rare operations
         PostgresIndexDefinition versionsIndex = new PostgresColumnsIndexDefinition( ptd, VERSIONS )
                 .name( quote( idxPrefix + "_versions_idx" ) )
-                .method( IndexMethod.GIN )
+                .method( IndexType.GIN )
                 .ifNotExists();
 
         PostgresIndexDefinition lastWriteIndex = new PostgresColumnsIndexDefinition( ptd, LAST_WRITE )

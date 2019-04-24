@@ -70,7 +70,6 @@ import com.openlattice.edm.events.EntitySetDeletedEvent;
 import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
 import com.openlattice.edm.events.EntityTypeCreatedEvent;
 import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.LinkedEntitySetAddedEvent;
 import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
 import com.openlattice.edm.events.PropertyTypeCreatedEvent;
 import com.openlattice.edm.events.PropertyTypeDeletedEvent;
@@ -455,10 +454,6 @@ public class EdmService implements EdmManager {
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
         markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
 
-        eventBus.post( new LinkedEntitySetAddedEvent(
-                updatedLinkingEntitySet,
-                newLinkedEntitySets,
-                Lists.newArrayList( getPropertyTypesForEntitySet( linkingEntitySetId ).values() ) ) );
         return updatedLinkingEntitySet.getLinkedEntitySets().size() - startSize;
     }
 
