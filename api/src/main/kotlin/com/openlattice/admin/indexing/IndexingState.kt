@@ -31,6 +31,8 @@ import java.util.*
  */
 data class IndexingState(
         @JsonProperty(SerializationConstants.INDEXING) val indexing: Map<UUID, Set<UUID>>,
+        @JsonProperty(SerializationConstants.QUEUE) val queue: Iterable<UUID>,
         @JsonProperty(SerializationConstants.CURRENT_ENTITY_SET) val currentEntitySet: UUID?,
+        @JsonProperty(SerializationConstants.QUEUE_SIZE) val queueSize: Int,
         @JsonProperty(SerializationConstants.COUNT) val jobCount : Int = indexing.size
 )
