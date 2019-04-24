@@ -100,12 +100,13 @@ class IndexingService(
                             entityKeyIds = getNextBatch(entitySetId, cursor, cursor != LB_UUID).toSortedSet()
                         }
 
+                        logger.info("Finished indexing entity set $entitySetId")
                         //We're done re-indexing this set.
                         try {
                             indexingLock.lock()
                             indexingJobs.delete(entitySetId)
                             indexingProgress.delete(entitySetId)
-                        } finally{
+                        } finally {
                             indexingLock.unlock()
                         }
                     } catch (ex: Exception) {
@@ -116,7 +117,12 @@ class IndexingService(
     }
 
     fun getIndexingState(): IndexingState {
-        return IndexingState(indexingJobs.getAll(indexingJobs.keys), indexingQueue.peek())
+        return IndexingState(
+                indexingJobs.getAll(indexingJobs.keys),
+                indexingQueue,
+                indexingQueue.peek(),
+                indexingQueue.size
+        )
     }
 
     fun queueForIndexing(entities: Map<UUID, Set<UUID>>): Int {
