@@ -113,24 +113,16 @@ import com.openlattice.postgres.PostgresTablesPod;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.mapstores.EntityTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -1773,6 +1765,22 @@ public class EdmService implements EdmManager {
     @Override
     public AuditRecordEntitySetsManager getAuditRecordEntitySetsManager() {
         return aresManager;
+    }
+
+    @Override
+    public Map<UUID, Integer> countEntitySetsOfEntityTypes( Set<UUID> entityTypeIds ) {
+        Map<UUID, Integer> entityTypeCounts = entitySets
+                .values( Predicates.in( "entityTypeId", entityTypeIds.toArray( new UUID[] {} ) ) ).stream()
+                .collect( Collectors.groupingBy( EntitySet::getEntityTypeId ) ).entrySet().stream()
+                .collect( Collectors.toMap( Map.Entry::getKey, entry -> entry.getValue().size() ) );
+
+        entityTypeIds.forEach( id -> {
+            if ( !entityTypeCounts.containsKey( id ) ) {
+                entityTypeCounts.put( id, 0 );
+            }
+        } );
+
+        return entityTypeCounts;
     }
 
 }
