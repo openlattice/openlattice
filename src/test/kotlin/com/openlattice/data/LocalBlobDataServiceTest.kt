@@ -23,7 +23,7 @@ class LocalBlobDataServiceTest {
         @JvmStatic
         fun setUp() {
             val rhizomeConfiguration = ConfigurationService.StaticLoader.loadConfiguration(RhizomeConfiguration::class.java)
-            val hc = HikariConfig(rhizomeConfiguration?.hikariConfiguration?.get())
+            val hc = HikariConfig(rhizomeConfiguration?.postgresConfiguration?.get()?.hikariConfiguration)
             hds = HikariDataSource(hc)
             val byteBlobDataManager = LocalBlobDataService(hds)
             this.byteBlobDataManager = byteBlobDataManager

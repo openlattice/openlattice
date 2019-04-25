@@ -104,8 +104,9 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         logger.info("Refreshing user list from Auth0.")
         try {
             var page = 0
-            var pageOfUsers: Set<Auth0UserBasic>? = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
-            while (pageOfUsers != null && !pageOfUsers.isEmpty()) {
+            var pageOfUsers: Set<Auth0UserBasic> = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)!!
+            check( pageOfUsers.isNotEmpty() || users.isNotEmpty()) { "No users found."}
+            while (pageOfUsers.isNotEmpty()) {
                 logger.info("Loading page {} of {} auth0 users", page, pageOfUsers.size)
                 pageOfUsers
                         .parallelStream()
@@ -147,7 +148,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
 
         val removeUsersPredicate = Predicates.lessThan(
                 UserMapstore.LOAD_TIME_INDEX,
-                OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
+                OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.MILLIS)
         ) as Predicate<String, Auth0UserBasic>?
 
         /*
