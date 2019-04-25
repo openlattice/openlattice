@@ -71,7 +71,7 @@ public class EntityType extends ComplexType {
         Preconditions
                 .checkArgument( properties.containsAll( key ) || baseType.isPresent(),
                         "Properties must include all the key property types" );
-        Preconditions.checkArgument( shards.isEmpty() || shards.get() > 0 || shards.get() < 20 );
+        Preconditions.checkArgument( shards.isEmpty() || ( shards.get() > 0 && shards.get() < 20 ) );
         this.baseType = baseType;
         this.shards = shards.orElse( DEFAULT_SHARDS );
     }
