@@ -219,7 +219,7 @@ public class PostgresEdmManager implements DbEdmManager {
                         .getName() +
                         " FROM " + IDS.getName() +
                         " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName()
-                        + " IN (SELECT UNNEST( (?)::uuid[] )) " +
+                        + " = ANY( ? ) " +
                         " GROUP BY " + ENTITY_SET_ID.getName();
 
         try ( Connection connection = hds.getConnection();
