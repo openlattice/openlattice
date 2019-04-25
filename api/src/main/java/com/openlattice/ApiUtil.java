@@ -58,7 +58,8 @@ public class ApiUtil {
                 .map( ApiUtil::toUtf8Bytes )
                 .map( encoder::encodeToString )
                 .collect( Collectors.joining( "," ) );
-        return ( entityId.length() == 0 ) ? UUID.randomUUID().toString() : entityId;
+        Preconditions.checkArgument( entityId.length() > 0, "Entity ids cannot be empty strings" );
+        return entityId;
     }
 
     public static String dbQuote( String s ) {
