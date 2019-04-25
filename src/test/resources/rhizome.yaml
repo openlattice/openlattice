@@ -22,17 +22,10 @@ hazelcast:
     seed-nodes: 
         - "localhost"
 
-hikari:
-    jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
-    #"jdbc:postgresql://wonderwoman.openlattice.com:30001,captainamerica.openlattice.com:30002/openlattice?ssl=true"
-    #dataSourceClassName: "org.postgresql.ds.PGSimpleDataSource"
-    username: "oltest"
-    #username: "openlattice"
-    password: "test"
-    #dataSource.ssl: true
-    #dataSource.sslMode: "verify-full"
-    #dataSource.user: "mtamayo"
-    #dataSource.databaseName: "openlattice"
-    maximumPoolSize: 50
-    #20 minutes
-    connectionTimeout: 12000000
+postgres:
+    hikari:
+        jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
+        username: "oltest"
+        password: "test"
+        maximumPoolSize: 50
+        connectionTimeout: 12000000 #20 minutes
