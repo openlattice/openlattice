@@ -307,7 +307,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
                     authorizedPropertyTypesOfEntitySets.put(
                             linkingEntitySet.getId(),
-                            authzHelper.getAuthorizedPropertiesOnLinkingEntitySet(
+                            authzHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
                                     linkingEntitySet,
                                     EnumSet.of( Permission.MATERIALIZE ),
                                     Set.of( organizationPrincipal.getPrincipal() ) ) );
@@ -590,7 +590,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 Set.of(principal.getPrincipal()),
                 EnumSet.of( Permission.MATERIALIZE ) ) ) {
             throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
-                    "principal" + principal.getPrincipal().getId()  + " ." );
+                    "principal " + principal.getPrincipal().getId()  + " ." );
         }
 
         return aclKey;
