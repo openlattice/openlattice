@@ -3,6 +3,7 @@ package com.openlattice.search
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
 import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
@@ -38,6 +39,7 @@ data class PersistentSearchMessengerTaskDependencies(
         val hds: HikariDataSource,
         val principalsManager: SecurePrincipalsManager,
         val authorizationManager: AuthorizationManager,
+        val authorizationHelper: EdmAuthorizationHelper,
         val searchService: SearchService,
         val mailServiceClient: MailServiceClient,
         val mapboxToken: String,
@@ -51,6 +53,7 @@ data class PersistentSearchMessengerTaskDependencies(
             hds: HikariDataSource,
             principalsManager: SecurePrincipalsManager,
             authorizationManager: AuthorizationManager,
+            authorizationHelper: EdmAuthorizationHelper,
             searchService: SearchService,
             mailServiceClient: MailServiceClient,
             mapboxToken: String
@@ -58,6 +61,7 @@ data class PersistentSearchMessengerTaskDependencies(
             hds,
             principalsManager,
             authorizationManager,
+            authorizationHelper,
             searchService,
             mailServiceClient,
             mapboxToken,

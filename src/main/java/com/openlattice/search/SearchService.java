@@ -98,9 +98,6 @@ public class SearchService {
     @Inject
     private IndexingMetadataManager indexingMetadataManager;
 
-    @Inject
-    private EdmAuthorizationHelper authorizationHelper;
-
     public SearchService( EventBus eventBus ) {
         eventBus.register( this );
     }
@@ -133,37 +130,22 @@ public class SearchService {
     @Timed
     public DataSearchResult executeSearch(
             SearchConstraints searchConstraints,
-            Set<Principal> principals ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet ) {
 
         final Set<UUID> entitySetIds = Sets.newHashSet( Arrays.asList( searchConstraints.getEntitySetIds() ) );
         final Map<UUID, EntitySet> entitySetsById = dataModelService.getEntitySetsAsMap( entitySetIds );
-        final var groupedEntitySets = entitySetsById.values().stream()
-                .collect( Collectors.groupingBy( EntitySet::isLinking ) );
+        final var linkingEntitySets = entitySetsById.values().stream()
+                .filter( EntitySet::isLinking )
+                .collect( Collectors.toMap(
+                        EntitySet::getId,
+                        linkingEntitySet -> DelegatedUUIDSet.wrap( linkingEntitySet.getLinkedEntitySets() ) ) );
 
-        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authorizationHelper
-                .getAuthorizedPropertiesOnEntitySets(
-                        groupedEntitySets.getOrDefault( false, Lists.newArrayList() ).stream()
-                                .map( EntitySet::getId ).collect( Collectors.toSet() ),
-                        READ_PERMISSION,
-                        principals );
-
-        final Map<UUID, DelegatedUUIDSet> linkingEntitySets = Maps.newHashMap();
-        groupedEntitySets.getOrDefault( true, Lists.newArrayList() ).forEach( linkingEntitySet -> {
-                    final var linkingEntitySetId = linkingEntitySet.getId();
-                    linkingEntitySets.put( linkingEntitySetId,
-                            DelegatedUUIDSet.wrap( linkingEntitySet.getLinkedEntitySets() ) );
-                    // authorized properties should be the same within 1 linking entity set for each normal entity set
-                    authorizedPropertyTypesByEntitySet.put( linkingEntitySetId,
-                            authorizationHelper.getAuthorizedPropertiesOnLinkingEntitySet( linkingEntitySet,
-                                    READ_PERMISSION ) );
-                }
-        );
 
         final Map<UUID, DelegatedUUIDSet> authorizedPropertiesByEntitySet = authorizedPropertyTypesByEntitySet
                 .entrySet().stream().collect( Collectors.toMap( Map.Entry::getKey,
                         entry -> DelegatedUUIDSet.wrap( entry.getValue().keySet() ) ) );
 
-        if ( authorizedPropertiesByEntitySet.values().isEmpty() ) {
+        if ( authorizedPropertiesByEntitySet.isEmpty() ) {
             return new DataSearchResult( 0, Lists.newArrayList() );
         }
 
@@ -512,18 +494,19 @@ public class SearchService {
         Set<UUID> allBaseEntitySetIds = Sets.newHashSet( entitySetIds );
 
         if ( linkingEntitySets.size() > 0 ) {
-            entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingIds( filter.getEntityKeyIds() ).stream()
+            entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingIds( entityKeyIds ).stream()
                     .collect( Collectors.toMap( Pair::getKey, Pair::getValue ) );
-            entityKeyIdsByLinkingId.values().forEach( ids -> entityKeyIds.addAll( ids ) );
+            entityKeyIdsByLinkingId.values().forEach( entityKeyIds::addAll );
 
-            Set<UUID> authorizedLinkedEntitySetIds = authorizations
-                    .accessChecksForPrincipals( linkingEntitySets.stream()
-                            .flatMap( es -> es.getLinkedEntitySets().stream() )
-                            .map( esId -> new AccessCheck( new AclKey( esId ), READ_PERMISSION ) )
-                            .collect( Collectors.toSet() ), principals )
-                    .filter( auth -> auth.getPermissions().get( Permission.READ ) )
-                    .map( auth -> auth.getAclKey().get( 0 ) )
+            // normal entity sets within 1 linking entity set are only authorized if all of them is authorized
+            var authorizedLinkedEntitySetIds = linkingEntitySets.stream()
+                    .map( EntitySet::getLinkedEntitySets )
+                    .filter( esIds -> esIds.stream()
+                            .allMatch( esId -> authorizations
+                                    .checkIfHasPermissions( new AclKey( esId ), principals, READ_PERMISSION ) ) )
+                    .flatMap( Set::stream )
                     .collect( Collectors.toSet() );
+
             allBaseEntitySetIds.addAll( authorizedLinkedEntitySetIds );
         }
 
