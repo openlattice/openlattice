@@ -474,6 +474,7 @@ public class SearchService {
             entityKeyIdsByLinkingId = getEntityKeyIdsByLinkingIds( entityKeyIds ).stream()
                     .collect( Collectors.toMap( Pair::getKey, Pair::getValue ) );
             entityKeyIdsByLinkingId.values().forEach( entityKeyIds::addAll );
+            entityKeyIds.removeAll( entityKeyIdsByLinkingId.keySet() ); // remove linking ids
 
             // normal entity sets within 1 linking entity set are only authorized if all of them is authorized
             var authorizedLinkedEntitySetIds = linkingEntitySets.stream()
@@ -601,12 +602,15 @@ public class SearchService {
         logger.info( "Neighbor entity details collected in {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
 
         /* Map linkingIds to the collection of neighbors for all entityKeyIds in the cluster */
-        entityKeyIdsByLinkingId.entrySet().forEach( entry -> entityNeighbors.put( entry.getKey(),
-                entry.getValue().stream()
-                        .flatMap( entityKeyId -> entityNeighbors.getOrDefault( entityKeyId, Lists.newArrayList() )
-                                .stream() ).collect( Collectors.toList() ) ) );
+        entityKeyIdsByLinkingId.forEach( (linkingId, normalEntityKeyIds) ->
+            entityNeighbors.put( linkingId,
+                    normalEntityKeyIds.stream()
+                            .flatMap( entityKeyId -> entityNeighbors
+                                    .getOrDefault( entityKeyId, Lists.newArrayList() ).stream() )
+                            .collect( Collectors.toList() ) )
+        );
 
-        entityKeyIds.removeIf( entityKeyId -> !filter.getEntityKeyIds().contains( entityKeyId ) );
+        entityNeighbors.entrySet().removeIf( entry -> !filter.getEntityKeyIds().contains( entry.getKey() ) );
 
         logger.info( "Finished entity neighbor search in {} ms", sw2.elapsed( TimeUnit.MILLISECONDS ) );
         return entityNeighbors;
@@ -768,7 +772,7 @@ public class SearchService {
 
         }
 
-        logger.info( "Reduced entity neighbor search took {}", sw1.elapsed( TimeUnit.MILLISECONDS ) );
+        logger.info( "Reduced entity neighbor search took {} ms", sw1.elapsed( TimeUnit.MILLISECONDS ) );
 
         return neighbors;
     }
