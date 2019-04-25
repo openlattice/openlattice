@@ -40,6 +40,6 @@ interface AdminApi {
     fun getUserPrincipals(@Path(ID) principalId: String): Set<Principal>
 
     @POST(BASE + ENTITY_SETS + COUNT)
-    fun countEntitySetsOfEntityTypes(@Body entityTypeIds: Set<UUID>) :Map<UUID, Int>
+    fun countEntitySetsOfEntityTypes(@Body entityTypeIds: Set<UUID>) :Map<UUID, Long>
 
 }
