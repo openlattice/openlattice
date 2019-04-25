@@ -53,7 +53,6 @@ import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
@@ -73,6 +72,7 @@ class AssemblerConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration,
         private val hds: HikariDataSource,
         private val securePrincipalsManager: SecurePrincipalsManager,
+        private val authorizationManager: AuthorizationManager,
         private val edmAuthorizationHelper: EdmAuthorizationHelper,
         private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
@@ -99,6 +99,7 @@ class AssemblerConnectionManager(
         @JvmStatic val PRODUCTION_FOREIGN_SCHEMA = "prod"
         @JvmStatic val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
         @JvmStatic val PUBLIC_SCHEMA = "public"
+
         @JvmStatic val PRODUCTION_SERVER = "olprod"
     }
 
@@ -367,28 +368,38 @@ class AssemblerConnectionManager(
             connection: Connection,
             tableName: String,
             entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            materializedPropertyTypes: Map<UUID, PropertyType>
     ): IntArray {
         val entitySet = entitySets.getValue(entitySetId)
-        val permissions = EnumSet.of(Permission.READ)
 
         // collect all principals of type user, role, which have read access on entityset
         val authorizedPrincipals = securePrincipalsManager
-                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), permissions)
+                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), EdmAuthorizationHelper.READ_PERMISSION)
                 .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
                 .toSet()
 
         val propertyCheckFunction: (Principal) -> (Map<UUID, PropertyType>) = if (entitySet.isLinking) {
             { principal ->
-                edmAuthorizationHelper.getAuthorizedPropertiesOnLinkingEntitySet(
-                        entitySet, permissions, setOf(principal))
-                        .filter { authorizedPropertyTypes.keys.contains(it.key) }
+                // only grant select on authorized columns if principal has read access on every normal entity set
+                // within the linking entity set
+                if (entitySet.linkedEntitySets.all {
+                            authorizationManager.checkIfHasPermissions(
+                                    AclKey(it),
+                                    setOf(principal),
+                                    EdmAuthorizationHelper.READ_PERMISSION)
+                        }) {
+                    edmAuthorizationHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
+                            entitySet, EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))
+                            .filter { materializedPropertyTypes.keys.contains(it.key) }
+                } else {
+                    mapOf()
+                }
             }
         } else {
             { principal ->
                 edmAuthorizationHelper.getAuthorizedPropertiesOnEntitySets(
-                        setOf(entitySetId), permissions, setOf(principal))[entitySetId]!!
-                        .filter { authorizedPropertyTypes.keys.contains(it.key) }
+                        setOf(entitySetId), EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))[entitySetId]!!
+                        .filter { materializedPropertyTypes.keys.contains(it.key) }
             }
         }
 
