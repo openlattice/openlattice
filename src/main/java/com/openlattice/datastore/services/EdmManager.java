@@ -34,7 +34,6 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import java.util.Collection;
@@ -188,17 +187,7 @@ public interface EdmManager {
 
     EntityType getEntityTypeByEntitySetId( UUID entitySetId );
 
-    void createComplexTypeIfNotExists( ComplexType complexType );
-
-    Stream<ComplexType> getComplexTypes();
-
-    ComplexType getComplexType( UUID complexTypeId );
-
-    void deleteComplexType( UUID complexTypeId );
-
     Set<EntityType> getEntityTypeHierarchy( UUID entityTypeId );
-
-    Set<ComplexType> getComplexTypeHierarchy( UUID complexTypeId );
 
     UUID createAssociationType( AssociationType associationType, UUID entityTypeId );
 
