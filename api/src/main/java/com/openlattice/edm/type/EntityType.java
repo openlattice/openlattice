@@ -35,6 +35,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class EntityType extends ComplexType {
     private static final int DEFAULT_SHARDS = 5;
+    private static final int MAX_SHARDS     = 20;
 
     private final     LinkedHashSet<UUID> key;
     private final     Optional<UUID>      baseType;
@@ -71,9 +72,10 @@ public class EntityType extends ComplexType {
         Preconditions
                 .checkArgument( properties.containsAll( key ) || baseType.isPresent(),
                         "Properties must include all the key property types" );
-        Preconditions.checkArgument( shards.isEmpty() || shards.get() > 0 || shards.get() < 20 );
-        this.baseType = baseType;
         this.shards = shards.orElse( DEFAULT_SHARDS );
+        Preconditions.checkArgument( this.shards > 0 && this.shards < MAX_SHARDS,
+                "The number of shards must be between 0 and " + MAX_SHARDS );
+        this.baseType = baseType;
     }
 
     public EntityType(
