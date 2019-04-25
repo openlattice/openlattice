@@ -586,50 +586,6 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
     }
 
     @Override
-    @GetMapping(
-            path = COMPLEX_TYPE_PATH,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public Iterable<ComplexType> getComplexTypes() {
-        return modelService.getComplexTypes()::iterator;
-    }
-
-    @Override
-    @PostMapping(
-            path = COMPLEX_TYPE_PATH,
-            consumes = MediaType.APPLICATION_JSON_VALUE )
-    public UUID createComplexType( @RequestBody ComplexType complexType ) {
-        ensureAdminAccess();
-        modelService.createComplexTypeIfNotExists( complexType );
-        return complexType.getId();
-    }
-
-    @Override
-    @GetMapping(
-            path = COMPLEX_TYPE_PATH + ID_PATH,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public ComplexType getComplexType( @PathVariable( ID ) UUID complexTypeId ) {
-        return modelService.getComplexType( complexTypeId );
-    }
-
-    @Override
-    @GetMapping(
-            path = COMPLEX_TYPE_PATH + ID_PATH + HIERARCHY_PATH,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public Set<ComplexType> getComplexTypeHierarchy( @PathVariable( ID ) UUID complexTypeId ) {
-        return modelService.getComplexTypeHierarchy( complexTypeId );
-    }
-
-    @Override
-    @DeleteMapping(
-            path = COMPLEX_TYPE_PATH + ID_PATH,
-            produces = MediaType.APPLICATION_JSON_VALUE )
-    public Void deleteComplexType( @PathVariable( ID ) UUID complexTypeId ) {
-        ensureAdminAccess();
-        modelService.deleteComplexType( complexTypeId );
-        return null;
-    }
-
-    @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH,
             method = RequestMethod.POST,
