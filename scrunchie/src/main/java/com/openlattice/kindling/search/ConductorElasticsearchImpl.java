@@ -772,8 +772,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
      */
     private static Map<UUID, Map<String, Float>> getFieldsMap(
             UUID entitySetId,
-            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
-            Optional<Set<UUID>> linkedEntitySets ) {
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
         Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
         authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( propertyTypeId -> {
             String fieldName = getFieldName( propertyTypeId );
@@ -984,14 +983,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
             UUID entitySetId = searchConstraints.getEntitySetIds()[ i ];
 
-            Optional<Set<UUID>> normalEntitySets = Optional.ofNullable( linkingEntitySets.get( entitySetId ) );
+            Set<UUID> normalEntitySets = linkingEntitySets.getOrDefault(
+                    entitySetId,  DelegatedUUIDSet.wrap(  ImmutableSet.of( entitySetId ) ) );
 
             Map<UUID, Map<String, Float>> authorizedFieldsMap =
-                    getFieldsMap( entitySetId, authorizedPropertyTypesByEntitySet, normalEntitySets );
+                    getFieldsMap( entitySetId, authorizedPropertyTypesByEntitySet );
 
-            QueryBuilder searchQuery = getQueryForSearch( normalEntitySets.orElse( ImmutableSet.of( entitySetId ) ),
-                    searchConstraints,
-                    authorizedFieldsMap );
+            QueryBuilder searchQuery = getQueryForSearch( normalEntitySets , searchConstraints, authorizedFieldsMap );
 
             if ( searchQuery != null ) {
 
