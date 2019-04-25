@@ -8,7 +8,7 @@ import com.openlattice.authorization.Principal
 import com.openlattice.authorization.Principals
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.hazelcast.HazelcastMap
-import com.openlattice.organizations.PrincipalSet
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -17,6 +17,10 @@ import javax.inject.Inject
 @RestController
 @RequestMapping(CONTROLLER)
 class AdminController : AdminApi, AuthorizingComponent {
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(AdminController::class.java)!!
+    }
 
     @Inject
     private lateinit var auditRecordEntitySetsManager: AuditRecordEntitySetsManager
@@ -34,7 +38,14 @@ class AdminController : AdminApi, AuthorizingComponent {
     @GetMapping(value = [RELOAD_CACHE])
     override fun reloadCache() {
         ensureAdminAccess()
-        HazelcastMap.values().forEach { hazelcast.getMap<Any, Any>(it.name).loadAll(true) }
+        HazelcastMap.values().forEach {
+            logger.info("Reloading map ${it.name}")
+            try {
+                hazelcast.getMap<Any, Any>(it.name).loadAll(true)
+            } catch (e: IllegalArgumentException) {
+                logger.error("Unable to reload map ${it.name}", e)
+            }
+        }
     }
 
     @GetMapping(value = [RELOAD_CACHE + NAME_PATH])
