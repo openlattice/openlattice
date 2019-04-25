@@ -85,7 +85,6 @@ import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.edm.types.processors.AddDstEntityTypesToAssociationTypeProcessor;
@@ -140,7 +139,6 @@ public class EdmService implements EdmManager {
     private static final Logger logger = LoggerFactory.getLogger( EdmService.class );
 
     private final IMap<UUID, PropertyType>                              propertyTypes;
-    private final IMap<UUID, ComplexType>                               complexTypes;
     private final IMap<UUID, EntityType>                                entityTypes;
     private final IMap<UUID, EntitySet>                                 entitySets;
     private final IMap<String, UUID>                                    aclKeys;
@@ -182,7 +180,6 @@ public class EdmService implements EdmManager {
         this.hazelcastInstance = hazelcastInstance;
         this.hds = hds;
         this.propertyTypes = hazelcastInstance.getMap( HazelcastMap.PROPERTY_TYPES.name() );
-        this.complexTypes = hazelcastInstance.getMap( HazelcastMap.COMPLEX_TYPES.name() );
         this.entityTypes = hazelcastInstance.getMap( HazelcastMap.ENTITY_TYPES.name() );
         this.entitySets = hazelcastInstance.getMap( HazelcastMap.ENTITY_SETS.name() );
         this.names = hazelcastInstance.getMap( HazelcastMap.NAMES.name() );
@@ -294,11 +291,6 @@ public class EdmService implements EdmManager {
     @Override
     public void forceDeletePropertyType( UUID propertyTypeId ) {
         final var entityTypes = getEntityTypesContainPropertyType( propertyTypeId );
-        entityTypes.forEach( et -> Preconditions
-                .checkArgument( !et.getKey().contains( propertyTypeId ) || et.getKey().size() > 1,
-                        "Property type {} cannot be deleted because entity type {} will be left without a primary key",
-                        propertyTypeId,
-                        et.getId() ) );
         entityTypes.forEach( et -> {
             forceRemovePropertyTypesFromEntityType( et.getId(),
                     ImmutableSet.of( propertyTypeId ) );
@@ -627,33 +619,6 @@ public class EdmService implements EdmManager {
         return getTypeHierarchy( entityTypeId, HazelcastUtils.getter( entityTypes ), EntityType::getBaseType );
     }
 
-    @Override
-    public void createComplexTypeIfNotExists( ComplexType complexType ) {
-        aclKeyReservations.reserveIdAndValidateType( complexType );
-        complexTypes.putIfAbsent( complexType.getId(), complexType );
-    }
-
-    @Override
-    public Stream<ComplexType> getComplexTypes() {
-        /*
-         * An assumption worth stating here is that we are going to periodically run health checks the verify the
-         * consistency of the database such that no null values will ever be present.
-         */
-        return entityTypeManager.getComplexTypeIds()
-                .parallel()
-                .map( complexTypes::get );
-    }
-
-    @Override
-    public ComplexType getComplexType( UUID complexTypeId ) {
-        return complexTypes.get( complexTypeId );
-    }
-
-    @Override
-    public Set<ComplexType> getComplexTypeHierarchy( UUID complexTypeId ) {
-        return getTypeHierarchy( complexTypeId, HazelcastUtils.getter( complexTypes ), ComplexType::getBaseType );
-    }
-
     private <T> Set<T> getTypeHierarchy(
             UUID enumTypeId,
             Function<UUID, T> typeGetter,
@@ -672,11 +637,6 @@ public class EdmService implements EdmManager {
         } while ( baseType.isPresent() );
 
         return typeHierarchy;
-    }
-
-    @Override
-    public void deleteComplexType( UUID complexTypeId ) {
-        complexTypes.delete( complexTypeId );
     }
 
     @Override
@@ -780,7 +740,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void addPropertyTypesToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
 
         List<PropertyType> newPropertyTypes = Lists.newArrayList( propertyTypes.getAll( propertyTypeIds ).values() );
         Stream<UUID> childrenIds = entityTypeManager.getEntityTypeChildrenIdsDeep( entityTypeId );
@@ -855,7 +815,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void removePropertyTypesFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
 
         List<UUID> childrenIds = entityTypeManager.getEntityTypeChildrenIdsDeep( entityTypeId )
                 .collect( Collectors.<UUID>toList() );
@@ -871,7 +831,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void forceRemovePropertyTypesFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
         EntityType entityType = getEntityType( entityTypeId );
 
         if ( entityType.getBaseType().isPresent() ) {
@@ -879,10 +839,6 @@ public class EdmService implements EdmManager {
             Preconditions.checkArgument( Sets.intersection( propertyTypeIds, baseType.getProperties() ).isEmpty(),
                     "Inherited property types cannot be removed." );
         }
-        Preconditions.checkArgument( !Sets.difference( entityType.getKey(), propertyTypeIds ).isEmpty(),
-                "Removing property types {} from entity type {} will leave it with no primary keys",
-                propertyTypeIds,
-                entityType.getId() );
 
         List<UUID> childrenIds = entityTypeManager
                 .getEntityTypeChildrenIdsDeep( entityTypeId )
@@ -926,7 +882,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void addPrimaryKeysToEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
         EntityType entityType = entityTypes.get( entityTypeId );
         checkNotNull( entityType, "No entity type with id {}", entityTypeId );
         Preconditions.checkArgument( entityType.getProperties().containsAll( propertyTypeIds ),
@@ -944,7 +900,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public void removePrimaryKeysFromEntityType( UUID entityTypeId, Set<UUID> propertyTypeIds ) {
-        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exists." );
+        Preconditions.checkArgument( checkPropertyTypesExist( propertyTypeIds ), "Some properties do not exist." );
         EntityType entityType = entityTypes.get( entityTypeId );
         checkNotNull( entityType, "No entity type with id {}", entityTypeId );
         Preconditions.checkArgument( entityType.getProperties().containsAll( propertyTypeIds ),

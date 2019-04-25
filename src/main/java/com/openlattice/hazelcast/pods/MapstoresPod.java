@@ -37,23 +37,14 @@ import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
 import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.AceValue;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.PostgresUserApi;
-import com.openlattice.authorization.SecurablePrincipal;
-import com.openlattice.authorization.mapstores.PermissionMapstore;
-import com.openlattice.authorization.mapstores.PostgresCredentialMapstore;
-import com.openlattice.authorization.mapstores.PrincipalMapstore;
-import com.openlattice.authorization.mapstores.PrincipalTreesMapstore;
-import com.openlattice.authorization.mapstores.UserMapstore;
+import com.openlattice.authorization.*;
+import com.openlattice.authorization.mapstores.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.ids.IdGenerationMapstore;
@@ -67,18 +58,19 @@ import com.openlattice.requests.Status;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
 import com.zaxxer.hikari.HikariDataSource;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.UUID;
-import javax.inject.Inject;
 import org.jdbi.v3.core.Jdbi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+
+import javax.inject.Inject;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.UUID;
 
 @Configuration
 @Import( { PostgresPod.class, Auth0Pod.class } )
@@ -141,11 +133,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, EntityType> entityTypeMapstore() {
         return new EntityTypeMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, ComplexType> complexTypeMapstore() {
-        return new ComplexTypeMapstore( hikariDataSource );
     }
 
     @Bean
