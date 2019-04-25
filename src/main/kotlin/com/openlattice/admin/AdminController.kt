@@ -6,7 +6,7 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principal
 import com.openlattice.authorization.Principals
-import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.HazelcastMap
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -32,7 +32,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     private lateinit var hazelcast: HazelcastInstance
 
     @Inject
-    private lateinit var edmManager: EdmManager
+    private lateinit var postgresEdmManager: PostgresEdmManager
 
 
     @GetMapping(value = [RELOAD_CACHE])
@@ -62,9 +62,9 @@ class AdminController : AdminApi, AuthorizingComponent {
 
     @PostMapping(value = [ENTITY_SETS + COUNT], consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE])
-    override fun countEntitySetsOfEntityTypes(@RequestBody entityTypeIds: Set<UUID>): Map<UUID, Int> {
+    override fun countEntitySetsOfEntityTypes(@RequestBody entityTypeIds: Set<UUID>): Map<UUID, Long> {
         ensureAdminAccess()
-        return edmManager.countEntitySetsOfEntityTypes(entityTypeIds)
+        return postgresEdmManager.countEntitySetsOfEntityTypes(entityTypeIds)
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
