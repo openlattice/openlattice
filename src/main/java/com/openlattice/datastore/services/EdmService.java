@@ -1767,20 +1767,4 @@ public class EdmService implements EdmManager {
         return aresManager;
     }
 
-    @Override
-    public Map<UUID, Integer> countEntitySetsOfEntityTypes( Set<UUID> entityTypeIds ) {
-        Map<UUID, Integer> entityTypeCounts = entitySets
-                .values( Predicates.in( "entityTypeId", entityTypeIds.toArray( new UUID[] {} ) ) ).stream()
-                .collect( Collectors.groupingBy( EntitySet::getEntityTypeId ) ).entrySet().stream()
-                .collect( Collectors.toMap( Map.Entry::getKey, entry -> entry.getValue().size() ) );
-
-        entityTypeIds.forEach( id -> {
-            if ( !entityTypeCounts.containsKey( id ) ) {
-                entityTypeCounts.put( id, 0 );
-            }
-        } );
-
-        return entityTypeCounts;
-    }
-
 }

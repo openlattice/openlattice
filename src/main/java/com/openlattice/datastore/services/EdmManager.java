@@ -231,6 +231,4 @@ public interface EdmManager {
     Set<UUID> getEntitySetsForOrganization( UUID organizationId );
 
     AuditRecordEntitySetsManager getAuditRecordEntitySetsManager();
-
-    Map<UUID, Integer> countEntitySetsOfEntityTypes( Set<UUID> entityTypeIds );
 }

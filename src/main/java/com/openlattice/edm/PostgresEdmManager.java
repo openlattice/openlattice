@@ -49,6 +49,7 @@ import static com.openlattice.postgres.PostgresColumn.*;
 
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -214,13 +215,15 @@ public class PostgresEdmManager implements DbEdmManager {
      */
     public Map<UUID, Set<UUID>> getLinkingIdsByEntitySetIds( Set<UUID> entitySetIds ) {
         String query =
-                "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID.getName() +
+                "SELECT " + ENTITY_SET_ID.getName() + ", array_agg(" + LINKING_ID.getName() + ") AS " + LINKING_ID
+                        .getName() +
                         " FROM " + IDS.getName() +
-                        " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName() + " IN (SELECT UNNEST( (?)::uuid[] )) " +
+                        " WHERE " + LINKING_ID.getName() + " IS NOT NULL AND " + ENTITY_SET_ID.getName()
+                        + " IN (SELECT UNNEST( (?)::uuid[] )) " +
                         " GROUP BY " + ENTITY_SET_ID.getName();
 
         try ( Connection connection = hds.getConnection();
-              PreparedStatement ps = connection.prepareStatement( query ) ) {
+                PreparedStatement ps = connection.prepareStatement( query ) ) {
             Map<UUID, Set<UUID>> result = Maps.newHashMap();
             Array arr = PostgresArrays.createUuidArray( connection, entitySetIds );
             ps.setArray( 1, arr );
@@ -299,6 +302,27 @@ public class PostgresEdmManager implements DbEdmManager {
             preparedStatement.executeUpdate();
         } catch ( SQLException e ) {
             logger.error( "Unable to update column full qualified name in propertytype", e );
+        }
+    }
+
+    public Map<UUID, Long> countEntitySetsOfEntityTypes( Set<UUID> entityTypeIds ) {
+        String query =
+                "SELECT " + ENTITY_TYPE_ID.getName() + ", COUNT(*) FROM " + ENTITY_SETS + " WHERE " + ENTITY_TYPE_ID
+                        .getName() + " = ANY( ? ) GROUP BY " + ENTITY_TYPE_ID.getName();
+        try ( Connection connection = hds.getConnection();
+                PreparedStatement ps = connection.prepareStatement( query ) ) {
+            Map<UUID, Long> result = Maps.newHashMap();
+            Array arr = PostgresArrays.createUuidArray( connection, entityTypeIds );
+            ps.setArray( 1, arr );
+            ResultSet rs = ps.executeQuery();
+            while ( rs.next() ) {
+                result.put( ResultSetAdapters.entityTypeId( rs ), ResultSetAdapters.count( rs ) );
+            }
+
+            return result;
+        } catch ( SQLException e ) {
+            logger.debug( "Unable to count entity sets for entity type ids {}", entityTypeIds, e );
+            return Map.of();
         }
     }
 
