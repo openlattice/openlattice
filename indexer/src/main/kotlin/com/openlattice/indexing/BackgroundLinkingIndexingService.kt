@@ -10,6 +10,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
@@ -33,6 +34,7 @@ class BackgroundLinkingIndexingService(
         private val dataStore: EntityDatastore,
         private val elasticsearchApi: ConductorElasticsearchApi,
         private val dataManager: IndexingMetadataManager,
+        private val indexerConfiguration: IndexerConfiguration,
         hazelcastInstance: HazelcastInstance
 ) {
 
@@ -54,6 +56,9 @@ class BackgroundLinkingIndexingService(
      */
     @Scheduled(fixedRate = INDEX_RATE)
     fun indexUpdatedLinkedEntities() {
+        if( !indexerConfiguration.backgroundIndexingEnabled ) {
+            return
+        }
         if (taskLock.tryLock()) {
             try {
                 logger.info("Starting background linking indexing task.")

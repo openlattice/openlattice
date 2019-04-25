@@ -34,7 +34,15 @@ import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
-import com.openlattice.conductor.rpc.ConductorConfiguration;
+import com.openlattice.authorization.AuthorizationManager;
+import com.openlattice.authorization.AuthorizationQueryService;
+import com.openlattice.authorization.DbCredentialService;
+import com.openlattice.authorization.HazelcastAclKeyReservationService;
+import com.openlattice.authorization.HazelcastAuthorizationService;
+import com.openlattice.authorization.HazelcastSecurableObjectResolveTypeService;
+import com.openlattice.authorization.PostgresUserApi;
+import com.openlattice.authorization.Principals;
+import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.services.EdmService;
@@ -45,6 +53,7 @@ import com.openlattice.edm.schemas.SchemaQueryService;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
 import com.openlattice.edm.schemas.postgres.PostgresSchemaQueryService;
 import com.openlattice.hazelcast.HazelcastQueue;
+import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.kindling.search.ConductorElasticsearchImpl;
 import com.openlattice.mail.config.MailServiceRequirements;
 import com.openlattice.organizations.HazelcastOrganizationService;
@@ -52,7 +61,6 @@ import com.openlattice.organizations.roles.HazelcastPrincipalService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.PostgresTableManager;
 import com.zaxxer.hikari.HikariDataSource;
-import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -85,7 +93,7 @@ public class IndexerServicesPod {
     private EventBus eventBus;
 
     @Inject
-    private ConductorConfiguration conductorConfiguration;
+    private IndexerConfiguration indexerConfiguration;
 
     @Inject
     private AuditingConfiguration auditingConfiguration;
@@ -98,7 +106,7 @@ public class IndexerServicesPod {
 
     @Bean
     public ConductorElasticsearchApi elasticsearchApi() {
-        return new ConductorElasticsearchImpl( conductorConfiguration.getSearchConfiguration() );
+        return new ConductorElasticsearchImpl( indexerConfiguration.getSearchConfiguration() );
     }
 
     @Bean
@@ -221,6 +229,7 @@ public class IndexerServicesPod {
                 auditingConfiguration,
                 assembler() );
     }
+
 
     @PostConstruct
     void initPrincipals() {

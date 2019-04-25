@@ -34,6 +34,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap
+import com.openlattice.indexing.configuration.IndexerConfiguration
 import com.openlattice.postgres.DataTables.LAST_INDEX
 import com.openlattice.postgres.DataTables.LAST_WRITE
 import com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID
@@ -62,8 +63,9 @@ const val INDEX_RATE = 30000L
 const val FETCH_SIZE = 128000
 
 class BackgroundIndexingService(
-        private val hds: HikariDataSource,
         hazelcastInstance: HazelcastInstance,
+        private val indexerConfiguration: IndexerConfiguration,
+        private val hds: HikariDataSource,
         private val dataQueryService: PostgresEntityDataQueryService,
         private val elasticsearchApi: ConductorElasticsearchApi,
         private val dataManager: IndexingMetadataManager
@@ -101,26 +103,30 @@ class BackgroundIndexingService(
         if (taskLock.tryLock()) {
             try {
                 ensureAllEntityTypeIndicesExist()
-                val w = Stopwatch.createStarted()
-                //We shuffle entity sets to make sure we have a chance to work share and index everything
-                val lockedEntitySets = entitySets.values
-                        .shuffled()
-                        .filter { tryLockEntitySet(it) }
-                        .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
+                if (indexerConfiguration.backgroundIndexingEnabled) {
+                    val w = Stopwatch.createStarted()
+                    //We shuffle entity sets to make sure we have a chance to work share and index everything
+                    val lockedEntitySets = entitySets.values
+                            .shuffled()
+                            .filter { tryLockEntitySet(it) }
+                            .filter { it.name != "OpenLattice Audit Entity Set" } //TODO: Clean out audit entity set from prod
 
-                val totalIndexed = lockedEntitySets
-                        .parallelStream()
-                        .filter { !it.isLinking }
-                        .mapToInt { indexEntitySet(it) }
-                        .sum()
+                    val totalIndexed = lockedEntitySets
+                            .parallelStream()
+                            .filter { !it.isLinking }
+                            .mapToInt { indexEntitySet(it) }
+                            .sum()
 
-                lockedEntitySets.forEach(this::deleteIndexingLock)
+                    lockedEntitySets.forEach(this::deleteIndexingLock)
 
-                logger.info(
-                        "Completed indexing {} elements in {} ms",
-                        totalIndexed,
-                        w.elapsed(TimeUnit.MILLISECONDS)
-                )
+                    logger.info(
+                            "Completed indexing {} elements in {} ms",
+                            totalIndexed,
+                            w.elapsed(TimeUnit.MILLISECONDS)
+                    )
+                } else {
+                    logger.info("Skipping background indexing as it is not enabled.")
+                }
             } finally {
                 taskLock.unlock()
             }
@@ -146,12 +152,26 @@ class BackgroundIndexingService(
         }
     }
 
+    private fun getEntityDataKeysQuery(entitySetId: UUID): String {
+        return "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} > 0"
+    }
+
     private fun getDirtyEntitiesQuery(entitySetId: UUID): String {
         return "SELECT * FROM ${IDS.name} " +
                 "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND " +
                 "${LAST_INDEX.name} < ${LAST_WRITE.name} AND " +
                 "${VERSION.name} > 0 " +
                 "LIMIT $FETCH_SIZE"
+    }
+
+    private fun getEntityDataKeys(entitySetId: UUID): PostgresIterable<UUID> {
+        return PostgresIterable(Supplier<StatementHolder> {
+            val connection = hds.connection
+            val stmt = connection.createStatement()
+            stmt.fetchSize = 64000
+            val rs = stmt.executeQuery(getEntityDataKeysQuery(entitySetId))
+            StatementHolder(connection, stmt, rs)
+        }, Function<ResultSet, UUID> { ResultSetAdapters.id(it) })
     }
 
     private fun getDirtyEntityKeyIds(entitySetId: UUID): PostgresIterable<UUID> {
@@ -163,13 +183,13 @@ class BackgroundIndexingService(
         }, Function<ResultSet, UUID> { ResultSetAdapters.id(it) })
     }
 
-    private fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
+    internal fun getPropertyTypeForEntityType(entityTypeId: UUID): Map<UUID, PropertyType> {
         return propertyTypes
                 .getAll(entityTypes[entityTypeId]?.properties ?: setOf())
                 .filter { it.value.datatype != EdmPrimitiveTypeKind.Binary }
     }
 
-    private fun indexEntitySet(entitySet: EntitySet): Int {
+    internal fun indexEntitySet(entitySet: EntitySet, reindexAll: Boolean = false): Int {
         logger.info(
                 "Starting indexing for entity set {} with id {}",
                 entitySet.name,
@@ -177,7 +197,12 @@ class BackgroundIndexingService(
         )
 
         val esw = Stopwatch.createStarted()
-        val entityKeyIds = getDirtyEntityKeyIds(entitySet.id)
+        val entityKeyIds = if (reindexAll) {
+            getEntityDataKeys(entitySet.id)
+        } else {
+            getDirtyEntityKeyIds(entitySet.id)
+        }
+
         val propertyTypes = getPropertyTypeForEntityType(entitySet.entityTypeId)
 
         var indexCount = 0
@@ -187,7 +212,7 @@ class BackgroundIndexingService(
             updateExpiration(entitySet)
             while (entityKeyIdsIterator.hasNext()) {
                 val batch = getBatch(entityKeyIdsIterator)
-                indexCount += indexEntities(entitySet, batch, propertyTypes)
+                indexCount += indexEntities(entitySet, batch, propertyTypes, !reindexAll)
             }
             entityKeyIdsIterator = entityKeyIds.iterator()
         }
@@ -202,10 +227,11 @@ class BackgroundIndexingService(
         return indexCount
     }
 
-    private fun indexEntities(
+    internal fun indexEntities(
             entitySet: EntitySet,
             batchToIndex: Set<UUID>,
-            propertyTypeMap: Map<UUID, PropertyType>
+            propertyTypeMap: Map<UUID, PropertyType>,
+            markAsIndexed: Boolean = true
     ): Int {
         val esb = Stopwatch.createStarted()
         val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
@@ -220,8 +246,14 @@ class BackgroundIndexingService(
 
         val indexCount: Int
 
-        if (entitiesById.isNotEmpty() && elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
-            indexCount = dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
+        if (entitiesById.isNotEmpty() &&
+                elasticsearchApi.createBulkEntityData(entitySet.entityTypeId, entitySet.id, entitiesById)) {
+            indexCount = if (markAsIndexed) {
+                dataManager.markAsIndexed(mapOf(entitySet.id to Optional.of(batchToIndex)), false)
+            } else {
+                batchToIndex.size
+            }
+
             logger.info(
                     "Indexed batch of {} elements for {} ({}) in {} ms",
                     indexCount,
@@ -238,7 +270,7 @@ class BackgroundIndexingService(
 
     }
 
-    private fun tryLockEntitySet(entitySet: EntitySet): Boolean {
+    internal fun tryLockEntitySet(entitySet: EntitySet): Boolean {
         return indexingLocks.putIfAbsent(entitySet.id, System.currentTimeMillis() + EXPIRATION_MILLIS) == null
     }
 

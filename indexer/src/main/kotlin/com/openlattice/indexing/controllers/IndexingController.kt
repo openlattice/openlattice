@@ -21,9 +21,68 @@
 
 package com.openlattice.indexing.controllers
 
+import com.openlattice.admin.indexing.CONTROLLER
+import com.openlattice.admin.indexing.IndexAdminApi
+import com.openlattice.admin.indexing.IndexingState
+import com.openlattice.admin.indexing.REINDEX
+import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.authorization.AuthorizingComponent
+import com.openlattice.indexing.IndexingService
+import org.springframework.http.MediaType
+import org.springframework.web.bind.annotation.*
+import java.util.*
+import javax.inject.Inject
+
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-class IndexingController {
+@RestController
+@RequestMapping(CONTROLLER)
+class IndexingController : IndexAdminApi, AuthorizingComponent {
+    @Inject
+    private lateinit var indexingService: IndexingService
+
+    @Inject
+    private lateinit var authorizationManager: AuthorizationManager
+
+    override fun getAuthorizationManager(): AuthorizationManager {
+        return authorizationManager
+    }
+
+    @GetMapping(value = [REINDEX], produces = [MediaType.APPLICATION_JSON_VALUE])
+    override fun getIndexingState(): IndexingState {
+        ensureAdminAccess()
+        return indexingService.getIndexingState()
+    }
+
+    @PostMapping(
+            value = [REINDEX], consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun reindex(@RequestBody reindexRequest: Map<UUID, Set<UUID>>): IndexingState {
+        ensureAdminAccess()
+        indexingService.queueForIndexing(reindexRequest)
+        return indexingService.getIndexingState()
+    }
+
+    @PutMapping(
+            value = [REINDEX], consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun updateReindex(@RequestBody reindexRequest: Map<UUID, Set<UUID>>): IndexingState {
+        ensureAdminAccess()
+        indexingService.setForIndexing(reindexRequest)
+        return indexingService.getIndexingState()
+    }
+
+    @DeleteMapping(
+            value = [REINDEX], produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun clearIndexingQueue(): Int {
+        ensureAdminAccess()
+        return indexingService.clearIndexingJobs()
+    }
+
+
 }

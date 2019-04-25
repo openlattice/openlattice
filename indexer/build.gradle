@@ -56,22 +56,22 @@ apply from: "https://raw.githubusercontent.com/openlattice/gradles/master/openla
 apply plugin: 'kotlin'
 apply plugin: 'license-report'
 
-def CONDUCTOR_XMS = "$System.env.CONDUCTOR_XMS"
-def CONDUCTOR_XMX = "$System.env.CONDUCTOR_XMX"
-def C_ARGS = "$System.env.CONDUCTOR_ARGS"
+def INDEXER_XMS = "$System.env.INDEXER_XMS"
+def INDEXER_XMX = "$System.env.INDEXER_XMX"
+def INDEXER_ARGS = "$System.env.CONDUCTOR_ARGS"
 def PARALLEL = "$System.env.PARALLELISM"
 def GC = "$System.env.GC"
 
-if (CONDUCTOR_XMS == 'null' || CONDUCTOR_XMS == null || CONDUCTOR_XMS == "") {
-    CONDUCTOR_XMS = '-Xms1g'
+if (INDEXER_XMS == 'null' || INDEXER_XMS == null || INDEXER_XMS == "") {
+    INDEXER_XMS = '-Xms1g'
 }
 
-if (CONDUCTOR_XMX == 'null' || CONDUCTOR_XMX == null || CONDUCTOR_XMX == "") {
-    CONDUCTOR_XMX = '-Xms4g'
+if (INDEXER_XMX == 'null' || INDEXER_XMX == null || INDEXER_XMX == "") {
+    INDEXER_XMX = '-Xms4g'
 }
 
-if (C_ARGS == 'null' || C_ARGS == null || C_ARGS == "") {
-    C_ARGS = 'local postgres medialocal dl4j'
+if (INDEXER_ARGS == 'null' || INDEXER_ARGS == null || INDEXER_ARGS == "") {
+    INDEXER_ARGS = 'local postgres medialocal dl4j'
 }
 
 if (PARALLEL == 'null' || PARALLEL == null || PARALLEL == "") {
@@ -84,15 +84,15 @@ if (GC == 'null' || GC == null || GC == "") {
 
 
 mainClassName = "com.openlattice.indexing.Indexer"
-applicationDefaultJvmArgs = [CONDUCTOR_XMS, CONDUCTOR_XMX, "-server", GC, PARALLEL]
+applicationDefaultJvmArgs = [INDEXER_XMS, INDEXER_XMX, "-server", GC, PARALLEL]
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
 println "Using java args for running ${projectName}: " + Arrays.toString(applicationDefaultJvmArgs)
 
 run {
-    if (C_ARGS != null) {
-        args C_ARGS.split()
+    if (INDEXER_ARGS != null) {
+        args INDEXER_ARGS.split()
     } else if (System.getProperty("exec.args") != null) {
         args System.getProperty("exec.args").split()
     }

@@ -38,6 +38,8 @@ import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.indexing.BackgroundIndexingService;
 import com.openlattice.indexing.BackgroundLinkingIndexingService;
+import com.openlattice.indexing.IndexingService;
+import com.openlattice.indexing.configuration.IndexerConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -56,7 +58,7 @@ public class IndexerPostConfigurationServicesPod {
     private HazelcastInstance hazelcastInstance;
 
     @Inject
-    private ConductorConfiguration conductorConfiguration;
+    private IndexerConfiguration indexerConfiguration;
 
     @Inject
     private HikariDataSource hikariDataSource;
@@ -103,7 +105,7 @@ public class IndexerPostConfigurationServicesPod {
     public PostgresLinkingFeedbackService postgresLinkingFeedbackService() {
         return new PostgresLinkingFeedbackService( hikariDataSource, hazelcastInstance );
     }
-    
+
     @Bean
     public EntityDatastore entityDatastore() {
         return new HazelcastEntityDatastore( idService(),
@@ -119,20 +121,28 @@ public class IndexerPostConfigurationServicesPod {
     }
 
     @Bean
-    public BackgroundIndexingService backgroundIndexingService() throws IOException {
-        return new BackgroundIndexingService( hikariDataSource,
+    public BackgroundIndexingService backgroundIndexingService() {
+        return new BackgroundIndexingService(
                 hazelcastInstance,
+                indexerConfiguration,
+                hikariDataSource,
                 dataQueryService(),
                 elasticsearchApi,
                 indexingMetadataManager() );
     }
 
     @Bean
-    public BackgroundLinkingIndexingService backgroundLinkingIndexingService() throws IOException {
+    public BackgroundLinkingIndexingService backgroundLinkingIndexingService() {
         return new BackgroundLinkingIndexingService( hikariDataSource,
                 entityDatastore(),
                 elasticsearchApi,
                 indexingMetadataManager(),
+                indexerConfiguration,
                 hazelcastInstance );
+    }
+
+    @Bean
+    public IndexingService indexingService() {
+        return new IndexingService(hikariDataSource, backgroundIndexingService(), executor, hazelcastInstance );
     }
 }
