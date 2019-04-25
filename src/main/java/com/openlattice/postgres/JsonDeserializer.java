@@ -164,7 +164,7 @@ public class JsonDeserializer {
                         dataType,
                         propertyTypeId,
                         value.getClass() );
-                return Duration.parse( (String) value );
+                return Duration.parse( (String) value ).toMillis();
             case Guid:
                 if ( value instanceof UUID ) {
                     return value;
