@@ -50,7 +50,7 @@ import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.roles.Role;
-import com.openlattice.postgres.IndexMethod;
+import com.openlattice.postgres.IndexType;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -85,7 +85,7 @@ public final class TestDataFactory {
     private static final Action[]              actions              = Action.values();
     private static final RequestStatus[]       requestStatuses      = RequestStatus.values();
     private static final Analyzer[]            analyzers            = Analyzer.values();
-    private static final IndexMethod[]         indexMethods         = IndexMethod.values();
+    private static final IndexType[]           INDEX_TYPES          = IndexType.values();
     private static final Random                r                    = new Random();
 
     private TestDataFactory() {
@@ -235,7 +235,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.Date,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( Analyzer.STANDARD ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
     }
 
     public static PropertyType dateTimePropertyType() {
@@ -248,7 +248,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( Analyzer.STANDARD ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
     }
 
     public static PropertyType propertyType() {
@@ -261,7 +261,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
     }
 
     public static PropertyType binaryPropertyType() {
@@ -274,7 +274,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
     }
 
     public static Organization organization() {
@@ -453,7 +453,7 @@ public final class TestDataFactory {
                         type,
                         Optional.of( r.nextBoolean() ),
                         Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                        Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                        Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
             default:
                 return new PropertyType(
                         UUID.randomUUID(),
@@ -464,7 +464,7 @@ public final class TestDataFactory {
                         type,
                         Optional.of( r.nextBoolean() ),
                         Optional.empty(),
-                        Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                        Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
         }
     }
 

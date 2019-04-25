@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
 import com.google.common.base.Preconditions;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -39,7 +37,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.openlattice.postgres.IndexMethod;
+import com.openlattice.postgres.IndexType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
@@ -60,7 +58,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     protected         EdmPrimitiveTypeKind  datatype;
     protected         boolean               piiField;
     protected         Analyzer              analyzer;
-    protected         IndexMethod           postgresIndexType;
+    protected         IndexType             postgresIndexType;
     private transient int                   h          = 0;
 
     @JsonCreator
@@ -75,7 +73,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             @JsonProperty( SerializationConstants.PII_FIELD ) Optional<Boolean> piiField,
             @JsonProperty( SerializationConstants.MULTI_VALUED ) Optional<Boolean> multiValued,
             @JsonProperty( SerializationConstants.ANALYZER ) Optional<Analyzer> analyzer,
-            @JsonProperty( SerializationConstants.INDEXED ) Optional<IndexMethod> postgresIndexType ) {
+            @JsonProperty( SerializationConstants.INDEX_TYPE ) Optional<IndexType> postgresIndexType ) {
         super(
                 id,
                 fqn,
@@ -91,7 +89,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
         this.analyzer = analyzer.orElse( Analyzer.STANDARD );
-        this.postgresIndexType = postgresIndexType.orElse( IndexMethod.BTREE );
+        this.postgresIndexType = postgresIndexType.orElse( IndexType.BTREE );
     }
 
     public PropertyType(
@@ -103,7 +101,7 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
             EdmPrimitiveTypeKind datatype,
             Optional<Boolean> piiField,
             Optional<Analyzer> analyzer,
-            Optional<IndexMethod> postgresIndexType ) {
+            Optional<IndexType> postgresIndexType ) {
         this( Optional.of( id ),
                 fqn,
                 title,
@@ -202,8 +200,8 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         return analyzer;
     }
 
-    @JsonProperty( SerializationConstants.INDEXED )
-    public IndexMethod getPostgresIndexType() {
+    @JsonProperty( SerializationConstants.INDEX_TYPE )
+    public IndexType getPostgresIndexType() {
         return postgresIndexType;
     }
 
