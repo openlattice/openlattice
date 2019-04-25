@@ -495,7 +495,7 @@ public final class ResultSetAdapters {
         Optional<Boolean> pii = Optional.ofNullable( pii( rs ) );
         Optional<Boolean> multiValued = Optional.ofNullable( multiValued( rs ) );
         Optional<Analyzer> analyzer = Optional.ofNullable( analyzer( rs ) );
-        Optional<IndexMethod> indexMethod = Optional.ofNullable( indexMethod( rs ) );
+        Optional<IndexType> indexMethod = Optional.ofNullable( indexType( rs ) );
 
         return new PropertyType( Optional.of( id ),
                 fqn,
@@ -632,8 +632,8 @@ public final class ResultSetAdapters {
         return rs.getBoolean( MULTI_VALUED.getName() );
     }
 
-    public static IndexMethod indexMethod( ResultSet rs ) throws SQLException {
-        return IndexMethod.valueOf( rs.getString( INDEX_TYPE.getName() ) );
+    public static IndexType indexType( ResultSet rs ) throws SQLException {
+        return IndexType.valueOf( rs.getString( INDEX_TYPE.getName() ) );
     }
 
     public static Status status( ResultSet rs ) throws SQLException {
