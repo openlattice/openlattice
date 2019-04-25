@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017. OpenLattice, Inc
+ * Copyright (C) 2018. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,21 +20,20 @@
 
 package com.openlattice.hazelcast.serializers;
 
+import com.openlattice.hazelcast.processors.UUIDKeyToUUIDSetMerger;
+import com.google.common.collect.ImmutableSet;
 import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest;
-import com.openlattice.hazelcast.aggregators.EntitySetAggregator;
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
+
 import java.util.UUID;
 
-/**
- * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
- */
-public class EntitySetAggregatorStreamSerializerTest
-        extends AbstractStreamSerializerTest<HazelcastStreamEntitySetAggregatorStreamSerializer, EntitySetAggregator> {
-    @Override protected HazelcastStreamEntitySetAggregatorStreamSerializer createSerializer() {
-        return new HazelcastStreamEntitySetAggregatorStreamSerializer();
+public class UUIDKeyToUUIDSetMergerStreamSerializerTest
+        extends AbstractStreamSerializerTest<UUIDKeyToUUIDSetMergerStreamSerializer, UUIDKeyToUUIDSetMerger> {
+    @Override protected UUIDKeyToUUIDSetMergerStreamSerializer createSerializer() {
+        return new UUIDKeyToUUIDSetMergerStreamSerializer();
     }
 
-    @Override protected EntitySetAggregator createInput() {
-        EntitySetAggregator agg = new EntitySetAggregator( UUID.randomUUID() );
-        return agg;
+    @Override protected UUIDKeyToUUIDSetMerger createInput() {
+        return new UUIDKeyToUUIDSetMerger( DelegatedUUIDSet.wrap( ImmutableSet.of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ) );
     }
 }

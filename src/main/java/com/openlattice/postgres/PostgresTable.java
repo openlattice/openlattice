@@ -307,7 +307,7 @@ public final class PostgresTable {
     static {
         PRINCIPAL_TREES.addIndexes(
                 new PostgresColumnsIndexDefinition( PRINCIPAL_TREES, ACL_KEY )
-                        .method( IndexMethod.GIN )
+                        .method( IndexType.GIN )
                         .name( "principal_trees_acl_key_idx" )
                         .ifNotExists()
         );
@@ -343,7 +343,7 @@ public final class PostgresTable {
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, VERSIONS )
                         .name( "entity_key_ids_versions_idx" )
-                        .method( IndexMethod.GIN )
+                        .method( IndexType.GIN )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( IDS, LINKING_ID )
                         .name( "entity_key_ids_linking_id_idx" )
@@ -431,7 +431,7 @@ public final class PostgresTable {
 
         ENTITY_SETS.addIndexes(
                 new PostgresColumnsIndexDefinition( ENTITY_SETS, LINKED_ENTITY_SETS )
-                        .method( IndexMethod.GIN )
+                        .method( IndexType.GIN )
                         .ifNotExists() );
         MATERIALIZED_ENTITY_SETS.addIndexes(
                 new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ORGANIZATION_ID )
