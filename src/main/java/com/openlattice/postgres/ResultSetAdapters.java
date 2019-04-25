@@ -20,23 +20,10 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.DataTables.ID_FQN;
-import static com.openlattice.postgres.DataTables.LAST_INDEX;
-import static com.openlattice.postgres.DataTables.LAST_INDEX_FQN;
-import static com.openlattice.postgres.DataTables.LAST_LINK;
-import static com.openlattice.postgres.DataTables.LAST_WRITE;
-import static com.openlattice.postgres.DataTables.LAST_WRITE_FQN;
-import static com.openlattice.postgres.PostgresArrays.getTextArray;
-import static com.openlattice.postgres.PostgresColumn.*;
-
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppType;
@@ -44,12 +31,7 @@ import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.*;
@@ -61,7 +43,6 @@ import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.edge.Edge;
@@ -79,13 +60,14 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
-import java.sql.Array;
 import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -93,10 +75,10 @@ import java.util.*;
 import java.util.Base64.Decoder;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.openlattice.postgres.DataTables.*;
+import static com.openlattice.postgres.PostgresArrays.getTextArray;
+import static com.openlattice.postgres.PostgresColumn.*;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -575,41 +557,6 @@ public final class ResultSetAdapters {
         boolean bidirectional = bidirectional( rs );
 
         return new AssociationType( Optional.empty(), src, dst, bidirectional );
-    }
-
-    public static ComplexType complexType( ResultSet rs ) throws SQLException {
-        UUID id = id( rs );
-        FullQualifiedName fqn = fqn( rs );
-        String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
-        Set<FullQualifiedName> schemas = schemas( rs );
-        LinkedHashSet<UUID> properties = properties( rs );
-
-        LinkedHashMultimap<UUID, String> propertyTags;
-        try {
-            propertyTags = mapper.readValue( rs.getString( PROPERTY_TAGS_FIELD ),
-                    new TypeReference<LinkedHashMultimap<UUID, String>>() {
-                    } );
-        } catch ( IOException e ) {
-            String errMsg =
-                    "Unable to deserialize json from entity type " + fqn.getFullQualifiedNameAsString() + " with id "
-                            + id.toString();
-            logger.error( errMsg );
-            throw new SQLException( errMsg );
-        }
-
-        Optional<UUID> baseType = Optional.ofNullable( baseType( rs ) );
-        SecurableObjectType category = category( rs );
-
-        return new ComplexType( id,
-                fqn,
-                title,
-                description,
-                schemas,
-                properties,
-                propertyTags,
-                baseType,
-                category );
     }
 
     public static EntitySetPropertyMetadata entitySetPropertyMetadata( ResultSet rs ) throws SQLException {
