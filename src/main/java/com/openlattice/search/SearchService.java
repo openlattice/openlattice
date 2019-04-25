@@ -697,13 +697,14 @@ public class SearchService {
                         entityKeyIdsOfLinkingId -> {
                             Map<UUID, SetMultimap<UUID, NeighborEntityIds>> neighborIds = Maps.newHashMap();
                             entityKeyIdsOfLinkingId.getRight().stream()
-                                    .filter( entityKeyId -> entityNeighbors.containsKey( entityKeyId ) )
-                                    .forEach( entityKeyId -> {
-                                        entityNeighbors.get( entityKeyId ).entrySet().forEach( entry -> {
-                                            neighborIds.getOrDefault( entry.getKey(), HashMultimap.create() )
-                                                    .putAll( entry.getValue() );
-                                        } );
-                                    } );
+                                    .filter( entityNeighbors::containsKey )
+                                    .forEach( entityKeyId ->
+                                            entityNeighbors.get( entityKeyId ).forEach( ( entityKey, neighbors ) -> {
+                                                if ( !neighborIds.containsKey( entityKey ) ) {
+                                                    neighborIds.put( entityKey, HashMultimap.create() );
+                                                }
+                                                neighborIds.get( entityKey ).putAll( neighbors );
+                                            } ) );
                             return neighborIds;
                         }
                 ) );
