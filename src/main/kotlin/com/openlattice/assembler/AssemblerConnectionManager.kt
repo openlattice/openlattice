@@ -406,7 +406,6 @@ class AssemblerConnectionManager(
         // collect all authorized property types for principals which have read access on entity set
         val authorizedPropertiesOfPrincipal = authorizedPrincipals
                 .map { it to propertyCheckFunction(it).values }
-                .filter { !it.second.isEmpty() } // filter principals with no properties authorized
                 .toMap()
 
         // prepare batch queries
