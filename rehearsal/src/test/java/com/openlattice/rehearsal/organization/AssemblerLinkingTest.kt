@@ -158,7 +158,8 @@ class AssemblerLinkingTest : SetupTestData() {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking1))
-                Assert.assertTrue(getColumnNames(rs).contains(newPropertyType.type.fullQualifiedNameAsString))
+                Assert.assertTrue(TestAssemblerConnectionManager.getColumnNames(rs)
+                        .contains(newPropertyType.type.fullQualifiedNameAsString))
             }
         }
 
@@ -198,7 +199,7 @@ class AssemblerLinkingTest : SetupTestData() {
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking2))
-                val columnNames = getColumnNames(rs)
+                val columnNames = TestAssemblerConnectionManager.getColumnNames(rs)
                 Assert.assertTrue(columnNames.contains(newFqn.fullQualifiedNameAsString))
                 Assert.assertFalse(columnNames.contains(newPropertyType.type.fullQualifiedNameAsString))
             }
@@ -487,9 +488,5 @@ class AssemblerLinkingTest : SetupTestData() {
 
     private fun getStringResult(rs: ResultSet, column: String): String {
         return PostgresArrays.getTextArray(rs, column)[0]
-    }
-
-    private fun getColumnNames(rs: ResultSet): List<String> {
-        return (1..rs.metaData.columnCount).map { column -> rs.metaData.getColumnName(column) }
     }
 }

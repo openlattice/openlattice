@@ -46,10 +46,10 @@ class TestAssemblerConnectionManager {
         }
 
         @JvmStatic
-        fun connect(organizationId: UUID): HikariDataSource {
+        fun connect(organizationId: UUID, config: Optional<Properties> = Optional.empty()): HikariDataSource {
             val dbName = "org_${organizationId.toString().replace("-", "").toLowerCase()}"
-            val config = assemblerConfiguration.server.clone() as Properties
-            config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
+            val connectionConfig = config.orElse(assemblerConfiguration.server.clone() as Properties)
+            connectionConfig.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
                 "${(jdbcUrl as String).removeSuffix(
                         "/"
                 )}/$dbName" + if (assemblerConfiguration.ssl) {
@@ -58,7 +58,7 @@ class TestAssemblerConnectionManager {
                     ""
                 }
             }
-            return HikariDataSource(HikariConfig(config))
+            return HikariDataSource(HikariConfig(connectionConfig))
         }
 
 
@@ -92,6 +92,11 @@ class TestAssemblerConnectionManager {
                                 "OR ${PostgresColumn.EDGE_ENTITY_SET_ID.name} IN $setIdsClause " +
                                 "OR ${PostgresColumn.DST_ENTITY_SET_ID.name} IN $setIdsClause"
                     }
+        }
+
+        @JvmStatic
+        fun getColumnNames(rs: ResultSet): List<String> {
+            return (1..rs.metaData.columnCount).map { column -> rs.metaData.getColumnName(column) }
         }
     }
 }

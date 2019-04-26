@@ -229,6 +229,7 @@ class DataControllerLinkingTest : SetupTestData() {
         try {
             loginAs("user1")
             dataApi.loadEntitySetData(esLinking.id, ess, FileType.json)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Insufficient permissions to read the entity set ${esLinking.id} or it doesn't " +
@@ -243,6 +244,7 @@ class DataControllerLinkingTest : SetupTestData() {
         try {
             loginAs("user1")
             dataApi.loadEntitySetData(esLinking.id, ess, FileType.json)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             val esUuid = arrayPattern.find(e.undeclaredThrowable.message!!)!!.groupValues[1]
             Assert.assertTrue(esLinking.linkedEntitySets.contains(UUID.fromString(esUuid)))
@@ -323,6 +325,7 @@ class DataControllerLinkingTest : SetupTestData() {
         try {
             loginAs("user1")
             dataApi.getEntity(esLinking.id, id)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esLinking.id}] is not accessible.", true))
@@ -330,6 +333,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         try {
             dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esLinking.id}] is not accessible.", true))
@@ -344,6 +348,7 @@ class DataControllerLinkingTest : SetupTestData() {
         try {
             loginAs("user1")
             dataApi.getEntity(esLinking.id, id)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             val esUuid = arrayPattern.find(e.undeclaredThrowable.message!!)!!.groupValues[1]
             Assert.assertTrue(esLinking.linkedEntitySets.contains(UUID.fromString(esUuid)))
@@ -351,6 +356,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         try {
             dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             val esUuid = arrayPattern.find(e.undeclaredThrowable.message!!)!!.groupValues[1]
             Assert.assertTrue(esLinking.linkedEntitySets.contains(UUID.fromString(esUuid)))
@@ -372,6 +378,7 @@ class DataControllerLinkingTest : SetupTestData() {
 
         try {
             dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Not authorized to read property type ${EdmTestConstants.personGivenNameId} in " +

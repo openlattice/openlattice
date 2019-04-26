@@ -489,6 +489,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.loadEntitySetData(es.id, ess, FileType.json)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Insufficient permissions to read the entity set or it doesn't exists.", true))
@@ -555,6 +556,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.getEntity(es2.id, id)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es2.id}] is not accessible.", true))
@@ -562,6 +564,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         try {
             dataApi.getEntity(es2.id, id, property)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es2.id}] is not accessible.", true))
@@ -580,6 +583,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         try {
             dataApi.getEntity(es2.id, id, property)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es2.id}, $property] is not accessible.", true))
@@ -666,6 +670,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es.id}] is not accessible.", true))
@@ -681,6 +686,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must have OWNER permission of all required entity set properties to delete entities from it.", true))
@@ -697,6 +703,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esEdge.id}] is not accessible.", true))
@@ -713,6 +720,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             newEntityIds.toSet(),
                             Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
                     DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esDst.id}] is not accessible.", true))
@@ -732,6 +740,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             newEntityIds.toSet(),
                             Optional.empty(), Optional.of(setOf(esDst.id)), Optional.of(setOf(esEdge.id))),
                     DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must have OWNER permission of all required entity set properties to delete entities from it.", true))
@@ -745,6 +754,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es.id}] is not accessible.", true))
@@ -761,6 +771,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must have WRITE permission of all required entity set properties to delete entities from it.", true))
@@ -778,6 +789,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esEdge.id}] is not accessible.", true))
@@ -797,6 +809,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             newEntityIds.toSet(),
                             Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
                     DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esDst.id}] is not accessible.", true))
@@ -816,6 +829,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             newEntityIds.toSet(),
                             Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
                     DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must have WRITE permission of all required entity set properties to delete entities from it.", true))
