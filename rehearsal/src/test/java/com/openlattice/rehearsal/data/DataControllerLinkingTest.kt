@@ -95,13 +95,12 @@ class DataControllerLinkingTest : SetupTestData() {
         val esLinking = createEntitySet(personEt, true, setOf(esId1, esId2))
 
         val personGivenNamePropertyId = EdmTestConstants.personGivenNameId
-        val givenNames = mapOf(personGivenNamePropertyId to
-                (1..numberOfEntries).map { RandomStringUtils.randomAscii(5) }.toSet())
+        val givenNames = (1..numberOfEntries).map {
+            mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5)))
+        }
 
-        val entries = listOf(givenNames)
-
-        dataApi.createEntities(esId1, entries)
-        dataApi.createEntities(esId2, entries)
+        dataApi.createEntities(esId1, givenNames)
+        dataApi.createEntities(esId2, givenNames)
 
         val ess = EntitySetSelection(Optional.of(setOf(personGivenNamePropertyId)), Optional.empty())
 
@@ -120,10 +119,10 @@ class DataControllerLinkingTest : SetupTestData() {
             it.removeAll(DataTables.LAST_WRITE_FQN)
         }
 
-        Assert.assertEquals(
-                givenNames[personGivenNamePropertyId],
-                data.first()[EdmTestConstants.personGivenNameFqn]
-        )
+        val actualGivenNamesData = data.flatMap { it[EdmTestConstants.personGivenNameFqn] }.toSet()
+        val expectedGivenNamesData = givenNames.flatMap { it.getValue(EdmTestConstants.personGivenNameId) }.toSet()
+
+        Assert.assertEquals(expectedGivenNamesData, actualGivenNamesData)
     }
 
     @Test
@@ -137,13 +136,12 @@ class DataControllerLinkingTest : SetupTestData() {
         val esLinking = createEntitySet(personEt, true, setOf(esId1, esId2))
 
         val personGivenNamePropertyId = EdmTestConstants.personGivenNameId
-        val givenNames = mapOf(personGivenNamePropertyId to
-                (1..numberOfEntries).map { RandomStringUtils.randomAscii(5) }.toSet())
+        val givenNames = (1..numberOfEntries).map {
+            mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5)))
+        }
 
-        val entries = listOf(givenNames)
-
-        dataApi.createEntities(esId1, entries)
-        dataApi.createEntities(esId2, entries)
+        dataApi.createEntities(esId1, givenNames)
+        dataApi.createEntities(esId2, givenNames)
 
         // wait while linking finishes
         Thread.sleep(5000)
@@ -183,15 +181,13 @@ class DataControllerLinkingTest : SetupTestData() {
 
         val esLinking = createEntitySet(personEt, true, setOf(esId1, esId2))
 
-        val testData = mapOf(
-                EdmTestConstants.personGivenNameId to
-                        (1..numberOfEntries).map { RandomStringUtils.randomAscii(5) }.toSet(),
-                EdmTestConstants.personMiddleNameId to
-                        (1..numberOfEntries).map { RandomStringUtils.randomAscii(5) }.toSet())
-        val entries = listOf(testData)
+        val testData = (1..numberOfEntries).map {
+            mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)),
+                    EdmTestConstants.personMiddleNameId to setOf(RandomStringUtils.randomAscii(5)))
+        }
 
-        dataApi.createEntities(esId1, entries)
-        dataApi.createEntities(esId2, entries)
+        dataApi.createEntities(esId1, testData)
+        dataApi.createEntities(esId2, testData)
 
         // wait while linking finishes
         Thread.sleep(5000)
@@ -405,7 +401,7 @@ class DataControllerLinkingTest : SetupTestData() {
         Assert.assertEquals(setOf(DataTables.ID_FQN, EdmTestConstants.personGivenNameFqn), ptData1.keys)
 
         val ptData2 = dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
-        Assert.assertEquals(numberOfEntries, ptData2.size)
+        Assert.assertEquals(1, ptData2.size)
 
         loginAs("admin")
 
@@ -427,7 +423,7 @@ class DataControllerLinkingTest : SetupTestData() {
                 dataAll1.keys)
 
         val dataAll2 = dataApi.getEntity(esLinking.id, id, EdmTestConstants.personGivenNameId)
-        Assert.assertEquals(numberOfEntries, dataAll2.size)
+        Assert.assertEquals(1, dataAll2.size)
 
         loginAs("admin")
     }

@@ -492,7 +492,8 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
-                    .contains("Insufficient permissions to read the entity set or it doesn't exists.", true))
+                    .contains("Insufficient permissions to read the entity set ${es.id} or it doesn't exists.",
+                            true))
         } finally {
             loginAs("admin")
         }
@@ -636,7 +637,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entries = (1..numberOfEntries)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -845,7 +845,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entries = (1..numberOfEntries)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
@@ -867,7 +866,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entries = (1..numberOfEntries)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -954,7 +952,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entries = (1..numberOfEntries)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -1049,7 +1046,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)),
                             EdmTestConstants.personMiddleNameId to setOf(RandomStringUtils.randomAscii(5))
                     )
-                }.toList()
+                }
 
         val newEntityIds = dataApi.createEntities(es.id, people)
 
