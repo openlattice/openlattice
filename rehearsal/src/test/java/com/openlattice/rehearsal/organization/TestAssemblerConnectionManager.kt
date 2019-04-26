@@ -24,7 +24,6 @@ import com.openlattice.assembler.AssemblerConfiguration
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.pods.AssemblerConfigurationPod
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
@@ -67,11 +66,11 @@ class TestAssemblerConnectionManager {
          * If properties are left empty, the query will select all columns.
          */
         @JvmStatic
-        fun selectFromEntitySetSql(entitySet: EntitySet, properties: Set<PropertyType> = setOf()): String {
+        fun selectFromEntitySetSql(entitySet: EntitySet, properties: Set<String> = setOf()): String {
             val columnsToSelect = if (properties.isEmpty()) {
                 "*"
             } else {
-                properties.map { it.type.fullQualifiedNameAsString }.joinToString(",") { DataTables.quote(it) }
+                properties.joinToString(",") { DataTables.quote(it) }
             }
             return "SELECT $columnsToSelect FROM " +
                     "${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${DataTables.quote(entitySet.name)}"
