@@ -18,21 +18,19 @@
 
 package com.openlattice.edm.requests;
 
-import com.google.common.collect.LinkedHashMultimap;
-import com.openlattice.authorization.Principal;
-import com.openlattice.client.serialization.SerializationConstants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-
+import com.google.common.collect.LinkedHashMultimap;
+import com.openlattice.client.serialization.SerializationConstants;
+import com.openlattice.postgres.IndexType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Used for updating metadata of property type, entity type, or entity set. Non-existent fields for the specific object
@@ -43,6 +41,7 @@ public class MetadataUpdate {
     // Common across property type, entity type, entity set
     private Optional<String>                           title;
     private Optional<String>                           description;
+    private Optional<IndexType>                        indexType;
     // Specific to entity set
     private Optional<String>                           name;
     private Optional<Set<String>>                      contacts;
@@ -68,6 +67,7 @@ public class MetadataUpdate {
             @JsonProperty( SerializationConstants.URL ) Optional<String> url,
             @JsonProperty( SerializationConstants.PROPERTY_TAGS )
                     Optional<LinkedHashMultimap<UUID, String>> propertyTags,
+            @JsonProperty( SerializationConstants.INDEX_TYPE ) Optional<IndexType> indexType,
             @JsonProperty( SerializationConstants.ORGANIZATION_ID ) Optional<UUID> organizationId ) {
         // WARNING These checks have to be consistent with the same check elsewhere.
         Preconditions.checkArgument( !title.isPresent() || StringUtils.isNotBlank( title.get() ),
@@ -89,7 +89,22 @@ public class MetadataUpdate {
         this.defaultShow = defaultShow;
         this.url = url;
         this.propertyTags = propertyTags;
+        this.indexType = indexType;
         this.organizationId = organizationId;
+    }
+
+    public MetadataUpdate(
+             Optional<String> title,
+             Optional<String> description,
+             Optional<String> name,
+             Optional<Set<String>> contacts,
+             Optional<FullQualifiedName> type,
+             Optional<Boolean> pii,
+             Optional<Boolean> defaultShow,
+             Optional<String> url,
+             Optional<LinkedHashMultimap<UUID, String>> propertyTags,
+             Optional<UUID> organizationId ) {
+        this(title, description, name, contacts, type, pii, defaultShow, url, propertyTags, Optional.empty(), organizationId);
     }
 
     @JsonProperty( SerializationConstants.TITLE_FIELD )
@@ -153,6 +168,7 @@ public class MetadataUpdate {
                 ", defaultShow=" + defaultShow +
                 ", url=" + url +
                 ", propertyTags=" + propertyTags +
+                ", indexType=" + indexType +
                 ", organization=" + organizationId +
                 '}';
     }
@@ -170,12 +186,13 @@ public class MetadataUpdate {
                 Objects.equals( defaultShow, that.defaultShow ) &&
                 Objects.equals( url, that.url ) &&
                 Objects.equals( propertyTags, that.propertyTags ) &&
+                Objects.equals( indexType, that.indexType ) &&
                 Objects.equals( organizationId, that.organizationId );
     }
 
     @Override public int hashCode() {
         return Objects
-                .hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags, organizationId );
+                .hash( title, description, name, contacts, type, pii, defaultShow, url, propertyTags, indexType, organizationId );
     }
 
     //TODO: Delete the code below as it doesn't seem to be used.
