@@ -589,15 +589,15 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     private byte[] formatLinkedEntity( Map<UUID, Map<UUID, Set<Object>>> entityValuesByEntitySet ) {
 
-        List<Map<Object, Object>> documents = entityValuesByEntitySet.entrySet().stream().flatMap( esEntry -> {
+        List<Map<Object, Object>> documents = entityValuesByEntitySet.entrySet().stream().map( esEntry -> {
             UUID entitySetId = esEntry.getKey();
             Map<UUID, Set<Object>> entity = esEntry.getValue();
 
-            List<Map<Object, Object>> values = Lists.newArrayList();
-            entity.entrySet().forEach( entry -> values.add( ImmutableMap.of( entry.getKey(), entry.getValue() ) ) );
-            values.add( ImmutableMap.of( ENTITY_SET_ID_KEY, entitySetId ) );
+            Map<Object, Object> values = new HashMap<>( entity.size() + 1 );
+            entity.entrySet().forEach( entry -> values.put( entry.getKey(), entry.getValue() ) );
+            values.put( ENTITY_SET_ID_KEY, entitySetId );
 
-            return values.stream();
+            return values;
         } ).collect( Collectors.toList() );
 
         try {
@@ -611,9 +611,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     private byte[] formatEntity( UUID entitySetId, Map<UUID, Set<Object>> entity ) {
 
-        List<Map<Object, Object>> values = Lists.newArrayList();
-        entity.entrySet().forEach( entry -> values.add( ImmutableMap.of( entry.getKey(), entry.getValue() ) ) );
-        values.add( ImmutableMap.of( ENTITY_SET_ID_KEY, entitySetId ) );
+        Map<Object, Object> values = new HashMap<>( entity.size() + 1 );
+        entity.entrySet().forEach( entry -> values.put( entry.getKey(), entry.getValue() ) );
+        values.put( ENTITY_SET_ID_KEY, entitySetId );
 
         try {
             return mapper.writeValueAsBytes( ImmutableMap.of( ENTITY, values, ENTITY_SET_ID_FIELD, entitySetId ) );
@@ -810,12 +810,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             Constraint constraints,
             Map<UUID, Map<String, Float>> authorizedFieldsMap ) {
 
-        boolean isEmpty = true;
-
         BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch( 1 );
         for ( SearchDetails search : constraints.getSearches().get() ) {
             if ( authorizedFieldsMap.keySet().contains( search.getPropertyType() ) ) {
-                isEmpty = false;
 
                 QueryStringQueryBuilder queryString = QueryBuilders
                         .queryStringQuery( search.getSearchTerm() )
