@@ -105,7 +105,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         try {
             var page = 0
             var pageOfUsers: Set<Auth0UserBasic> = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)!!
-            check( pageOfUsers.isNotEmpty() || users.isNotEmpty()) { "No users found."}
+            check(pageOfUsers.isNotEmpty() || users.isNotEmpty()) { "No users found." }
             while (pageOfUsers.isNotEmpty()) {
                 logger.info("Loading page {} of {} auth0 users", page, pageOfUsers.size)
                 pageOfUsers
@@ -142,7 +142,7 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                 pageOfUsers = auth0ManagementApi.getAllUsers(page++, DEFAULT_PAGE_SIZE)
             }
         } catch (ex: Exception) {
-            logger.error("Retrofit called failed during auth0 sync task." , ex )
+            logger.error("Retrofit called failed during auth0 sync task.", ex)
             return
         }
 
@@ -151,17 +151,19 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                 OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.SECONDS)
         ) as Predicate<String, Auth0UserBasic>?
 
+        val usersToRemove = users.keySet(removeUsersPredicate)
+        logger.info("Removing the following users: {}", usersToRemove)
         /*
          *  Need to remove members from their respective orgs here
          */
-        membersOf.executeOnEntries( RemoveMemberOfOrganizationEntryProcessor( users.keySet( removeUsersPredicate ) ) )
+        membersOf.executeOnEntries(RemoveMemberOfOrganizationEntryProcessor(usersToRemove))
 
         /*
          * If we did not see a user in any of the pages we should delete that user.
          * In the future we should consider persisting users to our own database so that we
          * don't have to load all of them at startup.
          */
-        users.removeAll( removeUsersPredicate )
+        users.removeAll(removeUsersPredicate)
 
     }
 
@@ -191,7 +193,9 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         }
 
         if (user.roles.contains(SystemRole.ADMIN.getName())) {
-            syncDependencies.organizationService.addMembers(openlatticeOrganizationAclKey[0], ImmutableSet.of(principal))
+            syncDependencies.organizationService.addMembers(
+                    openlatticeOrganizationAclKey[0], ImmutableSet.of(principal)
+            )
             syncDependencies.organizationService
                     .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal)
         }
