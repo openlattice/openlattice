@@ -102,7 +102,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Inject
     private SecurePrincipalsManager spm;
 
-    private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
+    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @RequestMapping(
@@ -587,7 +587,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             method = RequestMethod.DELETE )
     public Integer deleteAllEntitiesFromEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
-            @RequestParam( value = TYPE ) DeleteType deleteType) {
+            @RequestParam( value = TYPE ) DeleteType deleteType ) {
         WriteEvent writeEvent;
         // access checks to entity set and property types
         final Map<UUID, PropertyType> authorizedPropertyTypes =
@@ -635,7 +635,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
 
         if ( entityKeyIds.size() > MAX_BATCH_SIZE ) {
-            throw new IllegalArgumentException( "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
+            throw new IllegalArgumentException(
+                    "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
         }
 
         WriteEvent writeEvent;
@@ -766,10 +767,10 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // (along with associations connected to all of them), not associations.
         // If called with an association entity set, it will simplify down to a basic delete call.
 
-
         final Set<UUID> entityKeyIds = filter.getEntityKeyIds();
         if ( entityKeyIds.size() > MAX_BATCH_SIZE ) {
-            throw new IllegalArgumentException( "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
+            throw new IllegalArgumentException(
+                    "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
         }
 
         // we don't include associations in filtering, since they will be deleted anyways with deleting the entities
@@ -823,7 +824,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         entitySetIdToEntityDataKeysMap.values().forEach( neighborEntityKeyIds -> {
                     if ( neighborEntityKeyIds.size() > MAX_BATCH_SIZE ) {
-                        throw new IllegalArgumentException( "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
+                        throw new IllegalArgumentException(
+                                "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
                     }
                 }
         );
@@ -879,13 +881,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         deleteAssociations( neighborEntitySetId, Optional.of( entityKeyIds ) );
                         neighborWriteEvent = dgm.deleteEntities(
                                 neighborEntitySetId,
-                                neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
+                                neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId )
+                                        .collect( Collectors.toSet() ),
                                 authorizedPropertyTypesOfEntitySets.get( neighborEntitySetId ) );
                     } else {
                         clearAssociations( entitySetId, Optional.of( entityKeyIds ) );
                         neighborWriteEvent = dgm.clearEntities(
                                 neighborEntitySetId,
-                                neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId ).collect( Collectors.toSet() ),
+                                neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId )
+                                        .collect( Collectors.toSet() ),
                                 authorizedPropertyTypesOfEntitySets.get( neighborEntitySetId ) );
                     }
 
