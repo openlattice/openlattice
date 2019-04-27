@@ -39,7 +39,7 @@ public class IndexerSecurityPod extends Auth0SecurityPod {
                 .antMatchers( HttpMethod.OPTIONS ).permitAll()
                 .antMatchers( HttpMethod.POST, "/indexer/**" ).authenticated()
                 .antMatchers( HttpMethod.PUT, "/indexer/**" ).authenticated()
-                .antMatchers( HttpMethod.GET, "/indexer/**" ).permitAll()
+                .antMatchers( HttpMethod.GET, "/indexer/**" ).authenticated()
                 .antMatchers( "/indexer/**" ).authenticated();
     }
 }
