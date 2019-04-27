@@ -222,15 +222,6 @@ class Assembler(
 
         // materialize entity sets
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
-
-            // if entity set is not yet materialized or it is, but had data changes -> update view
-            // (edm changes are propagated immediately)
-            if(!isEntitySetMaterialized(entitySetId)
-                    || materializedEntitySets[EntitySetAssemblyKey(entitySetId, organizationId)]!!.flags
-                            .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)) {
-                createOrUpdateProductionViewOfEntitySet(entitySetId)
-            }
-
             // even if we re-materialize, we would clear all flags
             val materializedEntitySetKey = EntitySetAssemblyKey(entitySetId, organizationId)
             materializedEntitySets.set(materializedEntitySetKey, MaterializedEntitySet(materializedEntitySetKey))
@@ -290,8 +281,6 @@ class Assembler(
         if (!materializedEntitySets[entitySetAssemblyKey]!!.flags.contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
                 && materializedEntitySets[entitySetAssemblyKey]!!.flags.contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)) {
             logger.info("Refreshing materialized entity set $entitySetId")
-
-            createOrUpdateProductionViewOfEntitySet(entitySetId)
 
             materializedEntitySets.executeOnKey(
                     entitySetAssemblyKey,
