@@ -19,6 +19,7 @@
 package com.openlattice.directory.pojo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,7 +35,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.Sets;
 
 @JsonIgnoreProperties(
-    ignoreUnknown = true )
+        ignoreUnknown = true )
 public class Auth0UserBasic {
     public static final String USER_ID_FIELD       = "user_id";
     public static final String EMAIL_FIELD         = "email";
@@ -44,18 +45,18 @@ public class Auth0UserBasic {
     public static final String ROLES_FIELD         = "roles";
     public static final String ORGANIZATIONS_FIELD = "com/openlattice/organization";
 
-    private final String       userId;
-    private final String       email;
-    private final String       nickname;
-    private final String       username;
-    private final Set<String>  roles;
-    private final Set<String>  organizations;
+    private final String         userId;
+    private final String         email;
+    private final String         nickname;
+    private final String         username;
+    private final Set<String>    roles;
+    private final Set<String>    organizations;
     private final OffsetDateTime loadTime = OffsetDateTime.now();
 
     @SuppressWarnings( "unchecked" )
     @JsonCreator
     @JsonIgnoreProperties(
-        ignoreUnknown = true )
+            ignoreUnknown = true )
     public Auth0UserBasic(
             @JsonProperty( USER_ID_FIELD ) String userId,
             @JsonProperty( EMAIL_FIELD ) String email,
@@ -80,7 +81,12 @@ public class Auth0UserBasic {
                         new ArrayList<String>() ) ) );
     }
 
-    public Auth0UserBasic( String userId, String email, String nickname, Set<String> roles, Set<String> organizations ) {
+    public Auth0UserBasic(
+            String userId,
+            String email,
+            String nickname,
+            Set<String> roles,
+            Set<String> organizations ) {
         this.userId = userId;
         this.email = email;
         this.nickname = nickname;
@@ -126,8 +132,8 @@ public class Auth0UserBasic {
     }
 
     @JsonIgnore
-    public OffsetDateTime getLoadTime() {
-        return loadTime;
+    public long getLoadTime() {
+        return loadTime.toInstant().toEpochMilli();
     }
 
     @Override
@@ -151,13 +157,18 @@ public class Auth0UserBasic {
     @Override
     public boolean equals( Object obj ) {
         // user id is a unique identifier.
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
+        if ( this == obj )
+            return true;
+        if ( obj == null )
+            return false;
+        if ( getClass() != obj.getClass() )
+            return false;
         Auth0UserBasic other = (Auth0UserBasic) obj;
         if ( userId == null ) {
-            if ( other.userId != null ) return false;
-        } else if ( !userId.equals( other.userId ) ) return false;
+            if ( other.userId != null )
+                return false;
+        } else if ( !userId.equals( other.userId ) )
+            return false;
         return true;
     }
 
