@@ -53,9 +53,9 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.hazelcast.HazelcastQueue;
 import com.openlattice.ids.IdGenerationMapstore;
 import com.openlattice.ids.Range;
 import com.openlattice.linking.mapstores.LinkingFeedbackMapstore;
@@ -143,11 +143,7 @@ public class MapstoresPod {
         return new EntityTypeMapstore( hikariDataSource );
     }
 
-    @Bean
-    public SelfRegisteringMapStore<UUID, ComplexType> complexTypeMapstore() {
-        return new ComplexTypeMapstore( hikariDataSource );
-    }
-
+y
     @Bean
     public SelfRegisteringMapStore<AclKey, AuditRecordEntitySetConfiguration> auditRecordEntitySetConfigurationMapstore() {
         return new AuditRecordEntitySetConfigurationMapstore( hikariDataSource );
@@ -244,7 +240,15 @@ public class MapstoresPod {
 
     @Bean
     public QueueConfigurer indexingQueueConfigurer() {
-        return config -> config.setMaxSize( 100000 ).setBackupCount( 1 );
+        return config -> config.setName( HazelcastQueue.INDEXING.name() ).setMaxSize( 100000 ).setBackupCount( 1 );
+    }
+
+    @Bean
+    public QueueConfigurer linkingQueueConfigurer() {
+        return config -> config
+                .setName( HazelcastQueue.LINKING_CANDIDATES.name() )
+                .setMaxSize( 1000 )
+                .setBackupCount( 1 );
     }
 
     @Bean
