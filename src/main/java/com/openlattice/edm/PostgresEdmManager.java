@@ -22,6 +22,9 @@ package com.openlattice.edm;
 
 import static com.openlattice.postgres.DataTables.propertyTableName;
 import static com.openlattice.postgres.DataTables.quote;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_SET_ID;
+import static com.openlattice.postgres.PostgresColumn.ENTITY_TYPE_ID;
+import static com.openlattice.postgres.PostgresColumn.LINKING_ID;
 import static com.openlattice.postgres.PostgresTable.IDS;
 
 import com.codahale.metrics.annotation.ExceptionMetered;
@@ -39,18 +42,31 @@ import com.openlattice.authorization.Principal;
 import com.openlattice.data.PropertyUsageSummary;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.*;
+import com.openlattice.postgres.DataTables;
+import com.openlattice.postgres.PostgresArrays;
+import com.openlattice.postgres.PostgresColumn;
+import com.openlattice.postgres.PostgresTable;
+import com.openlattice.postgres.PostgresTableDefinition;
+import com.openlattice.postgres.PostgresTableManager;
+import com.openlattice.postgres.ResultSetAdapters;
 import com.openlattice.postgres.mapstores.EntitySetMapstore;
 import com.openlattice.postgres.streams.PostgresIterable;
 import com.openlattice.postgres.streams.StatementHolder;
 import com.zaxxer.hikari.HikariDataSource;
-
-import static com.openlattice.postgres.PostgresColumn.*;
-
-import java.sql.*;
-import java.util.*;
-import java.util.stream.Collectors;
-
+import java.sql.Array;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +75,8 @@ import org.slf4j.LoggerFactory;
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 public class PostgresEdmManager implements DbEdmManager {
-    private static final Logger logger = LoggerFactory.getLogger( PostgresEdmManager.class );
+    private static final String getAllEntitySets = "SELECT * FROM " + PostgresTable.ENTITY_SETS.getName();
+    private static final Logger logger           = LoggerFactory.getLogger( PostgresEdmManager.class );
 
     private final PostgresTableManager ptm;
     private final HikariDataSource     hds;
@@ -164,21 +181,29 @@ public class PostgresEdmManager implements DbEdmManager {
 
     }
 
-    public Iterable<EntitySet> getAllEntitySets() {
-        String getAllEntitySets = String.format( "SELECT * FROM %1$s", ENTITY_SETS );
-        try ( Connection connection = hds.getConnection();
-                PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
-                ResultSet rs = ps.executeQuery() ) {
-            List<EntitySet> result = Lists.newArrayList();
-            while ( rs.next() ) {
-                result.add( ResultSetAdapters.entitySet( rs ) );
-            }
-
-            return result;
-        } catch ( SQLException e ) {
-            logger.error( "Unable to load all entity sets", e );
-            return ImmutableList.of();
-        }
+    public PostgresIterable<EntitySet> getAllEntitySets() {
+        return new PostgresIterable<>(
+                () -> {
+                    try {
+                        Connection connection = hds.getConnection();
+                        PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
+                        ps.setFetchSize( 10000 );
+                        ResultSet rs = ps.executeQuery();
+                        return new StatementHolder( connection, ps, rs );
+                    } catch ( SQLException e ) {
+                        logger.error( "Unable to load all entity sets", e );
+                        throw new IllegalStateException( "Unable to load entity sets.", e );
+                    }
+                },
+                rs -> {
+                    try {
+                        return ResultSetAdapters.entitySet( rs );
+                    } catch ( SQLException e ) {
+                        logger.error( "Unable to read entity set", e );
+                        throw new IllegalStateException( "Unable to read entity set.", e );
+                    }
+                }
+        );
     }
 
     public Iterable<EntitySet> getAllEntitySetsForType( UUID entityTypeId ) {
