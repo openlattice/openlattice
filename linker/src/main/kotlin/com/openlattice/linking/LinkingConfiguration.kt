@@ -31,11 +31,11 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName
 import java.util.*
 
 
-const val BLOCK_SIZE_FIELD = "block-size"
-const val BLACKLIST = "blacklist"
 const val DEFAULT_BLOCK_SIZE = 10000
-const val ENTITY_TYPES_FIELD = "entity-types"
-const val WHITELIST = "whitelist"
+private const val BLOCK_SIZE_FIELD = "block-size"
+private const val BLACKLIST = "blacklist"
+private const val ENTITY_TYPES_FIELD = "entity-types"
+private const val WHITELIST = "whitelist"
 private val DEFAULT_ENTITY_TYPES = setOf("general.person")
 
 /**
@@ -43,12 +43,12 @@ private val DEFAULT_ENTITY_TYPES = setOf("general.person")
  */
 @ReloadableConfiguration(uri = "linking.yaml")
 data class LinkingConfiguration(
-        @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String>,
-        @JsonProperty(
-                BLOCK_SIZE_FIELD
-        ) val blockSize: Int = DEFAULT_BLOCK_SIZE,
+        @JsonProperty(BLOCK_SIZE_FIELD) val blockSize: Int = DEFAULT_BLOCK_SIZE,
         @JsonProperty(WHITELIST) val whitelist: Optional<Set<UUID>>,
-        @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf()
+        @JsonProperty(BLACKLIST) val blacklist: Set<UUID> = setOf(),
+        @JsonProperty("batch-size") val batchSize: Int = 10,
+        @JsonProperty("load-size") val loadSize: Int = 100,
+        @JsonProperty(ENTITY_TYPES_FIELD) private val entityTypesFqns: Set<String> = DEFAULT_ENTITY_TYPES
 ) : Configuration {
     companion object {
         private val key = SimpleConfigurationKey("linking.yaml")
@@ -59,6 +59,7 @@ data class LinkingConfiguration(
     }
 
     val entityTypes: Set<FullQualifiedName> = entityTypesFqns.map { FullQualifiedName(it) }.toSet()
+
 
     @JsonIgnore
     override fun getKey(): ConfigurationKey {

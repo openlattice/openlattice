@@ -3,11 +3,7 @@ package com.openlattice.linking.controllers
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.datastore.services.EdmManager
-import com.openlattice.linking.LinkingConfiguration
-import com.openlattice.linking.EntityKeyPair
-import com.openlattice.linking.LinkingQueryService
-import com.openlattice.linking.MatchedEntityPair
-import com.openlattice.linking.RealtimeLinkingApi
+import com.openlattice.linking.*
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PathVariable
@@ -28,6 +24,9 @@ class RealtimeLinkingController(
 
     @Inject
     private lateinit var authz: AuthorizationManager
+
+    @Inject
+    private lateinit var backgroundLinkingService: BackgroundLinkingService
 
     private val entitySetBlacklist = lc.blacklist
     private val whitelist = lc.whitelist

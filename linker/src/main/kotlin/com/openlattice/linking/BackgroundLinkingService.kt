@@ -25,16 +25,18 @@ import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Stopwatch
 import com.google.common.collect.MapMaker
 import com.google.common.util.concurrent.ListeningExecutorService
+import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.query.Predicate
 import com.hazelcast.query.Predicates
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.EntityKeyIdService
 import com.openlattice.edm.EntitySet
+import com.openlattice.edm.PostgresEdmManager
 import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.linking.clustering.ClusterUpdate
-import com.openlattice.postgres.mapstores.EntitySetMapstore
-import com.openlattice.postgres.mapstores.EntitySetMapstore.ID_INDEX
+import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -58,23 +60,22 @@ internal const val MINIMUM_SCORE = 0.75
  * Performs realtime linking of individuals as they are integrated ino the system.
  */
 @Component
-class RealtimeLinkingService
+class BackgroundLinkingService
 (
-        hazelcastInstance: HazelcastInstance,
+        private val executor: ListeningExecutorService,
+        private val hazelcastInstance: HazelcastInstance,
+        private val pgEdmManager: PostgresEdmManager,
         private val blocker: Blocker,
         private val matcher: Matcher,
         private val ids: EntityKeyIdService,
         private val loader: DataLoader,
         private val gqs: LinkingQueryService,
-        private val executor: ListeningExecutorService,
         private val linkingFeedbackService: PostgresLinkingFeedbackService,
         private val linkableTypes: Set<UUID>,
-        private val entitySetBlacklist: Set<UUID>,
-        private val whitelist: Optional<Set<UUID>>,
-        private val blockSize: Int
+        private val configuration: LinkingConfiguration
 ) {
     companion object {
-        private val logger = LoggerFactory.getLogger(RealtimeLinkingService::class.java)
+        private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
         private val clusterLocks: MutableMap<UUID, ReentrantLock> =
                 MapMaker()
                         .concurrencyLevel(Runtime.getRuntime().availableProcessors() - 1)
@@ -84,9 +85,18 @@ class RealtimeLinkingService
     }
 
     private val running = ReentrantLock()
+
+    private val blacklist: Set<UUID> = configuration.blacklist
+    private val whitelist: Optional<Set<UUID>> = configuration.whitelist
+
+    private val entitySetQueue = hazelcastInstance.getMap<Long, UUID>("")
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
-    private val linkingLocks = hazelcastInstance.getMap<UUID, Boolean>(HazelcastMap.ENTITY_SETS.name)
+    private val linkingLocks = hazelcastInstance.getMap<UUID, String>(HazelcastMap.LINKING_LOCKS.name)
+
+    private val entityLinkingLocks = hazelcastInstance.getMap<EntityDataKey, Boolean>(HazelcastMap.LINKING_LOCKS.name)
+    private val cursors = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.LINKING_CURSORS.name)
     private val candidates = hazelcastInstance.getQueue<EntityDataKey>(HazelcastQueue.LINKING_CANDIDATES.name)
+
 
     private val linkingWorker = executor.submit {
         Stream.generate { candidates.take() }.forEach(this::link)
@@ -103,6 +113,7 @@ class RealtimeLinkingService
      * @param candidate The data key for the entity to perform linking upon.
      */
     private fun link(candidate: EntityDataKey) {
+        clearNeighborhoods(candidate)
         // if we have positive feedbacks on entity, we use its linking id and match them together
         if (hasPositiveFeedback(candidate)) {
             try {
@@ -211,18 +222,12 @@ class RealtimeLinkingService
         return linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, entity).iterator().hasNext()
     }
 
-    private fun clearNeighborhoods(entitySetId: UUID, entityKeyIds: Stream<UUID>) {
-        logger.debug("Starting neighborhood cleanup of {}", entitySetId)
-        val clearedCount = entityKeyIds
-                .parallel()
-                .map { EntityDataKey(entitySetId, it) }
-                .mapToInt {
-                    val positiveFeedbacks = linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, it)
-                            .map(EntityLinkingFeedback::entityPair)
-                    gqs.deleteNeighborhood(it, positiveFeedbacks)
-                }
-                .sum()
-        logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, entitySetId)
+    private fun clearNeighborhoods(candidate: EntityDataKey) {
+        logger.debug("Starting neighborhood cleanup of {}", candidate)
+        val positiveFeedbacks = linkingFeedbackService.getLinkingFeedbackOnEntity(FeedbackType.Positive, candidate)
+                .map(EntityLinkingFeedback::entityPair)
+        val clearedCount = gqs.deleteNeighborhood(candidate, positiveFeedbacks)
+        logger.debug("Cleared {} neighbors from neighborhood of {}", clearedCount, candidate)
     }
 
     private fun getAndLockClusters(
@@ -263,56 +268,64 @@ class RealtimeLinkingService
 
     @Timed
     @Scheduled(fixedRate = 30000)
+    fun pruneFailedNodes() {
+        logger.info("Removing locks for any failed nodes.")
+        val lockOwners = linkingLocks.aggregate(Aggregators.distinct<MutableMap.MutableEntry<UUID, String>, String>())
+        val memberIds = hazelcastInstance.cluster.members.map { it.uuid }
+        val failedNodes = lockOwners - memberIds
+        logger.info("Detected the following failed nodes holding locks: {}", failedNodes)
+        linkingLocks.removeAll(Predicates.`in`("this", *failedNodes.toTypedArray()) as Predicate<UUID, String>)
+    }
+
+    @Timed
+    @Scheduled(fixedRate = 30000)
     fun updateCandidateList() {
-        if (!running.tryLock()) {
-            return
+        if (running.tryLock()) {
+            try {
+                pgEdmManager.allEntitySets.asSequence()
+                        .filter { linkableTypes.contains(it.entityTypeId) }
+                        .filterNot { blacklist.contains(it.id) }
+                        .filter { entitySet -> whitelist.map { it.contains(entitySet.id) }.orElse(true) }
+                        .filter {
+                            //Filter any entity sets that are currently locked for a call to entities needing linking.
+                            val ownerId = linkingLocks.putIfAbsent(
+                                    it.id,
+                                    hazelcastInstance.localEndpoint.uuid
+                            ) ?: hazelcastInstance.localEndpoint.uuid
+                            return@filter ownerId == hazelcastInstance.localEndpoint.uuid
+                        }.forEach {
+                            updateCandidateList(it.id)
+                        }
+            } catch (ex: Exception) {
+                logger.info("Encountered error while updating candidates for linking.", ex)
+            } finally {
+                running.unlock()
+            }
         }
-        
-        try {
-            val ltFilter = Predicates.`in`(EntitySetMapstore.ENTITY_TYPE_ID_INDEX, *linkableTypes.toTypedArray())
-            val blFilter = Predicates.not(
-                    Predicates.`in`(EntitySetMapstore.ID_INDEX, *entitySetBlacklist.toTypedArray())
-            )
-            val filter = whitelist.map { wl ->
-                Predicates.and(ltFilter, blFilter, Predicates.`in`(ID_INDEX, *wl.toTypedArray()))
-            }.orElseGet { Predicates.and(ltFilter, blFilter) }
+    }
 
-            val linkableEntitySets = entitySets.keySet(filter)
+    private fun updateCandidateList(entitySetId: UUID) {
+        logger.info(
+                "Registering job to queue entities needing linking in entity set {} ({}) .",
+                entitySets.getValue(entitySetId).name,
+                entitySetId
+        )
 
-            logger.info(
-                    "Attempting to update candidates for the following linkable entity sets {}.",
-                    linkableEntitySets
-            )
-
-            linkableEntitySets
-                    .asSequence()
-                    .filter { entitySetId ->
-                        //Filter any entity sets that are currently locked for a call to entities needing linking.
-                        linkingLocks.putIfAbsent(
-                                entitySetId,
-                                true,
-                                LINKING_BATCH_TIMEOUT,
-                                TimeUnit.MILLISECONDS
-                        ) != true
-                    }
-                    .forEach { entitySetId ->
-                        logger.info(
-                                "Queueing entities needing linking in entity set {} ({}) .",
-                                entitySets.getValue(entitySetId).name,
-                                entitySetId
-                        )
-                        gqs.getEntitiesNeedingLinking(setOf(entitySetId))
+        executor.submit {
+            var entitiesNeedingLinking =
+                    gqs
+                            .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
+                            .map { EntityDataKey(it.first, it.second) }
+            while (entitiesNeedingLinking.isNotEmpty()) {
+                entitiesNeedingLinking.forEach(candidates::put)
+                entitiesNeedingLinking =
+                        gqs
+                                .getEntitiesNeedingLinking(setOf(entitySetId), configuration.loadSize)
                                 .map { EntityDataKey(it.first, it.second) }
-                                .forEach(candidates::put)
+            }
 
-                        //Allow other nodes to link entity sets.
-                        linkingLocks.set(entitySetId, false)
-                    }
-
-        } catch (ex: Exception) {
-            logger.info("Encountered error while updating candidates for linking.")
-        } finally {
-            running.unlock()
+            //Allow other nodes to link this entity set.
+            linkingLocks.delete(entitySetId)
         }
     }
 }

@@ -44,7 +44,7 @@ import com.openlattice.linking.EdmCachingDataLoader;
 import com.openlattice.linking.LinkingConfiguration;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.Matcher;
-import com.openlattice.linking.RealtimeLinkingService;
+import com.openlattice.linking.BackgroundLinkingService;
 import com.openlattice.linking.blocking.ElasticsearchBlocker;
 import com.openlattice.linking.controllers.RealtimeLinkingController;
 import com.openlattice.linking.graph.PostgresLinkingQueryService;
@@ -144,9 +144,9 @@ public class LinkerPostConfigurationServicesPod {
     }
 
     @Bean
-    public RealtimeLinkingService linkingService() throws IOException {
+    public BackgroundLinkingService linkingService() throws IOException {
         var lc = linkingConfiguration();
-        return new RealtimeLinkingService( hazelcastInstance,
+        return new BackgroundLinkingService( hazelcastInstance,
                 blocker(),
                 matcher,
                 idService(),
