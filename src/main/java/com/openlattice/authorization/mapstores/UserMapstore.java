@@ -47,7 +47,7 @@ public class UserMapstore implements TestableSelfRegisteringMapStore<String, Aut
     public static final String LOAD_TIME_INDEX = "loadTime";
     private static final Logger logger            = LoggerFactory.getLogger( UserMapstore.class );
     private static final int    DEFAULT_PAGE_SIZE = 100;
-    private static final int    TTL_SECONDS       = 60;
+    private static final int    TTL_SECONDS       = 360;
     private final Retrofit           retrofit;
     private final Auth0ManagementApi auth0ManagementApi;
 
