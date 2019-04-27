@@ -20,6 +20,7 @@
  */
 package com.openlattice.rehearsal.organization
 
+import com.google.common.collect.ImmutableList
 import com.openlattice.authorization.*
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
@@ -37,12 +38,10 @@ import com.openlattice.organization.Organization
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresArrays
-import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import org.apache.commons.lang.RandomStringUtils
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -110,15 +109,12 @@ class AssemblerLinkingTest : SetupTestData() {
 
         val esLinking = createEntitySet(personEt, true, setOf(esId1, esId2))
 
-        val personGivenNamePropertyId = EdmTestConstants.personGivenNameId
-        val givenNames = mapOf(personGivenNamePropertyId to
-                (1..numberOfEntities).map { RandomStringUtils.randomAscii(5) }.toSet())
+        val givenNames = (1..numberOfEntities).map {
+            mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)))
+        }
 
-        val entries1 = listOf(givenNames)
-        val entries2 = listOf(givenNames)
-
-        dataApi.createEntities(esId1, entries1)
-        dataApi.createEntities(esId2, entries2)
+        dataApi.createEntities(esId1, givenNames)
+        dataApi.createEntities(esId2, givenNames)
 
 
         // materialize linking entity set
@@ -150,10 +146,15 @@ class AssemblerLinkingTest : SetupTestData() {
         edmApi.addPropertyTypeToEntityType(personEt.id, newPropertyType.id)
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+
+        // wait to re-create view
+        Thread.sleep(2000)
+
         grantMaterializePermissions(organization, esLinking1, setOf(newPropertyType.id))
         organizationsApi.synchronizeEdmChanges(organizationID, esLinking1.id)
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+
         // check if new column is there
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -191,6 +192,10 @@ class AssemblerLinkingTest : SetupTestData() {
                         Optional.empty()))
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking2.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
+
+        // wait to re-create view
+        Thread.sleep(2000)
+
         organizationsApi.synchronizeEdmChanges(organizationID, esLinking2.id)
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking2.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
@@ -214,8 +219,34 @@ class AssemblerLinkingTest : SetupTestData() {
 
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
+        var esLinking = createEntitySet(personEt, true, setOf(esId1))
 
-        val esLinking = createEntitySet(personEt, true, setOf(esId1))
+        // wait while linking finishes
+        Thread.sleep(5000)
+        while (!checkLinkingFinished(setOf(importedEntitySets.keys.first(), importedEntitySets.keys.last()))) {
+            Thread.sleep(2000)
+        }
+
+        // add some data
+        val givenNames1 = (1..numberOfEntities).map {
+            mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)))
+        }
+        val givenNames2 = (1..numberOfEntities).map {
+            mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)))
+        }
+        dataApi.createEntities(esId1, givenNames1)
+        dataApi.createEntities(esId2, givenNames2)
+
+        // wait while linking finishes
+        Thread.sleep(5000)
+        while (!checkLinkingFinished(setOf(importedEntitySets.keys.first(), importedEntitySets.keys.last()))) {
+            Thread.sleep(2000)
+        }
+
+        // get linking ids
+        val ess = EntitySetSelection(Optional.of(personEt.properties))
+        val data1 = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val linkingIds1 = data1.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }.toSet()
 
         // materialize entity set with all it's properties
         grantMaterializePermissions(organization, esLinking, personEt.properties)
@@ -224,14 +255,80 @@ class AssemblerLinkingTest : SetupTestData() {
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
 
+        // check linking ids
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+
+                val actualLinkingIds = mutableSetOf<UUID>()
+                while (rs.next()) {
+                    actualLinkingIds.add(ResultSetAdapters.linkingId(rs))
+                }
+                Assert.assertEquals(linkingIds1, actualLinkingIds)
+            }
+        }
+
 
         // add entity set to linking entity set
         entitySetsApi.addEntitySetsToLinkingEntitySet(esLinking.id, setOf(esId2))
+        esLinking = edmApi.getEntitySet(esLinking.id)
 
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
 
-        // todo finish this once we change materialization of entity sets LATTICE-1929
+        // grant materialize again with new entity set included
+        grantMaterializePermissions(organization, esLinking, personEt.properties)
+
+        // refresh
+        organizationsApi.refreshDataChanges(organizationID, esLinking.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+
+        // check linking ids
+        val data12 = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val linkingIds12 = data12.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }.toSet()
+
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val actualLinkingIds = mutableSetOf<UUID>()
+                while (rs.next()) {
+                    actualLinkingIds.add(ResultSetAdapters.linkingId(rs))
+                }
+                Assert.assertEquals(linkingIds12, actualLinkingIds)
+            }
+        }
+
+
+        // remove entity set from linking entity set
+        entitySetsApi.removeEntitySetsFromLinkingEntitySet(esLinking.id, setOf(esId1))
+        esLinking = edmApi.getEntitySet(esLinking.id)
+
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+
+        // grant materialize again with new entity set included
+        grantMaterializePermissions(organization, esLinking, personEt.properties)
+
+        // refresh
+        organizationsApi.refreshDataChanges(organizationID, esLinking.id)
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+
+        // check linking ids
+        val data2 = ImmutableList.copyOf(dataApi.loadEntitySetData(esLinking.id, ess, FileType.json))
+        val linkingIds2 = data2.map { UUID.fromString(it[DataTables.ID_FQN].first() as String) }.toSet()
+
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
+                val actualLinkingIds = mutableSetOf<UUID>()
+                while (rs.next()) {
+                    actualLinkingIds.add(ResultSetAdapters.linkingId(rs))
+                }
+                Assert.assertEquals(linkingIds2, actualLinkingIds)
+            }
+        }
     }
 
     @Test
@@ -240,8 +337,8 @@ class AssemblerLinkingTest : SetupTestData() {
         val esId1 = edmApi.getEntitySetId(importedEntitySets.keys.first())
         val esId2 = edmApi.getEntitySetId(importedEntitySets.keys.last())
 
-        dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
-        dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
+        dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Hard)
+        dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Soft)
 
         val esLinking = createEntitySet(personEt, true, setOf(esId1, esId2))
         val propertyFqns = personEt.properties.map { edmApi.getPropertyType(it).type }.toSet()
@@ -249,17 +346,15 @@ class AssemblerLinkingTest : SetupTestData() {
         // materialize entity set with all it's properties
         grantMaterializePermissions(organization, esLinking, personEt.properties)
         organizationsApi.assembleEntitySets(organizationID, setOf(esLinking.id))
+
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
                 // all columns are there
-                (1..rs.metaData.columnCount).forEach {
-                    val columnName = rs.metaData.getColumnName(it)
-                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name) {
-                        Assert.assertTrue(propertyFqns.contains(FullQualifiedName(columnName)))
-                    }
+                val columns = TestAssemblerConnectionManager.getColumnNames(rs)
+                propertyFqns.forEach {
+                    Assert.assertTrue(columns.contains(it.fullQualifiedNameAsString))
                 }
                 // no data is there yet
                 Assert.assertFalse(rs.next())
@@ -270,8 +365,9 @@ class AssemblerLinkingTest : SetupTestData() {
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
 
-        val givenNames = listOf(mapOf(EdmTestConstants.personGivenNameId to
-                (1..numberOfEntities).map { RandomStringUtils.randomAscii(5) }.toSet()))
+        val givenNames = (1..numberOfEntities).map {
+            mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)))
+        }
         val ids1 = dataApi.createEntities(esId1, givenNames)
         val ids2 = dataApi.createEntities(esId2, givenNames)
 
@@ -284,47 +380,52 @@ class AssemblerLinkingTest : SetupTestData() {
             Thread.sleep(2000)
         }
 
+        //  read data with linking ids
         val ess = EntitySetSelection(Optional.of(setOf(EdmTestConstants.personGivenNameId)))
         val loadedDataWithLinkingId = dataApi.loadEntitySetData(esLinking.id, ess, FileType.json).map {
             val values = it.asMap()
+            val id = UUID.fromString(it[DataTables.ID_FQN].first() as String)
             values.remove(DataTables.ID_FQN)
 
-            UUID.fromString(it[DataTables.ID_FQN].first() as String) to values
+            id to values
         }.toMap()
 
         // refresh
         organizationsApi.refreshDataChanges(organizationID, esLinking.id)
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
                 .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+
         // check if data is in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
 
-                var index = 0
+                val materializedLinkingIds = mutableSetOf<UUID>()
                 Assert.assertTrue(rs.next())
-                Assert.assertEquals(esLinking.id, ResultSetAdapters.entitySetId(rs))
+
                 do {
-                    val id = ResultSetAdapters.id(rs)
+                    val entitySetId = ResultSetAdapters.entitySetId(rs)
+                    val id = ResultSetAdapters.linkingId(rs)
+                    Assert.assertTrue(esLinking.linkedEntitySets.contains(entitySetId))
                     Assert.assertTrue(loadedDataWithLinkingId.keys.contains(id))
-                    propertyFqns.forEach {
-                        Assert.assertEquals(
-                                loadedDataWithLinkingId.getValue(id).getValue(it).first() as String,
-                                getStringResult(rs, it.fullQualifiedNameAsString))
-                    }
-                    index++
+                    Assert.assertEquals(
+                            loadedDataWithLinkingId
+                                    .getValue(id).getValue(EdmTestConstants.personGivenNameFqn).first() as String,
+                            getStringResult(rs, EdmTestConstants.personGivenNameFqn.fullQualifiedNameAsString))
+
+                    materializedLinkingIds.add(id)
 
                 } while (rs.next())
 
-                Assert.assertEquals(numberOfEntities, index)
+                Assert.assertEquals(loadedDataWithLinkingId.keys, materializedLinkingIds)
             }
         }
 
 
         // update data
-        val newGivenNames = listOf(mapOf(EdmTestConstants.personGivenNameId to
-                (1..numberOfEntities).map { RandomStringUtils.randomAscii(5) }.toSet()))
+        val newGivenNames = (1..numberOfEntities).map {
+            mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)))
+        }
         val newTestDataWithIds1 = ids1.zip(newGivenNames).toMap()
         val newTestDataWithIds2 = ids2.zip(newGivenNames).toMap()
         dataApi.updateEntitiesInEntitySet(esId1, newTestDataWithIds1, UpdateType.Replace)
@@ -341,9 +442,10 @@ class AssemblerLinkingTest : SetupTestData() {
 
         val newLoadedDataWithLinkingId = dataApi.loadEntitySetData(esLinking.id, ess, FileType.json).map {
             val values = it.asMap()
+            val id = UUID.fromString(it[DataTables.ID_FQN].first() as String)
             values.remove(DataTables.ID_FQN)
 
-            UUID.fromString(it[DataTables.ID_FQN].first() as String) to values
+            id to values
         }.toMap()
 
         // refresh
@@ -353,29 +455,30 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is updated in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
 
-                var index = 0
+                val materializedLinkingIds = mutableSetOf<UUID>()
                 Assert.assertTrue(rs.next())
-                Assert.assertEquals(esLinking.id, ResultSetAdapters.entitySetId(rs))
+
                 do {
-                    val id = ResultSetAdapters.id(rs)
+                    val id = ResultSetAdapters.linkingId(rs)
+                    val entitySetId = ResultSetAdapters.entitySetId(rs)
+                    Assert.assertTrue(esLinking.linkedEntitySets.contains(entitySetId))
                     Assert.assertTrue(newLoadedDataWithLinkingId.keys.contains(id))
-                    propertyFqns.forEach {
-                        Assert.assertEquals(
-                                newLoadedDataWithLinkingId.getValue(id).getValue(it).first(),
-                                getStringResult(rs, it.fullQualifiedNameAsString))
-                    }
-                    index++
+                    Assert.assertEquals(
+                            newLoadedDataWithLinkingId
+                                    .getValue(id).getValue(EdmTestConstants.personGivenNameFqn).first() as String,
+                            getStringResult(rs, EdmTestConstants.personGivenNameFqn.fullQualifiedNameAsString))
+
+                    materializedLinkingIds.add(id)
 
                 } while (rs.next())
 
-                Assert.assertEquals(numberOfEntities, index)
+                Assert.assertEquals(newLoadedDataWithLinkingId.keys, materializedLinkingIds)
             }
         }
 
-        // delete first half of data
+        // delete data
         dataApi.deleteAllEntitiesFromEntitySet(esId1, DeleteType.Soft)
         dataApi.deleteAllEntitiesFromEntitySet(esId2, DeleteType.Hard)
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[esLinking.id]!!
@@ -394,7 +497,6 @@ class AssemblerLinkingTest : SetupTestData() {
         // check if data is deleted in org database
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(esLinking))
                 // no data is there
                 Assert.assertFalse(rs.next())
@@ -424,15 +526,15 @@ class AssemblerLinkingTest : SetupTestData() {
         // edges should be there but empty
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 Assert.assertFalse(rs.next())
             }
         }
 
         // add data to edges
-        val givenNames = listOf(mapOf(EdmTestConstants.personGivenNameId to
-                (1..numberOfEntities).map { RandomStringUtils.randomAscii(5) }.toSet()))
+        val givenNames = (1..numberOfEntities).map {
+            mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)))
+        }
         val ids = dataApi.createEntities(esId, givenNames)
 
         val testDataDst = randomStringEntityData(numberOfEntities, dst.properties).values.toList()
@@ -462,7 +564,6 @@ class AssemblerLinkingTest : SetupTestData() {
         // edges should be still empty, since we materialize only the linking entity set
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                // todo this will have to change once we change materialization of entity sets LATTICE-1929
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 Assert.assertFalse(rs.next())
             }
@@ -472,17 +573,28 @@ class AssemblerLinkingTest : SetupTestData() {
     /**
      * Add permission to materialize entity set and it's properties to organization principal
      */
-    private fun grantMaterializePermissions(organization: Organization, entitySet: EntitySet, properties: Set<UUID>) {
+    private fun grantMaterializePermissions(
+            organization: Organization, linkingEntitySet: EntitySet, properties: Set<UUID>) {
         val newPermissions = EnumSet.of(Permission.MATERIALIZE)
-        val entitySetAcl = Acl(AclKey(entitySet.id), setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX)))
-        permissionsApi.updateAcl(AclData(entitySetAcl, Action.ADD))
 
-        // add permissions on properties
-        properties.forEach {
-            val propertyTypeAcl = Acl(
-                    AclKey(entitySet.id, it),
+        val linkingEntitySetAcl = Acl(
+                AclKey(linkingEntitySet.id),
+                setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(linkingEntitySetAcl, Action.ADD))
+
+        // add permissions on properties and normal entity sets
+        linkingEntitySet.linkedEntitySets.forEach { entitySetId ->
+            val entitySetAcl = Acl(
+                    AclKey(entitySetId),
                     setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX)))
-            permissionsApi.updateAcl(AclData(propertyTypeAcl, Action.ADD))
+            permissionsApi.updateAcl(AclData(entitySetAcl, Action.ADD))
+
+            properties.forEach {
+                val propertyTypeAcl = Acl(
+                        AclKey(entitySetId, it),
+                        setOf(Ace(organization.principal, newPermissions, OffsetDateTime.MAX)))
+                permissionsApi.updateAcl(AclData(propertyTypeAcl, Action.ADD))
+            }
         }
     }
 
