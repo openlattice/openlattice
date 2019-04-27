@@ -409,8 +409,6 @@ class SearchLinkedEntitiesTests : SetupTestData() {
                 EdmTestConstants.personDateOfBirthId)
 
         val readPermission = EnumSet.of(Permission.READ)
-        val esReadAcl = Acl(AclKey(esLinking.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
-        permissionsApi.updateAcl(AclData(esReadAcl, Action.REMOVE))
         esLinking.linkedEntitySets.forEach { esId ->
             permissionsApi.updateAcl(
                     AclData(

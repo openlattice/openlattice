@@ -378,6 +378,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testMaterializeAuthorizations() {
+        // TODO: after automatic permission change handling, remove extra calls of re-materialization
+
         // create new organization
         val organization = TestDataFactory.organization()
         val organizationID = organizationsApi.createOrganizationIfNotExists(organization)
