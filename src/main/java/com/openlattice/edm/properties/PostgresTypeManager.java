@@ -20,14 +20,14 @@
 
 package com.openlattice.edm.properties;
 
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.PropertyType;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
+import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.edm.type.EntityType;
+import com.openlattice.edm.type.PropertyType;
 import com.openlattice.postgres.PostgresColumn;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
@@ -46,15 +46,14 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 public class PostgresTypeManager {
-    private static final Logger logger = LoggerFactory.getLogger( PostgresTypeManager.class );
-    private final HikariDataSource hds;
+    private static final Logger           logger = LoggerFactory.getLogger( PostgresTypeManager.class );
+    private final        HikariDataSource hds;
 
     private final String getEntityTypes;
     private final String getPropertyTypes;
     private final String getAssociationEntityTypes;
     private final String getAssociationTypeIds;
     private final String getEntityTypesStrict;
-    private final String getComplexTypeIds;
     private final String getEnumTypeIds;
 
     private final String entityTypesContainPropertyType;
@@ -69,7 +68,6 @@ public class PostgresTypeManager {
         String ENTITY_TYPES = PostgresTable.ENTITY_TYPES.getName();
         String PROPERTY_TYPES = PostgresTable.PROPERTY_TYPES.getName();
         String ASSOCIATION_TYPES = PostgresTable.ASSOCIATION_TYPES.getName();
-        String COMPLEX_TYPES = PostgresTable.COMPLEX_TYPES.getName();
         String ENUM_TYPES = PostgresTable.ENUM_TYPES.getName();
 
         // Property names
@@ -93,7 +91,6 @@ public class PostgresTypeManager {
         this.getEntityTypesStrict = "SELECT * FROM ".concat( ENTITY_TYPES ).concat( " WHERE " ).concat( CATEGORY )
                 .concat( " = '" ).concat(
                         SecurableObjectType.EntityType.name() ).concat( "';" );
-        this.getComplexTypeIds = "SELECT ".concat( ID ).concat( " FROM " ).concat( COMPLEX_TYPES ).concat( ";" );
         this.getEnumTypeIds = "SELECT ".concat( ID ).concat( " FROM " ).concat( ENUM_TYPES ).concat( ";" );
         this.entityTypesContainPropertyType = "SELECT * FROM ".concat( ENTITY_TYPES ).concat( " WHERE ? = ANY(" )
                 .concat( PROPERTIES ).concat( ");" );
@@ -210,10 +207,6 @@ public class PostgresTypeManager {
 
     public Iterable<UUID> getAssociationTypeIds() {
         return getIdsForQuery( getAssociationTypeIds );
-    }
-
-    public Stream<UUID> getComplexTypeIds() {
-        return StreamUtil.stream( getIdsForQuery( getComplexTypeIds ) );
     }
 
     public Stream<UUID> getEnumTypeIds() {
