@@ -136,21 +136,23 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             Set<Principal> principals ) {
         if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
             return Maps.newHashMap();
-        } else {
-            final var authorizedPropertyTypesOfNormalEntitySets = getAuthorizedPropertiesOnEntitySets(
-                    linkingEntitySet.getLinkedEntitySets(), requiredPermissions, principals );
-
-            final var authorizedProperties = authorizedPropertyTypesOfNormalEntitySets
-                    .values().stream()
-                    .reduce( ( properties, nextProperties ) ->
-                            Maps.difference( properties, nextProperties ).entriesInCommon() )
-                    .orElse( Maps.newHashMap() );
-
-            return linkingEntitySet.getLinkedEntitySets().stream().collect( Collectors.toMap(
-                    Function.identity(),
-                    esId -> authorizedProperties
-            ) );
         }
+
+        final var propertyPermissions = getPermissionsOnLinkingEntitySetProperties(
+                linkingEntitySet.getLinkedEntitySets(), principals );
+
+        final var authorizedProperties = propertyPermissions.entrySet().stream()
+                .filter( entry -> entry.getValue().containsAll( requiredPermissions ) )
+                .collect( Collectors.toMap(
+                        entry -> entry.getKey().getId(),
+                        Map.Entry::getKey
+                ) );
+
+        return linkingEntitySet.getLinkedEntitySets().stream().collect( Collectors.toMap(
+                Function.identity(),
+                esId -> authorizedProperties
+        ) );
+
     }
 
     /**
@@ -162,24 +164,22 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             EnumSet<Permission> requiredPermissions ) {
         if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
             return Maps.newHashMap();
-        } else {
-            final var authorizedPropertyTypesOfNormalEntitySets = getAuthorizedPropertyTypes(
-                    linkingEntitySet.getLinkedEntitySets(),
-                    selectedProperties,
-                    requiredPermissions,
-                    Principals.getCurrentPrincipals() );
-
-            final var authorizedProperties = authorizedPropertyTypesOfNormalEntitySets
-                    .values().stream()
-                    .reduce( ( properties, nextProperties ) ->
-                            Maps.difference( properties, nextProperties ).entriesInCommon() )
-                    .orElse( Maps.newHashMap() );
-
-            return linkingEntitySet.getLinkedEntitySets().stream().collect( Collectors.toMap(
-                    Function.identity(),
-                    esId -> authorizedProperties
-            ) );
         }
+
+        final var propertyPermissions = getPermissionsOnLinkingEntitySetProperties(
+                linkingEntitySet.getLinkedEntitySets(), selectedProperties, Principals.getCurrentPrincipals() );
+
+        final var authorizedProperties = propertyPermissions.entrySet().stream()
+                .filter( entry -> entry.getValue().containsAll( requiredPermissions ) )
+                .collect( Collectors.toMap(
+                        entry -> entry.getKey().getId(),
+                        Map.Entry::getKey
+                ) );
+
+        return linkingEntitySet.getLinkedEntitySets().stream().collect( Collectors.toMap(
+                Function.identity(),
+                esId -> authorizedProperties
+        ) );
     }
 
     public Map<UUID, PropertyType> getAuthorizedPropertyTypesOfLinkingEntitySet(
@@ -195,16 +195,45 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             Set<Principal> principals ) {
         if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
             return Maps.newHashMap();
-        } else {
-            final var authorizedPropertyTypesOfNormalEntitySets = getAuthorizedPropertiesOnEntitySets(
-                    linkingEntitySet.getLinkedEntitySets(), requiredPermissions, principals );
-
-            return authorizedPropertyTypesOfNormalEntitySets
-                    .values().stream()
-                    .reduce( ( properties, nextProperties ) ->
-                            Maps.difference( properties, nextProperties ).entriesInCommon() )
-                    .orElse( Maps.newHashMap() );
         }
+
+        final var propertyPermissions = getPermissionsOnLinkingEntitySetProperties(
+                linkingEntitySet.getLinkedEntitySets(), principals );
+        return propertyPermissions.entrySet().stream()
+                .filter( entry -> entry.getValue().containsAll( requiredPermissions ) )
+                .collect( Collectors.toMap(
+                        entry -> entry.getKey().getId(),
+                        Map.Entry::getKey
+                ) );
+    }
+
+    /**
+     * Note: entity sets of ids provided are assumed to have same entity type
+     *
+     * @return the intersection of permissions for each property type id of the normal entity sets
+     */
+    private Map<PropertyType, EnumSet<Permission>> getPermissionsOnLinkingEntitySetProperties(
+            Set<UUID> entitySetIds, Set<Principal> principals ) {
+
+        final var propertyTypeIds = getAllPropertiesOnEntitySet( entitySetIds.iterator().next() );
+        return getPermissionsOnLinkingEntitySetProperties( entitySetIds, propertyTypeIds, principals );
+    }
+
+    /**
+     * @return the intersection of permissions for each provided property type id of the normal entity sets
+     */
+    private Map<PropertyType, EnumSet<Permission>> getPermissionsOnLinkingEntitySetProperties(
+            Set<UUID> entitySetIds, Set<UUID> selectedProperties, Set<Principal> principals ) {
+        final var propertyTypes = edm.getPropertyTypesAsMap( selectedProperties );
+
+        final var aclKeySets = propertyTypes.keySet().stream().collect( Collectors.toMap(
+                Function.identity(),
+                ptId -> entitySetIds.stream().map( esId -> new AclKey( esId, ptId ) ).collect( Collectors.toSet() ) ) );
+
+        final var permissionsMap = authz.getSecurableObjectSetsPermissions( aclKeySets.values(), principals );
+
+        return propertyTypes.values().stream().collect( Collectors.toMap( Function.identity(),
+                pt -> permissionsMap.get( aclKeySets.get( pt.getId() ) ) ) );
     }
 
     /**

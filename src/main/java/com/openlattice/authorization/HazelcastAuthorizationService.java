@@ -341,25 +341,25 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     @Timed
     @Override
     public Map<Set<AclKey>, EnumSet<Permission>> getSecurableObjectSetsPermissions(
-            List<Set<AclKey>> securableObjectSets,
+            Collection<Set<AclKey>> aclKeySets,
             Set<Principal> principals ) {
 
-        return securableObjectSets.parallelStream().collect( Collectors.toMap(
+        return aclKeySets.parallelStream().collect( Collectors.toMap(
                 Function.identity(),
                 aclKeySet -> getSecurableObjectSetPermissions( aclKeySet, principals )
         ) );
     }
 
     private EnumSet<Permission> getSecurableObjectSetPermissions(
-            Set<AclKey> securableObjectSet,
+            Set<AclKey> aclKeySet,
             Set<Principal> principals ) {
 
-        var authorizationsMap = securableObjectSet.stream()
+        var authorizationsMap = aclKeySet.stream()
                 .collect( Collectors.toMap( Function.identity(), aclKey -> EnumSet.noneOf( Permission.class ) ) );
 
         return aces.aggregate(
                 new AuthorizationSetAggregator( authorizationsMap ),
-                matches( securableObjectSet, principals ) );
+                matches( aclKeySet, principals ) );
     }
 
     @Override

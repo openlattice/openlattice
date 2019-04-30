@@ -115,8 +115,13 @@ public interface AuthorizationManager {
     boolean checkIfUserIsOwner( AclKey aclkeys, Principal principal );
     // Utility functions for retrieving permissions
 
+    /**
+     * @param aclKeySets the list of groups of AclKeys for wich to get the most restricted set of permissions
+     * @param principals the pricipals to check against
+     * @return the intersection of permission for each set of aclKeys
+     */
     Map<Set<AclKey>, EnumSet<Permission>> getSecurableObjectSetsPermissions(
-            List<Set<AclKey>> securableObjectSets,
+            Collection<Set<AclKey>> aclKeySets,
             Set<Principal> principals );
 
     Set<Permission> getSecurableObjectPermissions(
