@@ -401,16 +401,17 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     @Override
     @Timed
-    public Stream<SetMultimap<FullQualifiedName, Object>> getEntitiesWithVersion(
+    public Stream<SetMultimap<FullQualifiedName, Object>> getEntitiesWithMetadata(
             UUID entitySetId,
             Set<UUID> ids,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            EnumSet<MetadataOption> metadataOptions ) {
         //If the query generated exceeds 33.5M UUIDs good chance that it exceeds Postgres's 1 GB max query buffer size
         return dataQueryService.streamableEntitySet(
                 entitySetId,
                 ids,
                 authorizedPropertyTypes,
-                EnumSet.of( MetadataOption.LAST_WRITE ),
+                metadataOptions,
                 Optional.empty(),
                 false ).stream();
     }
@@ -438,6 +439,20 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 entityKeyIds,
                 authorizedPropertyTypes,
                 EnumSet.noneOf( MetadataOption.class ),
+                Optional.empty() ).stream();
+    }
+
+    @Override
+    @Timed
+    public Stream<SetMultimap<FullQualifiedName, Object>> getLinkingEntitiesWithMetadata(
+            Map<UUID, Optional<Set<UUID>>> entityKeyIds,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            EnumSet<MetadataOption> metadataOptions ) {
+        //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
+        return dataQueryService.streamableLinkingEntitySet(
+                entityKeyIds,
+                authorizedPropertyTypes,
+                metadataOptions,
                 Optional.empty() ).stream();
     }
 

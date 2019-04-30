@@ -40,6 +40,7 @@ import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.*;
@@ -790,11 +791,16 @@ public class SearchService {
         if ( linking ) {
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetIds = authorizedPropertyTypes.keySet().stream()
                     .collect( Collectors.toMap( esId -> esId, esId -> Optional.of( entityKeyIds ) ) );
-            return dataManager.getLinkingEntities( linkingIdsByEntitySetIds, authorizedPropertyTypes )
+            return dataManager.getLinkingEntitiesWithMetadata( linkingIdsByEntitySetIds,
+                    authorizedPropertyTypes,
+                    EnumSet.of( MetadataOption.LAST_WRITE ) )
                     .collect( Collectors.toList() );
         } else {
             return dataManager
-                    .getEntities( entitySetId, ImmutableSet.copyOf( entityKeyIds ), authorizedPropertyTypes )
+                    .getEntitiesWithMetadata( entitySetId,
+                            ImmutableSet.copyOf( entityKeyIds ),
+                            authorizedPropertyTypes,
+                            EnumSet.of( MetadataOption.LAST_WRITE ) )
                     .collect( Collectors.toList() );
         }
     }

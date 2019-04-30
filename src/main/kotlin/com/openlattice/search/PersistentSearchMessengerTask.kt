@@ -162,6 +162,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             logger.info(
                     "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
                     results.numHits)
+            return lastReadDateTime
         }
 
         return null
