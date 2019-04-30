@@ -25,18 +25,14 @@ package com.openlattice.data.storage;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.data.*;
 import com.openlattice.data.events.EntitiesDeletedEvent;
 import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.EntitySetDataDeletedEvent;
 import com.openlattice.edm.type.PropertyType;
-import com.openlattice.hazelcast.HazelcastMap;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
 import com.openlattice.organization.OrganizationEntitySetFlag;
@@ -541,9 +537,23 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         logger.info( "Deleting data of entity set: {}", entitySetId );
         WriteEvent propertyWriteEvent = dataQueryService.deleteEntitySetData( entitySetId, propertyTypes );
         WriteEvent writeEvent = dataQueryService.deleteEntitySet( entitySetId );
-        logger.info( "Finished deletion data from entity set {}. Deleted {} rows and {} property data",
-                entitySetId, writeEvent.getNumUpdates(), propertyWriteEvent.getNumUpdates() );
+
         signalEntitySetDataDeleted( entitySetId );
+
+        // delete entities from linking feedbacks
+        int deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks( entitySetId, Optional.empty() );
+
+        // Delete all neighboring entries from matched entities
+        int deleteMatchCount = linkingQueryService.deleteEntitySetNeighborhood( entitySetId );
+
+        logger.info( "Finished deleting data from entity set {}. " +
+                        "Deleted {} rows and {} property data, {} linking feedback and {} matched entries.",
+                entitySetId,
+                writeEvent.getNumUpdates(),
+                propertyWriteEvent.getNumUpdates(),
+                deleteFeedbackCount,
+                deleteMatchCount );
+
         return writeEvent;
     }
 
@@ -559,13 +569,14 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         signalDeletedEntities( entitySetId, entityKeyIds );
 
         // delete entities from linking feedbacks too
-        int deleteFeedbackCount = feedbackQueryService.deleteLinkingFeedbacks( entitySetId, entityKeyIds );
+        int deleteFeedbackCount = feedbackQueryService
+                .deleteLinkingFeedbacks( entitySetId, Optional.of( entityKeyIds ) );
 
         // Delete all neighboring entries from matched entities
         int deleteMatchCount = linkingQueryService.deleteNeighborhoods( entitySetId, entityKeyIds );
 
         logger.info( "Finished deletion of entities ( {} ) from entity set {}. Deleted {} rows, {} property data, " +
-                        "{} linking feedback and {} matched entries",
+                        "{} linking feedback and {} matched entries.",
                 entityKeyIds,
                 entitySetId,
                 writeEvent.getNumUpdates(),
