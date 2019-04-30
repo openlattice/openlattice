@@ -20,13 +20,13 @@
  */
 package com.openlattice.authorization.aggregators
 
-import com.google.common.base.Preconditions.checkNotNull
 import com.google.common.collect.Sets
 import com.hazelcast.aggregation.Aggregator
 import com.openlattice.authorization.AceKey
 import com.openlattice.authorization.AceValue
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.Permission
+import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.Map
 
@@ -34,15 +34,24 @@ data class AuthorizationSetAggregator(
         val permissionsMap: MutableMap<AclKey, EnumSet<Permission>>
 ) : Aggregator<Map.Entry<AceKey, AceValue>, EnumSet<Permission>>() {
 
+    companion object {
+        private val logger = LoggerFactory.getLogger(AuthorizationSetAggregator::class.java)
+    }
+
     override fun accumulate(input: Map.Entry<AceKey, AceValue>) {
-        val permissions = checkNotNull(input.value.permissions, "Permissions shouldn't be null")
-        permissionsMap[input.key.aclKey] = permissions
+        val permissions = input.value.permissions
+        
+        if (permissions == null) {
+            logger.error("Encountered null permissions for ${input.key}")
+        } else {
+            permissionsMap[input.key.aclKey] = permissions
+        }
     }
 
     override fun combine(aggregator: Aggregator<*, *>?) {
         if (aggregator is AuthorizationSetAggregator) {
             aggregator.permissionsMap.forEach {
-                permissionsMap[it.key]!!.addAll(it.value)
+                permissionsMap.getValue(it.key).addAll(it.value)
             }
         }
     }
@@ -54,16 +63,12 @@ data class AuthorizationSetAggregator(
 
         return permissionsMap.values
                 .fold(EnumSet.allOf(Permission::class.java)) { acc, permissionSet ->
-                    val reducedPermissions = Sets.intersection(acc, permissionSet)
+                    val reducedPermissions = acc.intersect(permissionSet)
                     if (reducedPermissions.isEmpty()) {
                         return@fold EnumSet.noneOf(Permission::class.java)
                     }
 
                     EnumSet.copyOf(reducedPermissions)
                 }
-    }
-
-    override fun toString(): String {
-        return "AuthorizationSetAggregator{permissionsMap=$permissionsMap}"
     }
 }
