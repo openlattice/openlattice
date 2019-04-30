@@ -29,8 +29,6 @@ import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 import com.openlattice.conductor.rpc.SearchConfiguration
 
 
-private val key = SimpleConfigurationKey("indexer.yaml")
-
 /**
  * In
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -43,12 +41,10 @@ data class IndexerConfiguration(
 ) : Configuration {
     companion object {
         @JvmStatic
-        fun key(): ConfigurationKey {
-            return key
-        }
+        val configKey = SimpleConfigurationKey("indexer.yaml")
     }
 
     override fun getKey(): ConfigurationKey {
-        return key
+        return configKey
     }
 }
