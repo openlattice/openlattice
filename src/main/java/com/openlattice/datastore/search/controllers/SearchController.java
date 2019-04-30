@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.search.controllers;
 
+import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
@@ -94,6 +95,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executeEntitySetKeywordQuery(
             @RequestBody Search search ) {
         if ( !search.getOptionalKeyword().isPresent() && !search.getOptionalEntityType().isPresent()
@@ -114,6 +116,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public Iterable<EntitySet> getPopularEntitySet() {
         return edm.getEntitySets();
 
@@ -124,6 +127,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult getEntitySets(
             @PathVariable( START ) int start,
             @PathVariable( NUM_RESULTS ) int maxHits ) {
@@ -140,6 +144,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.PATCH,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public DataSearchResult searchEntitySetData( @RequestBody SearchConstraints searchConstraints ) {
 
         DataSearchResult results = searchService.executeSearch( searchConstraints, Principals.getCurrentPrincipals() );
@@ -173,6 +178,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executeOrganizationSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executeOrganizationKeywordSearch( searchTerm );
     }
@@ -182,6 +188,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public DataSearchResult executeEntitySetDataQuery(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody SearchTerm searchTerm ) {
@@ -235,6 +242,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public DataSearchResult executeAdvancedEntitySetDataQuery(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody AdvancedSearch search ) {
@@ -287,6 +295,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executeEntityTypeSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executeEntityTypeSearch( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
@@ -298,6 +307,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executeAssociationTypeSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executeAssociationTypeSearch( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
@@ -309,6 +319,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executePropertyTypeSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executePropertyTypeSearch( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
@@ -320,6 +331,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executeAppSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executeAppSearch( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
@@ -331,6 +343,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executeAppTypeSearch( @RequestBody SearchTerm searchTerm ) {
         return searchService.executeAppTypeSearch( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
@@ -342,6 +355,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executeFQNEntityTypeSearch( @RequestBody FQNSearchTerm searchTerm ) {
         return searchService.executeFQNEntityTypeSearch( searchTerm.getNamespace(),
                 searchTerm.getName(),
@@ -354,6 +368,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public SearchResult executeFQNPropertyTypeSearch( @RequestBody FQNSearchTerm searchTerm ) {
         return searchService.executeFQNPropertyTypeSearch( searchTerm.getNamespace(),
                 searchTerm.getName(),
@@ -366,6 +381,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public List<NeighborEntityDetails> executeEntityNeighborSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @PathVariable( ENTITY_ID ) UUID entityKeyId ) {
@@ -429,6 +445,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public Map<UUID, List<NeighborEntityDetails>> executeEntityNeighborSearchBulk(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Set<UUID> entityKeyIds ) {
@@ -440,6 +457,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public Map<UUID, List<NeighborEntityDetails>> executeFilteredEntityNeighborSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter ) {
@@ -541,6 +559,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
     @Override
+    @Timed
     public Map<UUID, Map<UUID, SetMultimap<UUID, NeighborEntityIds>>> executeFilteredEntityNeighborIdsSearch(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody EntityNeighborsFilter filter ) {
@@ -625,6 +644,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             path = { EDM + INDEX },
             method = RequestMethod.GET )
     @Override
+    @Timed
     public Void triggerEdmIndex() {
         ensureAdminAccess();
         searchService.triggerPropertyTypeIndex( Lists.newArrayList( edm.getPropertyTypes() ) );
@@ -640,6 +660,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             path = { ENTITY_SETS + INDEX + ENTITY_SET_ID_PATH },
             method = RequestMethod.GET )
     @Override
+    @Timed
     public Void triggerEntitySetDataIndex( @PathVariable( ENTITY_SET_ID ) UUID entitySetId ) {
         ensureAdminAccess();
         searchService.triggerEntitySetDataIndex( entitySetId );
@@ -650,6 +671,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             path = { ENTITY_SETS + INDEX },
             method = RequestMethod.GET )
     @Override
+    @Timed
     public Void triggerAllEntitySetDataIndex() {
         ensureAdminAccess();
         searchService.triggerAllEntitySetDataIndex();
@@ -660,6 +682,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             path = { ORGANIZATIONS + INDEX },
             method = RequestMethod.GET )
     @Override
+    @Timed
     public Void triggerAllOrganizationsIndex() {
         ensureAdminAccess();
         List<Organization> allOrganizations = Lists.newArrayList(
@@ -677,6 +700,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
             path = { ORGANIZATIONS + INDEX + ORGANIZATION_ID_PATH },
             method = RequestMethod.GET )
     @Override
+    @Timed
     public Void triggerOrganizationIndex( @PathVariable( ORGANIZATION_ID ) UUID organizationId ) {
         ensureAdminAccess();
         searchService.triggerOrganizationIndex( organizationService.getOrganization( organizationId ) );

@@ -1,5 +1,6 @@
 package com.openlattice.admin
 
+import com.codahale.metrics.annotation.Timed
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.auditing.AuditRecordEntitySetsManager
 import com.openlattice.authorization.AuthorizationManager
@@ -35,6 +36,7 @@ class AdminController : AdminApi, AuthorizingComponent {
     private lateinit var postgresEdmManager: PostgresEdmManager
 
 
+    @Timed
     @GetMapping(value = [RELOAD_CACHE])
     override fun reloadCache() {
         ensureAdminAccess()
@@ -48,18 +50,21 @@ class AdminController : AdminApi, AuthorizingComponent {
         }
     }
 
+    @Timed
     @GetMapping(value = [RELOAD_CACHE + NAME_PATH])
     override fun reloadCache(@PathVariable(NAME) name: String) {
         ensureAdminAccess()
         hazelcast.getMap<Any, Any>(HazelcastMap.valueOf(name).name).loadAll(true)
     }
 
+    @Timed
     @GetMapping(value = [PRINCIPALS + ID_PATH])
     override fun getUserPrincipals(@PathVariable(ID) principalId: String): Set<Principal> {
         ensureAdminAccess()
         return Principals.getUserPrincipals(principalId)
     }
 
+    @Timed
     @PostMapping(value = [ENTITY_SETS + COUNT], consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun countEntitySetsOfEntityTypes(@RequestBody entityTypeIds: Set<UUID>): Map<UUID, Long> {

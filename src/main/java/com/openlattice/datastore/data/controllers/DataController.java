@@ -109,6 +109,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH },
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_CSV_VALUE } )
+    @Timed
     public EntitySetData<FullQualifiedName> loadEntitySetData(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestParam(
@@ -142,6 +143,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             method = RequestMethod.POST,
             consumes = { MediaType.APPLICATION_JSON_VALUE },
             produces = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_CSV_VALUE } )
+    @Timed
     public EntitySetData<FullQualifiedName> loadEntitySetData(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody( required = false ) EntitySetSelection selection,
@@ -231,6 +233,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH,
             consumes = MediaType.APPLICATION_JSON_VALUE )
+    @Timed
     public Integer updateEntitiesInEntitySet(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Map<UUID, Map<UUID, Set<Object>>> entities,
@@ -284,6 +287,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     @Override
+    @Timed
     public Integer replaceEntityProperties(
             @PathVariable( ENTITY_SET_ID ) UUID entitySetId,
             @RequestBody Map<UUID, SetMultimap<UUID, Map<ByteBuffer, Object>>> entities ) {
@@ -313,6 +317,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     }
 
     @Override
+    @Timed
     @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
         associations.forEach(
@@ -400,6 +405,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return entityKeyIds;
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH,
@@ -592,6 +598,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return new DataGraphIds( entityKeyIds, associationEntityKeyIds );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ALL },
@@ -629,6 +636,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return writeEvent.getNumUpdates();
     }
 
+    @Timed
     @Override
     @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH } )
     public Integer deleteEntity(
@@ -638,6 +646,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return deleteEntities( entitySetId, ImmutableSet.of( entityKeyId ), deleteType );
     }
 
+    @Timed
     @Override
     @DeleteMapping( path = { "/" + ENTITY_SET + "/" + SET_ID_PATH } )
     public Integer deleteEntities(
@@ -680,6 +689,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return writeEvent.getNumUpdates();
     }
 
+    @Timed
     @Override
     @DeleteMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTIES } )
@@ -927,6 +937,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
@@ -958,6 +969,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return writeEvent.getNumUpdates();
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { "/" + ENTITY_SET + "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
@@ -974,6 +986,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         return replaceEntityInEntitySet( entitySetId, entityKeyId, entity );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { "/" + SET_ID_PATH + "/" + COUNT },
@@ -991,6 +1004,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         }
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH },
@@ -1020,6 +1034,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         }
     }
 
+    @Timed
     @Override
     @GetMapping(
             path = "/" + SET_ID_PATH + "/" + ENTITY_KEY_ID_PATH + "/" + PROPERTY_TYPE_ID_PATH,

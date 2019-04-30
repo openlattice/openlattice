@@ -20,6 +20,7 @@
 
 package com.openlattice.controllers;
 
+import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
@@ -90,6 +91,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
     @Inject
     private EdmAuthorizationHelper authzHelper;
 
+    @Timed
     @Override
     @GetMapping(
             value = { "", "/" },
@@ -103,6 +105,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         );
     }
 
+    @Timed
     @Override
     @PostMapping(
             value = { "", "/" },
@@ -114,6 +117,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return organization.getId();
     }
 
+    @Timed
     @Override
     @GetMapping(
             value = ID_PATH,
@@ -131,6 +135,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 org.getApps() );
     }
 
+    @Timed
     @Override
     @DeleteMapping( value = ID_PATH, produces = MediaType.APPLICATION_JSON_VALUE )
     @ResponseStatus( HttpStatus.OK )
@@ -143,6 +148,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @GetMapping( value = ID_PATH + INTEGRATION, produces = MediaType.APPLICATION_JSON_VALUE )
     public OrganizationIntegrationAccount getOrganizationIntegrationAccount( @PathVariable( ID ) UUID organizationId ) {
@@ -150,6 +156,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return assembler.getOrganizationIntegrationAccount( organizationId );
     }
 
+    @Timed
     @Override
     @GetMapping( value = ID_PATH + ENTITY_SETS, produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
@@ -158,6 +165,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return getOrganizationEntitySets( organizationId, EnumSet.allOf( OrganizationEntitySetFlag.class ) );
     }
 
+    @Timed
     @Override
     @PostMapping( value = ID_PATH + ENTITY_SETS, produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> getOrganizationEntitySets(
@@ -226,6 +234,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return entitySets;
     }
 
+    @Timed
     @Override
     @PostMapping(
             value = ID_PATH + ENTITY_SETS + ASSEMBLE,
@@ -238,6 +247,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return assembler.materializeEntitySets( organizationId, authorizedPropertyTypesByEntitySet );
     }
 
+    @Timed
     @Override
     @PostMapping( ID_PATH + SET_ID_PATH + SYNCHRONIZE )
     public Void synchronizeEdmChanges(
@@ -254,6 +264,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @PostMapping( ID_PATH + SET_ID_PATH + REFRESH )
     public Void refreshDataChanges(
@@ -291,6 +302,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 Set.of( organizationPrincipal.getPrincipal() ) );
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = ID_PATH + TITLE,
@@ -302,6 +314,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = ID_PATH + DESCRIPTION,
@@ -313,6 +326,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @GetMapping(
             value = ID_PATH + EMAIL_DOMAINS,
@@ -322,6 +336,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return organizations.getAutoApprovedEmailDomains( organizationId );
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = ID_PATH + EMAIL_DOMAINS,
@@ -335,6 +350,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @PostMapping(
             value = ID_PATH + EMAIL_DOMAINS,
@@ -347,6 +363,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @DeleteMapping(
             value = ID_PATH + EMAIL_DOMAINS,
@@ -359,6 +376,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
@@ -370,6 +388,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @DeleteMapping(
             value = ID_PATH + EMAIL_DOMAINS + EMAIL_DOMAIN_PATH )
@@ -381,6 +400,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @GetMapping(
             value = ID_PATH + PRINCIPALS + MEMBERS )
@@ -396,6 +416,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
 
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH )
@@ -407,6 +428,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @DeleteMapping(
             value = ID_PATH + PRINCIPALS + MEMBERS + USER_ID_PATH )
@@ -418,6 +440,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @PostMapping(
             value = ROLES,
@@ -429,6 +452,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return role.getId();
     }
 
+    @Timed
     @Override
     @GetMapping(
             value = ID_PATH + PRINCIPALS + ROLES,
@@ -444,6 +468,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 .collect( Collectors.toSet() );
     }
 
+    @Timed
     @Override
     @GetMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH,
@@ -457,6 +482,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         }
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + TITLE,
@@ -471,6 +497,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + DESCRIPTION,
@@ -484,6 +511,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @DeleteMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH )
@@ -493,6 +521,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @GetMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS,
@@ -504,6 +533,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return principalService.getAllUserProfilesWithPrincipal( new AclKey( organizationId, roleId ) );
     }
 
+    @Timed
     @Override
     @PutMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS + USER_ID_PATH )
@@ -518,6 +548,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Timed
     @Override
     @DeleteMapping(
             value = ID_PATH + PRINCIPALS + ROLES + ROLE_ID_PATH + MEMBERS + USER_ID_PATH )
