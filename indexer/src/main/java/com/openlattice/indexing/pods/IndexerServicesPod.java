@@ -161,7 +161,6 @@ public class IndexerServicesPod {
                 edmAuthorizationHelper(),
                 organizationsManager(),
                 dbcs(),
-                hazelcastInstance,
                 eventBus,
                 metricRegistry );
     }
