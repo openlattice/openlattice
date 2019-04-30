@@ -275,6 +275,17 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
             }
         }
     }
+
+
+    override fun deleteEntitySetNeighborhood(entitySetId: UUID): Int {
+        hds.connection.use {
+            it.prepareStatement(DELETE_ENTITY_SET_NEIGHBORHOOD_SQL).use {
+                it.setObject(1, entitySetId)
+                it.setObject(2, entitySetId)
+                return it.executeUpdate()
+            }
+        }
+    }
 }
 
 internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): String {
@@ -322,6 +333,8 @@ private val DELETE_NEIGHBORHOODS_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} WHE
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) "
 
+private val DELETE_ENTITY_SET_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} WHERE " +
+        "${SRC_ENTITY_SET_ID.name} = ? OR ${DST_ENTITY_SET_ID.name} = ? "
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} " +
         "WHERE (${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) "
