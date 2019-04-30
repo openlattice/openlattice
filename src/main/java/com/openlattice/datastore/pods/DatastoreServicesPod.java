@@ -375,7 +375,6 @@ public class DatastoreServicesPod {
                 edmAuthorizationHelper(),
                 organizationsManager(),
                 dcs(),
-                hazelcastInstance,
                 eventBus,
                 metricRegistry );
     }
