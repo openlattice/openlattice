@@ -477,7 +477,7 @@ public class SearchService {
             entityKeyIds.removeAll( entityKeyIdsByLinkingId.keySet() ); // remove linking ids
 
             // normal entity sets within 1 linking entity set are only authorized if all of them is authorized
-            var authorizedLinkedEntitySetIds = linkingEntitySets.stream()
+            var authorizedNormalEntitySetIds = linkingEntitySets.stream()
                     .map( EntitySet::getLinkedEntitySets )
                     .filter( esIds -> esIds.stream()
                             .allMatch( esId -> authorizations
@@ -485,7 +485,7 @@ public class SearchService {
                     .flatMap( Set::stream )
                     .collect( Collectors.toSet() );
 
-            allBaseEntitySetIds.addAll( authorizedLinkedEntitySetIds );
+            allBaseEntitySetIds.addAll( authorizedNormalEntitySetIds );
         }
 
         List<Edge> edges = Lists.newArrayList();
