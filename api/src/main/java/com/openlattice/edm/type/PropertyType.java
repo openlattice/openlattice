@@ -209,6 +209,11 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         return enumValues;
     }
 
+    @JsonIgnore
+    public void setPostgresIndexType( IndexType postgresIndexType ) {
+        this.postgresIndexType = postgresIndexType;
+    }
+
     @Override public boolean equals( Object o ) {
         if ( this == o ) { return true; }
         if ( !( o instanceof PropertyType ) ) { return false; }

@@ -157,6 +157,11 @@ public class MetadataUpdate {
         return organizationId;
     }
 
+    @JsonProperty( SerializationConstants.INDEX_TYPE)
+    public Optional<IndexType> getIndexType() {
+        return indexType;
+    }
+
     @Override public String toString() {
         return "MetadataUpdate{" +
                 "title=" + title +
