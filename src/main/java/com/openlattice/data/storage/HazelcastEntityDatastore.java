@@ -393,12 +393,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Set<UUID> ids,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
         //If the query generated exceeds 33.5M UUIDs good chance that it exceeds Postgres's 1 GB max query buffer size
-        return dataQueryService.streamableEntitySet(
-                entitySetId,
+        return getEntitiesWithMetadata( entitySetId,
                 ids,
                 authorizedPropertyTypes,
-                EnumSet.noneOf( MetadataOption.class ),
-                Optional.empty() ).stream();
+                EnumSet.noneOf( MetadataOption.class ) );
     }
 
     @Override
@@ -414,8 +412,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                 ids,
                 authorizedPropertyTypes,
                 metadataOptions,
-                Optional.empty(),
-                false ).stream();
+                Optional.empty() ).stream();
     }
 
     @Override
@@ -437,11 +434,9 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes ) {
         //If the query generated exceed 33.5M UUIDs good chance that it exceed Postgres's 1 GB max query buffer size
-        return dataQueryService.streamableLinkingEntitySet(
-                entityKeyIds,
+        return getLinkingEntitiesWithMetadata( entityKeyIds,
                 authorizedPropertyTypes,
-                EnumSet.noneOf( MetadataOption.class ),
-                Optional.empty() ).stream();
+                EnumSet.noneOf( MetadataOption.class ) );
     }
 
     @Override
@@ -533,8 +528,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                                         e.getValue(),
                                         Map.of( e.getKey(), authorizedPropertyTypesByEntitySet.get( e.getKey() ) ),
                                         EnumSet.noneOf( MetadataOption.class ),
-                                        Optional.empty(),
-                                        false )
+                                        Optional.empty() )
                         )
                 );
 

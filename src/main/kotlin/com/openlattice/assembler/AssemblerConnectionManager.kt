@@ -27,16 +27,15 @@ import com.codahale.metrics.Timer
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
-import com.hazelcast.core.HazelcastInstance
 import com.openlattice.assembler.PostgresDatabases.Companion.buildOrganizationDatabaseName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
 import com.openlattice.data.storage.entityKeyIdColumnsList
+import com.openlattice.data.storage.linkingEntityKeyIdColumnsList
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.hazelcast.HazelcastMap
 import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
@@ -52,7 +51,6 @@ import com.openlattice.principals.RoleCreatedEvent
 import com.openlattice.principals.UserCreatedEvent
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.sql.Connection
@@ -72,14 +70,14 @@ class AssemblerConnectionManager(
         private val assemblerConfiguration: AssemblerConfiguration,
         private val hds: HikariDataSource,
         private val securePrincipalsManager: SecurePrincipalsManager,
+        private val authorizationManager: AuthorizationManager,
+        private val edmAuthorizationHelper: EdmAuthorizationHelper,
         private val organizations: HazelcastOrganizationService,
         private val dbCredentialService: DbCredentialService,
-        hazelcastInstance: HazelcastInstance,
         eventBus: EventBus,
         metricRegistry: MetricRegistry
 ) {
 
-    private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val target: HikariDataSource = connect("postgres")
     private val materializeAllTimer: Timer =
             metricRegistry.timer(name(AssemblerConnectionManager::class.java, "materializeAll"))
@@ -93,11 +91,17 @@ class AssemblerConnectionManager(
     }
 
     companion object {
-        @JvmStatic val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
-        @JvmStatic val PRODUCTION_FOREIGN_SCHEMA = "prod"
-        @JvmStatic val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
-        @JvmStatic val PUBLIC_SCHEMA = "public"
-        @JvmStatic val PRODUCTION_SERVER = "olprod"
+        @JvmStatic
+        val MATERIALIZED_VIEWS_SCHEMA = "openlattice"
+        @JvmStatic
+        val PRODUCTION_FOREIGN_SCHEMA = "prod"
+        @JvmStatic
+        val PRODUCTION_VIEWS_SCHEMA = "olviews"  //This is the scheme that is created on production server to hold entity set views
+        @JvmStatic
+        val PUBLIC_SCHEMA = "public"
+
+        @JvmStatic
+        val PRODUCTION_SERVER = "olprod"
     }
 
     fun connect(dbname: String): HikariDataSource {
@@ -294,30 +298,30 @@ class AssemblerConnectionManager(
 
     fun materializeEntitySets(
             organizationId: UUID,
-            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
         materializeAllTimer.time().use {
             connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
                 materializeEntitySets(datasource, authorizedPropertyTypesByEntitySet)
             }
-            return authorizedPropertyTypesByEntitySet.mapValues {
-                EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED)
-            }
+            return authorizedPropertyTypesByEntitySet
+                    .map { it.key.id to EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED) }
+                    .toMap()
         }
     }
 
 
     private fun materializeEntitySets(
             datasource: HikariDataSource,
-            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>
     ) {
-        authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
+        authorizedPropertyTypesByEntitySet.forEach { entitySet, authorizedPropertyTypes ->
             // re-import materialized view of entity set
-            updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySetId)))
+            updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySet.id)))
             // (re)-import property_types and entity_types in case of property type change
             updatePublicTables(datasource, setOf(ENTITY_TYPES.name, PROPERTY_TYPES.name))
 
-            materialize(datasource, entitySetId, authorizedPropertyTypes)
+            materialize(datasource, entitySet, authorizedPropertyTypes)
         }
     }
 
@@ -325,15 +329,14 @@ class AssemblerConnectionManager(
      * Materializes an entity set on atlas.
      */
     private fun materialize(
-            datasource: HikariDataSource, entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
-    ) {
+            datasource: HikariDataSource,
+            entitySet: EntitySet,
+            authorizedPropertyTypes: Map<UUID, PropertyType>) {
         materializeEntitySetsTimer.time().use {
-            val entitySet = entitySets.getValue(entitySetId)
 
-            val selectColumns = (entityKeyIdColumnsList + authorizedPropertyTypes.values
-                    .map { quote(it.type.fullQualifiedNameAsString) })
-                    .joinToString(",")
+            val selectColumns = ((if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
+                    authorizedPropertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) }
+                    ).joinToString(",")
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
 
@@ -352,7 +355,7 @@ class AssemblerConnectionManager(
                 val selectGrantedResults = grantSelectForEntitySet(
                         connection,
                         tableName,
-                        entitySet.id,
+                        entitySet,
                         authorizedPropertyTypes
                 )
                 logger.info("Granted select for ${selectGrantedResults.filter { it >= 0 }.size} users/roles " +
@@ -364,45 +367,53 @@ class AssemblerConnectionManager(
     private fun grantSelectForEntitySet(
             connection: Connection,
             tableName: String,
-            entitySetId: UUID,
-            authorizedPropertyTypes: Map<UUID, PropertyType>
+            entitySet: EntitySet,
+            materializedPropertyTypes: Map<UUID, PropertyType>
     ): IntArray {
 
-        val permissions = EnumSet.of(Permission.READ)
         // collect all principals of type user, role, which have read access on entityset
         val authorizedPrincipals = securePrincipalsManager
-                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId), permissions)
+                .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySet.id), EdmAuthorizationHelper.READ_PERMISSION)
                 .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
                 .toSet()
-        // on every property type collect all principals of type user, role, which have read access
-        val authorizedPrincipalsOfProperties = authorizedPropertyTypes.values.map {
-            it.type to securePrincipalsManager
-                    .getAuthorizedPrincipalsOnSecurableObject(AclKey(entitySetId, it.id), permissions)
-                    .filter { it.type == PrincipalType.USER || it.type == PrincipalType.ROLE }
-        }.toMap()
 
-        // collect all authorized property types for principals which have read access on entity set
-        val authorizedPropertiesOfPrincipal = authorizedPrincipals
-                .map { it to mutableSetOf<FullQualifiedName>() }.toMap()
-        authorizedPrincipalsOfProperties.forEach { fqn, principals ->
-            principals.forEach {
-                authorizedPropertiesOfPrincipal[it]?.add(fqn)
+        val propertyCheckFunction: (Principal) -> (Map<UUID, PropertyType>) = if (entitySet.isLinking) {
+            { principal ->
+                // only grant select on authorized columns if principal has read access on every normal entity set
+                // within the linking entity set
+                if (entitySet.linkedEntitySets.all {
+                            authorizationManager.checkIfHasPermissions(
+                                    AclKey(it),
+                                    setOf(principal),
+                                    EdmAuthorizationHelper.READ_PERMISSION)
+                        }) {
+                    edmAuthorizationHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
+                            entitySet, EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))
+                            .filter { materializedPropertyTypes.keys.contains(it.key) }
+                } else {
+                    mapOf()
+                }
+            }
+        } else {
+            { principal ->
+                edmAuthorizationHelper.getAuthorizedPropertiesOnEntitySets(
+                        setOf(entitySet.id), EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))[entitySet.id]!!
+                        .filter { materializedPropertyTypes.keys.contains(it.key) }
             }
         }
 
-        // filter principals with no properties authorized
-        authorizedPrincipalsOfProperties.filter { it.value.isEmpty() }
+        // collect all authorized property types for principals which have read access on entity set
+        val authorizedPropertiesOfPrincipal = authorizedPrincipals
+                .map { it to propertyCheckFunction(it).values }
+                .toMap()
 
         // prepare batch queries
         return connection.createStatement().use { stmt ->
-            authorizedPropertiesOfPrincipal.forEach { principal, fqns ->
-                val allColumns =
-                        if (fqns == authorizedPrincipalsOfProperties.keys) {
-                            listOf() // if user is authorized for all properties, grant select on whole table
-                        } else {
-                            entityKeyIdColumnsList + fqns.map { it.fullQualifiedNameAsString }
-                        }
-                val grantSelectSql = grantSelectSql(tableName, principal, allColumns)
+            authorizedPropertiesOfPrincipal.forEach { principal, propertyTypes ->
+                val columns = (if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
+                        propertyTypes.map { it.type.fullQualifiedNameAsString }
+                val grantSelectSql = grantSelectSql(tableName, principal, columns)
+
                 stmt.addBatch(grantSelectSql)
             }
             stmt.executeBatch()
@@ -456,13 +467,13 @@ class AssemblerConnectionManager(
     /**
      * Synchronize data changes in entity set materialized view in organization database
      */
-    fun refreshEntitySet(organizationId: UUID, entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>) {
+    fun refreshEntitySet(organizationId: UUID, entitySet: EntitySet, authorizedPropertyTypes: Map<UUID, PropertyType>) {
         connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
             // re-import materialized view of entity set
-            updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySetId)))
+            updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySet.id)))
 
             // re-materialize entity set
-            materialize(datasource, entitySetId, authorizedPropertyTypes)
+            materialize(datasource, entitySet, authorizedPropertyTypes)
         }
     }
 
