@@ -94,10 +94,11 @@ class PostgresEntityDataQueryService(
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
             metadataOptions: EnumSet<MetadataOption>
     ): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
+        var authorizedLinkingPropertyTypes = authorizedPropertyTypesByEntitySetId.values.firstOrNull() ?: mapOf()
         val adapter = Function<ResultSet, Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
             Pair(ResultSetAdapters.linkingId(it), ResultSetAdapters.entitySetId(it)) to
-                    ResultSetAdapters.implicitEntityValuesById(
-                            it, authorizedPropertyTypesByEntitySetId, byteBlobDataManager
+                    ResultSetAdapters.implicitEntityValuesByIdWithLastWrite(
+                            it, authorizedLinkingPropertyTypes, byteBlobDataManager
                     )
         }
         return streamableEntitySet(
