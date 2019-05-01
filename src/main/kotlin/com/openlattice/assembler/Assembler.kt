@@ -224,9 +224,11 @@ class Assembler(
         authorizedPropertyTypesByEntitySet.forEach { entitySetId, authorizedPropertyTypes ->
             // even if we re-materialize, we would clear all flags
             val materializedEntitySetKey = EntitySetAssemblyKey(entitySetId, organizationId)
+            val entitySet = entitySets.getValue(entitySetId)
+
             materializedEntitySets.set(materializedEntitySetKey, MaterializedEntitySet(materializedEntitySetKey))
             materializedEntitySets.executeOnKey(materializedEntitySetKey,
-                    MaterializeEntitySetProcessor(authorizedPropertyTypes).init(acm)
+                    MaterializeEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
             )
         }
 
@@ -255,9 +257,10 @@ class Assembler(
                         .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)) {
             logger.info("Synchronizing materialized entity set $entitySetId")
 
+            val entitySet = entitySets.getValue(entitySetId)
             materializedEntitySets.executeOnKey(
                     EntitySetAssemblyKey(entitySetId, organizationId),
-                    SynchronizeMaterializedEntitySetProcessor(authorizedPropertyTypes))
+                    SynchronizeMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes))
 
             // remove flag also from organization entity sets
             assemblies.executeOnKey(organizationId,
@@ -282,9 +285,10 @@ class Assembler(
                 && materializedEntitySets[entitySetAssemblyKey]!!.flags.contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)) {
             logger.info("Refreshing materialized entity set $entitySetId")
 
+            val entitySet = entitySets.getValue(entitySetId)
             materializedEntitySets.executeOnKey(
                     entitySetAssemblyKey,
-                    RefreshMaterializedEntitySetProcessor(authorizedPropertyTypes))
+                    RefreshMaterializedEntitySetProcessor(entitySet, authorizedPropertyTypes))
             // remove flag also from organization entity sets
             assemblies.executeOnKey(organizationId,
                     RemoveFlagsFromOrganizationMaterializedEntitySetProcessor(
@@ -372,7 +376,7 @@ class Assembler(
                 as Predicate<EntitySetAssemblyKey, MaterializedEntitySet>
     }
 
-    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<*,*> {
+    private fun entitySetIdInOrganizationPredicate(entitySetId: UUID): Predicate<*, *> {
         return Predicates.equal(OrganizationAssemblyMapstore.MATERIALIZED_ENTITY_SETS_ID_INDEX, entitySetId)
     }
 

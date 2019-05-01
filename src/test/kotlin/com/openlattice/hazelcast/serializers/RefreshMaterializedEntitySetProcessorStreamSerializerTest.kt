@@ -38,10 +38,12 @@ class RefreshMaterializedEntitySetProcessorStreamSerializerTest
     }
 
     override fun createInput(): RefreshMaterializedEntitySetProcessor {
+        val entitySet = TestDataFactory.entitySet()
+
         val propertyTypes =
                 listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType())
                         .map { it.id to it }
                         .toMap()
-        return RefreshMaterializedEntitySetProcessor(propertyTypes)
+        return RefreshMaterializedEntitySetProcessor(entitySet, propertyTypes)
     }
 }

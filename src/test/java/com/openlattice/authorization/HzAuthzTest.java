@@ -315,4 +315,53 @@ public class HzAuthzTest {
         Assert.assertEquals( Set.of( p1, p2 ), authorizedPrincipals );
     }
 
+    @Test
+    public void testGetSecurableObjectSetsPermissions() {
+        var key1 = new AclKey( UUID.randomUUID() );
+        var key2 = new AclKey( UUID.randomUUID() );
+        var key3 = new AclKey( UUID.randomUUID() );
+        var key4 = new AclKey( UUID.randomUUID() );
+        var key5 = new AclKey( UUID.randomUUID() );
+        var key6 = new AclKey( UUID.randomUUID() );
+
+
+        Principal principal = TestDataFactory.userPrincipal();
+        EnumSet<Permission> read = EnumSet.of( Permission.READ );
+        EnumSet<Permission> write = EnumSet.of( Permission.WRITE );
+        EnumSet<Permission> owner = EnumSet.of( Permission.OWNER );
+        EnumSet<Permission> materialize = EnumSet.of( Permission.MATERIALIZE );
+        EnumSet<Permission> discover = EnumSet.of( Permission.DISCOVER );
+
+        // has read for all 3 acls, owner for 2, write for 2
+        var aclKeySet1 = Set.of( key1, key2, key3 );
+
+        hzAuthz.addPermission( key1, principal, read );
+        hzAuthz.addPermission( key2, principal, read );
+        hzAuthz.addPermission( key3, principal, read );
+
+        hzAuthz.addPermission( key1, principal, write );
+        hzAuthz.addPermission( key2, principal, write );
+
+        hzAuthz.addPermission( key2, principal, owner );
+        hzAuthz.addPermission( key3, principal, owner );
+
+        // has all 3 on one, none on other
+        var aclKeySet2 = Set.of( key4, key5 );
+
+        hzAuthz.addPermission( key4, principal, materialize );
+        hzAuthz.addPermission( key4, principal, discover );
+
+        // no permissions at all
+        var aclKeySet3 = Set.of( key5, key6 );
+
+
+        final var reducedPermissionsMap = hzAuthz.getSecurableObjectSetsPermissions(
+                List.of(aclKeySet1, aclKeySet2, aclKeySet3),
+                Set.of(principal) );
+
+        Assert.assertEquals( read, reducedPermissionsMap.get( aclKeySet1 ) );
+        Assert.assertEquals( EnumSet.noneOf( Permission.class ), reducedPermissionsMap.get( aclKeySet2 ) );
+        Assert.assertEquals( EnumSet.noneOf( Permission.class ), reducedPermissionsMap.get( aclKeySet3 ) );
+    }
+
 }
