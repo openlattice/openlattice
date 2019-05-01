@@ -294,11 +294,13 @@ public class SearchService {
             UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( linkingEntitySetId ).getId();
 
             // linking_id/(normal)entity_set_id/property_type_id
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
-                    linkingIds.entrySet().stream().collect(
-                            Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
-                    linkingIds.keySet().stream().collect(
-                            Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ) );
+            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager
+                    .getLinkedEntityDataByLinkingIdWithMetadata(
+                            linkingIds.entrySet().stream().collect(
+                                    Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
+                            linkingIds.keySet().stream().collect(
+                                    Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ),
+                            EnumSet.of( MetadataOption.LAST_WRITE ) );
 
             elasticsearchApi.createBulkLinkedData( entityTypeId, linkingEntitySetId, linkedData );
         }

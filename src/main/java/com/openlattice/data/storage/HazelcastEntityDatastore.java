@@ -52,7 +52,6 @@ import java.util.stream.Stream;
 
 import static com.google.common.collect.Maps.newHashMap;
 
-
 public class HazelcastEntityDatastore implements EntityDatastore {
     private static final int    BATCH_INDEX_THRESHOLD = 256;
     private static final Logger logger                = LoggerFactory
@@ -215,9 +214,10 @@ public class HazelcastEntityDatastore implements EntityDatastore {
                             entityKeyIds ) ) );
         }
 
-        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
+        markMaterializedEntitySetDirty( entitySetId ); // mark entityset as unsync with data
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+                .forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalLinkedEntitiesUpserted(
@@ -249,11 +249,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
 
     private void signalEntitySetDataDeleted( UUID entitySetId ) {
         eventBus.post( new EntitySetDataDeletedEvent( entitySetId ) );
-        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
+        markMaterializedEntitySetDirty( entitySetId ); // mark entityset as unsync with data
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.empty() );
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+                .forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
@@ -261,11 +262,12 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             eventBus.post( new EntitiesDeletedEvent( entitySetId, entityKeyIds ) );
             signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         }
-        markMaterializedEntitySetDirty(entitySetId); // mark entityset as unsync with data
+        markMaterializedEntitySetDirty( entitySetId ); // mark entityset as unsync with data
 
         signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         // mark all involved linking entitysets as unsync with data
-        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId ).forEach( this::markMaterializedEntitySetDirty );
+        dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
+                .forEach( this::markMaterializedEntitySetDirty );
     }
 
     private void signalLinkedEntitiesDeleted( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
@@ -468,9 +470,23 @@ public class HazelcastEntityDatastore implements EntityDatastore {
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId ) {
 
+        return getLinkedEntityDataByLinkingIdWithMetadata( linkingIdsByEntitySetId,
+                authorizedPropertyTypesByEntitySetId,
+                EnumSet.noneOf( MetadataOption.class ) );
+    }
+
+    @Override
+    @Timed
+    public Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityDataByLinkingIdWithMetadata(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId,
+            EnumSet<MetadataOption> metadataOptions ) {
+
         // map of: pair<linking_id, entity_set_id> to property_data
         PostgresIterable<kotlin.Pair<kotlin.Pair<UUID, UUID>, Map<UUID, Set<Object>>>> linkedEntityDataStream =
-                dataQueryService.getLinkedEntityData( linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId );
+                dataQueryService.getLinkedEntityDataWithMetadata( linkingIdsByEntitySetId,
+                        authorizedPropertyTypesByEntitySetId,
+                        metadataOptions );
 
         Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedEntityData = new HashMap<>();
         linkedEntityDataStream.stream().forEach( it -> {

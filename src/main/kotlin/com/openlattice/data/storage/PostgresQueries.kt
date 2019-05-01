@@ -21,6 +21,7 @@
 
 package com.openlattice.data.storage
 
+import com.google.common.collect.Sets
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
@@ -39,6 +40,8 @@ const val LEFT_JOIN = "LEFT JOIN"
 const val INNER_JOIN = "INNER JOIN"
 val entityKeyIdColumnsList = listOf(ENTITY_SET_ID.name, ID_VALUE.name)
 val entityKeyIdColumns = entityKeyIdColumnsList.joinToString(",")
+
+private val ALLOWED_LINKING_METADATA_OPTIONS = EnumSet.of(MetadataOption.LAST_WRITE)
 
 internal class PostgresQueries
 
@@ -374,11 +377,23 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 ): String {
     val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
 
-    val selectColumns = joinColumns.joinToString(",") +
-            (if (!metadataColumns.isEmpty()) ", $metadataColumns" else "")
-    val distinct = if (linking) "DISTINCT" else "" // we need to add this in case of linking query, because linking_id, entity_set_id are not unique
 
-    return "(SELECT $distinct $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause ) as $ENTITIES_TABLE_ALIAS"
+    var selectColumns = joinColumns.joinToString(",")
+
+    if (metadataColumns.isNotEmpty()) {
+
+        if (linking) {
+            if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+                selectColumns += ", max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}"
+            }
+        } else {
+            selectColumns += ", $metadataColumns"
+        }
+    }
+
+    val groupBy = if (linking) "GROUP BY ${LINKING_ID.name}" else ""
+
+    return "(SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
 
 }
 
@@ -453,9 +468,11 @@ private fun getJoinColumns(linking: Boolean, omitEntitySetId: Boolean): List<Str
 }
 
 private fun getMetadataOptions(metadataOptions: Set<MetadataOption>, linking: Boolean): List<String> {
-    return if (linking) { // we omit metadatoptions from linking queries
-        listOf()
+    val allowedMetadataOptions = if (linking) { // we omit some metadataOptions from linking queries
+        Sets.intersection(metadataOptions, ALLOWED_LINKING_METADATA_OPTIONS)
     } else {
-        metadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name }
+        metadataOptions
     }
+
+    return allowedMetadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name }
 }
