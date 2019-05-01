@@ -22,10 +22,7 @@
 package com.openlattice.data.ids
 
 import com.google.common.base.Preconditions.checkState
-import com.google.common.collect.HashMultimap
-import com.google.common.collect.Multimaps
 import com.google.common.collect.Queues
-import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.hazelcast.core.HazelcastInstance
 import com.openlattice.data.EntityKey
@@ -40,9 +37,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.BlockingQueue
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.stream.Collectors
 import kotlin.collections.HashMap
 
 /**
@@ -183,9 +177,9 @@ class PostgresEntityKeyIdService(
 
             val ids = HashMap<EntityKey, UUID>(entityIds.values.sumBy { it.size })
 
+            val ps = connection.prepareStatement(entityKeyIdsSql)
             entityIds
                     .forEach { (entitySetId, entityIdValues) ->
-                        val ps = connection.prepareStatement(entityKeyIdsSql)
                         ps.setObject(1, entitySetId)
                         ps.setArray(2, PostgresArrays.createTextArray(connection, entityIdValues))
                         val rs = ps.executeQuery()
