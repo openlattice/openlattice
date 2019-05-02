@@ -202,7 +202,7 @@ open class DataGraphService(
 
         associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE, groupEdges).forEach { entityKeyIds ->
             entityKeyIds.entries.forEach {
-                val writeEvent = clearEntityDataAndVerticesOfAssociayions(
+                val writeEvent = clearEntityDataAndVerticesOfAssociations(
                         it.key, it.value, authorizedPropertyTypes.getValue(it.key))
                 writeEvents.add(writeEvent)
                 associationClearCount += writeEvent.numUpdates
@@ -215,7 +215,7 @@ open class DataGraphService(
         return writeEvents
     }
 
-    private fun clearEntityDataAndVerticesOfAssociayions(entitySetId: UUID,
+    private fun clearEntityDataAndVerticesOfAssociations(entitySetId: UUID,
                                            entityKeyIds: Set<UUID>,
                                            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // clear edges
