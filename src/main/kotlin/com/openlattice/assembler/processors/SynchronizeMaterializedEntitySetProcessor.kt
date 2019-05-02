@@ -27,25 +27,26 @@ import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcesso
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
+import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import java.util.*
 
 private const val NOT_INITIALIZED = "Assembler Connection Manager not initialized."
 
-data class SynchronizeMaterializedEntitySetProcessor(val authorizedPropertyTypes: Map<UUID, PropertyType>) :
-        AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
+data class SynchronizeMaterializedEntitySetProcessor(
+        val entitySet: EntitySet, val authorizedPropertyTypes: Map<UUID, PropertyType>
+) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>(), Offloadable {
     @Transient
     private var acm: AssemblerConnectionManager? = null
 
     override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet?>): Void? {
         val organizationId = entry.key.organizationId
-        val entitySetId = entry.key.entitySetId
         val materializedEntitySet = entry.value
         if (materializedEntitySet == null) {
             throw IllegalStateException("Encountered null materialized entity set while trying to synchronize " +
-                    "materialized view for entity set $entitySetId in organization $organizationId.")
+                    "materialized view for entity set ${entitySet.id} in organization $organizationId.")
         } else {
-            acm?.materializeEntitySets(organizationId, mapOf(entitySetId to authorizedPropertyTypes))
+            acm?.materializeEntitySets(organizationId, mapOf(entitySet to authorizedPropertyTypes))
                     ?: throw IllegalStateException(NOT_INITIALIZED)
 
             // Clear edm and data unsync flags.

@@ -37,11 +37,12 @@ class SynchronizeMaterializedEntitySetProcessorStreamSerializerTest : AbstractSt
     }
 
     override fun createInput(): SynchronizeMaterializedEntitySetProcessor {
+        val entitySet = TestDataFactory.entitySet()
         val propertyTypes =
                 listOf(TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType())
                         .map { it.id to it }
                         .toMap()
 
-        return SynchronizeMaterializedEntitySetProcessor(propertyTypes)
+        return SynchronizeMaterializedEntitySetProcessor(entitySet, propertyTypes)
     }
 }

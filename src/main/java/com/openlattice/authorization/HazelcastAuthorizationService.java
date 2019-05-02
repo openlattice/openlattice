@@ -24,10 +24,7 @@ package com.openlattice.authorization;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.MapMaker;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.aggregation.Aggregators;
 import com.hazelcast.core.HazelcastInstance;
@@ -35,6 +32,7 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.openlattice.authorization.aggregators.AuthorizationAggregator;
+import com.openlattice.authorization.aggregators.AuthorizationSetAggregator;
 import com.openlattice.authorization.aggregators.PrincipalAggregator;
 import com.openlattice.authorization.mapstores.PermissionMapstore;
 import com.openlattice.authorization.paging.AuthorizedObjectsSearchResult;
@@ -50,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -337,6 +336,30 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     public boolean checkIfUserIsOwner( AclKey aclKey, Principal principal ) {
         checkArgument( principal.getType().equals( PrincipalType.USER ), "A role cannot be the owner of an object" );
         return checkIfHasPermissions( aclKey, ImmutableSet.of( principal ), EnumSet.of( Permission.OWNER ) );
+    }
+
+    @Timed
+    @Override
+    public Map<Set<AclKey>, EnumSet<Permission>> getSecurableObjectSetsPermissions(
+            Collection<Set<AclKey>> aclKeySets,
+            Set<Principal> principals ) {
+
+        return aclKeySets.parallelStream().collect( Collectors.toMap(
+                Function.identity(),
+                aclKeySet -> getSecurableObjectSetPermissions( aclKeySet, principals )
+        ) );
+    }
+
+    private EnumSet<Permission> getSecurableObjectSetPermissions(
+            Set<AclKey> aclKeySet,
+            Set<Principal> principals ) {
+
+        var authorizationsMap = aclKeySet.stream()
+                .collect( Collectors.toMap( Function.identity(), aclKey -> EnumSet.noneOf( Permission.class ) ) );
+
+        return aces.aggregate(
+                new AuthorizationSetAggregator( authorizationsMap ),
+                matches( aclKeySet, principals ) );
     }
 
     @Override
