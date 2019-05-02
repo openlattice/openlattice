@@ -21,7 +21,6 @@
 package com.openlattice.datastore.search.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.openlattice.auditing.AuditEventType;
@@ -37,7 +36,6 @@ import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.datastore.apps.services.AppService;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -144,7 +142,18 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     public DataSearchResult searchEntitySetData( @RequestBody SearchConstraints searchConstraints ) {
         // check read on entity sets
-        final var authorizedEntitySetIds = Arrays.stream( searchConstraints.getEntitySetIds() )
+        final var allNormalEntitySetIds = Arrays.stream( searchConstraints.getEntitySetIds() )
+                .flatMap( esId -> {
+                    var entitySet = edm.getEntitySet( esId );
+                    var entitySetIdsToCheck = Sets.newHashSet(esId);
+                    if ( entitySet.isLinking() ) {
+                        entitySetIdsToCheck.addAll( entitySet.getLinkedEntitySets() );
+                    }
+
+                    return entitySetIdsToCheck.stream();
+                } )
+                .collect( Collectors.toSet() );
+        final var authorizedEntitySetIds = allNormalEntitySetIds.stream()
                 .filter( esId -> authorizations.checkIfHasPermissions(
                         new AclKey( esId ),
                         Principals.getCurrentPrincipals(),
@@ -153,39 +162,11 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
 
         DataSearchResult results = new DataSearchResult( 0, Lists.newArrayList() );
 
-        if ( !authorizedEntitySetIds.isEmpty() ) {
+        // if user has read access on all normal entity sets
+        if ( authorizedEntitySetIds.size() == allNormalEntitySetIds.size() ) {
 
-            final Map<UUID, EntitySet> entitySetsById = edm.getEntitySetsAsMap( authorizedEntitySetIds );
-
-            final var groupedEntitySets = entitySetsById.values().stream()
-                    .collect( Collectors.groupingBy( EntitySet::isLinking ) );
-
-            final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet = authorizationsHelper
-                    .getAuthorizedPropertiesOnEntitySets(
-                            groupedEntitySets.getOrDefault( false, Lists.newArrayList() ).stream()
-                                    .map( EntitySet::getId ).collect( Collectors.toSet() ),
-                            READ_PERMISSION,
-                            Principals.getCurrentPrincipals() );
-
-            groupedEntitySets.getOrDefault( true, Lists.newArrayList() ).forEach( linkingEntitySet -> {
-                        final var linkingEntitySetId = linkingEntitySet.getId();
-                        // check read permission on every normal entity set
-                        if ( !linkingEntitySet.getLinkedEntitySets().isEmpty()
-                                && linkingEntitySet.getLinkedEntitySets()
-                                .stream()
-                                .allMatch( esId -> authorizations.checkIfHasPermissions(
-                                        new AclKey( esId ),
-                                        Principals.getCurrentPrincipals(),
-                                        READ_PERMISSION ) ) ) {
-                            // authorized properties should be the same within 1 linking entity set for each normal
-                            // entity set
-                            authorizedPropertyTypesByEntitySet.put( linkingEntitySetId,
-                                    authorizationsHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
-                                            linkingEntitySet,
-                                            READ_PERMISSION ) );
-                        }
-                    }
-            );
+            final var authorizedPropertyTypesByEntitySet = authorizationsHelper.getAuthorizedPropertiesOnEntitySets(
+                    authorizedEntitySetIds, READ_PERMISSION, Principals.getCurrentPrincipals() );
 
             results = searchService
                     .executeSearch( searchConstraints, authorizedPropertyTypesByEntitySet );

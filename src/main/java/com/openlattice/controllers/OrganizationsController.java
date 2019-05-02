@@ -24,6 +24,7 @@ import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
 import com.openlattice.authorization.AclKey;
@@ -286,35 +287,24 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ResourceNotFoundException( "Organization does not exist." );
         }
 
-        entitySetIds.forEach( entitySetId -> ensureMaterialize( entitySetId, organizationPrincipal ) );
+        // check materialization on all linking and normal entity sets
+        final var entitySets = edm.getEntitySetsAsMap( entitySetIds );
+        final var allEntitySetIds = entitySets.values().stream()
+                .flatMap( entitySet -> {
+                    var entitySetIdsToCheck = Sets.newHashSet( entitySet.getId() );
+                    if ( entitySet.isLinking() ) {
+                        entitySetIdsToCheck.addAll( entitySet.getLinkedEntitySets() );
+                    }
 
-        final var groupedEntitySets = entitySetIds.stream()
-                .map( edm::getEntitySet )
-                .collect( Collectors.groupingBy( EntitySet::isLinking ) );
+                    return entitySetIdsToCheck.stream();
+                } ).collect( Collectors.toList() );
 
-        // first collect authorized property types of normal entity sets
-        final var authorizedPropertyTypesOfEntitySets = authzHelper.getAuthorizedPropertiesOnEntitySets(
-                groupedEntitySets.getOrDefault( false, Lists.newArrayList() ).stream().map( EntitySet::getId )
-                        .collect( Collectors.toSet() ),
-                EnumSet.of( Permission.MATERIALIZE ),
-                Set.of( organizationPrincipal.getPrincipal() ) );
+        allEntitySetIds.forEach( entitySetId -> ensureMaterialize( entitySetId, organizationPrincipal ) );
 
-        // for each linking entity set, check materialization on normal entity sets and get the intersection of their
-        // authorized property types
-        groupedEntitySets.getOrDefault( true, Lists.newArrayList() ).forEach( linkingEntitySet -> {
-                    linkingEntitySet.getLinkedEntitySets().forEach( entitySetId ->
-                            ensureMaterialize( entitySetId, organizationPrincipal ) );
-
-                    authorizedPropertyTypesOfEntitySets.put(
-                            linkingEntitySet.getId(),
-                            authzHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
-                                    linkingEntitySet,
-                                    EnumSet.of( Permission.MATERIALIZE ),
-                                    Set.of( organizationPrincipal.getPrincipal() ) ) );
-                }
-        );
-
-        return authorizedPropertyTypesOfEntitySets;
+        // first we collect authorized property types of normal entity sets and then for each linking entity set, we
+        // check materialization on normal entity sets and get the intersection of their authorized property types
+        return authzHelper.getAuthorizedPropertiesOnEntitySets(
+                entitySetIds, EnumSet.of( Permission.MATERIALIZE ), Set.of( organizationPrincipal.getPrincipal() ) );
     }
 
     @Override
