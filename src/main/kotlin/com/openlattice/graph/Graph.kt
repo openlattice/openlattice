@@ -147,6 +147,20 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
+    override fun clearVerticesOfAssociations(entitySetId: UUID, vertices: Set<UUID>): Int {
+        val connection = hds.connection
+        connection.use {
+            val ps = connection.prepareStatement(CLEAR_BY_EDGES_SQL)
+            val arr = PostgresArrays.createUuidArray(it, vertices)
+            val version = -System.currentTimeMillis()
+            ps.setLong(1, version)
+            ps.setLong(2, version)
+            ps.setObject(3, entitySetId)
+            ps.setObject(4, arr)
+            return ps.executeUpdate()
+        }
+    }
+
     override fun deleteEdges(keys: Set<DataEdgeKey>): WriteEvent {
         val connection = hds.connection
         connection.use {
@@ -178,6 +192,17 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             ps.setObject(4, arr)
             ps.setObject(5, entitySetId)
             ps.setObject(6, arr)
+            return ps.executeUpdate()
+        }
+    }
+
+    override fun deleteVerticesOfAssociations(entitySetId: UUID, vertices: Set<UUID>): Int {
+        val connection = hds.connection
+        connection.use {
+            val ps = connection.prepareStatement(DELETE_BY_EDGES_SQL)
+            val arr = PostgresArrays.createUuidArray(it, vertices)
+            ps.setObject(1, entitySetId)
+            ps.setObject(2, arr)
             return ps.executeUpdate()
         }
     }
@@ -224,7 +249,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     fun executeEdgesQuery(query: String): Stream<Edge> {
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val stmt = connection.createStatement()
                     val rs = stmt.executeQuery(query)
                     StatementHolder(connection, stmt, rs)
@@ -265,7 +290,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 Supplier {
                     val connection = hds.connection
                     val idArr= PostgresArrays.createUuidArray(connection, entityKeyIds)
-                    val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
+                    val stmt = connection.prepareStatement(BULK_VERTICES_SQL)
                     stmt.setObject(1, entitySetId)
                     stmt.setObject(2, idArr)
                     stmt.setObject(3, entitySetId)
@@ -785,43 +810,52 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
 
 private val SELECT_SQL = "SELECT * FROM ${EDGES.name} " +
         "WHERE (${KEY_COLUMNS.joinToString(",")}) IN "
+
 private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
 private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+
 private val CLEAR_BY_SET_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
+
 private val CLEAR_BY_VERTICES_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+
+private val CLEAR_BY_EDGES_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE " +
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
 
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val DELETE_BY_SET_SQL = "DELETE FROM ${EDGES.name} WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
 
 private val DELETE_BY_VERTICES_SQL = "DELETE FROM ${EDGES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+
+private val DELETE_BY_EDGES_SQL = "DELETE FROM ${EDGES.name} WHERE " +
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+
+private val BULK_VERTICES_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
 
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
+        "( ${SRC_ENTITY_SET_ID.name} = ? ) OR ( ${DST_ENTITY_SET_ID.name} = ? )"
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?)"
-
-private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ))"
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ? ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ? )"
 
 private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "( ${SRC_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${SRC_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${DST_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] )) )"
+        "( ${SRC_ENTITY_SET_ID.name} = ANY( (?)::uuid[] ) AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ANY( (?)::uuid[] )  AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
     val (srcEntitySetSql, dstEntitySetSql) = if (multipleEntitySetIds) {

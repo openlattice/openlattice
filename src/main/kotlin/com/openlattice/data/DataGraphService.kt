@@ -179,33 +179,47 @@ open class DataGraphService(
         return clearEntityDataAndVertices(entitySetId, entityKeyIds, authorizedPropertyTypes)
     }
 
-    override fun clearAssociationsBatch(
-            entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
-    ): List<WriteEvent> {
-        var associationDeleteCount = 0
-        val writeEvents = ArrayList<WriteEvent>()
-
-        associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE, groupEdges).forEach { entityKeyIds ->
-            entityKeyIds.entries.forEach {
-                val writeEvent = clearEntityDataAndVertices(it.key, it.value, authorizedPropertyTypes.getValue(it.key))
-                writeEvents.add(writeEvent)
-                associationDeleteCount += writeEvent.numUpdates
-            }
-        }
-
-        logger.info("Cleared {} associations when deleting entities from entity set {}", associationDeleteCount,
-                entitySetId)
-
-        return writeEvents
-    }
-
     private fun clearEntityDataAndVertices(entitySetId: UUID,
                                            entityKeyIds: Set<UUID>,
                                            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // clear edges
         val verticesCount = graphService.clearVertices(entitySetId, entityKeyIds)
+
+        //clear entities
+        val entityWriteEvent = eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
+
+        logger.info("Cleared {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
+        return entityWriteEvent
+    }
+
+    override fun clearAssociationsBatch(
+            entitySetId: UUID,
+            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): List<WriteEvent> {
+        var associationClearCount = 0
+        val writeEvents = ArrayList<WriteEvent>()
+
+        associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE, groupEdges).forEach { entityKeyIds ->
+            entityKeyIds.entries.forEach {
+                val writeEvent = clearEntityDataAndVerticesOfAssociayions(
+                        it.key, it.value, authorizedPropertyTypes.getValue(it.key))
+                writeEvents.add(writeEvent)
+                associationClearCount += writeEvent.numUpdates
+            }
+        }
+
+        logger.info("Cleared {} associations when deleting entities from entity set {}", associationClearCount,
+                entitySetId)
+
+        return writeEvents
+    }
+
+    private fun clearEntityDataAndVerticesOfAssociayions(entitySetId: UUID,
+                                           entityKeyIds: Set<UUID>,
+                                           authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+        // clear edges
+        val verticesCount = graphService.clearVerticesOfAssociations(entitySetId, entityKeyIds)
 
         //clear entities
         val entityWriteEvent = eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
@@ -267,7 +281,8 @@ open class DataGraphService(
 
         associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE, groupEdges).forEach { entityKeyIds ->
             entityKeyIds.entries.forEach {
-                val writeEvent = deleteEntityDataAnVertices(it.key, it.value, authorizedPropertyTypes.getValue(it.key))
+                val writeEvent = deleteEntityDataAnVerticesOfAssociations(
+                        it.key, it.value, authorizedPropertyTypes.getValue(it.key))
                 writeEvents.add(writeEvent)
                 associationDeleteCount += writeEvent.numUpdates
             }
@@ -277,6 +292,21 @@ open class DataGraphService(
                 entitySetId)
 
         return writeEvents
+    }
+
+    private fun deleteEntityDataAnVerticesOfAssociations(
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+        // delete edges
+        val verticesCount = graphService.deleteVerticesOfAssociations(entitySetId, entityKeyIds)
+
+        // delete entities
+        val entityWriteEvent = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
+
+        logger.info("Deleted {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
+
+        return entityWriteEvent
     }
 
     override fun deleteEntityProperties(
