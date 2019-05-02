@@ -822,29 +822,29 @@ private val CLEAR_BY_SET_SQL = "UPDATE ${EDGES.name} SET version = ?, versions =
         "WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
 
 private val CLEAR_BY_VERTICES_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE " +
-        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
-        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( ? ) )"
 
 private val CLEAR_BY_EDGES_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE " +
-        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( ? ) )"
 
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
 private val DELETE_BY_SET_SQL = "DELETE FROM ${EDGES.name} WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
 
 private val DELETE_BY_VERTICES_SQL = "DELETE FROM ${EDGES.name} WHERE " +
-        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
-        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( ? ) )"
 
 private val DELETE_BY_EDGES_SQL = "DELETE FROM ${EDGES.name} WHERE " +
-        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( ? ) )"
 
 private val BULK_VERTICES_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
-        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
+        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( ? ) )"
 
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${SRC_ENTITY_SET_ID.name} = ? ) OR ( ${DST_ENTITY_SET_ID.name} = ? )"
@@ -854,8 +854,8 @@ private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ? )"
 
 private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "( ${SRC_ENTITY_SET_ID.name} = ANY( (?)::uuid[] ) AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} = ANY( (?)::uuid[] )  AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ) )"
+        "( ${SRC_ENTITY_SET_ID.name} = ANY( ? ) AND ${SRC_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ANY( ? )  AND ${DST_ENTITY_KEY_ID.name} = ANY( ? ) )"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
     val (srcEntitySetSql, dstEntitySetSql) = if (multipleEntitySetIds) {
