@@ -143,26 +143,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
                 .groupBy { it.isLinking }
 
         val authorizedPropertyTypesByEntitySet = dependencies.authorizationHelper.getAuthorizedPropertiesOnEntitySets(
-                entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
-                EdmAuthorizationHelper.READ_PERMISSION,
-                Principals.getCurrentPrincipals())
-
-        entitySets.getOrDefault(true, listOf()).forEach { linkingEntitySet ->
-            val linkingEntitySetId = linkingEntitySet.id
-            // check read permission on every normal entity set
-            if (!linkingEntitySet.linkedEntitySets.isEmpty()
-                    && linkingEntitySet.linkedEntitySets.all { esId ->
-                        dependencies.authorizationManager.checkIfHasPermissions(
-                                AclKey(esId),
-                                Principals.getCurrentPrincipals(),
-                                EdmAuthorizationHelper.READ_PERMISSION)
-                    }) {
-                // authorized properties should be the same within 1 linking entity set for each normal entity set
-                authorizedPropertyTypesByEntitySet[linkingEntitySetId] =
-                        dependencies.authorizationHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
-                                        linkingEntitySet, EdmAuthorizationHelper.READ_PERMISSION)
-            }
-        }
+                dependencies.entitySets.keys, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals)
 
         val constraints = getUpdatedConstraints(persistentSearch)
 
