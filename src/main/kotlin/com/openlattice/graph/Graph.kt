@@ -853,7 +853,7 @@ private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ? ) OR " +
         "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ? )"
 
-private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
+private val BULK_ENTITY_SET_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${SRC_ENTITY_SET_ID.name} = ANY( ? ) AND ${SRC_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
         "( ${DST_ENTITY_SET_ID.name} = ANY( ? )  AND ${DST_ENTITY_KEY_ID.name} = ANY( ? ) )"
 
