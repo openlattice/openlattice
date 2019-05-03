@@ -3,6 +3,7 @@ package com.openlattice.apps;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -72,6 +73,7 @@ public class  App extends AbstractSecurableObject {
         this.url = url;
     }
 
+    @JsonIgnore
     @Override public SecurableObjectType getCategory() {
         return SecurableObjectType.App;
     }
