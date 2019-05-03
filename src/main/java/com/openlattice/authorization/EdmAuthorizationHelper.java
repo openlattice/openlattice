@@ -25,6 +25,7 @@ package com.openlattice.authorization;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.hazelcast.util.Preconditions;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
@@ -309,6 +310,23 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         );
 
         return authorizedPropertyTypesByEntitySet;
+    }
+
+    public Set<UUID> getAuthorizedEntitySets( Set<UUID> entitySetIds, EnumSet<Permission> requiredPermissions ) {
+        return entitySetIds.stream()
+                .filter( entitySetId -> {
+                    var entitySet = edm.getEntitySet( entitySetId );
+                    var entitySetIdsToCheck = Sets.newHashSet( entitySetId );
+                    if ( entitySet.isLinking() ) {
+                        entitySetIdsToCheck.addAll( entitySet.getLinkedEntitySets() );
+                    }
+
+                    return entitySetIdsToCheck.stream().allMatch( esId -> authz.checkIfHasPermissions(
+                            new AclKey( esId ),
+                            Principals.getCurrentPrincipals(),
+                            requiredPermissions ) );
+                } )
+                .collect( Collectors.toSet() );
     }
 
     /**
