@@ -392,8 +392,8 @@ class AssemblerConnectionManager(
                                     setOf(principal),
                                     EdmAuthorizationHelper.READ_PERMISSION)
                         }) {
-                    edmAuthorizationHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
-                            entitySet, EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))
+                    edmAuthorizationHelper.getAuthorizedPropertyTypes(
+                            entitySet.id, EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))
                             .filter { materializedPropertyTypes.keys.contains(it.key) }
                 } else {
                     mapOf()
