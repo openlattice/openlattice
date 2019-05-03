@@ -139,17 +139,21 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             return null
         }
 
-        val entitySets = dependencies.entitySets.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
-                .groupBy { it.isLinking }
+        val entitySetIds = persistentSearch.searchConstraints.entitySetIds.toSet()
+        val authorizedEntitySetIds = dependencies.authorizationHelper
+                .getAuthorizedEntitySets(entitySetIds, EdmAuthorizationHelper.READ_PERMISSION)
 
         val authorizedPropertyTypesByEntitySet = dependencies.authorizationHelper.getAuthorizedPropertiesOnEntitySets(
                 dependencies.entitySets.keys, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals)
 
         val constraints = getUpdatedConstraints(persistentSearch)
-
-        val results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet)
+        var results = DataSearchResult(0, listOf())
+        if (authorizedEntitySetIds.size == entitySetIds.size) {
+            results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet)
+        }
 
         if (results.numHits > 0) {
+            val entitySets = dependencies.entitySets.getAll(entitySetIds).values.groupBy { it.isLinking }
             val neighborsById = mutableMapOf<UUID, List<NeighborEntityDetails>>()
 
             if (results.hits.isNotEmpty()) neighborsById.putAll(
