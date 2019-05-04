@@ -1083,10 +1083,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                         chunk,
                         authorizedPropertyTypes );
             } else {
-                List<WriteEvent> clearEvents = clearAssociations( entitySetId, Optional.of( chunk ) );
-                while ( !clearEvents.isEmpty() ) {
-                    clearEvents = clearAssociations( entitySetId, Optional.of( chunk ) );
-                }
+                clearAssociations( entitySetId, Optional.of( chunk ) );
                 writeEvent = dgm.clearEntities(
                         entitySetId,
                         chunk,
