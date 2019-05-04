@@ -31,8 +31,8 @@ import com.openlattice.auditing.AuditableEvent;
 import com.openlattice.auditing.AuditingComponent;
 import com.openlattice.authorization.*;
 import com.openlattice.controllers.exceptions.BadRequestException;
-import com.openlattice.data.*;
 import com.openlattice.controllers.exceptions.ForbiddenException;
+import com.openlattice.data.*;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
 import com.openlattice.datastore.services.EdmService;
@@ -102,7 +102,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Inject
     private SecurePrincipalsManager spm;
 
-    private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
+    private LoadingCache<UUID, EdmPrimitiveTypeKind>  primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
 
     @RequestMapping(
@@ -645,26 +645,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             @RequestBody Set<UUID> entityKeyIds,
             @RequestParam( value = TYPE ) DeleteType deleteType ) {
 
-        if ( entityKeyIds.size() > MAX_BATCH_SIZE ) {
-            throw new IllegalArgumentException(
-                    "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
-        }
-
-        WriteEvent writeEvent;
-
-        // access checks for entity set and properties
-        final Map<UUID, PropertyType> authorizedPropertyTypes =
-                getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty(), deleteType );
-
-        if ( deleteType == DeleteType.Hard ) {
-            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntities call
-            deleteAssociations( entitySetId, Optional.of( entityKeyIds ) );
-            writeEvent = dgm.deleteEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
-        } else {
-            // associations need to be cleared first, because edges are cleared in DataGraphManager.clearEntities call
-            clearAssociations( entitySetId, Optional.of( entityKeyIds ) );
-            writeEvent = dgm.clearEntities( entitySetId, entityKeyIds, authorizedPropertyTypes );
-        }
+        WriteEvent writeEvent = clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType );
 
         recordEvent( new AuditableEvent(
                 getCurrentUserId(),
@@ -779,10 +760,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         // If called with an association entity set, it will simplify down to a basic delete call.
 
         final Set<UUID> entityKeyIds = filter.getEntityKeyIds();
-        if ( entityKeyIds.size() > MAX_BATCH_SIZE ) {
-            throw new IllegalArgumentException(
-                    "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
-        }
 
         // we don't include associations in filtering, since they will be deleted anyways with deleting the entities
         final Set<UUID> filteringNeighborEntitySetIds = Stream
@@ -792,34 +769,12 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         // if no neighbor entity set ids are defined to delete from, it reduces down to a simple deleteEntities call
         if ( filteringNeighborEntitySetIds.isEmpty() ) {
-            return deleteEntities( entitySetId, entityKeyIds, deleteType ).longValue();
+            return Integer.valueOf( clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType ).getNumUpdates() )
+                    .longValue();
         }
 
-
         /*
-         * 1 - collect all relevant EntitySets and check permissions against them and for all their PropertyTypes
-         */
-
-        // getNeighborEntitySetIds() returns source, destination, and edge EntitySet ids
-        final Set<UUID> neighborEntitySetIds = dgm
-                .getNeighborEntitySetIds( ImmutableSet.of( entitySetId ) )
-                .stream()
-                .filter( filteringNeighborEntitySetIds::contains )
-                .collect( Collectors.toSet() );
-
-        final Set<UUID> allEntitySetIds = ImmutableSet.<UUID>builder()
-                .add( entitySetId )
-                .addAll( neighborEntitySetIds )
-                .build();
-
-        Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesOfEntitySets = allEntitySetIds
-                .stream()
-                .collect( Collectors.toMap(
-                        Function.identity(),
-                        esId -> getAuthorizedPropertyTypesForDelete( esId, Optional.empty(), deleteType ) ) );
-
-        /*
-         * 2 - collect all neighbor entities, organized by EntitySet
+         * 1 - collect all neighbor entities, organized by EntitySet
          */
 
         Map<UUID, Set<EntityDataKey>> entitySetIdToEntityDataKeysMap = dgm
@@ -833,37 +788,15 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 .flatMap( edge -> Stream.of( edge.getSrc(), edge.getDst() ) )
                 .collect( Collectors.groupingBy( EntityDataKey::getEntitySetId, Collectors.toSet() ) );
 
-        entitySetIdToEntityDataKeysMap.values().forEach( neighborEntityKeyIds -> {
-                    if ( neighborEntityKeyIds.size() > MAX_BATCH_SIZE ) {
-                        throw new IllegalArgumentException(
-                                "You can only delete entities in batches of up to " + MAX_BATCH_SIZE + " per request." );
-                    }
-                }
-        );
-
         /*
-         * 3 - delete all entities
+         * 2 - delete all entities
          */
 
         /* Delete entity */
 
         long numUpdates = 0;
 
-        WriteEvent writeEvent;
-        if ( deleteType == DeleteType.Hard ) {
-            deleteAssociations( entitySetId, Optional.of( entityKeyIds ) );
-            writeEvent = dgm.deleteEntities(
-                    entitySetId,
-                    entityKeyIds,
-                    authorizedPropertyTypesOfEntitySets.get( entitySetId ) );
-        } else {
-            clearAssociations( entitySetId, Optional.of( entityKeyIds ) );
-            writeEvent = dgm.clearEntities(
-                    entitySetId,
-                    entityKeyIds,
-                    authorizedPropertyTypesOfEntitySets.get( entitySetId ) );
-        }
-
+        WriteEvent writeEvent = clearOrDeleteEntities( entitySetId, entityKeyIds, deleteType );
         numUpdates += writeEvent.getNumUpdates();
 
         recordEvent( new AuditableEvent(
@@ -878,31 +811,18 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                 Optional.empty()
         ) );
 
-        /* Delete neighbors */
+        /* 3 - Delete neighbors */
 
         List<AuditableEvent> neighborDeleteEvents = Lists.newArrayList();
 
         numUpdates += entitySetIdToEntityDataKeysMap.entrySet().stream().mapToInt( entry -> {
                     final UUID neighborEntitySetId = entry.getKey();
-                    final Set<EntityDataKey> neighborEntityDataKeys = entry.getValue();
+                    final Set<UUID> neighborEntityKeyIds = entry.getValue().stream().map( EntityDataKey::getEntityKeyId )
+                            .collect( Collectors.toSet() );
 
-                    WriteEvent neighborWriteEvent;
-
-                    if ( deleteType == DeleteType.Hard ) {
-                        deleteAssociations( neighborEntitySetId, Optional.of( entityKeyIds ) );
-                        neighborWriteEvent = dgm.deleteEntities(
-                                neighborEntitySetId,
-                                neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId )
-                                        .collect( Collectors.toSet() ),
-                                authorizedPropertyTypesOfEntitySets.get( neighborEntitySetId ) );
-                    } else {
-                        clearAssociations( entitySetId, Optional.of( entityKeyIds ) );
-                        neighborWriteEvent = dgm.clearEntities(
-                                neighborEntitySetId,
-                                neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId )
-                                        .collect( Collectors.toSet() ),
-                                authorizedPropertyTypesOfEntitySets.get( neighborEntitySetId ) );
-                    }
+                    WriteEvent neighborWriteEvent = clearOrDeleteEntities( neighborEntitySetId,
+                            neighborEntityKeyIds,
+                            deleteType );
 
                     neighborDeleteEvents.add( new AuditableEvent(
                             getCurrentUserId(),
@@ -910,8 +830,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                             AuditEventType.DELETE_ENTITY_AS_PART_OF_NEIGHBORHOOD,
                             "Entity deleted using delete type " + deleteType.toString() + " as part of " +
                                     "neighborhood delete through DataApi.clearEntityAndNeighborEntities",
-                            Optional.of( neighborEntityDataKeys.stream().map( EntityDataKey::getEntityKeyId )
-                                    .collect( Collectors.toSet() ) ),
+                            Optional.of( neighborEntityKeyIds ),
                             ImmutableMap.of(),
                             getDateTimeFromLong( neighborWriteEvent.getVersion() ),
                             Optional.empty()
@@ -1141,6 +1060,44 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     private static OffsetDateTime getDateTimeFromLong( long epochTime ) {
         return OffsetDateTime.ofInstant( Instant.ofEpochMilli( epochTime ), ZoneId.systemDefault() );
+    }
+
+    private WriteEvent clearOrDeleteEntities( UUID entitySetId, Set<UUID> entityKeyIds, DeleteType deleteType ) {
+        int numUpdates = 0;
+        long maxVersion = Long.MIN_VALUE;
+
+        // access checks for entity set and properties
+        final Map<UUID, PropertyType> authorizedPropertyTypes =
+                getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty(), deleteType );
+
+        Iterable<List<UUID>> entityKeyIdChunks = Iterables.partition( entityKeyIds, MAX_BATCH_SIZE );
+        for ( List<UUID> chunkList : entityKeyIdChunks ) {
+            Set<UUID> chunk = Sets.newHashSet( chunkList );
+
+            WriteEvent writeEvent;
+
+            if ( deleteType == DeleteType.Hard ) {
+                deleteAssociations( entitySetId, Optional.of( chunk ) );
+                writeEvent = dgm.deleteEntities(
+                        entitySetId,
+                        chunk,
+                        authorizedPropertyTypes );
+            } else {
+                List<WriteEvent> clearEvents = clearAssociations( entitySetId, Optional.of( chunk ) );
+                while ( !clearEvents.isEmpty() ) {
+                    clearEvents = clearAssociations( entitySetId, Optional.of( chunk ) );
+                }
+                writeEvent = dgm.clearEntities(
+                        entitySetId,
+                        chunk,
+                        authorizedPropertyTypes );
+            }
+
+            numUpdates += writeEvent.getNumUpdates();
+            maxVersion = Math.max( maxVersion, writeEvent.getVersion() );
+        }
+
+        return new WriteEvent( maxVersion, numUpdates );
     }
 
     @NotNull
