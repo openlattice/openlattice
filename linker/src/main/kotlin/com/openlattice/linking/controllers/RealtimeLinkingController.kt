@@ -63,7 +63,7 @@ class RealtimeLinkingController(
             @PathVariable(RealtimeLinkingApi.LINKING_ID) linkingId: UUID
     ): Set<MatchedEntityPair> {
         ensureAdminAccess()
-        val matches = lqs.getClustersContaining(setOf(linkingId)).getValue(linkingId)
+        val matches = lqs.getClusters(setOf(linkingId)).getValue(linkingId)
         val matchedEntityPairs = HashSet<MatchedEntityPair>()
 
         matches.forEach {
