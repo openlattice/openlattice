@@ -83,11 +83,11 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
         this.analyzer = analyzer.orElse( Analyzer.STANDARD );
+
         if ( EdmPrimitiveTypeKind.Binary == this.datatype ) {
-            this.postgresIndexType = IndexType.NONE;
-        } else {
-            this.postgresIndexType = postgresIndexType.orElse( IndexType.BTREE );
+            checkArgument( this.postgresIndexType == IndexType.NONE, "Indexes are not allowed on Binary datatypes" );
         }
+        this.postgresIndexType = postgresIndexType.orElse( IndexType.BTREE );
     }
 
     public PropertyType(
