@@ -23,6 +23,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.openlattice.apps.AppApi;
 import com.openlattice.authorization.AuthorizationsApi;
 import com.openlattice.authorization.PermissionsApi;
 import com.openlattice.client.RetrofitFactory.Environment;
@@ -67,6 +68,10 @@ public class ApiClient implements ApiFactoryFactory {
     public ApiClient( ApiFactoryFactory retrofitSupplier ) {
         this.retrofitSupplier = retrofitSupplier;
         logger.info( "API client ready!" );
+    }
+
+    public AppApi getAppApi() throws ExecutionException {
+        return get().create( AppApi.class );
     }
 
     public AuthorizationsApi getAuthorizationsApi() throws ExecutionException {
