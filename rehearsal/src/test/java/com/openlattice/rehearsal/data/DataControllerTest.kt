@@ -200,7 +200,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     }
 
     @Test
-    fun createEdges() {
+    fun testCreateEdgesAuthorization() {
         val src = createEntityType()
         val dst = createEntityType()
         val edge = createEdgeEntityType()
@@ -208,6 +208,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val esSrc = createEntitySet(src)
         val esDst = createEntitySet(dst)
         val esEdge = createEntitySet(edge)
+
+        // create association type with defining src and dst entity types
+        createAssociationType(edge, setOf(src), setOf(dst))
 
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
@@ -258,13 +261,16 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     }
 
     @Test
-    fun createEdgesWithData() {
+    fun testCreateEdgesWithData() {
         val et = createEdgeEntityType()
         val es = createEntitySet(et)
         val src = createEntityType()
         val esSrc = createEntitySet(src)
         val dst = createEntityType()
         val esDst = createEntitySet(dst)
+
+        // create association type with defining src and dst entity types
+        createAssociationType(et, setOf(src), setOf(dst))
 
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
@@ -277,7 +283,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
 
         val edgesToBeCreated: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
-        val edgeData = createDataEdges(es.id, et.properties, idsSrc, idsDst)
+        val edgeData = createDataEdges(es.id, et.properties, esSrc.id, idsSrc, esDst.id, idsDst)
         edgesToBeCreated.putAll(edgeData.first, edgeData.second)
 
         val createdEdges = dataApi.createAssociations(edgesToBeCreated)
@@ -305,6 +311,80 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         }
     }
 
+    @Test
+    fun testCreateEdgesWithDifferentEntityTypes() {
+        // Test for createAssociations( ListMultimap<UUID, DataEdge> associations )
+        val edge1 = createEdgeEntityType()
+        val esEdge1 = createEntitySet(edge1)
+        val src = createEntityType()
+        val esSrc = createEntitySet(src)
+        val dst = createEntityType()
+        val esDst = createEntitySet(dst)
+
+        // create empty association type
+        createAssociationType(edge1, setOf(), setOf())
+
+        val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntries, src.properties)
+        val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
+
+        val entriesSrc = ImmutableList.copyOf(testDataSrc.values)
+        val idsSrc = dataApi.createEntities(esSrc.id, entriesSrc)
+
+        val entriesDst = ImmutableList.copyOf(testDataDst.values)
+        val idsDst = dataApi.createEntities(esDst.id, entriesDst)
+
+
+        val edgesToBeCreated: ListMultimap<UUID, DataEdge> = ArrayListMultimap.create()
+        val edgeData = createDataEdges(esEdge1.id, edge1.properties, esSrc.id, idsSrc, esDst.id, idsDst)
+        edgesToBeCreated.putAll(edgeData.first, edgeData.second)
+
+        try {
+            dataApi.createAssociations(edgesToBeCreated)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("differs from allowed entity types in association type ${edge1.id}", true))
+        }
+
+        // add src and dst to association type
+        edmApi.addSrcEntityTypeToAssociationType(edge1.id, src.id)
+        edmApi.addDstEntityTypeToAssociationType(edge1.id, dst.id)
+        dataApi.createAssociations(edgesToBeCreated)
+
+
+        // Test for createAssociations( Set<DataEdgeKey> associations )
+        val edge2 = createEdgeEntityType()
+        val esEdge2 = createEntitySet(edge2)
+
+        // create empty association type
+        createAssociationType(edge2, setOf(), setOf())
+
+        val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge2.properties)
+        val entriesEdge = ImmutableList.copyOf(testDataEdge.values)
+        val idsEdge = dataApi.createEntities(esEdge2.id, entriesEdge)
+
+        val edges = idsSrc.mapIndexed { index, _ ->
+            DataEdgeKey(
+                    EntityDataKey(esSrc.id, idsSrc[index]),
+                    EntityDataKey(esDst.id, idsDst[index]),
+                    EntityDataKey(esEdge2.id, idsEdge[index])
+            )
+        }.toSet()
+
+        try {
+            dataApi.createAssociations(edges)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("differs from allowed entity types in association type ${edge2.id}", true))
+        }
+
+        // add src and dst to association type
+        edmApi.addSrcEntityTypeToAssociationType(edge2.id, src.id)
+        edmApi.addDstEntityTypeToAssociationType(edge2.id, dst.id)
+        dataApi.createAssociations(edgesToBeCreated)
+    }
+
     private fun lookupEdgeDataByFqn(edgeData: MutableMap<UUID, MutableCollection<Any>>):
             Map<FullQualifiedName, MutableCollection<Any>> {
         return edgeData.mapKeys { entry -> edmApi.getPropertyType(entry.key).type }
@@ -314,14 +394,16 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
     private fun createDataEdges(
             entitySetId: UUID,
             properties: Set<UUID>,
+            srcEntitySetId: UUID,
             srcIds: List<UUID>,
+            dstEntitySetId: UUID,
             dstIds: List<UUID>
     ): Pair<UUID, List<DataEdge>> {
         val edgeData = ImmutableList.copyOf(TestDataFactory.randomStringEntityData(numberOfEntries, properties).values)
 
         val edges = srcIds.mapIndexed { index, data ->
-            val srcDataKey = EntityDataKey(entitySetId, srcIds[index])
-            val dstDataKey = EntityDataKey(entitySetId, dstIds[index])
+            val srcDataKey = EntityDataKey(srcEntitySetId, srcIds[index])
+            val dstDataKey = EntityDataKey(dstEntitySetId, dstIds[index])
             DataEdge(srcDataKey, dstDataKey, edgeData[index])
         }
 
@@ -487,6 +569,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val esDst = createEntitySet(dst)
         val esEdge = createEntitySet(edge)
+
+        // create association type with defining src and dst entity types
+        createAssociationType(edge, setOf(personEt), setOf(dst))
 
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
         val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge.properties)
@@ -709,6 +794,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val esDst = createEntitySet(dst)
         val esEdge = createEntitySet(edge)
 
+        // create association type with defining src and dst entity types
+        createAssociationType(edge, setOf(personEt), setOf(dst))
+
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
         val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge.properties)
 
@@ -795,6 +883,9 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val esDst = createEntitySet(dst)
         val esEdge = createEntitySet(edge)
+
+        // create association type with defining src and dst entity types
+        createAssociationType(edge, setOf(personEt), setOf(dst))
 
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntries, dst.properties)
         val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntries, edge.properties)
@@ -913,6 +1004,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val esSrc1 = createEntitySet(src1)
         val esEdgeSrc1 = createEntitySet(edgeSrc1)
 
+        // create association type with defining src and dst entity types
+        createAssociationType(edgeSrc1, setOf(src1), setOf(et1))
+        createAssociationType(edgeDst1, setOf(et1), setOf(dst1))
+
         val testData1 = TestDataFactory.randomStringEntityData(numberOfEntries, et1.properties).values.toList()
         val testDataDst1 = TestDataFactory.randomStringEntityData(numberOfEntries, dst1.properties).values.toList()
         val testDataEdgeDst1 = TestDataFactory.randomStringEntityData(numberOfEntries, edgeDst1.properties).values.toList()
@@ -988,6 +1083,10 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val esSrc2 = createEntitySet(src2)
         val esEdgeSrc2 = createEntitySet(edgeSrc2)
 
+        // create association type with defining src and dst entity types
+        createAssociationType(edgeSrc2, setOf(src2), setOf(et2))
+        createAssociationType(edgeDst2, setOf(et2), setOf(dst2))
+
         val testData2 = TestDataFactory.randomStringEntityData(numberOfEntries, et2.properties).values.toList()
         val testDataDst2 = TestDataFactory.randomStringEntityData(numberOfEntries, dst2.properties).values.toList()
         val testDataEdgeDst2 = TestDataFactory.randomStringEntityData(numberOfEntries, edgeDst2.properties).values.toList()
@@ -1043,7 +1142,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val loadedDstEntities2 = dataApi.loadEntitySetData(esDst2.id, essDst2, FileType.json).toList()
         Assert.assertEquals(numberOfEntries, loadedDstEntities2.size)
         loadedDstEntities2.forEach {
-            idsDst2.contains(UUID.fromString(it[OL_ID_FQN].first() as String))
+            idsDst2.contains(UUID.fromString(it[DataTables.ID_FQN].first() as String))
         }
 
         val essEdgeDst2 = EntitySetSelection(Optional.of(edgeDst2.properties))
