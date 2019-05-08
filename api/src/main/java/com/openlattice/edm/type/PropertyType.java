@@ -84,8 +84,9 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         this.multiValued = multiValued.orElse( true );
         this.analyzer = analyzer.orElse( Analyzer.STANDARD );
 
-        if ( EdmPrimitiveTypeKind.Binary == this.datatype && postgresIndexType.isPresent() ) {
-            checkArgument( postgresIndexType.get() == IndexType.NONE, "Indexes are not allowed on Binary datatypes" );
+        if ( EdmPrimitiveTypeKind.Binary == this.datatype ) {
+            this.postgresIndexType = postgresIndexType.orElse( IndexType.NONE );
+            checkArgument( this.postgresIndexType == IndexType.NONE, "Indexes are not allowed on Binary datatypes" );
         }
         this.postgresIndexType = postgresIndexType.orElse( IndexType.BTREE );
     }
