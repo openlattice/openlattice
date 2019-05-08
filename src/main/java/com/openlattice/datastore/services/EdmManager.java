@@ -195,6 +195,8 @@ public interface EdmManager {
 
     AssociationType getAssociationTypeSafe( UUID associationTypeId );
 
+    AssociationType getAssociationTypeByEntitySetId( UUID entitySetId );
+
     void deleteAssociationType( UUID associationTypeId );
 
     AssociationDetails getAssociationDetails( UUID associationTypeId );

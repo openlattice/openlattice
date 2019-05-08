@@ -1193,6 +1193,13 @@ public class EdmService implements EdmManager {
                 associationDetails.get().isBidirectional() );
     }
 
+
+    @Override
+    public AssociationType getAssociationTypeByEntitySetId( UUID entitySetId ) {
+        final var entityTypeId = getEntitySet( entitySetId ).getEntityTypeId();
+        return getAssociationType( entityTypeId );
+    }
+
     @Override
     public void deleteAssociationType( UUID associationTypeId ) {
         AssociationType associationType = getAssociationType( associationTypeId );
