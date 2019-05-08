@@ -40,6 +40,7 @@ import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.requests.NeighborEntityDetails;
 import com.openlattice.data.requests.NeighborEntityIds;
 import com.openlattice.data.storage.IndexingMetadataManager;
+import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.events.*;
@@ -284,11 +285,13 @@ public class SearchService {
             UUID entityTypeId = dataModelService.getEntityTypeByEntitySetId( linkingEntitySetId ).getId();
 
             // linking_id/(normal)entity_set_id/property_type_id
-            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager.getLinkedEntityDataByLinkingId(
-                    linkingIds.entrySet().stream().collect(
-                            Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
-                    linkingIds.keySet().stream().collect(
-                            Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ) );
+            Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> linkedData = dataManager
+                    .getLinkedEntityDataByLinkingIdWithMetadata(
+                            linkingIds.entrySet().stream().collect(
+                                    Collectors.toMap( Map.Entry::getKey, entry -> Optional.of( entry.getValue() ) ) ),
+                            linkingIds.keySet().stream().collect(
+                                    Collectors.toMap( Function.identity(), entitySetId -> propertyTypes ) ),
+                            EnumSet.of( MetadataOption.LAST_WRITE ) );
 
             elasticsearchApi.createBulkLinkedData( entityTypeId, linkingEntitySetId, linkedData );
         }
@@ -792,11 +795,16 @@ public class SearchService {
                             Function.identity(),
                             normalEntitySetId -> authorizedPropertyTypes.get( entitySet.getId() ) ) );
 
-            return dataManager.getLinkingEntities( linkingIdsByEntitySetIds, authorizedPropertiesOfNormalEntitySets )
+            return dataManager.getLinkingEntitiesWithMetadata( linkingIdsByEntitySetIds,
+                    authorizedPropertiesOfNormalEntitySets,
+                    EnumSet.of( MetadataOption.LAST_WRITE ) )
                     .collect( Collectors.toList() );
         } else {
             return dataManager
-                    .getEntities( entitySet.getId(), ImmutableSet.copyOf( entityKeyIds ), authorizedPropertyTypes )
+                    .getEntitiesWithMetadata( entitySet.getId(),
+                            ImmutableSet.copyOf( entityKeyIds ),
+                            authorizedPropertyTypes,
+                            EnumSet.of( MetadataOption.LAST_WRITE ) )
                     .collect( Collectors.toList() );
         }
     }
