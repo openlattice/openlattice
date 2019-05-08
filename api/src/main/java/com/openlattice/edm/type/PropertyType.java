@@ -18,8 +18,6 @@
 
 package com.openlattice.edm.type;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -29,17 +27,13 @@ import com.google.common.base.Preconditions;
 import com.openlattice.authorization.securable.AbstractSchemaAssociatedSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.client.serialization.SerializationConstants;
-
-import java.util.EnumSet;
-import java.util.LinkedHashSet;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
 import com.openlattice.postgres.IndexType;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import java.util.*;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -89,6 +83,10 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         this.piiField = piiField.orElse( false );
         this.multiValued = multiValued.orElse( true );
         this.analyzer = analyzer.orElse( Analyzer.STANDARD );
+
+        if ( EdmPrimitiveTypeKind.Binary == this.datatype && postgresIndexType.isPresent() ) {
+            checkArgument( postgresIndexType.get() == IndexType.NONE, "Indexes are not allowed on Binary datatypes" );
+        }
         this.postgresIndexType = postgresIndexType.orElse( IndexType.BTREE );
     }
 
@@ -209,6 +207,11 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
     @JsonInclude(value = Include.NON_EMPTY)
     public LinkedHashSet<String> getEnumValues() {
         return enumValues;
+    }
+
+    @JsonIgnore
+    public void setPostgresIndexType( IndexType postgresIndexType ) {
+        this.postgresIndexType = postgresIndexType;
     }
 
     @Override public boolean equals( Object o ) {
