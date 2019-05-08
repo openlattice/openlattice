@@ -17,7 +17,7 @@ import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
 
-const val FETCH_SIZE = 100000
+const val FETCH_SIZE = 100_000
 
 class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcastInstance: HazelcastInstance) {
 
@@ -32,6 +32,7 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         return PostgresIterable(
                 Supplier<StatementHolder> {
                     val connection = hds.connection
+                    connection.autoCommit = false
                     val stmt = connection.prepareStatement(SELECT_ALL_SQL)
                     stmt.fetchSize = FETCH_SIZE
                     val rs = stmt.executeQuery()

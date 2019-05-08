@@ -83,15 +83,33 @@ class PostgresEntityDataQueryService(
             linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
             authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
+        return getLinkedEntityDataWithMetadata(
+                linkingIdsByEntitySetId,
+                authorizedPropertyTypesByEntitySetId,
+                EnumSet.noneOf(MetadataOption::class.java))
+    }
+
+    fun getLinkedEntityDataWithMetadata(
+            linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>>>,
+            authorizedPropertyTypesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>,
+            metadataOptions: EnumSet<MetadataOption>
+    ): PostgresIterable<Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
+
         val adapter = Function<ResultSet, Pair<Pair<UUID, UUID>, Map<UUID, Set<Any>>>> {
             Pair(ResultSetAdapters.linkingId(it), ResultSetAdapters.entitySetId(it)) to
-                    ResultSetAdapters.implicitEntityValuesById(
-                            it, authorizedPropertyTypesByEntitySetId, byteBlobDataManager
-                    )
+                    if (metadataOptions.isEmpty()) {
+                        ResultSetAdapters.implicitEntityValuesById(
+                                it, authorizedPropertyTypesByEntitySetId, byteBlobDataManager
+                        )
+                    } else {
+                        ResultSetAdapters.implicitEntityValuesByIdWithLastWrite(
+                                it, authorizedPropertyTypesByEntitySetId.values.firstOrNull() ?: mapOf(), byteBlobDataManager
+                        )
+                    }
         }
         return streamableEntitySet(
                 linkingIdsByEntitySetId, authorizedPropertyTypesByEntitySetId,
-                EnumSet.noneOf(MetadataOption::class.java), Optional.empty(), adapter, true
+                metadataOptions, Optional.empty(), adapter, true
         )
     }
 
@@ -222,6 +240,7 @@ class PostgresEntityDataQueryService(
         return PostgresIterable(
                 Supplier<StatementHolder> {
                     val connection = hds.connection
+                    connection.autoCommit = false
                     val statement = connection.createStatement()
                     statement.fetchSize = FETCH_SIZE
 
@@ -306,6 +325,7 @@ class PostgresEntityDataQueryService(
         }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
+            connection.autoCommit = false
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
@@ -318,6 +338,7 @@ class PostgresEntityDataQueryService(
         val adapter = Function<ResultSet, UUID> { ResultSetAdapters.linkingId(it) }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
+            connection.autoCommit = false
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
@@ -334,6 +355,7 @@ class PostgresEntityDataQueryService(
         }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
+            connection.autoCommit = false
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
@@ -429,8 +451,8 @@ class PostgresEntityDataQueryService(
                     rawValue
                 } else {
                     asMap(JsonDeserializer
-                                  .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                                  { "Entity set $entitySetId with entity key id $entityKeyId" })
+                            .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
+                            { "Entity set $entitySetId with entity key id $entityKeyId" })
                 }
 
                 entityData.map { (propertyTypeId, values) ->
@@ -610,6 +632,7 @@ class PostgresEntityDataQueryService(
         PostgresIterable(
                 Supplier {
                     val connection = hds.connection
+                    connection.autoCommit = false
                     val ps = connection.prepareStatement(
                             selectPropertiesInEntitySetInS3(propertyTable, quote(fqn), entitySetId)
                     )
