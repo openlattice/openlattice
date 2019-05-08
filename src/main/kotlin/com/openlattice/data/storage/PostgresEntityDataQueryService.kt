@@ -222,6 +222,7 @@ class PostgresEntityDataQueryService(
         return PostgresIterable(
                 Supplier<StatementHolder> {
                     val connection = hds.connection
+                    connection.autoCommit = false
                     val statement = connection.createStatement()
                     statement.fetchSize = FETCH_SIZE
 
@@ -306,6 +307,7 @@ class PostgresEntityDataQueryService(
         }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
+            connection.autoCommit = false
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
@@ -318,6 +320,7 @@ class PostgresEntityDataQueryService(
         val adapter = Function<ResultSet, UUID> { ResultSetAdapters.linkingId(it) }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
+            connection.autoCommit = false
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
@@ -334,6 +337,7 @@ class PostgresEntityDataQueryService(
         }
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
+            connection.autoCommit = false
             val statement = connection.createStatement()
             statement.fetchSize = FETCH_SIZE
 
@@ -610,6 +614,7 @@ class PostgresEntityDataQueryService(
         PostgresIterable(
                 Supplier {
                     val connection = hds.connection
+                    connection.autoCommit = false
                     val ps = connection.prepareStatement(
                             selectPropertiesInEntitySetInS3(propertyTable, quote(fqn), entitySetId)
                     )
