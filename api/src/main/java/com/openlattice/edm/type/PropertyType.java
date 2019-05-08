@@ -87,8 +87,9 @@ public class PropertyType extends AbstractSchemaAssociatedSecurableType {
         if ( EdmPrimitiveTypeKind.Binary == this.datatype ) {
             this.postgresIndexType = postgresIndexType.orElse( IndexType.NONE );
             checkArgument( this.postgresIndexType == IndexType.NONE, "Indexes are not allowed on Binary datatypes" );
+        } else {
+            this.postgresIndexType = postgresIndexType.orElse( IndexType.BTREE );
         }
-        this.postgresIndexType = postgresIndexType.orElse( IndexType.BTREE );
     }
 
     public PropertyType(
