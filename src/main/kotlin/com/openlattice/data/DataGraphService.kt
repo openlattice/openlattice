@@ -497,8 +497,9 @@ open class DataGraphService(
             val dstEntityType = edmManager.getEntityTypeByEntitySetId( it.dst.entitySetId )
             if ( !( associationType.src.contains( srcEntityType.id )
                             && associationType.dst.contains( dstEntityType.id ) ) ) {
-                throw IllegalArgumentException( "Entity type of src/dst entity set in edge $it differs from allowed " +
-                        "entity types in association type ${associationType.associationEntityType.id}" )
+                throw IllegalArgumentException( "Entity type of src/dst entity set in data keys {src(${it.src}), " +
+                        "dst(${it.dst})} differs from allowed entity types in association type " +
+                        associationType.associationEntityType.id )
             }
         }
     }
