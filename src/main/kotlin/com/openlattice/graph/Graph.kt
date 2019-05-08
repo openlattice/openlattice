@@ -246,6 +246,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
+                    connection.autoCommit = false
                     val stmt = connection.prepareStatement(query)
                     stmt.fetchSize = BATCH_SIZE
                     stmt.setArray(1, PostgresArrays.createUuidArray(connection, srcEntitySetIds.stream()))
@@ -264,7 +265,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
-                    val idArr= PostgresArrays.createUuidArray(connection, entityKeyIds)
+                    connection.autoCommit = false
+                    val idArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
                     val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
                     stmt.setObject(1, entitySetId)
                     stmt.setObject(2, idArr)
@@ -284,6 +286,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
+                    connection.autoCommit = false
                     val stmt = connection.prepareStatement(NEIGHBORHOOD_OF_ENTITY_SET_SQL)
                     stmt.setObject(1, entitySetId)
                     stmt.setObject(2, entitySetId)
