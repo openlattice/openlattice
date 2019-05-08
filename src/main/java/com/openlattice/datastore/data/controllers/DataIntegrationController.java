@@ -51,6 +51,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
 
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
 public class DataIntegrationController implements DataIntegrationApi, AuthorizingComponent {
@@ -216,6 +218,22 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
+        edges.forEach(
+                association -> {
+                    final var associationEntitySetId = association.getEdge().getEntitySetId();
+
+                    //Ensure that we have read access to entity set metadata.
+                    ensureReadAccess( new AclKey( association.getSrc().getEntitySetId() ) );
+                    ensureReadAccess( new AclKey( association.getDst().getEntitySetId() ) );
+                    ensureReadAccess( new AclKey( associationEntitySetId ) );
+
+                    //Ensure that we can read key properties.
+                    Set<UUID> keyPropertyTypes = dms.getEntityTypeByEntitySetId( associationEntitySetId ).getKey();
+                    keyPropertyTypes.forEach( propertyType ->
+                            accessCheck( new AclKey( associationEntitySetId, propertyType ), READ_PERMISSION ) );
+                }
+        );
+
         return dgm.createAssociations( edges ).getNumUpdates();
     }
 
