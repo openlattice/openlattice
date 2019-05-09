@@ -19,9 +19,10 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, EntitySet> {
-
+    public static final String ENTITY_TYPE_ID_INDEX    = "entityTypeId";
+    public static final String ID_INDEX                = "id";
     public static final String LINKED_ENTITY_SET_INDEX = "linkedEntitySets[any]";
-    public static final String ORGANIZATION_INDEX = "organizationId";
+    public static final String ORGANIZATION_INDEX      = "organizationId";
 
     public EntitySetMapstore( HikariDataSource hds ) {
         super( HazelcastMap.ENTITY_SETS.name(), ENTITY_SETS, hds );
@@ -29,8 +30,10 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
 
     @Override protected void bind( PreparedStatement ps, UUID key, EntitySet value ) throws SQLException {
         Array contacts = PostgresArrays.createTextArray( ps.getConnection(), value.getContacts().stream() );
-        Array linkedEntitySets = PostgresArrays.createUuidArray( ps.getConnection(), value.getLinkedEntitySets().stream() );
-        Array flags = PostgresArrays.createTextArray( ps.getConnection(), value.getFlags().stream().map( EntitySetFlag::toString ) );
+        Array linkedEntitySets = PostgresArrays
+                .createUuidArray( ps.getConnection(), value.getLinkedEntitySets().stream() );
+        Array flags = PostgresArrays
+                .createTextArray( ps.getConnection(), value.getFlags().stream().map( EntitySetFlag::toString ) );
 
         bind( ps, key, 1 );
         ps.setString( 2, value.getName() );
@@ -39,7 +42,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setString( 5, value.getDescription() );
         ps.setArray( 6, contacts );
         ps.setArray( 7, linkedEntitySets );
-        ps.setObject(8, value.getOrganizationId() );
+        ps.setObject( 8, value.getOrganizationId() );
         ps.setArray( 9, flags );
 
         // UPDATE
@@ -49,7 +52,7 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         ps.setString( 13, value.getDescription() );
         ps.setArray( 14, contacts );
         ps.setArray( 15, linkedEntitySets );
-        ps.setObject(16, value.getOrganizationId() );
+        ps.setObject( 16, value.getOrganizationId() );
         ps.setArray( 17, flags );
     }
 
@@ -78,7 +81,9 @@ public class EntitySetMapstore extends AbstractBasePostgresMapstore<UUID, Entity
         return super
                 .getMapConfig()
                 .setInMemoryFormat( InMemoryFormat.OBJECT )
+                .addMapIndexConfig( new MapIndexConfig( ENTITY_TYPE_ID_INDEX, false ) )
+                .addMapIndexConfig( new MapIndexConfig( ID_INDEX, false ) )
                 .addMapIndexConfig( new MapIndexConfig( LINKED_ENTITY_SET_INDEX, false ) )
-                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_INDEX , false )  );
+                .addMapIndexConfig( new MapIndexConfig( ORGANIZATION_INDEX, false ) );
     }
 }
