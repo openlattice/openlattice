@@ -169,7 +169,6 @@ public class LinkerServicesPod {
                 edmAuthorizationHelper(),
                 organizationsManager(),
                 dbcs(),
-                hazelcastInstance,
                 eventBus,
                 metricRegistry );
     }
