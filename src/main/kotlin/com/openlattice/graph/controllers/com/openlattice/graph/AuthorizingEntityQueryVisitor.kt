@@ -76,7 +76,7 @@ class AuthorizingEntityQueryVisitor(
     private fun addEntitySetProperties(entitySetId: UUID) {
         propertyTypes.putAll(
                 entitySetId,
-                authzHelper.getAuthorizedPropertiesOnEntitySet(entitySetId, EnumSet.of(Permission.READ))
+                authzHelper.getAuthorizedPropertyTypeIds(entitySetId, EnumSet.of(Permission.READ))
         )
     }
 }
