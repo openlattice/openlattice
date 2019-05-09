@@ -40,10 +40,7 @@ import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
-import com.openlattice.edm.events.EntitySetCreatedEvent
-import com.openlattice.edm.events.EntitySetDeletedEvent
-import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent
+import com.openlattice.edm.events.*
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.hazelcast.HazelcastMap.*
@@ -176,6 +173,24 @@ class Assembler(
         if (propertyTypesInEntitySetUpdatedEvent.fqnUpdated
                 && isEntitySetMaterialized(propertyTypesInEntitySetUpdatedEvent.entitySetId)) {
             createOrUpdateProductionViewOfEntitySet(propertyTypesInEntitySetUpdatedEvent.entitySetId)
+        }
+    }
+
+    @Subscribe
+    fun handleLinkedEntitySetAdded(linkedEntitySetAddedEvent: LinkedEntitySetAddedEvent) {
+        // when normal entity set is added to linking entity set, we need to update (re-create) the production view
+        // (olviews) of the entity set in openlattice db
+        if (isEntitySetMaterialized(linkedEntitySetAddedEvent.linkingEntitySetId)) {
+            createOrUpdateProductionViewOfEntitySet(linkedEntitySetAddedEvent.linkingEntitySetId)
+        }
+    }
+
+    @Subscribe
+    fun handleLinkedEntitySetRemoved(linkedEntitySetRemovedEvent: LinkedEntitySetRemovedEvent) {
+        // when normal entity set is removed from linking entity set, we need to update (re-create) the production view
+        // (olviews) of the entity set in openlattice db
+        if (isEntitySetMaterialized(linkedEntitySetRemovedEvent.linkingEntitySetId)) {
+            createOrUpdateProductionViewOfEntitySet(linkedEntitySetRemovedEvent.linkingEntitySetId)
         }
     }
 

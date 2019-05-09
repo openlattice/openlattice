@@ -258,6 +258,8 @@ class AssemblerConnectionManager(
     }
 
     fun materializeEdges(organizationId: UUID, entitySetIds: Set<UUID>) {
+        logger.info("Materializing edges in organization $organizationId database")
+
         connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
             // re-import foreign view edges before creating materialized view
             updatePublicTables(datasource, setOf(EDGES.name))
@@ -300,6 +302,9 @@ class AssemblerConnectionManager(
             organizationId: UUID,
             authorizedPropertyTypesByEntitySet: Map<EntitySet, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
+        logger.info("Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys.map { it.id }} in " +
+                "organization $organizationId database.")
+
         materializeAllTimer.time().use {
             connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
                 materializeEntitySets(datasource, authorizedPropertyTypesByEntitySet)
@@ -387,8 +392,8 @@ class AssemblerConnectionManager(
                                     setOf(principal),
                                     EdmAuthorizationHelper.READ_PERMISSION)
                         }) {
-                    edmAuthorizationHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
-                            entitySet, EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))
+                    edmAuthorizationHelper.getAuthorizedPropertyTypes(
+                            entitySet.id, EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))
                             .filter { materializedPropertyTypes.keys.contains(it.key) }
                 } else {
                     mapOf()
@@ -396,7 +401,7 @@ class AssemblerConnectionManager(
             }
         } else {
             { principal ->
-                edmAuthorizationHelper.getAuthorizedPropertiesOnEntitySets(
+                edmAuthorizationHelper.getAuthorizedPropertiesOnNormalEntitySets(
                         setOf(entitySet.id), EdmAuthorizationHelper.READ_PERMISSION, setOf(principal))[entitySet.id]!!
                         .filter { materializedPropertyTypes.keys.contains(it.key) }
             }
@@ -468,6 +473,7 @@ class AssemblerConnectionManager(
      * Synchronize data changes in entity set materialized view in organization database
      */
     fun refreshEntitySet(organizationId: UUID, entitySet: EntitySet, authorizedPropertyTypes: Map<UUID, PropertyType>) {
+        logger.info("Refreshing entity set ${entitySet.id} in organization $organizationId database")
         connect(buildOrganizationDatabaseName(organizationId)).use { datasource ->
             // re-import materialized view of entity set
             updateProductionViewTables(datasource, setOf(entitySetIdTableName(entitySet.id)))
@@ -675,6 +681,7 @@ class AssemblerConnectionManager(
     }
 
     private fun updatePublicTables(datasource: HikariDataSource, tables: Set<String>) {
+        logger.info("Updating foreign tables $tables in $PUBLIC_SCHEMA schema")
         datasource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 tables.forEach {
@@ -686,6 +693,7 @@ class AssemblerConnectionManager(
     }
 
     private fun updateProductionViewTables(datasource: HikariDataSource, tables: Set<String>) {
+        logger.info("Updating foreign tables $tables in $PRODUCTION_VIEWS_SCHEMA schema")
         datasource.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 tables.forEach {
