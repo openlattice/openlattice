@@ -19,6 +19,7 @@
 
 package com.openlattice.entitysets.controllers
 
+import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Preconditions
 import com.openlattice.authorization.AclKey
 import com.openlattice.authorization.AuthorizationManager
@@ -40,6 +41,7 @@ constructor(
 
     private val PERSON_FQN = "general.person"
 
+    @Timed
     @RequestMapping(path = [EntitySetsApi.LINKING + EntitySetsApi.SET_ID_PATH], method = [RequestMethod.PUT])
     override fun addEntitySetsToLinkingEntitySet(
             @PathVariable(EntitySetsApi.SET_ID) linkingEntitySetId: UUID,
@@ -48,6 +50,7 @@ constructor(
         return addEntitySets(linkingEntitySetId, entitySetIds)
     }
 
+    @Timed
     @RequestMapping(path = [EntitySetsApi.LINKING], method = [RequestMethod.POST])
     override fun addEntitySetsToLinkingEntitySets(@RequestBody entitySetIds: Map<UUID, Set<UUID>>): Int {
         return entitySetIds.map { addEntitySets(it.key, it.value) }.sum()
@@ -64,6 +67,7 @@ constructor(
         return edmManager.addLinkedEntitySets(linkingEntitySetId, entitySetIds)
     }
 
+    @Timed
     @RequestMapping(path = [EntitySetsApi.LINKING + EntitySetsApi.SET_ID_PATH], method = [RequestMethod.DELETE])
     override fun removeEntitySetsFromLinkingEntitySet(
             @PathVariable(EntitySetsApi.SET_ID) linkingEntitySetId: UUID,
@@ -72,6 +76,7 @@ constructor(
         return removeEntitySets(linkingEntitySetId, entitySetIds)
     }
 
+    @Timed
     @RequestMapping(path = [EntitySetsApi.LINKING], method = [RequestMethod.DELETE])
     override fun removeEntitySetsFromLinkingEntitySets(@RequestBody entitySetIds: Map<UUID, Set<UUID>>): Int {
         return entitySetIds.map { removeEntitySets(it.key, it.value) }.sum()
