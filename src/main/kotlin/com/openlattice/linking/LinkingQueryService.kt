@@ -23,6 +23,7 @@ package com.openlattice.linking
 
 import com.openlattice.data.EntityDataKey
 import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.postgres.streams.StatementHolder
 import java.util.*
 
 /**
@@ -49,13 +50,25 @@ interface LinkingQueryService {
     fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
     fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int
     fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int
-    fun getClustersContaining(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
+    /**
+     * Retrieve several clusters.
+     * @param clusterIds The ids for the clusters to load.
+     * @return The graph of scores for each cluster requested.
+     */
+    fun getClusters(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
+
     fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
 
     fun getEntitiesNeedingLinking(entitySetIds: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
     fun getEntitiesNotLinked(entitySetIds: Set<UUID>, limit: Int = 10000): PostgresIterable<Pair<UUID, UUID>>
-    fun getLinkableEntitySets(linkableEntityTypeIds: Set<UUID>, entitySetBlacklist: Set<UUID>, whitelist: Set<UUID>): PostgresIterable<UUID>
+    fun getLinkableEntitySets(
+            linkableEntityTypeIds: Set<UUID>,
+            entitySetBlacklist: Set<UUID>,
+            whitelist: Set<UUID>
+    ): PostgresIterable<UUID>
+
     fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID>
+    fun lockClustersForUpdates(clusters: Set<UUID>): StatementHolder
 }
 
 

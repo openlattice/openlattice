@@ -48,10 +48,24 @@ private const val AVG_SCORE_FIELD = "avg_score"
  */
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
 
+
+    override fun lockClustersForUpdates(
+            clusters: Set<UUID>
+    ): StatementHolder {
+        val connection = hds.connection
+        connection.autoCommit =false
+        val ps = connection.prepareStatement(LOCK_CLUSTERS_SQL)
+        val arr = PostgresArrays.createUuidArray(connection, clusters)
+        ps.setArray(1,arr)
+        val rs = ps.executeQuery()
+        return StatementHolder(connection, ps, rs )
+    }
+
     override fun getLinkableEntitySets(
             linkableEntityTypeIds: Set<UUID>,
             entitySetBlacklist: Set<UUID>,
-            whitelist: Set<UUID>): PostgresIterable<UUID> {
+            whitelist: Set<UUID>
+    ): PostgresIterable<UUID> {
         return PostgresIterable(Supplier {
             val connection = hds.connection
             val ps = connection.prepareStatement(LINKABLE_ENTITY_SET_IDS)
@@ -91,12 +105,12 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
     }
 
     override fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int {
-        hds.connection.use {
-            it.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use {
-                it.setObject(1, clusterId)
-                it.setObject(2, newMember.entitySetId)
-                it.setObject(3, newMember.entityKeyId)
-                return it.executeUpdate()
+        hds.connection.use { connection ->
+            connection.prepareStatement(UPDATE_LINKED_ENTITIES_SQL).use { ps ->
+                ps.setObject(1, clusterId)
+                ps.setObject(2, newMember.entitySetId)
+                ps.setObject(3, newMember.entityKeyId)
+                return ps.executeUpdate()
             }
         }
     }
@@ -116,7 +130,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
     }
 
     //TODO: Possible optimization is to avoid copying of array when invoking this function
-    override fun getClustersContaining(
+    override fun getClusters(
             clusterIds: Collection<UUID>
     ): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>> {
         return PostgresIterable<Pair<UUID, Pair<EntityDataKey, Pair<EntityDataKey, Double>>>>(
@@ -136,7 +150,13 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                     clusterId to (src to (dst to score))
                 })
                 .groupBy({ it.first }, { it.second })
-                .mapValues { it.value.groupBy({ it.first }, { it.second }).mapValues { it.value.toMap() } }
+                .mapValues {
+                    it.value
+                            .groupBy(
+                                    { src -> src.first },
+                                    { dstScore -> dstScore.second })
+                            .mapValues { dstScores -> dstScores.value.toMap() }
+                }
     }
 
     override fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>> {
@@ -286,11 +306,19 @@ internal fun buildIdsOfClusterContainingSql(dataKeys: Set<EntityDataKey>): Strin
 
 internal fun buildFilterEntityKeyPairs(entityKeyPairs: List<EntityKeyPair>): String {
     return entityKeyPairs.joinToString(" OR ") {
-        "( (${SRC_ENTITY_SET_ID.name} = ${uuidString(it.first.entitySetId)} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(it.second.entitySetId)} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
+        "( (${SRC_ENTITY_SET_ID.name} = ${uuidString(
+                it.first.entitySetId
+        )} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)} " +
+                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(
+                        it.second.entitySetId
+                )} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)})" +
                 " OR " +
-                "(${SRC_ENTITY_SET_ID.name} = ${uuidString(it.second.entitySetId)} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)} " +
-                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(it.first.entitySetId)} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)}) )"
+                "(${SRC_ENTITY_SET_ID.name} = ${uuidString(
+                        it.second.entitySetId
+                )} AND ${SRC_ENTITY_KEY_ID.name} = ${uuidString(it.second.entityKeyId)} " +
+                "AND ${DST_ENTITY_SET_ID.name} = ${uuidString(
+                        it.first.entitySetId
+                )} AND ${DST_ENTITY_KEY_ID.name} = ${uuidString(it.first.entityKeyId)}) )"
     }
 }
 
@@ -319,8 +347,8 @@ private val DELETE_NEIGHBORHOOD_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} " +
         "OR (${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?) )"
 
 private val DELETE_NEIGHBORHOODS_SQL = "DELETE FROM ${MATCHED_ENTITIES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) "
+        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY(?)) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY(?)) "
 
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${MATCHED_ENTITIES.name} " +
@@ -358,3 +386,5 @@ private val ENTITY_KEY_IDS_NOT_LINKED = "SELECT ${ENTITY_SET_ID.name},${ID.name}
 private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "FROM ${ENTITY_SETS.name} " +
         "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
+
+private val LOCK_CLUSTERS_SQL = "SELECT 1 FOR ${MATCHED_ENTITIES.name} WHERE linking_id = ANY(?) FOR UPDATE"
