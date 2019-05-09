@@ -186,6 +186,7 @@ public class PostgresEdmManager implements DbEdmManager {
                 () -> {
                     try {
                         Connection connection = hds.getConnection();
+                        connection.setAutoCommit( false );
                         PreparedStatement ps = connection.prepareStatement( getAllEntitySets );
                         ps.setFetchSize( 10000 );
                         ResultSet rs = ps.executeQuery();
