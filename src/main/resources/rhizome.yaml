@@ -22,11 +22,14 @@ hazelcast:
     seed-nodes: 
         - "localhost"
 
-hikari:
-    jdbcUrl: "jdbc:postgresql://localhost:5432/openlattice"
-    username: "oltest"
-    password: "test"
-    maximumPoolSize: 10
+postgres:
+    initialize-indices: false
+    hikari:
+        jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
+        username: "oltest"
+        password: "test"
+        maximumPoolSize: 10
+        connectionTimeout: 12000000 #20 minutes
 
 #graphite:
 #    host: "jarvis"
