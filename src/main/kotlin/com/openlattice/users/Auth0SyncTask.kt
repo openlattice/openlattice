@@ -151,10 +151,13 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
                 OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.MILLIS).toInstant().toEpochMilli()
         ) as Predicate<String, Auth0UserBasic>?
 
+        val usersToRemove = users.keySet(removeUsersPredicate)
+        logger.info("Removing the following users: {}", usersToRemove)
+
         /*
          *  Need to remove members from their respective orgs here
          */
-        membersOf.executeOnEntries(RemoveMemberOfOrganizationEntryProcessor(users.keySet(removeUsersPredicate)))
+        membersOf.executeOnEntries(RemoveMemberOfOrganizationEntryProcessor(usersToRemove))
 
         /*
          * If we did not see a user in any of the pages we should delete that user.
@@ -191,7 +194,9 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
         }
 
         if (user.roles.contains(SystemRole.ADMIN.getName())) {
-            syncDependencies.organizationService.addMembers(openlatticeOrganizationAclKey[0], ImmutableSet.of(principal))
+            syncDependencies.organizationService.addMembers(
+                    openlatticeOrganizationAclKey[0], ImmutableSet.of(principal)
+            )
             syncDependencies.organizationService
                     .addRoleToPrincipalInOrganization(adminRoleAclKey[0], adminRoleAclKey[1], principal)
         }
