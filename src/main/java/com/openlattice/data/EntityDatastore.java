@@ -24,6 +24,7 @@ package com.openlattice.data;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.SetMultimap;
+import com.openlattice.data.storage.MetadataOption;
 import com.openlattice.edm.type.PropertyType;
 
 import java.nio.ByteBuffer;
@@ -52,10 +53,11 @@ public interface EntityDatastore {
             Set<UUID> ids,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
-    Stream<SetMultimap<FullQualifiedName, Object>> getEntitiesWithVersion(
+    Stream<SetMultimap<FullQualifiedName, Object>> getEntitiesWithMetadata(
             UUID entitySetId,
             Set<UUID> ids,
-            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            EnumSet<MetadataOption> metadataOptions );
 
     PostgresIterable<Pair<UUID, Map<FullQualifiedName, Set<Object>>>> getEntitiesById(
             UUID entitySetId,
@@ -66,9 +68,19 @@ public interface EntityDatastore {
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes );
 
+    Stream<SetMultimap<FullQualifiedName, Object>> getLinkingEntitiesWithMetadata(
+            Map<UUID, Optional<Set<UUID>>> entityKeyIds,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
+            EnumSet<MetadataOption> metadataOptions );
+
     Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityDataByLinkingId(
             Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId );
+
+    Map<UUID, Map<UUID, Map<UUID, Set<Object>>>> getLinkedEntityDataByLinkingIdWithMetadata(
+            Map<UUID, Optional<Set<UUID>>> linkingIdsByEntitySetId,
+            Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySetId,
+            EnumSet<MetadataOption> metadataOptions );
 
     EntitySetData<FullQualifiedName> getEntities(
             Map<UUID, Optional<Set<UUID>>> entityKeyIds,
