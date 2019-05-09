@@ -21,6 +21,7 @@
 package com.openlattice.datastore.edm.controllers;
 
 import com.auth0.spring.security.api.authentication.PreAuthenticatedAuthenticationJsonWebToken;
+import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
@@ -125,6 +126,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         modelService.clearTables();
     }
 
+    @Timed
     @RequestMapping(
             method = RequestMethod.GET,
             produces = { MediaType.APPLICATION_JSON_VALUE, CustomMediaType.TEXT_YAML_VALUE } )
@@ -144,6 +146,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getEntityDataModel();
     }
 
+    @Timed
     @RequestMapping(
             path = DIFF_PATH,
             method = RequestMethod.POST,
@@ -166,6 +169,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getEntityDataModelDiff( edm );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             method = RequestMethod.PATCH,
@@ -177,6 +181,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             method = RequestMethod.POST,
@@ -269,6 +274,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
      * (non-Javadoc)
      * @see com.openlattice.datastore.edm.controllers.EdmAPI#getSchemas()
      */
+    @Timed
     @Override
     @RequestMapping(
             path = SCHEMA_PATH,
@@ -278,6 +284,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return schemaManager.getAllSchemas();
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = SCHEMA_PATH + NAMESPACE_PATH + NAME_PATH,
@@ -289,6 +296,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return schemaManager.getSchema( namespace, name );
     }
 
+    @Timed
     @RequestMapping(
             path = SCHEMA_PATH + NAMESPACE_PATH + NAME_PATH,
             method = RequestMethod.GET,
@@ -323,6 +331,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return schemaManager.getSchema( namespace, name );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = SCHEMA_PATH + NAMESPACE_PATH,
@@ -344,6 +353,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = SCHEMA_PATH + NAMESPACE_PATH + NAME_PATH,
@@ -355,6 +365,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH,
@@ -398,6 +409,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return createdEntitySets;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH,
@@ -411,6 +423,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                 .map( modelService::getEntitySet )::iterator;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = SUMMARY_PATH,
@@ -426,6 +439,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return allPropertySummaries;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = SUMMARY_PATH + ID_PATH,
@@ -435,6 +449,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getPropertyUsageSummary( propertyTypeId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH + ID_PATH,
@@ -455,6 +470,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getEntitySet( entitySetId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH + ID_PATH,
@@ -535,6 +551,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return authorizedPropertyTypes;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = SCHEMA_PATH + NAMESPACE_PATH + NAME_PATH,
@@ -577,6 +594,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @GetMapping(
             path = ENTITY_TYPE_PATH + ID_PATH + HIERARCHY_PATH,
@@ -585,6 +603,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getEntityTypeHierarchy( entityTypeId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH,
@@ -609,6 +628,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return entityType.getId();
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH,
@@ -622,6 +642,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getEntityTypesStrict()::iterator;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ENTITY_TYPE_PATH,
@@ -631,6 +652,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getAssociationEntityTypes()::iterator;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH,
@@ -650,6 +672,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                 "Unable to find entity type: " + entityTypeId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH,
@@ -675,6 +698,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH,
@@ -708,6 +732,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         throw new NotImplementedException( "Not yet ported" );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH + FORCE_PATH,
@@ -733,6 +758,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_PATH,
@@ -746,6 +772,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH + ID_PATH,
@@ -769,6 +796,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = PROPERTY_TYPE_PATH,
@@ -779,6 +807,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getPropertyTypes()::iterator;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = PROPERTY_TYPE_PATH,
@@ -803,6 +832,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return propertyType.getId();
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = PROPERTY_TYPE_PATH + ID_PATH,
@@ -827,6 +857,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = PROPERTY_TYPE_PATH + ID_PATH + FORCE_PATH,
@@ -851,6 +882,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = PROPERTY_TYPE_PATH + ID_PATH,
@@ -860,6 +892,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getPropertyType( propertyTypeId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = PROPERTY_TYPE_PATH + "/" + NAMESPACE + NAMESPACE_PATH,
@@ -869,6 +902,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getPropertyTypesInNamespace( namespace );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = IDS_PATH + ENTITY_SETS_PATH + NAME_PATH,
@@ -881,6 +915,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return es.getId();
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = IDS_PATH + ENTITY_SETS_PATH,
@@ -892,6 +927,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return entitySetIds;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = IDS_PATH + PROPERTY_TYPE_PATH + NAMESPACE_PATH + NAME_PATH,
@@ -904,6 +940,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                 fqn.getFullQualifiedNameAsString() );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = IDS_PATH + ENTITY_TYPE_PATH + NAMESPACE_PATH + NAME_PATH,
@@ -914,6 +951,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return getEntityTypeId( fqn );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = IDS_PATH + ENTITY_TYPE_PATH + FULLQUALIFIED_NAME_PATH_REGEX,
@@ -925,6 +963,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
                 fullQualifiedName.getFullQualifiedNameAsString() );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = PROPERTY_TYPE_PATH + ID_PATH,
@@ -950,6 +989,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_TYPE_PATH + ID_PATH,
@@ -973,6 +1013,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH + ID_PATH,
@@ -1023,6 +1064,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         }
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH,
@@ -1053,6 +1095,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return entityType.getId();
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ID_PATH,
@@ -1076,6 +1119,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ASSOCIATION_TYPE_ID_PATH + SRC_PATH + ENTITY_TYPE_ID_PATH,
@@ -1100,6 +1144,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ASSOCIATION_TYPE_ID_PATH + DST_PATH + ENTITY_TYPE_ID_PATH,
@@ -1124,6 +1169,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ASSOCIATION_TYPE_ID_PATH + SRC_PATH + ENTITY_TYPE_ID_PATH,
@@ -1148,6 +1194,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ASSOCIATION_TYPE_ID_PATH + DST_PATH + ENTITY_TYPE_ID_PATH,
@@ -1172,6 +1219,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ID_PATH,
@@ -1181,6 +1229,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getAssociationType( associationTypeId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ID_PATH + DETAILED_PATH,
@@ -1190,6 +1239,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getAssociationDetails( associationTypeId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ASSOCIATION_TYPE_PATH + ID_PATH + AVAILABLE_PATH,
@@ -1199,6 +1249,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getAvailableAssociationTypesForEntityType( entityTypeId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH + PROPERTY_TYPE_PATH,
@@ -1220,6 +1271,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getAllEntitySetPropertyMetadataForIds( entitySetIds );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH,
@@ -1232,6 +1284,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getAllEntitySetPropertyMetadata( entitySetId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH,
@@ -1244,6 +1297,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getEntitySetPropertyMetadata( entitySetId, propertyTypeId );
     }
 
+    @Timed
     @Override
     @GetMapping( value = ENTITY_SETS_PATH + ID_PATH + PROPERTIES_PATH, produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, PropertyType> getPropertyTypesForEntitySet( @PathVariable( ID ) UUID entitySetId ) {
@@ -1252,6 +1306,7 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
         return modelService.getPropertyTypesForEntitySet( entitySetId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ENTITY_SETS_PATH + ID_PATH + PROPERTY_TYPE_PATH + PROPERTY_TYPE_ID_PATH,

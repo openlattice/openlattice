@@ -26,6 +26,7 @@ import static com.google.common.base.Preconditions.checkState;
 import com.auth0.client.auth.AuthAPI;
 import com.auth0.exception.Auth0Exception;
 import com.auth0.json.auth.UserInfo;
+import com.codahale.metrics.annotation.Timed;
 import com.openlattice.assembler.PostgresRoles;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
@@ -81,6 +82,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     @Inject
     private AuthAPI                 authApi;
 
+    @Timed
     @Override
     @RequestMapping(
             method = RequestMethod.POST,
@@ -95,6 +97,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return spm.getSecurablePrincipal( aclKey );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = USERS,
@@ -104,6 +107,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return userDirectoryService.getAllUsers();
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { ROLES + CURRENT },
@@ -119,6 +123,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                 .collect( Collectors.toSet() );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = ROLES,
@@ -134,6 +139,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
                         .toMap( Function.identity(), aclKey -> (Role) spm.getSecurablePrincipal( aclKey ) ) );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = USERS + USER_ID_PATH,
@@ -144,6 +150,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return userDirectoryService.getUser( userId );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = USERS,
@@ -212,6 +219,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return spm.getAllPrincipals( spm.getSecurablePrincipal( userAclKey ) );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = DB,
@@ -222,6 +230,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return new MaterializedViewAccount(principal, dbCredService.getDbCredential( principal) );
     }
 
+    @Timed
     @Override
     @GetMapping(
             path = USERS + SEARCH + SEARCH_QUERY_PATH,
@@ -232,6 +241,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return userDirectoryService.searchAllUsers( wildcardSearchQuery );
     }
 
+    @Timed
     @Override
     @GetMapping(
             path = USERS + SEARCH_EMAIL + EMAIL_SEARCH_QUERY_PATH,
@@ -251,6 +261,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
     }
 
 
+    @Timed
     @Override
     @PostMapping(
             path = UPDATE,
@@ -264,6 +275,7 @@ public class PrincipalDirectoryController implements PrincipalApi, AuthorizingCo
         return null;
     }
 
+    @Timed
     @Override
     @DeleteMapping(
             path = UPDATE,
