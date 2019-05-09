@@ -25,6 +25,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -218,23 +219,40 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
+        final var associationEntitySetIds = new HashMap<UUID, Map<UUID, Set<UUID>>>(); // edge-src-dst
+
         edges.forEach(
                 association -> {
                     final var associationEntitySetId = association.getEdge().getEntitySetId();
+                    final var srcEntitySetId = association.getSrc().getEntitySetId();
+                    final var dstEntitySetId = association.getDst().getEntitySetId();
 
                     //Ensure that we have read access to entity set metadata.
-                    ensureReadAccess( new AclKey( association.getSrc().getEntitySetId() ) );
-                    ensureReadAccess( new AclKey( association.getDst().getEntitySetId() ) );
+                    ensureReadAccess( new AclKey( srcEntitySetId ) );
+                    ensureReadAccess( new AclKey( dstEntitySetId ) );
                     ensureReadAccess( new AclKey( associationEntitySetId ) );
 
                     //Ensure that we can read key properties.
                     Set<UUID> keyPropertyTypes = dms.getEntityTypeByEntitySetId( associationEntitySetId ).getKey();
                     keyPropertyTypes.forEach( propertyType ->
                             accessCheck( new AclKey( associationEntitySetId, propertyType ), READ_PERMISSION ) );
+
+
+                    if ( associationEntitySetIds.putIfAbsent(
+                            associationEntitySetId,
+                            new HashMap<>() {{
+                                put( srcEntitySetId, Sets.newHashSet( dstEntitySetId ) );
+                            }} ) != null ) {
+                        if ( associationEntitySetIds.get( associationEntitySetId )
+                                .putIfAbsent( srcEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
+                            associationEntitySetIds.get( associationEntitySetId ).get( srcEntitySetId )
+                                    .add( dstEntitySetId );
+                        }
+                    }
                 }
         );
 
-        return dgm.createAssociations( edges ).getNumUpdates();
+        return dgm.createAssociations( edges, associationEntitySetIds ).getNumUpdates();
     }
 
     private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
