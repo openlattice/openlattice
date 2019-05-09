@@ -96,6 +96,7 @@ class BackgroundLinkingService
 
     private val linkingWorker = executor.submit {
         Stream.generate { candidates.take() }
+                .parallel()
                 .forEach { candidate ->
                     try {
                         lock(candidate)
@@ -140,7 +141,6 @@ class BackgroundLinkingService
                 val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, candidate, scoredCluster.cluster)
 
                 insertMatches(clusterUpdate)
-
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
@@ -174,27 +174,27 @@ class BackgroundLinkingService
 
             //Decision that needs to be made is whether to start new cluster or merge into existing cluster.
             //No locks are required since any items that block to this element will be skipped.
-
             try {
                 val clusters = getClusters(dataKeys)
+                gqs.lockClustersForUpdates(clusters.keys).use {
+                    var maybeBestCluster = clusters
+                            .asSequence()
+                            .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
+                            .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
+                            .maxBy { scoredCluster -> scoredCluster.score }
 
-                var maybeBestCluster = clusters
-                        .asSequence()
-                        .map { cluster -> cluster(candidate, cluster, ::completeLinkCluster) }
-                        .filter { scoredCluster -> scoredCluster.score > MINIMUM_SCORE }
-                        .maxBy { scoredCluster -> scoredCluster.score }
+                    //TODO: When creating new cluster do we really need to re-match or can we assume score of 1.0?
+                    val clusterUpdate = if (maybeBestCluster == null) {
+                        val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
+                        val block = candidate to mapOf(candidate to elem)
+                        ClusterUpdate(clusterId, candidate, matcher.match(block).second)
+                    } else {
+                        val bestCluster = maybeBestCluster!!
+                        ClusterUpdate(bestCluster.clusterId, candidate, bestCluster.cluster)
+                    }
 
-
-                val clusterUpdate = if (maybeBestCluster == null) {
-                    val clusterId = ids.reserveIds(LINKING_ENTITY_SET_ID, 1).first()
-                    val block = candidate to mapOf(candidate to elem)
-                    ClusterUpdate(clusterId, candidate, matcher.match(block).second)
-                } else {
-                    val bestCluster = maybeBestCluster!!
-                    ClusterUpdate(bestCluster.clusterId, candidate, bestCluster.cluster)
+                    insertMatches(clusterUpdate)
                 }
-
-                insertMatches(clusterUpdate)
 
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
@@ -202,6 +202,7 @@ class BackgroundLinkingService
             }
         }
     }
+
 
     private fun isLocked(block: Set<EntityDataKey>): Boolean {
         //Skip locked elements as they will be requeued.
