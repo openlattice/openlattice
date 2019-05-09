@@ -45,10 +45,12 @@ public class MaterializeEntitySetsProcessorStreamSerializerTest extends
     }
 
     @Override protected MaterializeEntitySetProcessor createInput() {
+        final var entitySet = TestDataFactory.entitySet();
+
         final var propertyTypes = Stream
                 .of( TestDataFactory.propertyType(), TestDataFactory.propertyType(), TestDataFactory.propertyType() )
                 .collect( Collectors.toMap( PropertyType::getId, Function.identity() ) );
 
-        return new MaterializeEntitySetProcessor( propertyTypes );
+        return new MaterializeEntitySetProcessor( entitySet, propertyTypes );
     }
 }

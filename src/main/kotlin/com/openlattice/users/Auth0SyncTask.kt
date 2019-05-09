@@ -148,11 +148,12 @@ class Auth0SyncTask : HazelcastFixedRateTask<Auth0SyncTaskDependencies>, Hazelca
 
         val removeUsersPredicate = Predicates.lessThan(
                 UserMapstore.LOAD_TIME_INDEX,
-                OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.MILLIS)
+                OffsetDateTime.now().minus(6 * REFRESH_INTERVAL_MILLIS, ChronoUnit.MILLIS).toInstant().toEpochMilli()
         ) as Predicate<String, Auth0UserBasic>?
 
         val usersToRemove = users.keySet(removeUsersPredicate)
         logger.info("Removing the following users: {}", usersToRemove)
+
         /*
          *  Need to remove members from their respective orgs here
          */

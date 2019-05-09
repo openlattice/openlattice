@@ -17,7 +17,7 @@ import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
 
-const val FETCH_SIZE = 100000
+const val FETCH_SIZE = 100_000
 
 class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcastInstance: HazelcastInstance) {
 
@@ -32,6 +32,7 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
         return PostgresIterable(
                 Supplier<StatementHolder> {
                     val connection = hds.connection
+                    connection.autoCommit = false
                     val stmt = connection.prepareStatement(SELECT_ALL_SQL)
                     stmt.fetchSize = FETCH_SIZE
                     val rs = stmt.executeQuery()
@@ -73,14 +74,25 @@ class PostgresLinkingFeedbackService(private val hds: HikariDataSource, hazelcas
     }
 
     @SuppressWarnings("unchecked")
-    fun deleteLinkingFeedbacks(entitySetId: UUID, entityKeyIds: Set<UUID>): Int {
-        val firstPredicate = Predicates.and(
-                Predicates.equal(FIRST_ENTITY_SET_INDEX, entitySetId),
-                LinkingFeedbackPredicateBuilder.inUuidArray(entityKeyIds, FIRST_ENTITY_KEY_INDEX))
+    fun deleteLinkingFeedbacks(entitySetId: UUID, entityKeyIds: Optional<Set<UUID>>): Int {
+        val firstEntitySetPredicate = Predicates.equal(FIRST_ENTITY_SET_INDEX, entitySetId)
+        val secondEntitySetPredicate = Predicates.equal(SECOND_ENTITY_SET_INDEX, entitySetId)
 
-        val secondPredicate = Predicates.and(
-                Predicates.equal(SECOND_ENTITY_SET_INDEX, entitySetId),
-                LinkingFeedbackPredicateBuilder.inUuidArray(entityKeyIds, SECOND_ENTITY_KEY_INDEX))
+        val firstPredicate = if (entityKeyIds.isPresent) {
+            Predicates.and(
+                    firstEntitySetPredicate,
+                    LinkingFeedbackPredicateBuilder.inUuidArray(entityKeyIds.get(), FIRST_ENTITY_KEY_INDEX))
+        } else {
+            firstEntitySetPredicate
+        }
+
+        val secondPredicate = if (entityKeyIds.isPresent) {
+            Predicates.and(
+                    secondEntitySetPredicate,
+                    LinkingFeedbackPredicateBuilder.inUuidArray(entityKeyIds.get(), SECOND_ENTITY_KEY_INDEX))
+        } else {
+            secondEntitySetPredicate
+        }
 
         val feedbackCount = linkingFeedbacks.count()
         linkingFeedbacks.removeAll(

@@ -21,7 +21,6 @@ import com.openlattice.tasks.Task
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.slf4j.LoggerFactory
 import java.sql.ResultSet
-import java.sql.Statement
 import java.sql.Timestamp
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -143,9 +142,31 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
         val entitySets = dependencies.entitySets.getAll(persistentSearch.searchConstraints.entitySetIds.toSet()).values
                 .groupBy { it.isLinking }
 
+        val authorizedPropertyTypesByEntitySet = dependencies.authorizationHelper.getAuthorizedPropertiesOnEntitySets(
+                entitySets.getOrDefault(false, listOf()).map { it.id }.toSet(),
+                EdmAuthorizationHelper.READ_PERMISSION,
+                Principals.getCurrentPrincipals())
+
+        entitySets.getOrDefault(true, listOf()).forEach { linkingEntitySet ->
+            val linkingEntitySetId = linkingEntitySet.id
+            // check read permission on every normal entity set
+            if (!linkingEntitySet.linkedEntitySets.isEmpty()
+                    && linkingEntitySet.linkedEntitySets.all { esId ->
+                        dependencies.authorizationManager.checkIfHasPermissions(
+                                AclKey(esId),
+                                Principals.getCurrentPrincipals(),
+                                EdmAuthorizationHelper.READ_PERMISSION)
+                    }) {
+                // authorized properties should be the same within 1 linking entity set for each normal entity set
+                authorizedPropertyTypesByEntitySet[linkingEntitySetId] =
+                        dependencies.authorizationHelper.getAuthorizedPropertyTypesOfLinkingEntitySet(
+                                        linkingEntitySet, EdmAuthorizationHelper.READ_PERMISSION)
+            }
+        }
+
         val constraints = getUpdatedConstraints(persistentSearch)
 
-        val results = dependencies.searchService.executeSearch(constraints, allUserPrincipals)
+        val results = dependencies.searchService.executeSearch(constraints, authorizedPropertyTypesByEntitySet)
 
         if (results.numHits > 0) {
             val neighborsById = mutableMapOf<UUID, List<NeighborEntityDetails>>()
@@ -162,6 +183,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             logger.info(
                     "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
                     results.numHits)
+            return lastReadDateTime
         }
 
         return null

@@ -50,12 +50,16 @@ interface LinkingQueryService {
     fun getClustersBySize(): PostgresIterable<Pair<EntityDataKey, Double>>
     fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int
     fun deleteNeighborhoods(entitySetId: UUID, entityKeyIds: Set<UUID>): Int
+
     /**
      * Retrieve several clusters.
      * @param clusterIds The ids for the clusters to load.
      * @return The graph of scores for each cluster requested.
      */
     fun getClusters(clusterIds: Collection<UUID>): Map<UUID, Map<EntityDataKey, Map<EntityDataKey, Double>>>
+
+
+    fun deleteEntitySetNeighborhood(entitySetId: UUID): Int
 
     fun updateLinkingTable(clusterId: UUID, newMember: EntityDataKey): Int
 

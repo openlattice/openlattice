@@ -36,6 +36,8 @@ import org.springframework.stereotype.Component
 @Component
 class MaterializeEntitySetProcessorStreamSerializer
     : SelfRegisteringStreamSerializer<MaterializeEntitySetProcessor>, AssemblerConnectionManagerDependent {
+
+    private val entitySetSerializer = EntitySetStreamSerializer()
     private lateinit var acm: AssemblerConnectionManager
 
     override fun getTypeId(): Int {
@@ -43,7 +45,6 @@ class MaterializeEntitySetProcessorStreamSerializer
     }
 
     override fun destroy() {
-
     }
 
     override fun getClazz(): Class<MaterializeEntitySetProcessor> {
@@ -51,6 +52,8 @@ class MaterializeEntitySetProcessorStreamSerializer
     }
 
     override fun write(out: ObjectDataOutput, obj: MaterializeEntitySetProcessor) {
+        entitySetSerializer.write(out, obj.entitySet)
+
         out.writeInt(obj.authorizedPropertyTypes.size)
 
         obj.authorizedPropertyTypes.forEach { propertyTypeId, propertyType ->
@@ -60,12 +63,14 @@ class MaterializeEntitySetProcessorStreamSerializer
     }
 
     override fun read(input: ObjectDataInput): MaterializeEntitySetProcessor {
+        val entitySet = entitySetSerializer.read(input)
+
         val size = input.readInt()
         val authorizedPropertyTypes = ((0 until size).map {
             UUIDStreamSerializer.deserialize(input) to PropertyTypeStreamSerializer.deserialize(input)
         }.toMap())
 
-        return MaterializeEntitySetProcessor(authorizedPropertyTypes).init(acm)
+        return MaterializeEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
     }
 
     override fun init(assemblerConnectionManager: AssemblerConnectionManager) {
