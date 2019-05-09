@@ -62,21 +62,7 @@ import com.openlattice.edm.EntityDataModelDiff;
 import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.edm.Schema;
-import com.openlattice.edm.events.AssociationTypeCreatedEvent;
-import com.openlattice.edm.events.AssociationTypeDeletedEvent;
-import com.openlattice.edm.events.ClearAllDataEvent;
-import com.openlattice.edm.events.EntitySetCreatedEvent;
-import com.openlattice.edm.events.EntitySetDeletedEvent;
-import com.openlattice.edm.events.EntitySetMetadataUpdatedEvent;
-import com.openlattice.edm.events.EntityTypeCreatedEvent;
-import com.openlattice.edm.events.EntityTypeDeletedEvent;
-import com.openlattice.edm.events.LinkedEntitySetRemovedEvent;
-import com.openlattice.edm.events.PropertyTypeCreatedEvent;
-import com.openlattice.edm.events.PropertyTypeDeletedEvent;
-import com.openlattice.edm.events.PropertyTypeMetaDataUpdatedEvent;
-import com.openlattice.edm.events.PropertyTypesAddedToEntitySetEvent;
-import com.openlattice.edm.events.PropertyTypesAddedToEntityTypeEvent;
-import com.openlattice.edm.events.PropertyTypesInEntitySetUpdatedEvent;
+import com.openlattice.edm.events.*;
 import com.openlattice.edm.properties.PostgresTypeManager;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager;
@@ -434,9 +420,11 @@ public class EdmService implements EdmManager {
     public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
+        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
         markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
+
+        eventBus.post( new LinkedEntitySetAddedEvent( linkingEntitySetId ) );
 
         return updatedLinkingEntitySet.getLinkedEntitySets().size() - startSize;
     }
@@ -445,7 +433,7 @@ public class EdmService implements EdmManager {
     public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
+        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
                 linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
 
         Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )

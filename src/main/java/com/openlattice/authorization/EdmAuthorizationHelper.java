@@ -22,8 +22,10 @@
 
 package com.openlattice.authorization;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.hazelcast.util.Preconditions;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.EntitySet;
@@ -49,16 +51,37 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions ) {
-        return getAuthorizedPropertyTypes( entitySetId,
-                requiredPermissions,
-                edm.getPropertyTypesForEntitySet( entitySetId ),
-                Principals.getCurrentPrincipals() );
+        return getAuthorizedPropertyTypes( entitySetId, requiredPermissions, Principals.getCurrentPrincipals() );
+    }
+
+    public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
+            UUID entitySetId,
+            EnumSet<Permission> requiredPermissions,
+            Set<Principal> principals ) {
+        final var propertyTypes = edm.getPropertyTypesForEntitySet( entitySetId );
+
+        return getAuthorizedPropertyTypes( entitySetId, requiredPermissions, propertyTypes, principals );
     }
 
     public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions,
             Map<UUID, PropertyType> propertyTypes,
+            Set<Principal> principals ) {
+
+        final var entitySet = edm.getEntitySet( entitySetId );
+
+        return ( entitySet.isLinking() )
+                ? getAuthorizedPropertyTypesOfLinkingEntitySet(
+                entitySet, propertyTypes.keySet(), requiredPermissions, principals )
+                : getAuthorizedPropertyTypesOfNormalEntitySet(
+                entitySetId, propertyTypes, requiredPermissions, principals );
+    }
+
+    private Map<UUID, PropertyType> getAuthorizedPropertyTypesOfNormalEntitySet(
+            UUID entitySetId,
+            Map<UUID, PropertyType> propertyTypes,
+            EnumSet<Permission> requiredPermissions,
             Set<Principal> principals ) {
 
         Map<AclKey, EnumSet<Permission>> accessRequest = propertyTypes.keySet().stream()
@@ -71,6 +94,26 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 .forEach( authz -> propertyTypes.remove( authz.getKey().get( 1 ) ) );
 
         return propertyTypes;
+    }
+
+    private Map<UUID, PropertyType> getAuthorizedPropertyTypesOfLinkingEntitySet(
+            EntitySet linkingEntitySet,
+            Set<UUID> propertyTypeIds,
+            EnumSet<Permission> requiredPermissions,
+            Set<Principal> principals ) {
+        if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
+            return Maps.newHashMap();
+        }
+
+        final var propertyPermissions = getPermissionsOnLinkingEntitySetProperties(
+                linkingEntitySet.getLinkedEntitySets(), propertyTypeIds, principals );
+
+        return propertyPermissions.entrySet().stream()
+                .filter( entry -> entry.getValue().containsAll( requiredPermissions ) )
+                .collect( Collectors.toMap(
+                        entry -> entry.getKey().getId(),
+                        Map.Entry::getKey
+                ) );
     }
 
     /**
@@ -102,14 +145,6 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                                 principals ) ) );
     }
 
-    public Set<UUID> getAuthorizedPropertiesOnEntitySet(
-            UUID entitySetId,
-            EnumSet<Permission> requiredPermissions ) {
-        return getAuthorizedPropertiesOnEntitySet(
-                entitySetId,
-                getAllPropertiesOnEntitySet( entitySetId ),
-                requiredPermissions );
-    }
 
     /**
      * @see EdmAuthorizationHelper#getAuthorizedPropertiesByNormalEntitySets(EntitySet, EnumSet, Set)
@@ -138,8 +173,10 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             return Maps.newHashMap();
         }
 
+        final var propertyTypeIds = getAllPropertiesOnEntitySet(
+                linkingEntitySet.getLinkedEntitySets().iterator().next() );
         final var propertyPermissions = getPermissionsOnLinkingEntitySetProperties(
-                linkingEntitySet.getLinkedEntitySets(), principals );
+                linkingEntitySet.getLinkedEntitySets(), propertyTypeIds, principals );
 
         final var authorizedProperties = propertyPermissions.entrySet().stream()
                 .filter( entry -> entry.getValue().containsAll( requiredPermissions ) )
@@ -182,43 +219,6 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         ) );
     }
 
-    public Map<UUID, PropertyType> getAuthorizedPropertyTypesOfLinkingEntitySet(
-            EntitySet linkingEntitySet,
-            EnumSet<Permission> requiredPermissions ) {
-        return getAuthorizedPropertyTypesOfLinkingEntitySet(
-                linkingEntitySet, requiredPermissions, Principals.getCurrentPrincipals() );
-    }
-
-    public Map<UUID, PropertyType> getAuthorizedPropertyTypesOfLinkingEntitySet(
-            EntitySet linkingEntitySet,
-            EnumSet<Permission> requiredPermissions,
-            Set<Principal> principals ) {
-        if ( linkingEntitySet.getLinkedEntitySets().isEmpty() ) {
-            return Maps.newHashMap();
-        }
-
-        final var propertyPermissions = getPermissionsOnLinkingEntitySetProperties(
-                linkingEntitySet.getLinkedEntitySets(), principals );
-        return propertyPermissions.entrySet().stream()
-                .filter( entry -> entry.getValue().containsAll( requiredPermissions ) )
-                .collect( Collectors.toMap(
-                        entry -> entry.getKey().getId(),
-                        Map.Entry::getKey
-                ) );
-    }
-
-    /**
-     * Note: entity sets of ids provided are assumed to have same entity type
-     *
-     * @return the intersection of permissions for each property type id of the normal entity sets
-     */
-    private Map<PropertyType, EnumSet<Permission>> getPermissionsOnLinkingEntitySetProperties(
-            Set<UUID> entitySetIds, Set<Principal> principals ) {
-
-        final var propertyTypeIds = getAllPropertiesOnEntitySet( entitySetIds.iterator().next() );
-        return getPermissionsOnLinkingEntitySetProperties( entitySetIds, propertyTypeIds, principals );
-    }
-
     /**
      * @return the intersection of permissions for each provided property type id of the normal entity sets
      */
@@ -245,7 +245,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * @param principals          the principals to check against
      * @return Map of authorized property types by entity set ids
      */
-    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
+    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnNormalEntitySets(
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions,
             Set<Principal> principals ) {
@@ -258,7 +258,18 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 principals );
     }
 
-    private Set<UUID> getAuthorizedPropertiesOnEntitySet(
+    public Set<UUID> getAuthorizedPropertyTypeIds(
+            UUID entitySetId,
+            EnumSet<Permission> requiredPermissions ) {
+        final var entitySet = edm.getEntitySet( entitySetId );
+        final var properties = getAllPropertiesOnEntitySet( entitySetId );
+
+        return ( entitySet.isLinking() )
+                ? getAuthorizedPropertyTypeIdsOnLinkingEntitySet( entitySet, properties, requiredPermissions )
+                : getAuthorizedPropertyTypeIdsOnNormalEntitySet( entitySetId, properties, requiredPermissions );
+    }
+
+    private Set<UUID> getAuthorizedPropertyTypeIdsOnNormalEntitySet(
             UUID entitySetId,
             Set<UUID> selectedProperties,
             EnumSet<Permission> requiredPermissions ) {
@@ -267,6 +278,77 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                         Collectors.toSet() ), Principals.getCurrentPrincipals() )
                 .filter( authorization -> authorization.getPermissions().values().stream().allMatch( val -> val ) )
                 .map( authorization -> authorization.getAclKey().get( 1 ) ).collect( Collectors.toSet() );
+    }
+
+    private Set<UUID> getAuthorizedPropertyTypeIdsOnLinkingEntitySet(
+            EntitySet linkingEntitySet,
+            Set<UUID> selectedProperties,
+            EnumSet<Permission> requiredPermissions ) {
+        final var propertyPermissions = getPermissionsOnLinkingEntitySetProperties(
+                linkingEntitySet.getLinkedEntitySets(), selectedProperties, Principals.getCurrentPrincipals() );
+
+        return propertyPermissions.entrySet().stream()
+                .filter( entry -> entry.getValue().containsAll( requiredPermissions ) )
+                .map( entry -> entry.getKey().getId() )
+                .collect( Collectors.toSet() );
+    }
+
+    /**
+     * Collects the authorized property types mapped by the requested entity sets. For normal entity sets it does the
+     * general checks for each of them and returns only those property types, where it has the required permissions.
+     * For linking entity sets it return only those property types, where the calling user has the required permissions
+     * in all of the normal entity sets.
+     * Note: The returned maps keys are the requested entity set ids and not the normal entity set ids for linking
+     * entity sets!
+     *
+     * @param entitySetIds        The entity set ids for which to get the authorized property types.
+     * @param requiredPermissions The set of required permissions to check for.
+     * @return A Map with keys for each of the requested entity set id and values of authorized property types by their
+     * id.
+     */
+    public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
+            Set<UUID> entitySetIds,
+            EnumSet<Permission> requiredPermissions,
+            Set<Principal> principals ) {
+        final var entitySets = edm.getEntitySetsAsMap( entitySetIds ).values();
+
+        final var groupedEntitySets = entitySets.stream()
+                .collect( Collectors.groupingBy( EntitySet::isLinking ) );
+
+        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
+                getAuthorizedPropertiesOnNormalEntitySets(
+                        groupedEntitySets.getOrDefault( false, Lists.newArrayList() ).stream()
+                                .map( EntitySet::getId ).collect( Collectors.toSet() ),
+                        requiredPermissions,
+                        principals );
+
+        groupedEntitySets.getOrDefault( true, Lists.newArrayList() ).forEach( linkingEntitySet -> {
+                    final var linkingEntitySetId = linkingEntitySet.getId();
+                    // authorized properties should be the same within 1 linking entity set for each normal entity set
+                    authorizedPropertyTypesByEntitySet.put(
+                            linkingEntitySetId,
+                            getAuthorizedPropertyTypes( linkingEntitySetId, requiredPermissions ) );
+                }
+        );
+
+        return authorizedPropertyTypesByEntitySet;
+    }
+
+    public Set<UUID> getAuthorizedEntitySets( Set<UUID> entitySetIds, EnumSet<Permission> requiredPermissions ) {
+        return entitySetIds.stream()
+                .filter( entitySetId -> {
+                    var entitySet = edm.getEntitySet( entitySetId );
+                    var entitySetIdsToCheck = Sets.newHashSet( entitySetId );
+                    if ( entitySet.isLinking() ) {
+                        entitySetIdsToCheck.addAll( entitySet.getLinkedEntitySets() );
+                    }
+
+                    return entitySetIdsToCheck.stream().allMatch( esId -> authz.checkIfHasPermissions(
+                            new AclKey( esId ),
+                            Principals.getCurrentPrincipals(),
+                            requiredPermissions ) );
+                } )
+                .collect( Collectors.toSet() );
     }
 
     /**

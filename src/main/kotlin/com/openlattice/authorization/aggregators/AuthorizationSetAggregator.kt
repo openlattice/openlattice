@@ -20,7 +20,6 @@
  */
 package com.openlattice.authorization.aggregators
 
-import com.google.common.collect.Sets
 import com.hazelcast.aggregation.Aggregator
 import com.openlattice.authorization.AceKey
 import com.openlattice.authorization.AceValue
@@ -44,7 +43,8 @@ data class AuthorizationSetAggregator(
         if (permissions == null) {
             logger.error("Encountered null permissions for ${input.key}")
         } else {
-            permissionsMap[input.key.aclKey] = permissions
+            // accumulate all permissions of different principals for 1 acl
+            permissionsMap.getValue(input.key.aclKey).addAll(permissions)
         }
     }
 

@@ -355,13 +355,31 @@ public class HzAuthzTest {
         var aclKeySet3 = Set.of( key5, key6 );
 
 
-        final var reducedPermissionsMap = hzAuthz.getSecurableObjectSetsPermissions(
+        final var reducedPermissionsMap1 = hzAuthz.getSecurableObjectSetsPermissions(
                 List.of(aclKeySet1, aclKeySet2, aclKeySet3),
                 Set.of(principal) );
 
-        Assert.assertEquals( read, reducedPermissionsMap.get( aclKeySet1 ) );
-        Assert.assertEquals( EnumSet.noneOf( Permission.class ), reducedPermissionsMap.get( aclKeySet2 ) );
-        Assert.assertEquals( EnumSet.noneOf( Permission.class ), reducedPermissionsMap.get( aclKeySet3 ) );
+        Assert.assertEquals( read, reducedPermissionsMap1.get( aclKeySet1 ) );
+        Assert.assertEquals( EnumSet.noneOf( Permission.class ), reducedPermissionsMap1.get( aclKeySet2 ) );
+        Assert.assertEquals( EnumSet.noneOf( Permission.class ), reducedPermissionsMap1.get( aclKeySet3 ) );
+
+
+        // different principals permissions should accumulate toghether
+        Principal p1 = TestDataFactory.userPrincipal();
+        Principal p2 = TestDataFactory.userPrincipal();
+        Principal p3 = TestDataFactory.userPrincipal();
+
+        hzAuthz.addPermission( key1, p1, read );
+        hzAuthz.addPermission( key1, p1, write );
+        hzAuthz.addPermission( key2, p2, read );
+        hzAuthz.addPermission( key2, p2, owner );
+        hzAuthz.addPermission( key3, p3, read );
+        hzAuthz.addPermission( key3, p3, materialize );
+
+        final var reducedPermissionsMap2 = hzAuthz.getSecurableObjectSetsPermissions(
+                List.of( aclKeySet1 ),
+                Set.of( p1, p2, p3 ) );
+        Assert.assertEquals( read, reducedPermissionsMap2.get( aclKeySet1 ) );
     }
 
 }
