@@ -18,24 +18,18 @@
 
 package com.openlattice;
 
-import java.nio.ByteBuffer;
-import java.util.Base64;
-import java.util.Base64.Encoder;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.SetMultimap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.Base64.Encoder;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ApiUtil {
     private static final Encoder encoder = Base64.getEncoder();
@@ -53,12 +47,13 @@ public class ApiUtil {
 
     public static String generateDefaultEntityId( Stream<UUID> keys, Map<UUID, Set<Object>> entityDetails ) {
         String entityId = keys.map( entityDetails::get )
-                .filter( obj -> obj != null )
+                .filter( Objects::nonNull )
                 .map( ApiUtil::joinObjectsAsString )
                 .map( ApiUtil::toUtf8Bytes )
                 .map( encoder::encodeToString )
                 .collect( Collectors.joining( "," ) );
-        return ( entityId.length() == 0 ) ? UUID.randomUUID().toString() : entityId;
+        Preconditions.checkArgument( entityId.length() > 0, "Entity ids cannot be empty strings" );
+        return entityId;
     }
 
     public static String dbQuote( String s ) {

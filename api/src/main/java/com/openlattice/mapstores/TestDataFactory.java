@@ -18,8 +18,8 @@
 
 package com.openlattice.mapstores;
 
-import com.openlattice.authorization.*;
 import com.google.common.collect.*;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -30,13 +30,11 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.organization.roles.Role;
-import com.openlattice.postgres.IndexMethod;
+import com.openlattice.postgres.IndexType;
 import com.openlattice.requests.PermissionsRequestDetails;
 import com.openlattice.requests.Request;
 import com.openlattice.requests.RequestStatus;
@@ -46,19 +44,15 @@ import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
 import com.openlattice.search.requests.SearchDetails;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
+
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressFBWarnings( value = "SECPR", justification = "Only used for testing." )
 public final class TestDataFactory {
@@ -67,7 +61,7 @@ public final class TestDataFactory {
     private static final Action[]              actions              = Action.values();
     private static final RequestStatus[]       requestStatuses      = RequestStatus.values();
     private static final Analyzer[]            analyzers            = Analyzer.values();
-    private static final IndexMethod[]         indexMethods         = IndexMethod.values();
+    private static final IndexType[]           INDEX_TYPES          = IndexType.values();
     private static final Random                r                    = new Random();
 
     private TestDataFactory() {
@@ -217,7 +211,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.Date,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( Analyzer.STANDARD ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
     }
 
     public static PropertyType dateTimePropertyType() {
@@ -230,7 +224,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.DateTimeOffset,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( Analyzer.STANDARD ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
     }
 
     public static PropertyType propertyType() {
@@ -243,7 +237,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.String,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
     }
 
     public static PropertyType binaryPropertyType() {
@@ -256,7 +250,7 @@ public final class TestDataFactory {
                 EdmPrimitiveTypeKind.Binary,
                 Optional.of( r.nextBoolean() ),
                 Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
     }
 
     public static Organization organization() {
@@ -407,38 +401,6 @@ public final class TestDataFactory {
         return new EntityKey( entitySetId, RandomStringUtils.random( 10 ).replace( Character.MIN_VALUE, '0' ) );
     }
 
-    public static ComplexType complexType() {
-        final var ptId = UUID.randomUUID();
-        final var propertyTags = LinkedHashMultimap.<UUID, String>create();
-        propertyTags.put( ptId, "SOME PROPERTY TAG" );
-        return new ComplexType(
-                UUID.randomUUID(),
-                fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( "test complex type" ),
-                ImmutableSet.of( fqn(), fqn() ),
-                Sets.newLinkedHashSet( Arrays.asList( ptId, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ),
-                propertyTags,
-                Optional.empty(),
-                SecurableObjectType.ComplexType );
-    }
-
-    public static EnumType enumType() {
-        return new EnumType(
-                Optional.of( UUID.randomUUID() ),
-                fqn(),
-                RandomStringUtils.randomAlphanumeric( 5 ),
-                Optional.of( "test enum type" ),
-                Sets.newLinkedHashSet( Arrays.asList( "Blue", "Red", "Green" ) ),
-                ImmutableSet.of( fqn(), fqn(), fqn() ),
-                Optional.of( EdmPrimitiveTypeKind.Int32 ),
-                false,
-                Optional.of( true ),
-                Optional.empty(),
-                Optional.of( Analyzer.METAPHONE ),
-                Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
-    }
-
     public static PropertyType propertyType( EdmPrimitiveTypeKind type ) {
         switch ( type ) {
             case String:
@@ -451,7 +413,7 @@ public final class TestDataFactory {
                         type,
                         Optional.of( r.nextBoolean() ),
                         Optional.of( analyzers[ r.nextInt( analyzers.length ) ] ),
-                        Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                        Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
             default:
                 return new PropertyType(
                         UUID.randomUUID(),
@@ -462,7 +424,7 @@ public final class TestDataFactory {
                         type,
                         Optional.of( r.nextBoolean() ),
                         Optional.empty(),
-                        Optional.of( indexMethods[ r.nextInt( indexMethods.length ) ] ) );
+                        Optional.of( INDEX_TYPES[ r.nextInt( INDEX_TYPES.length ) ] ) );
         }
     }
 

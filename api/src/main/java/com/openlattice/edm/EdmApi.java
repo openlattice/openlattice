@@ -26,24 +26,15 @@ import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationDetails;
 import com.openlattice.edm.type.AssociationType;
-import com.openlattice.edm.type.ComplexType;
 import com.openlattice.edm.type.EntityType;
-import com.openlattice.edm.type.EnumType;
 import com.openlattice.edm.type.PropertyType;
+import org.apache.olingo.commons.api.edm.FullQualifiedName;
+import retrofit2.http.*;
+
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import retrofit2.http.Body;
-import retrofit2.http.DELETE;
-import retrofit2.http.GET;
-import retrofit2.http.PATCH;
-import retrofit2.http.POST;
-import retrofit2.http.PUT;
-import retrofit2.http.Path;
-import retrofit2.http.Query;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -103,14 +94,14 @@ public interface EdmApi {
     String KEY_PATH              = "/key";
     String SUMMARY_PATH          = "/summary";
 
-    String NAMESPACE_PATH                   = "/{" + NAMESPACE + "}";
-    String NAME_PATH                        = "/{" + NAME + "}";
-    String FULLQUALIFIED_NAME_PATH          = "/{" + FULLQUALIFIED_NAME + "}";
-    String FULLQUALIFIED_NAME_PATH_REGEX    = "/{" + FULLQUALIFIED_NAME + ":.+" + "}";
-    String ID_PATH                          = "/{" + ID + "}";
-    String ENTITY_TYPE_ID_PATH              = "/{" + ENTITY_TYPE_ID + "}";
-    String ASSOCIATION_TYPE_ID_PATH         = "/{" + ASSOCIATION_TYPE_ID + "}";
-    String PROPERTY_TYPE_ID_PATH            = "/{" + PROPERTY_TYPE_ID + "}";
+    String NAMESPACE_PATH                = "/{" + NAMESPACE + "}";
+    String NAME_PATH                     = "/{" + NAME + "}";
+    String FULLQUALIFIED_NAME_PATH       = "/{" + FULLQUALIFIED_NAME + "}";
+    String FULLQUALIFIED_NAME_PATH_REGEX = "/{" + FULLQUALIFIED_NAME + ":.+" + "}";
+    String ID_PATH                       = "/{" + ID + "}";
+    String ENTITY_TYPE_ID_PATH           = "/{" + ENTITY_TYPE_ID + "}";
+    String ASSOCIATION_TYPE_ID_PATH      = "/{" + ASSOCIATION_TYPE_ID + "}";
+    String PROPERTY_TYPE_ID_PATH         = "/{" + PROPERTY_TYPE_ID + "}";
 
     String SCHEMA_BASE_PATH           = BASE + SCHEMA_PATH;
     String ENTITY_SETS_BASE_PATH      = BASE + ENTITY_SETS_PATH;
@@ -135,7 +126,7 @@ public interface EdmApi {
      * Updates the entity data model, including schemas, entity types, association types, and property types.
      *
      * @param edm - The relevant elements of the entity data model to create or update, including schemas, entity types,
-     * association types, and property types
+     *            association types, and property types
      */
     @PATCH( BASE )
     Void updateEntityDataModel( @Body EntityDataModel edm );
@@ -145,7 +136,7 @@ public interface EdmApi {
      * association types, entity types, and property types.
      *
      * @param edm - The entire entity data model, including schemas, entity types, association types, and property
-     * types
+     *            types
      */
     @POST( BASE + DIFF_PATH )
     EntityDataModelDiff getEntityDataModelDiff( EntityDataModel edm );
@@ -154,7 +145,7 @@ public interface EdmApi {
      * Gets information for any SecurableObjectType given its type and ID.
      *
      * @param selectors A set containing a given SecurableObjectType, ID, and a set of fields (SecurableObjectType) to
-     * include in the response.
+     *                  include in the response.
      * @return EdmDetails - The SecurableObjectType details requested.
      */
     @POST( BASE )
@@ -211,33 +202,6 @@ public interface EdmApi {
     @DELETE( PROPERTY_TYPE_BASE_PATH + ID_PATH + FORCE_PATH )
     Void forceDeletePropertyType( @Path( ID ) UUID propertyTypeId );
 
-    @GET( BASE + ENUM_TYPE_PATH )
-    Iterable<EnumType> getEnumTypes();
-
-    @POST( BASE + ENUM_TYPE_PATH )
-    UUID createEnumType( @Body EnumType enumType );
-
-    @GET( BASE + ENUM_TYPE_PATH + ID_PATH )
-    EnumType getEnumType( @Path( ID ) UUID enumTypeId );
-
-    @DELETE( BASE + ENUM_TYPE_PATH + ID_PATH )
-    Void deleteEnumType( @Path( ID ) UUID enumTypeId );
-
-    @GET( BASE + COMPLEX_TYPE_PATH )
-    Iterable<ComplexType> getComplexTypes();
-
-    @POST( BASE + COMPLEX_TYPE_PATH )
-    UUID createComplexType( @Body ComplexType complexType );
-
-    @GET( BASE + COMPLEX_TYPE_PATH + ID_PATH )
-    ComplexType getComplexType( @Path( ID ) UUID complexTypeId );
-
-    @GET( BASE + COMPLEX_TYPE_PATH + ID_PATH + HIERARCHY_PATH )
-    Set<ComplexType> getComplexTypeHierarchy( @Path( ID ) UUID complexTypeId );
-
-    @DELETE( BASE + COMPLEX_TYPE_PATH + ID_PATH )
-    Void deleteComplexType( @Path( ID ) UUID complexTypeId );
-
     /**
      * Get all entity types.
      *
@@ -292,7 +256,7 @@ public interface EdmApi {
     /**
      * Adds a property type with a given ID to an entity type with a given ID.
      *
-     * @param entityTypeId The ID for the entity type that will have a property added to it.
+     * @param entityTypeId   The ID for the entity type that will have a property added to it.
      * @param propertyTypeId The ID for the property type that will be added to the entity type.
      */
     @PUT( ENTITY_TYPE_BASE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH )
@@ -303,7 +267,7 @@ public interface EdmApi {
     /**
      * Removes a property type with a given ID from an entity type with a given ID.
      *
-     * @param entityTypeId The ID for the entity type that will have a property removed from it.
+     * @param entityTypeId   The ID for the entity type that will have a property removed from it.
      * @param propertyTypeId The ID for the property type that will be removed from the entity type.
      */
     @DELETE( ENTITY_TYPE_BASE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH )
@@ -314,7 +278,7 @@ public interface EdmApi {
     /**
      * Adds a primary key with a given ID to an entity type with a given ID.
      *
-     * @param entityTypeId The ID for the entity type that will have a property added to it.
+     * @param entityTypeId   The ID for the entity type that will have a property added to it.
      * @param propertyTypeId The ID for the primary key that will be added to the entity type.
      */
     @PUT( ENTITY_TYPE_BASE_PATH + KEY_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH )
@@ -325,7 +289,7 @@ public interface EdmApi {
     /**
      * Removes a primary key with a given ID from an entity type with a given ID.
      *
-     * @param entityTypeId The ID for the entity type that will have a property removed from it.
+     * @param entityTypeId   The ID for the entity type that will have a property removed from it.
      * @param propertyTypeId The ID for the primary key that will be removed from the entity type.
      */
     @DELETE( ENTITY_TYPE_BASE_PATH + KEY_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH )
@@ -337,7 +301,7 @@ public interface EdmApi {
      * Removes a property type with a given ID from an entity type with a given ID regardless of whether there is data
      * associated with the property type.
      *
-     * @param entityTypeId The ID for the entity type that will have a property removed from it.
+     * @param entityTypeId   The ID for the entity type that will have a property removed from it.
      * @param propertyTypeId The ID for the property type that will be removed from the entity type.
      */
     @DELETE( ENTITY_TYPE_BASE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_ID_PATH + FORCE_PATH )
@@ -348,7 +312,7 @@ public interface EdmApi {
     /**
      * Reorders the specified entity type's properties;
      *
-     * @param entityTypeId ID for entity type.
+     * @param entityTypeId    ID for entity type.
      * @param propertyTypeIds The new ordering of the entity type's properties.
      */
     @PATCH( ENTITY_TYPE_BASE_PATH + ENTITY_TYPE_ID_PATH + PROPERTY_TYPE_PATH )
@@ -364,7 +328,6 @@ public interface EdmApi {
 
     @GET( SUMMARY_BASE_PATH )
     Map<UUID, Iterable<PropertyUsageSummary>> getAllPropertyUsageSummaries();
-
 
     @GET( SUMMARY_BASE_PATH + ID_PATH )
     Iterable<PropertyUsageSummary> getPropertyUsageSummary( @Path( ID ) UUID propertyTypeId );
@@ -388,6 +351,7 @@ public interface EdmApi {
 
     /**
      * Hard deletes the entity set
+     *
      * @param entitySetId the ID for the entity set
      */
     @DELETE( ENTITY_SETS_BASE_PATH + ID_PATH )
@@ -397,7 +361,7 @@ public interface EdmApi {
      * Creates an empty schema, if it doesn't exist. If schema exists then no action is taken.
      *
      * @param namespace The namespace for the schema.
-     * @param name The name for the schema.
+     * @param name      The name for the schema.
      */
     @PUT( SCHEMA_BASE_PATH + NAMESPACE_PATH + NAME_PATH )
     Void createEmptySchema( @Path( NAMESPACE ) String namespace, @Path( NAME ) String name );
@@ -426,7 +390,7 @@ public interface EdmApi {
      * Gets the schema contents for a corresponding namespace and name
      *
      * @param namespace The namespace for a schema.
-     * @param name The name for a schema.
+     * @param name      The name for a schema.
      * @return All schemas identified by namespace and name, across all accessible Acls.
      */
     @GET( SCHEMA_BASE_PATH + NAMESPACE_PATH + NAME_PATH )
@@ -438,7 +402,7 @@ public interface EdmApi {
      * Gets the schema contents for a corresponding namespace and name
      *
      * @param namespace The namespace for a schema.
-     * @param name The name for a schema.
+     * @param name      The name for a schema.
      * @return All schemas identified by namespace and name, across all accessible Acls.
      */
     @GET( SCHEMA_BASE_PATH + NAMESPACE_PATH + NAME_PATH )
@@ -452,7 +416,7 @@ public interface EdmApi {
      * Edits the schema contents for a corresponding namespace and name
      *
      * @param namespace The namespace for a schema.
-     * @param name The name for a schema.
+     * @param name      The name for a schema.
      */
     @PATCH( SCHEMA_BASE_PATH + NAMESPACE_PATH + NAME_PATH )
     Void updateSchema(
@@ -482,7 +446,7 @@ public interface EdmApi {
      * Get ID for property type with given namespace and name.
      *
      * @param namespace The namespace for a property.
-     * @param name The name for a property.
+     * @param name      The name for a property.
      * @return ID for property type.
      */
     @GET( BASE + IDS_PATH + PROPERTY_TYPE_PATH + NAMESPACE_PATH + NAME_PATH )
@@ -492,7 +456,7 @@ public interface EdmApi {
      * Get ID for entity type with given namespace and name.
      *
      * @param namespace The namespace for an entity type.
-     * @param name The name for an entity type.
+     * @param name      The name for an entity type.
      * @return ID for entity type.
      */
     @GET( BASE + IDS_PATH + ENTITY_TYPE_PATH + NAMESPACE_PATH + NAME_PATH )
@@ -505,13 +469,13 @@ public interface EdmApi {
      * @return ID for entity type.
      */
     @GET( BASE + IDS_PATH + ENTITY_TYPE_PATH + FULLQUALIFIED_NAME_PATH )
-    UUID getEntityTypeId( @Path( FULLQUALIFIED_NAME ) FullQualifiedName fullQualifiedName);
+    UUID getEntityTypeId( @Path( FULLQUALIFIED_NAME ) FullQualifiedName fullQualifiedName );
 
     /**
      * Edit property type metadata for a given property type.
      *
      * @param propertyTypeId ID for property type.
-     * @param update Only title, description, and type fields are accepted. Other fields are ignored.
+     * @param update         Only title, description, and type fields are accepted. Other fields are ignored.
      */
     @PATCH( PROPERTY_TYPE_BASE_PATH + ID_PATH )
     Void updatePropertyTypeMetadata( @Path( ID ) UUID propertyTypeId, @Body MetadataUpdate update );
@@ -520,7 +484,7 @@ public interface EdmApi {
      * Edit entity type metadata for a given entity type.
      *
      * @param entityTypeId ID for entity type.
-     * @param update Only title, description, and type fields are accepted. Other fields are ignored.
+     * @param update       Only title, description, and type fields are accepted. Other fields are ignored.
      */
     @PATCH( ENTITY_TYPE_BASE_PATH + ID_PATH )
     Void updateEntityTypeMetadata( @Path( ID ) UUID entityTypeId, @Body MetadataUpdate update );
@@ -529,8 +493,8 @@ public interface EdmApi {
      * Edit entity set metadata for a given entity set.
      *
      * @param entitySetId ID for entity set.
-     * @param update Only title, description, contacts and name fields are accepted. Other fields are ignored. This is
-     * somewhat out of date.
+     * @param update      Only title, description, contacts and name fields are accepted. Other fields are ignored. This is
+     *                    somewhat out of date.
      */
     @PATCH( ENTITY_SETS_BASE_PATH + ID_PATH )
     Void updateEntitySetMetadata( @Path( ID ) UUID entitySetId, @Body MetadataUpdate update );
@@ -561,8 +525,8 @@ public interface EdmApi {
      * Adds an entity type with a given ID to the src field of an association type with a given ID.
      *
      * @param associationTypeId The ID for the association type that will have an entity type id added to its src
-     * types.
-     * @param entityTypeId The ID for the entity type that will be added to the association type's src field.
+     *                          types.
+     * @param entityTypeId      The ID for the entity type that will be added to the association type's src field.
      */
     @PUT( ASSOCIATION_TYPE_BASE_PATH + ASSOCIATION_TYPE_ID_PATH + SRC_PATH + ENTITY_TYPE_ID_PATH )
     Void addSrcEntityTypeToAssociationType(
@@ -573,8 +537,8 @@ public interface EdmApi {
      * Adds an entity type with a given ID to the dst field of an association type with a given ID.
      *
      * @param associationTypeId The ID for the association type that will have an entity type id added to its dst
-     * types.
-     * @param entityTypeId The ID for the entity type that will be added to the association type's dst field.
+     *                          types.
+     * @param entityTypeId      The ID for the entity type that will be added to the association type's dst field.
      */
     @PUT( ASSOCIATION_TYPE_BASE_PATH + ASSOCIATION_TYPE_ID_PATH + DST_PATH + ENTITY_TYPE_ID_PATH )
     Void addDstEntityTypeToAssociationType(
@@ -585,8 +549,8 @@ public interface EdmApi {
      * Removes an entity type with a given ID from the src field of an association type with a given ID.
      *
      * @param associationTypeId The ID for the association type that will have an entity type id removed from its src
-     * types.
-     * @param entityTypeId The ID for the entity type that will be removed from the association type's src field.
+     *                          types.
+     * @param entityTypeId      The ID for the entity type that will be removed from the association type's src field.
      */
     @DELETE( ASSOCIATION_TYPE_BASE_PATH + ASSOCIATION_TYPE_ID_PATH + SRC_PATH + ENTITY_TYPE_ID_PATH )
     Void removeSrcEntityTypeFromAssociationType(
@@ -597,8 +561,8 @@ public interface EdmApi {
      * Removes an entity type with a given ID from the dst field of an association type with a given ID.
      *
      * @param associationTypeId The ID for the association type that will have an entity type id removed from its dst
-     * types.
-     * @param entityTypeId The ID for the entity type that will be removed from the association type's dst field.
+     *                          types.
+     * @param entityTypeId      The ID for the entity type that will be removed from the association type's dst field.
      */
     @DELETE( ASSOCIATION_TYPE_BASE_PATH + ASSOCIATION_TYPE_ID_PATH + DST_PATH + ENTITY_TYPE_ID_PATH )
     Void removeDstEntityTypeFromAssociationType(

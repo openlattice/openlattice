@@ -72,7 +72,7 @@ public final class SerializationConstants {
     public static final String CONSTRAINTS                      = "constraints";
     public static final String CONTACTS                         = "contacts";
     public static final String COUNT                            = "count";
-    public static final String CURRENT_SYNC                     = "currentSync";
+    public static final String CURRENT_ENTITY_SET               = "currentEntitySet";
     public static final String DATA                             = "data";
     public static final String DATASOURCE_IDS                   = "datasourceIds";
     public static final String DATATYPE_FIELD                   = "datatype";
@@ -112,6 +112,7 @@ public final class SerializationConstants {
     public static final String ENTITY_TYPES                     = "entityTypes";
     public static final String ENTITY_TYPE_ID                   = "entityTypeId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
+    public static final String ENUM_VALUES                      = "enumValues";
     public static final String EXACT                            = "exact";
     public static final String EXACT_SEARCH_FIELDS              = "exactSearchFields";
     public static final String EXPIRATION                       = "expiration";
@@ -129,7 +130,8 @@ public final class SerializationConstants {
     public static final String IDS                              = "ids";
     public static final String ID_FIELD                         = "id";
     public static final String INCLUDE_FIELD                    = "include";
-    public static final String INDEXED                          = "indexed";
+    public static final String INDEXING                         = "indexing";
+    public static final String INDEX_TYPE                       = "indexType";
     public static final String IS_DST                           = "isDst";
     public static final String IS_OWNER                         = "isOwner";
     public static final String KEYWORD                          = "kw";
@@ -138,12 +140,12 @@ public final class SerializationConstants {
     public static final String LAST_READ                        = "lastRead";
     public static final String LAST_WRITE                       = "lastWrite";
     public static final String LATITUDE                         = "latitude";
+    public static final String LINK                             = "link";
     public static final String LINKED                           = "linked";
     public static final String LINKED_ENTITY_SETS               = "linkedEntitySets";
     public static final String LINKING                          = "linking";
-    public static final String LINKING_FEEDBACK                 = "linkingFeedback";
-    public static final String LINK                             = "link";
     public static final String LINKING_ENTITY                   = "linkingEntity";
+    public static final String LINKING_FEEDBACK                 = "linkingFeedback";
     public static final String LINKING_PROPERTIES_FIELD         = "linkingProperties";
     public static final String LONGITUDE                        = "longitude";
     public static final String LOWERBOUND                       = "lowerbound";
@@ -173,7 +175,7 @@ public final class SerializationConstants {
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
-    public static final String PII_FIELD                        = "piiField";
+    public static final String PII_FIELD                        = "pii";
     public static final String PRESENT                          = "present";
     public static final String PRINCIPAL                        = "principal";
     public static final String PRINCIPAL_PATHS                  = "principalPaths";
@@ -187,6 +189,8 @@ public final class SerializationConstants {
     public static final String PROPERTY_TYPE_ID                 = "propertyTypeId";
     public static final String PROPERTY_TYPE_IDS                = "propertyTypeIds";
     public static final String QUERY_ID                         = "queryId";
+    public static final String QUEUE                            = "queue";
+    public static final String QUEUE_SIZE                       = "queueSize";
     public static final String RADIUS                           = "radius";
     public static final String REASON                           = "reason";
     public static final String REQUEST                          = "request";
