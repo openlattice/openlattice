@@ -1,5 +1,6 @@
 package com.openlattice.datastore.search.controllers;
 
+import com.codahale.metrics.annotation.Timed;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principals;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
@@ -24,6 +25,7 @@ public class PersistentSearchController implements PersistentSearchApi {
     @Inject
     private SecurePrincipalsManager spm;
 
+    @Timed
     @Override
     @RequestMapping(
             method = RequestMethod.POST,
@@ -32,6 +34,7 @@ public class PersistentSearchController implements PersistentSearchApi {
         return persistentSearchService.createPersistentSearch( search );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             method = RequestMethod.GET,
@@ -41,6 +44,7 @@ public class PersistentSearchController implements PersistentSearchApi {
         return persistentSearchService.loadPersistentSearchesForUser( includeExpired );
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { ID_PATH + EXPIRATION },
@@ -53,6 +57,7 @@ public class PersistentSearchController implements PersistentSearchApi {
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { ID_PATH },
@@ -65,6 +70,7 @@ public class PersistentSearchController implements PersistentSearchApi {
         return null;
     }
 
+    @Timed
     @Override
     @RequestMapping(
             path = { ID_PATH },
