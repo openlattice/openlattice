@@ -27,6 +27,7 @@ import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.linking.FeedbackType
 import com.openlattice.linking.LinkingFeedback
+import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.SetupTestData
 import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.SearchConstraints
@@ -121,7 +122,7 @@ class LinkingFeedbackTest : SetupTestData() {
                 SearchConstraints.simpleSearchConstraints(
                         arrayOf(linkingEntitySet.id), 0, 100, "*")).hits
         linkingId = linkedData.map {
-            UUID.fromString(it[FullQualifiedName("openlattice.@id")].first() as String)
+            UUID.fromString(it[DataTables.ID_FQN].first() as String)
         }.toSet().first()
         val matchedEntities = realtimeLinkingApi.getMatchedEntitiesForLinkingId(linkingId)
 

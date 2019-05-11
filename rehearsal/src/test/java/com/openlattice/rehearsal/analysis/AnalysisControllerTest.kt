@@ -32,8 +32,7 @@ class AnalysisControllerTest : MultipleAuthenticatedUsersBase() {
         val personEs = createEntitySet( personEt )
 
         val pt = createPropertyType()
-        val et = createEntityType( pt.id )
-        val linkingEs = createEntitySet( et, true, setOf(personEs.id) )
+        val linkingEs = createEntitySet( EdmTestConstants.personEt, true, setOf(personEs.id) )
 
         // Create edge and src entitysets (linked entity set is dst)
         val edge = MultipleAuthenticatedUsersBase.createEdgeEntityType()
