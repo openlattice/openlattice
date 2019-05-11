@@ -40,15 +40,11 @@ public interface GraphService {
 
     WriteEvent createEdges( Set<DataEdgeKey> keys );
 
-    int clearEdges( Set<DataEdgeKey> keys );
-
     int clearVerticesInEntitySet( UUID entitySetId );
 
     int clearVertices( UUID entitySetId, Set<UUID> vertices );
 
     int clearVerticesOfAssociations( UUID entitySetId, Set<UUID> vertices );
-
-    WriteEvent deleteEdges( Set<DataEdgeKey> keys );
 
     int deleteVerticesInEntitySet( UUID entitySetId );
 
