@@ -64,12 +64,15 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
     val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
-            entitiesClause, metadataOptions, linking, joinColumns
+            entitiesClause,
+            metadataOptions,
+            linking,
+            joinColumns
     )
 
     val dataColumns = joinColumns
             .union(getMetadataOptions(metadataOptions, linking)) // omit metadataoptions from linking
-            .union(returnedPropertyTypes.map { propertyTypes[it]!! })
+            .union(returnedPropertyTypes.map { propertyTypes.getValue(it) })
             .joinToString(",")
 
     // for performance, we place inner joins of filtered property tables at the end
@@ -93,7 +96,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                                 propertyTypeFilters[it.key] ?: setOf(),
                                 it.value,
                                 linking,
-                                binaryPropertyTypes[it.key]!!,
+                                binaryPropertyTypes.getValue(it.key),
                                 joinColumns,
                                 metadataFilters
                         )
@@ -378,8 +381,13 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 ): String {
     val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
 
-
-    var selectColumns = joinColumns.joinToString(",")
+    var selectColumns = joinColumns.joinToString(",") { column ->
+        if (column == ENTITY_SET_ID.name && linking) {
+            "array_agg(entity_set_id) as entity_set_ids"
+        } else {
+            column
+        }
+    }
 
     if (metadataColumns.isNotEmpty()) {
 
@@ -413,9 +421,10 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
 
     val idsColumn = if (linking) LINKING_ID.name else ID_VALUE.name
     return "$filterLinkingIds AND (" + entityKeyIds.entries.joinToString(" OR ") {
-        val idsClause = it.value.filter { ids -> ids.isNotEmpty() }.map { ids ->
-            " AND $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")"
-        }.orElse("")
+        val idsClause = it.value
+                .filter { ids -> ids.isNotEmpty() }
+                .map { ids -> " AND $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")" }
+                .orElse("")
         " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
     } + ")"
 }
