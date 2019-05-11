@@ -33,6 +33,7 @@ import com.openlattice.auditing.AuditingConfiguration;
 import com.openlattice.auditing.pods.AuditingConfigurationPod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizationQueryService;
 import com.openlattice.authorization.DbCredentialService;
@@ -156,9 +157,10 @@ public class IndexerServicesPod {
         return new AssemblerConnectionManager( assemblerConfiguration,
                 hikariDataSource,
                 principalService(),
+                authorizationManager(),
+                edmAuthorizationHelper(),
                 organizationsManager(),
                 dbcs(),
-                hazelcastInstance,
                 eventBus,
                 metricRegistry );
     }
@@ -176,6 +178,11 @@ public class IndexerServicesPod {
     @Bean
     public Auth0TokenProvider auth0TokenProvider() {
         return new Auth0TokenProvider( auth0Configuration );
+    }
+
+    @Bean
+    public EdmAuthorizationHelper edmAuthorizationHelper() {
+        return new EdmAuthorizationHelper( dataModelService(), authorizationManager() );
     }
 
     @Bean
