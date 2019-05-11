@@ -391,11 +391,11 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
                     } else {
                         ""
                     } + if (metadataOptions.contains(MetadataOption.ENTITY_SET_IDS)) {
-                        "array_agg(entity_set_id) as entity_set_ids"
+                        ", array_agg(entity_set_id) as entity_set_ids"
                     } else {
                         ""
                     } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-                        "array_agg(entity_key_id) as entity_key_ids"
+                        ", array_agg(entity_key_id) as entity_key_ids"
                     } else {
                         ""
                     }
