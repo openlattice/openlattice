@@ -383,37 +383,38 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 ): String {
     val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
 
-    val selectColumns = joinColumns.joinToString(",") { column ->
-        if (linking && omitEntitySetId &&
-                metadataOptions.contains(MetadataOption.ENTITY_SET_IDS) && column == ENTITY_SET_ID.name) {
-            "array_agg(entity_set_id) as entity_set_ids"
-        } else {
-            column
-        }
-    } + if (metadataColumns.isNotEmpty()) {
-        if (linking) {
-            if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                ", max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}"
+    val selectColumns = joinColumns.joinToString(",") +
+            if (metadataColumns.isNotEmpty()) {
+                if (linking) {
+                    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+                        ", max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}"
+                    } else {
+                        ""
+                    } + if (metadataOptions.contains(MetadataOption.ENTITY_SET_IDS)) {
+                        "array_agg(entity_set_id) as entity_set_ids"
+                    } else {
+                        ""
+                    } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
+                        "array_agg(entity_key_id) as entity_key_ids"
+                    } else {
+                        ""
+                    }
+                } else {
+                    ", $metadataColumns"
+                }
             } else {
                 ""
             }
-        } else {
-            ", $metadataColumns"
-        }
-    } else {
-        ""
-    }
 
     val groupBy = if (linking && omitEntitySetId) {
         "GROUP BY ${LINKING_ID.name}"
     } else if (linking && !omitEntitySetId) {
-        "GROUPY BY (${ENTITY_SET_ID.name},${LINKING_ID.name})"
+        "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name})"
     } else {
         ""
     }
 
     return "(SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
-
 }
 
 internal fun arrayAggSql(fqn: String): String {
@@ -504,5 +505,6 @@ private fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): S
         MetadataOption.LAST_LINK -> LAST_LINK.name
         MetadataOption.VERSION -> VERSION.name
         MetadataOption.ENTITY_SET_IDS -> "entity_set_ids"
+        MetadataOption.ENTITY_KEY_IDS -> "entity_key_ids"
     }
 }
