@@ -733,7 +733,7 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
         new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE )
-                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_FIELD, entitySetId.toString() ) )
+                .filter( QueryBuilders.termQuery( ENTITY_SET_ID_KEY.toString(), entitySetId.toString() ) )
                 .source( getIndexName( entityTypeId ) )
                 .execute()
                 .actionGet();
@@ -772,32 +772,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
      */
     private static Map<UUID, Map<String, Float>> getFieldsMap(
             UUID entitySetId,
-            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet,
-            Optional<Set<UUID>> linkedEntitySets ) {
+            Map<UUID, DelegatedUUIDSet> authorizedPropertyTypesByEntitySet ) {
         Map<UUID, Map<String, Float>> fieldsMap = Maps.newHashMap();
         authorizedPropertyTypesByEntitySet.get( entitySetId ).forEach( propertyTypeId -> {
-
             String fieldName = getFieldName( propertyTypeId );
 
-            if ( linkedEntitySets.isPresent() ) {
-
-                boolean isAuthorized = true;
-
-                for ( UUID normalEntitySetId : linkedEntitySets.get() ) {
-                    if ( !authorizedPropertyTypesByEntitySet
-                            .getOrDefault( normalEntitySetId, DelegatedUUIDSet.wrap( ImmutableSet.of() ) )
-                            .contains( propertyTypeId ) ) {
-                        isAuthorized = false;
-                    }
-                }
-
-                if ( isAuthorized ) {
-                    fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
-                }
-
-            } else {
-                fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
-            }
+            // authorized property types are the same within 1 linking entity set (no need for extra check)
+            fieldsMap.put( propertyTypeId, Map.of( fieldName, 1F ) );
         } );
         return fieldsMap;
     }
@@ -999,14 +980,13 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         for ( int i = 0; i < searchConstraints.getEntitySetIds().length; i++ ) {
             UUID entitySetId = searchConstraints.getEntitySetIds()[ i ];
 
-            Optional<Set<UUID>> normalEntitySets = Optional.ofNullable( linkingEntitySets.get( entitySetId ) );
+            Set<UUID> normalEntitySets = linkingEntitySets.getOrDefault(
+                    entitySetId,  DelegatedUUIDSet.wrap(  ImmutableSet.of( entitySetId ) ) );
 
             Map<UUID, Map<String, Float>> authorizedFieldsMap =
-                    getFieldsMap( entitySetId, authorizedPropertyTypesByEntitySet, normalEntitySets );
+                    getFieldsMap( entitySetId, authorizedPropertyTypesByEntitySet );
 
-            QueryBuilder searchQuery = getQueryForSearch( normalEntitySets.orElse( ImmutableSet.of( entitySetId ) ),
-                    searchConstraints,
-                    authorizedFieldsMap );
+            QueryBuilder searchQuery = getQueryForSearch( normalEntitySets , searchConstraints, authorizedFieldsMap );
 
             if ( searchQuery != null ) {
 
