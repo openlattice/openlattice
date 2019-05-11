@@ -47,7 +47,8 @@ private val logger = LoggerFactory.getLogger(SocratesMatcher::class.java)
 class SocratesMatcher(
         model: MultiLayerNetwork,
         private val fqnToIdMap: Map<FullQualifiedName, UUID>,
-        private val linkingFeedbackService: PostgresLinkingFeedbackService) : Matcher {
+        private val linkingFeedbackService: PostgresLinkingFeedbackService
+) : Matcher {
 
     private var localModel = ThreadLocal.withInitial { model.clone() }
 
@@ -144,7 +145,8 @@ class SocratesMatcher(
     private fun computeResults(
             entityValues: Map<EntityDataKey, Map<UUID, Set<Any>>>,
             entities: Map<EntityDataKey, List<EntityDataKey>>,
-            positiveFeedbacks: Set<EntityKeyPair>): List<ResultSet> {
+            positiveFeedbacks: Set<EntityKeyPair>
+    ): List<ResultSet> {
         val positiveMatches = positiveFeedbacks.map { ResultSet(it.first, it.second, 1.0) } +
                 positiveFeedbacks.map { ResultSet(it.second, it.first, 1.0) }
 
@@ -159,11 +161,11 @@ class SocratesMatcher(
             val extractedProperties = entityValues.map { it.key to extractProperties(it.value) }.toMap()
 
             // extract features for all entities in block
-            val extractedFeatures = entities.mapValues {
-                val selfProperties = extractedProperties.getValue(it.key)
-                it.value.map {
-                    val otherProperties = extractedProperties.getValue(it)
-                    it to extractFeatures(selfProperties, otherProperties)
+            val extractedFeatures = entities.mapValues { neighborhood ->
+                val selfProperties = extractedProperties.getValue(neighborhood.key)
+                neighborhood.value.map { dst ->
+                    val otherProperties = extractedProperties.getValue(dst)
+                    dst to extractFeatures(selfProperties, otherProperties)
                 }.toMap()
             }
 
@@ -190,9 +192,11 @@ class SocratesMatcher(
             }.plus(positiveMatches)
 
 
-            logger.info("Feature extraction took {} ms, matching took {} ms",
+            logger.info(
+                    "Feature extraction took {} ms, matching took {} ms",
                     featureExtractionSW,
-                    sw.elapsed(TimeUnit.MILLISECONDS) - featureExtractionSW)
+                    sw.elapsed(TimeUnit.MILLISECONDS) - featureExtractionSW
+            )
             return results
         }
 
