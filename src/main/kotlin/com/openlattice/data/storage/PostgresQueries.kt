@@ -44,7 +44,18 @@ val entityKeyIdColumnsList = listOf(ENTITY_SET_ID.name, ID_VALUE.name)
 val linkingEntityKeyIdColumnsList = listOf(ENTITY_SET_ID.name, LINKING_ID.name)
 val entityKeyIdColumns = entityKeyIdColumnsList.joinToString(",")
 
-private val ALLOWED_LINKING_METADATA_OPTIONS = EnumSet.of(MetadataOption.LAST_WRITE)
+private val ALLOWED_LINKING_METADATA_OPTIONS = EnumSet.of(
+        MetadataOption.LAST_WRITE,
+        MetadataOption.ENTITY_KEY_IDS,
+        MetadataOption.ENTITY_SET_IDS
+)
+
+private val ALLOWED_NON_LINKING_METADATA_OPTIONS = EnumSet.allOf(MetadataOption::class.java).minus(
+        listOf(
+                MetadataOption.ENTITY_KEY_IDS,
+                MetadataOption.ENTITY_SET_IDS
+        )
+)
 
 internal class PostgresQueries
 
@@ -395,7 +406,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
                     } else {
                         ""
                     } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-                        ", array_agg(entity_key_id) as entity_key_ids"
+                        ", array_agg(id) as entity_key_ids"
                     } else {
                         ""
                     }
@@ -489,10 +500,18 @@ private fun getJoinColumns(linking: Boolean, omitEntitySetId: Boolean): List<Str
 }
 
 private fun getMetadataOptions(metadataOptions: Set<MetadataOption>, linking: Boolean): List<String> {
-    val allowedMetadataOptions = if (linking) { // we omit some metadataOptions from linking queries
-        Sets.intersection(metadataOptions, ALLOWED_LINKING_METADATA_OPTIONS)
+    val (allowedMetadataOptions,invalidMetadataOptions) = if (linking) { // we omit some metadataOptions from linking queries
+        val allowed = metadataOptions.intersect(ALLOWED_LINKING_METADATA_OPTIONS)
+        allowed to (ALLOWED_LINKING_METADATA_OPTIONS - allowed)
     } else {
-        metadataOptions
+        val allowed = metadataOptions.intersect(ALLOWED_NON_LINKING_METADATA_OPTIONS)
+        allowed to (ALLOWED_NON_LINKING_METADATA_OPTIONS-allowed)
+    }
+    
+    //TODO: Make this an error and fix cases by providing static method for getting all allowed metadata options
+    //as opposed to just EnumSet.allOf(...)
+    if( invalidMetadataOptions.isNotEmpty() ){
+        logger.warn("Invalid metadata options requested: {}", invalidMetadataOptions)
     }
 
     return allowedMetadataOptions.map(::mapMetadataOptionToPostgresColumn)
