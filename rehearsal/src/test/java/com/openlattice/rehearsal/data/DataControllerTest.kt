@@ -173,7 +173,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val replacementProperty = propertySrc.keys.first()
         replacement.put(replacementProperty, RandomStringUtils.random(10) as Any)
 
-        //added transformValues()
         val replacementMap = transformValues(mapOf(ids[0]!! to replacement), Multimaps::asMap)
 
         Assert.assertEquals(1, dataApi.updateEntitiesInEntitySet(es.id, replacementMap, UpdateType.PartialReplace))
@@ -547,8 +546,168 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val results = Sets.newHashSet(dataApi.loadEntitySetData(es.id, ess, FileType.json))
 
         val fqns = results.iterator().next().keys()
-        Assert.assertEquals(1, fqns.asSequence().filter { it.namespace.equals(newNameSpace) }.count())
-        Assert.assertEquals(0, fqns.asSequence().filter { it.namespace.equals(oldNameSpace) }.count())
+        Assert.assertEquals(1, fqns.asSequence().filter { it.namespace == newNameSpace }.count())
+        Assert.assertEquals(0, fqns.asSequence().filter { it.namespace == oldNameSpace }.count())
+    }
+
+    @Test
+    fun testLoadDataAuthorizations() {
+        // create data with admin
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
+
+        val entries = ImmutableList.copyOf(testData.values)
+        val ids = dataApi.createEntities(es.id, entries)
+
+        val indexExpected = entries.mapIndexed { index, data -> ids[index] to keyByFqn(data) }.toMap()
+        val ess = EntitySetSelection(Optional.of(et.properties), Optional.of(HashSet(ids)))
+
+
+        /* loadEntitySetData */
+
+        // try to read data with no permissions on it
+        try {
+            loginAs("user1")
+            dataApi.loadEntitySetData(es.id, ess, FileType.json)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Insufficient permissions to read the entity set ${es.id} or it doesn't exists.",
+                            true))
+        } finally {
+            loginAs("admin")
+        }
+
+        // add permission to read entityset but none of the properties
+        val readPermission = EnumSet.of(Permission.READ)
+        val esReadAcl = Acl(AclKey(es.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(esReadAcl, Action.ADD))
+
+        loginAs("user1")
+        val noData = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        Assert.assertEquals(numberOfEntries, noData.size)
+        noData.forEach { Assert.assertEquals(setOf(DataTables.ID_FQN), it.asMap().keys) }
+        loginAs("admin")
+
+
+        // add permission on 1 property
+        val pt1 = edmApi.getPropertyType(et.properties.first())
+        val pt1ReadAcl = Acl(AclKey(es.id, pt1.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(pt1ReadAcl, Action.ADD))
+        loginAs("user1")
+        val pt1Data = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        Assert.assertEquals(numberOfEntries, pt1Data.size)
+        pt1Data.forEach { Assert.assertEquals(setOf(DataTables.ID_FQN, pt1.type), it.asMap().keys) }
+        loginAs("admin")
+
+
+        // add permission on all properties
+        et.properties.forEach {
+            val ptReadAcl = Acl(AclKey(es.id, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+            permissionsApi.updateAcl(AclData(ptReadAcl, Action.ADD))
+        }
+
+        loginAs("user1")
+        val dataAll = ImmutableList.copyOf(dataApi.loadEntitySetData(es.id, ess, FileType.json))
+        val indexActualAll = index(dataAll)
+
+        //Remove the extra properties for easier equals.
+        indexActualAll.forEach {
+            it.value.removeAll(DataTables.ID_FQN)
+            it.value.removeAll(DataTables.LAST_INDEX_FQN)
+            it.value.removeAll(DataTables.LAST_WRITE_FQN)
+        }
+
+        Assert.assertEquals(indexExpected, indexActualAll)
+        loginAs("admin")
+
+
+        /* getEntity */
+
+        val et2 = createEntityType()
+        val es2 = createEntitySet(et2)
+
+        val testData2 = TestDataFactory.randomStringEntityData(1, et2.properties)
+
+        val entries2 = ImmutableList.copyOf(testData2.values)
+        val id = dataApi.createEntities(es2.id, entries2)[0]
+        val property = et2.properties.first()
+
+        // try to read data with no permissions on it
+        try {
+            loginAs("user1")
+            dataApi.getEntity(es2.id, id)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Object [${es2.id}] is not accessible.", true))
+        }
+
+        try {
+            dataApi.getEntity(es2.id, id, property)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Object [${es2.id}] is not accessible.", true))
+        } finally {
+            loginAs("admin")
+        }
+
+        // add permission to read entityset but none of the properties
+        val es2ReadAcl = Acl(AclKey(es2.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(es2ReadAcl, Action.ADD))
+
+        loginAs("user1")
+        val noData2 = dataApi.getEntity(es2.id, id).asMap()
+        Assert.assertEquals(1, noData2.size)
+        noData2.forEach { Assert.assertEquals(DataTables.ID_FQN, it.key) }
+
+        try {
+            dataApi.getEntity(es2.id, id, property)
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!
+                    .contains("Object [${es2.id}, $property] is not accessible.", true))
+        } finally {
+            loginAs("admin")
+        }
+
+
+        // add permission on 1 property
+        val pt = edmApi.getPropertyType(property)
+        val ptReadAcl = Acl(AclKey(es2.id, pt.id), setOf(Ace(user1, readPermission, OffsetDateTime.MAX)))
+        permissionsApi.updateAcl(AclData(ptReadAcl, Action.ADD))
+
+        loginAs("user1")
+        val ptData1 = dataApi.getEntity(es2.id, id).asMap()
+        Assert.assertEquals(1, ptData1[DataTables.ID_FQN]!!.size)
+        Assert.assertEquals(setOf(DataTables.ID_FQN, pt.type), ptData1.keys)
+        val ptData2 =  dataApi.getEntity(es2.id, id, property)
+        Assert.assertEquals(1, ptData2.size)
+        Assert.assertEquals(entries2[0][property], ptData2)
+        loginAs("admin")
+
+
+        // add permission on all properties
+        et2.properties.forEach {
+            permissionsApi.updateAcl(AclData(
+                    Acl(AclKey(es2.id, it), setOf(Ace(user1, readPermission, OffsetDateTime.MAX))),
+                    Action.ADD))
+        }
+
+        loginAs("user1")
+        val dataAll1 = dataApi.getEntity(es2.id, id).asMap()
+        Assert.assertEquals(1, dataAll1[DataTables.ID_FQN]!!.size)
+        val fqns = et2.properties.map { edmApi.getPropertyType(it).type }.toMutableSet()
+        fqns.add(DataTables.ID_FQN)
+        Assert.assertEquals(fqns, dataAll1.keys)
+        val dataAll2 =  dataApi.getEntity(es2.id, id, property)
+        Assert.assertEquals(1, dataAll2.size)
+        Assert.assertEquals(entries2[0][property], dataAll2)
+
+        loginAs("admin")
     }
 
 
@@ -560,7 +719,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entries = (1..numberOfEntries)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -597,6 +755,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es.id}] is not accessible.", true))
@@ -612,6 +771,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must have OWNER permission of all required entity set properties to delete entities from it.", true))
@@ -628,6 +788,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esEdge.id}] is not accessible.", true))
@@ -644,6 +805,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             newEntityIds.toSet(),
                             Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
                     DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esDst.id}] is not accessible.", true))
@@ -663,6 +825,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             newEntityIds.toSet(),
                             Optional.empty(), Optional.of(setOf(esDst.id)), Optional.of(setOf(esEdge.id))),
                     DeleteType.Hard)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must have OWNER permission of all required entity set properties to delete entities from it.", true))
@@ -676,6 +839,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${es.id}] is not accessible.", true))
@@ -692,6 +856,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must have WRITE permission of all required entity set properties to delete entities from it.", true))
@@ -709,6 +874,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         try {
             loginAs("user1")
             dataApi.deleteEntities(es.id, newEntityIds.toSet(), DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esEdge.id}] is not accessible.", true))
@@ -728,6 +894,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             newEntityIds.toSet(),
                             Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
                     DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("Object [${esDst.id}] is not accessible.", true))
@@ -747,6 +914,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             newEntityIds.toSet(),
                             Optional.empty(), Optional.of(setOf(esDst.id)), Optional.empty()),
                     DeleteType.Soft)
+            Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!
                     .contains("You must have WRITE permission of all required entity set properties to delete entities from it.", true))
@@ -762,7 +930,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entries = (1..numberOfEntries)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
@@ -784,7 +951,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entries = (1..numberOfEntries)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -874,7 +1040,6 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val entries = (1..numberOfEntries)
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
-                .toList()
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
         // create edges with original entityset as source
@@ -920,7 +1085,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertEquals(0, loadedEntriesEdge1.size)
         Assert.assertEquals(numberOfEntries, loadedEntriesDst1.size)
 
-        Thread.sleep(5000L) // it takes some time to delete documents from elasticsearch
+        Thread.sleep(10000L) // it takes some time to delete documents from elasticsearch
         Assert.assertEquals(0L, searchApi
                 .executeEntitySetDataQuery(es.id, SearchTerm("*", 0, 10)).numHits)
         Assert.assertEquals(0L, searchApi
@@ -972,7 +1137,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                             EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5)),
                             EdmTestConstants.personMiddleNameId to setOf(RandomStringUtils.randomAscii(5))
                     )
-                }.toList()
+                }
 
         val newEntityIds = dataApi.createEntities(es.id, people)
 

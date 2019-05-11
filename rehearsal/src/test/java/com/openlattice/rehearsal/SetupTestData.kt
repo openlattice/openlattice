@@ -23,6 +23,7 @@ package com.openlattice.rehearsal
 
 import com.openlattice.authentication.AuthenticationTest
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
+import com.openlattice.shuttle.MissionControl
 import com.openlattice.shuttle.ShuttleCli
 import com.openlattice.shuttle.main
 import org.apache.olingo.commons.api.edm.FullQualifiedName
@@ -36,6 +37,10 @@ open class SetupTestData : MultipleAuthenticatedUsersBase() {
     companion object {
         private const val DATA_FOLDER = "data"
         private const val FLIGHT_FOLDER = "flights"
+
+        init {
+            MissionControl.continueAfterSuccess()
+        }
 
         /**
          * Import datasets via Shuttle

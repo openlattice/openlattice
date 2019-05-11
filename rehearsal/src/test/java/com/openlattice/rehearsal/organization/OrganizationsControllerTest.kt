@@ -35,7 +35,7 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         loginAs("admin")
 
         // add role1 to user1 with admin
-        addRoleToUser(organizationID, roleId, user1.id)
+        OrganizationControllerCallHelper.addRoleToUser(organizationID, roleId, user1.id)
 
         val usersOfRole1 = organizationsApi.getAllUsersOfRole(organizationID, roleId).toList()
         Assert.assertEquals(1, usersOfRole1.size)
@@ -44,7 +44,7 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         // try to add role to user2 with user1
         loginAs("user1")
         try {
-            addRoleToUser(organizationID, roleId, user2.id)
+            OrganizationControllerCallHelper.addRoleToUser(organizationID, roleId, user2.id)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: GeneralException) {
             Assert.assertTrue(e.message!!.contains("Object [$organizationID, $roleId] is not accessible"))
@@ -56,17 +56,17 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         loginAs("admin")
 
         // add and remove role1 to/from user1 with admin
-        addRoleToUser(organizationID, roleId, user1.id)
-        removeRoleFromUser(organizationID, roleId, user1.id)
+        OrganizationControllerCallHelper.addRoleToUser(organizationID, roleId, user1.id)
+        OrganizationControllerCallHelper.removeRoleFromUser(organizationID, roleId, user1.id)
 
         // re-add role1 to user1 with admin
-        addRoleToUser(organizationID, roleId, user1.id)
+        OrganizationControllerCallHelper.addRoleToUser(organizationID, roleId, user1.id)
 
         // try to remove role1 from user1 with user2
         loginAs("user2")
 
         try {
-            removeRoleFromUser(organizationID, roleId, user1.id)
+            OrganizationControllerCallHelper.removeRoleFromUser(organizationID, roleId, user1.id)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: GeneralException) {
             Assert.assertTrue(e.message!!.contains("Object [$organizationID, $roleId] is not accessible"))
@@ -79,7 +79,7 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         loginAs("user1")
 
         try {
-            addMemberToOrganization(organizationID, user2.id)
+            OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user2.id)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: GeneralException) {
             Assert.assertTrue(e.message!!.contains("Object [$organizationID] is not accessible"))
@@ -95,25 +95,25 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(acl, Action.ADD))
 
         loginAs("user1")
-        addMemberToOrganization(organizationID, user2.id)
+        OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user2.id)
 
         // clean up: remove ownership from user1, remove user2 from organization
         loginAs("admin")
         permissionsApi.updateAcl(AclData(acl, Action.REMOVE))
-        removeMemberFromOrganization(organizationID, user2.id)
+        OrganizationControllerCallHelper.removeMemberFromOrganization(organizationID, user2.id)
     }
 
     @Test
     fun testRemoveMembersFromOrganization() {
         // add member with admin
         loginAs("admin")
-        addMemberToOrganization(organizationID, user2.id)
+        OrganizationControllerCallHelper.addMemberToOrganization(organizationID, user2.id)
 
         // test owner access check
         loginAs("user1")
 
         try {
-            removeMemberFromOrganization(organizationID, user2.id)
+            OrganizationControllerCallHelper.removeMemberFromOrganization(organizationID, user2.id)
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: GeneralException) {
             Assert.assertTrue(e.message!!.contains("Object [$organizationID] is not accessible"))
@@ -129,7 +129,7 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(acl, Action.ADD))
 
         loginAs("user1")
-        removeMemberFromOrganization(organizationID, user2.id)
+        OrganizationControllerCallHelper.removeMemberFromOrganization(organizationID, user2.id)
 
         // clean up: remove ownership from user1
         loginAs("admin")
@@ -137,43 +137,4 @@ class OrganizationsControllerTest : MultipleAuthenticatedUsersBase() {
 
     }
 
-    private fun addRoleToUser(organizationId: UUID, roleId: UUID, userId: String) {
-        val url = OrganizationsApi.BASE +
-                "/$organizationId" +
-                OrganizationsApi.PRINCIPALS +
-                OrganizationsApi.ROLES +
-                "/$roleId" +
-                OrganizationsApi.MEMBERS +
-                "/$userId"
-        makePutRequest(url, RequestBody.create(null, ByteArray(0)))
-    }
-
-    private fun removeRoleFromUser(organizationId: UUID, roleId: UUID, userId: String) {
-        val url = OrganizationsApi.BASE +
-                "/$organizationId" +
-                OrganizationsApi.PRINCIPALS +
-                OrganizationsApi.ROLES +
-                "/$roleId" +
-                OrganizationsApi.MEMBERS +
-                "/$userId"
-        makeDeleteRequest(url)
-    }
-
-    private fun addMemberToOrganization(organizationId: UUID, userId: String) {
-        val url = OrganizationsApi.BASE +
-                "/$organizationId" +
-                OrganizationsApi.PRINCIPALS +
-                OrganizationsApi.MEMBERS +
-                "/$userId"
-        makePutRequest(url, RequestBody.create(null, ByteArray(0)))
-    }
-
-    private fun removeMemberFromOrganization(organizationId: UUID, userId: String) {
-        val url = OrganizationsApi.BASE +
-                "/$organizationId" +
-                OrganizationsApi.PRINCIPALS +
-                OrganizationsApi.MEMBERS +
-                "/$userId"
-        makeDeleteRequest(url)
-    }
 }
