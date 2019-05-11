@@ -25,10 +25,12 @@ import com.google.common.collect.Sets
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
+import java.security.InvalidParameterException
 import java.util.*
 
 /**
@@ -67,6 +69,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
             entitiesClause,
             metadataOptions,
             linking,
+            omitEntitySetId,
             joinColumns
     )
 
@@ -330,9 +333,7 @@ internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
                 "WHERE max_abs=abs_max ) "
     } else {
         //TODO: needs fix with aliases
-        val metadataColumns = metadataOptions.map(ResultSetAdapters::mapMetadataOptionToPostgresColumn).joinToString(
-                ","
-        ) { it.name }
+        val metadataColumns = metadataOptions.map(::mapMetadataOptionToPostgresColumn).joinToString(",")
         return "(SELECT $selectedColumns,$metadataColumns FROM ${IDS.name} INNER JOIN (SELECT $selectedColumns " +
                 "FROM ( SELECT $selectedColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
                 "       FROM (  SELECT $selectedColumns, unnest(versions) as versions " +
@@ -377,33 +378,43 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         entitiesClause: String,
         metadataOptions: Set<MetadataOption>,
         linking: Boolean,
+        omitEntitySetId: Boolean,
         joinColumns: List<String>
 ): String {
     val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
 
-    var selectColumns = joinColumns.joinToString(",") { column ->
-        if (column == ENTITY_SET_ID.name && linking) {
-            "array_agg(entity_set_id) as entity_set_ids"
-        } else {
-            column
-        }
-    }
-
-    if (metadataColumns.isNotEmpty()) {
-
-        if (linking) {
-            if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                selectColumns += ", max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}"
+    val selectColumns = joinColumns.joinToString(",") +
+            if (metadataColumns.isNotEmpty()) {
+                if (linking) {
+                    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+                        ", max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}"
+                    } else {
+                        ""
+                    } + if (metadataOptions.contains(MetadataOption.ENTITY_SET_IDS)) {
+                        ", array_agg(entity_set_id) as entity_set_ids"
+                    } else {
+                        ""
+                    } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
+                        ", array_agg(entity_key_id) as entity_key_ids"
+                    } else {
+                        ""
+                    }
+                } else {
+                    ", $metadataColumns"
+                }
+            } else {
+                ""
             }
-        } else {
-            selectColumns += ", $metadataColumns"
-        }
-    }
 
-    val groupBy = if (linking) "GROUP BY ${LINKING_ID.name}" else ""
+    val groupBy = if (linking && omitEntitySetId) {
+        "GROUP BY ${LINKING_ID.name}"
+    } else if (linking && !omitEntitySetId) {
+        "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name})"
+    } else {
+        ""
+    }
 
     return "(SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
-
 }
 
 internal fun arrayAggSql(fqn: String): String {
@@ -484,5 +495,16 @@ private fun getMetadataOptions(metadataOptions: Set<MetadataOption>, linking: Bo
         metadataOptions
     }
 
-    return allowedMetadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name }
+    return allowedMetadataOptions.map(::mapMetadataOptionToPostgresColumn)
+}
+
+private fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): String {
+    return when (metadataOption) {
+        MetadataOption.LAST_WRITE -> LAST_WRITE.name
+        MetadataOption.LAST_INDEX -> LAST_INDEX.name
+        MetadataOption.LAST_LINK -> LAST_LINK.name
+        MetadataOption.VERSION -> VERSION.name
+        MetadataOption.ENTITY_SET_IDS -> "entity_set_ids"
+        MetadataOption.ENTITY_KEY_IDS -> "entity_key_ids"
+    }
 }
