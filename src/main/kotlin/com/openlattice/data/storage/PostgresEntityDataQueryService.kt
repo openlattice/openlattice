@@ -407,12 +407,13 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         val version = System.currentTimeMillis()
         val idsClause = buildEntityKeyIdsClause(entities.keys) // we assume that entities is not empty
+        val citusIdsClause = entities.keys.joinToString(" OR ") { " id = '$it' " }
 
         //Update the versions of all entities.
         val updatedEntityCount = hds.connection.use { connection ->
             connection.autoCommit = false
             return@use connection.createStatement().use { updateEntities ->
-                updateEntities.execute(lockEntities(entitySetId, idsClause, version))
+                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
                 val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
                 connection.commit()
                 connection.autoCommit = true
@@ -916,7 +917,7 @@ internal fun buildLockPropertiesStatement(entitySetId: UUID, propertyTypeId: UUI
 
 internal fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): String {
     return "SELECT 1 FROM ${IDS.name} " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause) " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} AND ($idsClause) " +
             "FOR UPDATE"
 }
 
