@@ -411,12 +411,12 @@ class PostgresEntityDataQueryService(
 
         //Update the versions of all entities.
         val updatedEntityCount = hds.connection.use { connection ->
-            connection.autoCommit = false
+//            connection.autoCommit = false
             return@use connection.createStatement().use { updateEntities ->
-                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
+//                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
                 val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
-                connection.commit()
-                connection.autoCommit = true
+//                connection.commit()
+//                connection.autoCommit = true
                 return@use updateCount
             }
         }
