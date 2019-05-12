@@ -334,7 +334,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     override fun getEdgesAndNeighborsForVertices(entitySetId: UUID, filter: EntityNeighborsFilter): Stream<Edge> {
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, false))
                     stmt.setObject(1, entitySetId)
@@ -350,7 +350,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
 
     override fun getEdgesAndNeighborsForVerticesBulk(
-            entitySetIds: Set<UUID>, filter: EntityNeighborsFilter
+            entitySetIds: Set<UUID>,
+            filter: EntityNeighborsFilter
     ): Stream<Edge> {
         if (entitySetIds.size == 1) {
             return getEdgesAndNeighborsForVertices(entitySetIds.first(), filter)
@@ -670,8 +671,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 authorizedFilteredRanking.filteredNeighborsRanking.neighborFilters,
                 setOf(),
                 entitySetPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
-                false,
-                false
+                linking = false,
+                omitEntitySetId = false
         )
 
         val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
