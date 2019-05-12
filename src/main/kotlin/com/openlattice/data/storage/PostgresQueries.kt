@@ -500,17 +500,16 @@ private fun getJoinColumns(linking: Boolean, omitEntitySetId: Boolean): List<Str
 }
 
 private fun getMetadataOptions(metadataOptions: Set<MetadataOption>, linking: Boolean): List<String> {
-    val (allowedMetadataOptions,invalidMetadataOptions) = if (linking) { // we omit some metadataOptions from linking queries
-        val allowed = metadataOptions.intersect(ALLOWED_LINKING_METADATA_OPTIONS)
-        allowed to (ALLOWED_LINKING_METADATA_OPTIONS - allowed)
-    } else {
-        val allowed = metadataOptions.intersect(ALLOWED_NON_LINKING_METADATA_OPTIONS)
-        allowed to (ALLOWED_NON_LINKING_METADATA_OPTIONS-allowed)
-    }
-    
+    val allowedMetadataOptions = if (linking) // we omit some metadataOptions from linking queries
+        metadataOptions.intersect(ALLOWED_LINKING_METADATA_OPTIONS)
+    else
+        metadataOptions.intersect(ALLOWED_NON_LINKING_METADATA_OPTIONS)
+
+
     //TODO: Make this an error and fix cases by providing static method for getting all allowed metadata options
     //as opposed to just EnumSet.allOf(...)
-    if( invalidMetadataOptions.isNotEmpty() ){
+    val invalidMetadataOptions = metadataOptions - allowedMetadataOptions
+    if (invalidMetadataOptions.isNotEmpty()) {
         logger.warn("Invalid metadata options requested: {}", invalidMetadataOptions)
     }
 
