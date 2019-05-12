@@ -917,7 +917,7 @@ internal fun buildLockPropertiesStatement(entitySetId: UUID, propertyTypeId: UUI
 
 internal fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): String {
     return "SELECT 1 FROM ${IDS.name} " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} AND ($idsClause) " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ($idsClause) " +
             "FOR UPDATE"
 }
 
