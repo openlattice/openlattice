@@ -72,9 +72,26 @@ class PostgresEntityKeyIdService(
         return entityIds.zip(ids).toMap()
     }
 
+    private fun storeEntityKeyIdReservations(entitySetId: UUID, entityKeyIds: Set<UUID>) {
+        hds.connection.use { connection ->
+
+            val insertIds = connection.prepareStatement(INSERT_SQL)
+
+            entityKeyIds.forEach { entityKeyId ->
+                insertIds.setObject(1, entitySetId)
+                insertIds.setObject(3, entityKeyId)
+                insertIds.addBatch()
+            }
+
+            val totalWritten = insertIds.executeBatch().sum()
+            if (totalWritten != entityKeyIds.size) {
+                logger.warn("Expected ${entityKeyIds.size} entity key id writes. Only $totalWritten writes registered.")
+            }
+        }
+    }
+
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
-        val connection = hds.connection
-        connection.use { connection ->
+        hds.connection.use { connection ->
             connection.autoCommit = false
 
             val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
@@ -155,7 +172,7 @@ class PostgresEntityKeyIdService(
 
     override fun reserveIds(entitySetId: UUID, count: Int): List<UUID> {
         val ids = idGenerationService.getNextIds(count)
-        storeEntityKeyIds(ids.map { EntityKey(entitySetId, it.toString()) to it }.toMap())
+        storeEntityKeyIdReservations(entitySetId, ids)
         return ids.toList()
     }
 
