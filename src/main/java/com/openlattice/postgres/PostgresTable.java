@@ -175,6 +175,19 @@ public final class PostgresTable {
             new PostgresTableDefinition( "id_gen" )
                     .primaryKey( PARTITION_INDEX )
                     .addColumns( PARTITION_INDEX, MSB, LSB );
+    public static final PostgresTableDefinition LINKING_FEEDBACK         =
+            new PostgresTableDefinition( "linking_feedback" )
+                    .addColumns(
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID,
+                            LINKED )
+                    .primaryKey(
+                            SRC_ENTITY_SET_ID,
+                            SRC_ENTITY_KEY_ID,
+                            DST_ENTITY_SET_ID,
+                            DST_ENTITY_KEY_ID );
     public static final PostgresTableDefinition        MATCHED_ENTITIES             =
             new CitusDistributedTableDefinition( "matched_entities" )
                     .addColumns( LINKING_ID,
@@ -189,26 +202,6 @@ public final class PostgresTable {
                             DST_ENTITY_SET_ID,
                             DST_ENTITY_KEY_ID )
                     .distributionColumn( LINKING_ID );
-
-    public static final PostgresTableDefinition LINKING_FEEDBACK        =
-            new PostgresTableDefinition( "linking_feedback" )
-                    .addColumns(
-                            SRC_ENTITY_SET_ID,
-                            SRC_ENTITY_KEY_ID,
-                            DST_ENTITY_SET_ID,
-                            DST_ENTITY_KEY_ID,
-                            LINKED )
-                    .primaryKey(
-                            SRC_ENTITY_SET_ID,
-                            SRC_ENTITY_KEY_ID,
-                            DST_ENTITY_SET_ID,
-                            DST_ENTITY_KEY_ID );
-    //.setUnique( NAME );
-    public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES =
-            new PostgresTableDefinition( "organization_assemblies" )
-                    .addColumns( ORGANIZATION_ID, DB_NAME, INITIALIZED )
-                    .primaryKey( ORGANIZATION_ID )
-                    .setUnique( DB_NAME ); //We may have to delete for citus
     public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS =
             new PostgresTableDefinition( "materialized_entity_sets" )
                     .addColumns( ENTITY_SET_ID, ORGANIZATION_ID, ENTITY_SET_FLAGS )
@@ -220,6 +213,12 @@ public final class PostgresTable {
     public static final PostgresTableDefinition ORGANIZATIONS            =
             new PostgresTableDefinition( "organizations" )
                     .addColumns( ID, NULLABLE_TITLE, DESCRIPTION, ALLOWED_EMAIL_DOMAINS, MEMBERS, APP_IDS );
+    //.setUnique( NAME );
+    public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES  =
+            new PostgresTableDefinition( "organization_assemblies" )
+                    .addColumns( ORGANIZATION_ID, DB_NAME, INITIALIZED )
+                    .primaryKey( ORGANIZATION_ID )
+                    .setUnique( DB_NAME ); //We may have to delete for citus
     public static final PostgresTableDefinition PERMISSIONS              =
             new PostgresTableDefinition( "permissions" )
                     .addColumns( ACL_KEY,
@@ -282,10 +281,10 @@ public final class PostgresTable {
                     .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
                     .primaryKey( ACL_KEY );
     public static final PostgresTableDefinition SYNC_IDS                 =
-            new PostgresTableDefinition( "sync_ids" )
-                    .addColumns( ENTITY_SET_ID, SYNC_ID, CURRENT_SYNC_ID )
-                    .primaryKey( ENTITY_SET_ID, SYNC_ID )
-                    .setUnique( ENTITY_SET_ID, SYNC_ID );
+            new CitusDistributedTableDefinition( "sync_ids" )
+                    .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
+                    .primaryKey( ENTITY_SET_ID, ENTITY_ID )
+                    .distributionColumn( ENTITY_ID );
     public static final PostgresTableDefinition VERTEX_IDS_AFTER_LINKING =
             new PostgresTableDefinition( "vertex_ids_after_linking" )
                     .addColumns( GRAPH_ID, VERTEX_ID, NEW_VERTEX_ID )
@@ -392,7 +391,7 @@ public final class PostgresTable {
                 new PostgresColumnsIndexDefinition( APPS, ID )
                         .name( "apps_id_idx" )
                         .ifNotExists() );
-        
+
         GRAPH_QUERIES.addIndexes(
                 new PostgresColumnsIndexDefinition( GRAPH_QUERIES, START_TIME )
                         .name( "graph_queries_expiry_idx" )

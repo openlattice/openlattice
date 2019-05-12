@@ -32,6 +32,7 @@ import com.openlattice.ids.HazelcastIdGenerationService
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.SYNC_IDS
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -43,13 +44,12 @@ import kotlin.collections.HashMap
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} IN " +
-        "(SELECT * FROM UNNEST( (?)::uuid[] )) "
-private val entityKeyIdsSql = "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} IN " +
-        "(SELECT * FROM UNNEST( (?)::text[] )) "
-private val entityKeyIdSql = "SELECT * FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} =? "
-private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name})" +
-        " VALUES(?,?,?)"
+private val entityKeysSql = "SELECT * FROM ${IDS.name} WHERE ${ID.name} = ANY(?) "
+private val entityKeyIdsSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ANY(?) "
+private val entityKeyIdSql = "SELECT * FROM ${SYNC_IDS.name} WHERE ${ENTITY_SET_ID.name} = ? AND ${ENTITY_ID.name} = ? "
+private val INSERT_SQL = "INSERT INTO ${IDS.name} (${ENTITY_SET_ID.name},${ID.name}) VALUES(?,?)"
+private val INSERT_SYNC_SQL = "INSERT INTO ${SYNC_IDS.name} (${ENTITY_SET_ID.name},${ENTITY_ID.name},${ID.name}) VALUES(?,?,?)"
+
 private val logger = LoggerFactory.getLogger(PostgresEntityKeyIdService::class.java)
 
 class PostgresEntityKeyIdService(
@@ -74,18 +74,32 @@ class PostgresEntityKeyIdService(
 
     private fun storeEntityKeyIds(entityKeyIds: Map<EntityKey, UUID>): Map<EntityKey, UUID> {
         val connection = hds.connection
-        connection.use {
-            val ps = connection.prepareStatement(INSERT_SQL)
+        connection.use { connection ->
+            connection.autoCommit = false
+
+            val insertSyncIds = connection.prepareStatement(INSERT_SYNC_SQL)
+
             entityKeyIds.forEach {
-                ps.setObject(1, it.key.entitySetId)
-                ps.setString(2, it.key.entityId)
-                ps.setObject(3, it.value)
-                ps.addBatch()
+                insertSyncIds.setObject(1, it.key.entitySetId)
+                insertSyncIds.setString(2, it.key.entityId)
+                insertSyncIds.setObject(3, it.value)
+                insertSyncIds.addBatch()
             }
-            val totalWritten = ps.executeBatch().sum()
+
+            val insertIds = connection.prepareStatement(INSERT_SQL)
+
+            entityKeyIds.forEach {
+                insertIds.setObject(1, it.key.entitySetId)
+                insertIds.setObject(3, it.value)
+                insertIds.addBatch()
+            }
+
+            val totalWritten = insertIds.executeBatch().sum()
             if (totalWritten != entityKeyIds.size) {
                 logger.warn("Expected ${entityKeyIds.size} entity key writes. Only $totalWritten writes registered.")
             }
+            connection.commit()
+            connection.autoCommit = true
         }
         return entityKeyIds
     }
