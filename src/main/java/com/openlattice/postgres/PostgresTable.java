@@ -296,23 +296,26 @@ public final class PostgresTable {
                         .ifNotExists()
         );
         EDGES.addIndexes(
+                new PostgresColumnsIndexDefinition( EDGES, ID_VALUE )
+                        .name( "edges_id_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( EDGES, EDGE_COMP_1 )
+                        .name( "edges_edge_comp_1_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( EDGES, EDGE_COMP_2 )
+                        .name( "edges_edge_comp_2_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( EDGES, COMPONENT_TYPES )
+                        .name( "edges_comp_types_idx" )
+                        .ifNotExists(),
                 new PostgresColumnsIndexDefinition( EDGES, SRC_ENTITY_SET_ID )
                         .name( "edges_src_entity_set_id_idx" )
-                        .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, SRC_ENTITY_KEY_ID )
-                        .name( "edges_src_entity_key_id_idx" )
                         .ifNotExists(),
                 new PostgresColumnsIndexDefinition( EDGES, DST_ENTITY_SET_ID )
                         .name( "edges_dst_entity_set_id_idx" )
                         .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, DST_ENTITY_KEY_ID )
-                        .name( "edges_dst_entity_key_id_idx" )
-                        .ifNotExists(),
                 new PostgresColumnsIndexDefinition( EDGES, EDGE_ENTITY_SET_ID )
                         .name( "edges_edge_entity_set_id_idx" )
-                        .ifNotExists(),
-                new PostgresColumnsIndexDefinition( EDGES, EDGE_ENTITY_KEY_ID )
-                        .name( "edges_edge_entity_key_id_idx" )
                         .ifNotExists() );
         IDS.addIndexes(
                 new PostgresColumnsIndexDefinition( IDS, ENTITY_SET_ID )
