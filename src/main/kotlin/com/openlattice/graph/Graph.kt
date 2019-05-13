@@ -161,6 +161,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ps.setObject(3, dataEdgeKey.src.entityKeyId)
         ps.setObject(4, dataEdgeKey.dst.entityKeyId)
         ps.setObject(5, dataEdgeKey.edge.entityKeyId)
+        ps.addBatch()
     }
 
     private fun clearEdgesAddDstRowToBatch(ps: PreparedStatement, version: Long, dataEdgeKey: DataEdgeKey) {
@@ -169,6 +170,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ps.setObject(3, dataEdgeKey.dst.entityKeyId)
         ps.setObject(4, dataEdgeKey.edge.entityKeyId)
         ps.setObject(5, dataEdgeKey.src.entityKeyId)
+        ps.addBatch()
     }
 
     private fun clearEdgesAddEdgeRowToBatch(ps: PreparedStatement, version: Long, dataEdgeKey: DataEdgeKey) {
@@ -177,11 +179,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ps.setObject(3, dataEdgeKey.edge.entityKeyId)
         ps.setObject(4, dataEdgeKey.src.entityKeyId)
         ps.setObject(5, dataEdgeKey.dst.entityKeyId)
+        ps.addBatch()
     }
 
-    override fun clearVerticesInEntitySet(entitySetId: UUID?): Int {
-        val connection = hds.connection
-        connection.use {
+    override fun clearVerticesInEntitySet(entitySetId: UUID): Int {
+        hds.connection.use { connection ->
             val ps = connection.prepareStatement(CLEAR_BY_SET_SQL)
             val version = -System.currentTimeMillis()
             ps.setLong(1, version)
@@ -193,7 +195,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    override fun clearVertices(entitySetId: UUID?, vertices: Set<UUID>?): Int {
+    override fun clearVertices(entitySetId: UUID, vertices: Set<UUID>): Int {
         val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(CLEAR_BY_VERTICES_SQL)
@@ -201,12 +203,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             val version = -System.currentTimeMillis()
             ps.setLong(1, version)
             ps.setLong(2, version)
-            ps.setObject(3, entitySetId)
+            ps.setObject(3, arr)
             ps.setObject(4, arr)
-            ps.setObject(5, entitySetId)
-            ps.setObject(6, arr)
-            ps.setObject(7, entitySetId)
-            ps.setObject(8, arr)
+            ps.setObject(5, arr)
             return ps.executeUpdate()
         }
     }
@@ -214,10 +213,36 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     override fun deleteEdges(keys: Set<DataEdgeKey>): WriteEvent {
         val connection = hds.connection
         connection.use {
-            val ps = connection.prepareStatement(deleteEdgesSql(keys))
+            val ps = connection.prepareStatement(DELETE_SQL)
+            keys.forEach { dataEdgeKey ->
+                deleteEdgesAddSrcRowToBatch(ps, dataEdgeKey)
+                deleteEdgesAddDstRowToBatch(ps, dataEdgeKey)
+                deleteEdgesEdgeDstRowToBatch(ps, dataEdgeKey)
+            }
             val numUpdated = ps.executeUpdate()
             return WriteEvent(System.currentTimeMillis(), numUpdated)
         }
+    }
+
+    private fun deleteEdgesAddSrcRowToBatch(ps: PreparedStatement, dataEdgeKey: DataEdgeKey) {
+        ps.setObject(1, dataEdgeKey.src.entityKeyId)
+        ps.setObject(2, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
+        ps.addBatch()
+    }
+
+    private fun deleteEdgesAddDstRowToBatch(ps: PreparedStatement, dataEdgeKey: DataEdgeKey) {
+        ps.setObject(2, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(1, dataEdgeKey.src.entityKeyId)
+        ps.addBatch()
+    }
+
+    private fun deleteEdgesEdgeDstRowToBatch(ps: PreparedStatement, dataEdgeKey: DataEdgeKey) {
+        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(1, dataEdgeKey.src.entityKeyId)
+        ps.setObject(2, dataEdgeKey.dst.entityKeyId)
+        ps.addBatch()
     }
 
     override fun deleteVerticesInEntitySet(entitySetId: UUID?): Int {
@@ -246,25 +271,13 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
-    private fun deleteEdgesSql(keys: Set<DataEdgeKey>): String {
-        val sql = "DELETE FROM ${EDGES.name} WHERE " +
-                (keys.joinToString(" OR ") {
-                    " ( ${SRC_ENTITY_SET_ID.name} = '${it.src.entitySetId}' AND ${SRC_ENTITY_KEY_ID.name} = '${it.src.entityKeyId}' " +
-                            "${DST_ENTITY_SET_ID.name} = '${it.dst.entitySetId}' AND ${DST_ENTITY_KEY_ID.name} = '${it.dst.entityKeyId}' " +
-                            "${EDGE_ENTITY_SET_ID.name} = '${it.edge.entitySetId}' AND ${EDGE_ENTITY_KEY_ID.name} = '${it.edge.entityKeyId}' ) "
-                })
-
-        return sql
-    }
-
-
     /* Select */
 
     override fun getEdgesAsMap(keys: MutableSet<DataEdgeKey>?): MutableMap<DataEdgeKey, Edge> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun getEdge(key: DataEdgeKey): Edge? {
+    override fun getEdge(key: DataEdgeKey): Edge {
         val iter = getEdges(setOf(key)).iterator()
         return if (iter.hasNext()) {
             iter.next()
@@ -276,7 +289,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     override fun getEdges(keys: Set<DataEdgeKey>): Stream<Edge> {
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val stmt = connection.createStatement()
                     val rs = stmt.executeQuery(selectEdges(keys))
                     StatementHolder(connection, stmt, rs)
@@ -288,7 +301,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     fun executeEdgesQuery(query: String): Stream<Edge> {
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val stmt = connection.createStatement()
                     val rs = stmt.executeQuery(query)
                     StatementHolder(connection, stmt, rs)
@@ -855,18 +868,19 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
 
 private val SELECT_SQL = "SELECT * FROM ${EDGES.name} " +
         "WHERE (${KEY_COLUMNS.joinToString(",")}) IN "
+
 private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
 private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+
 private val CLEAR_BY_SET_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
         "WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
+
 private val CLEAR_BY_VERTICES_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
+        "${ID_VALUE.name} = ANY(?) OR ${EDGE_COMP_1.name} = ANY(?) OR ${EDGE_COMP_2.name} = ANY(?) "
 
 private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
