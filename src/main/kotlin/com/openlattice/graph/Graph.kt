@@ -734,12 +734,13 @@ private val KEY_COLUMNS = setOf(
 ).map { col -> col.name }.toList()
 
 private val INSERT_COLUMNS = setOf(
+        ID_VALUE,
+        EDGE_COMP_1,
+        EDGE_COMP_2,
+        COMPONENT_TYPES,
         SRC_ENTITY_SET_ID,
-        SRC_ENTITY_KEY_ID,
         DST_ENTITY_SET_ID,
-        DST_ENTITY_KEY_ID,
         EDGE_ENTITY_SET_ID,
-        EDGE_ENTITY_KEY_ID,
         VERSION,
         VERSIONS
 ).map { it.name }.toSet()
