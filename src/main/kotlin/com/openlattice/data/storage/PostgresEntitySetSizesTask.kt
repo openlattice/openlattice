@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit
 
 
 private const val ENTITY_SET_SIZES_TABLE = "entity_set_counts"
+private val logger = LoggerFactory.getLogger(PostgresEntitySetSizesTask::class.java)
 
 class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizesTaskDependency> {
     override fun getInitialDelay(): Long {
@@ -63,18 +64,14 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
         return PostgresEntitySetSizesTaskDependency::class.java
     }
 
-    companion object {
-        private val logger = LoggerFactory.getLogger(PostgresEntitySetSizesTask::class.java)
-    }
-
-    init {
-        logger.info("Creating entity set count views.")
+//    init {
+//        logger.info("Creating entity set count views.")
 //        getDependency().hikariDataSource.connection.use { connection ->
 //            connection.createStatement().use { stmt ->
 //                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
 //            }
 //        }
-    }
+//    }
 
     fun getEntitySetSize(entitySetId: UUID): Long {
         return getDependency().hikariDataSource.connection.use { connection ->
