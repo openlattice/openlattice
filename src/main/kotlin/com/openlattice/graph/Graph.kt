@@ -816,14 +816,14 @@ private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE 
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "${ID_VALUE.name} = ? AND " +
-        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC} ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST} )"
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal} ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal} )"
 
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "${ID_VALUE.name} = ANY(?) AND " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC}) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST}) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE})"
+        "(${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}) OR " +
+        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal})"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
     val idsClause = "${ID_VALUE.name} = ANY(?)"
@@ -834,7 +834,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         "${SRC_ENTITY_SET_ID.name} = ?" to "${DST_ENTITY_SET_ID.name} = ?"
     }
 
-    var srcSql = "$srcEntitySetSql AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC}"
+    var srcSql = "$srcEntitySetSql AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
     if (filter.dstEntitySetIds.isPresent) {
         if (filter.dstEntitySetIds.get().size > 0) {
             srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(
@@ -845,7 +845,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         }
     }
 
-    var dstSql = "$dstEntitySetSql AND ${COMPONENT_TYPES.name} = ${ComponentType.DST}"
+    var dstSql = "$dstEntitySetSql AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
     if (filter.srcEntitySetIds.isPresent) {
         if (filter.srcEntitySetIds.get().size > 0) {
             dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(
