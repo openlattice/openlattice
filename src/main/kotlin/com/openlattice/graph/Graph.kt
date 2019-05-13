@@ -295,12 +295,10 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     connection.autoCommit = false
                     val idArr = PostgresArrays.createUuidArray(connection, entityKeyIds)
                     val stmt = connection.prepareStatement(BULK_NEIGHBORHOOD_SQL)
-                    stmt.setObject(1, entitySetId)
-                    stmt.setObject(2, idArr)
+                    stmt.setObject(1, idArr)
+                    stmt.setObject(2, entitySetId)
                     stmt.setObject(3, entitySetId)
-                    stmt.setObject(4, idArr)
-                    stmt.setObject(5, entitySetId)
-                    stmt.setObject(6, idArr)
+                    stmt.setObject(4, entitySetId)
                     stmt.fetchSize = BATCH_SIZE
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
@@ -827,9 +825,10 @@ private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "( ${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST} )"
 
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ))"
+        "${ID_VALUE.name} = ANY(?) AND " +
+        "(${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC}) OR " +
+        "(${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST}) OR " +
+        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE})"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
     val idsClause = "${ID_VALUE.name} = ANY(?)"
