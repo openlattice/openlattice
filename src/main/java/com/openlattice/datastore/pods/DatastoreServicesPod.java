@@ -412,6 +412,11 @@ public class DatastoreServicesPod {
         return new HazelcastRequestsManager( hazelcastInstance, rqs() );
     }
 
+    @Bean
+    public PostgresEntitySetSizeCacheManager postgresEntitySetSizeCacheManager() {
+        return new PostgresEntitySetSizeCacheManager(hikariDataSource);
+    }
+
     @PostConstruct
     void initPrincipals() {
         Principals.init( principalService() );
