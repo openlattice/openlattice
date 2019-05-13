@@ -432,10 +432,6 @@ internal fun arrayAggSql(fqn: String): String {
     return " array_agg($fqn) as $fqn "
 }
 
-internal fun buildGetEntitySetSizeQuery(entitySetId: UUID): String {
-    return "SELECT COUNT(*) FROM ${ENTITY_KEY_IDS.name} WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${VERSION.name} > 0"
-}
-
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
     if (entityKeyIds.isEmpty()) return ""
 

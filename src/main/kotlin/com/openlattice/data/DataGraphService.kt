@@ -92,21 +92,6 @@ open class DataGraphService(
         return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, linking)
     }
 
-    override fun getLinkingEntitySetSize(linkedEntitySetIds: Set<UUID>): Long {
-        if (linkedEntitySetIds.isEmpty()) {
-            return 0
-        }
-
-        return eds.getLinkingEntities(
-                linkedEntitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
-                mapOf()
-        ).count()
-    }
-
-    override fun getEntitySetSize(entitySetId: UUID): Long {
-        return eds.getEntitySetSize(entitySetId)
-    }
-
     override fun getEntity(
             entitySetId: UUID,
             entityKeyId: UUID,
