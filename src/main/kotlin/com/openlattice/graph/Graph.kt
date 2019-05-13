@@ -338,10 +338,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 Supplier {
                     val connection = hds.connection
                     val stmt = connection.prepareStatement(NEIGHBORHOOD_SQL)
-                    stmt.setObject(1, entitySetId)
-                    stmt.setObject(2, vertexId)
+                    stmt.setObject(1, vertexId)
+                    stmt.setObject(2, entitySetId)
                     stmt.setObject(3, entitySetId)
-                    stmt.setObject(4, vertexId)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
@@ -831,8 +830,9 @@ private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE 
         "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
 
 private val NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ?) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ?)"
+        "${ID_VALUE.name} = ? AND " +
+        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC} ) OR " +
+        "( ${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST} )"
 
 private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
