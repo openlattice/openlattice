@@ -39,7 +39,6 @@ import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.mapstores.SyncIdsMapstore;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
