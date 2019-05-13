@@ -325,7 +325,7 @@ class Assembler(
         }
 
         val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
+                entitySetIds.associate { it to Optional.empty<Set<UUID>>() },
                 propertyFqns,
                 authorizedPropertyTypes.values.map(PropertyType::getId),
                 mapOf(entitySetId to authorizedPropertyTypes.keys),
