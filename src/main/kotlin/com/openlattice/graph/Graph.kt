@@ -77,9 +77,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
             ps.use {
                 keys.forEach { dataEdgeKey ->
-                    addSrcRowToBatch(ps, version, versions, dataEdgeKey)
-                    addDstRowToBatch(ps, version, versions, dataEdgeKey)
-                    addEdgeRowToBatch(ps, version, versions, dataEdgeKey)
+                    createAddSrcRowToBatch(ps, version, versions, dataEdgeKey)
+                    createAddDstRowToBatch(ps, version, versions, dataEdgeKey)
+                    createAddEdgeRowToBatch(ps, version, versions, dataEdgeKey)
                 }
                 return WriteEvent(version, ps.executeBatch().sum())
             }
@@ -91,8 +91,8 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
      * dst,edge,src = 2
      * edge,src,dst = 3
      */
-    
-    private fun addSrcRowToBatch(
+
+    private fun createAddSrcRowToBatch(
             ps: PreparedStatement,
             version: Long,
             versions: java.sql.Array,
@@ -110,7 +110,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ps.addBatch()
     }
 
-    private fun addDstRowToBatch(
+    private fun createAddDstRowToBatch(
             ps: PreparedStatement, version: Long, versions: java.sql.Array, dataEdgeKey: DataEdgeKey
     ) {
         ps.setObject(1, dataEdgeKey.dst.entityKeyId)
@@ -125,7 +125,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ps.addBatch()
     }
 
-    private fun addEdgeRowToBatch(
+    private fun createAddEdgeRowToBatch(
             ps: PreparedStatement, version: Long, versions: java.sql.Array, dataEdgeKey: DataEdgeKey
     ) {
         ps.setObject(1, dataEdgeKey.edge.entityKeyId)
@@ -140,27 +140,43 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ps.addBatch()
     }
 
-
-    /* Delete  */
-
     override fun clearEdges(keys: MutableSet<DataEdgeKey>): Int {
         val connection = hds.connection
         connection.use {
             val ps = connection.prepareStatement(CLEAR_SQL)
             val version = -System.currentTimeMillis()
-            keys.forEach {
-                ps.setLong(1, version)
-                ps.setLong(2, version)
-                ps.setObject(3, it.src.entitySetId)
-                ps.setObject(4, it.src.entityKeyId)
-                ps.setObject(5, it.dst.entitySetId)
-                ps.setObject(6, it.dst.entityKeyId)
-                ps.setObject(7, it.edge.entitySetId)
-                ps.setObject(8, it.edge.entityKeyId)
+            keys.forEach { dataEdgeKey ->
+                clearEdgesAddSrcRowToBatch(ps, version, dataEdgeKey)
+                clearEdgesAddDstRowToBatch(ps, version, dataEdgeKey)
+                clearEdgesAddEdgeRowToBatch(ps, version, dataEdgeKey)
                 ps.addBatch()
             }
             return ps.executeBatch().sum()
         }
+    }
+
+    private fun clearEdgesAddSrcRowToBatch(ps: PreparedStatement, version: Long, dataEdgeKey: DataEdgeKey) {
+        ps.setLong(1, version)
+        ps.setLong(2, version)
+        ps.setObject(3, dataEdgeKey.src.entityKeyId)
+        ps.setObject(4, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(5, dataEdgeKey.edge.entityKeyId)
+    }
+
+    private fun clearEdgesAddDstRowToBatch(ps: PreparedStatement, version: Long, dataEdgeKey: DataEdgeKey) {
+        ps.setLong(1, version)
+        ps.setLong(2, version)
+        ps.setObject(3, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(4, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(5, dataEdgeKey.src.entityKeyId)
+    }
+
+    private fun clearEdgesAddEdgeRowToBatch(ps: PreparedStatement, version: Long, dataEdgeKey: DataEdgeKey) {
+        ps.setLong(1, version)
+        ps.setLong(2, version)
+        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(4, dataEdgeKey.src.entityKeyId)
+        ps.setObject(5, dataEdgeKey.dst.entityKeyId)
     }
 
     override fun clearVerticesInEntitySet(entitySetId: UUID?): Int {
@@ -773,13 +789,10 @@ private fun caseExpression(entitySetId: UUID): String {
 }
 
 private val KEY_COLUMNS = setOf(
-        SRC_ENTITY_SET_ID,
-        SRC_ENTITY_KEY_ID,
-        DST_ENTITY_SET_ID,
-        DST_ENTITY_KEY_ID,
-        EDGE_ENTITY_SET_ID,
-        EDGE_ENTITY_KEY_ID
-).map { it.name }.toSet()
+        ID_VALUE,
+        EDGE_COMP_1,
+        EDGE_COMP_2
+).map { col -> col.name }.toList()
 
 private val INSERT_COLUMNS = setOf(
         SRC_ENTITY_SET_ID,
