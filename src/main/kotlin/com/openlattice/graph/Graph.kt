@@ -273,10 +273,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
 
     /* Select */
 
-    override fun getEdgesAsMap(keys: MutableSet<DataEdgeKey>?): MutableMap<DataEdgeKey, Edge> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     override fun getEdge(key: DataEdgeKey): Edge {
         val iter = getEdges(setOf(key)).iterator()
         return if (iter.hasNext()) {
@@ -296,45 +292,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 },
                 Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
         ).stream()
-    }
-
-    fun executeEdgesQuery(query: String): Stream<Edge> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.createStatement()
-                    val rs = stmt.executeQuery(query)
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function<ResultSet, Edge> { ResultSetAdapters.edge(it) }
-        ).stream()
-    }
-
-    override fun getEntitiesForDestination(
-            srcEntitySetIds: List<UUID>, edgeEntitySetIds: List<UUID>, dstEntityKeyIds: Set<UUID>
-    ): PostgresIterable<DataEdgeKey> {
-        val query = "SELECT ${SRC_ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name}, ${DST_ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name}, ${EDGE_ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} " +
-                "FROM ${EDGES.name} WHERE " +
-                "${SRC_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) AND " +
-                "${EDGE_ENTITY_SET_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) AND " +
-                "${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )) " +
-                "ORDER BY ${DST_ENTITY_KEY_ID.name} "
-
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    connection.autoCommit = false
-                    val stmt = connection.prepareStatement(query)
-                    stmt.fetchSize = BATCH_SIZE
-                    stmt.setArray(1, PostgresArrays.createUuidArray(connection, srcEntitySetIds.stream()))
-                    stmt.setArray(2, PostgresArrays.createUuidArray(connection, edgeEntitySetIds.stream()))
-                    stmt.setArray(3, PostgresArrays.createUuidArray(connection, dstEntityKeyIds.stream()))
-                    val rs = stmt.executeQuery()
-                    logger.info(stmt.toString())
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function<ResultSet, DataEdgeKey> { ResultSetAdapters.edgeKey(it) }
-        )
     }
 
     override fun getEdgeKeysContainingEntities(entitySetId: UUID, entityKeyIds: Set<UUID>)
@@ -375,27 +332,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         )
     }
 
-    override fun getEdgeKeysContainingEntity(entitySetId: UUID, entityKeyId: UUID): Iterable<DataEdgeKey> {
-        return PostgresIterable(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.prepareStatement(NEIGHBORHOOD_SQL)
-                    stmt.setObject(1, entitySetId)
-                    stmt.setObject(2, entityKeyId)
-                    stmt.setObject(3, entitySetId)
-                    stmt.setObject(4, entityKeyId)
-                    val rs = stmt.executeQuery()
-                    StatementHolder(connection, stmt, rs)
-                },
-                Function<ResultSet, DataEdgeKey> { ResultSetAdapters.edgeKey(it) }
-        )
-    }
-
     override fun getEdgesAndNeighborsForVertex(entitySetId: UUID, vertexId: UUID): Stream<Edge> {
 
         return PostgresIterable(
                 Supplier {
-                    val connection = hds.getConnection()
+                    val connection = hds.connection
                     val stmt = connection.prepareStatement(NEIGHBORHOOD_SQL)
                     stmt.setObject(1, entitySetId)
                     stmt.setObject(2, vertexId)
@@ -796,11 +737,6 @@ enum class ComponentType {
     EDGE
 }
 
-//TODO: Extract string constants.
-private fun caseExpression(entitySetId: UUID): String {
-    return " CASE WHEN ${SRC_ENTITY_SET_ID.name}=$entitySetId THEN ${SRC_ENTITY_KEY_ID.name} ELSE ${DST_ENTITY_KEY_ID.name} END "
-}
-
 private val KEY_COLUMNS = setOf(
         ID_VALUE,
         EDGE_COMP_1,
@@ -902,10 +838,6 @@ private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] )) OR " +
         "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ))"
-
-private val BULK_BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "( ${SRC_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${SRC_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] ) ) AND ${DST_ENTITY_KEY_ID.name} IN ( SELECT * FROM UNNEST( (?)::uuid[] )) )"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
     val (srcEntitySetSql, dstEntitySetSql) = if (multipleEntitySetIds) {

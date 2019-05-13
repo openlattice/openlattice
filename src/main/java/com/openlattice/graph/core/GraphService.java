@@ -55,15 +55,11 @@ public interface GraphService {
 
     Edge getEdge( DataEdgeKey key );
 
-    Map<DataEdgeKey, Edge> getEdgesAsMap( Set<DataEdgeKey> keys );
-
     Stream<Edge> getEdges( Set<DataEdgeKey> keys );
 
     PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
     PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
-
-    Iterable<DataEdgeKey> getEdgeKeysContainingEntity( UUID entitySetId, UUID entityKeyId );
 
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 
@@ -96,9 +92,4 @@ public interface GraphService {
             SetMultimap<UUID, UUID> dstFilters );
 
     List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
-
-    PostgresIterable<DataEdgeKey> getEntitiesForDestination(
-            List<UUID> srcEntitySetIds,
-            List<UUID> edgeEntitySetIds,
-            Set<UUID> dstEntityKeyIds );
 }
