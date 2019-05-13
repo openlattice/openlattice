@@ -354,10 +354,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val connection = hds.connection
                     val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, false))
-                    stmt.setObject(1, entitySetId)
-                    stmt.setArray(2, ids)
+                    stmt.setArray(1, ids)
+                    stmt.setObject(2, entitySetId)
                     stmt.setObject(3, entitySetId)
-                    stmt.setArray(4, ids)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
@@ -379,10 +378,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     val ids = PostgresArrays.createUuidArray(connection, filter.entityKeyIds.stream())
                     val entitySetIdsArr = PostgresArrays.createUuidArray(connection, entitySetIds.stream())
                     val stmt = connection.prepareStatement(getFilteredNeighborhoodSql(filter, true))
-                    stmt.setArray(1, entitySetIdsArr)
-                    stmt.setArray(2, ids)
+                    stmt.setArray(1, ids)
+                    stmt.setArray(2, entitySetIdsArr)
                     stmt.setArray(3, entitySetIdsArr)
-                    stmt.setArray(4, ids)
                     val rs = stmt.executeQuery()
                     StatementHolder(connection, stmt, rs)
                 },
@@ -840,13 +838,15 @@ private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( (?)::uuid[] ))"
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
+    val idsClause = "${ID_VALUE.name} = ANY(?)"
+
     val (srcEntitySetSql, dstEntitySetSql) = if (multipleEntitySetIds) {
         "${SRC_ENTITY_SET_ID.name} = ANY( ? )" to "${DST_ENTITY_SET_ID.name} = ANY( ? )"
     } else {
         "${SRC_ENTITY_SET_ID.name} = ?" to "${DST_ENTITY_SET_ID.name} = ?"
     }
 
-    var srcSql = "$srcEntitySetSql AND ${SRC_ENTITY_KEY_ID.name} = ANY(?) "
+    var srcSql = "$srcEntitySetSql AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC}"
     if (filter.dstEntitySetIds.isPresent) {
         if (filter.dstEntitySetIds.get().size > 0) {
             srcSql += " AND ( ${DST_ENTITY_SET_ID.name} IN (${filter.dstEntitySetIds.get().joinToString(
@@ -857,7 +857,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         }
     }
 
-    var dstSql = "$dstEntitySetSql AND ${DST_ENTITY_KEY_ID.name} = ANY(?)"
+    var dstSql = "$dstEntitySetSql AND ${COMPONENT_TYPES.name} = ${ComponentType.DST}"
     if (filter.srcEntitySetIds.isPresent) {
         if (filter.srcEntitySetIds.get().size > 0) {
             dstSql += " AND ( ${SRC_ENTITY_SET_ID.name} IN (${filter.srcEntitySetIds.get().joinToString(
@@ -877,7 +877,7 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
         ) { "'$it'" }}))"
     }
 
-    return "SELECT * FROM ${EDGES.name} WHERE ( " + srcSql + " ) OR ( " + dstSql + " )"
+    return "SELECT * FROM ${EDGES.name} WHERE $idsClause AND ( ( $srcSql ) OR ( $dstSql ) )"
 }
 
 
