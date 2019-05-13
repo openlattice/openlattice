@@ -30,6 +30,7 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
+import com.openlattice.data.storage.PostgresEntitySetSizeCacheManager
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
@@ -55,7 +56,8 @@ open class DataGraphService(
         private val eventBus: EventBus,
         private val graphService: GraphService,
         private val idService: EntityKeyIdService,
-        private val eds: EntityDatastore
+        private val eds: EntityDatastore,
+        private val entitySetSizeCacheManager: PostgresEntitySetSizeCacheManager
 
 ) : DataGraphManager {
     override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
@@ -92,19 +94,8 @@ open class DataGraphService(
         return eds.getEntities(entityKeyIds, orderedPropertyNames, authorizedPropertyTypes, linking)
     }
 
-    override fun getLinkingEntitySetSize(linkedEntitySetIds: Set<UUID>): Long {
-        if (linkedEntitySetIds.isEmpty()) {
-            return 0
-        }
-
-        return eds.getLinkingEntities(
-                linkedEntitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
-                mapOf()
-        ).count()
-    }
-
     override fun getEntitySetSize(entitySetId: UUID): Long {
-        return eds.getEntitySetSize(entitySetId)
+        return entitySetSizeCacheManager.getEntitySetSize(entitySetId)
     }
 
     override fun getEntity(
