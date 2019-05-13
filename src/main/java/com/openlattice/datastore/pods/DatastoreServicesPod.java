@@ -414,8 +414,13 @@ public class DatastoreServicesPod {
     }
 
     @Bean
-    public PostgresEntitySetSizeCacheManager postgresEntitySetSizeCacheManager() {
-        return new PostgresEntitySetSizeCacheManager(hikariDataSource);
+    public PostgresEntitySetSizesTaskDependency postgresEntitySetSizesTaskDependency() {
+        return new PostgresEntitySetSizesTaskDependency( hikariDataSource );
+    }
+    
+    @Bean
+    public PostgresEntitySetSizesTask postgresEntitySetSizeCacheManager() {
+        return new PostgresEntitySetSizesTask();
     }
 
     @PostConstruct
