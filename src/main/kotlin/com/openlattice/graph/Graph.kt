@@ -22,7 +22,10 @@
 package com.openlattice.graph
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.*
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.MoreCollectors
+import com.google.common.collect.Multimaps
+import com.google.common.collect.SetMultimap
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.data.DataEdgeKey
@@ -259,12 +262,9 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         connection.use {
             val ps = connection.prepareStatement(DELETE_BY_VERTICES_SQL)
             val arr = PostgresArrays.createUuidArray(it, vertices)
-            ps.setObject(1, entitySetId)
+            ps.setObject(1, arr)
             ps.setObject(2, arr)
-            ps.setObject(3, entitySetId)
-            ps.setObject(4, arr)
-            ps.setObject(5, entitySetId)
-            ps.setObject(6, arr)
+            ps.setObject(3, arr)
             return ps.executeUpdate()
         }
     }
@@ -814,9 +814,7 @@ private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToSt
 private val DELETE_BY_SET_SQL = "DELETE FROM ${EDGES.name} WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
 
 private val DELETE_BY_VERTICES_SQL = "DELETE FROM ${EDGES.name} WHERE " +
-        "(${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] ))) OR " +
-        "(${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} IN (SELECT * FROM UNNEST( (?)::uuid[] )))"
+        "${ID_VALUE.name} = ANY(?) OR ${EDGE_COMP_1.name} = ANY(?) OR ${EDGE_COMP_2.name} = ANY(?) "
 
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
