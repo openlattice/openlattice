@@ -30,7 +30,7 @@ import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.FilteredNeighborsRankingAggregation
 import com.openlattice.data.integration.Association
 import com.openlattice.data.integration.Entity
-import com.openlattice.data.storage.PostgresEntitySetSizeCacheManager
+import com.openlattice.data.storage.PostgresEntitySetSizesTask
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.core.GraphService
 import com.openlattice.graph.core.NeighborSets
@@ -57,7 +57,7 @@ open class DataGraphService(
         private val graphService: GraphService,
         private val idService: EntityKeyIdService,
         private val eds: EntityDatastore,
-        private val entitySetSizeCacheManager: PostgresEntitySetSizeCacheManager
+        private val entitySetSizesTask: PostgresEntitySetSizesTask
 
 ) : DataGraphManager {
     override fun getEntityKeyIds(entityKeys: Set<EntityKey>): Set<UUID> {
@@ -95,7 +95,7 @@ open class DataGraphService(
     }
 
     override fun getEntitySetSize(entitySetId: UUID): Long {
-        return entitySetSizeCacheManager.getEntitySetSize(entitySetId)
+        return entitySetSizesTask.getEntitySetSize(entitySetId)
     }
 
     override fun getEntity(

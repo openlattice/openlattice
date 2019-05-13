@@ -24,53 +24,68 @@ import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
-import com.zaxxer.hikari.HikariDataSource
+import com.openlattice.tasks.HazelcastFixedRateTask
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 
 private const val ENTITY_SET_SIZES_TABLE = "entity_set_counts"
 
-class PostgresEntitySetSizeCacheManager(private val hds: HikariDataSource) {
-    companion object {
-        private val logger = LoggerFactory.getLogger(PostgresEntitySetSizeCacheManager::class.java)
+class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizesTaskDependency> {
+    override fun getInitialDelay(): Long {
+        return 0
     }
 
-    init {
-        logger.info("Creating entity set count views.")
-        val connection = hds.connection
-
-        connection.use {
-            it.createStatement().use { stmt ->
-                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
-            }
-        }
+    override fun getPeriod(): Long {
+        return 60000
     }
 
-    @Scheduled(fixedRate = 60000)
-    fun refreshEntitySetCounts() {
+    override fun getTimeUnit(): TimeUnit {
+        return TimeUnit.MILLISECONDS
+    }
+
+    override fun runTask() {
         logger.info("Refreshing entity set count views.")
-        val connection = hds.connection
-
-        connection.use {
-            it.createStatement().use { stmt ->
+        getDependency().hikariDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
                 stmt.execute(REFRESH_ENTITY_SET_COUNTS_VIEW)
             }
         }
     }
 
-    fun getEntitySetSize(entitySetId: UUID): Long {
-        val connection = hds.connection
+    override fun getName(): String {
+        return "entity_set_sizes_refresh_task"
+    }
 
-        return connection.use {
-            return@use connection.prepareStatement(GET_ENTITY_SET_COUNT).use { ps ->
+    override fun getDependenciesClass(): Class<out PostgresEntitySetSizesTaskDependency> {
+        return PostgresEntitySetSizesTaskDependency::class.java
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(PostgresEntitySetSizesTask::class.java)
+    }
+
+    init {
+        logger.info("Creating entity set count views.")
+        getDependency().hikariDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
+            }
+        }
+    }
+
+    fun getEntitySetSize(entitySetId: UUID): Long {
+        return getDependency().hikariDataSource.connection.use { connection ->
+            connection.prepareStatement(GET_ENTITY_SET_COUNT).use { ps ->
                 ps.setObject(1, entitySetId)
-                val rs = ps.executeQuery()
-                return@use if (rs.next()) {
-                    rs.getLong(1)
-                } else {
-                    0
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        rs.getLong(1)
+                    } else {
+                        0
+                    }
                 }
             }
         }
