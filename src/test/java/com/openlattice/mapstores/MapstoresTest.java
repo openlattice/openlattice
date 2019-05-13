@@ -161,7 +161,7 @@ public class MapstoresTest extends HzAuthzTest {
 
     @SuppressWarnings( { "rawtypes", "unchecked" } )
     private static void test( TestableSelfRegisteringMapStore ms ) {
-        if ( ms instanceof SyncIdsMapstore || ms instanceof PostgresCredentialMapstore || ms instanceof UserMapstore ) {
+        if ( ms instanceof PostgresCredentialMapstore || ms instanceof UserMapstore ) {
             return;
         }
         Object expected = ms.generateTestValue();
