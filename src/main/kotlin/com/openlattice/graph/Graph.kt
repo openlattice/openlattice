@@ -22,9 +22,7 @@
 package com.openlattice.graph
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableList
-import com.google.common.collect.Multimaps
-import com.google.common.collect.SetMultimap
+import com.google.common.collect.*
 import com.openlattice.analysis.AuthorizedFilteredNeighborsRanking
 import com.openlattice.analysis.requests.WeightedRankingAggregation
 import com.openlattice.data.DataEdgeKey
@@ -278,12 +276,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
     override fun getEdge(key: DataEdgeKey): Edge {
-        val iter = getEdges(setOf(key)).iterator()
-        return if (iter.hasNext()) {
-            iter.next()
-        } else {
-            null
-        }
+        return getEdges(setOf(key)).collect(MoreCollectors.onlyElement())
     }
 
     override fun getEdges(keys: Set<DataEdgeKey>): Stream<Edge> {
@@ -950,11 +943,13 @@ internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleE
 
 
 private fun selectEdges(keys: Set<DataEdgeKey>): String {
-    return "$SELECT_SQL(" +
-            keys
-                    .asSequence()
-                    .map { "(${it.src.entitySetId},${it.src.entityKeyId},${it.dst.entitySetId},${it.dst.entityKeyId},${it.edge.entitySetId},${it.edge.entityKeyId})" }
-                    .joinToString(",") + ")"
+    check(keys.isNotEmpty()) { "Cannot select an empty set of edges." }
+    return "SELECT * from ${EDGES.name} WHERE " +
+            keys.joinToString(" OR ") {
+                "( ${ID_VALUE.name} = ${it.src.entityKeyId} AND " +
+                        "$EDGE_COMP_1 = ${it.dst.entityKeyId} AND " +
+                        "$EDGE_COMP_2 = ${it.edge.entityKeyId} )"
+            }
 }
 
 private fun srcClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, UUID>): String {
