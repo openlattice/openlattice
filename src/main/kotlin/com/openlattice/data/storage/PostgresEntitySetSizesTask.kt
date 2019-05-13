@@ -69,11 +69,11 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
 
     init {
         logger.info("Creating entity set count views.")
-        getDependency().hikariDataSource.connection.use { connection ->
-            connection.createStatement().use { stmt ->
-                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
-            }
-        }
+//        getDependency().hikariDataSource.connection.use { connection ->
+//            connection.createStatement().use { stmt ->
+//                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
+//            }
+//        }
     }
 
     fun getEntitySetSize(entitySetId: UUID): Long {
