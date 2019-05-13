@@ -25,6 +25,7 @@ import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTable.ENTITY_SETS
 import com.openlattice.tasks.HazelcastFixedRateTask
+import com.openlattice.tasks.HazelcastInitializationTask
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -34,7 +35,7 @@ private const val ENTITY_SET_SIZES_TABLE = "entity_set_counts"
 private val logger = LoggerFactory.getLogger(PostgresEntitySetSizesTask::class.java)
 
 class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizesTaskDependency> {
-    init {
+    /*init {
         logger.info("Creating entity set count views.")
         val connection = getDependency().hikariDataSource.connection
         connection.use {
@@ -42,7 +43,7 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
                 stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
             }
         }
-    }
+    }*/
 
     override fun getInitialDelay(): Long {
         return 0
@@ -72,15 +73,6 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
     override fun getDependenciesClass(): Class<out PostgresEntitySetSizesTaskDependency> {
         return PostgresEntitySetSizesTaskDependency::class.java
     }
-
-//    init {
-//        logger.info("Creating entity set count views.")
-//        getDependency().hikariDataSource.connection.use { connection ->
-//            connection.createStatement().use { stmt ->
-//                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
-//            }
-//        }
-//    }
 
     fun getEntitySetSize(entitySetId: UUID): Long {
         return getDependency().hikariDataSource.connection.use { connection ->
