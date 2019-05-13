@@ -36,6 +36,7 @@ import com.openlattice.data.storage.IndexingMetadataManager;
 import com.openlattice.data.storage.PostgresEntityDataQueryService;
 import com.openlattice.datastore.pods.ByteBlobServicePod;
 import com.openlattice.datastore.services.EdmManager;
+import com.openlattice.edm.PostgresEdmManager;
 import com.openlattice.ids.HazelcastIdGenerationService;
 import com.openlattice.linking.*;
 import com.openlattice.linking.Blocker;
@@ -89,6 +90,9 @@ public class LinkerPostConfigurationServicesPod {
     @Inject
     private Assembler assembler;
 
+    @Inject
+    private PostgresEdmManager pgEdmManager;
+
     @Bean
     public HazelcastIdGenerationService idGeneration() {
         return new HazelcastIdGenerationService( hazelcastInstance );
@@ -103,7 +107,6 @@ public class LinkerPostConfigurationServicesPod {
     public PostgresEntityDataQueryService dataQueryService() {
         return new PostgresEntityDataQueryService( hikariDataSource, byteBlobDataManager );
     }
-
 
     @Bean
     public DataLoader dataLoader() {
@@ -146,18 +149,18 @@ public class LinkerPostConfigurationServicesPod {
     @Bean
     public BackgroundLinkingService linkingService() throws IOException {
         var lc = linkingConfiguration();
-        return new BackgroundLinkingService( hazelcastInstance,
+        return new BackgroundLinkingService( executor,
+                hazelcastInstance,
+                pgEdmManager,
                 blocker(),
                 matcher,
                 idService(),
                 dataLoader(),
                 lqs(),
-                executor,
                 postgresLinkingFeedbackQueryService(),
                 edm.getEntityTypeUuids( lc.getEntityTypes() ),
-                lc.getBlacklist(),
-                lc.getWhitelist(),
-                lc.getBlockSize() );
+                linkingConfiguration() );
+                
     }
 
     @Bean
