@@ -320,7 +320,8 @@ public class DatastoreServicesPod {
                 eventBus,
                 graphApi(),
                 idService(),
-                entityDatastore() );
+                entityDatastore(),
+                postgresEntitySetSizeCacheManager() );
     }
 
     @Bean
@@ -410,6 +411,11 @@ public class DatastoreServicesPod {
     @Bean
     public HazelcastRequestsManager hazelcastRequestsManager() {
         return new HazelcastRequestsManager( hazelcastInstance, rqs() );
+    }
+
+    @Bean
+    public PostgresEntitySetSizeCacheManager postgresEntitySetSizeCacheManager() {
+        return new PostgresEntitySetSizeCacheManager(hikariDataSource);
     }
 
     @PostConstruct
