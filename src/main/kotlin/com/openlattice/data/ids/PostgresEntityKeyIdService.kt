@@ -79,7 +79,7 @@ class PostgresEntityKeyIdService(
 
             entityKeyIds.forEach { entityKeyId ->
                 insertIds.setObject(1, entitySetId)
-                insertIds.setObject(3, entityKeyId)
+                insertIds.setObject(2, entityKeyId)
                 insertIds.addBatch()
             }
 
