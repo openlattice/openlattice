@@ -50,6 +50,7 @@ import com.openlattice.search.requests.EntityNeighborsFilter
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import org.slf4j.LoggerFactory
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
@@ -69,29 +70,76 @@ private val logger = LoggerFactory.getLogger(Graph::class.java)
 
 class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : GraphService {
 
-    /* Create */
-
     override fun createEdges(keys: MutableSet<DataEdgeKey>): WriteEvent {
-        hds.connection.use {
-            val ps = it.prepareStatement(UPSERT_SQL)
+        hds.connection.use { connection ->
+            val ps = connection.prepareStatement(UPSERT_SQL)
             val version = System.currentTimeMillis()
-            val versions = PostgresArrays.createLongArray(it, ImmutableList.of(version))
+            val versions = PostgresArrays.createLongArray(connection, ImmutableList.of(version))
             ps.use {
-                keys.forEach {
-                    ps.setObject(1, it.src.entitySetId)
-                    ps.setObject(2, it.src.entityKeyId)
-                    ps.setObject(3, it.dst.entitySetId)
-                    ps.setObject(4, it.dst.entityKeyId)
-                    ps.setObject(5, it.edge.entitySetId)
-                    ps.setObject(6, it.edge.entityKeyId)
-                    ps.setLong(7, version)
-                    ps.setArray(8, versions)
-                    ps.addBatch()
+                keys.forEach { dataEdgeKey ->
+                    addSrcRowToBatch(ps, version, versions, dataEdgeKey)
+                    addDstRowToBatch(ps, version, versions, dataEdgeKey)
+                    addEdgeRowToBatch(ps, version, versions, dataEdgeKey)
                 }
                 return WriteEvent(version, ps.executeBatch().sum())
             }
         }
     }
+
+    /*
+     * src,dst,edge = 1
+     * dst,edge,src = 2
+     * edge,src,dst = 3
+     */
+    
+    private fun addSrcRowToBatch(
+            ps: PreparedStatement,
+            version: Long,
+            versions: java.sql.Array,
+            dataEdgeKey: DataEdgeKey
+    ) {
+        ps.setObject(1, dataEdgeKey.src.entityKeyId)
+        ps.setObject(2, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(4, ComponentType.SRC.ordinal)
+        ps.setObject(5, dataEdgeKey.src.entitySetId)
+        ps.setObject(6, dataEdgeKey.dst.entitySetId)
+        ps.setObject(7, dataEdgeKey.edge.entitySetId)
+        ps.setLong(8, version)
+        ps.setArray(9, versions)
+        ps.addBatch()
+    }
+
+    private fun addDstRowToBatch(
+            ps: PreparedStatement, version: Long, versions: java.sql.Array, dataEdgeKey: DataEdgeKey
+    ) {
+        ps.setObject(1, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(2, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(3, dataEdgeKey.src.entityKeyId)
+        ps.setObject(4, ComponentType.DST.ordinal)
+        ps.setObject(5, dataEdgeKey.src.entitySetId)
+        ps.setObject(6, dataEdgeKey.dst.entitySetId)
+        ps.setObject(7, dataEdgeKey.edge.entitySetId)
+        ps.setLong(8, version)
+        ps.setArray(9, versions)
+        ps.addBatch()
+    }
+
+    private fun addEdgeRowToBatch(
+            ps: PreparedStatement, version: Long, versions: java.sql.Array, dataEdgeKey: DataEdgeKey
+    ) {
+        ps.setObject(1, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(2, dataEdgeKey.src.entityKeyId)
+        ps.setObject(3, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(4, ComponentType.EDGE.ordinal)
+        ps.setObject(5, dataEdgeKey.src.entitySetId)
+        ps.setObject(6, dataEdgeKey.dst.entitySetId)
+        ps.setObject(7, dataEdgeKey.edge.entitySetId)
+        ps.setLong(8, version)
+        ps.setArray(9, versions)
+        ps.addBatch()
+    }
+
 
     /* Delete  */
 
@@ -260,7 +308,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         )
     }
 
-    override fun getEdgeKeysContainingEntities( entitySetId: UUID, entityKeyIds: Set<UUID> )
+    override fun getEdgeKeysContainingEntities(entitySetId: UUID, entityKeyIds: Set<UUID>)
             : PostgresIterable<DataEdgeKey> {
         return PostgresIterable(
                 Supplier {
@@ -713,6 +761,11 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 }
 
+enum class ComponentType {
+    SRC,
+    DST,
+    EDGE
+}
 
 //TODO: Extract string constants.
 private fun caseExpression(entitySetId: UUID): String {
