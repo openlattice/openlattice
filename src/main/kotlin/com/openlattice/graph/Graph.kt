@@ -791,9 +791,6 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
             "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
-private val SELECT_SQL = "SELECT * FROM ${EDGES.name} " +
-        "WHERE (${KEY_COLUMNS.joinToString(",")}) IN "
-
 private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
