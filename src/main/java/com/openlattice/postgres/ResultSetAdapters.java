@@ -45,6 +45,7 @@ import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
+import com.openlattice.graph.ComponentType;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.query.GraphQueryState;
 import com.openlattice.graph.query.GraphQueryState.State;
@@ -91,6 +92,7 @@ public final class ResultSetAdapters {
     private static final ObjectMapper                       mapper               = ObjectMappers.newJsonMapper();
     private static final TypeReference<Map<String, Object>> alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
+    private static final ComponentType[]                    componentTypes       = ComponentType.values();
 
     public static UUID clusterId( ResultSet rs ) throws SQLException {
         return (UUID) rs.getObject( LINKING_ID_FIELD );
@@ -161,16 +163,44 @@ public final class ResultSetAdapters {
         DataEdgeKey key = edgeKey( rs );
         long version = rs.getLong( VERSION.getName() );
         List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
+
         return new Edge( key, version, versions );
     }
 
     public static DataEdgeKey edgeKey( ResultSet rs ) throws SQLException {
-        UUID srcEntitySetId = (UUID) rs.getObject( SRC_ENTITY_SET_ID.getName() );
-        UUID srcEntityKeyId = (UUID) rs.getObject( SRC_ENTITY_KEY_ID.getName() );
-        UUID dstEntitySetId = (UUID) rs.getObject( DST_ENTITY_SET_ID.getName() );
-        UUID dstEntityKeyId = (UUID) rs.getObject( DST_ENTITY_KEY_ID.getName() );
-        UUID edgeEntitySetId = (UUID) rs.getObject( EDGE_ENTITY_SET_ID.getName() );
-        UUID edgeEntityKeyId = (UUID) rs.getObject( EDGE_ENTITY_KEY_ID.getName() );
+        final int typeId = rs.getInt( COMPONENT_TYPES_FIELD );
+
+        if ( typeId >= componentTypes.length ) {
+            throw new IllegalStateException( "Type " + typeId + " is not recognized." );
+        }
+
+        final ComponentType type = componentTypes[ typeId ];
+        final UUID srcEntityKeyId;
+        final UUID dstEntityKeyId;
+        final UUID edgeEntityKeyId;
+        switch ( type ) {
+            case SRC:
+                srcEntityKeyId = rs.getObject( ID_VALUE.getName(), UUID.class );
+                dstEntityKeyId = rs.getObject( EDGE_COMP_1.getName(), UUID.class );
+                edgeEntityKeyId = rs.getObject( EDGE_COMP_2.getName(), UUID.class );
+                break;
+            case DST:
+                srcEntityKeyId = rs.getObject( EDGE_COMP_2.getName(), UUID.class );
+                dstEntityKeyId = rs.getObject( ID_VALUE.getName(), UUID.class );
+                edgeEntityKeyId = rs.getObject( EDGE_COMP_1.getName(), UUID.class );
+                break;
+            case EDGE:
+                srcEntityKeyId = rs.getObject( EDGE_COMP_1.getName(), UUID.class );
+                dstEntityKeyId = rs.getObject( EDGE_COMP_2.getName(), UUID.class );
+                edgeEntityKeyId = rs.getObject( ID_VALUE.getName(), UUID.class );
+                break;
+            default:
+                throw new IllegalStateException( "Type " + type.name() + " is not recognized." );
+        }
+
+        final UUID srcEntitySetId = rs.getObject( SRC_ENTITY_SET_ID.getName(), UUID.class );
+        final UUID dstEntitySetId = rs.getObject( DST_ENTITY_SET_ID.getName(), UUID.class );
+        final UUID edgeEntitySetId = rs.getObject( EDGE_ENTITY_SET_ID.getName(), UUID.class );
 
         return new DataEdgeKey( new EntityDataKey( srcEntitySetId, srcEntityKeyId ),
                 new EntityDataKey( dstEntitySetId, dstEntityKeyId ),

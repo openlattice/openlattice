@@ -32,6 +32,7 @@ import com.openlattice.search.requests.EntityNeighborsFilter;
 
 import java.util.*;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 
 /**
  * Graph Object supporting CRUD operations of vertices and edges to the graph.
@@ -42,9 +43,9 @@ public interface GraphService {
 
     int clearEdges( Set<DataEdgeKey> keys );
 
-    int clearVerticesInEntitySet( UUID entitySetId );
+    int clearVerticesInEntitySet( @Nonnull UUID entitySetId );
 
-    int clearVertices( UUID entitySetId, Set<UUID> vertices );
+    int clearVertices( @Nonnull UUID entitySetId, @Nonnull Set<UUID> vertices );
 
     WriteEvent deleteEdges( Set<DataEdgeKey> keys );
 
@@ -54,21 +55,17 @@ public interface GraphService {
 
     Edge getEdge( DataEdgeKey key );
 
-    Map<DataEdgeKey, Edge> getEdgesAsMap( Set<DataEdgeKey> keys );
-
     Stream<Edge> getEdges( Set<DataEdgeKey> keys );
 
     PostgresIterable<DataEdgeKey> getEdgeKeysOfEntitySet( UUID entitySetId );
 
     PostgresIterable<DataEdgeKey> getEdgeKeysContainingEntities( UUID entitySetId, Set<UUID> entityKeyIds );
 
-    Iterable<DataEdgeKey> getEdgeKeysContainingEntity( UUID entitySetId, UUID entityKeyId );
-
     Stream<Edge> getEdgesAndNeighborsForVertex( UUID entitySetId, UUID vertexId );
 
     Stream<Edge> getEdgesAndNeighborsForVertices( UUID entitySetId, EntityNeighborsFilter filter );
 
-    Stream<Edge> getEdgesAndNeighborsForVerticesBulk(Set<UUID> entitySetIds, EntityNeighborsFilter filter);
+    Stream<Edge> getEdgesAndNeighborsForVerticesBulk( Set<UUID> entitySetIds, EntityNeighborsFilter filter );
 
     Stream<IncrementableWeightId> topEntitiesOld(
             int limit,
@@ -76,13 +73,13 @@ public interface GraphService {
             SetMultimap<UUID, UUID> srcFilters,
             SetMultimap<UUID, UUID> dstFilters );
 
-    PostgresIterable<Map<String,Object>> computeTopEntities(
+    PostgresIterable<Map<String, Object>> computeTopEntities(
             int limit,
             Set<UUID> entitySetIds,
             Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypes,
             List<AuthorizedFilteredNeighborsRanking> details,
             boolean linked,
-            Optional<UUID> linkingEntitySetId);
+            Optional<UUID> linkingEntitySetId );
 
     /**
      * @param srcFilters Association type ids to neighbor entity set ids
@@ -95,9 +92,4 @@ public interface GraphService {
             SetMultimap<UUID, UUID> dstFilters );
 
     List<NeighborSets> getNeighborEntitySets( Set<UUID> entitySetIds );
-
-    PostgresIterable<DataEdgeKey> getEntitiesForDestination(
-            List<UUID> srcEntitySetIds,
-            List<UUID> edgeEntitySetIds,
-            Set<UUID> dstEntityKeyIds);
 }
