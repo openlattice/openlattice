@@ -320,7 +320,8 @@ public class DatastoreServicesPod {
                 eventBus,
                 graphApi(),
                 idService(),
-                entityDatastore() );
+                entityDatastore(),
+                postgresEntitySetSizeCacheManager() );
     }
 
     @Bean

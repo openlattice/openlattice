@@ -35,7 +35,6 @@ import com.openlattice.data.*;
 import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.data.requests.EntitySetSelection;
 import com.openlattice.data.requests.FileType;
-import com.openlattice.data.storage.PostgresEntitySetSizeCacheManager;
 import com.openlattice.datastore.services.EdmService;
 import com.openlattice.datastore.services.SyncTicketService;
 import com.openlattice.edm.EntitySet;
@@ -102,9 +101,6 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
     @Inject
     private SecurePrincipalsManager spm;
-
-    @Inject
-    private PostgresEntitySetSizeCacheManager entitySetSizeCacheManager;
 
     private LoadingCache<UUID, EdmPrimitiveTypeKind> primitiveTypeKinds;
     private LoadingCache<AuthorizationKey, Set<UUID>> authorizedPropertyCache;
@@ -989,7 +985,7 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
 
         // If entityset is linking: should return distinct count of entities corresponding to the linking entity set,
         // which is the distinct count of linking_id s
-        return entitySetSizeCacheManager.getEntitySetSize(entitySetId);
+        return dgm.getEntitySetSize(entitySetId);
     }
 
     @Timed
