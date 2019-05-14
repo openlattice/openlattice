@@ -423,6 +423,11 @@ public class DatastoreServicesPod {
         return new PostgresEntitySetSizesTask();
     }
 
+    @Bean
+    public PostgresEntitySetSizesInitializationTask postgresEntitySetSizesInitializationTask() {
+        return new PostgresEntitySetSizesInitializationTask();
+    }
+
     @PostConstruct
     void initPrincipals() {
         Principals.init( principalService() );
