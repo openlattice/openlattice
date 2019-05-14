@@ -288,21 +288,6 @@ class PostgresEntityDataQueryService(
         )
     }
 
-    fun getEntitySetSize(entitySetId: UUID): Long {
-        val connection = hds.connection
-
-        return connection.use {
-            return@use connection.createStatement().use { statement ->
-                val rs = statement.executeQuery(buildGetEntitySetSizeQuery(entitySetId))
-                return@use if (rs.next()) {
-                    rs.getLong(1)
-                } else {
-                    0
-                }
-            }
-        }
-    }
-
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
         val adapter = Function<ResultSet, UUID> {
             ResultSetAdapters.id(it)

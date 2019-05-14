@@ -205,11 +205,6 @@ public class MapstoresPod {
     }
 
     @Bean
-    public SelfRegisteringMapStore<UUID, UUID> syncIdsMapstore() {
-        return new SyncIdsMapstore( hikariDataSource );
-    }
-
-    @Bean
     public SelfRegisteringMapStore<String, String> dbCredentialsMapstore() {
         return new PostgresCredentialMapstore( hikariDataSource, pgUserApi() );
     }

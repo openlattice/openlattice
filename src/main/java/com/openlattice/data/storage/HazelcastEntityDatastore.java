@@ -104,12 +104,6 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         return dataQueryService.getEntityKeyIdsInEntitySet( entitySetId );
     }
 
-    @Override
-    @Timed
-    public long getEntitySetSize( UUID entitySetId ) {
-        return dataQueryService.getEntitySetSize( entitySetId );
-    }
-
     @Timed
     @Override
     public WriteEvent createOrUpdateEntities(
