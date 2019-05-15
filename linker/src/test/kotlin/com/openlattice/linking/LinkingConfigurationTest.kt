@@ -23,6 +23,7 @@ package com.openlattice.linking
 
 import com.openlattice.data.serializers.FullQualifiedNameJacksonSerializer
 import com.openlattice.serializer.AbstractJacksonYamlSerializationTest
+import org.apache.commons.lang.RandomStringUtils
 import org.apache.commons.lang.math.RandomUtils
 import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.junit.BeforeClass
@@ -42,12 +43,15 @@ class LinkingConfigurationTest : AbstractJacksonYamlSerializationTest<LinkingCon
 
     override fun getSampleData(): LinkingConfiguration {
         return LinkingConfiguration(
+                RandomUtils.nextInt(),
+                Optional.of(setOf(UUID.randomUUID())),
+                setOf(UUID.randomUUID()),
+                RandomUtils.nextInt(),
+                RandomUtils.nextInt(),
                 listOf("blah.boo", "foo.fah")
                         .map(::FullQualifiedName)
                         .map(FullQualifiedName::getFullQualifiedNameAsString)
-                        .toSet(), RandomUtils.nextInt(),
-                Optional.of(setOf(UUID.randomUUID())),
-                setOf(UUID.randomUUID())
+                        .toSet()
         )
     }
 
