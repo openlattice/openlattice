@@ -348,7 +348,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     index++
                 } while (rs.next())
 
-                Assert.assertEquals(numberOfEntities, index)
+                Assert.assertEquals(numberOfEntities * 3, index)
             }
         }
 
@@ -370,7 +370,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     index++
                 } while (rs.next())
 
-                Assert.assertEquals(numberOfEntities, index)
+                Assert.assertEquals(numberOfEntities * 3, index)
             }
         }
 

@@ -35,7 +35,7 @@ import com.openlattice.edm.type.EntityType
 import com.openlattice.mapstores.TestDataFactory
 import com.openlattice.postgres.DataTables
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
-import com.openlattice.rehearsal.edm.*
+import com.openlattice.rehearsal.edm.EdmTestConstants
 import com.openlattice.search.requests.EntityNeighborsFilter
 import com.openlattice.search.requests.SearchTerm
 import org.apache.commons.lang.RandomStringUtils
@@ -231,7 +231,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val createdEdges = dataApi.createAssociations(edges)
 
         Assert.assertNotNull(createdEdges)
-        Assert.assertEquals(edges.size, createdEdges)
+        Assert.assertEquals(edges.size * 3, createdEdges)
 
         // Test permissions on property types. First add read permission on entity sets
         val add = EnumSet.of(Permission.READ)
@@ -602,7 +602,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val ptData1 = dataApi.getEntity(es2.id, id).asMap()
         Assert.assertEquals(1, ptData1[DataTables.ID_FQN]!!.size)
         Assert.assertEquals(setOf(DataTables.ID_FQN, pt.type), ptData1.keys)
-        val ptData2 =  dataApi.getEntity(es2.id, id, property)
+        val ptData2 = dataApi.getEntity(es2.id, id, property)
         Assert.assertEquals(1, ptData2.size)
         Assert.assertEquals(entries2[0][property], ptData2)
         loginAs("admin")
@@ -621,7 +621,7 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val fqns = et2.properties.map { edmApi.getPropertyType(it).type }.toMutableSet()
         fqns.add(DataTables.ID_FQN)
         Assert.assertEquals(fqns, dataAll1.keys)
-        val dataAll2 =  dataApi.getEntity(es2.id, id, property)
+        val dataAll2 = dataApi.getEntity(es2.id, id, property)
         Assert.assertEquals(1, dataAll2.size)
         Assert.assertEquals(entries2[0][property], dataAll2)
 
