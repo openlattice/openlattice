@@ -101,9 +101,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             versions: java.sql.Array,
             dataEdgeKey: DataEdgeKey
     ) {
-        ps.setObject(1, dataEdgeKey.src.entityKeyId)
-        ps.setObject(2, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
+        addSrcKeyIds(ps, dataEdgeKey)
         ps.setObject(4, ComponentType.SRC.ordinal)
         ps.setObject(5, dataEdgeKey.src.entitySetId)
         ps.setObject(6, dataEdgeKey.dst.entitySetId)
@@ -116,9 +114,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     private fun createAddDstRowToBatch(
             ps: PreparedStatement, version: Long, versions: java.sql.Array, dataEdgeKey: DataEdgeKey
     ) {
-        ps.setObject(1, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(2, dataEdgeKey.edge.entityKeyId)
-        ps.setObject(3, dataEdgeKey.src.entityKeyId)
+        addDstKeyIds(ps, dataEdgeKey)
         ps.setObject(4, ComponentType.DST.ordinal)
         ps.setObject(5, dataEdgeKey.src.entitySetId)
         ps.setObject(6, dataEdgeKey.dst.entitySetId)
@@ -131,9 +127,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     private fun createAddEdgeRowToBatch(
             ps: PreparedStatement, version: Long, versions: java.sql.Array, dataEdgeKey: DataEdgeKey
     ) {
-        ps.setObject(1, dataEdgeKey.edge.entityKeyId)
-        ps.setObject(2, dataEdgeKey.src.entityKeyId)
-        ps.setObject(3, dataEdgeKey.dst.entityKeyId)
+        addEdgeKeyIds(ps, dataEdgeKey)
         ps.setObject(4, ComponentType.EDGE.ordinal)
         ps.setObject(5, dataEdgeKey.src.entitySetId)
         ps.setObject(6, dataEdgeKey.dst.entitySetId)
@@ -143,196 +137,251 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ps.addBatch()
     }
 
+    private fun addSrcKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
+        ps.setObject(startIndex, dataEdgeKey.src.entityKeyId)
+        ps.setObject(startIndex + 1, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(startIndex + 2, dataEdgeKey.edge.entityKeyId)
+    }
+
+    private fun addDstKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
+        ps.setObject(startIndex, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(startIndex + 1, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
+    }
+
+    private fun addEdgeKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
+        ps.setObject(startIndex, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
+        ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
+    }
+
+
+    /* Delete  */
+
     override fun clearEdges(keys: MutableSet<DataEdgeKey>): Int {
-        val connection = hds.connection
-        connection.use {
-            val ps = connection.prepareStatement(CLEAR_SQL)
+        hds.connection.use { connection ->
+            connection.autoCommit = false
+
+            val psLocks = connection.prepareStatement(LOCK_BY_VERTEX_SQL)
+            val psClear = connection.prepareStatement(CLEAR_BY_VERTEX_SQL)
             val version = -System.currentTimeMillis()
             keys.forEach { dataEdgeKey ->
-                clearEdgesAddSrcRowToBatch(ps, version, dataEdgeKey)
-                clearEdgesAddDstRowToBatch(ps, version, dataEdgeKey)
-                clearEdgesAddEdgeRowToBatch(ps, version, dataEdgeKey)
-                ps.addBatch()
+                addSrcKeyIds(psLocks, dataEdgeKey)
+                psLocks.addBatch()
+                addDstKeyIds(psLocks, dataEdgeKey)
+                psLocks.addBatch()
+                addEdgeKeyIds(psLocks, dataEdgeKey)
+                psLocks.addBatch()
+
+                clearEdgesAddVersion(psClear, version)
+                addSrcKeyIds(psClear, dataEdgeKey, 3)
+                psClear.addBatch()
+                clearEdgesAddVersion(psClear, version)
+                addDstKeyIds(psClear, dataEdgeKey, 3)
+                psClear.addBatch()
+                clearEdgesAddVersion(psClear, version)
+                addEdgeKeyIds(psClear, dataEdgeKey, 3)
+                psClear.addBatch()
             }
-            return ps.executeBatch().sum()
+            psLocks.executeBatch()
+            val clearCount = psClear.executeBatch().sum()
+            connection.commit()
+
+            connection.autoCommit = true
+
+            return clearCount
         }
-    }
-
-    private fun clearEdgesAddSrcRowToBatch(ps: PreparedStatement, version: Long, dataEdgeKey: DataEdgeKey) {
-        ps.setLong(1, version)
-        ps.setLong(2, version)
-        ps.setObject(3, dataEdgeKey.src.entityKeyId)
-        ps.setObject(4, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(5, dataEdgeKey.edge.entityKeyId)
-        ps.addBatch()
-    }
-
-    private fun clearEdgesAddDstRowToBatch(ps: PreparedStatement, version: Long, dataEdgeKey: DataEdgeKey) {
-        ps.setLong(1, version)
-        ps.setLong(2, version)
-        ps.setObject(3, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(4, dataEdgeKey.edge.entityKeyId)
-        ps.setObject(5, dataEdgeKey.src.entityKeyId)
-        ps.addBatch()
-    }
-
-    private fun clearEdgesAddEdgeRowToBatch(ps: PreparedStatement, version: Long, dataEdgeKey: DataEdgeKey) {
-        ps.setLong(1, version)
-        ps.setLong(2, version)
-        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
-        ps.setObject(4, dataEdgeKey.src.entityKeyId)
-        ps.setObject(5, dataEdgeKey.dst.entityKeyId)
-        ps.addBatch()
     }
 
     override fun clearVerticesInEntitySet(entitySetId: UUID): Int {
         hds.connection.use { connection ->
-            val ps = connection.prepareStatement(CLEAR_BY_SET_SQL)
+            connection.autoCommit = false
+
+            val psLock = connection.prepareStatement(LOCK_BY_SET_SQL)
+            psLock.setObject(1, entitySetId)
+            psLock.setObject(2, entitySetId)
+            psLock.setObject(3, entitySetId)
+
+            val psClear = connection.prepareStatement(CLEAR_BY_SET_SQL)
             val version = -System.currentTimeMillis()
-            ps.setLong(1, version)
-            ps.setLong(2, version)
-            ps.setObject(3, entitySetId)
-            ps.setObject(4, entitySetId)
-            ps.setObject(5, entitySetId)
-            return ps.executeUpdate()
+            clearEdgesAddVersion(psClear, version)
+            psClear.setObject(3, entitySetId)
+            psClear.setObject(4, entitySetId)
+            psClear.setObject(5, entitySetId)
+
+            psLock.execute()
+            val clearCount = psClear.executeUpdate()
+            connection.commit()
+
+            connection.autoCommit = true
+
+            return clearCount
         }
     }
 
     override fun clearVertices(entitySetId: UUID, vertices: Set<UUID>): Int {
-        val connection = hds.connection
-        connection.use {
-            val ps = connection.prepareStatement(CLEAR_BY_VERTICES_SQL)
-            val arr = PostgresArrays.createUuidArray(it, vertices)
+        hds.connection.use { connection ->
+            connection.autoCommit = false
+
+            val arr = PostgresArrays.createUuidArray(connection, vertices)
             val version = -System.currentTimeMillis()
-            ps.setLong(1, version)
-            ps.setLong(2, version)
-            ps.setObject(3, arr)
-            ps.setObject(4, arr)
-            ps.setObject(5, arr)
-            return ps.executeUpdate()
+
+            val psLock = connection.prepareStatement(LOCK_BY_VERTICES_SQL)
+            psLock.setObject(1, arr)
+            psLock.setObject(2, arr)
+            psLock.setObject(3, arr)
+
+            val psClear = connection.prepareStatement(CLEAR_BY_VERTICES_SQL)
+            clearEdgesAddVersion(psClear, version)
+            psClear.setObject(3, arr)
+            psClear.setObject(4, arr)
+            psClear.setObject(5, arr)
+
+            psLock.execute()
+            val clearCount = psClear.executeUpdate()
+            connection.commit()
+
+            connection.autoCommit = true
+
+            return clearCount
         }
+    }
+
+    override fun clearVerticesOfAssociations(entitySetId: UUID, vertices: Set<UUID>): Int {
+        hds.connection.use { connection ->
+            connection.autoCommit = false
+
+            val ids = PostgresArrays.createUuidArray(connection, vertices)
+            val version = -System.currentTimeMillis()
+
+            val psLocks = connection.prepareStatement(LOCK_BY_ASSOCIATIONS_SQL)
+            psLocks.setObject(1, entitySetId)
+            psLocks.setArray(2, ids)
+
+            val psClear = connection.prepareStatement(CLEAR_BY_ASSOCIATIONS_SQL)
+            clearEdgesAddVersion(psClear, version)
+            psClear.setObject(3, entitySetId)
+            psClear.setArray(4, ids)
+
+            psLocks.execute()
+            val clearCount = psClear.executeUpdate()
+            connection.commit()
+
+            connection.autoCommit = true
+
+            return clearCount
+        }
+    }
+
+    private fun clearEdgesAddVersion(ps: PreparedStatement, version: Long) {
+        ps.setLong(1, version)
+        ps.setLong(2, version)
     }
 
     override fun deleteEdges(keys: Set<DataEdgeKey>): WriteEvent {
         val connection = hds.connection
+
         connection.use {
-            val ps = connection.prepareStatement(DELETE_SQL)
+            connection.autoCommit = false
+
+            val psLocks = connection.prepareStatement(LOCK_BY_VERTEX_SQL)
+            val psDelete = connection.prepareStatement(DELETE_BY_VERTEX_SQL)
             keys.forEach { dataEdgeKey ->
-                deleteEdgesAddSrcRowToBatch(ps, dataEdgeKey)
-                deleteEdgesAddDstRowToBatch(ps, dataEdgeKey)
-                deleteEdgesEdgeDstRowToBatch(ps, dataEdgeKey)
+                addSrcKeyIds(psLocks, dataEdgeKey)
+                psLocks.addBatch()
+                addDstKeyIds(psLocks, dataEdgeKey)
+                psLocks.addBatch()
+                addEdgeKeyIds(psLocks, dataEdgeKey)
+                psLocks.addBatch()
+
+                addSrcKeyIds(psDelete, dataEdgeKey)
+                psDelete.addBatch()
+                addDstKeyIds(psDelete, dataEdgeKey)
+                psDelete.addBatch()
+                addEdgeKeyIds(psDelete, dataEdgeKey)
+                psDelete.addBatch()
             }
-            val numUpdated = ps.executeUpdate()
-            return WriteEvent(System.currentTimeMillis(), numUpdated)
+            psLocks.executeBatch()
+            val updates = psDelete.executeBatch()
+            connection.commit()
+
+            connection.autoCommit = true
+
+            return WriteEvent(System.currentTimeMillis(), updates.sum())
         }
     }
 
-    private fun deleteEdgesAddSrcRowToBatch(ps: PreparedStatement, dataEdgeKey: DataEdgeKey) {
-        ps.setObject(1, dataEdgeKey.src.entityKeyId)
-        ps.setObject(2, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
-        ps.addBatch()
-    }
-
-    private fun deleteEdgesAddDstRowToBatch(ps: PreparedStatement, dataEdgeKey: DataEdgeKey) {
-        ps.setObject(2, dataEdgeKey.dst.entityKeyId)
-        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
-        ps.setObject(1, dataEdgeKey.src.entityKeyId)
-        ps.addBatch()
-    }
-
-    private fun deleteEdgesEdgeDstRowToBatch(ps: PreparedStatement, dataEdgeKey: DataEdgeKey) {
-        ps.setObject(3, dataEdgeKey.edge.entityKeyId)
-        ps.setObject(1, dataEdgeKey.src.entityKeyId)
-        ps.setObject(2, dataEdgeKey.dst.entityKeyId)
-        ps.addBatch()
-    }
-
     override fun deleteVerticesInEntitySet(entitySetId: UUID?): Int {
-        val connection = hds.connection
-        connection.use {
-            val ps = connection.prepareStatement(DELETE_BY_SET_SQL)
-            ps.setObject(1, entitySetId)
-            ps.setObject(2, entitySetId)
-            ps.setObject(3, entitySetId)
-            return ps.executeUpdate()
+        hds.connection.use { connection ->
+            connection.autoCommit = false
+
+            val psLock = connection.prepareStatement(LOCK_BY_SET_SQL)
+            psLock.setObject(1, entitySetId)
+            psLock.setObject(2, entitySetId)
+            psLock.setObject(3, entitySetId)
+
+            val psDelete = connection.prepareStatement(DELETE_BY_SET_SQL)
+            psDelete.setObject(1, entitySetId)
+            psDelete.setObject(2, entitySetId)
+            psDelete.setObject(3, entitySetId)
+
+            psLock.execute()
+            val deleteCount = psDelete.executeUpdate()
+            connection.commit()
+
+            connection.autoCommit = true
+
+            return deleteCount
         }
     }
 
     override fun deleteVertices(entitySetId: UUID, vertices: Set<UUID>): Int {
-        val connection = hds.connection
-        connection.use {
-            val ps = connection.prepareStatement(DELETE_BY_VERTICES_SQL)
-            val arr = PostgresArrays.createUuidArray(it, vertices)
-            ps.setObject(1, arr)
-            ps.setObject(2, arr)
-            ps.setObject(3, arr)
-            return ps.executeUpdate()
-        }
-    }
-
-    // delete with locking
-     fun clearVerticesInEntitySet2(entitySetId: UUID): Int {
-        val verticesInEntitySetFilter = buildFilterBySet(entitySetId)
-        return clearFromEdgesWithLocking(verticesInEntitySetFilter)
-    }
-
-     fun clearVertices2(entitySetId: UUID, vertices: Set<UUID>): Int {
-        val verticesFilter = buildFilterByVertices(entitySetId, vertices)
-        return clearFromEdgesWithLocking(verticesFilter)
-    }
-
-    override fun clearVerticesOfAssociations(entitySetId: UUID, vertices: Set<UUID>): Int {
-        val edgesFilter = buildFilterByEdge(entitySetId, vertices)
-        return clearFromEdgesWithLocking(edgesFilter)
-    }
-
-    private fun clearFromEdgesWithLocking(filterClause: String): Int {
-        val connection = hds.connection
-        connection.use {
+        hds.connection.use { connection ->
             connection.autoCommit = false
-            connection.createStatement().use { statement ->
-                val version = -System.currentTimeMillis()
-                statement.execute(lockEntities(filterClause))
-                val clearCount = statement.executeUpdate(getClearFromEdgesSql(version, filterClause))
-                connection.commit()
-                connection.autoCommit = true
-                return clearCount
-            }
+
+            val arr = PostgresArrays.createUuidArray(connection, vertices)
+
+            val psLock = connection.prepareStatement(LOCK_BY_VERTICES_SQL)
+            psLock.setObject(1, arr)
+            psLock.setObject(2, arr)
+            psLock.setObject(3, arr)
+
+            val psDelete = connection.prepareStatement(DELETE_BY_VERTICES_SQL)
+            psDelete.setObject(1, arr)
+            psDelete.setObject(2, arr)
+            psDelete.setObject(3, arr)
+
+            psLock.execute()
+            val deleteCount = psDelete.executeUpdate()
+            connection.commit()
+
+            connection.autoCommit = true
+
+            return deleteCount
         }
-    }
-
-     fun deleteVerticesInEntitySet2(entitySetId: UUID): Int {
-        val verticesInEntitySetFilter = buildFilterBySet(entitySetId)
-        return deleteFromEdgesWithLocking(verticesInEntitySetFilter)
-    }
-
-     fun deleteVertices2(entitySetId: UUID, vertices: Set<UUID>): Int {
-        val verticesFilter = buildFilterByVertices(entitySetId, vertices)
-        return deleteFromEdgesWithLocking(verticesFilter)
     }
 
     override fun deleteVerticesOfAssociations(entitySetId: UUID, vertices: Set<UUID>): Int {
-        val edgesFilter = buildFilterByEdge(entitySetId, vertices)
-        return deleteFromEdgesWithLocking(edgesFilter)
-    }
-
-    private fun deleteFromEdgesWithLocking(filterClause: String): Int {
-        val connection = hds.connection
-        connection.use {
+        hds.connection.use { connection ->
             connection.autoCommit = false
-            connection.createStatement().use { statement ->
-                statement.execute(lockEntities(filterClause))
-                val deleteCount = statement.executeUpdate(getDeleteFromEdgesSql(filterClause))
-                connection.commit()
-                connection.autoCommit = true
-                return deleteCount
-            }
-        }
-    }
 
-    private fun lockEntities(filterClause: String): String {
-        return "SELECT 1 FROM ${EDGES.name} WHERE $filterClause FOR UPDATE"
+            val ids = PostgresArrays.createUuidArray(connection, vertices)
+
+            val psLocks = connection.prepareStatement(LOCK_BY_ASSOCIATIONS_SQL)
+            psLocks.setObject(1, entitySetId)
+            psLocks.setArray(2, ids)
+
+            val psClear = connection.prepareStatement(DELETE_BY_ASSOCIATIONS_SQL)
+            psClear.setObject(1, entitySetId)
+            psClear.setArray(2, ids)
+
+            psLocks.execute()
+            val clearCount = psClear.executeUpdate()
+            connection.commit()
+            connection.autoCommit = true
+
+            return clearCount
+        }
     }
 
 
@@ -858,25 +907,41 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
             "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
+
 private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?,?) " +
         "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
-private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
-        "WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
-private val CLEAR_BY_SET_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? " +
-        "WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
+private val CLEAR_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE "
+private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE "
+private val LOCK_SQL1 = "SELECT 1 FROM ${EDGES.name} WHERE "
+private const val LOCK_SQL2 = " FOR UPDATE"
 
-private val CLEAR_BY_VERTICES_SQL = "UPDATE ${EDGES.name} SET version = ?, versions = versions || ? WHERE " +
-        "${ID_VALUE.name} = ANY(?) OR ${EDGE_COMP_1.name} = ANY(?) OR ${EDGE_COMP_2.name} = ANY(?) "
+private val VERTEX_FILTER_SQL = "${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
 
-private val DELETE_SQL = "DELETE FROM ${EDGES.name} WHERE ${KEY_COLUMNS.joinToString(" = ? AND ")} = ? "
+private val CLEAR_BY_VERTEX_SQL = "$CLEAR_SQL $VERTEX_FILTER_SQL"
+private val DELETE_BY_VERTEX_SQL = "$DELETE_SQL $VERTEX_FILTER_SQL"
+private val LOCK_BY_VERTEX_SQL = "$LOCK_SQL1 $VERTEX_FILTER_SQL $LOCK_SQL2"
 
-private val DELETE_BY_SET_SQL = "DELETE FROM ${EDGES.name} WHERE ${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
+private val SET_FILTER_SQL = "${SET_ID_COLUMNS.joinToString(" = ? OR ")} = ? "
 
-private val DELETE_BY_VERTICES_SQL = "DELETE FROM ${EDGES.name} WHERE " +
-        "${ID_VALUE.name} = ANY(?) OR ${EDGE_COMP_1.name} = ANY(?) OR ${EDGE_COMP_2.name} = ANY(?) "
+private val CLEAR_BY_SET_SQL = "$CLEAR_SQL $SET_FILTER_SQL "
+private val DELETE_BY_SET_SQL = "$DELETE_SQL $SET_FILTER_SQL"
+private val LOCK_BY_SET_SQL = "$LOCK_SQL1 $SET_FILTER_SQL $LOCK_SQL2"
+
+private val VERTICES_FILTER_SQL = "${ID_VALUE.name} = ANY(?) OR ${EDGE_COMP_1.name} = ANY(?) OR ${EDGE_COMP_2.name} = ANY(?) "
+
+private val DELETE_BY_VERTICES_SQL = "$DELETE_SQL $VERTICES_FILTER_SQL"
+private val CLEAR_BY_VERTICES_SQL = "$CLEAR_SQL $VERTICES_FILTER_SQL"
+private val LOCK_BY_VERTICES_SQL = "$LOCK_SQL1 $VERTICES_FILTER_SQL $LOCK_SQL2"
+
+private val ASSOCIATIONS_FILTER_SQL = "${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal} "
+
+private val CLEAR_BY_ASSOCIATIONS_SQL = "$CLEAR_SQL $ASSOCIATIONS_FILTER_SQL"
+private val DELETE_BY_ASSOCIATIONS_SQL = "$DELETE_SQL $ASSOCIATIONS_FILTER_SQL"
+private val LOCK_BY_ASSOCIATIONS_SQL = "$LOCK_SQL1 $ASSOCIATIONS_FILTER_SQL $LOCK_SQL2"
+
 
 private val NEIGHBORHOOD_OF_ENTITY_SET_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${SRC_ENTITY_SET_ID.name} = ?) OR (${DST_ENTITY_SET_ID.name} = ? )"
@@ -892,41 +957,6 @@ private val BULK_NEIGHBORHOOD_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
         "(${DST_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}) OR " +
         "(${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal})"
 
-private fun getClearFromEdgesSql(version: Long, edgesFilter: String): String {
-    return "UPDATE ${EDGES.name} SET version = $version, versions = versions || $version WHERE $edgesFilter"
-}
-
-private fun getDeleteFromEdgesSql(edgesFilter: String): String {
-    return "DELETE FROM ${EDGES.name} WHERE $edgesFilter"
-}
-
-private fun buildFilterBySet(entitySetId: UUID): String {
-    return "${SET_ID_COLUMNS.joinToString(" = '$entitySetId' OR ")} = '$entitySetId'"
-}
-
-private fun buildFilterByVertices(entitySetId: UUID, vertices: Set<UUID>): String {
-    val entityKeyIdsClause = buildEntityKeyIdsClause(vertices)
-    return "( ${SRC_ENTITY_SET_ID.name} = '$entitySetId' AND ${SRC_ENTITY_KEY_ID.name} IN ( $entityKeyIdsClause ) ) OR " +
-            "( ${DST_ENTITY_SET_ID.name} = '$entitySetId' AND ${DST_ENTITY_KEY_ID.name} IN ( $entityKeyIdsClause ) ) OR " +
-            "( ${EDGE_ENTITY_SET_ID.name} = '$entitySetId' AND ${EDGE_ENTITY_KEY_ID.name} IN ( $entityKeyIdsClause ) )"
-}
-
-private fun buildFilterByEdge(edgeEntitySetId: UUID, edgeEntityKeyIds: Set<UUID>): String {
-    return "${EDGE_ENTITY_SET_ID.name} = '$edgeEntitySetId' AND " +
-            "${EDGE_ENTITY_KEY_ID.name} IN ( ${buildEntityKeyIdsClause(edgeEntityKeyIds)} )"
-}
-
-private val SELECT_SQL = "SELECT * FROM ${EDGES.name} " +
-        "WHERE (${KEY_COLUMNS.joinToString(",")}) IN "
-
-private val BULK_VERTICES_SQL = "SELECT * FROM ${EDGES.name} WHERE " +
-        "( ${SRC_ENTITY_SET_ID.name} = ? AND ${SRC_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
-        "( ${DST_ENTITY_SET_ID.name} = ? AND ${DST_ENTITY_KEY_ID.name} = ANY( ? ) ) OR " +
-        "( ${EDGE_ENTITY_SET_ID.name} = ? AND ${EDGE_ENTITY_KEY_ID.name} = ANY( ? ) )"
-
-private fun buildEntityKeyIdsClause(entityKeyIds: Set<UUID>): String {
-    return entityKeyIds.joinToString(",") { "'$it'" }
-}
 
 internal fun getFilteredNeighborhoodSql(filter: EntityNeighborsFilter, multipleEntitySetIds: Boolean): String {
     val idsClause = "${ID_VALUE.name} = ANY(?)"
