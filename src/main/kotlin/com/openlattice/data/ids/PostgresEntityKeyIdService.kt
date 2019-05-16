@@ -111,7 +111,12 @@ class PostgresEntityKeyIdService(
                 insertIds.addBatch()
             }
 
+            val totalSyncIdRowsWritten = insertSyncIds.executeBatch().sum()
             val totalWritten = insertIds.executeBatch().sum()
+
+            if (totalSyncIdRowsWritten != entityKeyIds.size) {
+                logger.warn("Expected ${entityKeyIds.size} sync id writes. Only $totalSyncIdRowsWritten writes registered.")
+            }
             if (totalWritten != entityKeyIds.size) {
                 logger.warn("Expected ${entityKeyIds.size} entity key writes. Only $totalWritten writes registered.")
             }
