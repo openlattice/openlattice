@@ -1151,10 +1151,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public AssociationType getAssociationType( UUID associationTypeId ) {
-        AssociationType associationDetails = checkNotNull(
-                Util.getSafely( associationTypes, associationTypeId ),
-                "Association type of id %s does not exists.",
-                associationTypeId.toString() );
+        AssociationType associationDetails = getAssociationTypeDetails( associationTypeId );
         Optional<EntityType> entityType = Optional.ofNullable(
                 Util.getSafely( entityTypes, associationTypeId ) );
         return new AssociationType(
@@ -1162,6 +1159,13 @@ public class EdmService implements EdmManager {
                 associationDetails.getSrc(),
                 associationDetails.getDst(),
                 associationDetails.isBidirectional() );
+    }
+
+    private AssociationType getAssociationTypeDetails( UUID associationTypeId ) {
+        return checkNotNull(
+                Util.getSafely( associationTypes, associationTypeId ),
+                "Association type of id %s does not exists.",
+                associationTypeId.toString() );
     }
 
     @Override
@@ -1186,6 +1190,14 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public Iterable<AssociationType> getAssociationTypeDetailsByEntitySetIds( Set<UUID> entitySetId ) {
+        final var entityTypeIds = entitySets.getAll( entitySetId ).values().stream()
+                .map( EntitySet::getEntityTypeId )
+                .collect( Collectors.toSet() );
+        return associationTypes.getAll( entityTypeIds ).values();
+    }
+
+    @Override
     public void deleteAssociationType( UUID associationTypeId ) {
         AssociationType associationType = getAssociationType( associationTypeId );
         if ( associationType.getAssociationEntityType() == null ) {
@@ -1200,7 +1212,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public AssociationDetails getAssociationDetails( UUID associationTypeId ) {
-        AssociationType associationType = getAssociationType( associationTypeId );
+        AssociationType associationType = getAssociationTypeDetails( associationTypeId );
         LinkedHashSet<EntityType> srcEntityTypes = associationType.getSrc()
                 .stream()
                 .map( entityTypeId -> getEntityType( entityTypeId ) )
