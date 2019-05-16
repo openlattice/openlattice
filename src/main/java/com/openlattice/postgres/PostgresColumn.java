@@ -125,10 +125,12 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( DST_TYPE_ID_FIELD, UUID );
     public static final String                   EDGE_COMP_1_FIELD                 = "edge_comp_1";
     public static final PostgresColumnDefinition EDGE_COMP_1                       =
-            new PostgresColumnDefinition( EDGE_COMP_1_FIELD, UUID );
+            new PostgresColumnDefinition( EDGE_COMP_1_FIELD, UUID )
+            .notNull();
     public static final String                   EDGE_COMP_2_FIELD                 = "edge_comp_2";
     public static final PostgresColumnDefinition EDGE_COMP_2                       =
-            new PostgresColumnDefinition( EDGE_COMP_2_FIELD, UUID );
+            new PostgresColumnDefinition( EDGE_COMP_2_FIELD, UUID )
+            .notNull();
     public static final String                   EDGE_ENTITY_KEY_ID_FIELD          = "edge_entity_key_id";
     public static final PostgresColumnDefinition EDGE_ENTITY_KEY_ID                =
             new PostgresColumnDefinition( EDGE_ENTITY_KEY_ID_FIELD, UUID );
@@ -380,7 +382,8 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( TITLE_FIELD, TEXT ).notNull();
     public static final String                   COMPONENT_TYPES_FIELD = "comp_types";
     public static final PostgresColumnDefinition COMPONENT_TYPES             =
-    new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER );
+    new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER )
+            .notNull();
     public static final String                   URL_FIELD             = "url";
     public static final PostgresColumnDefinition URL                   =
             new PostgresColumnDefinition( URL_FIELD, TEXT );

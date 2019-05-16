@@ -69,6 +69,7 @@ public enum HazelcastMap {
     PRINCIPALS( Table.ROLES ),
     ORGANIZATIONS_ROLES( Table.ORGANIZATIONS_ROLES ),
     USERS( null ),
+    ENTITY_LINKING_LOCKS( null ),
     ENTITY_SET_TICKETS( null ),
     ENTITY_SET_PROPERTIES_TICKETS( null ),
     REQUESTS( Table.REQUESTS ),
