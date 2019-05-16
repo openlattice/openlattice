@@ -28,14 +28,11 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.graph.GraphApi
 import com.openlattice.graph.GraphApi.ID
-import com.openlattice.graph.GraphApi.ID_PATH
-import com.openlattice.graph.GraphApi.QUERY
 import com.openlattice.graph.GraphQueryService
 import com.openlattice.graph.SimpleGraphQuery
 import com.openlattice.graph.SubGraph
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
-import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject

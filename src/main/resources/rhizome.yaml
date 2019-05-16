@@ -6,19 +6,11 @@
 enable-persistence:  false
 session-clustering-enabled: false
 
-cassandra:
-    embedded: false
-    random-ports: false
-    ssl-enabled: false
-    keyspace: "sparks"
-    replication-factor: 1
-    seed-nodes:
-        - "localhost"
-
 hazelcast:
     server: false
     group: "local"
     password: "trellis"
+    cp-member-count: 0
     seed-nodes: 
         - "localhost"
 
@@ -31,7 +23,3 @@ postgres:
         password: "test"
         maximumPoolSize: 10
         connectionTimeout: 12000000 #20 minutes
-
-#graphite:
-#    host: "jarvis"
-#    global-prefix: "datastore"
