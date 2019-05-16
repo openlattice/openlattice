@@ -53,8 +53,6 @@ interface DataGraphManager {
             linking: Boolean
     ): EntitySetData<FullQualifiedName>
 
-    fun getLinkingEntitySetSize(linkedEntitySetIds: Set<UUID>): Long
-
     fun getEntitySetSize(entitySetId: UUID): Long
 
     /*

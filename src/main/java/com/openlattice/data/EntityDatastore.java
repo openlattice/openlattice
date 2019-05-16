@@ -46,8 +46,6 @@ public interface EntityDatastore {
 
     PostgresIterable<UUID> getEntityKeyIdsInEntitySet( UUID entitySetId );
 
-    long getEntitySetSize( UUID entitySetId );
-
     Stream<SetMultimap<FullQualifiedName, Object>> getEntities(
             UUID entitySetId,
             Set<UUID> ids,

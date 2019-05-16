@@ -288,21 +288,6 @@ class PostgresEntityDataQueryService(
         )
     }
 
-    fun getEntitySetSize(entitySetId: UUID): Long {
-        val connection = hds.connection
-
-        return connection.use {
-            return@use connection.createStatement().use { statement ->
-                val rs = statement.executeQuery(buildGetEntitySetSizeQuery(entitySetId))
-                return@use if (rs.next()) {
-                    rs.getLong(1)
-                } else {
-                    0
-                }
-            }
-        }
-    }
-
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
         val adapter = Function<ResultSet, UUID> {
             ResultSetAdapters.id(it)
@@ -407,15 +392,16 @@ class PostgresEntityDataQueryService(
     ): WriteEvent {
         val version = System.currentTimeMillis()
         val idsClause = buildEntityKeyIdsClause(entities.keys) // we assume that entities is not empty
+        val citusIdsClause = entities.keys.joinToString(" OR ") { " id = '$it' " }
 
         //Update the versions of all entities.
         val updatedEntityCount = hds.connection.use { connection ->
-            connection.autoCommit = false
+//            connection.autoCommit = false
             return@use connection.createStatement().use { updateEntities ->
-                updateEntities.execute(lockEntities(entitySetId, idsClause, version))
+//                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
                 val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
-                connection.commit()
-                connection.autoCommit = true
+//                connection.commit()
+//                connection.autoCommit = true
                 return@use updateCount
             }
         }
@@ -916,7 +902,7 @@ internal fun buildLockPropertiesStatement(entitySetId: UUID, propertyTypeId: UUI
 
 internal fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): String {
     return "SELECT 1 FROM ${IDS.name} " +
-            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause) " +
+            "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ($idsClause) " +
             "FOR UPDATE"
 }
 

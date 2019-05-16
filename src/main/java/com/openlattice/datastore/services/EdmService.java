@@ -122,7 +122,6 @@ public class EdmService implements EdmManager {
     private final IMap<String, UUID>                                    aclKeys;
     private final IMap<UUID, String>                                    names;
     private final IMap<UUID, AssociationType>                           associationTypes;
-    private final IMap<UUID, UUID>                                      syncIds;
     private final IMap<EntitySetPropertyKey, EntitySetPropertyMetadata> entitySetPropertyMetadata;
     private final IMap<AclKey, SecurableObjectType>                     securableObjectTypes;
 
@@ -163,7 +162,6 @@ public class EdmService implements EdmManager {
         this.names = hazelcastInstance.getMap( HazelcastMap.NAMES.name() );
         this.aclKeys = hazelcastInstance.getMap( HazelcastMap.ACL_KEYS.name() );
         this.associationTypes = hazelcastInstance.getMap( HazelcastMap.ASSOCIATION_TYPES.name() );
-        this.syncIds = hazelcastInstance.getMap( HazelcastMap.SYNC_IDS.name() );
         this.entitySetPropertyMetadata = hazelcastInstance.getMap( HazelcastMap.ENTITY_SET_PROPERTY_METADATA.name() );
         this.securableObjectTypes = hazelcastInstance.getMap( HazelcastMap.SECURABLE_OBJECT_TYPES.name() );
         this.aclKeyReservations = aclKeyReservations;
@@ -388,7 +386,6 @@ public class EdmService implements EdmManager {
 
         Util.deleteSafely( entitySets, entitySetId );
         aclKeyReservations.release( entitySetId );
-        syncIds.remove( entitySetId );
         eventBus.post( new EntitySetDeletedEvent( entitySetId, entityType.getId() ) );
         logger.info( "Entity set {}({}) deleted successfully", entitySet.getName(), entitySetId );
     }

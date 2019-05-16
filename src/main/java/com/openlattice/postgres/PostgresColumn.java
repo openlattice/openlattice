@@ -55,13 +55,11 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition AUDIT_ID                          =
             new PostgresColumnDefinition( AUDIT_ID_FIELD, UUID );
     public static final String                   AUDIT_RECORD_ENTITY_SET_IDS_FIELD = "audit_record_entity_set_ids";
-    public static final PostgresColumnDefinition AUDIT_RECORD_ENTITY_SET_IDS       = new PostgresColumnDefinition(
-            AUDIT_RECORD_ENTITY_SET_IDS_FIELD,
-            UUID_ARRAY );
+    public static final PostgresColumnDefinition AUDIT_RECORD_ENTITY_SET_IDS       =
+            new PostgresColumnDefinition( AUDIT_RECORD_ENTITY_SET_IDS_FIELD, UUID_ARRAY );
     public static final String                   AUDIT_RECORD_ENTITY_SET_ID_FIELD  = "audit_record_entity_set_id";
-    public static final PostgresColumnDefinition AUDIT_RECORD_ENTITY_SET_ID        = new PostgresColumnDefinition(
-            AUDIT_RECORD_ENTITY_SET_ID_FIELD,
-            PostgresDatatype.UUID );
+    public static final PostgresColumnDefinition AUDIT_RECORD_ENTITY_SET_ID        =
+            new PostgresColumnDefinition( AUDIT_RECORD_ENTITY_SET_ID_FIELD, PostgresDatatype.UUID );
     public static final String                   BASE_FIELD                        = "base";
     public static final PostgresColumnDefinition BASE                              =
             new PostgresColumnDefinition( BASE_FIELD, BIGINT ).notNull();
@@ -77,9 +75,8 @@ public final class PostgresColumn {
     public static final String                   CATEGORY_FIELD                    = "category";
     public static final PostgresColumnDefinition CATEGORY                          =
             new PostgresColumnDefinition( CATEGORY_FIELD, TEXT ).notNull();
-    public static final PostgresColumnDefinition CLAUSES                           = new PostgresColumnDefinition(
-            "clauses",
-            INTEGER_ARRAY );
+    public static final PostgresColumnDefinition CLAUSES                           =
+            new PostgresColumnDefinition( "clauses", INTEGER_ARRAY );
     public static final String                   CONFIG_TYPE_IDS_FIELD             = "config_type_ids";
     public static final PostgresColumnDefinition CONFIG_TYPE_IDS                   =
             new PostgresColumnDefinition( CONFIG_TYPE_IDS_FIELD, UUID_ARRAY );
@@ -126,6 +123,14 @@ public final class PostgresColumn {
     public static final String                   DST_TYPE_ID_FIELD                 = "dst_type_id";
     public static final PostgresColumnDefinition DST_TYPE_ID                       =
             new PostgresColumnDefinition( DST_TYPE_ID_FIELD, UUID );
+    public static final String                   EDGE_COMP_1_FIELD                 = "edge_comp_1";
+    public static final PostgresColumnDefinition EDGE_COMP_1                       =
+            new PostgresColumnDefinition( EDGE_COMP_1_FIELD, UUID )
+            .notNull();
+    public static final String                   EDGE_COMP_2_FIELD                 = "edge_comp_2";
+    public static final PostgresColumnDefinition EDGE_COMP_2                       =
+            new PostgresColumnDefinition( EDGE_COMP_2_FIELD, UUID )
+            .notNull();
     public static final String                   EDGE_ENTITY_KEY_ID_FIELD          = "edge_entity_key_id";
     public static final PostgresColumnDefinition EDGE_ENTITY_KEY_ID                =
             new PostgresColumnDefinition( EDGE_ENTITY_KEY_ID_FIELD, UUID );
@@ -147,7 +152,7 @@ public final class PostgresColumn {
     public static final String                   ENTITY_SET_FLAGS_FIELD            = "flags";
     public static final PostgresColumnDefinition ENTITY_SET_FLAGS                  =
             new PostgresColumnDefinition( ENTITY_SET_FLAGS_FIELD, TEXT_ARRAY )
-            .withDefault( "'{}'" );
+                    .withDefault( "'{}'" );
     public static final String                   ENTITY_SET_ID_FIELD               = "entity_set_id";
     public static final PostgresColumnDefinition ENTITY_SET_ID                     =
             new PostgresColumnDefinition( ENTITY_SET_ID_FIELD, UUID ).notNull();
@@ -369,17 +374,21 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition TAGS                              = new PostgresColumnDefinition(
             TAGS_FIELD,
             TEXT_ARRAY );
-    public static final String                   TIME_UUID_FIELD                   = "time_uuid";
-    public static final PostgresColumnDefinition TIME_UUID                         =
+    public static final String                   TIME_UUID_FIELD       = "time_uuid";
+    public static final PostgresColumnDefinition TIME_UUID             =
             new PostgresColumnDefinition( TIME_UUID_FIELD, UUID );
-    public static final String                   TITLE_FIELD                       = "title";
-    public static final PostgresColumnDefinition TITLE                             =
+    public static final String                   TITLE_FIELD           = "title";
+    public static final PostgresColumnDefinition TITLE                 =
             new PostgresColumnDefinition( TITLE_FIELD, TEXT ).notNull();
-    public static final String                   URL_FIELD                         = "url";
-    public static final PostgresColumnDefinition URL                               =
+    public static final String                   COMPONENT_TYPES_FIELD = "comp_types";
+    public static final PostgresColumnDefinition COMPONENT_TYPES             =
+    new PostgresColumnDefinition( COMPONENT_TYPES_FIELD, INTEGER )
+            .notNull();
+    public static final String                   URL_FIELD             = "url";
+    public static final PostgresColumnDefinition URL                   =
             new PostgresColumnDefinition( URL_FIELD, TEXT );
-    public static final String                   VERSIONS_FIELD                    = "versions";
-    public static final PostgresColumnDefinition VERSIONS                          =
+    public static final String                   VERSIONS_FIELD        = "versions";
+    public static final PostgresColumnDefinition VERSIONS              =
             new PostgresColumnDefinition( VERSIONS_FIELD, BIGINT_ARRAY )
                     .withDefault( "ARRAY[-1]" ).notNull();
     public static final String                   VERSION_FIELD                     = "version";
