@@ -78,7 +78,7 @@ class BackgroundLinkingService
         private val logger = LoggerFactory.getLogger(BackgroundLinkingService::class.java)
     }
 
-    private val entityLockingLock = hazelcastInstance.cpSubsystem.getLock("")
+    //private val entityLockingLock = hazelcastInstance.cpSubsystem.getLock("")
     private val running = ReentrantLock()
 
     private val blacklist: Set<UUID> = configuration.blacklist
@@ -88,7 +88,7 @@ class BackgroundLinkingService
     private val entitySets = hazelcastInstance.getMap<UUID, EntitySet>(HazelcastMap.ENTITY_SETS.name)
     private val linkingLocks = hazelcastInstance.getMap<UUID, String>(HazelcastMap.LINKING_LOCKS.name)
 
-    private val entityLinkingLocks = hazelcastInstance.getMap<EntityDataKey, Long>(HazelcastMap.LINKING_LOCKS.name)
+    private val entityLinkingLocks = hazelcastInstance.getMap<EntityDataKey, Long>(HazelcastMap.ENTITY_LINKING_LOCKS.name)
 
     private val cursors = hazelcastInstance.getMap<UUID, DelegatedUUIDSet>(HazelcastMap.LINKING_CURSORS.name)
     private val candidates = hazelcastInstance.getQueue<EntityDataKey>(HazelcastQueue.LINKING_CANDIDATES.name)
