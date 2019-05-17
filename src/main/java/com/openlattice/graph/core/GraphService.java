@@ -47,11 +47,15 @@ public interface GraphService {
 
     int clearVertices( @Nonnull UUID entitySetId, @Nonnull Set<UUID> vertices );
 
+    int clearVerticesOfAssociations( UUID entitySetId, Set<UUID> vertices );
+
     WriteEvent deleteEdges( Set<DataEdgeKey> keys );
 
     int deleteVerticesInEntitySet( UUID entitySetId );
 
     int deleteVertices( UUID entitySetId, Set<UUID> vertices );
+
+    int deleteVerticesOfAssociations( UUID entitySetId, Set<UUID> vertices );
 
     Edge getEdge( DataEdgeKey key );
 

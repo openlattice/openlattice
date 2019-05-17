@@ -38,7 +38,7 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
     }
 
     override fun getPeriod(): Long {
-        return 60000
+        return 300_000
     }
 
     override fun getTimeUnit(): TimeUnit {
