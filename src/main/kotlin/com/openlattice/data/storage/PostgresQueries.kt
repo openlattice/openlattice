@@ -528,3 +528,5 @@ private fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): S
         MetadataOption.ENTITY_KEY_IDS -> "entity_key_ids"
     }
 }
+
+val REGISTER_QUERY_SQL = "INSERT INTO ${QUERIES.name} VALUES(?,?,?,?,?)"

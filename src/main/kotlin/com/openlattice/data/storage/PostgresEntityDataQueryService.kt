@@ -1145,4 +1145,3 @@ internal fun getEntityKeyIdsOfEntitySetQuery(): String {
     return "SELECT ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 }
 
-val REGISTER_QUERY_SQL = "INSERT INTO ${QUERIES.name} VALUES(?,?,?,?,?)"
