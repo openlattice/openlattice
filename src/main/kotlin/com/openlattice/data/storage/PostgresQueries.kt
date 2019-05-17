@@ -254,14 +254,14 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
 
-    val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
-    val groupByColumns = joinColumns.joinToString(",")
+    val selectColumns = joinColumns.joinToString(",") { "$propertyTable.$it AS $it" }
+    val groupByColumns = joinColumns.joinToString(","){ "$propertyTable.$it" }
 
     val arrayAgg = arrayAggSql(fqn)
 
     val filtersClause = buildFilterClause(fqn, filters)
 
-    val entitiesJoinCondition = buildEntitiesJoinCondition(linking)
+    val entitiesJoinCondition = buildEntitiesJoinCondition(propertyTable, linking)
 
     return "(SELECT $selectColumns, $arrayAgg " +
             "FROM $propertyTable INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition " +
@@ -423,15 +423,15 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
     } else {
         ""
     }
-    val entitiesJoinCondition = buildEntitiesJoinCondition(linking)
+    val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
     return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
-internal fun buildEntitiesJoinCondition(linking: Boolean): String {
+internal fun buildEntitiesJoinCondition(joinTableName: String, linking: Boolean): String {
     return if (linking) {
-        "(${IDS.name}.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND (${IDS.name}.${LINKING_ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
+        "($joinTableName.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND ($joinTableName.${LINKING_ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
     } else {
-        "(${IDS.name}.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND (${IDS.name}.${ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
+        "($joinTableName.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND ($joinTableName.${ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
     }
 }
 
