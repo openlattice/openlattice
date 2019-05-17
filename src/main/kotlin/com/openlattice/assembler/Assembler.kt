@@ -348,8 +348,9 @@ class Assembler(
                 ps.setObject(1, entitySetId)
                 ps.setObject(2, DUMMY_ID)
                 ps.setObject(3, DUMMY_ID)
-                ps.setObject(4, true)
-                ps.setObject(5, Long.MAX_VALUE) //Infinite expiration
+                ps.setObject(4, Long.MAX_VALUE) //Infinite expiration
+                ps.setObject(5, true)
+
             }
         }
     }

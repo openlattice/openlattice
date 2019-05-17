@@ -254,8 +254,8 @@ class PostgresEntityDataQueryService(
                             registerEntityKeyIds.setObject(1, entitySetId)
                             registerEntityKeyIds.setObject(2, entityKeyId)
                             registerEntityKeyIds.setObject(3, queryId)
-                            registerEntityKeyIds.setObject(4, idsIsEmpty)
-                            registerEntityKeyIds.setLong(5, expiration)
+                            registerEntityKeyIds.setLong(4, expiration)
+                            registerEntityKeyIds.setObject(5, idsIsEmpty)
                             registerEntityKeyIds.addBatch()
                         }
                     }
