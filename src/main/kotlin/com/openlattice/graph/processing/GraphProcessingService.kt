@@ -481,6 +481,7 @@ internal fun buildGetActivePropertiesSql(
     }
 
     val selectEntities = selectEntitySetWithCurrentVersionOfPropertyTypes(
+            UUID.randomUUID(),
             entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
             propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }.toMap(),
             propertyTypes.keys,
@@ -508,6 +509,7 @@ internal fun buildGetBlockedPropertiesSql(
     //The result of this query can be joined with edges and other
 
     return selectEntitySetWithCurrentVersionOfPropertyTypes(
+            UUID.randomUUID(),
             entitySetIds.map { it to Optional.empty<Set<UUID>>() }.toMap(),
             propertyTypeIds.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
             propertyTypeIds.keys,
