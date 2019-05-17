@@ -76,6 +76,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         omitEntitySetId: Boolean,
         metadataFilters: String = ""
 ): String {
+    val withClause = buildWithClause(queryId, metadataOptions, linking, omitEntitySetId)
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
     val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
@@ -123,6 +124,35 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
 
     val fullQuery = "SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
     return fullQuery
+}
+
+internal fun buildWithClause(queryId: UUID, metadataOptions: Set<MetadataOption>, linking: Boolean, omitEntitySetId: Boolean): String {
+    val joinColumns = getJoinColumns(linking, omitEntitySetId)
+    val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
+    val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" } +
+            if (metadataColumns.isNotEmpty()) {
+                if (linking) {
+                    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
+                        ", max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}"
+                    } else {
+                        ""
+                    } + if (metadataOptions.contains(MetadataOption.ENTITY_SET_IDS)) {
+                        ", array_agg(entity_set_id) as entity_set_ids"
+                    } else {
+                        ""
+                    } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
+                        ", array_agg(id) as entity_key_ids"
+                    } else {
+                        ""
+                    }
+                } else {
+                    ", $metadataColumns"
+                }
+            } else {
+                ""
+            }
+    val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
+    return "WITH filtered_entity_key_ids AS ( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' AND ${LINKING_ID.name} IS NOT NULL ) "
 }
 
 
