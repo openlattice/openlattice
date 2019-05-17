@@ -23,12 +23,19 @@ package com.openlattice.data
 
 import com.google.common.collect.ImmutableMap
 import com.openlattice.data.storage.*
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables
+
+import com.openlattice.postgres.IndexType
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.apache.olingo.commons.api.edm.FullQualifiedName
+import com.openlattice.postgres.PostgresTable
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.*
+import kotlin.streams.toList
 
 
 /**
@@ -38,6 +45,28 @@ import java.util.*
 class PostgresEntityDataQueryServiceTest {
     private val logger: Logger = LoggerFactory.getLogger(PostgresEntityDataQueryServiceTest::class.java)
 
+    @Test
+    fun createEdgesTableQuery() {
+        logger.info(PostgresTable.QUERIES.createTableQuery());
+        logger.info(PostgresTable.EDGES.createTableQuery())
+        logger.info(PostgresTable.SYNC_IDS.createTableQuery())
+
+        logger.info(PostgresTable.EDGES.createIndexQueries.toList().joinToString("\n") { "$it;" })
+        logger.info(PostgresTable.SYNC_IDS.createIndexQueries.toList().joinToString("\n") { "$it;" })
+        logger.info(PostgresTable.QUERIES.createIndexQueries.toList().joinToString("\n") { "$it;" })
+    }
+
+    @Test
+    fun testBuildQuery() {
+        DataTables.buildPropertyTableDefinition(
+                PropertyType(
+                        UUID.fromString("f8a70a63-cd78-4e49-8936-7d382b4c59ef"),
+                        FullQualifiedName("ol", "bondtype"), "Bond type", Optional.of("A type of bail bond."), setOf(),
+                        EdmPrimitiveTypeKind.String,
+                        Optional.empty(), Optional.empty(), Optional.of(IndexType.BTREE)
+                )
+        ).createIndexQueries.forEach { System.out.println("$it;") }
+    }
 
     @Test
     fun testEntitySetQuery() {
@@ -80,7 +109,11 @@ class PostgresEntityDataQueryServiceTest {
                         Optional.of(entityKeyIds),
                         propertyTypeMap,
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
-                        propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
+                        propertyTypeMap.keys.map {
+                            it to (it == UUID.fromString(
+                                    "45aa6695-a7e7-46b6-96bd-782e6aa9ac13"
+                            ))
+                        }.toMap()
                 )
         )
 //        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
@@ -125,13 +158,18 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(
                 "Entity set query: {}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-                        ImmutableMap.of(entitySetId, Optional.of(entityKeyIds) ),
+                        UUID.fromString("b57ad8b1-e864-49d1-b264-5086f8cad002"),
+                        ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
                         propertyTypeMap,
                         propertyTypeMap.keys,
-                        ImmutableMap.of( entitySetId, propertyTypeMap.keys ),
+                        ImmutableMap.of(entitySetId, propertyTypeMap.keys),
                         ImmutableMap.of(),
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
-                        propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap(),
+                        propertyTypeMap.keys.map {
+                            it to (it == UUID.fromString(
+                                    "45aa6695-a7e7-46b6-96bd-782e6aa9ac13"
+                            ))
+                        }.toMap(),
                         false,
                         false
                 )
@@ -181,7 +219,11 @@ class PostgresEntityDataQueryServiceTest {
                         Optional.empty(),
                         propertyTypeMap,
                         setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX),
-                        propertyTypeMap.keys.map { it to (it==UUID.fromString("45aa6695-a7e7-46b6-96bd-782e6aa9ac13")) }.toMap()
+                        propertyTypeMap.keys.map {
+                            it to (it == UUID.fromString(
+                                    "45aa6695-a7e7-46b6-96bd-782e6aa9ac13"
+                            ))
+                        }.toMap()
                 )
         )
 //        logger.info("Versioned query: {}", selectEntitySetWithPropertyTypes(entitySetId, propertyTypeMap, setOf(MetadataOption.LAST_WRITE, MetadataOption.LAST_INDEX), version))
@@ -196,7 +238,7 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(
                 "SQL Query: {}",
                 selectVersionOfPropertyTypeInEntitySet(
-                        entitySetId, " ", propertyTypeId, fqn, version,false
+                        entitySetId, " ", propertyTypeId, fqn, version, false
                 )
         )
     }
@@ -212,8 +254,16 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(
                 "SQL Query: {}",
                 selectVersionOfPropertyTypeInEntitySet(
-                        entitySetId, entityKeyIdsClause(setOf(entityKeyId)), propertyTypeId, fqn, version,false
+                        entitySetId, entityKeyIdsClause(setOf(entityKeyId)), propertyTypeId, fqn, version, false
                 )
         )
+    }
+
+    @Test
+    fun testBuildWithClause() {
+        val queryId = UUID.randomUUID()
+        val metadataOptions = setOf(MetadataOption.LAST_WRITE)
+
+        logger.info("Build with clause: \n {}", buildWithClause(queryId, mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()), false))
     }
 }

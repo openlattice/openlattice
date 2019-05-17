@@ -118,8 +118,7 @@ public class DataTables {
                         WRITERS,
                         OWNERS )
                 .primaryKey( ENTITY_SET_ID, ID_VALUE, HASH )
-                .distributionColumn( ID )
-                .colocationColumn( PostgresTable.IDS );
+                .distributionColumn( ID );
 
         PostgresIndexDefinition idIndex = new PostgresColumnsIndexDefinition( ptd, ID_VALUE )
                 .name( quote( idxPrefix + "_id_idx" ) )

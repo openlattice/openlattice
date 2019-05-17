@@ -30,8 +30,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.ENTITY_SETS
-import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -53,6 +52,8 @@ import java.util.function.Supplier
 const val MAX_PREV_VERSION = "max_prev_version"
 const val EXPANDED_VERSIONS = "expanded_versions"
 const val FETCH_SIZE = 100000
+private val DUMMY_ID_SET = setOf(UUID(0, 0))
+
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(
@@ -86,7 +87,8 @@ class PostgresEntityDataQueryService(
         return getLinkedEntityDataWithMetadata(
                 linkingIdsByEntitySetId,
                 authorizedPropertyTypesByEntitySetId,
-                EnumSet.noneOf(MetadataOption::class.java))
+                EnumSet.noneOf(MetadataOption::class.java)
+        )
     }
 
     fun getLinkedEntityDataWithMetadata(
@@ -103,7 +105,8 @@ class PostgresEntityDataQueryService(
                         )
                     } else {
                         ResultSetAdapters.implicitEntityValuesByIdWithLastWrite(
-                                it, authorizedPropertyTypesByEntitySetId.values.firstOrNull() ?: mapOf(), byteBlobDataManager
+                                it, authorizedPropertyTypesByEntitySetId.values.firstOrNull() ?: mapOf(),
+                                byteBlobDataManager
                         )
                     }
         }
@@ -236,12 +239,31 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false,
             omitEntitySetId: Boolean = false
     ): PostgresIterable<T> {
-
         return PostgresIterable(
                 Supplier<StatementHolder> {
+                    val queryId = UUID.randomUUID()
+                    val expiration = System.currentTimeMillis() + 60 * 60 * 1000
                     val connection = hds.connection
+
+
+                    val registerEntityKeyIds = connection.prepareStatement(REGISTER_QUERY_SQL)
+
+                    entityKeyIds.forEach { entitySetId, entityKeyIds ->
+                        val idsIsEmpty = entityKeyIds.isEmpty
+                        entityKeyIds.orElse(DUMMY_ID_SET).forEach { entityKeyId ->
+                            registerEntityKeyIds.setObject(1, entitySetId)
+                            registerEntityKeyIds.setObject(2, entityKeyId)
+                            registerEntityKeyIds.setObject(3, queryId)
+                            registerEntityKeyIds.setLong(4, expiration)
+                            registerEntityKeyIds.setObject(5, idsIsEmpty)
+                            registerEntityKeyIds.addBatch()
+                        }
+                    }
+                    registerEntityKeyIds.executeBatch()
+
                     connection.autoCommit = false
                     val statement = connection.createStatement()
+
                     statement.fetchSize = FETCH_SIZE
 
                     val allPropertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.toSet()
@@ -270,6 +292,7 @@ class PostgresEntityDataQueryService(
                                 )
                             } else {
                                 selectEntitySetWithCurrentVersionOfPropertyTypes(
+                                        queryId,
                                         entityKeyIds,
                                         propertyFqns,
                                         allPropertyTypes.map { it.id },
@@ -282,10 +305,19 @@ class PostgresEntityDataQueryService(
                                 )
                             }
                     )
-                    StatementHolder(connection, statement, rs)
+
+                    val cleanupStatement = connection.prepareStatement(CHECK_OFF_QUERY_SQL)
+                    cleanupStatement.setObject(1, queryId)
+                    cleanupStatement.executeUpdate()
+
+                    StatementHolder(connection, statement, rs, listOf(cleanupStatement), listOf())
                 },
                 adapter
         )
+    }
+
+    fun createQueryTable(entityKeyIds: Map<UUID, Optional<Set<UUID>>>) {
+
     }
 
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
@@ -396,9 +428,9 @@ class PostgresEntityDataQueryService(
 
         //Update the versions of all entities.
         val updatedEntityCount = hds.connection.use { connection ->
-//            connection.autoCommit = false
+            //            connection.autoCommit = false
             return@use connection.createStatement().use { updateEntities ->
-//                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
+                //                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
                 val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
 //                connection.commit()
 //                connection.autoCommit = true
@@ -437,8 +469,8 @@ class PostgresEntityDataQueryService(
                     rawValue
                 } else {
                     asMap(JsonDeserializer
-                            .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                            { "Entity set $entitySetId with entity key id $entityKeyId" })
+                                  .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
+                                  { "Entity set $entitySetId with entity key id $entityKeyId" })
                 }
 
                 entityData.map { (propertyTypeId, values) ->
@@ -1113,3 +1145,4 @@ internal fun getLinkingEntitySetIdsOfEntitySetIdQuery(entitySetId: UUID): String
 internal fun getEntityKeyIdsOfEntitySetQuery(): String {
     return "SELECT ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 }
+
