@@ -58,7 +58,6 @@ class IndexingMetadataManager(private val hds: HikariDataSource) {
 
 fun updateLastIndexSql(idsByEntitySetId: Map<UUID, Optional<Set<UUID>>>): String {
     val entitiesClause = buildEntitiesClause(idsByEntitySetId, false)
-
     return "UPDATE ${IDS.name} SET ${LAST_INDEX.name} = ? " +
             "WHERE TRUE $entitiesClause "
 }
@@ -72,7 +71,7 @@ fun updateLastLinkIndexSql(linkingIdsByEntitySetId: Map<UUID, Optional<Set<UUID>
 
 fun markLinkingIdsAsNeedToBeIndexedSql(): String {
     return "UPDATE ${IDS.name} SET ${LAST_LINK_INDEX.name} = '-infinity()' " +
-            "WHERE ${LINKING_ID.name} IN (SELECT UNNEST( (?)::uuid[] )) "
+            "WHERE ${LINKING_ID.name} = ANY(?) "
 }
 
 fun markAsNeedsToBeLinkedSql(entityDataKeys: Set<EntityDataKey>): String {
