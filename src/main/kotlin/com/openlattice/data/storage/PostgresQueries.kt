@@ -492,12 +492,12 @@ internal fun buildLinkingEntitiesClause(linkingIds: Set<UUID>): String {
 private fun getJoinColumns(linking: Boolean, omitEntitySetId: Boolean): List<String> {
     return if (linking) {
         if (omitEntitySetId) {
-            listOf(LINKING_ID.name)
+            listOf("${IDS.name}.${LINKING_ID.name}")
         } else {
-            listOf(ENTITY_SET_ID.name, LINKING_ID.name)
+            listOf("${IDS.name}.${ENTITY_SET_ID.name}", "${IDS.name}.${LINKING_ID.name}")
         }
     } else {
-        listOf(ENTITY_SET_ID.name, ID_VALUE.name)
+        listOf("${IDS.name}.${ENTITY_SET_ID.name}", "${IDS.name}.${ID_VALUE.name}")
     }
 }
 
