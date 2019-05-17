@@ -434,6 +434,7 @@ internal fun arrayAggSql(fqn: String): String {
     return " array_agg($fqn) as $fqn "
 }
 
+@Deprecated("No longer in use, update consumers on a case by case basis")
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
     if (entityKeyIds.isEmpty()) return ""
 
