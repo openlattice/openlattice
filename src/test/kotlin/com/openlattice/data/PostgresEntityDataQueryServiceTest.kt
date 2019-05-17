@@ -44,7 +44,7 @@ import kotlin.streams.toList
  */
 class PostgresEntityDataQueryServiceTest {
     private val logger: Logger = LoggerFactory.getLogger(PostgresEntityDataQueryServiceTest::class.java)
-    
+
     @Test
     fun createEdgesTableQuery() {
         logger.info(PostgresTable.QUERIES.createTableQuery());

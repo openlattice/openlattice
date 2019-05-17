@@ -124,18 +124,9 @@ internal fun buildWithClause(queryId: UUID, entityKeyIds: Map<UUID, Optional<Set
         listOf(ENTITY_SET_ID.name, ID_VALUE.name)
     }
     val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
-    val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
-    val linkingClause = if (linking) "AND ${LINKING_ID.name} IS NOT NULL" else ""
+    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
 
-    val dataKeySql = "AND " + entityKeyIds.map { (entitySetId, entityKeyIds) ->
-        val entityKeyIdsSql = entityKeyIds.map { ids ->
-            val idsSql = ids.joinToString(",") { "'$it'" }
-            if (linking) "${LINKING_ID.name} IN ($idsSql)" else "${ID_VALUE.name} IN ($idsSql)"
-        }.orElse("")
-        " ( $entityKeyIdsSql AND ${ENTITY_SET_ID.name} = '$entitySetId' ) "
-    }.joinToString(separator = " OR ")
-
-    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $dataKeySql $linkingClause"
+    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
 
     return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql ) "
 }
@@ -449,13 +440,13 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
     val filterLinkingIds = if (linking) " AND ${LINKING_ID.name} IS NOT NULL " else ""
 
     val idsColumn = if (linking) LINKING_ID.name else ID_VALUE.name
-    return "$filterLinkingIds " /*AND (" + entityKeyIds.entries.joinToString(" OR ") {
+    return "$filterLinkingIds AND (" + entityKeyIds.entries.joinToString(" OR ") {
         val idsClause = it.value
                 .filter { ids -> ids.isNotEmpty() }
                 .map { ids -> " AND $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")" }
                 .orElse("")
         " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
-    } + ")"*/
+    } + ")"
 }
 
 internal fun buildPropertyTypeEntitiesClause(
