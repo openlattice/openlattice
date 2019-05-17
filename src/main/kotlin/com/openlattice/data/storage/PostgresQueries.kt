@@ -443,9 +443,9 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
     return "$filterLinkingIds AND (" + entityKeyIds.entries.joinToString(" OR ") {
         val idsClause = it.value
                 .filter { ids -> ids.isNotEmpty() }
-                .map { ids -> " AND $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")" }
+                .map { ids -> "$idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")" }
                 .orElse("")
-        " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
+        " ($idsClause AND ${ENTITY_SET_ID.name} = '${it.key}' )"
     } + ")"
 }
 
