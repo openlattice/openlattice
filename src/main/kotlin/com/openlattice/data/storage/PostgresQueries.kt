@@ -126,12 +126,18 @@ internal fun buildWithClause(queryId: UUID, entityKeyIds: Map<UUID, Optional<Set
     val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
     val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
     val linkingClause = if (linking) "AND ${LINKING_ID.name} IS NOT NULL" else ""
-    val completeEntitySets = entityKeyIds.asSequence().filter { it.value.isEmpty }.joinToString(",") { "'${it.key}'" }
+
+    val emptyEntitySetIds = entityKeyIds.asSequence().filter { it.value.isEmpty }
+    val completeEntitySetsUnionSql = if (emptyEntitySetIds.iterator().hasNext()) { // if there are entity set ids with no entity ids in entityKeyIds
+        val completeEntitySets = emptyEntitySetIds.joinToString(",") { "'${it.key}'" }
+        "UNION SELECT $selectColumns FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} IN ($completeEntitySets)"
+    } else {
+        ""
+    }
 
     val queriesSql = "SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause"
-    val completeEntitySetsSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} IN ($completeEntitySets)"
 
-    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql UNION $completeEntitySetsSql ) "
+    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql $completeEntitySetsUnionSql ) "
 }
 
 
