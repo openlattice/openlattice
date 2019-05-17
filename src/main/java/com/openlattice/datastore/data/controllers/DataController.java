@@ -309,7 +309,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Timed
     @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
-        final var associationEntitySetIds = new HashMap<UUID, Map<UUID, Set<UUID>>>(); // edge-src-dst
+        final var srcAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-src
+        final var dstAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-dst
 
         associations.forEach(
                 association -> {
@@ -322,27 +323,28 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
                     ensureReadAccess( new AclKey( dstEntitySetId ) );
                     ensureReadAccess( new AclKey( associationEntitySetId ) );
 
+                    // todo: collect and do batch checks
+
                     //Ensure that we can read key properties.
                     Set<UUID> keyPropertyTypes = edmService
                             .getEntityTypeByEntitySetId( associationEntitySetId ).getKey();
                     keyPropertyTypes.forEach( propertyType ->
                             accessCheck( new AclKey( associationEntitySetId, propertyType ), READ_PERMISSION ) );
 
-                    if ( associationEntitySetIds.putIfAbsent(
-                            associationEntitySetId,
-                            new HashMap<>() {{
-                                put( srcEntitySetId, Sets.newHashSet( dstEntitySetId ) );
-                            }} ) != null ) {
-                        if ( associationEntitySetIds.get( associationEntitySetId )
-                                .putIfAbsent( srcEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
-                            associationEntitySetIds.get( associationEntitySetId ).get( srcEntitySetId )
-                                    .add( dstEntitySetId );
-                        }
+                    if ( srcAssociationEntitySetIds
+                            .putIfAbsent( associationEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
+                        srcAssociationEntitySetIds.get( associationEntitySetId ).add( srcEntitySetId );
+                    }
+
+                    if ( dstAssociationEntitySetIds
+                            .putIfAbsent( associationEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
+                        dstAssociationEntitySetIds.get( associationEntitySetId ).add( dstEntitySetId );
                     }
                 }
         );
 
-        WriteEvent writeEvent = dgm.createAssociations( associations, associationEntitySetIds );
+        WriteEvent writeEvent = dgm
+                .createAssociations( associations, srcAssociationEntitySetIds, dstAssociationEntitySetIds );
 
         Stream<Pair<EntityDataKey, Map<String, Object>>> neighborMappingsCreated = associations.stream()
                 .flatMap( dataEdgeKey -> Stream.of(

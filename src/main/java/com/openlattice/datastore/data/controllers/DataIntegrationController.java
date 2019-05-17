@@ -169,9 +169,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
 
-        return dgm.integrateEntitiesAndAssociations( data.getEntities(),
-                data.getAssociations(),
-                authorizedPropertyTypesByEntitySet );
+        return dgm.integrateEntitiesAndAssociations( entities, associations, authorizedPropertyTypesByEntitySet );
     }
 
     @Override public List<String> generatePresignedUrls( Collection<S3EntityData> data ) {
@@ -219,7 +217,8 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
-        final var associationEntitySetIds = new HashMap<UUID, Map<UUID, Set<UUID>>>(); // edge-src-dst
+        final var srcAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-src
+        final var dstAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-dst
 
         edges.forEach(
                 association -> {
@@ -231,6 +230,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                     ensureReadAccess( new AclKey( srcEntitySetId ) );
                     ensureReadAccess( new AclKey( dstEntitySetId ) );
                     ensureReadAccess( new AclKey( associationEntitySetId ) );
+                    // todo: collect and do batch checks
 
                     //Ensure that we can read key properties.
                     Set<UUID> keyPropertyTypes = dms.getEntityTypeByEntitySetId( associationEntitySetId ).getKey();
@@ -238,21 +238,19 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                             accessCheck( new AclKey( associationEntitySetId, propertyType ), READ_PERMISSION ) );
 
 
-                    if ( associationEntitySetIds.putIfAbsent(
-                            associationEntitySetId,
-                            new HashMap<>() {{
-                                put( srcEntitySetId, Sets.newHashSet( dstEntitySetId ) );
-                            }} ) != null ) {
-                        if ( associationEntitySetIds.get( associationEntitySetId )
-                                .putIfAbsent( srcEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
-                            associationEntitySetIds.get( associationEntitySetId ).get( srcEntitySetId )
-                                    .add( dstEntitySetId );
-                        }
+                    if ( srcAssociationEntitySetIds
+                            .putIfAbsent( associationEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
+                        srcAssociationEntitySetIds.get( associationEntitySetId ).add( srcEntitySetId );
+                    }
+
+                    if ( dstAssociationEntitySetIds
+                            .putIfAbsent( associationEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
+                        dstAssociationEntitySetIds.get( associationEntitySetId ).add( dstEntitySetId );
                     }
                 }
         );
 
-        return dgm.createAssociations( edges, associationEntitySetIds ).getNumUpdates();
+        return dgm.createAssociations( edges, srcAssociationEntitySetIds, dstAssociationEntitySetIds ).getNumUpdates();
     }
 
     private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {
