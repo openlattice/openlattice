@@ -408,6 +408,10 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
                         ", array_agg(${IDS.name}.${ID.name}) as entity_key_ids"
                     } else {
                         ""
+                    } + + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
+                        ", array_agg(${IDS.name}.${ENTITY_SET_ID.name}) as entity_set_ids"
+                    } else {
+                        ""
                     }
                 } else {
                     ", $metadataColumns"
