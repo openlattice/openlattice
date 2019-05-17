@@ -372,7 +372,7 @@ class Assembler(
                 entitySetIds.associate { it to Optional.empty<Set<UUID>>() },
                 propertyFqns,
                 authorizedPropertyTypes.values.map(PropertyType::getId),
-                entitySetIds.map { it to authorizedPropertyTypes.keys) }.toMap(),
+                entitySetIds.associate { it to authorizedPropertyTypes.keys },
                 mapOf(),
                 EnumSet.allOf(MetadataOption::class.java),
                 authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
