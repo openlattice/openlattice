@@ -284,6 +284,7 @@ class PostgresEntityDataQueryService(
                                 )
                             } else {
                                 selectEntitySetWithCurrentVersionOfPropertyTypes(
+                                        queryId,
                                         entityKeyIds,
                                         propertyFqns,
                                         allPropertyTypes.map { it.id },
