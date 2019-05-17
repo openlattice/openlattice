@@ -430,7 +430,7 @@ internal fun buildEntitiesJoinCondition(linking: Boolean): String {
     return if (linking) {
         "(${IDS.name}.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND (${IDS.name}.${LINKING_ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
     } else {
-        "(${IDS.name}.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND (${IDS.name}.${ID.name} = ${QUERIES.name}.${ID.name} ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
+        "(${IDS.name}.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND (${IDS.name}.${ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
     }
 }
 
