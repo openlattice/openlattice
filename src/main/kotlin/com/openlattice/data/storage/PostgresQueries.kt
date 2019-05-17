@@ -260,16 +260,10 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
 
     val filtersClause = buildFilterClause(fqn, filters)
 
-    val linkingIdSubquerySql =
-            if (linking) {
-                "INNER JOIN (SELECT $entityKeyIdColumns,${LINKING_ID.name} FROM ${IDS.name}) as linking_ids USING($entityKeyIdColumns)"
-            } else {
-                ""
-            }
+    val entitiesJoinCondition = buildEntitiesJoinCondition(linking)
 
     return "(SELECT $selectColumns, $arrayAgg " +
-            "FROM $propertyTable INNER JOIN ${QUERIES.name} USING ($ENTITY_SET_ID" +
-            linkingIdSubquerySql +
+            "FROM $propertyTable INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition " +
             "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause $metadataFilters" +
             "GROUP BY ($selectColumns)) as $propertyTable "
 }
