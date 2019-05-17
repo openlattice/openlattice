@@ -152,7 +152,8 @@ internal fun buildWithClause(queryId: UUID, metadataOptions: Set<MetadataOption>
                 ""
             }
     val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
-    return "WITH filtered_entity_key_ids AS ( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' AND ${LINKING_ID.name} IS NOT NULL ) "
+    val linkingClause = if( linking ) "AND ${LINKING_ID.name} IS NOT NULL" else ""
+    return "WITH filtered_entity_key_ids AS ( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause ) "
 }
 
 
