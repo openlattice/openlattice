@@ -413,7 +413,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
     val groupBy = if (linking && omitEntitySetId) {
         "GROUP BY ${LINKING_ID.name}"
     } else if (linking && !omitEntitySetId) {
-        "GROUP BY (${IDS.name}.${ENTITY_SET_ID.name},${LINKING_ID.name})"
+        "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name})"
     } else {
         ""
     }
