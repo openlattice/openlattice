@@ -106,8 +106,6 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                                 it.key,
                                 propertyTypeFilters[it.key] ?: setOf(),
                                 it.value,
-                                linking,
-                                binaryPropertyTypes.getValue(it.key),
                                 joinColumns,
                                 metadataFilters
                         )
@@ -158,7 +156,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
 
     val dataColumns = joinColumns
             .union(getMetadataOptions(metadataOptions, linking)) // omit metadataoptions from linking
-            .union(returnedPropertyTypes.map { propertyTypes[it]!! })
+            .union(returnedPropertyTypes.map { propertyTypes.getValue(it) })
             .filter(String::isNotBlank)
             .joinToString(",")
 
@@ -252,21 +250,15 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
         propertyTypeId: UUID,
         filters: Set<Filter>,
         fqn: String,
-        linking: Boolean,
-        binary: Boolean,
         joinColumns: List<String>,
         metadataFilters: String = ""
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-
-    val selectColumns = joinColumns.joinToString(",")
     val groupByColumns = joinColumns.joinToString(",")
-
     val arrayAgg = arrayAggSql(fqn)
-
     val filtersClause = buildFilterClause(fqn, filters)
 
-    return "(SELECT $selectColumns, $arrayAgg " +
+    return "(SELECT $groupByColumns, $arrayAgg " +
             "FROM $propertyTable INNER JOIN ${QUERIES.name} USING ($groupByColumns) " +
             "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause $metadataFilters" +
             "GROUP BY ($groupByColumns)) as $propertyTable "
