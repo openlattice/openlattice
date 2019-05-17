@@ -44,15 +44,7 @@ import kotlin.streams.toList
  */
 class PostgresEntityDataQueryServiceTest {
     private val logger: Logger = LoggerFactory.getLogger(PostgresEntityDataQueryServiceTest::class.java)
-
-    @Test
-    fun testKotlin() {
-        logger.info(
-                listOf("A", "B", "C").joinToString(prefix = "foo", separator = ",")
-        )
-        logger.info(listOf<String>().joinToString(prefix = "foo", separator = ","))
-    }
-
+    
     @Test
     fun createEdgesTableQuery() {
         logger.info(PostgresTable.QUERIES.createTableQuery());
