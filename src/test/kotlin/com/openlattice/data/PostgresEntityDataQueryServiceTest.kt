@@ -256,4 +256,12 @@ class PostgresEntityDataQueryServiceTest {
                 )
         )
     }
+
+    @Test
+    fun testBuildWithClause() {
+        val queryId = UUID.randomUUID()
+        val metadataOptions = setOf(MetadataOption.LAST_WRITE)
+
+        logger.info("Build with clause: \n {}", buildWithClause(queryId, metadataOptions, false))
+    }
 }
