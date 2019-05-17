@@ -124,20 +124,11 @@ internal fun buildWithClause(queryId: UUID, entityKeyIds: Map<UUID, Optional<Set
         listOf(ENTITY_SET_ID.name, ID_VALUE.name)
     }
     val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
-    val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
-    val linkingClause = if (linking) "AND ${LINKING_ID.name} IS NOT NULL" else ""
+    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
 
-    val emptyEntitySetIds = entityKeyIds.asSequence().filter { it.value.isEmpty }
-    val completeEntitySetsUnionSql = if (emptyEntitySetIds.iterator().hasNext()) { // if there are entity set ids with no entity ids in entityKeyIds
-        val completeEntitySets = emptyEntitySetIds.joinToString(",") { "'${it.key}'" }
-        "UNION SELECT $selectColumns FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} IN ($completeEntitySets)"
-    } else {
-        ""
-    }
+    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
 
-    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause"
-
-    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql $completeEntitySetsUnionSql ) "
+    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql ) "
 }
 
 
@@ -450,13 +441,13 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
     val filterLinkingIds = if (linking) " AND ${LINKING_ID.name} IS NOT NULL " else ""
 
     val idsColumn = if (linking) LINKING_ID.name else ID_VALUE.name
-    return "$filterLinkingIds " /*AND (" + entityKeyIds.entries.joinToString(" OR ") {
+    return "$filterLinkingIds AND (" + entityKeyIds.entries.joinToString(" OR ") {
         val idsClause = it.value
                 .filter { ids -> ids.isNotEmpty() }
-                .map { ids -> " AND $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")" }
+                .map { ids -> " $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ") AND" }
                 .orElse("")
-        " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
-    } + ")"*/
+        " ($idsClause ${ENTITY_SET_ID.name} = '${it.key}' )"
+    } + ")"
 }
 
 internal fun buildPropertyTypeEntitiesClause(
@@ -473,7 +464,7 @@ internal fun buildPropertyTypeEntitiesClause(
         authorizedPropertyTypes[it.key]?.contains(propertyTypeId) ?: false
     }.joinToString(",") { "'${it.key}'" }
 
-    return if( authorizedEntitySetIds.isNotEmpty() )"AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)" else ""
+    return if (authorizedEntitySetIds.isNotEmpty()) "AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)" else ""
 }
 
 
