@@ -350,8 +350,9 @@ class Assembler(
                 ps.setObject(3, DUMMY_ID)
                 ps.setObject(4, Long.MAX_VALUE) //Infinite expiration
                 ps.setObject(5, true)
-
+                ps.executeUpdate()
             }
+
         }
     }
 
