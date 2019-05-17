@@ -270,7 +270,7 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
     val filtersClause = buildFilterClause(fqn, filters)
 
     return "(SELECT $groupByColumns, $arrayAgg " +
-            "FROM $propertyTable INNER JOIN $FILTERED_ENTITY_KEY_IDS USING ($groupByColumns) " +
+            "FROM $propertyTable INNER JOIN $FILTERED_ENTITY_KEY_IDS USING (${ENTITY_SET_ID.name},${ID_VALUE.name}) " +
             "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause $metadataFilters" +
             "GROUP BY ($groupByColumns)) as $propertyTable "
 }
