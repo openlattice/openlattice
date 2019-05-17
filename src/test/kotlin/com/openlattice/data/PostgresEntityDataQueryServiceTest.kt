@@ -47,11 +47,13 @@ class PostgresEntityDataQueryServiceTest {
 
     @Test
     fun createEdgesTableQuery() {
+        logger.info(PostgresTable.QUERIES.createTableQuery());
         logger.info(PostgresTable.EDGES.createTableQuery())
         logger.info(PostgresTable.SYNC_IDS.createTableQuery())
 
         logger.info(PostgresTable.EDGES.createIndexQueries.toList().joinToString("\n") { "$it;" })
         logger.info(PostgresTable.SYNC_IDS.createIndexQueries.toList().joinToString("\n") { "$it;" })
+        logger.info(PostgresTable.QUERIES.createIndexQueries.toList().joinToString("\n") { "$it;" })
     }
 
     @Test
@@ -156,7 +158,7 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(
                 "Entity set query: {}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-                        UUID.randomUUID(),
+                        UUID.fromString("b57ad8b1-e864-49d1-b264-5086f8cad002")
                         ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
                         propertyTypeMap,
                         propertyTypeMap.keys,
