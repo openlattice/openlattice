@@ -127,17 +127,17 @@ internal fun buildWithClause(queryId: UUID, entityKeyIds: Map<UUID, Optional<Set
     val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
     val linkingClause = if (linking) "AND ${LINKING_ID.name} IS NOT NULL" else ""
 
-    val emptyEntitySetIds = entityKeyIds.asSequence().filter { it.value.isEmpty }
-    val completeEntitySetsUnionSql = if (emptyEntitySetIds.iterator().hasNext()) { // if there are entity set ids with no entity ids in entityKeyIds
-        val completeEntitySets = emptyEntitySetIds.joinToString(",") { "'${it.key}'" }
-        "UNION SELECT $selectColumns FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} IN ($completeEntitySets)"
-    } else {
-        ""
-    }
+    val dataKeySql = "AND " + entityKeyIds.map { (entitySetId, entityKeyIds) ->
+        val entityKeyIdsSql = entityKeyIds.map { ids ->
+            val idsSql = ids.joinToString(",") { "'$it'" }
+            if (linking) "${LINKING_ID.name} IN ($idsSql)" else "${ID_VALUE.name} IN ($idsSql)"
+        }.orElse("")
+        " ( $entityKeyIdsSql AND ${ENTITY_SET_ID.name} = '$entitySetId' ) "
+    }.joinToString(separator = " OR ")
 
-    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause"
+    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $dataKeySql $linkingClause"
 
-    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql $completeEntitySetsUnionSql ) "
+    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql ) "
 }
 
 
@@ -472,7 +472,7 @@ internal fun buildPropertyTypeEntitiesClause(
         authorizedPropertyTypes[it.key]?.contains(propertyTypeId) ?: false
     }.joinToString(",") { "'${it.key}'" }
 
-    return if( authorizedEntitySetIds.isNotEmpty() )"AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)" else ""
+    return if (authorizedEntitySetIds.isNotEmpty()) "AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)" else ""
 }
 
 

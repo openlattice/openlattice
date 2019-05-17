@@ -46,6 +46,14 @@ class PostgresEntityDataQueryServiceTest {
     private val logger: Logger = LoggerFactory.getLogger(PostgresEntityDataQueryServiceTest::class.java)
 
     @Test
+    fun testKotlin() {
+        logger.info(
+                listOf("A", "B", "C").joinToString(prefix = "foo", separator = ",")
+        )
+        logger.info(listOf<String>().joinToString(prefix = "foo", separator = ","))
+    }
+
+    @Test
     fun createEdgesTableQuery() {
         logger.info(PostgresTable.QUERIES.createTableQuery());
         logger.info(PostgresTable.EDGES.createTableQuery())
@@ -264,6 +272,10 @@ class PostgresEntityDataQueryServiceTest {
         val queryId = UUID.randomUUID()
         val metadataOptions = setOf(MetadataOption.LAST_WRITE)
 
-        logger.info("Build with clause: \n {}", buildWithClause(queryId, mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()), false))
+        logger.info(
+                "Build with clause: \n {}", buildWithClause(
+                queryId, mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()), false
+        )
+        )
     }
 }
