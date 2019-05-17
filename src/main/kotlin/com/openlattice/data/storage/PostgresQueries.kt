@@ -429,9 +429,9 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 
 internal fun buildEntitiesJoinCondition(joinTableName: String, linking: Boolean): String {
     return if (linking) {
-        "($joinTableName.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND ($joinTableName.${LINKING_ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
+        "($joinTableName.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND ($joinTableName.${LINKING_ID.name} = ${QUERIES.name}.${ID.name} ) )"
     } else {
-        "($joinTableName.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND ($joinTableName.${ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
+        "($joinTableName.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND ($joinTableName.${ID.name} = ${QUERIES.name}.${ID.name} ) )"
     }
 }
 
