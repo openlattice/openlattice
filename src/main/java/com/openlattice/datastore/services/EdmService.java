@@ -1137,6 +1137,13 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public Set<UUID> getEntityTypeIdsByEntitySetIds( Set<UUID> entitySetIds ) {
+        return entitySets.getAll( entitySetIds ).values().stream()
+                .map( EntitySet::getEntityTypeId )
+                .collect( Collectors.toSet() );
+    }
+
+    @Override
     public UUID createAssociationType( AssociationType associationType, UUID entityTypeId ) {
         final AssociationType existing = associationTypes.putIfAbsent( entityTypeId, associationType );
 
@@ -1190,10 +1197,8 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Iterable<AssociationType> getAssociationTypeDetailsByEntitySetIds( Set<UUID> entitySetId ) {
-        final var entityTypeIds = entitySets.getAll( entitySetId ).values().stream()
-                .map( EntitySet::getEntityTypeId )
-                .collect( Collectors.toSet() );
+    public Iterable<AssociationType> getAssociationTypeDetailsByEntitySetIds( Set<UUID> entitySetIds ) {
+        final var entityTypeIds = getEntityTypeIdsByEntitySetIds( entitySetIds );
         return associationTypes.getAll( entityTypeIds ).values();
     }
 

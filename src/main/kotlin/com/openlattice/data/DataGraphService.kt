@@ -354,9 +354,11 @@ open class DataGraphService(
     }
 
     override fun createAssociations(
-            associations: Set<DataEdgeKey>, associationEntitySetIds: Map<UUID, Map<UUID, Set<UUID>>>
+            associations: Set<DataEdgeKey>,
+            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
+            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
     ): WriteEvent {
-        checkAssociationEntityTypes(associationEntitySetIds)
+        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
         return graphService.createEdges(associations)
     }
 
@@ -399,7 +401,8 @@ open class DataGraphService(
         val entityKeyIds = HashMap<EntityKey, UUID>(3 * associations.size)
 
         //Create graph structure and check entity types
-        val associationEntitySetIds = mutableMapOf<UUID, MutableMap<UUID, MutableSet<UUID>>>() // edge-src-dst
+        val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
+        val dstAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-dst
         val edges = associations
                 .asSequence()
                 .map { association ->
@@ -415,18 +418,18 @@ open class DataGraphService(
                     val dst = EntityDataKey(dstEsId, dstId)
                     val edge = EntityDataKey(edgeEsId, edgeId)
 
-                    if(associationEntitySetIds
-                                    .putIfAbsent(edgeEsId, mutableMapOf(srcEsId to mutableSetOf(dstEsId))) != null) {
-                        if(associationEntitySetIds.getValue(edgeEsId)
-                                        .putIfAbsent(srcEsId, mutableSetOf(dstEsId)) != null) {
-                            associationEntitySetIds.getValue(edgeEsId).getValue(srcEsId).add(dstEsId)
-                        }
+                    if(srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
+                        srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
+                    }
+
+                    if(srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
+                        srcAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
                     }
 
                     DataEdgeKey(src, dst, edge)
                 }
                 .toSet()
-        checkAssociationEntityTypes(associationEntitySetIds)
+        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
 
         //Create the entities for the association and build list of required entity keys
         val integrationResults = associationsByEntitySet
@@ -502,6 +505,37 @@ open class DataGraphService(
                     }
 
                 }
+            }
+        }
+    }
+
+    private fun checkAssociationEntityTypes(
+            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>, dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
+    ) {
+        val associationTypeDetails = srcAssociationEntitySetIds.keys
+                .zip(edmManager.getAssociationTypeDetailsByEntitySetIds(srcAssociationEntitySetIds.keys))
+                .toMap()
+
+        srcAssociationEntitySetIds.forEach {
+            val edgeEntitySetId = it.key
+            val srcEntitySetIds = it.value
+            val dstEntitySetIds = dstAssociationEntitySetIds.getValue(edgeEntitySetId)
+
+            val edgeAssociationType = associationTypeDetails.getValue(edgeEntitySetId)
+            val srcEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(srcEntitySetIds)
+            val dstEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(dstEntitySetIds)
+
+            // ensure, that src and dst entity types are part of src and dst entity types of AssociationType
+            if (!edgeAssociationType.src.containsAll(srcEntityTypes)) {
+                throw IllegalArgumentException("One or more entity types of src entity sets $srcEntitySetIds differs " +
+                        "from allowed entity types (${edgeAssociationType.src}) in association type of entity set " +
+                        edgeEntitySetId)
+            }
+
+            if (!edgeAssociationType.dst.containsAll(dstEntityTypes)) {
+                throw IllegalArgumentException("One or more entity types of src entity sets $dstEntitySetIds differs " +
+                        "from allowed entity types (${edgeAssociationType.dst}) in association type of entity set " +
+                        edgeEntitySetId)
             }
         }
     }

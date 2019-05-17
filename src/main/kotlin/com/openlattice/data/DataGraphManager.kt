@@ -157,7 +157,9 @@ interface DataGraphManager {
     ): WriteEvent
 
     fun createAssociations(
-            associations: Set<DataEdgeKey>, associationEntitySetIds: Map<UUID, Map<UUID, Set<UUID>>>
+            associations: Set<DataEdgeKey>,
+            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
+            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
     ): WriteEvent
 
     fun createAssociations(
