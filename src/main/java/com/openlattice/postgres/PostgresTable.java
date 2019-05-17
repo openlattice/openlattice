@@ -277,7 +277,7 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition QUERIES =
             new CitusDistributedTableDefinition( "queries" )
-                    .addColumns( ENTITY_SET_ID, ID_VALUE, QUERY_ID, EXPIRATION )
+                    .addColumns( ENTITY_SET_ID, ID_VALUE, QUERY_ID, EXPIRATION, MATCH_ALL_IDS )
                     .primaryKey( ID_VALUE, QUERY_ID )
                     .distributionColumn( ID_VALUE )
                     .unlogged();

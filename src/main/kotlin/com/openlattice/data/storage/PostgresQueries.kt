@@ -268,7 +268,7 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
             }
 
     return "(SELECT $selectColumns, $arrayAgg " +
-            "FROM $propertyTable " +
+            "FROM $propertyTable INNER JOIN ${QUERIES.name} USING ($ENTITY_SET_ID" +
             linkingIdSubquerySql +
             "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause $metadataFilters" +
             "GROUP BY ($selectColumns)) as $propertyTable "
@@ -525,4 +525,10 @@ private fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): S
         MetadataOption.ENTITY_SET_IDS -> "entity_set_ids"
         MetadataOption.ENTITY_KEY_IDS -> "entity_key_ids"
     }
+}
+
+internal enum class QueryType {
+    DATA_KEY,
+    ENTITY_SET,
+    LINKING
 }

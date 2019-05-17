@@ -52,6 +52,8 @@ import java.util.function.Supplier
 const val MAX_PREV_VERSION = "max_prev_version"
 const val EXPANDED_VERSIONS = "expanded_versions"
 const val FETCH_SIZE = 100000
+private val DUMMY_ID_SET = setOf(UUID(0, 0))
+
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
 class PostgresEntityDataQueryService(
@@ -240,17 +242,22 @@ class PostgresEntityDataQueryService(
         return PostgresIterable(
                 Supplier<StatementHolder> {
                     val queryId = UUID.randomUUID()
+                    val expiration = System.currentTimeMillis() + 60 * 60 * 1000
                     val connection = hds.connection
                     connection.autoCommit = false
 
                     val registerEntityKeyIds = connection.prepareStatement(REGISTER_QUERY_SQL)
 
-                    entityKeyIds.forEach { entitySetId, entityKeyId ->
-                        registerEntityKeyIds.setObject(1, entitySetId)
-                        registerEntityKeyIds.setObject(2, entityKeyId)
-                        registerEntityKeyIds.setObject(3, queryId)
-                        registerEntityKeyIds.setLong(4, System.currentTimeMillis() + 60 * 60 * 1000)
-                        registerEntityKeyIds.addBatch()
+                    entityKeyIds.forEach { entitySetId, entityKeyIds ->
+                        val idsIsEmpty = entityKeyIds.isEmpty
+                        entityKeyIds.orElse(DUMMY_ID_SET).forEach { entityKeyId ->
+                            registerEntityKeyIds.setObject(1, entitySetId)
+                            registerEntityKeyIds.setObject(2, entityKeyId)
+                            registerEntityKeyIds.setObject(3, queryId)
+                            registerEntityKeyIds.setObject(4, idsIsEmpty)
+                            registerEntityKeyIds.setLong(5, expiration)
+                            registerEntityKeyIds.addBatch()
+                        }
                     }
                     registerEntityKeyIds.executeBatch()
 
@@ -284,6 +291,7 @@ class PostgresEntityDataQueryService(
                                 )
                             } else {
                                 selectEntitySetWithCurrentVersionOfPropertyTypes(
+                                        queryId,
                                         entityKeyIds,
                                         propertyFqns,
                                         allPropertyTypes.map { it.id },
@@ -1137,4 +1145,4 @@ internal fun getEntityKeyIdsOfEntitySetQuery(): String {
     return "SELECT ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 }
 
-val REGISTER_QUERY_SQL = "INSERT INTO ${QUERIES.name} VALUES(?,?,?,?)"
+val REGISTER_QUERY_SQL = "INSERT INTO ${QUERIES.name} VALUES(?,?,?,?,?)"
