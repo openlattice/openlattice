@@ -49,7 +49,8 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
         logger.info("Refreshing entity set count views.")
         getDependency().hikariDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
-                stmt.execute(REFRESH_ENTITY_SET_COUNTS_VIEW)
+                stmt.execute(DROP_ENTITY_SET_COUNTS_VIEW)
+                stmt.execute(CREATE_ENTITY_SET_COUNTS_VIEW)
             }
         }
     }
@@ -77,7 +78,5 @@ class PostgresEntitySetSizesTask : HazelcastFixedRateTask<PostgresEntitySetSizes
         }
     }
 }
-
-private const val REFRESH_ENTITY_SET_COUNTS_VIEW = "REFRESH MATERIALIZED VIEW $ENTITY_SET_SIZES_VIEW"
 
 private val GET_ENTITY_SET_COUNT = "SELECT $COUNT FROM $ENTITY_SET_SIZES_VIEW WHERE ${ENTITY_SET_ID.name} = ?"
