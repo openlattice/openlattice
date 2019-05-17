@@ -244,7 +244,7 @@ class PostgresEntityDataQueryService(
                     val queryId = UUID.randomUUID()
                     val expiration = System.currentTimeMillis() + 60 * 60 * 1000
                     val connection = hds.connection
-                    connection.autoCommit = false
+
 
                     val registerEntityKeyIds = connection.prepareStatement(REGISTER_QUERY_SQL)
 
@@ -261,6 +261,7 @@ class PostgresEntityDataQueryService(
                     }
                     registerEntityKeyIds.executeBatch()
 
+                    connection.autoCommit = false
                     val statement = connection.createStatement()
 
                     statement.fetchSize = FETCH_SIZE
