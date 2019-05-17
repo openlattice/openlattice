@@ -237,9 +237,9 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false,
             omitEntitySetId: Boolean = false
     ): PostgresIterable<T> {
-        val queryId = UUID.randomUUID()
         return PostgresIterable(
                 Supplier<StatementHolder> {
+                    val queryId = UUID.randomUUID()
                     val connection = hds.connection
                     connection.autoCommit = false
 
@@ -248,8 +248,11 @@ class PostgresEntityDataQueryService(
                     entityKeyIds.forEach { entitySetId, entityKeyId ->
                         registerEntityKeyIds.setObject(1, entitySetId)
                         registerEntityKeyIds.setObject(2, entityKeyId)
-                        registerEntityKeyIds.setObject(3, UUID.randomUUID())
+                        registerEntityKeyIds.setObject(3, queryId)
+                        registerEntityKeyIds.setLong(4, System.currentTimeMillis() + 60 * 60 * 1000)
+                        registerEntityKeyIds.addBatch()
                     }
+                    registerEntityKeyIds.executeBatch()
 
                     val statement = connection.createStatement()
 
@@ -293,7 +296,12 @@ class PostgresEntityDataQueryService(
                                 )
                             }
                     )
-                    StatementHolder(connection, statement, rs)
+
+                    val cleanupStatement = connection.createStatement()
+                    val cleanupResultSet = cleanupStatement
+                            .executeQuery("DELETE FROM ${QUERIES.name} WHERE ${QUERY_ID.name} = $queryId")
+
+                    StatementHolder(connection, statement, rs, listOf(cleanupStatement), listOf(cleanupResultSet))
                 },
                 adapter
         )
