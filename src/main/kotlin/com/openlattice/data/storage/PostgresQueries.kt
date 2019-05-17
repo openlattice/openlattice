@@ -21,17 +21,12 @@
 
 package com.openlattice.data.storage
 
-import com.google.common.collect.Sets
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.IDS
 import com.openlattice.postgres.PostgresTable.QUERIES
-import com.openlattice.postgres.ResultSetAdapters
-import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
-import java.security.InvalidParameterException
 import java.util.*
 
 /**
@@ -78,10 +73,9 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
 ): String {
     val withClause = buildWithClause(queryId, metadataOptions, linking, omitEntitySetId)
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
-    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
+//    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
             queryId,
-            entitiesClause,
             metadataOptions,
             linking,
             omitEntitySetId,
@@ -105,8 +99,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                         val propertyTypeEntitiesClause = buildPropertyTypeEntitiesClause(
                                 entityKeyIds,
                                 it.key,
-                                authorizedPropertyTypes,
-                                linking
+                                authorizedPropertyTypes
                         )
                         val subQuerySql = selectCurrentVersionOfPropertyTypeSql(
                                 propertyTypeEntitiesClause,
@@ -122,7 +115,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
                     }
                     .joinToString("\n")
 
-    val fullQuery = "SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
+    val fullQuery = "$withClause SELECT $dataColumns FROM $entitiesSubquerySql $propertyTableJoins"
     return fullQuery
 }
 
@@ -199,8 +192,7 @@ fun selectEntitySetWithPropertyTypesAndVersionSql(
                         val propertyTypeEntitiesClause = buildPropertyTypeEntitiesClause(
                                 entityKeyIds,
                                 it.key,
-                                authorizedPropertyTypes,
-                                linking
+                                authorizedPropertyTypes
                         )
                         val subQuerySql = selectVersionOfPropertyTypeInEntitySetSql(
                                 propertyTypeEntitiesClause,
@@ -285,17 +277,15 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
 
-    val selectColumns = joinColumns.joinToString(",") { "$propertyTable.$it AS $it" }
-    val groupByColumns = joinColumns.joinToString(","){ "$propertyTable.$it" }
+    val selectColumns = joinColumns.joinToString(",")
+    val groupByColumns = joinColumns.joinToString(",")
 
     val arrayAgg = arrayAggSql(fqn)
 
     val filtersClause = buildFilterClause(fqn, filters)
 
-    val entitiesJoinCondition = buildEntitiesJoinCondition(propertyTable, linking)
-
     return "(SELECT $selectColumns, $arrayAgg " +
-            "FROM $propertyTable INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition " +
+            "FROM $propertyTable INNER JOIN ${QUERIES.name} USING ($groupByColumns) " +
             "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause $metadataFilters" +
             "GROUP BY ($groupByColumns)) as $propertyTable "
 }
@@ -488,19 +478,18 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
 internal fun buildPropertyTypeEntitiesClause(
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
         propertyTypeId: UUID,
-        authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-        linking: Boolean
+        authorizedPropertyTypes: Map<UUID, Set<UUID>>
 ): String {
     /*
      * Filter out any entity sets for which you aren't authorized to read this property.
      * There should always be at least one entity set as this isn't invoked for any properties
      * with not readable entity sets.
      */
-    val authorizedEntityKeyIds = entityKeyIds.filter {
+    val authorizedEntitySetIds = entityKeyIds.asSequence().filter {
         authorizedPropertyTypes[it.key]?.contains(propertyTypeId) ?: false
-    }
+    }.joinToString(",") { it.key.toString() }
 
-    return buildEntitiesClause(authorizedEntityKeyIds, linking)
+    return "AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)"
 }
 
 
