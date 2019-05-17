@@ -307,10 +307,9 @@ class PostgresEntityDataQueryService(
 
                     val cleanupStatement = connection.prepareStatement(CHECK_OFF_QUERY_SQL)
                     cleanupStatement.setObject(1, queryId)
-                    val cleanupResultSet = cleanupStatement
-                            .executeQuery()
+                    cleanupStatement.executeUpdate()
 
-                    StatementHolder(connection, statement, rs, listOf(cleanupStatement), listOf(cleanupResultSet))
+                    StatementHolder(connection, statement, rs, listOf(cleanupStatement), listOf())
                 },
                 adapter
         )
