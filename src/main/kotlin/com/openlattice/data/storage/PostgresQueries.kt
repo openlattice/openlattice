@@ -531,3 +531,4 @@ private fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): S
 }
 
 val REGISTER_QUERY_SQL = "INSERT INTO ${QUERIES.name} VALUES(?,?,?,?,?)"
+val CHECK_OFF_QUERY_SQL = "DELETE FROM ${QUERIES.name} WHERE ${QUERY_ID.name} = ?"

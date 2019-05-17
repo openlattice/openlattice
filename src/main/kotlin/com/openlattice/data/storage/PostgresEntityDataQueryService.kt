@@ -305,9 +305,10 @@ class PostgresEntityDataQueryService(
                             }
                     )
 
-                    val cleanupStatement = connection.createStatement()
+                    val cleanupStatement = connection.prepareStatement(CHECK_OFF_QUERY_SQL)
+                    cleanupStatement.setObject(1, queryId)
                     val cleanupResultSet = cleanupStatement
-                            .executeQuery("DELETE FROM ${QUERIES.name} WHERE ${QUERY_ID.name} = $queryId")
+                            .executeQuery()
 
                     StatementHolder(connection, statement, rs, listOf(cleanupStatement), listOf(cleanupResultSet))
                 },
