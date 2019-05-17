@@ -394,7 +394,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
                     } else {
                         ""
                     } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-                        ", array_agg(id) as entity_key_ids"
+                        ", array_agg(${ID.name}) as entity_key_ids"
                     } else {
                         ""
                     }
