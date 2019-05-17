@@ -56,12 +56,16 @@ class PostgresEntityDataQueryServiceTest {
 
     @Test
     fun testBuildQuery() {
-        DataTables.buildPropertyTableDefinition( PropertyType(UUID.fromString("f8a70a63-cd78-4e49-8936-7d382b4c59ef"),
-                                                              FullQualifiedName("ol","bondtype"), "Bond type", Optional.of("A type of bail bond."), setOf(), EdmPrimitiveTypeKind.String,
-                                                              Optional.empty(), Optional.empty(), Optional.of(IndexType.BTREE)
-        )
+        DataTables.buildPropertyTableDefinition(
+                PropertyType(
+                        UUID.fromString("f8a70a63-cd78-4e49-8936-7d382b4c59ef"),
+                        FullQualifiedName("ol", "bondtype"), "Bond type", Optional.of("A type of bail bond."), setOf(),
+                        EdmPrimitiveTypeKind.String,
+                        Optional.empty(), Optional.empty(), Optional.of(IndexType.BTREE)
+                )
         ).createIndexQueries.forEach { System.out.println("$it;") }
     }
+
     @Test
     fun testEntitySetQuery() {
         val entitySetId = UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace")
@@ -152,12 +156,8 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(
                 "Entity set query: {}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-<<<<<<< Updated upstream
                         UUID.randomUUID(),
-                        ImmutableMap.of(entitySetId, Optional.of(entityKeyIds) ),
-=======
                         ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
->>>>>>> Stashed changes
                         propertyTypeMap,
                         propertyTypeMap.keys,
                         ImmutableMap.of(entitySetId, propertyTypeMap.keys),
