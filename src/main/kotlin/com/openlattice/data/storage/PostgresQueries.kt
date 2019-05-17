@@ -468,7 +468,7 @@ internal fun buildPropertyTypeEntitiesClause(
         authorizedPropertyTypes[it.key]?.contains(propertyTypeId) ?: false
     }.joinToString(",") { "'${it.key}'" }
 
-    return "AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)"
+    return if( authorizedEntitySetIds.isNotEmpty() )"AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)" else ""
 }
 
 
