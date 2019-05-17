@@ -158,7 +158,7 @@ class PostgresEntityDataQueryServiceTest {
         logger.info(
                 "Entity set query: {}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-                        UUID.fromString("b57ad8b1-e864-49d1-b264-5086f8cad002")
+                        UUID.fromString("b57ad8b1-e864-49d1-b264-5086f8cad002"),
                         ImmutableMap.of(entitySetId, Optional.of(entityKeyIds)),
                         propertyTypeMap,
                         propertyTypeMap.keys,

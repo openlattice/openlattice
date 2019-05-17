@@ -72,7 +72,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         omitEntitySetId: Boolean,
         metadataFilters: String = ""
 ): String {
-    val withClause = buildWithClause(queryId, metadataOptions, linking)
+    val withClause = buildWithClause(queryId, entityKeyIds, linking)
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
 //    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
@@ -117,7 +117,7 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     return fullQuery
 }
 
-internal fun buildWithClause(queryId: UUID, metadataOptions: Set<MetadataOption>, linking: Boolean): String {
+internal fun buildWithClause(queryId: UUID, entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
     val joinColumns = if (linking) {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name, LINKING_ID.name)
     } else {
@@ -126,7 +126,12 @@ internal fun buildWithClause(queryId: UUID, metadataOptions: Set<MetadataOption>
     val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
     val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
     val linkingClause = if (linking) "AND ${LINKING_ID.name} IS NOT NULL" else ""
-    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause ) "
+    val completeEntitySets = entityKeyIds.asSequence().filter { it.value.isEmpty }.joinToString(",") { "'${it.key}'" }
+
+    val queriesSql = "SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause"
+    val completeEntitySetsSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} IN ($completeEntitySets"
+
+    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql UNION $completeEntitySetsSql ) "
 }
 
 
