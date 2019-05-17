@@ -83,7 +83,7 @@ public final class PostgresTable {
                             EDGE_ENTITY_SET_ID,
                             VERSION,
                             VERSIONS )
-                    .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2 )
+                    .primaryKey( ID, EDGE_COMP_1, EDGE_COMP_2, COMPONENT_TYPES )
                     .distributionColumn( ID_VALUE );
 
     public static final PostgresTableDefinition        ENTITY_QUERIES               =
