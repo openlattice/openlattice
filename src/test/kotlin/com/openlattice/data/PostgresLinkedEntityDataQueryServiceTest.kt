@@ -452,6 +452,6 @@ class PostgresLinkedEntityDataQueryServiceTest {
         val queryId = UUID.randomUUID()
         val metadataOptions = setOf(MetadataOption.LAST_WRITE)
 
-        logger.info("Build with clause: \n {}", buildWithClause(queryId, metadataOptions, true))
+        logger.info("Build with clause: \n {}", buildWithClause(queryId, mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty<Set<UUID>>(), true))
     }
 }
