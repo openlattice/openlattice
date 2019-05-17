@@ -57,8 +57,6 @@ class PostgresEntitySetSizesInitializationTask : HazelcastInitializationTask<Pos
     override fun getDependenciesClass(): Class<out PostgresEntitySetSizesTaskDependency> {
         return PostgresEntitySetSizesTaskDependency::class.java
     }
-
-
 }
 
 private val NORMAL_ENTITY_SET_COUNTS =
@@ -73,5 +71,7 @@ private val LINKED_ENTITY_SET_COUNTS =
                 "ON ( linking_ids.${ENTITY_SET_ID.name} = ANY(linking_sets.${LINKED_ENTITY_SETS.name}) ) " +
                 "GROUP BY linking_sets.${ID.name} )"
 
-private val CREATE_ENTITY_SET_COUNTS_VIEW = "CREATE MATERIALIZED VIEW IF NOT EXISTS $ENTITY_SET_SIZES_VIEW " +
+internal val CREATE_ENTITY_SET_COUNTS_VIEW = "CREATE MATERIALIZED VIEW IF NOT EXISTS $ENTITY_SET_SIZES_VIEW " +
         "AS $NORMAL_ENTITY_SET_COUNTS UNION $LINKED_ENTITY_SET_COUNTS"
+
+internal const val DROP_ENTITY_SET_COUNTS_VIEW = "DROP MATERIALIZED VIEW IF EXISTS $ENTITY_SET_SIZES_VIEW "
