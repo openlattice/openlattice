@@ -254,7 +254,8 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
 
-    val selectColumns = joinColumns.joinToString(",")
+    val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
+    val groupByColumns = joinColumns.joinToString(",")
 
     val arrayAgg = arrayAggSql(fqn)
 
@@ -265,7 +266,7 @@ internal fun selectCurrentVersionOfPropertyTypeSql(
     return "(SELECT $selectColumns, $arrayAgg " +
             "FROM $propertyTable INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition " +
             "WHERE ${VERSION.name} > 0 $entitiesClause $filtersClause $metadataFilters" +
-            "GROUP BY ($selectColumns)) as $propertyTable "
+            "GROUP BY ($groupByColumns)) as $propertyTable "
 }
 
 /**
@@ -392,7 +393,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
 ): String {
     val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
 
-    val selectColumns = joinColumns.joinToString(",") +
+    val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" } +
             if (metadataColumns.isNotEmpty()) {
                 if (linking) {
                     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
@@ -492,12 +493,12 @@ internal fun buildLinkingEntitiesClause(linkingIds: Set<UUID>): String {
 private fun getJoinColumns(linking: Boolean, omitEntitySetId: Boolean): List<String> {
     return if (linking) {
         if (omitEntitySetId) {
-            listOf("${IDS.name}.${LINKING_ID.name}")
+            listOf(LINKING_ID.name)
         } else {
-            listOf("${IDS.name}.${ENTITY_SET_ID.name}", "${IDS.name}.${LINKING_ID.name}")
+            listOf(ENTITY_SET_ID.name, LINKING_ID.name)
         }
     } else {
-        listOf("${IDS.name}.${ENTITY_SET_ID.name}", "${IDS.name}.${ID_VALUE.name}")
+        listOf(ENTITY_SET_ID.name, ID_VALUE.name)
     }
 }
 
