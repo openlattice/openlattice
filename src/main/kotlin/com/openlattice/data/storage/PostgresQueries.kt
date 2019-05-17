@@ -76,7 +76,6 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
 //    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
-            queryId,
             metadataOptions,
             linking,
             omitEntitySetId,
@@ -388,16 +387,14 @@ internal fun selectLinkingIdsFilteredByVersionSubquerySql(
  * ids table.
  */
 internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
-        queryId: UUID,
-        entitiesClause: String,
         metadataOptions: Set<MetadataOption>,
         linking: Boolean,
         omitEntitySetId: Boolean,
         joinColumns: List<String>
 ): String {
     val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
-
-    val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" } +
+    val joinColumnsSql = joinColumns.joinToString(",")
+    val selectColumns = joinColumnsSql +
             if (metadataColumns.isNotEmpty()) {
                 if (linking) {
                     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
@@ -423,8 +420,8 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
     } else {
         ""
     }
-    val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
-    return "( SELECT $selectColumns FROM filtered_entity_key_ids INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
+
+    return "( SELECT $selectColumns FROM $FILTERED_ENTITY_KEY_IDS INNER JOIN ${IDS.name} USING($joinColumnsSql) $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
 internal fun buildEntitiesJoinCondition(joinTableName: String, linking: Boolean): String {
