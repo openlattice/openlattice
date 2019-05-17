@@ -455,7 +455,7 @@ internal fun buildPropertyTypeEntitiesClause(
      */
     val authorizedEntitySetIds = entityKeyIds.asSequence().filter {
         authorizedPropertyTypes[it.key]?.contains(propertyTypeId) ?: false
-    }.joinToString(",") { it.key.toString() }
+    }.joinToString(",") { "'$it.key'" }
 
     return "AND ${ENTITY_SET_ID.name} IN ($authorizedEntitySetIds)"
 }
