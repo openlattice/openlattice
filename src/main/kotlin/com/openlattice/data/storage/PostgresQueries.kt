@@ -36,6 +36,7 @@ private val logger = LoggerFactory.getLogger(PostgresQueries::class.java)
 const val ENTITIES_TABLE_ALIAS = "entity_key_ids"
 const val LEFT_JOIN = "LEFT JOIN"
 const val INNER_JOIN = "INNER JOIN"
+const val FILTERED_ENTITY_KEY_IDS = "filtered_entity_key_ids"
 val entityKeyIdColumnsList = listOf(ENTITY_SET_ID.name, ID_VALUE.name)
 val linkingEntityKeyIdColumnsList = listOf(ENTITY_SET_ID.name, LINKING_ID.name)
 val entityKeyIdColumns = entityKeyIdColumnsList.joinToString(",")
@@ -120,33 +121,10 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
 }
 
 internal fun buildWithClause(queryId: UUID, metadataOptions: Set<MetadataOption>, linking: Boolean, omitEntitySetId: Boolean): String {
-    val joinColumns = getJoinColumns(linking, omitEntitySetId)
-    val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
-    val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" } +
-            if (metadataColumns.isNotEmpty()) {
-                if (linking) {
-                    if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
-                        ", max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}"
-                    } else {
-                        ""
-                    } + if (metadataOptions.contains(MetadataOption.ENTITY_SET_IDS)) {
-                        ", array_agg(entity_set_id) as entity_set_ids"
-                    } else {
-                        ""
-                    } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-                        ", array_agg(id) as entity_key_ids"
-                    } else {
-                        ""
-                    }
-                } else {
-                    ", $metadataColumns"
-                }
-            } else {
-                ""
-            }
+    val selectColumns = getJoinColumns(linking, omitEntitySetId).joinToString(",") { "${IDS.name}.$it AS $it" }
     val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
     val linkingClause = if( linking ) "AND ${LINKING_ID.name} IS NOT NULL" else ""
-    return "WITH filtered_entity_key_ids AS ( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause ) "
+    return "WITH $FILTERED_ENTITY_KEY_IDS AS ( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause ) "
 }
 
 
@@ -445,7 +423,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         ""
     }
     val entitiesJoinCondition = buildEntitiesJoinCondition(IDS.name, linking)
-    return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
+    return "( SELECT $selectColumns FROM filtered_entity_key_ids INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
 internal fun buildEntitiesJoinCondition(joinTableName: String, linking: Boolean): String {
