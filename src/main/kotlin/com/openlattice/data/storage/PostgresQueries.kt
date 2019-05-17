@@ -129,7 +129,7 @@ internal fun buildWithClause(queryId: UUID, entityKeyIds: Map<UUID, Optional<Set
     val completeEntitySets = entityKeyIds.asSequence().filter { it.value.isEmpty }.joinToString(",") { "'${it.key}'" }
 
     val queriesSql = "SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $linkingClause"
-    val completeEntitySetsSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} IN ($completeEntitySets"
+    val completeEntitySetsSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} IN ($completeEntitySets)"
 
     return "WITH $FILTERED_ENTITY_KEY_IDS AS ( $queriesSql UNION $completeEntitySetsSql ) "
 }
