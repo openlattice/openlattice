@@ -80,7 +80,6 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
             queryId,
-            entityKeyIds,
             entitiesClause,
             metadataOptions,
             linking,
