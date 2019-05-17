@@ -428,8 +428,16 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
     } else {
         ""
     }
+    val entitiesJoinCondition = buildEntitiesJoinCondition(linking)
+    return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} ON $entitiesJoinCondition WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
+}
 
-    return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} USING(${ENTITY_SET_ID.name}, ${ID.name}) WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
+internal fun buildEntitiesJoinCondition(linking: Boolean): String {
+    return if (linking) {
+        "(${IDS.name}.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND (${IDS.name}.${LINKING_ID.name} = ${QUERIES.name}.${ID.name} OR ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
+    } else {
+        "(${IDS.name}.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND (${IDS.name}.${ID.name} = ${QUERIES.name}.${ID.name} ${QUERIES.name}.${MATCH_ALL_IDS.name} = true ) )"
+    }
 }
 
 internal fun arrayAggSql(fqn: String): String {
@@ -525,10 +533,4 @@ private fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): S
         MetadataOption.ENTITY_SET_IDS -> "entity_set_ids"
         MetadataOption.ENTITY_KEY_IDS -> "entity_key_ids"
     }
-}
-
-internal enum class QueryType {
-    DATA_KEY,
-    ENTITY_SET,
-    LINKING
 }
