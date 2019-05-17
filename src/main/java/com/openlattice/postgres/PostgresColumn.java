@@ -178,6 +178,10 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( EXPIRATION_DATE_FIELD, TIMESTAMPTZ )
                     .withDefault( "'infinity'" )
                     .notNull();
+    public static final String                   EXPIRATION_FIELD                  = "expiration";
+    public static final PostgresColumnDefinition EXPIRATION                        = new PostgresColumnDefinition(
+            EXPIRATION_FIELD,
+            BIGINT );
     public static final String                   EXTERNAL_FIELD                    = "external";
     public static final PostgresColumnDefinition EXTERNAL                          =
             new PostgresColumnDefinition( EXTERNAL_FIELD, BOOLEAN );
@@ -195,7 +199,7 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( HASH_FIELD, BYTEA ).notNull();
     public static final String                   ID_FIELD                          = "id";
     public static final PostgresColumnDefinition ID                                =
-            new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey();
+            new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
@@ -309,7 +313,8 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition QUERY                             =
             new PostgresColumnDefinition( "query", TEXT ).notNull();
     public static final PostgresColumnDefinition QUERY_ID                          =
-            new PostgresColumnDefinition( "query_id", UUID );
+            new PostgresColumnDefinition( "query_id", UUID )
+                    .notNull();
     public static final String                   REASON_FIELD                      = "reason";
     public static final PostgresColumnDefinition REASON                            =
             new PostgresColumnDefinition( REASON_FIELD, TEXT );

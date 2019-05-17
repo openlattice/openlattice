@@ -30,8 +30,7 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.*
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
-import com.openlattice.postgres.PostgresTable.ENTITY_SETS
-import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.*
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
@@ -86,7 +85,8 @@ class PostgresEntityDataQueryService(
         return getLinkedEntityDataWithMetadata(
                 linkingIdsByEntitySetId,
                 authorizedPropertyTypesByEntitySetId,
-                EnumSet.noneOf(MetadataOption::class.java))
+                EnumSet.noneOf(MetadataOption::class.java)
+        )
     }
 
     fun getLinkedEntityDataWithMetadata(
@@ -103,7 +103,8 @@ class PostgresEntityDataQueryService(
                         )
                     } else {
                         ResultSetAdapters.implicitEntityValuesByIdWithLastWrite(
-                                it, authorizedPropertyTypesByEntitySetId.values.firstOrNull() ?: mapOf(), byteBlobDataManager
+                                it, authorizedPropertyTypesByEntitySetId.values.firstOrNull() ?: mapOf(),
+                                byteBlobDataManager
                         )
                     }
         }
@@ -236,12 +237,22 @@ class PostgresEntityDataQueryService(
             linking: Boolean = false,
             omitEntitySetId: Boolean = false
     ): PostgresIterable<T> {
-
+        val queryId = UUID.randomUUID()
         return PostgresIterable(
                 Supplier<StatementHolder> {
                     val connection = hds.connection
                     connection.autoCommit = false
+
+                    val registerEntityKeyIds = connection.prepareStatement(REGISTER_QUERY_SQL)
+
+                    entityKeyIds.forEach { entitySetId, entityKeyId ->
+                        registerEntityKeyIds.setObject(1, entitySetId)
+                        registerEntityKeyIds.setObject(2, entityKeyId)
+                        registerEntityKeyIds.setObject(3, UUID.randomUUID())
+                    }
+
                     val statement = connection.createStatement()
+
                     statement.fetchSize = FETCH_SIZE
 
                     val allPropertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.toSet()
@@ -286,6 +297,10 @@ class PostgresEntityDataQueryService(
                 },
                 adapter
         )
+    }
+
+    fun createQueryTable(entityKeyIds: Map<UUID, Optional<Set<UUID>>>) {
+
     }
 
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
@@ -396,9 +411,9 @@ class PostgresEntityDataQueryService(
 
         //Update the versions of all entities.
         val updatedEntityCount = hds.connection.use { connection ->
-//            connection.autoCommit = false
+            //            connection.autoCommit = false
             return@use connection.createStatement().use { updateEntities ->
-//                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
+                //                updateEntities.execute(lockEntities(entitySetId, citusIdsClause, version))
                 val updateCount = updateEntities.executeUpdate(upsertEntities(entitySetId, idsClause, version))
 //                connection.commit()
 //                connection.autoCommit = true
@@ -437,8 +452,8 @@ class PostgresEntityDataQueryService(
                     rawValue
                 } else {
                     asMap(JsonDeserializer
-                            .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                            { "Entity set $entitySetId with entity key id $entityKeyId" })
+                                  .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
+                                  { "Entity set $entitySetId with entity key id $entityKeyId" })
                 }
 
                 entityData.map { (propertyTypeId, values) ->
@@ -1113,3 +1128,5 @@ internal fun getLinkingEntitySetIdsOfEntitySetIdQuery(entitySetId: UUID): String
 internal fun getEntityKeyIdsOfEntitySetQuery(): String {
     return "SELECT ${ID.name} FROM ${IDS.name} WHERE ${ENTITY_SET_ID.name} = ? "
 }
+
+val REGISTER_QUERY_SQL = "INSERT INTO ${QUERIES.name} VALUES(?,?,?,?)"
