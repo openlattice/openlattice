@@ -27,6 +27,7 @@ import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresColumnDefinition
 import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.PostgresTable.QUERIES
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
@@ -63,6 +64,7 @@ internal class PostgresQueries
  *
  */
 fun selectEntitySetWithCurrentVersionOfPropertyTypes(
+        queryId: UUID,
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
         propertyTypes: Map<UUID, String>,
         returnedPropertyTypes: Collection<UUID>,
@@ -77,6 +79,8 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
     val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
+            queryId,
+            entityKeyIds,
             entitiesClause,
             metadataOptions,
             linking,
@@ -386,6 +390,7 @@ internal fun selectLinkingIdsFilteredByVersionSubquerySql(
  * ids table.
  */
 internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
+        queryId: UUID,
         entitiesClause: String,
         metadataOptions: Set<MetadataOption>,
         linking: Boolean,
@@ -425,7 +430,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         ""
     }
 
-    return "(SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
+    return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN ${QUERIES.name} USING(${ENTITY_SET_ID.name}, ${ID.name}) WHERE ${VERSION.name} > 0 AND ${QUERY_ID.name} = '$queryId' $entitiesClause $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
 internal fun arrayAggSql(fqn: String): String {
@@ -438,13 +443,13 @@ internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, l
     val filterLinkingIds = if (linking) " AND ${LINKING_ID.name} IS NOT NULL " else ""
 
     val idsColumn = if (linking) LINKING_ID.name else ID_VALUE.name
-    return "$filterLinkingIds AND (" + entityKeyIds.entries.joinToString(" OR ") {
+    return "$filterLinkingIds " /*AND (" + entityKeyIds.entries.joinToString(" OR ") {
         val idsClause = it.value
                 .filter { ids -> ids.isNotEmpty() }
                 .map { ids -> " AND $idsColumn IN (" + ids.joinToString(",") { id -> "'$id'" } + ")" }
                 .orElse("")
         " (${ENTITY_SET_ID.name} = '${it.key}' $idsClause)"
-    } + ")"
+    } + ")"*/
 }
 
 internal fun buildPropertyTypeEntitiesClause(
