@@ -84,9 +84,8 @@ class AdminController : AdminApi, AuthorizingComponent {
         )
         val entityType = edm.getEntityType(entityTypeId)
         val propertyTypes = edm.getPropertyTypesAsMap(entityType.properties)
-        //TODO: Get rid of query id.
+
         return selectEntitySetWithCurrentVersionOfPropertyTypes(
-                UUID(0,0),
                 entityKeyIds,
                 propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
                 entityType.properties,
