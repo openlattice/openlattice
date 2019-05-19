@@ -37,7 +37,6 @@ import com.openlattice.authorization.SecurablePrincipal
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.controllers.exceptions.ResourceNotFoundException
 import com.openlattice.data.storage.MetadataOption
-import com.openlattice.data.storage.REGISTER_QUERY_SQL
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.util.Util
 import com.openlattice.edm.EntitySet
@@ -67,7 +66,6 @@ import java.util.*
 
 const val SCHEMA = "openlattice"
 
-private val DUMMY_ID = UUID(0, 0)
 private val logger = LoggerFactory.getLogger(Assembler::class.java)
 
 /**
@@ -342,20 +340,6 @@ class Assembler(
         }
     }
 
-    private fun insertEntitySetQuery(entitySetId: UUID) {
-        hds.connection.use { connection ->
-            connection.prepareStatement("$REGISTER_QUERY_SQL ON CONFLICT DO NOTHING").use { ps ->
-                ps.setObject(1, entitySetId)
-                ps.setObject(2, DUMMY_ID)
-                ps.setObject(3, DUMMY_ID)
-                ps.setObject(4, Long.MAX_VALUE) //Infinite expiration
-                ps.setObject(5, true)
-                ps.executeUpdate()
-            }
-
-        }
-    }
-
     private fun createOrUpdateProductionViewOfEntitySet(entitySetId: UUID) {
         logger.info("Create or update view of $entitySetId in ${AssemblerConnectionManager.PRODUCTION_VIEWS_SCHEMA}")
         val entitySet = entitySets.getValue(entitySetId)
@@ -365,10 +349,8 @@ class Assembler(
         val propertyFqns = authorizedPropertyTypes.mapValues {
             DataTables.quote(it.value.type.fullQualifiedNameAsString)
         }
-        insertEntitySetQuery(entitySetId)
 
         val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                DUMMY_ID,
                 entitySetIds.associate { it to Optional.empty<Set<UUID>>() },
                 propertyFqns,
                 authorizedPropertyTypes.values.map(PropertyType::getId),

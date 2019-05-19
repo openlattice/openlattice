@@ -711,7 +711,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         return neighbors
     }
 
-    //TODO: Fix this-- shouldn't have random query id
     private fun buildAssociationTable(
             index: Int,
             selfEntitySetIds: Set<UUID>,
@@ -725,7 +724,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val associationPropertyTypes = authorizedFilteredRanking.associationPropertyTypes
         //This will read all the entity sets of the same type all at once applying filters.
         val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                UUID.randomUUID(),
                 esEntityKeyIds,
                 associationPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
                 authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations.keys,
@@ -788,7 +786,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val entitySetPropertyTypes = authorizedFilteredRanking.entitySetPropertyTypes
         //This will read all the entity sets of the same type all at once applying filters.
         val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                UUID.randomUUID(), //TODO: Remove this shouldn't have random query id
                 esEntityKeyIds,
                 entitySetPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
                 authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations.keys,
