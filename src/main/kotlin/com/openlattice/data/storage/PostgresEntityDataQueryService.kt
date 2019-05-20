@@ -735,7 +735,7 @@ class PostgresEntityDataQueryService(
                         }
                         ps.executeBatch().sum()
                     }
-                    .sum();
+                    .sum()
 
             return WriteEvent(tombstoneVersion, numUpdated)
         }
@@ -973,7 +973,7 @@ fun selectEntitySetWithPropertyTypes(
         metadataOptions: Set<MetadataOption>,
         binaryPropertyTypes: Map<UUID, Boolean>
 ): String {
-    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
+    val esTableName = quote(entityTableName(entitySetId))
 
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
@@ -991,31 +991,6 @@ fun selectEntitySetWithPropertyTypes(
     //@formatter:on
 }
 
-fun selectEntitySetWithPropertyTypesAndVersion(
-        entitySetId: UUID,
-        entityKeyIds: Optional<Set<UUID>>,
-        authorizedPropertyTypes: Map<UUID, String>,
-        metadataOptions: Set<MetadataOption>,
-        version: Long,
-        binaryPropertyTypes: Map<UUID, Boolean>
-): String {
-    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
-    val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
-    //@formatter:off
-    val columns = setOf(ID_VALUE.name) +
-            metadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
-            authorizedPropertyTypes.values.map(::quote)
-
-    return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM ( SELECT * " +
-            "FROM $esTableName " +
-            "WHERE version > 0 $entityKeyIdsClause" +
-            ") as $esTableName" +
-            authorizedPropertyTypes
-                    .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version, binaryPropertyTypes[it.key]!!)} USING (${ID.name} )" }
-                    .joinToString("\n")
-    //@formatter:on
-}
-
 internal fun selectVersionOfPropertyTypeInEntitySet(
         entitySetId: UUID,
         entityKeyIdsClause: String,
@@ -1025,7 +1000,7 @@ internal fun selectVersionOfPropertyTypeInEntitySet(
         binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    val arrayAgg = " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
+    val arrayAgg = " array_agg(${quote(fqn)}) as ${quote(fqn)} "
 
 
     return "(SELECT ${ENTITY_SET_ID.name}, " +
@@ -1047,7 +1022,7 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
         binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    val arrayAgg = " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
+    val arrayAgg = " array_agg(${quote(fqn)}) as ${quote(fqn)} "
 
     return "(SELECT ${ENTITY_SET_ID.name}," +
             " ${ID_VALUE.name}," +
