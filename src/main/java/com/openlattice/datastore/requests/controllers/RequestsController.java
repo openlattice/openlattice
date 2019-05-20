@@ -20,6 +20,7 @@
 
 package com.openlattice.datastore.requests.controllers;
 
+import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Predicates;
 import com.openlattice.authorization.AceKey;
 import com.openlattice.authorization.AclKey;
@@ -66,6 +67,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
         return authorizations;
     }
 
+    @Timed
     @Override
     @GetMapping(
             path = { "", "/" } )
@@ -73,6 +75,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
         return hrm.getStatuses( Principals.getCurrentUser() )::iterator;
     }
 
+    @Timed
     @Override
     @GetMapping(
             path = REQUEST_STATUS_PATH )
@@ -80,6 +83,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
         return hrm.getStatuses( Principals.getCurrentUser(), requestStatus )::iterator;
     }
 
+    @Timed
     @Override
     @PutMapping(
             path = { "", "/" } )
@@ -89,6 +93,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
         return null;
     }
 
+    @Timed
     @Override
     @PostMapping(
             path = { "", "/" },
@@ -98,6 +103,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
         return aclKeys.stream().flatMap( this::getStatuses )::iterator;
     }
 
+    @Timed
     @Override
     @PostMapping(
             path = REQUEST_STATUS_PATH,
@@ -109,6 +115,7 @@ public class RequestsController implements RequestsApi, AuthorizingComponent {
         return aclKeys.stream().flatMap( getStatusesInStatus( requestStatus ) )::iterator;
     }
 
+    @Timed
     @Override
     @PatchMapping(
             path = { "", "/" },

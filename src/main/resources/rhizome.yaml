@@ -6,28 +6,19 @@
 enable-persistence:  false
 session-clustering-enabled: false
 
-cassandra:
-    embedded: false
-    random-ports: false
-    ssl-enabled: false
-    keyspace: "sparks"
-    replication-factor: 1
-    seed-nodes:
-        - "localhost"
-
 hazelcast:
     server: false
     group: "local"
     password: "trellis"
+    cp-member-count: 0
     seed-nodes: 
         - "localhost"
 
-hikari:
-    jdbcUrl: "jdbc:postgresql://localhost:5432/openlattice"
-    username: "oltest"
-    password: "test"
-    maximumPoolSize: 10
-
-#graphite:
-#    host: "jarvis"
-#    global-prefix: "datastore"
+postgres:
+    initialize-indices: false
+    hikari:
+        jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
+        username: "oltest"
+        password: "test"
+        maximumPoolSize: 10
+        connectionTimeout: 12000000 #20 minutes

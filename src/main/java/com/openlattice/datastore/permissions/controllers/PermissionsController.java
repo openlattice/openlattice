@@ -117,7 +117,8 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
                     throw new BadRequestException( "Invalid action specified: " + req.getAction() );
             }
         } else {
-            throw new ForbiddenException( "Only owner of a securable object can access other users' access rights." );
+            throw new ForbiddenException( "Only owner of securable object " + aclKeys +
+                    " can access other users' access rights." );
         }
         return null;
     }
@@ -133,7 +134,8 @@ public class PermissionsController implements PermissionsApi, AuthorizingCompone
         if ( isAuthorized( Permission.OWNER ).test( aclKeys ) ) {
             return authorizations.getAllSecurableObjectPermissions( aclKeys );
         } else {
-            throw new ForbiddenException( "Only owner of a securable object can access other users' access rights." );
+            throw new ForbiddenException( "Only owner of securable object " + aclKeys +
+                    " can access other users' access rights." );
         }
     }
 
