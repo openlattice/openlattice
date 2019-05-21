@@ -52,7 +52,6 @@ import java.util.function.Supplier
 const val MAX_PREV_VERSION = "max_prev_version"
 const val EXPANDED_VERSIONS = "expanded_versions"
 const val FETCH_SIZE = 100000
-private val DUMMY_ID_SET = setOf(UUID(0, 0))
 
 private val logger = LoggerFactory.getLogger(PostgresEntityDataQueryService::class.java)
 
@@ -241,25 +240,7 @@ class PostgresEntityDataQueryService(
     ): PostgresIterable<T> {
         return PostgresIterable(
                 Supplier<StatementHolder> {
-                    val queryId = UUID.randomUUID()
-//                    val expiration = System.currentTimeMillis() + 60 * 60 * 1000
                     val connection = hds.connection
-
-//
-//                    val registerEntityKeyIds = connection.prepareStatement(REGISTER_QUERY_SQL)
-//
-//                    entityKeyIds.forEach { entitySetId, entityKeyIds ->
-//                        val idsIsEmpty = entityKeyIds.isEmpty
-//                        entityKeyIds.orElse(DUMMY_ID_SET).forEach { entityKeyId ->
-//                            registerEntityKeyIds.setObject(1, entitySetId)
-//                            registerEntityKeyIds.setObject(2, entityKeyId)
-//                            registerEntityKeyIds.setObject(3, queryId)
-//                            registerEntityKeyIds.setLong(4, expiration)
-//                            registerEntityKeyIds.setObject(5, idsIsEmpty)
-//                            registerEntityKeyIds.addBatch()
-//                        }
-//                    }
-//                    registerEntityKeyIds.executeBatch()
 
                     connection.autoCommit = false
                     val statement = connection.createStatement()
@@ -292,7 +273,6 @@ class PostgresEntityDataQueryService(
                                 )
                             } else {
                                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-                                        queryId,
                                         entityKeyIds,
                                         propertyFqns,
                                         allPropertyTypes.map { it.id },
@@ -306,18 +286,10 @@ class PostgresEntityDataQueryService(
                             }
                     )
 
-//                    val cleanupStatement = connection.prepareStatement(CHECK_OFF_QUERY_SQL)
-//                    cleanupStatement.setObject(1, queryId)
-//                    cleanupStatement.executeUpdate()
-
                     StatementHolder(connection, statement, rs)
                 },
                 adapter
         )
-    }
-
-    fun createQueryTable(entityKeyIds: Map<UUID, Optional<Set<UUID>>>) {
-
     }
 
     fun getEntityKeyIdsInEntitySet(entitySetId: UUID): PostgresIterable<UUID> {
@@ -531,7 +503,10 @@ class PostgresEntityDataQueryService(
             }
         }.sum()
 
-        checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
+        if( updatedEntityCount != entities.size ) {
+            logger.warn("Update $updatedEntityCount entities. Expect to update ${entities.size}.")
+            logger.warn("Entity key ids: {}", entities.keys)
+        }
 
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
@@ -763,7 +738,7 @@ class PostgresEntityDataQueryService(
                         }
                         ps.executeBatch().sum()
                     }
-                    .sum();
+                    .sum()
 
             return WriteEvent(tombstoneVersion, numUpdated)
         }
@@ -1001,7 +976,7 @@ fun selectEntitySetWithPropertyTypes(
         metadataOptions: Set<MetadataOption>,
         binaryPropertyTypes: Map<UUID, Boolean>
 ): String {
-    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
+    val esTableName = quote(entityTableName(entitySetId))
 
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
@@ -1019,31 +994,6 @@ fun selectEntitySetWithPropertyTypes(
     //@formatter:on
 }
 
-fun selectEntitySetWithPropertyTypesAndVersion(
-        entitySetId: UUID,
-        entityKeyIds: Optional<Set<UUID>>,
-        authorizedPropertyTypes: Map<UUID, String>,
-        metadataOptions: Set<MetadataOption>,
-        version: Long,
-        binaryPropertyTypes: Map<UUID, Boolean>
-): String {
-    val esTableName = DataTables.quote(DataTables.entityTableName(entitySetId))
-    val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
-    //@formatter:off
-    val columns = setOf(ID_VALUE.name) +
-            metadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
-            authorizedPropertyTypes.values.map(::quote)
-
-    return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM ( SELECT * " +
-            "FROM $esTableName " +
-            "WHERE version > 0 $entityKeyIdsClause" +
-            ") as $esTableName" +
-            authorizedPropertyTypes
-                    .map { "LEFT JOIN ${selectVersionOfPropertyTypeInEntitySet(entitySetId, entityKeyIdsClause, it.key, it.value, version, binaryPropertyTypes[it.key]!!)} USING (${ID.name} )" }
-                    .joinToString("\n")
-    //@formatter:on
-}
-
 internal fun selectVersionOfPropertyTypeInEntitySet(
         entitySetId: UUID,
         entityKeyIdsClause: String,
@@ -1053,7 +1003,7 @@ internal fun selectVersionOfPropertyTypeInEntitySet(
         binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    val arrayAgg = " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
+    val arrayAgg = " array_agg(${quote(fqn)}) as ${quote(fqn)} "
 
 
     return "(SELECT ${ENTITY_SET_ID.name}, " +
@@ -1075,7 +1025,7 @@ internal fun subSelectLatestVersionOfPropertyTypeInEntitySet(
         binary: Boolean
 ): String {
     val propertyTable = quote(propertyTableName(propertyTypeId))
-    val arrayAgg = " array_agg(${DataTables.quote(fqn)}) as ${DataTables.quote(fqn)} "
+    val arrayAgg = " array_agg(${quote(fqn)}) as ${quote(fqn)} "
 
     return "(SELECT ${ENTITY_SET_ID.name}," +
             " ${ID_VALUE.name}," +

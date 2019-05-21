@@ -549,13 +549,13 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                     authorizedFilteredRanking.associationPropertyTypes,
                     authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations,
                     ASSOC
-            ).map { it.value to authorizedFilteredRanking.associationPropertyTypes[it.key]!!.datatype } +
+            ).map { it.value to authorizedFilteredRanking.associationPropertyTypes.getValue(it.key).datatype } +
                     buildAggregationColumnMap(
                             index,
                             authorizedFilteredRanking.entitySetPropertyTypes,
                             authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations,
                             ENTITY
-                    ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes[it.key]!!.datatype } +
+                    ).map { it.value to authorizedFilteredRanking.entitySetPropertyTypes.getValue(it.key).datatype } +
                     (associationCountColumnName(index) to EdmPrimitiveTypeKind.Int64) +
                     (entityCountColumnName(index) to EdmPrimitiveTypeKind.Int64)
         }.flatten().plus(idColumns).plus(SCORE.name to EdmPrimitiveTypeKind.Double).toMap()
@@ -649,12 +649,14 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
     }
 
 
+    @Deprecated("Edges table queries need update")
     override fun computeGraphAggregation(
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Array<IncrementableWeightId> {
         return topEntitiesOld(limit, entitySetId, srcFilters, dstFilters).toList().toTypedArray()
     }
 
+    @Deprecated("Edges table queries need update")
     override fun topEntitiesOld(
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Stream<IncrementableWeightId> {
@@ -665,6 +667,7 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         }
     }
 
+    @Deprecated("Edges table queries need update")
     private fun topEntitiesWorker(
             limit: Int, entitySetId: UUID, srcFilters: SetMultimap<UUID, UUID>, dstFilters: SetMultimap<UUID, UUID>
     ): Stream<Pair<EntityDataKey, Long>> {
@@ -711,7 +714,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         return neighbors
     }
 
-    //TODO: Fix this-- shouldn't have random query id
     private fun buildAssociationTable(
             index: Int,
             selfEntitySetIds: Set<UUID>,
@@ -725,7 +727,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val associationPropertyTypes = authorizedFilteredRanking.associationPropertyTypes
         //This will read all the entity sets of the same type all at once applying filters.
         val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                UUID.randomUUID(),
                 esEntityKeyIds,
                 associationPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
                 authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations.keys,
@@ -737,29 +738,15 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 false
         )
 
-        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
-            "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
-        } else {
-            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
-        }
-
-        val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking)
         val joinColumns = entityKeyIdColumns
         val groupingColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
-        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
-        val spineSql = if (linked) {
-            "SELECT edges.*,${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
-                    "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
-        } else {
-            "SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause"
-        }
+
+        val spineSql = buildSpineSql(selfEntitySetIds, authorizedFilteredRanking, linked, true)
 
         val aggregationColumns =
                 authorizedFilteredRanking.filteredNeighborsRanking.associationAggregations
                         .mapValues {
-                            val fqn = quote(associationPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
+                            val fqn = quote(associationPropertyTypes.getValue(it.key).type.fullQualifiedNameAsString)
                             val alias = aggregationAssociationColumnName(index, it.key)
                             "${it.value.type.name}(COALESCE($fqn[1],0)) as $alias"
                         }.values.joinToString(",")
@@ -788,7 +775,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         val entitySetPropertyTypes = authorizedFilteredRanking.entitySetPropertyTypes
         //This will read all the entity sets of the same type all at once applying filters.
         val dataSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                UUID.randomUUID(), //TODO: Remove this shouldn't have random query id
                 esEntityKeyIds,
                 entitySetPropertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) },
                 authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations.keys,
@@ -800,29 +786,16 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
                 omitEntitySetId = false
         )
 
-        val baseEntityColumnsSql = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
-            "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${SRC_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
-        } else {
-            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${DST_ENTITY_KEY_ID.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}"
-        }
 
-        val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking)
         val joinColumns = entityKeyIdColumns
         val groupingColumns = if (linked) LINKING_ID.name else "$SELF_ENTITY_SET_ID, $SELF_ENTITY_KEY_ID"
-        val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
-        val spineSql = if (linked) {
-            "SELECT edges.*,${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
-                    "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
-        } else {
-            "SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause"
-        }
+
+        val spineSql = buildSpineSql(selfEntitySetIds, authorizedFilteredRanking, linked, false)
 
         val aggregationColumns =
                 authorizedFilteredRanking.filteredNeighborsRanking.neighborTypeAggregations
                         .mapValues {
-                            val fqn = quote(entitySetPropertyTypes[it.key]!!.type.fullQualifiedNameAsString)
+                            val fqn = quote(entitySetPropertyTypes.getValue(it.key).type.fullQualifiedNameAsString)
                             val alias = aggregationEntityColumnName(index, it.key)
                             "${it.value.type.name}(COALESCE($fqn[1],0)) as $alias"
                         }.values.joinToString(",")
@@ -879,6 +852,7 @@ private val SET_ID_COLUMNS = setOf(
  *
  * That is for each
  */
+@Deprecated("Edges table queries need update")
 internal fun getTopUtilizersSql(
         entitySetId: UUID,
         srcFilters: SetMultimap<UUID, UUID>,
@@ -896,17 +870,19 @@ internal fun getTopUtilizersSql(
 
 }
 
+@Deprecated("Edges table queries need update")
 internal fun getTopUtilizersFromSrc(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "src_count"
     return "SELECT ${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
-            "FROM EDGES WHERE ${srcClauses(entitySetId, filters)} " +
+            "FROM ${EDGES.name} WHERE ${srcClauses(entitySetId, filters)} " +
             "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
+@Deprecated("Edges table queries need update")
 internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "dst_count"
     return "SELECT ${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
-            "FROM EDGES WHERE ${dstClauses(entitySetId, filters)} " +
+            "FROM ${EDGES.name} WHERE ${dstClauses(entitySetId, filters)} " +
             "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
@@ -939,7 +915,7 @@ private val DELETE_BY_VERTICES_SQL = "$DELETE_SQL $VERTICES_FILTER_SQL"
 private val CLEAR_BY_VERTICES_SQL = "$CLEAR_SQL $VERTICES_FILTER_SQL"
 private val LOCK_BY_VERTICES_SQL = "$LOCK_SQL1 $VERTICES_FILTER_SQL $LOCK_SQL2"
 
-private val ASSOCIATIONS_FILTER_SQL = "${EDGE_ENTITY_SET_ID.name} = ? AND ${ID_VALUE.name} = ANY(?) AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal} "
+private val ASSOCIATIONS_FILTER_SQL = "${ID_VALUE.name} = ANY(?) AND ${EDGE_ENTITY_SET_ID.name} = ? AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal} "
 
 private val CLEAR_BY_ASSOCIATIONS_SQL = "$CLEAR_SQL $ASSOCIATIONS_FILTER_SQL"
 private val DELETE_BY_ASSOCIATIONS_SQL = "$DELETE_SQL $ASSOCIATIONS_FILTER_SQL"
@@ -1029,7 +1005,9 @@ private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, 
 
 private fun buildEdgeFilteringClause(
         selfEntitySetIds: Set<UUID>,
-        authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking
+        authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking,
+        association: Boolean,
+        isDst: Boolean
 ): String {
     val authorizedAssociationEntitySets = authorizedFilteredRanking.associationSets.keys
     val authorizedEntitySets = authorizedFilteredRanking.entitySets.keys
@@ -1037,13 +1015,13 @@ private fun buildEdgeFilteringClause(
     val associationsClause =
             "${EDGE_ENTITY_SET_ID.name} IN (${authorizedAssociationEntitySets.joinToString(",") { "'$it'" }})"
 
-    val entitySetColumn = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
+    val entitySetColumn = if (isDst) {
         DST_ENTITY_SET_ID.name
     } else {
         SRC_ENTITY_SET_ID.name
     }
 
-    val selfEntitySetColumn = if (authorizedFilteredRanking.filteredNeighborsRanking.dst) {
+    val selfEntitySetColumn = if (isDst) {
         SRC_ENTITY_SET_ID.name
     } else {
         DST_ENTITY_SET_ID.name
@@ -1053,7 +1031,59 @@ private fun buildEdgeFilteringClause(
             "$entitySetColumn IN (${authorizedEntitySets.joinToString(",") { "'$it'" }}) " +
                     "AND $selfEntitySetColumn IN (${selfEntitySetIds.joinToString(",") { "'$it'" }})"
 
-    return "($associationsClause AND $entitySetsClause)"
+    val componentTypeClause = if(association) {
+        "${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
+    } else {
+        if(isDst) {
+            "${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
+        } else {
+            "${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
+        }
+    }
+
+    return "($associationsClause AND $entitySetsClause AND $componentTypeClause)"
+}
+
+private fun buildSpineSql(
+        selfEntitySetIds: Set<UUID>,
+        authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking,
+        linked: Boolean,
+        association: Boolean
+): String {
+    val isDst = authorizedFilteredRanking.filteredNeighborsRanking.dst
+
+
+    val baseEntityColumnsSql = if (association) {
+        // Order on which we select is {edge, src, dst}, EDGE ComponentType
+        if (isDst) { // select src and edge
+            "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_1.name} as $SELF_ENTITY_KEY_ID, " +
+                    "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+        } else { // select dst and edge
+            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_2.name} as $SELF_ENTITY_KEY_ID, " +
+                    "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+        }
+    } else {
+        // Order on which we select is {src, dst, edge}, DST ComponentType
+        if (isDst) { // select src and dst
+            "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_2.name} as $SELF_ENTITY_KEY_ID, " +
+                    "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+        } else { // Order on which we select is {src, dst, edge}, SRC ComponentType
+            // select dst and src
+            "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_1.name} as $SELF_ENTITY_KEY_ID, " +
+                    "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+        }
+    }
+
+    val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking, association, isDst)
+    val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
+    val spineSql = if (linked) {
+        "SELECT edges.*, ${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
+                "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"
+    } else {
+        "SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause"
+    }
+
+    return spineSql
 }
 
 /**

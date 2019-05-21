@@ -24,7 +24,6 @@ package com.openlattice.data
 import com.openlattice.analysis.requests.DateRangeFilter
 import com.openlattice.data.storage.*
 import com.openlattice.postgres.DataTables
-import com.openlattice.postgres.PostgresColumn
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -117,7 +116,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
                 Pair(UUID.fromString("f950d05a-f4f2-451b-8c6d-56e78bba8b42"), "nc.PersonRace"),
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), "housing.updatedat"),
                 Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity")
-        );
+        )
         val entityKeyIds = sequenceOf(
                 "73170000-0000-0000-8000-0000000004a9",
                 "4d9b0000-0000-0000-8000-00000000005d"
@@ -221,7 +220,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
 
     @Test
     fun testEmptySelectEntitySets() {
-        logger.info(selectEntitySetWithCurrentVersionOfPropertyTypes(UUID.randomUUID(), mapOf(), mapOf(), listOf(), mapOf(), mapOf(), setOf(), mapOf(), false, false))
+        logger.info(selectEntitySetWithCurrentVersionOfPropertyTypes(mapOf(), mapOf(), listOf(), mapOf(), mapOf(), setOf(), mapOf(), false, false))
     }
 
 
@@ -262,7 +261,6 @@ class PostgresLinkedEntityDataQueryServiceTest {
         logger.info(
                 "Entity set query:\n {}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-                        UUID.randomUUID(),
                         mapOf(entitySetId to Optional.empty()),
                         propertyTypeMap,
                         propertyTypeMap.keys,
@@ -307,7 +305,6 @@ class PostgresLinkedEntityDataQueryServiceTest {
         )
 
         val query = selectEntitySetWithCurrentVersionOfPropertyTypes(
-                UUID.randomUUID(),
                 mapOf(entitySetId to Optional.empty()),
                 propertyTypeMap,
                 propertyTypeMap.keys,
@@ -364,7 +361,7 @@ class PostgresLinkedEntityDataQueryServiceTest {
         val propertyTypeMap = mapOf(
                 Pair(UUID.fromString("7b038634-a0b4-4ce1-a04f-85d1775937aa"), DataTables.quote("nc.PersonSurName")),
                 Pair(UUID.fromString("e9a0b4dc-5298-47c1-8837-20af172379a5"), DataTables.quote("nc.PersonGivenName"))
-        );
+        )
         val entityKeyIds = sequenceOf(
                 "73170000-0000-0000-8000-0000000004a9",
                 "4d9b0000-0000-0000-8000-00000000005d"
@@ -374,7 +371,6 @@ class PostgresLinkedEntityDataQueryServiceTest {
         logger.info(
                 "Linking entity set query with entity set id: \n{}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-                        UUID.randomUUID(),
                         mapOf(entitySetId to Optional.of(entityKeyIds)),
                         propertyTypeMap,
                         propertyTypeMap.keys,
@@ -390,7 +386,6 @@ class PostgresLinkedEntityDataQueryServiceTest {
         logger.info(
                 "Linking entity set query without entity set id: \n{}",
                 selectEntitySetWithCurrentVersionOfPropertyTypes(
-                        UUID.randomUUID(),
                         mapOf(entitySetId to Optional.of(entityKeyIds)),
                         propertyTypeMap,
                         propertyTypeMap.keys,
@@ -449,9 +444,9 @@ class PostgresLinkedEntityDataQueryServiceTest {
 
     @Test
     fun testBuildWithClause() {
-        val queryId = UUID.randomUUID()
-        val metadataOptions = setOf(MetadataOption.LAST_WRITE)
-
-        logger.info("Build with clause: \n {}", buildWithClause(queryId, mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()), true))
+        val entitiesClause = buildEntitiesClause(
+                mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()),
+                true)
+        logger.info("Build with clause: \n {}", buildWithClause(true, entitiesClause))
     }
 }

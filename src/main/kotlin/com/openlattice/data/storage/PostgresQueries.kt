@@ -25,7 +25,6 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
-import com.openlattice.postgres.PostgresTable.QUERIES
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -60,7 +59,6 @@ internal class PostgresQueries
  *
  */
 fun selectEntitySetWithCurrentVersionOfPropertyTypes(
-        queryId: UUID,
         entityKeyIds: Map<UUID, Optional<Set<UUID>>>,
         propertyTypes: Map<UUID, String>,
         returnedPropertyTypes: Collection<UUID>,
@@ -72,9 +70,10 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         omitEntitySetId: Boolean,
         metadataFilters: String = ""
 ): String {
-    val withClause = buildWithClause(queryId, entityKeyIds, linking)
+    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
+    val withClause = buildWithClause(linking, entitiesClause)
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
-//    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
+
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
             metadataOptions,
             linking,
@@ -117,14 +116,13 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     return fullQuery
 }
 
-internal fun buildWithClause(queryId: UUID, entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
+internal fun buildWithClause(linking: Boolean, entitiesClause: String): String {
     val joinColumns = if (linking) {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name, LINKING_ID.name)
     } else {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name)
     }
     val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
-    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
 
     val queriesSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
 
@@ -422,19 +420,10 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
     return "( SELECT $selectColumns FROM $FILTERED_ENTITY_KEY_IDS INNER JOIN ${IDS.name} USING($joinColumnsSql) $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
-internal fun buildEntitiesJoinCondition(joinTableName: String, linking: Boolean): String {
-    return if (linking) {
-        "($joinTableName.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND ($joinTableName.${LINKING_ID.name} = ${QUERIES.name}.${ID.name} ) )"
-    } else {
-        "($joinTableName.${ENTITY_SET_ID.name} = ${QUERIES.name}.${ENTITY_SET_ID.name} AND ($joinTableName.${ID.name} = ${QUERIES.name}.${ID.name} ) )"
-    }
-}
-
 internal fun arrayAggSql(fqn: String): String {
     return " array_agg($fqn) as $fqn "
 }
 
-@Deprecated("No longer in use, update consumers on a case by case basis")
 internal fun buildEntitiesClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
     if (entityKeyIds.isEmpty()) return ""
 
@@ -524,6 +513,3 @@ private fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): S
         MetadataOption.ENTITY_KEY_IDS -> "entity_key_ids"
     }
 }
-
-val REGISTER_QUERY_SQL = "INSERT INTO ${QUERIES.name} VALUES(?,?,?,?,?)"
-val CHECK_OFF_QUERY_SQL = "DELETE FROM ${QUERIES.name} WHERE ${QUERY_ID.name} = ?"
