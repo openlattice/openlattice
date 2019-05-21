@@ -1125,6 +1125,32 @@ paths:
   ## DATA API"s ##
   ################
 
+  /datastore/data/associations/:
+    post:
+      summary: Creates a new set of associations.
+      operationId: createAssocations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              type: array
+              items:         
+                $ref: "#/components/dataEdgeMap"
+      tags:
+        - data
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "Edges"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
   /datastore/data/set/{entitySetId}:
     get:
       summary: Gets an iterable containing the entity data, using property type FQNs as key
@@ -1191,8 +1217,8 @@ paths:
                     items:
                       type: string
     delete:
-      summary: Clears the data from a single entity set.
-      operationId: clearEntitySet
+      summary: Deletes multiple entities from an entity set.
+      operationId: deleteEntities
       parameters:
         - name: entitySetId
           in: path
@@ -1200,6 +1226,21 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [Soft, Hard]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
       tags:
         - data
       security:
@@ -1208,6 +1249,10 @@ paths:
       responses:
         "200":
           description: "Success"
+          content:
+            application/json:
+              schema:
+                type: integer
   /datastore/data/set/{entitySetId}/all:
     delete:
       summary: Clears the Entity matching the given Entity id and all of its neighbor Entities
@@ -1256,10 +1301,103 @@ paths:
             application/json:
               schema:
                 type: integer
+    
+
+
+  #############################
+  ## DATA INTEGRATIONS API"s ##
+  #############################
+  
+  /datastore/integration:
+    post:
+      summary: Integrate entity and association data
+      operationId: integrateEntityAndAssociationData
+      parameters:
+        - name: detailedResults
+          in: query
+          required: true
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/bulkDataCreation"
+      tags:
+        - data-integrations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A data search result object, containing the total number of hits for the given query, and the hits themselves"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/integrationResults"
+  /datastore/integration/entityKeyIds:
+    post:
+      summary: Get entity key ID's
+      operationId: getEntityKeyIds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/entityKey"
+      tags:
+        - data-integrations
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A data search result object, containing the total number of hits for the given query, and the hits themselves"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uuid      
+
 
   ##################
   ## SEARCH API"s ##
   ##################
+
+  /datastore/search/advanced/{entitySetId}:
+    post:
+      summary: Executes a search over the data of a given entity set to find rows that match the search term
+      operationId: executeAdvancedEntitySetDataQuery
+      parameters:
+        - name: entitySetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/advancedSearch"
+      tags:
+        - search
+      security:
+        - openlattice_auth: []
+        - http_auth: []
+      responses:
+        "200":
+          description: "A data search result object, containing the total number of hits for the given query, and the hits themselves"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/dataSearchResult"
 
   /datastore/search/{entitySetId}/{entityKeyId}:
     get:
@@ -2500,10 +2638,9 @@ components:
         description: This is a more elaborate description of the entity set.
     neighborDetails:
       type: object
-      properties:
-        openlattice.@id:
-          type: string
-        ol.id:
+      additionalProperties:
+        type: array
+        items:
           type: string
     neighborEntityDetails:
       type: object
@@ -2516,7 +2653,7 @@ components:
             $ref: "#/components/entitySet"
         neighborId:
           type: string
-        neighbourDetails:
+        neighborDetails:
             $ref: "#/components/neighborDetails"
     neighborEntityIds:
       type: object
@@ -2552,6 +2689,101 @@ components:
           items:
             type: string
             format: uuid
+    dataSearchResult:
+      type: object
+      properties:
+        numHits:
+          type: integer
+        hits:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string
+    advancedSearch:
+      type: object
+      properties:
+        searchFields:
+          type: list
+          items:
+            $ref: "#/components/searchDetails"
+        start: 
+          type: integer
+        maxHits:
+          type: integer
+    searchDetails:            
+      type: object
+      properties:
+        searchTerm:
+          type: string
+        property:
+          type: string
+          format: uuid
+        exact:
+          type: boolean
+    bulkDataCreation:
+      type: object
+      properties:
+        entities:
+          type: list
+          items:
+            $ref: "#/components/entity"
+        associations:
+          type: list
+          items:
+            $ref: "#/components/association"
+    entity:
+      type: object
+      properties:
+        key:
+          $ref: "#/components/entityKey"    
+        details:
+          type: object
+          additionalProperties:
+            type: string
+    association:
+      type: object
+      properties:
+        key:
+          $ref: "#/components/entityKey"   
+        src:
+          $ref: "#/components/entityKey"   
+        dst:
+          $ref: "#/components/entityKey"   
+        details:
+          type: object
+          additionalProperties:
+            type: string  
+    entityKey:
+      type: object
+      properties:
+        entitySetId:
+          type: string
+          format: uuid
+        entityId:
+          type: string
+          format: uuid
+    integrationResults:
+      type: object
+      properties:
+        entityCount:
+          type: integer
+        associationCount:
+          type: integer
+        associationsEntityKeyMappings:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: string
+        entitySetsEntityKeyMappings:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: string
     auth0userBasic:
       type: object
       properties:
@@ -2620,6 +2852,25 @@ components:
           type: string
         description:
           type: string
+    dataEdgeMap:
+      type: object
+      additionalProperties:
+        $ref: "#/components/dataEdge"
+    dataEdge:
+      type: object
+      properties:
+        src:
+          type: string
+          format: uuid
+        dst:
+          type: string
+          format: uuid
+        data:
+          $ref: "#/components/dataMap"
+    dataMap:
+      type: object
+      additionalProperties:
+        type: string
     role:
       type: object
       properties:
