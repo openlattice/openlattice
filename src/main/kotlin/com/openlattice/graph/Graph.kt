@@ -1006,11 +1006,11 @@ private fun dstClauses(entitySetId: UUID, associationFilters: SetMultimap<UUID, 
 private fun buildEdgeFilteringClause(
         selfEntitySetIds: Set<UUID>,
         authorizedFilteredRanking: AuthorizedFilteredNeighborsRanking,
-        association: Boolean
+        association: Boolean,
+        isDst: Boolean
 ): String {
     val authorizedAssociationEntitySets = authorizedFilteredRanking.associationSets.keys
     val authorizedEntitySets = authorizedFilteredRanking.entitySets.keys
-    val isDst = authorizedFilteredRanking.filteredNeighborsRanking.dst
 
     val associationsClause =
             "${EDGE_ENTITY_SET_ID.name} IN (${authorizedAssociationEntitySets.joinToString(",") { "'$it'" }})"
@@ -1034,7 +1034,11 @@ private fun buildEdgeFilteringClause(
     val componentTypeClause = if(association) {
         "${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
     } else {
-        "${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
+        if(isDst) {
+            "${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
+        } else {
+            "${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
+        }
     }
 
     return "($associationsClause AND $entitySetsClause AND $componentTypeClause)"
@@ -1059,17 +1063,18 @@ private fun buildSpineSql(
                     "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
         }
     } else {
-        // Order on which we select is {src, dst, edge}, SRC ComponentType
+        // Order on which we select is {src, dst, edge}, DST ComponentType
         if (isDst) { // select src and dst
-            "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID_VALUE.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${EDGE_COMP_1.name} as ${ID_VALUE.name}"
-        } else { // select dst and src
+            "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_2.name} as $SELF_ENTITY_KEY_ID, " +
+                    "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+        } else { // Order on which we select is {src, dst, edge}, SRC ComponentType
+            // select dst and src
             "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_1.name} as $SELF_ENTITY_KEY_ID, " +
                     "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
         }
     }
 
-    val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking, association)
+    val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking, association, isDst)
     val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
     val spineSql = if (linked) {
         "SELECT edges.*, ${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
