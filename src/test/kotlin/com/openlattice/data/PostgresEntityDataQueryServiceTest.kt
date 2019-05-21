@@ -47,7 +47,7 @@ class PostgresEntityDataQueryServiceTest {
 
     @Test
     fun createEdgesTableQuery() {
-        logger.info(PostgresTable.QUERIES.createTableQuery());
+        logger.info(PostgresTable.QUERIES.createTableQuery())
         logger.info(PostgresTable.EDGES.createTableQuery())
         logger.info(PostgresTable.SYNC_IDS.createTableQuery())
 
@@ -95,7 +95,7 @@ class PostgresEntityDataQueryServiceTest {
                 Pair(UUID.fromString("f950d05a-f4f2-451b-8c6d-56e78bba8b42"), "nc.PersonRace"),
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), "housing.updatedat"),
                 Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity")
-        );
+        )
         val entityKeyIds = sequenceOf(
                 "73170000-0000-0000-8000-0000000004a9",
                 "4d9b0000-0000-0000-8000-00000000005d"
@@ -147,7 +147,7 @@ class PostgresEntityDataQueryServiceTest {
                 Pair(UUID.fromString("f950d05a-f4f2-451b-8c6d-56e78bba8b42"), "nc.PersonRace"),
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), "housing.updatedat"),
                 Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity")
-        ).mapValues { DataTables.quote(it.value) };
+        ).mapValues { DataTables.quote(it.value) }
         val entityKeyIds = sequenceOf(
                 "73170000-0000-0000-8000-0000000004a9",
                 "4d9b0000-0000-0000-8000-00000000005d"
@@ -204,7 +204,7 @@ class PostgresEntityDataQueryServiceTest {
                 Pair(UUID.fromString("f950d05a-f4f2-451b-8c6d-56e78bba8b42"), "nc.PersonRace"),
                 Pair(UUID.fromString("314d2bfd-e50e-4965-b2eb-422742fa265c"), "housing.updatedat"),
                 Pair(UUID.fromString("1407ac70-ea63-4879-aca4-6722034f0cda"), "nc.PersonEthnicity")
-        );
+        )
         val entityKeyIds = sequenceOf(
                 "73170000-0000-0000-8000-0000000004a9",
                 "4d9b0000-0000-0000-8000-00000000005d"
@@ -260,7 +260,9 @@ class PostgresEntityDataQueryServiceTest {
 
     @Test
     fun testBuildWithClause() {
-        logger.info("Build with clause: \n {}",
-                buildWithClause(mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()), false))
+        val entitiesClause = buildEntitiesClause(
+                mapOf(UUID.fromString("ed5716db-830b-41b7-9905-24fa82761ace") to Optional.empty()),
+                false)
+        logger.info("Build with clause: \n {}", buildWithClause(false, entitiesClause))
     }
 }

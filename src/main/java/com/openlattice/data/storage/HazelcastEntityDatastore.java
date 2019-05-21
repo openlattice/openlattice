@@ -224,22 +224,21 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         //                      -> background indexing job will pick up updated entity with new linking id
         // It makes more sense to let background task (re-)index, instead of explicitly calling re-index, since an
         // update/create event affects all the linking entity sets, where that linking id is present
+        Set<UUID> remainingLinkingIds = dataQueryService
+                .getEntityKeyIdsOfLinkingIds( oldLinkingIds ).stream()
+                // we cannot know, whether the old entity was already updated with a new linking id or is still there
+                .filter( linkingIds -> !Sets.difference( linkingIds.getRight(), deletedEntityKeyIds ).isEmpty() )
+                .map( Pair::getLeft )
+                .collect( Collectors.toSet() );
+
+        // re-index
+        if ( !remainingLinkingIds.isEmpty() ) {
+            pdm.markLinkingIdsAsNeedToBeIndexed( remainingLinkingIds );
+        }
+        // delete
+        Set<UUID> deletedLinkingIds = Sets.difference( oldLinkingIds, remainingLinkingIds );
+        eventBus.post( new LinkedEntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
     }
-//        Set<UUID> remainingLinkingIds = dataQueryService
-//                .getEntityKeyIdsOfLinkingIds( oldLinkingIds ).stream()
-//                // we cannot know, whether the old entity was already updated with a new linking id or is still there
-//                .filter( linkingIds -> !Sets.difference( linkingIds.getRight(), deletedEntityKeyIds ).isEmpty() )
-//                .map( Pair::getLeft )
-//                .collect( Collectors.toSet() );
-//
-//        // re-index
-//        if ( !remainingLinkingIds.isEmpty() ) {
-//            pdm.markLinkingIdsAsNeedToBeIndexed( remainingLinkingIds );
-//        }
-//        // delete
-//        Set<UUID> deletedLinkingIds = Sets.difference( oldLinkingIds, remainingLinkingIds );
-//        eventBus.post( new LinkedEntitiesDeletedEvent( linkingEntitySetIds, deletedLinkingIds ) );
-//    }
 
     private void signalEntitySetDataDeleted( UUID entitySetId ) {
         eventBus.post( new EntitySetDataDeletedEvent( entitySetId ) );
