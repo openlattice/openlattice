@@ -21,6 +21,7 @@
 
 package com.openlattice.indexing.configuration
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.kryptnostic.rhizome.configuration.Configuration
 import com.kryptnostic.rhizome.configuration.ConfigurationKey
@@ -44,6 +45,7 @@ data class IndexerConfiguration(
         val configKey = SimpleConfigurationKey("indexer.yaml")
     }
 
+    @JsonIgnore
     override fun getKey(): ConfigurationKey {
         return configKey
     }
