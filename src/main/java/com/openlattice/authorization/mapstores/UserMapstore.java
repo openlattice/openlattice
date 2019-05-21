@@ -20,6 +20,7 @@
 
 package com.openlattice.authorization.mapstores;
 
+import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
@@ -75,6 +76,7 @@ public class UserMapstore implements TestableSelfRegisteringMapStore<String, Aut
 
     @Override public MapConfig getMapConfig() {
         return new MapConfig( getMapName() )
+                .setInMemoryFormat( InMemoryFormat.OBJECT )
                 .setTimeToLiveSeconds( TTL_SECONDS )
                 .addMapIndexConfig( new MapIndexConfig( LOAD_TIME_INDEX, true ) )
                 .setMapStoreConfig( getMapStoreConfig() );
