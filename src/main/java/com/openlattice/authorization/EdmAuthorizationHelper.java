@@ -357,8 +357,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * @return all the property type ids on the entity type of the entity set
      */
     public Set<UUID> getAllPropertiesOnEntitySet( UUID entitySetId ) {
-        EntitySet es = edm.getEntitySet( entitySetId );
-        EntityType et = edm.getEntityType( es.getEntityTypeId() );
+        EntityType et = edm.getEntityTypeByEntitySetId( entitySetId );
         return et.getProperties();
     }
 

@@ -515,40 +515,16 @@ open class DataGraphService(
         return null
     }
 
-    private fun checkAssociationEntityTypes(associationEntitySetIds: Map<UUID, Map<UUID, Set<UUID>>>) {
-        associationEntitySetIds.forEach { edgeEntitySetIds ->
-            // ensure, that src and dst entity types are part of src and dst entity types of AssociationType
-            val associationType = edmManager.getAssociationTypeByEntitySetId(edgeEntitySetIds.key)
-
-            edgeEntitySetIds.value.forEach { srcEntitySetIds ->
-                val srcEntityTypeId = edmManager.getEntityTypeByEntitySetId(srcEntitySetIds.key).id
-                if (!associationType.src.contains(srcEntityTypeId)) {
-                    throw IllegalArgumentException("Entity type of src entity set ${srcEntitySetIds.key} differs " +
-                            "from allowed entity types in association type ${associationType.associationEntityType.id}")
-                }
-
-                srcEntitySetIds.value.forEach { dstEntitySetId ->
-                    val dstEntityTypeId = edmManager.getEntityTypeByEntitySetId(dstEntitySetId).id
-                    if (!associationType.dst.contains(dstEntityTypeId)) {
-                        throw IllegalArgumentException("Entity type of dst entity set $dstEntitySetId differs from " +
-                                "allowed entity types in association type ${associationType.associationEntityType.id}")
-                    }
-
-                }
-            }
-        }
-    }
-
     private fun checkAssociationEntityTypes(
             srcAssociationEntitySetIds: Map<UUID, Set<UUID>>, dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
     ) {
-        val associationTypeDetails = srcAssociationEntitySetIds.keys
+        val edgeEntitySetIds = srcAssociationEntitySetIds.keys
+        val associationTypeDetails = edgeEntitySetIds
                 .zip(edmManager.getAssociationTypeDetailsByEntitySetIds(srcAssociationEntitySetIds.keys))
                 .toMap()
 
-        srcAssociationEntitySetIds.forEach {
-            val edgeEntitySetId = it.key
-            val srcEntitySetIds = it.value
+        edgeEntitySetIds.forEach {edgeEntitySetId ->
+            val srcEntitySetIds = srcAssociationEntitySetIds.getValue(edgeEntitySetId)
             val dstEntitySetIds = dstAssociationEntitySetIds.getValue(edgeEntitySetId)
 
             val edgeAssociationType = associationTypeDetails.getValue(edgeEntitySetId)
