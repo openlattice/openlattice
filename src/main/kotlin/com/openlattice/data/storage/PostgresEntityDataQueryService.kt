@@ -503,7 +503,10 @@ class PostgresEntityDataQueryService(
             }
         }.sum()
 
-        checkState(updatedEntityCount == entities.size, "Updated entity metadata count mismatch")
+        if( updatedEntityCount != entities.size ) {
+            logger.warn("Update $updatedEntityCount entities. Expect to update ${entities.size}.")
+            logger.warn("Entity key ids: {}", entities.keys)
+        }
 
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
 
