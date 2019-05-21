@@ -53,6 +53,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
 
 import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
@@ -220,35 +221,38 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         final var srcAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-src
         final var dstAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-dst
 
+        final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
+        final SetMultimap<UUID, UUID> keyPropertiesOfAssociations = HashMultimap.create();
         edges.forEach(
                 association -> {
-                    final var associationEntitySetId = association.getEdge().getEntitySetId();
+                    final var edgeEntitySetId = association.getEdge().getEntitySetId();
                     final var srcEntitySetId = association.getSrc().getEntitySetId();
                     final var dstEntitySetId = association.getDst().getEntitySetId();
 
-                    //Ensure that we have read access to entity set metadata.
-                    ensureReadAccess( new AclKey( srcEntitySetId ) );
-                    ensureReadAccess( new AclKey( dstEntitySetId ) );
-                    ensureReadAccess( new AclKey( associationEntitySetId ) );
-                    // todo: collect and do batch checks
+                    entitySetIdChecks.put( new AclKey( edgeEntitySetId ), READ_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( srcEntitySetId ), READ_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( dstEntitySetId ), READ_PERMISSION );
 
-                    //Ensure that we can read key properties.
-                    Set<UUID> keyPropertyTypes = dms.getEntityTypeByEntitySetId( associationEntitySetId ).getKey();
-                    keyPropertyTypes.forEach( propertyType ->
-                            accessCheck( new AclKey( associationEntitySetId, propertyType ), READ_PERMISSION ) );
-
+                    final var keyPropertyTypes = dms.getEntityTypeByEntitySetId( edgeEntitySetId ).getKey();
+                    keyPropertiesOfAssociations.putAll( edgeEntitySetId, keyPropertyTypes );
 
                     if ( srcAssociationEntitySetIds
-                            .putIfAbsent( associationEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
-                        srcAssociationEntitySetIds.get( associationEntitySetId ).add( srcEntitySetId );
+                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
+                        srcAssociationEntitySetIds.get( edgeEntitySetId ).add( srcEntitySetId );
                     }
 
                     if ( dstAssociationEntitySetIds
-                            .putIfAbsent( associationEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
-                        dstAssociationEntitySetIds.get( associationEntitySetId ).add( dstEntitySetId );
+                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
+                        dstAssociationEntitySetIds.get( edgeEntitySetId ).add( dstEntitySetId );
                     }
                 }
         );
+
+        //Ensure that we have read access to entity set metadata.
+        accessCheck( entitySetIdChecks );
+
+        //Ensure that we can read key properties on association.
+        accessCheck( aclKeysForAccessCheck( keyPropertiesOfAssociations, READ_PERMISSION ) );
 
         return dgm.createAssociations( edges, srcAssociationEntitySetIds, dstAssociationEntitySetIds ).getNumUpdates();
     }
