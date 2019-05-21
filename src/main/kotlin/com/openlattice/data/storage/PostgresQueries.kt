@@ -70,7 +70,8 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
         omitEntitySetId: Boolean,
         metadataFilters: String = ""
 ): String {
-    val withClause = buildWithClause(entityKeyIds, linking)
+    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
+    val withClause = buildWithClause(linking, entitiesClause)
     val joinColumns = getJoinColumns(linking, omitEntitySetId)
 
     val entitiesSubquerySql = selectEntityKeyIdsWithCurrentVersionSubquerySql(
@@ -115,14 +116,13 @@ fun selectEntitySetWithCurrentVersionOfPropertyTypes(
     return fullQuery
 }
 
-internal fun buildWithClause(entityKeyIds: Map<UUID, Optional<Set<UUID>>>, linking: Boolean): String {
+internal fun buildWithClause(linking: Boolean, entitiesClause: String): String {
     val joinColumns = if (linking) {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name, LINKING_ID.name)
     } else {
         listOf(ENTITY_SET_ID.name, ID_VALUE.name)
     }
     val selectColumns = joinColumns.joinToString(",") { "${IDS.name}.$it AS $it" }
-    val entitiesClause = buildEntitiesClause(entityKeyIds, linking)
 
     val queriesSql = "SELECT $selectColumns FROM ${IDS.name} WHERE ${VERSION.name} > 0 $entitiesClause"
 

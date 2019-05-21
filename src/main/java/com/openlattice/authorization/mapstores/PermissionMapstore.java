@@ -20,28 +20,21 @@
 
 package com.openlattice.authorization.mapstores;
 
-import static com.openlattice.postgres.PostgresArrays.createTextArray;
-import static com.openlattice.postgres.PostgresArrays.createUuidArray;
-
 import com.codahale.metrics.annotation.Timed;
+import com.google.common.collect.ImmutableList;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.MapStoreConfig.InitialLoadMode;
-import com.openlattice.authorization.AceKey;
-import com.openlattice.authorization.AceValue;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.postgres.PostgresTable;
-import com.openlattice.postgres.ResultSetAdapters;
+import com.openlattice.postgres.*;
 import com.openlattice.postgres.mapstores.AbstractBasePostgresMapstore;
-import com.openlattice.postgres.mapstores.SecurableObjectTypeMapstore;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Array;
 import java.sql.PreparedStatement;
@@ -49,9 +42,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import static com.openlattice.postgres.PostgresArrays.createTextArray;
+import static com.openlattice.postgres.PostgresArrays.createUuidArray;
 
 /**
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
@@ -64,11 +60,8 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
     public static final String ACL_KEY_INDEX               = "__key#aclKey.index";
     public static final String EXPIRATION_DATE_INDEX       = "expirationDate";
 
-    private final SecurableObjectTypeMapstore objectTypes;
-
     public PermissionMapstore( HikariDataSource hds ) {
         super( HazelcastMap.PERMISSIONS.name(), PostgresTable.PERMISSIONS, hds );
-        this.objectTypes = new SecurableObjectTypeMapstore( hds );
     }
 
     @Override protected void bind(
@@ -103,7 +96,7 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
          * There is small risk of deadlock here if all readers get stuck waiting for connection from the connection pool
          * we should keep an eye out to make sure there aren't an unusual number of TimeoutExceptions being thrown.
          */
-        SecurableObjectType objectType = objectTypes.load( aclKey );
+        SecurableObjectType objectType = ResultSetAdapters.securableObjectType( rs );
 
         if ( objectType == null ) {
             logger.warn( "SecurableObjectType was null for key {}", aclKey );
@@ -119,6 +112,18 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         return super
                 .getMapStoreConfig()
                 .setInitialLoadMode( InitialLoadMode.EAGER );
+    }
+
+    @Override protected String buildSelectByKeyQuery() {
+        return selectQuery( false );
+    }
+
+    @Override protected String buildSelectAllKeysQuery() {
+        return selectQuery( true );
+    }
+
+    @Override protected String buildSelectInQuery() {
+        return selectInQuery( ImmutableList.of(), keyColumns(), batchSize );
     }
 
     @Override public MapConfig getMapConfig() {
@@ -145,5 +150,50 @@ public class PermissionMapstore extends AbstractBasePostgresMapstore<AceKey, Ace
         return new AceValue(
                 EnumSet.of( Permission.READ, Permission.WRITE ),
                 SecurableObjectType.PropertyTypeInEntitySet );
+    }
+
+    private String selectQuery( boolean allKeys ) {
+
+        StringBuilder selectSql = selectInnerJoinQuery();
+        if ( !allKeys ) {
+            selectSql.append( " WHERE " )
+                    .append( keyColumns().stream()
+                            .map( col -> getTableColumn( PostgresTable.PERMISSIONS, col ) )
+                            .map( columnName -> columnName + " = ? " )
+                            .collect( Collectors.joining( " and " ) ) );
+        }
+        return selectSql.toString();
+
+    }
+
+    private String selectInQuery(
+            List<PostgresColumnDefinition> columnsToSelect,
+            List<PostgresColumnDefinition> whereToSelect, int batchSize ) {
+        StringBuilder selectSql = selectInnerJoinQuery();
+
+        final String compoundElement = "(" + StringUtils.repeat( "?", ",", whereToSelect.size() ) + ")";
+        final String batched = StringUtils.repeat( compoundElement, ",", batchSize );
+
+        selectSql.append( " WHERE (" )
+                .append( whereToSelect.stream()
+                        .map( col -> getTableColumn( PostgresTable.PERMISSIONS, col ) )
+                        .collect( Collectors.joining( "," ) ) )
+                .append( ") IN (" )
+                .append( batched )
+                .append( ")" );
+
+        return selectSql.toString();
+    }
+
+    private StringBuilder selectInnerJoinQuery() {
+        return new StringBuilder( "SELECT * FROM " ).append( PostgresTable.PERMISSIONS.getName() )
+                .append( " INNER JOIN " )
+                .append( PostgresTable.SECURABLE_OBJECTS.getName() ).append( " ON " )
+                .append( getTableColumn( PostgresTable.PERMISSIONS, PostgresColumn.ACL_KEY ) ).append( " = " )
+                .append( getTableColumn( PostgresTable.SECURABLE_OBJECTS, PostgresColumn.ACL_KEY ) );
+    }
+
+    private String getTableColumn( PostgresTableDefinition table, PostgresColumnDefinition column ) {
+        return table.getName() + "." + column.getName();
     }
 }
