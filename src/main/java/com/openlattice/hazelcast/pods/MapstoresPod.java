@@ -40,8 +40,14 @@ import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.mapstores.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
+import com.openlattice.collections.mapstores.EntitySetCollectionConfigMapstore;
+import com.openlattice.collections.mapstores.EntitySetCollectionMapstore;
+import com.openlattice.collections.mapstores.EntityTypeCollectionMapstore;
 import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.collection.CollectionTemplateKey;
+import com.openlattice.edm.collection.EntitySetCollection;
+import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.set.EntitySetPropertyKey;
 import com.openlattice.edm.set.EntitySetPropertyMetadata;
 import com.openlattice.edm.type.AssociationType;
@@ -256,6 +262,21 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<Long, Range> idGenerationMapstore() {
         return new IdGenerationMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, EntityTypeCollection> entityTypeCollectionMapstore() {
+        return new EntityTypeCollectionMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<UUID, EntitySetCollection> entitySetCollectionMapstore() {
+        return new EntitySetCollectionMapstore( hikariDataSource );
+    }
+
+    @Bean
+    public SelfRegisteringMapStore<CollectionTemplateKey, UUID> entitySetCollectionConfigMapstore() {
+        return new EntitySetCollectionConfigMapstore( hikariDataSource );
     }
 
     @Bean

@@ -122,6 +122,34 @@ public final class PostgresTable {
                             CATEGORY,
                             SHARDS );
     //.setUnique( NAMESPACE, NAME );
+    public static final PostgresTableDefinition        ENTITY_TYPE_COLLECTIONS      =
+            new PostgresTableDefinition( "entity_type_collections" )
+                    .addColumns(
+                            ID,
+                            NAMESPACE,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            SCHEMAS,
+                            TEMPLATE );
+    public static final PostgresTableDefinition        ENTITY_SET_COLLECTIONS       =
+            new PostgresTableDefinition( "entity_set_collections" )
+                    .addColumns(
+                            ID,
+                            NAME,
+                            TITLE,
+                            DESCRIPTION,
+                            CONTACTS,
+                            ENTITY_TYPE_COLLECTION_ID,
+                            ORGANIZATION_ID );
+    public static final PostgresTableDefinition        ENTITY_SET_COLLECTION_CONFIG =
+            new PostgresTableDefinition( "entity_set_collection_config" )
+                    .addColumns(
+                            ENTITY_SET_COLLECTION_ID,
+                            TEMPLATE_TYPE_ID,
+                            ENTITY_SET_ID )
+                    .primaryKey( ENTITY_SET_COLLECTION_ID, TEMPLATE_TYPE_ID )
+                    .setUnique( ENTITY_SET_COLLECTION_ID, TEMPLATE_TYPE_ID );
     public static final PostgresTableDefinition        ENUM_TYPES                   =
             new PostgresTableDefinition( "enum_types" )
                     .addColumns( ID,
