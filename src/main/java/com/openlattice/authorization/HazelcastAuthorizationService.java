@@ -190,6 +190,34 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     }
 
     @Override
+    public void setPermissions( Map<AceKey, EnumSet<Permission>> permissions ) {
+
+        permissions.entrySet().stream().filter( entry -> !entry.getValue().contains( Permission.OWNER ) )
+                .collect( Collectors.groupingBy( e -> e.getKey().getAclKey(),
+                        Collectors.mapping( e -> e.getKey().getPrincipal(), Collectors.toSet() ) ) )
+                .entrySet()
+                .forEach( entry -> ensureAclKeysHaveOtherUserOwners( ImmutableSet.of( entry.getKey() ),
+                        entry.getValue() ) );
+
+        Map<AclKey, SecurableObjectType> securableObjectTypesForAclKeys = securableObjectTypes
+                .getAll( permissions.keySet().stream().map( AceKey::getAclKey ).collect(
+                        Collectors.toSet() ) );
+
+        Map<AceKey, AceValue> newPermissions = Maps.newHashMap();
+
+        for ( Map.Entry<AceKey, EnumSet<Permission>> entry : permissions.entrySet() ) {
+
+            SecurableObjectType objectType = securableObjectTypesForAclKeys
+                    .getOrDefault( entry.getKey().getAclKey(), SecurableObjectType.Unknown );
+
+            newPermissions.put( entry.getKey(), new AceValue( entry.getValue(), objectType, OffsetDateTime.MAX ) );
+        }
+
+        aces.putAll( newPermissions );
+
+    }
+
+    @Override
     public void deletePermissions( AclKey aclKey ) {
         securableObjectTypes.delete( aclKey );
         aces.removeAll( hasAclKey( aclKey ) );
@@ -456,6 +484,17 @@ public class HazelcastAuthorizationService implements AuthorizationManager {
     @Override
     public Iterable<Principal> getSecurableObjectOwners( AclKey key ) {
         return aqs.getOwnersForSecurableObject( key );
+    }
+
+    @Timed
+    @Override
+    public SetMultimap<AclKey, Principal> getOwnersForSecurableObjects( Collection<AclKey> aclKeys ) {
+        SetMultimap<AclKey, Principal> result = HashMultimap.create();
+
+        aces.keySet( Predicates.and( hasAnyAclKeys( aclKeys ), hasExactPermissions( EnumSet.of( Permission.OWNER ) ) ) )
+                .forEach( aceKey -> result.put( aceKey.getAclKey(), aceKey.getPrincipal() ) );
+
+        return result;
     }
 
     @Timed

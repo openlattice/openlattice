@@ -14,7 +14,10 @@ import com.openlattice.collections.aggregators.EntitySetCollectionConfigAggregat
 import com.openlattice.collections.mapstores.ENTITY_SET_COLLECTION_ID_INDEX
 import com.openlattice.collections.mapstores.ENTITY_TYPE_COLLECTION_ID_INDEX
 import com.openlattice.collections.mapstores.ID_INDEX
-import com.openlattice.collections.processors.*
+import com.openlattice.collections.processors.AddPairToEntityTypeCollectionTemplateProcessor
+import com.openlattice.collections.processors.RemoveKeyFromEntityTypeCollectionTemplateProcessor
+import com.openlattice.collections.processors.UpdateEntitySetCollectionMetadataProcessor
+import com.openlattice.collections.processors.UpdateEntityTypeCollectionMetadataProcessor
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
@@ -23,10 +26,8 @@ import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
-import org.apache.olingo.commons.api.edm.FullQualifiedName
 import org.springframework.stereotype.Service
 import java.util.*
-import kotlin.collections.LinkedHashSet
 
 @Service
 class CollectionsManager(
@@ -152,20 +153,40 @@ class CollectionsManager(
             throw IllegalArgumentException("Id or name of CollectionTemplateType $collectionTemplateType is already used on template of EntityTypeCollection $id.")
         }
 
-        val entitySetCollectionsToUpdate = entitySetCollections.values(entityTypeCollectionIdPredicate(collectionTemplateType.entityTypeId))
-
-        entitySetCollections.values(entityTypeCollectionIdPredicate(collectionTemplateType.entityTypeId)).map {
-            //            it.id to EntitySet(
-//                    Optional.empty(),
-//                    entityTypeId,
-//
-//                    )
-
-            // TODO
-        }
+        updateEntitySetCollectionsForNewType(id, collectionTemplateType)
 
         entityTypeCollections.executeOnKey(id, AddPairToEntityTypeCollectionTemplateProcessor(collectionTemplateType))
     }
+
+    private fun updateEntitySetCollectionsForNewType(entityTypeCollectionId: UUID, collectionTemplateType: CollectionTemplateType) {
+
+        val entitySetCollectionsToUpdate = entitySetCollections.values(entityTypeCollectionIdPredicate(entityTypeCollectionId))
+
+        val entitySetCollectionOwners = authorizations.getOwnersForSecurableObjects(entitySetCollectionsToUpdate.map { AclKey(it.id) }.toSet())
+        val entitySetsCreated = entitySetCollectionsToUpdate.associate {
+            it.id to generateEntitySet(it, collectionTemplateType, entitySetCollectionOwners.get(AclKey(it.id)).first { p -> p.type == PrincipalType.USER })
+        }
+
+        val propertyTypeIds = edmManager.getEntityType(collectionTemplateType.entityTypeId).properties
+        val ownerPermissions = EnumSet.allOf(Permission::class.java)
+
+        val permissionsToAdd = mutableMapOf<AceKey, EnumSet<Permission>>()
+
+        entitySetsCreated.forEach {
+            val entitySetCollectionId = it.key
+            val entitySetId = it.value
+
+            entitySetCollectionOwners.get(AclKey(entitySetCollectionId)).forEach { owner ->
+                permissionsToAdd[AceKey(AclKey(entitySetId), owner)] = ownerPermissions
+                propertyTypeIds.forEach { ptId -> permissionsToAdd[AceKey(AclKey(entitySetId, ptId), owner)] = ownerPermissions }
+            }
+        }
+
+        authorizations.setPermissions(permissionsToAdd)
+        entitySetCollectionConfig.putAll(entitySetCollectionsToUpdate.associate { CollectionTemplateKey(it.id, collectionTemplateType.id) to entitySetsCreated.getValue(it.id) })
+
+    }
+
 
     fun removeKeyFromEntityTypeCollectionTemplate(id: UUID, templateTypeId: UUID) {
 
