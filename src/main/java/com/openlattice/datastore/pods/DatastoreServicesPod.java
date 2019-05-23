@@ -41,6 +41,7 @@ import com.openlattice.auth0.Auth0Pod;
 import com.openlattice.auth0.Auth0TokenProvider;
 import com.openlattice.authentication.Auth0Configuration;
 import com.openlattice.authorization.*;
+import com.openlattice.collections.CollectionsManager;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.data.DataGraphManager;
 import com.openlattice.data.DataGraphService;
@@ -426,6 +427,15 @@ public class DatastoreServicesPod {
     @Bean
     public PostgresEntitySetSizesInitializationTask postgresEntitySetSizesInitializationTask() {
         return new PostgresEntitySetSizesInitializationTask();
+    }
+
+    @Bean
+    public CollectionsManager collectionsManager() {
+        return new CollectionsManager( hazelcastInstance,
+                dataModelService(),
+                aclKeyReservationService(),
+                schemaManager(),
+                authorizationManager() );
     }
 
     @PostConstruct
