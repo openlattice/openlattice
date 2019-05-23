@@ -286,4 +286,32 @@ public class MetadataUpdate {
                 Optional.empty(),
                 Optional.empty() );
     }
+
+    public static MetadataUpdate trimToEntityTypeCollectionUpdate( MetadataUpdate update ) {
+        return new MetadataUpdate(
+                update.getTitle(),
+                update.getDescription(),
+                Optional.empty(),
+                Optional.empty(),
+                update.getType(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty() );
+    }
+
+    public static MetadataUpdate trimToEntitySetCollectionUpdate( MetadataUpdate update ) {
+        return new MetadataUpdate(
+                update.getTitle(),
+                update.getDescription(),
+                update.getName(),
+                update.getContacts(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                update.getOrganizationId() );
+    }
 }

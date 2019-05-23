@@ -22,7 +22,7 @@ public class ConstraintGroup {
         this.constraints = constraints;
 
         Preconditions.checkArgument( this.constraints.size() > 0, "Constraint groups must not be empty" );
-        Preconditions.checkArgument( this.minimumMatches > 0, "Minumum number of matches must be at least 1" );
+        Preconditions.checkArgument( this.minimumMatches > 0, "Minimum number of matches must be at least 1" );
         Preconditions.checkArgument( this.minimumMatches <= constraints.size(),
                 "Minimum number of matches cannot be greater than the number of constraints" );
     }

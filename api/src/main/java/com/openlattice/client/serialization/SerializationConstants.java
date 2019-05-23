@@ -111,6 +111,7 @@ public final class SerializationConstants {
     public static final String ENTITY_TYPE                      = "entityType";
     public static final String ENTITY_TYPES                     = "entityTypes";
     public static final String ENTITY_TYPE_ID                   = "entityTypeId";
+    public static final String ENTITY_TYPE_COLLECTION_ID        = "entityTypeCollectionId";
     public static final String ENTITY_TYPE_IDS_FIELD            = "entityTypeIds";
     public static final String ENUM_VALUES                      = "enumValues";
     public static final String EXACT                            = "exact";
@@ -218,6 +219,7 @@ public final class SerializationConstants {
     public static final String SYNC_IDS                         = "syncIds";
     public static final String SYNC_TICKETS                     = "syncTickets";
     public static final String TARGET                           = "target";
+    public static final String TEMPLATE                         = "template";
     public static final String TIMESTAMP                        = "timestamp";
     public static final String TIME_ID                          = "timeId";
     public static final String TITLE_FIELD                      = "title";                   // for EntitySet

@@ -21,7 +21,9 @@ package com.openlattice.authorization.securable;
 public enum SecurableObjectType {
     EdmTemplate,
     EntityType,
+    EntityTypeCollection,
     EntitySet,
+    EntitySetCollection,
     PropertyTypeInEntitySet,
     Datasource,
     ComplexType,

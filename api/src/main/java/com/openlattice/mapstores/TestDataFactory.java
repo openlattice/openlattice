@@ -27,6 +27,10 @@ import com.openlattice.data.EntityDataKey;
 import com.openlattice.data.EntityKey;
 import com.openlattice.edm.EdmDetails;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.collection.CollectionTemplateType;
+import com.openlattice.edm.collection.CollectionTemplates;
+import com.openlattice.edm.collection.EntitySetCollection;
+import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.requests.MetadataUpdate;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
@@ -504,6 +508,66 @@ public final class TestDataFactory {
                 PersistentSearchNotificationType.ALPR_ALERT,
                 simpleSearchConstraints(),
                 ImmutableMap.of() );
+    }
+
+    public static CollectionTemplateType collectionTemplateType() {
+        return new CollectionTemplateType(
+                UUID.randomUUID(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                UUID.randomUUID()
+        );
+    }
+
+    public static EntityTypeCollection entityTypeCollection() {
+        return new EntityTypeCollection(
+                UUID.randomUUID(),
+                fqn(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                ImmutableSet.of( fqn(), fqn(), fqn() ),
+                Stream.of( collectionTemplateType(), collectionTemplateType(), collectionTemplateType() ).collect(
+                        Collectors.toCollection( Sets::newLinkedHashSet ) )
+        );
+    }
+
+    public static EntitySetCollection entitySetCollection() {
+        return new EntitySetCollection(
+                UUID.randomUUID(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                UUID.randomUUID(),
+                ImmutableMap.of( UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID() ),
+                ImmutableSet.of( RandomStringUtils.randomAlphanumeric( 5 ),
+                        RandomStringUtils.randomAlphanumeric( 5 ),
+                        RandomStringUtils.randomAlphanumeric( 5 ) ),
+                Optional.of( UUID.randomUUID() )
+        );
+    }
+
+    public static CollectionTemplates collectionTemplates() {
+        Map<UUID, Map<UUID, UUID>> templates = Maps.newHashMap();
+
+        for (int i = 0; i < 5; i++) {
+
+            int size = RandomUtils.nextInt( 1, 5 );
+            Map<UUID, UUID> map = Maps.newHashMap();
+
+            for (int j = 0; j < size; j++) {
+                map.put( UUID.randomUUID(), UUID.randomUUID() );
+            }
+
+            templates.put(UUID.randomUUID(), map);
+        }
+
+        return new CollectionTemplates( templates );
     }
 
 }
