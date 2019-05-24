@@ -3,6 +3,7 @@ package com.openlattice.collections
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.base.Preconditions.checkState
 import com.google.common.collect.Sets
+import com.google.common.eventbus.EventBus
 import com.hazelcast.aggregation.Aggregators
 import com.hazelcast.core.HazelcastInstance
 import com.hazelcast.core.IMap
@@ -13,6 +14,7 @@ import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.collections.aggregators.EntitySetCollectionConfigAggregator
 import com.openlattice.collections.mapstores.ENTITY_SET_COLLECTION_ID_INDEX
 import com.openlattice.collections.mapstores.ENTITY_TYPE_COLLECTION_ID_INDEX
+import com.openlattice.collections.mapstores.EntitySetCollectionConfigMapstore
 import com.openlattice.collections.mapstores.ID_INDEX
 import com.openlattice.collections.processors.AddPairToEntityTypeCollectionTemplateProcessor
 import com.openlattice.collections.processors.RemoveKeyFromEntityTypeCollectionTemplateProcessor
@@ -22,12 +24,17 @@ import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.collection.*
+import com.openlattice.edm.events.EntitySetCollectionCreatedEvent
+import com.openlattice.edm.events.EntitySetCollectionDeletedEvent
+import com.openlattice.edm.events.EntityTypeCollectionCreatedEvent
+import com.openlattice.edm.events.EntityTypeCollectionDeletedEvent
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.edm.schemas.manager.HazelcastSchemaManager
 import com.openlattice.edm.set.EntitySetFlag
 import com.openlattice.hazelcast.HazelcastMap
 import org.springframework.stereotype.Service
 import java.util.*
+import javax.inject.Inject
 
 @Service
 class CollectionsManager(
@@ -35,7 +42,8 @@ class CollectionsManager(
         private val edmManager: EdmManager,
         private val aclKeyReservations: HazelcastAclKeyReservationService,
         private val schemaManager: HazelcastSchemaManager,
-        private val authorizations: AuthorizationManager
+        private val authorizations: AuthorizationManager,
+        private val eventBus: EventBus
 
 ) {
 
@@ -99,10 +107,12 @@ class CollectionsManager(
             throw IllegalStateException("EntityTypeCollection ${entityTypeCollection.type} with id ${entityTypeCollection.id} already exists")
         }
 
+        eventBus.post(EntityTypeCollectionCreatedEvent(entityTypeCollection))
+
         return entityTypeCollection.id
     }
 
-    fun createEntitySetCollection(entitySetCollection: EntitySetCollection): UUID {
+    fun createEntitySetCollection(entitySetCollection: EntitySetCollection, autoCreate: Boolean): UUID {
         val principal = Principals.getCurrentUser()
         Principals.ensureUser(principal)
 
@@ -111,8 +121,10 @@ class CollectionsManager(
         val template = entityTypeCollections[entityTypeCollectionId]?.template ?: throw IllegalStateException(
                 "Cannot create EntitySetCollection ${entitySetCollection.id} because EntityTypeCollection $entityTypeCollectionId does not exist.")
 
-        checkArgument(template.map { it.id }.toSet() == entitySetCollection.template.keys,
-                "EntitySetCollection ${entitySetCollection.name} template keys do not match its EntityTypeCollection template.")
+        if (!autoCreate) {
+            checkArgument(template.map { it.id }.toSet() == entitySetCollection.template.keys,
+                    "EntitySetCollection ${entitySetCollection.name} template keys do not match its EntityTypeCollection template.")
+        }
 
         validateEntitySetCollectionTemplate(entitySetCollection.name, entitySetCollection.template, template)
 
@@ -120,12 +132,21 @@ class CollectionsManager(
         checkState(entitySetCollections.putIfAbsent(entitySetCollection.id, entitySetCollection) == null,
                 "EntitySetCollection ${entitySetCollection.name} already exists.")
 
+        val templateTypesToCreate = template.filter { !entitySetCollection.template.keys.contains(it.id) }
+        if (templateTypesToCreate.isNotEmpty()) {
+            val userPrincipal = Principals.getCurrentUser()
+            val entitySetsCreated = templateTypesToCreate.associate { it.id to generateEntitySet(entitySetCollection, it, userPrincipal) }
+            entitySetCollection.template.putAll(entitySetsCreated)
+        }
+
         entitySetCollectionConfig.putAll(entitySetCollection.template.entries.associate { CollectionTemplateKey(entitySetCollection.id, it.key) to it.value })
 
         authorizations.setSecurableObjectType(AclKey(entitySetCollection.id), SecurableObjectType.EntitySetCollection)
         authorizations.addPermission(AclKey(entitySetCollection.id),
                 principal,
                 EnumSet.allOf(Permission::class.java))
+
+        eventBus.post(EntitySetCollectionCreatedEvent(entitySetCollection))
 
         return entitySetCollection.id
     }
@@ -141,6 +162,8 @@ class CollectionsManager(
         }
 
         entityTypeCollections.submitToKey(id, UpdateEntityTypeCollectionMetadataProcessor(update))
+
+        signalEntityTypeCollectionUpdated(id)
     }
 
     fun addTypeToEntityTypeCollectionTemplate(id: UUID, collectionTemplateType: CollectionTemplateType) {
@@ -156,14 +179,16 @@ class CollectionsManager(
         updateEntitySetCollectionsForNewType(id, collectionTemplateType)
 
         entityTypeCollections.executeOnKey(id, AddPairToEntityTypeCollectionTemplateProcessor(collectionTemplateType))
+
+        signalEntityTypeCollectionUpdated(id)
     }
 
     private fun updateEntitySetCollectionsForNewType(entityTypeCollectionId: UUID, collectionTemplateType: CollectionTemplateType) {
 
-        val entitySetCollectionsToUpdate = entitySetCollections.values(entityTypeCollectionIdPredicate(entityTypeCollectionId))
+        val entitySetCollectionsToUpdate = entitySetCollections.values(entityTypeCollectionIdPredicate(entityTypeCollectionId)).associate { it.id to it }
 
-        val entitySetCollectionOwners = authorizations.getOwnersForSecurableObjects(entitySetCollectionsToUpdate.map { AclKey(it.id) }.toSet())
-        val entitySetsCreated = entitySetCollectionsToUpdate.associate {
+        val entitySetCollectionOwners = authorizations.getOwnersForSecurableObjects(entitySetCollectionsToUpdate.keys.map { AclKey(it) }.toSet())
+        val entitySetsCreated = entitySetCollectionsToUpdate.values.associate {
             it.id to generateEntitySet(it, collectionTemplateType, entitySetCollectionOwners.get(AclKey(it.id)).first { p -> p.type == PrincipalType.USER })
         }
 
@@ -180,10 +205,14 @@ class CollectionsManager(
                 permissionsToAdd[AceKey(AclKey(entitySetId), owner)] = ownerPermissions
                 propertyTypeIds.forEach { ptId -> permissionsToAdd[AceKey(AclKey(entitySetId, ptId), owner)] = ownerPermissions }
             }
+
+            entitySetCollectionsToUpdate.getValue(entitySetCollectionId).template[collectionTemplateType.id] = entitySetId
         }
 
         authorizations.setPermissions(permissionsToAdd)
-        entitySetCollectionConfig.putAll(entitySetCollectionsToUpdate.associate { CollectionTemplateKey(it.id, collectionTemplateType.id) to entitySetsCreated.getValue(it.id) })
+        entitySetCollectionConfig.putAll(entitySetCollectionsToUpdate.keys.associate { CollectionTemplateKey(it, collectionTemplateType.id) to entitySetsCreated.getValue(it) })
+
+        entitySetCollectionsToUpdate.values.forEach { eventBus.post(EntitySetCollectionCreatedEvent(it)) }
 
     }
 
@@ -194,6 +223,8 @@ class CollectionsManager(
         ensureEntityTypeCollectionNotInUse(id)
 
         entityTypeCollections.executeOnKey(id, RemoveKeyFromEntityTypeCollectionTemplateProcessor(templateTypeId))
+
+        signalEntityTypeCollectionUpdated(id)
     }
 
     fun updateEntitySetCollectionMetadata(id: UUID, update: MetadataUpdate) {
@@ -211,6 +242,8 @@ class CollectionsManager(
         }
 
         entitySetCollections.submitToKey(id, UpdateEntitySetCollectionMetadataProcessor(update))
+
+        signalEntitySetCollectionUpdated(id)
     }
 
     fun updateEntitySetCollectionTemplate(id: UUID, templateUpdates: Map<UUID, UUID>) {
@@ -223,9 +256,12 @@ class CollectionsManager(
         val template = entityTypeCollections[entityTypeCollectionId]?.template ?: throw IllegalStateException(
                 "Cannot update EntitySetCollection ${entitySetCollection.id} because EntityTypeCollection $entityTypeCollectionId does not exist.")
 
-        validateEntitySetCollectionTemplate(entitySetCollection.name, templateUpdates, template)
+        entitySetCollection.template.putAll(templateUpdates)
+        validateEntitySetCollectionTemplate(entitySetCollection.name, entitySetCollection.template, template)
 
         entitySetCollectionConfig.putAll(templateUpdates.entries.associate { CollectionTemplateKey(id, it.key) to it.value })
+
+        eventBus.post(EntitySetCollectionCreatedEvent(entitySetCollection))
     }
 
     /** DELETE **/
@@ -236,11 +272,16 @@ class CollectionsManager(
 
         entityTypeCollections.remove(id)
         aclKeyReservations.release(id)
+
+        eventBus.post(EntityTypeCollectionDeletedEvent(id))
     }
 
     fun deleteEntitySetCollection(id: UUID) {
         entitySetCollections.remove(id)
         aclKeyReservations.release(id)
+        entitySetCollectionConfig.removeAll(Predicates.equal(ENTITY_SET_COLLECTION_ID_INDEX, id) as Predicate<CollectionTemplateKey, UUID>)
+
+        eventBus.post(EntitySetCollectionDeletedEvent(id))
     }
 
     /** validation **/
@@ -354,6 +395,14 @@ class CollectionsManager(
         return entitySetCollectionConfig.aggregate(
                 EntitySetCollectionConfigAggregator(CollectionTemplates()),
                 entitySetCollectionIdsPredicate(ids) as Predicate<CollectionTemplateKey, UUID>).templates
+    }
+
+    private fun signalEntityTypeCollectionUpdated(id: UUID) {
+        eventBus.post(EntityTypeCollectionCreatedEvent(entityTypeCollections.getValue(id)))
+    }
+
+    private fun signalEntitySetCollectionUpdated(id: UUID) {
+        eventBus.post(EntitySetCollectionCreatedEvent(getEntitySetCollection(id)))
     }
 
 

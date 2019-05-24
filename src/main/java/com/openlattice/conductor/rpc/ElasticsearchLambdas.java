@@ -23,8 +23,11 @@ package com.openlattice.conductor.rpc;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
 import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.collection.EntitySetCollection;
+import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -138,102 +141,46 @@ public class ElasticsearchLambdas implements Serializable {
                 .saveAssociationTypeToElasticsearch( associationType, propertyTypes );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> savePropertyTypeToElasticsearch( PropertyType propertyType ) {
+    public static Function<ConductorElasticsearchApi, Boolean> saveSecurableObjectToElasticsearch(
+            SecurableObjectType securableObjectType,
+            Object securableObject ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .savePropertyTypeToElasticsearch( propertyType );
+                .saveSecurableObjectToElasticsearch( securableObjectType, securableObject );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> saveAppToElasticsearch( App app ) {
+    public static Function<ConductorElasticsearchApi, Boolean> deleteSecurableObject(
+            SecurableObjectType securableObjectType,
+            UUID securableObjectId ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .saveAppToElasticsearch( app );
+                .deleteSecurableObjectFromElasticsearch( securableObjectType, securableObjectId );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> saveAppTypeToElasticsearch( AppType appType ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .saveAppTypeToElasticsearch( appType );
+    public static Function<ConductorElasticsearchApi, SearchResult> executeEntitySetCollectionSearch(
+            String searchTerm,
+            Set<AclKey> authorizedEntitySetCollectionIds,
+            int start,
+            int maxHits ) {
+        return (Function<ConductorElasticsearchApi, SearchResult> & Serializable) ( api ) -> api
+                .executeEntitySetCollectionSearch( searchTerm, authorizedEntitySetCollectionIds, start, maxHits );
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> deleteEntityType( UUID entityTypeId ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteEntityType( entityTypeId );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> deleteAssociationType( UUID associationTypeId ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteAssociationType( associationTypeId );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> deletePropertyType( UUID propertyTypeId ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deletePropertyType( propertyTypeId );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> deleteApp( UUID appId ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteApp( appId );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> deleteAppType( UUID appTypeId ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .deleteAppType( appTypeId );
-    }
-
-    public static Function<ConductorElasticsearchApi, SearchResult> executeEntityTypeSearch(
+    public static Function<ConductorElasticsearchApi, SearchResult> executeSecurableObjectSearch(
+            SecurableObjectType securableObjectType,
             String searchTerm,
             int start,
             int maxHits ) {
         return (Function<ConductorElasticsearchApi, SearchResult> & Serializable) ( api ) -> api
-                .executeEntityTypeSearch( searchTerm, start, maxHits );
+                .executeSecurableObjectSearch( securableObjectType, searchTerm, start, maxHits );
     }
 
-    public static Function<ConductorElasticsearchApi, SearchResult> executeAssociationTypeSearch(
-            String searchTerm,
-            int start,
-            int maxHits ) {
-        return (Function<ConductorElasticsearchApi, SearchResult> & Serializable) ( api ) -> api
-                .executeAssociationTypeSearch( searchTerm, start, maxHits );
-    }
-
-    public static Function<ConductorElasticsearchApi, SearchResult> executeAppSearch(
-            String searchTerm,
-            int start,
-            int maxHits ) {
-        return (Function<ConductorElasticsearchApi, SearchResult> & Serializable) ( api ) -> api
-                .executeAppSearch( searchTerm, start, maxHits );
-    }
-
-    public static Function<ConductorElasticsearchApi, SearchResult> executeAppTypeSearch(
-            String searchTerm,
-            int start,
-            int maxHits ) {
-        return (Function<ConductorElasticsearchApi, SearchResult> & Serializable) ( api ) -> api
-                .executeAppTypeSearch( searchTerm, start, maxHits );
-    }
-
-    public static Function<ConductorElasticsearchApi, SearchResult> executePropertyTypeSearch(
-            String searchTerm,
-            int start,
-            int maxHits ) {
-        return (Function<ConductorElasticsearchApi, SearchResult> & Serializable) ( api ) -> api
-                .executePropertyTypeSearch( searchTerm, start, maxHits );
-    }
-
-    public static Function<ConductorElasticsearchApi, SearchResult> executeFQNEntityTypeSearch(
+    public static Function<ConductorElasticsearchApi, SearchResult> executeSecurableObjectFQNSearch(
+            SecurableObjectType securableObjectType,
             String namespace,
             String name,
             int start,
             int maxHits ) {
         return (Function<ConductorElasticsearchApi, SearchResult> & Serializable) ( api ) -> api
-                .executeFQNEntityTypeSearch( namespace, name, start, maxHits );
-    }
-
-    public static Function<ConductorElasticsearchApi, SearchResult> executeFQNPropertyTypeSearch(
-            String namespace,
-            String name,
-            int start,
-            int maxHits ) {
-        return (Function<ConductorElasticsearchApi, SearchResult> & Serializable) ( api ) -> api
-                .executeFQNPropertyTypeSearch( namespace, name, start, maxHits );
+                .executeSecurableObjectFQNSearch( securableObjectType, namespace, name, start, maxHits );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> deleteEntityData(
@@ -256,19 +203,11 @@ public class ElasticsearchLambdas implements Serializable {
                 .clearAllData();
     }
 
-    public static Function<ConductorElasticsearchApi, Boolean> triggerPropertyTypeIndex( List<PropertyType> propertyTypes ) {
+    public static Function<ConductorElasticsearchApi, Boolean> triggerSecurableObjectIndex(
+            SecurableObjectType securableObjectType,
+            Iterable<?> securableObjects ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .triggerPropertyTypeIndex( propertyTypes );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> triggerEntityTypeIndex( List<EntityType> entityTypes ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .triggerEntityTypeIndex( entityTypes );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> triggerAssociationTypeIndex( List<AssociationType> associationTypes ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .triggerAssociationTypeIndex( associationTypes );
+                .triggerSecurableObjectIndex( securableObjectType, securableObjects );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> triggerEntitySetIndex(
@@ -276,16 +215,6 @@ public class ElasticsearchLambdas implements Serializable {
             Map<UUID, PropertyType> propertyTypes ) {
         return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
                 .triggerEntitySetIndex( entitySets, propertyTypes );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> triggerAppIndex( List<App> apps ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .triggerAppIndex( apps );
-    }
-
-    public static Function<ConductorElasticsearchApi, Boolean> triggerAppTypeIndex( List<AppType> appTypes ) {
-        return (Function<ConductorElasticsearchApi, Boolean> & Serializable) ( api ) -> api
-                .triggerAppTypeIndex( appTypes );
     }
 
     public static Function<ConductorElasticsearchApi, Boolean> triggerOrganizationIndex( List<Organization> organizations ) {
