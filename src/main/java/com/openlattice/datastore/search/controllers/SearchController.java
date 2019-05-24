@@ -312,7 +312,7 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     @Override
     @Timed
     public SearchResult executeEntitySetCollectionSearch( @RequestBody SearchTerm searchTerm ) {
-        return searchService.executeEntitySetCollectiohQuery( searchTerm.getSearchTerm(),
+        return searchService.executeEntitySetCollectionQuery( searchTerm.getSearchTerm(),
                 searchTerm.getStart(),
                 searchTerm.getMaxHits() );
     }
