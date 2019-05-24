@@ -22,37 +22,28 @@ package com.openlattice.datastore.services;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.durableexecutor.DurableExecutorService;
-import com.openlattice.apps.App;
-import com.openlattice.apps.AppType;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.*;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.collection.EntitySetCollection;
-import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.Organization;
 import com.openlattice.rhizome.hazelcast.DelegatedStringSet;
 import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet;
-import com.openlattice.search.requests.*;
-
-import java.util.Optional;
-
+import com.openlattice.search.requests.EntityDataKeySearchResult;
+import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.search.requests.SearchResult;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 public class DatastoreConductorElasticsearchApi implements ConductorElasticsearchApi {
@@ -183,17 +174,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
                     .wrap( ElasticsearchLambdas.createOrganization( organization ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to create organization in elasticsearch" );
-            return false;
-        }
-    }
-
-    @Override
-    public boolean deleteOrganization( UUID organizationId ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deleteOrganization( organizationId ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to delete organization from elasticsearch" );
             return false;
         }
     }
@@ -389,7 +369,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         }
     }
 
-
     @Override
     public SearchResult executeSecurableObjectSearch(
             SecurableObjectType securableObjectType, String searchTerm, int start, int maxHits ) {
@@ -426,7 +405,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
             return new SearchResult( 0, Lists.newArrayList() );
         }
     }
-
 
     @Override
     public boolean clearAllData() {
