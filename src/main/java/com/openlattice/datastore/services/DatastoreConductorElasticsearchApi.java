@@ -29,9 +29,12 @@ import com.hazelcast.durableexecutor.DurableExecutorService;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppType;
 import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.*;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.collection.EntitySetCollection;
+import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
@@ -210,7 +213,26 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
                     .get();
             return searchResult;
         } catch ( InterruptedException | ExecutionException e ) {
-            logger.error( "Unable to to perform keyword search.", e );
+            logger.error( "Unable to to perform organization keyword search.", e );
+            return new SearchResult( 0, Lists.newArrayList() );
+        }
+    }
+
+    @Override
+    public SearchResult executeEntitySetCollectionSearch(
+            String searchTerm,
+            Set<AclKey> authorizedEntitySetCollectionIds,
+            int start,
+            int maxHits ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall
+                    .wrap( ElasticsearchLambdas.executeEntitySetCollectionSearch( searchTerm,
+                            authorizedEntitySetCollectionIds,
+                            start,
+                            maxHits ) ) )
+                    .get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.error( "Unable to to perform EntitySetCollection keyword search.", e );
             return new SearchResult( 0, Lists.newArrayList() );
         }
     }
@@ -233,6 +255,19 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         try {
             return executor.submit( ConductorElasticsearchCall.wrap(
                     ElasticsearchLambdas.triggerOrganizationIndex( organizations ) ) ).get();
+        } catch ( InterruptedException | ExecutionException e ) {
+            logger.debug( "Unable to trigger app type re-index" );
+            return false;
+        }
+    }
+
+    @Override
+    public boolean triggerSecurableObjectIndex(
+            SecurableObjectType securableObjectType,
+            Iterable<?> securableObjects ) {
+        try {
+            return executor.submit( ConductorElasticsearchCall.wrap(
+                    ElasticsearchLambdas.triggerSecurableObjectIndex( securableObjectType, securableObjects ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "Unable to trigger app type re-index" );
             return false;
@@ -295,11 +330,13 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     @Override public boolean deleteEntityDataBulk( UUID entitySetId, UUID entityTypeId, Set<UUID> entityKeyIds ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deleteEntityDataBulk( entitySetId, entityTypeId, entityKeyIds ) ) ).get();
+                    .wrap( ElasticsearchLambdas.deleteEntityDataBulk( entitySetId, entityTypeId, entityKeyIds ) ) )
+                    .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to delete entity data from elasticsearch" );
             return false;
-        }    }
+        }
+    }
 
     @Override public EntityDataKeySearchResult executeSearch(
             SearchConstraints searchConstraints,
@@ -339,113 +376,45 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
     }
 
     @Override
-    public boolean saveAssociationTypeToElasticsearch( AssociationType associationType, List<PropertyType> propertyTypes ) {
+    public boolean saveAssociationTypeToElasticsearch(
+            AssociationType associationType,
+            List<PropertyType> propertyTypes ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.saveAssociationTypeToElasticsearch( associationType, propertyTypes ) ) ).get();
+                    .wrap( ElasticsearchLambdas.saveAssociationTypeToElasticsearch( associationType, propertyTypes ) ) )
+                    .get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to save association type to elasticsearch" );
             return false;
         }
     }
 
-    @Override
-    public boolean savePropertyTypeToElasticsearch( PropertyType propertyType ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.savePropertyTypeToElasticsearch( propertyType ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to save property type to elasticsearch" );
-            return false;
-        }
-    }
 
     @Override
-    public boolean deleteEntityType( UUID entityTypeId ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deleteEntityType( entityTypeId ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to delete entity type from elasticsearch" );
-            return false;
-        }
-    }
-
-    @Override
-    public boolean deleteAssociationType( UUID associationTypeId ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deleteAssociationType( associationTypeId ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to delete association type from elasticsearch" );
-            return false;
-        }
-    }
-
-    @Override
-    public boolean deletePropertyType( UUID propertyTypeId ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deletePropertyType( propertyTypeId ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to delete property type from elasticsearch" );
-            return false;
-        }
-    }
-
-    @Override
-    public SearchResult executeEntityTypeSearch( String searchTerm, int start, int maxHits ) {
+    public SearchResult executeSecurableObjectSearch(
+            SecurableObjectType securableObjectType, String searchTerm, int start, int maxHits ) {
         try {
             SearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.executeEntityTypeSearch(
+                    ElasticsearchLambdas.executeSecurableObjectSearch(
+                            securableObjectType,
                             searchTerm,
                             start,
                             maxHits ) ) )
                     .get();
             return queryResults;
         } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute entity type search" );
+            logger.debug( "unable to execute securable object search" );
             return new SearchResult( 0, Lists.newArrayList() );
         }
     }
 
     @Override
-    public SearchResult executeAssociationTypeSearch( String searchTerm, int start, int maxHits ) {
+    public SearchResult executeSecurableObjectFQNSearch(
+            SecurableObjectType securableObjectType, String namespace, String name, int start, int maxHits ) {
         try {
             SearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.executeAssociationTypeSearch(
-                            searchTerm,
-                            start,
-                            maxHits ) ) )
-                    .get();
-            return queryResults;
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute association type search" );
-            return new SearchResult( 0, Lists.newArrayList() );
-        }
-    }
-
-    @Override
-    public SearchResult executePropertyTypeSearch( String searchTerm, int start, int maxHits ) {
-        try {
-            SearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.executePropertyTypeSearch(
-                            searchTerm,
-                            start,
-                            maxHits ) ) )
-                    .get();
-            return queryResults;
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute property type search" );
-            return new SearchResult( 0, Lists.newArrayList() );
-        }
-    }
-
-    @Override
-    public SearchResult executeFQNEntityTypeSearch( String namespace, String name, int start, int maxHits ) {
-        try {
-            SearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.executeFQNEntityTypeSearch(
+                    ElasticsearchLambdas.executeSecurableObjectFQNSearch(
+                            securableObjectType,
                             namespace,
                             name,
                             start,
@@ -453,27 +422,11 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
                     .get();
             return queryResults;
         } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute property type search" );
+            logger.debug( "unable to execute securable object FQN search" );
             return new SearchResult( 0, Lists.newArrayList() );
         }
     }
 
-    @Override
-    public SearchResult executeFQNPropertyTypeSearch( String namespace, String name, int start, int maxHits ) {
-        try {
-            SearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.executeFQNPropertyTypeSearch(
-                            namespace,
-                            name,
-                            start,
-                            maxHits ) ) )
-                    .get();
-            return queryResults;
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute property type search" );
-            return new SearchResult( 0, Lists.newArrayList() );
-        }
-    }
 
     @Override
     public boolean clearAllData() {
@@ -482,39 +435,6 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
                     ElasticsearchLambdas.clearAllData() ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
             logger.debug( "unable to delete all data" );
-            return false;
-        }
-    }
-
-    @Override
-    public boolean triggerPropertyTypeIndex( List<PropertyType> propertyTypes ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.triggerPropertyTypeIndex( propertyTypes ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "Unable to trigger property type re-index" );
-            return false;
-        }
-    }
-
-    @Override
-    public boolean triggerEntityTypeIndex( List<EntityType> entityTypes ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.triggerEntityTypeIndex( entityTypes ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "Unable to trigger entity type re-index" );
-            return false;
-        }
-    }
-
-    @Override
-    public boolean triggerAssociationTypeIndex( List<AssociationType> associationTypes ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.triggerAssociationTypeIndex( associationTypes ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "Unable to trigger association type re-index" );
             return false;
         }
     }
@@ -532,93 +452,26 @@ public class DatastoreConductorElasticsearchApi implements ConductorElasticsearc
         }
     }
 
-    @Override public boolean triggerAppIndex( List<App> apps ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.triggerAppIndex( apps ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "Unable to trigger app re-index" );
-            return false;
-        }
-    }
-
-    @Override public boolean triggerAppTypeIndex( List<AppType> appTypes ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.triggerAppTypeIndex( appTypes ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "Unable to trigger app type re-index" );
-            return false;
-        }
-    }
-
-    @Override public boolean saveAppToElasticsearch( App app ) {
+    @Override public boolean saveSecurableObjectToElasticsearch(
+            SecurableObjectType securableObjectType, Object securableObject ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.saveAppToElasticsearch( app ) ) ).get();
+                    .wrap( ElasticsearchLambdas
+                            .saveSecurableObjectToElasticsearch( securableObjectType, securableObject ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to save app to elasticsearch" );
+            logger.debug( "unable to save securable object to elasticsearch" );
             return false;
         }
     }
 
-    @Override public boolean deleteApp( UUID appId ) {
+    @Override public boolean deleteSecurableObjectFromElasticsearch(
+            SecurableObjectType securableObjectType, UUID objectId ) {
         try {
             return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deleteApp( appId ) ) ).get();
+                    .wrap( ElasticsearchLambdas.deleteSecurableObject( securableObjectType, objectId ) ) ).get();
         } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to delete app from elasticsearch" );
+            logger.debug( "unable to delete securable object from elasticsearch" );
             return false;
-        }
-    }
-
-    @Override public SearchResult executeAppSearch( String searchTerm, int start, int maxHits ) {
-        try {
-            SearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.executeAppSearch(
-                            searchTerm,
-                            start,
-                            maxHits ) ) )
-                    .get();
-            return queryResults;
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute app search" );
-            return new SearchResult( 0, Lists.newArrayList() );
-        }
-    }
-
-    @Override public boolean saveAppTypeToElasticsearch( AppType appType ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.saveAppTypeToElasticsearch( appType ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to save app type to elasticsearch" );
-            return false;
-        }
-    }
-
-    @Override public boolean deleteAppType( UUID appTypeId ) {
-        try {
-            return executor.submit( ConductorElasticsearchCall
-                    .wrap( ElasticsearchLambdas.deleteAppType( appTypeId ) ) ).get();
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to delete app type from elasticsearch" );
-            return false;
-        }
-    }
-
-    @Override public SearchResult executeAppTypeSearch( String searchTerm, int start, int maxHits ) {
-        try {
-            SearchResult queryResults = executor.submit( ConductorElasticsearchCall.wrap(
-                    ElasticsearchLambdas.executeAppTypeSearch(
-                            searchTerm,
-                            start,
-                            maxHits ) ) )
-                    .get();
-            return queryResults;
-        } catch ( InterruptedException | ExecutionException e ) {
-            logger.debug( "unable to execute app type search" );
-            return new SearchResult( 0, Lists.newArrayList() );
         }
     }
 

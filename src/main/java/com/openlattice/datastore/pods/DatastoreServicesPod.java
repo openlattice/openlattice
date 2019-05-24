@@ -435,7 +435,8 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 aclKeyReservationService(),
                 schemaManager(),
-                authorizationManager() );
+                authorizationManager(),
+                eventBus );
     }
 
     @PostConstruct

@@ -294,6 +294,30 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     @RequestMapping(
+            path = { ENTITY_TYPES + COLLECTIONS },
+            method = RequestMethod.POST,
+            produces = { MediaType.APPLICATION_JSON_VALUE } )
+    @Override
+    @Timed
+    public SearchResult executeEntityTypeCollectionSearch( @RequestBody SearchTerm searchTerm ) {
+        return searchService.executeEntityTypeCollectionSearch( searchTerm.getSearchTerm(),
+                searchTerm.getStart(),
+                searchTerm.getMaxHits() );
+    }
+
+    @RequestMapping(
+            path = { ENTITY_SETS + COLLECTIONS },
+            method = RequestMethod.POST,
+            produces = { MediaType.APPLICATION_JSON_VALUE } )
+    @Override
+    @Timed
+    public SearchResult executeEntitySetCollectionSearch( @RequestBody SearchTerm searchTerm ) {
+        return searchService.executeEntitySetCollectiohQuery( searchTerm.getSearchTerm(),
+                searchTerm.getStart(),
+                searchTerm.getMaxHits() );
+    }
+
+    @RequestMapping(
             path = { ENTITY_TYPES + FQN },
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )

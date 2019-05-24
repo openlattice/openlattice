@@ -3,6 +3,7 @@ package com.openlattice.collection
 import com.openlattice.authorization.*
 import com.openlattice.authorization.securable.SecurableObjectType
 import com.openlattice.collections.CollectionsApi
+import com.openlattice.collections.CollectionsApi.Companion.AUTO_CREATE
 import com.openlattice.collections.CollectionsApi.Companion.CONTROLLER
 import com.openlattice.collections.CollectionsApi.Companion.ENTITY_SET_COLLECTION_ID
 import com.openlattice.collections.CollectionsApi.Companion.ENTITY_SET_COLLECTION_ID_PATH
@@ -77,13 +78,15 @@ class CollectionsController : CollectionsApi, AuthorizingComponent {
     }
 
     @RequestMapping(path = [ENTITY_SET_PATH], method = [RequestMethod.POST])
-    override fun createEntitySetCollection(@RequestBody entitySetCollection: EntitySetCollection): UUID {
+    override fun createEntitySetCollection(
+            @RequestBody entitySetCollection: EntitySetCollection,
+            @RequestParam(value = AUTO_CREATE, defaultValue = "true") autoCreate: Boolean): UUID {
         val unauthorizedEntitySetIds = findUnauthorizedTemplateEntitySets(entitySetCollection.template)
         if (unauthorizedEntitySetIds.isNotEmpty()) {
             throw ForbiddenException("Unable to create EntitySetCollection ${entitySetCollection.name} because entity sets $unauthorizedEntitySetIds are not authorized")
         }
 
-        return collectionsManager.createEntitySetCollection(entitySetCollection)
+        return collectionsManager.createEntitySetCollection(entitySetCollection, autoCreate)
     }
 
     @RequestMapping(path = [ENTITY_TYPE_PATH + ENTITY_TYPE_COLLECTION_ID_PATH], method = [RequestMethod.PATCH])
