@@ -32,8 +32,10 @@ import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresUsername
 import com.openlattice.authorization.*
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.entityKeyIdColumnsList
 import com.openlattice.data.storage.linkingEntityKeyIdColumnsList
+import com.openlattice.data.storage.mapMetadataOptionToPostgresColumn
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -340,8 +342,9 @@ class AssemblerConnectionManager(
         materializeEntitySetsTimer.time().use {
 
             val selectColumns = ((if (entitySet.isLinking) linkingEntityKeyIdColumnsList else entityKeyIdColumnsList) +
-                    authorizedPropertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) }
-                    ).joinToString(",")
+                    mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS) +
+                    authorizedPropertyTypes.values.map { quote(it.type.fullQualifiedNameAsString) })
+                    .joinToString(",")
 
             val sql = "SELECT $selectColumns FROM $PRODUCTION_FOREIGN_SCHEMA.${entitySetIdTableName(entitySet.id)} "
 

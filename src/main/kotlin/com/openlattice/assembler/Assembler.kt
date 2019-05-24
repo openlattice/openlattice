@@ -356,7 +356,7 @@ class Assembler(
                 authorizedPropertyTypes.values.map(PropertyType::getId),
                 entitySetIds.associateWith { authorizedPropertyTypes.keys },
                 mapOf(),
-                EnumSet.allOf(MetadataOption::class.java),
+                EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
                 authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 entitySet.isLinking,
                 false //Always provide entity set id

@@ -503,7 +503,7 @@ private fun getMetadataOptions(metadataOptions: Set<MetadataOption>, linking: Bo
     return allowedMetadataOptions.map(::mapMetadataOptionToPostgresColumn)
 }
 
-private fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): String {
+fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): String {
     return when (metadataOption) {
         MetadataOption.LAST_WRITE -> LAST_WRITE.name
         MetadataOption.LAST_INDEX -> LAST_INDEX.name
