@@ -30,6 +30,8 @@ interface CollectionsApi {
 
         const val TYPE_ID = "typeId"
         const val TYPE_ID_PATH = "/{$TYPE_ID}"
+
+        const val AUTO_CREATE = "autoCreate"
     }
 
     /**
@@ -72,7 +74,7 @@ interface CollectionsApi {
      * Creates a new EntitySetCollection and creating any EntitySets missing from the template
      */
     @POST(BASE + ENTITY_SET_PATH)
-    fun createEntitySetCollection(@Body entitySetCollection: EntitySetCollection): UUID
+    fun createEntitySetCollection(@Body entitySetCollection: EntitySetCollection, @Query(AUTO_CREATE) autoCreate: Boolean): UUID
 
     /**
      * Updates metadata of the specified EntityTypeCollection

@@ -19,7 +19,7 @@ public class CollectionTemplateType {
     @JsonCreator
     public CollectionTemplateType(
             @JsonProperty( SerializationConstants.ID_FIELD ) Optional<UUID> id,
-            @JsonProperty( SerializationConstants.NAME ) String name,
+            @JsonProperty( SerializationConstants.NAME_FIELD ) String name,
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
             @JsonProperty( SerializationConstants.ENTITY_TYPE_ID ) UUID entityTypeId ) {
@@ -44,7 +44,7 @@ public class CollectionTemplateType {
         return id;
     }
 
-    @JsonProperty( SerializationConstants.NAME )
+    @JsonProperty( SerializationConstants.NAME_FIELD )
     public String getName() {
         return name;
     }

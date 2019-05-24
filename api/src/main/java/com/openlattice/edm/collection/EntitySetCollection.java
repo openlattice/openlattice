@@ -21,7 +21,7 @@ public class EntitySetCollection extends AbstractSecurableObject {
     @JsonCreator
     public EntitySetCollection(
             @JsonProperty( SerializationConstants.ID_FIELD ) Optional<UUID> id,
-            @JsonProperty( SerializationConstants.NAME ) String name,
+            @JsonProperty( SerializationConstants.NAME_FIELD ) String name,
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
             @JsonProperty( SerializationConstants.ENTITY_TYPE_COLLECTION_ID ) UUID entityTypeCollectionId,
@@ -48,7 +48,7 @@ public class EntitySetCollection extends AbstractSecurableObject {
         this( Optional.of( id ), name, title, description, entityTypeCollectionId, template, contacts, organizationId );
     }
 
-    @JsonProperty( SerializationConstants.NAME )
+    @JsonProperty( SerializationConstants.NAME_FIELD )
     public String getName() {
         return name;
     }
