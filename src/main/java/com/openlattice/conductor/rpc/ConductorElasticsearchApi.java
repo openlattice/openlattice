@@ -87,7 +87,6 @@ public interface ConductorElasticsearchApi {
     String ORGANIZATIONS     = "organizations";
     String ORGANIZATION      = "com/openlattice/organization";
     String ORGANIZATION_TYPE = "organizationType";
-    String ORGANIZATION_ID   = "organizationId";
 
     String DATA_INDEX_PREFIX = "entity_data_";
     String DATA_TYPE_PREFIX  = "data_type_";
@@ -103,7 +102,6 @@ public interface ConductorElasticsearchApi {
     // association_type_index setup consts
     String ASSOCIATION_TYPE_INDEX = "association_type_index";
     String ASSOCIATION_TYPE       = "association_type";
-    String ENTITY_TYPE_FIELD      = "entityType";
 
     // app_index setup consts
     String APP_INDEX = "app_index";
@@ -114,17 +112,8 @@ public interface ConductorElasticsearchApi {
     String APP_TYPE       = "app_type";
 
     // entity set field consts
-    String TYPE_FIELD     = "_type";
     String ENTITY_SET     = "entitySet";
     String PROPERTY_TYPES = "propertyTypes";
-    String ACLS           = "acls";
-    String NAME           = "name";
-    String NAMESPACE      = "namespace";
-    String TITLE          = "title";
-    String DESCRIPTION    = "description";
-    String ENTITY_TYPE_ID = "entityTypeId";
-    String ID             = "id";
-    String URL            = "url";
 
     // entity type data nested fields
     String ENTITY              = "entity";
@@ -133,7 +122,6 @@ public interface ConductorElasticsearchApi {
     // entity_type_collection_index setup consts
     String ENTITY_TYPE_COLLECTION_INDEX = "entity_type_collection_index";
     String ENTITY_TYPE_COLLECTION       = "entity_type_collection";
-    String TEMPLATE                     = "template";
 
     // entity_set_collection_index setup consts
     String ENTITY_SET_COLLECTION_INDEX = "entity_set_collection_index";
@@ -217,8 +205,6 @@ public interface ConductorElasticsearchApi {
 
     /* Organizations */
     boolean createOrganization( Organization organization );
-
-    boolean deleteOrganization( UUID organizationId );
 
     boolean updateOrganization( UUID id, Optional<String> optionalTitle, Optional<String> optionalDescription );
 

@@ -288,7 +288,8 @@ public class SearchService {
 
     @Subscribe
     public void deleteOrganization( OrganizationDeletedEvent event ) {
-        elasticsearchApi.deleteOrganization( event.getOrganizationId() );
+        elasticsearchApi
+                .deleteSecurableObjectFromElasticsearch( SecurableObjectType.Organization, event.getOrganizationId() );
     }
 
     /**
