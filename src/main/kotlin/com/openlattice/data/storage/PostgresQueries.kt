@@ -417,7 +417,7 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         ""
     }
 
-    return "( SELECT $selectColumns FROM $FILTERED_ENTITY_KEY_IDS INNER JOIN ${IDS.name} USING($joinColumnsSql) $groupBy ) as $ENTITIES_TABLE_ALIAS"
+    return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) $groupBy ) as $ENTITIES_TABLE_ALIAS"
 }
 
 internal fun arrayAggSql(fqn: String): String {
