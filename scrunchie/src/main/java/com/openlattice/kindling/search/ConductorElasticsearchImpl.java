@@ -26,8 +26,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.*;
-import com.openlattice.apps.App;
-import com.openlattice.apps.AppType;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.SecurableObjectType;
@@ -36,8 +34,6 @@ import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
 import com.openlattice.conductor.rpc.SearchConfiguration;
 import com.openlattice.data.EntityDataKey;
 import com.openlattice.edm.EntitySet;
-import com.openlattice.edm.collection.EntitySetCollection;
-import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.type.Analyzer;
 import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
@@ -112,7 +108,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             SecurableObjectType.App, APP_INDEX,
             SecurableObjectType.AppType, APP_TYPE_INDEX,
             SecurableObjectType.EntityTypeCollection, ENTITY_TYPE_COLLECTION_INDEX,
-            SecurableObjectType.EntitySetCollection, ENTITY_SET_COLLECTION_INDEX
+            SecurableObjectType.EntitySetCollection, ENTITY_SET_COLLECTION_INDEX,
+            SecurableObjectType.Organization, ORGANIZATIONS
     );
 
     private static final Map<String, String> typeNamesByIndexName = Map.of(
@@ -122,7 +119,8 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             APP_INDEX, APP,
             APP_TYPE_INDEX, APP_TYPE,
             ENTITY_TYPE_COLLECTION_INDEX, ENTITY_TYPE_COLLECTION,
-            ENTITY_SET_COLLECTION_INDEX, ENTITY_SET_COLLECTION
+            ENTITY_SET_COLLECTION_INDEX, ENTITY_SET_COLLECTION,
+            ORGANIZATIONS, ORGANIZATION_TYPE
     );
 
     static {
@@ -238,9 +236,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         Map<String, Object> mapping = Maps.newHashMap();
         properties.put( PROPERTY_TYPES, nestedField );
         properties.put( ENTITY_SET, objectField );
-        properties.put( ENTITY_SET + "." + NAME, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
-        properties.put( ENTITY_SET + "." + TITLE, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
-        properties.put( ENTITY_SET + "." + DESCRIPTION, ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
+        properties.put( ENTITY_SET + "." + SerializationConstants.NAME_FIELD,
+                ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
+        properties.put( ENTITY_SET + "." + SerializationConstants.TITLE_FIELD,
+                ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
+        properties.put( ENTITY_SET + "." + SerializationConstants.DESCRIPTION_FIELD,
+                ImmutableMap.of( TYPE, TEXT, ANALYZER, METAPHONE_ANALYZER ) );
         entitySetData.put( MAPPING_PROPERTIES, properties );
         mapping.put( ENTITY_SET_TYPE, entitySetData );
 
@@ -999,10 +1000,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         Map<String, Object> updatedFields = Maps.newHashMap();
         if ( optionalTitle.isPresent() ) {
-            updatedFields.put( TITLE, optionalTitle.get() );
+            updatedFields.put( SerializationConstants.TITLE_FIELD, optionalTitle.get() );
         }
         if ( optionalDescription.isPresent() ) {
-            updatedFields.put( DESCRIPTION, optionalDescription.get() );
+            updatedFields.put( SerializationConstants.DESCRIPTION_FIELD, optionalDescription.get() );
         }
         try {
             String s = ObjectMappers.getJsonMapper().writeValueAsString( updatedFields );
@@ -1112,14 +1113,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
     public boolean createOrganization( Organization organization ) {
         if ( !verifyElasticsearchConnection() ) { return false; }
 
-        Map<String, Object> organizationObject = Maps.newHashMap();
-        organizationObject.put( ID, organization.getId() );
-        organizationObject.put( TITLE, organization.getTitle() );
-        organizationObject.put( DESCRIPTION, organization.getDescription() );
-        UUID organizationId = organization.getSecurablePrincipal().getId();
         try {
-            String s = ObjectMappers.getJsonMapper().writeValueAsString( organizationObject );
-            client.prepareIndex( ORGANIZATIONS, ORGANIZATION_TYPE, organizationId.toString() )
+            String s = ObjectMappers.getJsonMapper().writeValueAsString( getOrganizationObject( organization ) );
+            client.prepareIndex( ORGANIZATIONS, ORGANIZATION_TYPE, organization.getId().toString() )
                     .setSource( s, XContentType.JSON )
                     .execute().actionGet();
             return true;
@@ -1127,23 +1123,6 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
             logger.debug( "error creating organization in elasticsearch" );
         }
         return false;
-    }
-
-    @Override
-    public boolean deleteOrganization( UUID organizationId ) {
-        if ( !verifyElasticsearchConnection() ) { return false; }
-
-        client.prepareDelete( ORGANIZATIONS, ORGANIZATION_TYPE, organizationId.toString() ).execute().actionGet();
-
-        new DeleteByQueryRequestBuilder( client, DeleteByQueryAction.INSTANCE ).filter(
-                QueryBuilders.boolQuery()
-                        .must( QueryBuilders.matchQuery( TYPE_FIELD, ACLS ) )
-                        .must( QueryBuilders.matchQuery( ORGANIZATION_ID, organizationId.toString() ) ) )
-                .source( ORGANIZATIONS )
-                .execute()
-                .actionGet();
-
-        return true;
     }
 
     /*** METADATA SEARCHES ***/
@@ -1185,8 +1164,12 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         String typeName = typeNamesByIndexName.get( indexName );
 
         BoolQueryBuilder query = new BoolQueryBuilder();
-        query.must( QueryBuilders.regexpQuery( TYPE + "." + NAMESPACE, ".*" + namespace + ".*" ) )
-                .must( QueryBuilders.regexpQuery( TYPE + "." + NAME, ".*" + name + ".*" ) );
+        query.must( QueryBuilders
+                .regexpQuery( SerializationConstants.TYPE_FIELD + "." + SerializationConstants.NAMESPACE_FIELD,
+                        ".*" + namespace + ".*" ) )
+                .must( QueryBuilders
+                        .regexpQuery( SerializationConstants.TYPE_FIELD + "." + SerializationConstants.NAME_FIELD,
+                                ".*" + name + ".*" ) );
 
         SearchResponse response = client.prepareSearch( indexName )
                 .setTypes( typeName )
@@ -1217,8 +1200,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( !verifyElasticsearchConnection() ) { return new SearchResult( 0, Lists.newArrayList() ); }
 
         BoolQueryBuilder query = new BoolQueryBuilder()
-                .should( QueryBuilders.matchQuery( TITLE, searchTerm ).fuzziness( Fuzziness.AUTO ) )
-                .should( QueryBuilders.matchQuery( DESCRIPTION, searchTerm ).fuzziness( Fuzziness.AUTO ) )
+                .should( QueryBuilders.matchQuery( SerializationConstants.TITLE_FIELD, searchTerm )
+                        .fuzziness( Fuzziness.AUTO ) )
+                .should( QueryBuilders.matchQuery( SerializationConstants.DESCRIPTION_FIELD, searchTerm )
+                        .fuzziness( Fuzziness.AUTO ) )
                 .minimumShouldMatch( 1 );
 
         query.filter( QueryBuilders.idsQuery()
@@ -1259,10 +1244,10 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         if ( optionalSearchTerm.isPresent() ) {
             String searchTerm = optionalSearchTerm.get();
             Map<String, Float> fieldsMap = Maps.newHashMap();
-            fieldsMap.put( ENTITY_SET + "." + ID, 1F );
-            fieldsMap.put( ENTITY_SET + "." + NAME, 1F );
-            fieldsMap.put( ENTITY_SET + "." + TITLE, 1F );
-            fieldsMap.put( ENTITY_SET + "." + DESCRIPTION, 1F );
+            fieldsMap.put( ENTITY_SET + "." + SerializationConstants.ID_FIELD, 1F );
+            fieldsMap.put( ENTITY_SET + "." + SerializationConstants.NAME, 1F );
+            fieldsMap.put( ENTITY_SET + "." + SerializationConstants.TITLE_FIELD, 1F );
+            fieldsMap.put( ENTITY_SET + "." + SerializationConstants.DESCRIPTION_FIELD, 1F );
 
             query.must( QueryBuilders.queryStringQuery( getFormattedFuzzyString( searchTerm ) ).fields( fieldsMap )
                     .lenient( true ).fuzziness( Fuzziness.AUTO ) );
@@ -1270,12 +1255,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         if ( optionalEntityType.isPresent() ) {
             UUID eid = optionalEntityType.get();
-            query.must( QueryBuilders.matchQuery( ENTITY_SET + "." + ENTITY_TYPE_ID, eid.toString() ) );
+            query.must( QueryBuilders
+                    .matchQuery( ENTITY_SET + "." + SerializationConstants.ENTITY_TYPE_ID, eid.toString() ) );
         } else if ( optionalPropertyTypes.isPresent() ) {
             Set<UUID> propertyTypes = optionalPropertyTypes.get();
             for ( UUID pid : propertyTypes ) {
                 query.must( QueryBuilders.nestedQuery( PROPERTY_TYPES,
-                        QueryBuilders.matchQuery( PROPERTY_TYPES + "." + ID, pid.toString() ),
+                        QueryBuilders
+                                .matchQuery( PROPERTY_TYPES + "." + SerializationConstants.ID_FIELD, pid.toString() ),
                         ScoreMode.Avg ) );
             }
         }
@@ -1330,17 +1317,11 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
     @Override
     public boolean triggerOrganizationIndex( List<Organization> organizations ) {
-        Function<Object, String> idFn = org -> ( (Map<String, Object>) org ).get( ID ).toString();
-        List<Map<String, Object>> organizationObjects =
-                organizations.stream()
-                        .map( organization -> {
-                            Map<String, Object> organizationObject = Maps.newHashMap();
-                            organizationObject.put( ID, organization.getId() );
-                            organizationObject.put( TITLE, organization.getTitle() );
-                            organizationObject.put( DESCRIPTION, organization.getDescription() );
-                            return organizationObject;
-                        } )
-                        .collect( Collectors.toList() );
+        Function<Object, String> idFn = org -> ( (Map<String, Object>) org )
+                .get( SerializationConstants.ID_FIELD ).toString();
+        List<Map<String, Object>> organizationObjects = organizations.stream()
+                .map( ConductorElasticsearchImpl::getOrganizationObject )
+                .collect( Collectors.toList() );
 
         return triggerIndex( ORGANIZATIONS, ORGANIZATION_TYPE, organizationObjects, idFn );
     }
@@ -1414,9 +1395,9 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
 
         switch ( objectType ) {
             case AssociationType: {
-                fields.add( ENTITY_TYPE_FIELD + "." + SerializationConstants.TYPE_FIELD + "."
+                fields.add( SerializationConstants.ENTITY_TYPE + "." + SerializationConstants.TYPE_FIELD + "."
                         + SerializationConstants.NAME );
-                fields.add( ENTITY_TYPE_FIELD + "." + SerializationConstants.TYPE_FIELD + "."
+                fields.add( SerializationConstants.ENTITY_TYPE + "." + SerializationConstants.TYPE_FIELD + "."
                         + SerializationConstants.NAMESPACE );
                 break;
             }
@@ -1495,6 +1476,14 @@ public class ConductorElasticsearchImpl implements ConductorElasticsearchApi {
         }
 
         return true;
+    }
+
+    private static Map<String, Object> getOrganizationObject( Organization organization ) {
+        Map<String, Object> organizationObject = Maps.newHashMap();
+        organizationObject.put( SerializationConstants.ID_FIELD, organization.getId() );
+        organizationObject.put( SerializationConstants.TITLE_FIELD, organization.getTitle() );
+        organizationObject.put( SerializationConstants.DESCRIPTION_FIELD, organization.getDescription() );
+        return organizationObject;
     }
 
     public boolean verifyElasticsearchConnection() {
