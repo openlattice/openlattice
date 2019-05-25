@@ -159,12 +159,12 @@ interface DataGraphManager {
     /**
      * Integrates association data into the system.
      * @param associations The assosciations to integrate
-     * @param authorizedPropertiesByEntitySetId The authorized properties by entity set id.
+     * @param authorizedPropertiesByEntitySet The authorized properties by entity set id.
      * @return A map of entity sets to mappings of entity ids to entity key ids.
      */
     fun integrateAssociations(
             associations: Set<Association>,
-            authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertiesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Map<String, UUID>>
 
     fun createAssociations(
@@ -202,7 +202,7 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun getNeighborEntitySetIds(entitySetId: Set<UUID>): Set<UUID>
+    fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID>
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
     fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey>
