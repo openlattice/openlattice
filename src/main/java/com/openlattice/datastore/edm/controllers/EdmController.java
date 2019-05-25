@@ -488,9 +488,13 @@ public class EdmController implements EdmApi, AuthorizingComponent, AuditingComp
 
         modelService.deleteEntitySet( entitySetId );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( entitySetId ) );
-        // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
-        deleteAssociationsOfEntitySet( entitySetId );
-        dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
+
+        // linking entitysets have no entities or associations
+        if(!entitySet.isLinking()) {
+            // associations need to be deleted first, because edges are deleted in DataGraphManager.deleteEntitySet call
+            deleteAssociationsOfEntitySet( entitySetId );
+            dgm.deleteEntitySet( entitySetId, authorizedPropertyTypes );
+        }
 
         recordEvent( new AuditableEvent(
                 getCurrentUserId(),
