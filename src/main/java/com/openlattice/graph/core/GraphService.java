@@ -41,21 +41,21 @@ public interface GraphService {
 
     WriteEvent createEdges( Set<DataEdgeKey> keys );
 
-    int clearEdges( Set<DataEdgeKey> keys );
+    int clearEdges( Iterable<DataEdgeKey> keys );
 
-    int clearVerticesInEntitySet( @Nonnull UUID entitySetId );
+    int clearVerticesInEntitySetWithoutLocking( @Nonnull UUID entitySetId );
 
-    int clearVertices( @Nonnull UUID entitySetId, @Nonnull Set<UUID> vertices );
+    int clearVerticesWithoutLocking( @Nonnull UUID entitySetId, @Nonnull Set<UUID> vertices );
 
-    int clearVerticesOfAssociations( UUID entitySetId, Set<UUID> vertices );
+    int clearVerticesOfAssociationsWithoutLocking( UUID entitySetId, Set<UUID> vertices );
 
-    WriteEvent deleteEdges( Set<DataEdgeKey> keys );
+    WriteEvent deleteEdges( Iterable<DataEdgeKey> keys );
 
-    int deleteVerticesInEntitySet( UUID entitySetId );
+    int deleteVerticesInEntitySetWithoutLocking( UUID entitySetId );
 
-    int deleteVertices( UUID entitySetId, Set<UUID> vertices );
+    int deleteVerticesWithoutLocking( UUID entitySetId, Set<UUID> vertices );
 
-    int deleteVerticesOfAssociations( UUID entitySetId, Set<UUID> vertices );
+    int deleteVerticesOfAssociationsWithoutLocking( UUID entitySetId, Set<UUID> vertices );
 
     Edge getEdge( DataEdgeKey key );
 
