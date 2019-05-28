@@ -155,7 +155,12 @@ open class DataGraphService(
 
     override fun clearEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // clear edges
-        val verticesCount = graphService.clearVerticesInEntitySet(entitySetId)
+        var verticesCount = 0L
+        val dataEdgeKeys = getEdgeKeysOfEntitySet(entitySetId)
+        // since we cannot lock on entity set just on individual DataEdgeKeys, we do the delete in chunks
+        dataEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE).forEach {
+            verticesCount += graphService.clearEdges(it)
+        }
 
         //clear entities
         val entityWriteEvent = eds.clearEntitySet(entitySetId, authorizedPropertyTypes)
@@ -176,7 +181,8 @@ open class DataGraphService(
                                            entityKeyIds: Set<UUID>,
                                            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // clear edges
-        val verticesCount = graphService.clearVertices(entitySetId, entityKeyIds)
+        val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds)
+        val verticesCount = graphService.clearEdges(dataEdgeKeys)
 
         //clear entities
         val entityWriteEvent = eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
@@ -193,10 +199,11 @@ open class DataGraphService(
         var associationClearCount = 0
         val writeEvents = ArrayList<WriteEvent>()
 
-        associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE, groupEdges).forEach { entityKeyIds ->
+        associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE).forEach { dataEdgeKeys ->
+            val entityKeyIds = groupEdges(dataEdgeKeys)
             entityKeyIds.entries.forEach {
                 val writeEvent = clearEntityDataAndVerticesOfAssociations(
-                        it.key, it.value, authorizedPropertyTypes.getValue(it.key))
+                        dataEdgeKeys, it.key, it.value, authorizedPropertyTypes.getValue(it.key))
                 writeEvents.add(writeEvent)
                 associationClearCount += writeEvent.numUpdates
             }
@@ -208,11 +215,13 @@ open class DataGraphService(
         return writeEvents
     }
 
-    private fun clearEntityDataAndVerticesOfAssociations(entitySetId: UUID,
-                                           entityKeyIds: Set<UUID>,
-                                           authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
+    private fun clearEntityDataAndVerticesOfAssociations(
+            dataEdgeKeys: List<DataEdgeKey>,
+            entitySetId: UUID,
+            entityKeyIds: Set<UUID>,
+            authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // clear edges
-        val verticesCount = graphService.clearVerticesOfAssociations(entitySetId, entityKeyIds)
+        val verticesCount = graphService.clearEdges(dataEdgeKeys)
 
         //clear entities
         val entityWriteEvent = eds.clearEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
@@ -233,7 +242,12 @@ open class DataGraphService(
 
     override fun deleteEntitySet(entitySetId: UUID, authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // delete edges
-        val verticesCount = graphService.deleteVerticesInEntitySet(entitySetId)
+        var verticesCount = 0L
+        val dataEdgeKeys = getEdgeKeysOfEntitySet(entitySetId)
+        // since we cannot lock on entity set just on individual DataEdgeKeys, we do the delete in chunks
+        dataEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE).forEach {
+            verticesCount += graphService.deleteEdges(it).numUpdates
+        }
 
         // delete entities
         val entityWriteEvent = eds.deleteEntitySetData(entitySetId, authorizedPropertyTypes)
@@ -255,10 +269,11 @@ open class DataGraphService(
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // delete edges
-        val entityWriteEvent = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
+        val dataEdgeKeys = getEdgesConnectedToEntities(entitySetId, entityKeyIds)
+        val verticesCount = graphService.deleteEdges(dataEdgeKeys)
 
         // delete entities
-        val verticesCount = graphService.deleteVertices(entitySetId, entityKeyIds)
+        val entityWriteEvent = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
 
         logger.info("Deleted {} entities and {} vertices.", entityWriteEvent.numUpdates, verticesCount)
 
@@ -272,10 +287,11 @@ open class DataGraphService(
         var associationDeleteCount = 0
         val writeEvents = ArrayList<WriteEvent>()
 
-        associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE, groupEdges).forEach { entityKeyIds ->
+        associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE).forEach { dataEdgeKeys ->
+           val entityKeyIds =  groupEdges(dataEdgeKeys)
             entityKeyIds.entries.forEach {
                 val writeEvent = deleteEntityDataAndVerticesOfAssociations(
-                        it.key, it.value, authorizedPropertyTypes.getValue(it.key))
+                        dataEdgeKeys, it.key, it.value, authorizedPropertyTypes.getValue(it.key))
                 writeEvents.add(writeEvent)
                 associationDeleteCount += writeEvent.numUpdates
             }
@@ -288,11 +304,12 @@ open class DataGraphService(
     }
 
     private fun deleteEntityDataAndVerticesOfAssociations(
+            dataEdgeKeys: List<DataEdgeKey>,
             entitySetId: UUID,
             entityKeyIds: Set<UUID>,
             authorizedPropertyTypes: Map<UUID, PropertyType>): WriteEvent {
         // delete edges
-        val verticesCount = graphService.deleteVerticesOfAssociations(entitySetId, entityKeyIds)
+        val verticesCount = graphService.deleteEdges(dataEdgeKeys)
 
         // delete entities
         val entityWriteEvent = eds.deleteEntities(entitySetId, entityKeyIds, authorizedPropertyTypes)
