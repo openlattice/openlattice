@@ -6,6 +6,7 @@ import com.hazelcast.core.IMap
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi
 import com.openlattice.data.EntityDatastore
 import com.openlattice.data.storage.IndexingMetadataManager
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.EntityType
 import com.openlattice.edm.type.PropertyType
@@ -56,7 +57,7 @@ class BackgroundLinkingIndexingService(
      */
     @Scheduled(fixedRate = INDEX_RATE)
     fun indexUpdatedLinkedEntities() {
-        if( !indexerConfiguration.backgroundIndexingEnabled ) {
+        if (!indexerConfiguration.backgroundIndexingEnabled) {
             return
         }
         if (taskLock.tryLock()) {
@@ -87,7 +88,10 @@ class BackgroundLinkingIndexingService(
                     val propertyTypesOfEntitySets = dirtyLinkingIdsByEntitySetId // entity_set_id/property_type_id
                             .map { it.key to getPropertyTypeForEntitySet(it.key) }.toMap()
                     val linkedEntityData = dataStore // linking_id/entity_set_id/property_type_idB
-                            .getLinkedEntityDataByLinkingId(dirtyLinkingIdsByEntitySetId, propertyTypesOfEntitySets)
+                            .getLinkedEntityDataByLinkingIdWithMetadata(
+                                    dirtyLinkingIdsByEntitySetId,
+                                    propertyTypesOfEntitySets,
+                                    EnumSet.of(MetadataOption.LAST_WRITE))
 
 
                     // it is important to iterate over linking ids which have an associated linking entity set id!

@@ -235,7 +235,7 @@ class BackgroundIndexingService(
             markAsIndexed: Boolean = true
     ): Int {
         val esb = Stopwatch.createStarted()
-        val entitiesById = dataQueryService.getEntitiesById(entitySet.id, propertyTypeMap, batchToIndex)
+        val entitiesById = dataQueryService.getEntitiesByIdWithLastWrite(entitySet.id, propertyTypeMap, batchToIndex)
 
         if (entitiesById.size != batchToIndex.size) {
             logger.error(
