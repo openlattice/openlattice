@@ -187,6 +187,8 @@ public interface EdmManager {
 
     EntityType getEntityTypeByEntitySetId( UUID entitySetId );
 
+    Set<UUID> getEntityTypeIdsByEntitySetIds( Set<UUID> entitySetIds );
+
     Set<EntityType> getEntityTypeHierarchy( UUID entityTypeId );
 
     UUID createAssociationType( AssociationType associationType, UUID entityTypeId );
@@ -194,6 +196,10 @@ public interface EdmManager {
     AssociationType getAssociationType( UUID associationTypeId );
 
     AssociationType getAssociationTypeSafe( UUID associationTypeId );
+
+    AssociationType getAssociationTypeByEntitySetId( UUID entitySetId );
+
+    Iterable<AssociationType> getAssociationTypeDetailsByEntitySetIds( Set<UUID> entitySetIds );
 
     void deleteAssociationType( UUID associationTypeId );
 

@@ -141,7 +141,7 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val entitySetIds = persistentSearch.searchConstraints.entitySetIds.toSet()
         val authorizedEntitySetIds = dependencies.authorizationHelper
-                .getAuthorizedEntitySets(entitySetIds, EdmAuthorizationHelper.READ_PERMISSION)
+                .getAuthorizedEntitySetsForPrincipals(entitySetIds, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals)
 
         val authorizedPropertyTypesByEntitySet = dependencies.authorizationHelper.getAuthorizedPropertiesOnEntitySets(
                 dependencies.entitySets.keys, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals)

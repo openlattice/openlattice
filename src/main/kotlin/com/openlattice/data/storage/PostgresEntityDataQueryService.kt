@@ -503,9 +503,9 @@ class PostgresEntityDataQueryService(
             }
         }.sum()
 
-        if (updatedEntityCount != entities.size) {
-            logger.warn("Update $updatedEntityCount entities. Expect to update ${entities.size}.")
-            logger.warn("Entity key ids: {}", entities.keys)
+        if( updatedEntityCount != entities.size ) {
+            logger.warn("Update $updatedEntityCount entities. Expect to update ${entities.size} for entity set $entitySetId.")
+            logger.debug("Entity key ids: {}", entities.keys)
         }
 
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")
@@ -914,7 +914,7 @@ internal fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): 
 }
 
 fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String {
-    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
+    return "UPDATE ${IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
             "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < $version THEN $version " +
             "ELSE ${IDS.name}.${VERSION.name} END " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause)"
