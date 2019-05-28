@@ -504,8 +504,8 @@ class PostgresEntityDataQueryService(
         }.sum()
 
         if( updatedEntityCount != entities.size ) {
-            logger.warn("Update $updatedEntityCount entities. Expect to update ${entities.size}.")
-            logger.warn("Entity key ids: {}", entities.keys)
+            logger.warn("Update $updatedEntityCount entities. Expect to update ${entities.size} for entity set $entitySetId.")
+            logger.debug("Entity key ids: {}", entities.keys)
         }
 
         logger.debug("Updated $updatedEntityCount entities and $updatedPropertyCounts properties")

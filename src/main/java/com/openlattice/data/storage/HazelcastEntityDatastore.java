@@ -32,6 +32,7 @@ import com.openlattice.data.events.LinkedEntitiesDeletedEvent;
 import com.openlattice.data.events.EntitiesUpsertedEvent;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.edm.events.EntitySetDataDeletedEvent;
+import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
@@ -200,7 +201,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     private void signalCreatedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
-        if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
+        if ( shouldIndexDirectly( entitySetId, entityKeyIds ) ) {
 
             eventBus.post( new EntitiesUpsertedEvent( entitySetId, dataQueryService
                     .getEntitiesByIdWithLastWrite( entitySetId,
@@ -251,7 +252,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     private void signalDeletedEntities( UUID entitySetId, Set<UUID> entityKeyIds ) {
-        if ( entityKeyIds.size() < BATCH_INDEX_THRESHOLD ) {
+        if ( shouldIndexDirectly( entitySetId, entityKeyIds ) ) {
             eventBus.post( new EntitiesDeletedEvent( entitySetId, entityKeyIds ) );
             signalLinkedEntitiesDeleted( entitySetId, Optional.of( entityKeyIds ) );
         }
@@ -261,6 +262,11 @@ public class HazelcastEntityDatastore implements EntityDatastore {
         // mark all involved linking entitysets as unsync with data
         dataQueryService.getLinkingEntitySetIdsOfEntitySet( entitySetId )
                 .forEach( this::markMaterializedEntitySetDirty );
+    }
+
+    private boolean shouldIndexDirectly( UUID entitySetId, Set<UUID> entityKeyIds ) {
+        return entityKeyIds.size() < BATCH_INDEX_THRESHOLD && !edmManager.getEntitySet( entitySetId ).getFlags()
+                .contains( EntitySetFlag.AUDIT );
     }
 
     private void signalLinkedEntitiesDeleted( UUID entitySetId, Optional<Set<UUID>> entityKeyIds ) {
