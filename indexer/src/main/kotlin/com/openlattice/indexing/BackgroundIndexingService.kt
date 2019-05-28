@@ -167,8 +167,9 @@ class BackgroundIndexingService(
     private fun getEntityDataKeys(entitySetId: UUID): PostgresIterable<UUID> {
         return PostgresIterable(Supplier<StatementHolder> {
             val connection = hds.connection
+            connection.autoCommit = false
             val stmt = connection.createStatement()
-            stmt.fetchSize = 64000
+            stmt.fetchSize = 64_000
             val rs = stmt.executeQuery(getEntityDataKeysQuery(entitySetId))
             StatementHolder(connection, stmt, rs)
         }, Function<ResultSet, UUID> { ResultSetAdapters.id(it) })
