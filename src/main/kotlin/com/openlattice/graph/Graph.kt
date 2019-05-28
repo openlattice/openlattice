@@ -102,7 +102,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             dataEdgeKey: DataEdgeKey
     ) {
         addSrcKeyIds(ps, dataEdgeKey)
-        ps.setObject(4, ComponentType.SRC.ordinal)
         ps.setObject(5, dataEdgeKey.src.entitySetId)
         ps.setObject(6, dataEdgeKey.dst.entitySetId)
         ps.setObject(7, dataEdgeKey.edge.entitySetId)
@@ -115,7 +114,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             ps: PreparedStatement, version: Long, versions: java.sql.Array, dataEdgeKey: DataEdgeKey
     ) {
         addDstKeyIds(ps, dataEdgeKey)
-        ps.setObject(4, ComponentType.DST.ordinal)
         ps.setObject(5, dataEdgeKey.src.entitySetId)
         ps.setObject(6, dataEdgeKey.dst.entitySetId)
         ps.setObject(7, dataEdgeKey.edge.entitySetId)
@@ -128,7 +126,6 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
             ps: PreparedStatement, version: Long, versions: java.sql.Array, dataEdgeKey: DataEdgeKey
     ) {
         addEdgeKeyIds(ps, dataEdgeKey)
-        ps.setObject(4, ComponentType.EDGE.ordinal)
         ps.setObject(5, dataEdgeKey.src.entitySetId)
         ps.setObject(6, dataEdgeKey.dst.entitySetId)
         ps.setObject(7, dataEdgeKey.edge.entitySetId)
@@ -141,18 +138,21 @@ class Graph(private val hds: HikariDataSource, private val edm: EdmManager) : Gr
         ps.setObject(startIndex, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.edge.entityKeyId)
+        ps.setObject(startIndex + 3, ComponentType.SRC.ordinal)
     }
 
     private fun addDstKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         ps.setObject(startIndex, dataEdgeKey.dst.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.edge.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.src.entityKeyId)
+        ps.setObject(startIndex + 3, ComponentType.DST.ordinal)
     }
 
     private fun addEdgeKeyIds(ps: PreparedStatement, dataEdgeKey: DataEdgeKey, startIndex: Int = 1) {
         ps.setObject(startIndex, dataEdgeKey.edge.entityKeyId)
         ps.setObject(startIndex + 1, dataEdgeKey.src.entityKeyId)
         ps.setObject(startIndex + 2, dataEdgeKey.dst.entityKeyId)
+        ps.setObject(startIndex + 3, ComponentType.EDGE.ordinal)
     }
 
 
@@ -790,8 +790,9 @@ enum class ComponentType {
 private val KEY_COLUMNS = setOf(
         ID_VALUE,
         EDGE_COMP_1,
-        EDGE_COMP_2
-).map { col -> col.name }.toList()
+        EDGE_COMP_2,
+        COMPONENT_TYPES
+).map { it.name }.toSet()
 
 private val INSERT_COLUMNS = setOf(
         ID_VALUE,
@@ -858,7 +859,7 @@ internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID
 
 
 private val UPSERT_SQL = "INSERT INTO ${EDGES.name} (${INSERT_COLUMNS.joinToString(",")}) VALUES (?,?,?,?,?,?,?,?,?) " +
-        "ON CONFLICT (${KEY_COLUMNS.joinToString(",")},${COMPONENT_TYPES.name}) " +
+        "ON CONFLICT (${KEY_COLUMNS.joinToString(",")}) " +
         "DO UPDATE SET version = EXCLUDED.version, versions = ${EDGES.name}.versions || EXCLUDED.version"
 
 
