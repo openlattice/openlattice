@@ -49,16 +49,19 @@ private const val AVG_SCORE_FIELD = "avg_score"
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
 
 
-    override fun lockClustersForUpdates(
-            clusters: Set<UUID>
-    ): StatementHolder {
+    override fun lockClustersForUpdates(clusters: Set<UUID>): StatementHolder {
         val connection = hds.connection
         connection.autoCommit = false
-        val ps = connection.prepareStatement(LOCK_CLUSTERS_SQL)
-        val arr = PostgresArrays.createUuidArray(connection, clusters)
-        ps.setArray(1, arr)
-        val rs = ps.executeQuery()
-        return StatementHolder(connection, ps, rs)
+
+        val psLocks = connection.prepareStatement(LOCK_CLUSTERS_SQL)
+        clusters.forEach {
+            psLocks.setObject(1, it)
+            psLocks.addBatch()
+        }
+        psLocks.executeBatch()
+        connection.commit()
+
+        return StatementHolder(connection, psLocks, null)
     }
 
     override fun getLinkableEntitySets(
@@ -400,4 +403,4 @@ private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "FROM ${ENTITY_SETS.name} " +
         "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
 
-private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE linking_id = ANY(?) FOR UPDATE"
+private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE linking_id = ? FOR UPDATE"
