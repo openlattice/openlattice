@@ -441,8 +441,8 @@ class PostgresEntityDataQueryService(
                     rawValue
                 } else {
                     asMap(JsonDeserializer
-                                  .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
-                                  { "Entity set $entitySetId with entity key id $entityKeyId" })
+                            .validateFormatAndNormalize(rawValue, authorizedPropertyTypes)
+                            { "Entity set $entitySetId with entity key id $entityKeyId" })
                 }
 
                 entityData.map { (propertyTypeId, values) ->
@@ -914,7 +914,7 @@ internal fun lockEntities(entitySetId: UUID, idsClause: String, version: Long): 
 }
 
 fun upsertEntities(entitySetId: UUID, idsClause: String, version: Long): String {
-    return "UPDATE ${IDS.name} SET versions = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
+    return "UPDATE ${IDS.name} SET ${VERSIONS.name} = ${VERSIONS.name} || ARRAY[$version], ${LAST_WRITE.name} = now(), " +
             "${VERSION.name} = CASE WHEN abs(${IDS.name}.${VERSION.name}) < $version THEN $version " +
             "ELSE ${IDS.name}.${VERSION.name} END " +
             "WHERE ${ENTITY_SET_ID.name} = '$entitySetId' AND ${ID_VALUE.name} IN ($idsClause)"
@@ -1063,9 +1063,13 @@ internal fun entityKeyIdsClause(entityKeyIds: Set<UUID>): String {
 
 internal fun selectLinkingIdsOfEntities(entityKeyIds: Map<UUID, Optional<Set<UUID>>>): String {
     val entitiesClause = buildEntitiesClause(entityKeyIds, false)
-    return "SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${LINKING_ID.name} " +
-            "FROM ${IDS.name} " +
-            "WHERE ${LINKING_ID.name} IS NOT NULL $entitiesClause " +
+    val filterLinkingIds = " AND ${LINKING_ID.name} IS NOT NULL "
+    val withClause = buildWithClause(true, entitiesClause + filterLinkingIds)
+    val joinColumnsSql = (entityKeyIdColumnsList + LINKING_ID.name).joinToString(",")
+
+    return "$withClause SELECT ${ENTITY_SET_ID.name}, array_agg(${LINKING_ID.name}) as ${LINKING_ID.name} " +
+            "FROM $FILTERED_ENTITY_KEY_IDS " +
+            "INNER JOIN ${IDS.name} USING($joinColumnsSql) " +
             "GROUP BY ${ENTITY_SET_ID.name} "
 }
 
@@ -1080,8 +1084,9 @@ internal fun getLinkingEntitySetIdsOfLinkingIdQuery(linkingId: UUID): String {
             "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
                     "FROM ${IDS.name} " +
                     "WHERE ${LINKING_ID.name} = '$linkingId'"
+    val wrapLocalTable = "SELECT ${ID.name}, ${LINKED_ENTITY_SETS.name} from ${ENTITY_SETS.name}"
     return "SELECT ${ID.name} " +
-            "FROM ${ENTITY_SETS.name} " +
+            "FROM ( $wrapLocalTable ) as entity_set_ids " +
             "INNER JOIN ( $selectEntitySetIdOfLinkingId ) as linked_es " +
             "ON ( ${ENTITY_SET_ID.name}= ANY( ${LINKED_ENTITY_SETS.name} ) )"
 }

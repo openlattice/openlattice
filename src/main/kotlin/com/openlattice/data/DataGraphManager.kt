@@ -156,21 +156,27 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    /**
-     * Integrates association data into the system.
-     * @param associations The assosciations to integrate
-     * @param authorizedPropertiesByEntitySetId The authorized properties by entity set id.
-     * @return A map of entity sets to mappings of entity ids to entity key ids.
-     */
-    fun integrateAssociations(
-            associations: Set<Association>,
-            authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
-    ): Map<UUID, Map<String, UUID>>
+    fun createAssociations(
+            associations: Set<DataEdgeKey>,
+            srcAssociationEntitySetIds: Map<UUID, Set<UUID>>,
+            dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
+    ): WriteEvent
 
     fun createAssociations(
             associations: ListMultimap<UUID, DataEdge>,
             authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, CreateAssociationEvent>
+
+    /**
+     * Integrates association data into the system.
+     * @param associations The assosciations to integrate
+     * @param authorizedPropertiesByEntitySet The authorized properties by entity set id.
+     * @return A map of entity sets to mappings of entity ids to entity key ids.
+     */
+    fun integrateAssociations(
+            associations: Set<Association>,
+            authorizedPropertiesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
+    ): Map<UUID, Map<String, UUID>>
 
     fun integrateEntitiesAndAssociations(
             entities: Set<Entity>,
@@ -180,7 +186,7 @@ interface DataGraphManager {
 
     fun getTopUtilizers(
             entitySetId: UUID,
-            topUtilizerDetails: List<FilteredNeighborsRankingAggregation>,
+            filteredNeighborsRankingList: List<FilteredNeighborsRankingAggregation>,
             numResults: Int,
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): Stream<SetMultimap<FullQualifiedName, Any>>
@@ -194,7 +200,7 @@ interface DataGraphManager {
             linkingEntitySetId: Optional<UUID>
     ): Iterable<Map<String, Any>>
 
-    fun getNeighborEntitySets(entitySetId: Set<UUID>): List<NeighborSets>
+    fun getNeighborEntitySets(entitySetIds: Set<UUID>): List<NeighborSets>
 
     fun mergeEntities(
             entitySetId: UUID,
@@ -202,11 +208,9 @@ interface DataGraphManager {
             authorizedPropertyTypes: Map<UUID, PropertyType>
     ): WriteEvent
 
-    fun getNeighborEntitySetIds(entitySetId: Set<UUID>): Set<UUID>
+    fun getNeighborEntitySetIds(entitySetIds: Set<UUID>): Set<UUID>
 
     fun getEdgesAndNeighborsForVertex(entitySetId: UUID, entityKeyId: UUID): Stream<Edge>
     fun getEdgeKeysOfEntitySet(entitySetId: UUID): PostgresIterable<DataEdgeKey>
     fun getEdgesConnectedToEntities(entitySetId: UUID, entityKeyIds: Set<UUID>): PostgresIterable<DataEdgeKey>
-
-    fun createAssociations(associations: Set<DataEdgeKey>): WriteEvent
 }

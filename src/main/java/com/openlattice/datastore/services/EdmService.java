@@ -1137,6 +1137,13 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public Set<UUID> getEntityTypeIdsByEntitySetIds( Set<UUID> entitySetIds ) {
+        return entitySets.getAll( entitySetIds ).values().stream()
+                .map( EntitySet::getEntityTypeId )
+                .collect( Collectors.toSet() );
+    }
+
+    @Override
     public UUID createAssociationType( AssociationType associationType, UUID entityTypeId ) {
         final AssociationType existing = associationTypes.putIfAbsent( entityTypeId, associationType );
 
@@ -1151,10 +1158,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public AssociationType getAssociationType( UUID associationTypeId ) {
-        AssociationType associationDetails = checkNotNull(
-                Util.getSafely( associationTypes, associationTypeId ),
-                "Association type of id %s does not exists.",
-                associationTypeId.toString() );
+        AssociationType associationDetails = getAssociationTypeDetails( associationTypeId );
         Optional<EntityType> entityType = Optional.ofNullable(
                 Util.getSafely( entityTypes, associationTypeId ) );
         return new AssociationType(
@@ -1162,6 +1166,13 @@ public class EdmService implements EdmManager {
                 associationDetails.getSrc(),
                 associationDetails.getDst(),
                 associationDetails.isBidirectional() );
+    }
+
+    private AssociationType getAssociationTypeDetails( UUID associationTypeId ) {
+        return checkNotNull(
+                Util.getSafely( associationTypes, associationTypeId ),
+                "Association type of id %s does not exists.",
+                associationTypeId.toString() );
     }
 
     @Override
@@ -1176,6 +1187,19 @@ public class EdmService implements EdmManager {
                 associationDetails.get().getSrc(),
                 associationDetails.get().getDst(),
                 associationDetails.get().isBidirectional() );
+    }
+
+
+    @Override
+    public AssociationType getAssociationTypeByEntitySetId( UUID entitySetId ) {
+        final var entityTypeId = getEntitySet( entitySetId ).getEntityTypeId();
+        return getAssociationType( entityTypeId );
+    }
+
+    @Override
+    public Iterable<AssociationType> getAssociationTypeDetailsByEntitySetIds( Set<UUID> entitySetIds ) {
+        final var entityTypeIds = getEntityTypeIdsByEntitySetIds( entitySetIds );
+        return associationTypes.getAll( entityTypeIds ).values();
     }
 
     @Override
@@ -1193,7 +1217,7 @@ public class EdmService implements EdmManager {
 
     @Override
     public AssociationDetails getAssociationDetails( UUID associationTypeId ) {
-        AssociationType associationType = getAssociationType( associationTypeId );
+        AssociationType associationType = getAssociationTypeDetails( associationTypeId );
         LinkedHashSet<EntityType> srcEntityTypes = associationType.getSrc()
                 .stream()
                 .map( entityTypeId -> getEntityType( entityTypeId ) )
