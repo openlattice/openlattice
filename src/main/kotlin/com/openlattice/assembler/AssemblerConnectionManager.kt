@@ -464,12 +464,12 @@ class AssemblerConnectionManager(
         val onProperties = if (columns.isEmpty()) {
             ""
         } else {
-            "(${columns.joinToString(",") { DataTables.quote(it) }}) "
+            "(${columns.joinToString(",") { quote(it) }}) "
         }
 
         return "GRANT SELECT $onProperties " +
                 "ON $entitySetTableName " +
-                "TO ${DataTables.quote(postgresUserName)}"
+                "TO ${quote(postgresUserName)}"
     }
 
     /**
@@ -490,7 +490,7 @@ class AssemblerConnectionManager(
      * Removes a materialized entity set from atlas.
      */
     fun dematerializeEntitySets(organizationId: UUID, entitySetIds: Set<UUID>) {
-        val dbName = PostgresDatabases.buildOrganizationDatabaseName(organizationId)
+        val dbName = buildOrganizationDatabaseName(organizationId)
         connect(dbName).use { datasource ->
             entitySetIds.forEach { dropMaterializedEntitySet(datasource, it) }
         }
@@ -655,7 +655,6 @@ class AssemblerConnectionManager(
         datasource.connection.use { connection ->
             connection.createStatement().use { statement ->
                 statement.execute("CREATE EXTENSION IF NOT EXISTS postgres_fdw")
-
                 logger.info("Installed postgres_fdw extension.")
 
                 statement.execute(
@@ -664,23 +663,28 @@ class AssemblerConnectionManager(
                                 "dbname '${assemblerConfiguration.foreignDbName}', " +
                                 "port '${assemblerConfiguration.foreignPort}')"
                 )
-                logger.info("Created foreign server definition. ")
+                logger.info("Created foreign server definition.")
+
                 statement.execute(
                         "CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER SERVER $PRODUCTION_SERVER " +
                                 "OPTIONS ( user '${assemblerConfiguration.foreignUsername}', " +
                                 "password '${assemblerConfiguration.foreignPassword}')"
                 )
-                logger.info("Reseting $PRODUCTION_FOREIGN_SCHEMA")
-                statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_FOREIGN_SCHEMA CASCADE")
-                statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
-                logger.info("Created user mapping. ")
-                statement.execute(importProductionViewsSchemaSql(setOf()))
-                statement.execute(
-                        importPublicSchemaSql(PUBLIC_TABLES)
-                )
+                logger.info("Created user mapping for foreign server.")
+
+                resetForeignSchema(statement)
                 logger.info("Imported foreign schema")
             }
         }
+    }
+
+    private fun resetForeignSchema(statement: Statement) {
+        logger.info("Resetting $PRODUCTION_FOREIGN_SCHEMA")
+        statement.execute("DROP SCHEMA IF EXISTS $PRODUCTION_FOREIGN_SCHEMA CASCADE")
+        statement.execute("CREATE SCHEMA IF NOT EXISTS $PRODUCTION_FOREIGN_SCHEMA")
+        logger.info("Created user mapping. ")
+        statement.execute(importProductionViewsSchemaSql(setOf()))
+        statement.execute(importPublicSchemaSql(PUBLIC_TABLES))
     }
 
     private fun updatePublicTables(datasource: HikariDataSource, tables: Set<String>) {
@@ -725,7 +729,7 @@ class AssemblerConnectionManager(
     }
 
     private fun entitySetIdTableName(entitySetId: UUID): String {
-        return DataTables.quote(entitySetId.toString())
+        return quote(entitySetId.toString())
     }
 }
 
@@ -757,7 +761,7 @@ internal fun createRoleIfNotExistsSql(dbRole: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbRole') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${DataTables.quote(
+            "      CREATE ROLE ${quote(
                     dbRole
             )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN;\n" +
             "   END IF;\n" +

@@ -48,7 +48,6 @@ private val ALLOWED_LINKING_METADATA_OPTIONS = EnumSet.of(
 
 private val ALLOWED_NON_LINKING_METADATA_OPTIONS = EnumSet.allOf(MetadataOption::class.java).minus(
         listOf(
-                MetadataOption.ENTITY_KEY_IDS,
                 MetadataOption.ENTITY_SET_IDS
         )
 )
@@ -384,17 +383,20 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
         omitEntitySetId: Boolean,
         joinColumns: List<String>
 ): String {
-    val metadataColumns = getMetadataOptions(metadataOptions, linking).joinToString(",")
+    val metadataColumns = getMetadataOptions(metadataOptions.minus(MetadataOption.ENTITY_KEY_IDS), linking)
+            .joinToString(",")
     val joinColumnsSql = joinColumns.joinToString(",")
     val selectColumns = joinColumnsSql +
+            // used in materialized entitysets for both linking and non-linking entity sets to join on edges
+            if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
+                ", array_agg(${IDS.name}.${ID.name}) as entity_key_ids"
+            } else {
+                ""
+            } +
             if (metadataColumns.isNotEmpty()) {
                 if (linking) {
                     if (metadataOptions.contains(MetadataOption.LAST_WRITE)) {
                         ", max(${LAST_WRITE.name}) AS ${LAST_WRITE.name}"
-                    } else {
-                        ""
-                    } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
-                        ", array_agg(${IDS.name}.${ID.name}) as entity_key_ids"
                     } else {
                         ""
                     } + if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
@@ -409,12 +411,18 @@ internal fun selectEntityKeyIdsWithCurrentVersionSubquerySql(
                 ""
             }
 
-    val groupBy = if (linking && omitEntitySetId) {
-        "GROUP BY ${LINKING_ID.name}"
-    } else if (linking && !omitEntitySetId) {
-        "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name})"
+    val groupBy = if (linking) {
+        if (omitEntitySetId) {
+            "GROUP BY ${LINKING_ID.name}"
+        } else {
+            "GROUP BY (${ENTITY_SET_ID.name},${LINKING_ID.name})"
+        }
     } else {
-        ""
+        if (metadataOptions.contains(MetadataOption.ENTITY_KEY_IDS)) {
+            "GROUP BY (${ENTITY_SET_ID.name}, ${ID.name})"
+        } else {
+            ""
+        }
     }
 
     return "( SELECT $selectColumns FROM ${IDS.name} INNER JOIN $FILTERED_ENTITY_KEY_IDS USING($joinColumnsSql) $groupBy ) as $ENTITIES_TABLE_ALIAS"

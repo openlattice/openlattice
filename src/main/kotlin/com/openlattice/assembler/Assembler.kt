@@ -241,6 +241,8 @@ class Assembler(
             organizationId: UUID,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
+        logger.info("Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys}")
+
         // check if organization is initialized
         ensureAssemblyInitialized(organizationId)
 
