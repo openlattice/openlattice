@@ -42,7 +42,6 @@ import com.openlattice.organization.OrganizationEntitySetFlag
 import com.openlattice.organization.roles.Role
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.organizations.roles.SecurePrincipalsManager
-import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.*
@@ -198,16 +197,16 @@ class AssemblerConnectionManager(
     }
 
     private fun createOrganizationDatabase(organizationId: UUID, dbname: String) {
-        val db = DataTables.quote(dbname)
+        val db = quote(dbname)
         val dbRole = "${dbname}_role"
         val unquotedDbAdminUser = buildOrganizationUserId(organizationId)
-        val dbOrgUser = DataTables.quote(unquotedDbAdminUser)
+        val dbOrgUser = quote(unquotedDbAdminUser)
         val dbAdminUserPassword = dbCredentialService.getOrCreateUserCredentials(unquotedDbAdminUser)
                 ?: dbCredentialService.getDbCredential(unquotedDbAdminUser)
         val createOrgDbRole = createRoleIfNotExistsSql(dbRole)
         val createOrgDbUser = createUserIfNotExistsSql(unquotedDbAdminUser, dbAdminUserPassword)
 
-        val grantRole = "GRANT ${DataTables.quote(dbRole)} TO $dbOrgUser"
+        val grantRole = "GRANT ${quote(dbRole)} TO $dbOrgUser"
         val createDb = " CREATE DATABASE $db"
         val revokeAll = "REVOKE ALL ON DATABASE $db FROM $PUBLIC_SCHEMA"
 
@@ -221,7 +220,7 @@ class AssemblerConnectionManager(
                 if (!exists(dbname)) {
                     statement.execute(createDb)
                     //Allow usage of schema public
-                    //statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbOrgUser)}")
+                    //statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbOrgUser)}")
                     statement.execute("GRANT ${MEMBER_ORG_DATABASE_PERMISSIONS.joinToString(", ")} " +
                             "ON DATABASE $db TO $dbOrgUser")
                 }
@@ -543,7 +542,7 @@ class AssemblerConnectionManager(
 
     private fun configureRolesInDatabase(datasource: HikariDataSource, spm: SecurePrincipalsManager) {
         getAllRoles(spm).forEach { role ->
-            val dbRole = DataTables.quote(buildPostgresRoleName(role))
+            val dbRole = quote(buildPostgresRoleName(role))
 
             datasource.connection.use { connection ->
                 connection.createStatement().use { statement ->
@@ -580,7 +579,7 @@ class AssemblerConnectionManager(
                 statement.execute(createRoleIfNotExistsSql(dbRole))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking $PUBLIC_SCHEMA schema right from role: {}", role)
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbRole)}")
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbRole)}")
 
                 return@use
             }
@@ -604,7 +603,7 @@ class AssemblerConnectionManager(
                 statement.execute(createUserIfNotExistsSql(dbUser, dbUserPassword))
                 //Don't allow users to access public schema which will contain foreign data wrapper tables.
                 logger.info("Revoking $PUBLIC_SCHEMA schema right from user {}", user)
-                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${DataTables.quote(dbUser)}")
+                statement.execute("REVOKE USAGE ON SCHEMA $PUBLIC_SCHEMA FROM ${quote(dbUser)}")
 
                 return@use
             }
@@ -612,7 +611,7 @@ class AssemblerConnectionManager(
     }
 
     private fun configureUserInDatabase(datasource: HikariDataSource, dbname: String, userId: String) {
-        val dbUser = DataTables.quote(userId)
+        val dbUser = quote(userId)
         logger.info("Configuring user {} in database {}", userId, dbname)
         //First we will grant all privilege which for database is connect, temporary, and create schema
         target.connection.use { connection ->
@@ -638,7 +637,7 @@ class AssemblerConnectionManager(
     }
 
     private fun revokeConnectAndSchemaUsage(datasource: HikariDataSource, dbname: String, userId: String) {
-        val dbUser = DataTables.quote(userId)
+        val dbUser = quote(userId)
         logger.info("Removing user {} from database {} and schema usage of $MATERIALIZED_VIEWS_SCHEMA", userId, dbname)
 
         datasource.connection.use { conn ->
@@ -778,7 +777,7 @@ internal fun createUserIfNotExistsSql(dbUser: String, dbUserPassword: String): S
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      CREATE ROLE ${DataTables.quote(
+            "      CREATE ROLE ${quote(
                     dbUser
             )} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN ENCRYPTED PASSWORD '$dbUserPassword';\n" +
             "   END IF;\n" +
@@ -796,7 +795,7 @@ internal fun dropOwnedIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP OWNED BY ${DataTables.quote(
+            "      DROP OWNED BY ${quote(
                     dbUser
             )} ;\n" +
             "   END IF;\n" +
@@ -813,7 +812,7 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "      FROM   pg_catalog.pg_roles\n" +
             "      WHERE  rolname = '$dbUser') THEN\n" +
             "\n" +
-            "      DROP ROLE ${DataTables.quote(
+            "      DROP ROLE ${quote(
                     dbUser
             )} ;\n" +
             "   END IF;\n" +
