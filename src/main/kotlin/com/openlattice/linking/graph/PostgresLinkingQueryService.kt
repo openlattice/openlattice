@@ -33,6 +33,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
+import java.sql.Connection
 import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
@@ -49,7 +50,7 @@ private const val AVG_SCORE_FIELD = "avg_score"
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
 
 
-    override fun lockClustersForUpdates(clusters: Set<UUID>): StatementHolder {
+    override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection
         connection.autoCommit = false
 
@@ -60,7 +61,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
         }
         psLocks.executeBatch()
 
-        return StatementHolder(connection, psLocks)
+        return connection
     }
 
     override fun getLinkableEntitySets(
@@ -220,9 +221,13 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                 }).toMap()
     }
 
-    override fun insertMatchScores(clusterId: UUID, scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int {
-        hds.connection.use {
-            it.prepareStatement(INSERT_SQL).use {
+    override fun insertMatchScores(
+            connection: Connection,
+            clusterId: UUID,
+            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
+    ): Int {
+        connection.use { conn ->
+            conn.prepareStatement(INSERT_SQL).use {
                 val ps = it
                 scores.forEach {
                     val srcEntityDataKey = it.key
@@ -238,23 +243,9 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                         ps.addBatch()
                     }
                 }
-                return ps.executeBatch().sum()
-            }
-        }
-    }
-
-    override fun insertMatchScore(
-            clusterId: UUID, blockKey: EntityDataKey, blockElement: EntityDataKey, score: Double
-    ): Int {
-        hds.connection.use {
-            it.prepareStatement(INSERT_SQL).use {
-                it.setObject(1, clusterId)
-                it.setObject(2, blockKey.entitySetId)
-                it.setObject(3, blockKey.entityKeyId)
-                it.setObject(4, blockElement.entitySetId)
-                it.setObject(5, blockElement.entityKeyId)
-                it.setObject(6, score)
-                return it.executeUpdate()
+                val insertCount = ps.executeBatch().sum()
+                conn.commit()
+                return insertCount
             }
         }
     }

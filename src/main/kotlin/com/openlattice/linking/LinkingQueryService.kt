@@ -24,6 +24,7 @@ package com.openlattice.linking
 import com.openlattice.data.EntityDataKey
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
+import java.sql.Connection
 import java.util.*
 
 /**
@@ -39,9 +40,10 @@ interface LinkingQueryService {
      * @param scores The scores pairs of elements within a cluster.
      * @return The total number of stored elements.
      */
-    fun insertMatchScores(clusterId: UUID, scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
-
-    fun insertMatchScore(clusterId: UUID, blockKey: EntityDataKey, blockElement: EntityDataKey, score: Double): Int
+    fun insertMatchScores(
+            connection: Connection,
+            clusterId: UUID,
+            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int
 
     fun getNeighborhoodScores(blockKey: EntityDataKey): Map<EntityDataKey, Double>
     fun deleteMatchScore(blockKey: EntityDataKey, blockElement: EntityDataKey): Int
@@ -72,7 +74,7 @@ interface LinkingQueryService {
     ): PostgresIterable<UUID>
 
     fun getIdsOfClustersContaining(dataKeys: Set<EntityDataKey>): PostgresIterable<UUID>
-    fun lockClustersForUpdates(clusters: Set<UUID>): StatementHolder
+    fun lockClustersForUpdates(clusters: Set<UUID>): Connection
 }
 
 
