@@ -271,6 +271,7 @@ class BackgroundLinkingService
     @Timed
     @Scheduled(fixedRate = 30000)
     fun updateCandidateList() {
+        logger.info("Updating linking candidates list.")
         if (running.tryLock()) {
             try {
                 pgEdmManager.allEntitySets.asSequence()
