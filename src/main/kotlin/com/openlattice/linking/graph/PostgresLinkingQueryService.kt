@@ -59,9 +59,8 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
             psLocks.addBatch()
         }
         psLocks.executeBatch()
-        connection.commit()
 
-        return StatementHolder(connection, psLocks, null)
+        return StatementHolder(connection, psLocks)
     }
 
     override fun getLinkableEntitySets(
@@ -274,7 +273,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
 
     override fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int {
         val deleteNeighborHoodSql = DELETE_NEIGHBORHOOD_SQL +
-                if (!positiveFeedbacks.isEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(positiveFeedbacks)} )" else ""
+                if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(positiveFeedbacks)} )" else ""
         hds.connection.use {
             it.prepareStatement(deleteNeighborHoodSql).use {
                 it.setObject(1, entity.entitySetId)
