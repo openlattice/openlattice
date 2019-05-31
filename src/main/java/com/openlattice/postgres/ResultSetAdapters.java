@@ -966,16 +966,20 @@ public final class ResultSetAdapters {
         return new EntityKeyPair( srcEntityDataKey, dstEntityDataKey );
     }
 
-    public static PostgresColumnDefinition mapMetadataOptionToPostgresColumn( MetadataOption metadataOption ) {
+    public static String mapMetadataOptionToPostgresColumn( MetadataOption metadataOption ) {
         switch ( metadataOption ) {
             case LAST_WRITE:
-                return LAST_WRITE;
+                return LAST_WRITE.getName();
             case LAST_INDEX:
-                return LAST_INDEX;
+                return LAST_INDEX.getName();
             case LAST_LINK:
-                return LAST_LINK;
+                return LAST_LINK.getName();
             case VERSION:
-                return VERSION;
+                return VERSION.getName();
+            case ENTITY_SET_IDS:
+                return "entity_set_ids";
+            case ENTITY_KEY_IDS:
+                return "entity_key_ids";
             default:
                 return null;
         }

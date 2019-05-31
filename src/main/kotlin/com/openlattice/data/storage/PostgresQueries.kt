@@ -25,6 +25,7 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.postgres.DataTables.*
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.IDS
+import com.openlattice.postgres.ResultSetAdapters
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -336,7 +337,9 @@ internal fun selectEntityKeyIdsFilteredByVersionSubquerySql(
                 "WHERE max_abs=abs_max ) "
     } else {
         //TODO: needs fix with aliases
-        val metadataColumns = metadataOptions.map(::mapMetadataOptionToPostgresColumn).joinToString(",")
+        val metadataColumns = metadataOptions.joinToString(",") {
+            ResultSetAdapters.mapMetadataOptionToPostgresColumn(it)
+        }
         return "(SELECT $selectedColumns,$metadataColumns FROM ${IDS.name} INNER JOIN (SELECT $selectedColumns " +
                 "FROM ( SELECT $selectedColumns, max(versions) as abs_max, max(abs(versions)) as max_abs " +
                 "       FROM (  SELECT $selectedColumns, unnest(versions) as versions " +
@@ -508,16 +511,5 @@ private fun getMetadataOptions(metadataOptions: Set<MetadataOption>, linking: Bo
         logger.warn("Invalid metadata options requested: {}", invalidMetadataOptions)
     }
 
-    return allowedMetadataOptions.map(::mapMetadataOptionToPostgresColumn)
-}
-
-fun mapMetadataOptionToPostgresColumn(metadataOption: MetadataOption): String {
-    return when (metadataOption) {
-        MetadataOption.LAST_WRITE -> LAST_WRITE.name
-        MetadataOption.LAST_INDEX -> LAST_INDEX.name
-        MetadataOption.LAST_LINK -> LAST_LINK.name
-        MetadataOption.VERSION -> VERSION.name
-        MetadataOption.ENTITY_SET_IDS -> "entity_set_ids"
-        MetadataOption.ENTITY_KEY_IDS -> "entity_key_ids"
-    }
+    return allowedMetadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it) }
 }
