@@ -6,6 +6,7 @@ import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DeleteType
 import com.openlattice.data.EntityDataKey
 import com.openlattice.data.UpdateType
+import com.openlattice.data.storage.MetadataOption
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.requests.MetadataUpdate
 import com.openlattice.mapstores.TestDataFactory
@@ -455,7 +456,10 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
-                Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(3))
+                Assert.assertEquals(
+                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
+                        rs.metaData.getColumnName(3))
+                Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(4))
             }
         }
 
@@ -477,6 +481,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(
+                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
+                        rs.metaData.getColumnName(3))
                 val columnNames = TestAssemblerConnectionManager.getColumnNames(rs)
                 et.properties.forEach {
                     Assert.assertTrue(columnNames.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
@@ -544,6 +551,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                         .selectFromEntitySetSql(es, setOf(PostgresColumn.ENTITY_SET_ID.name, PostgresColumn.ID.name)))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(
+                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
+                        rs.metaData.getColumnName(3))
             }
         }
 
@@ -577,6 +587,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                                 propertyType.type.fullQualifiedNameAsString)))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(
+                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
+                        rs.metaData.getColumnName(3))
                 Assert.assertEquals(propertyType.type.fullQualifiedNameAsString, rs.metaData.getColumnName(3))
             }
         }
@@ -595,6 +608,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
+                Assert.assertEquals(
+                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(MetadataOption.ENTITY_KEY_IDS),
+                        rs.metaData.getColumnName(3))
                 val columns = TestAssemblerConnectionManager.getColumnNames(rs)
                 et.properties.forEach {
                     Assert.assertTrue(columns.contains(edmApi.getPropertyType(it).type.fullQualifiedNameAsString))
