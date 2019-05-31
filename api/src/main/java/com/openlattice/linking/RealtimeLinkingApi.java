@@ -44,6 +44,7 @@ public interface RealtimeLinkingApi {
     String LINKING_ID            = "linkingId";
     String LINKING_ID_PATH       = "/{" + LINKING_ID + "}";
 
+
     @GET( BASE + FINISHED + SET )
     Set<UUID> getLinkingFinishedEntitySets();
 
