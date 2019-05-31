@@ -20,9 +20,9 @@ servers:
 
 paths:
 
-  ###############
-  ## EDM API"s ##
-  ###############
+  ##############
+  ## EDM APIs ##
+  ##############
 
   # edm
 
@@ -1121,14 +1121,14 @@ paths:
                 items:
                   $ref: "#/components/schema"
 
-  ################
-  ## DATA API"s ##
-  ################
+  ###############
+  ## DATA APIs ##
+  ###############
 
   /datastore/data/associations/:
     post:
       summary: Creates a new set of associations.
-      operationId: createAssocations
+      operationId: createAssociations
       requestBody:
         required: true
         content:
@@ -1181,7 +1181,7 @@ paths:
                     items:
                       type: string
     post:
-      summary: Gets a list of entities by UUID's
+      summary: Gets a list of entities by UUIDs
       operationId: loadFilteredEntitySetData
       parameters:
         - name: entitySetId
@@ -1304,9 +1304,9 @@ paths:
     
 
 
-  #############################
-  ## DATA INTEGRATIONS API"s ##
-  #############################
+  ############################
+  ## DATA INTEGRATIONS APIs ##
+  ############################
   
   /datastore/integration:
     post:
@@ -1365,9 +1365,9 @@ paths:
                   format: uuid      
 
 
-  ##################
-  ## SEARCH API"s ##
-  ##################
+  #################
+  ## SEARCH APIs ##
+  #################
 
   /datastore/search/advanced/{entitySetId}:
     post:
@@ -1500,9 +1500,9 @@ paths:
                     items:
                       $ref: "#/components/neighborEntityDetailsReduced"
   
-  #####################
-  ## DIRECTORY API"s ##
-  #####################
+  ####################
+  ## DIRECTORY APIs ##
+  ####################
 
   /datastore/principals/users/search/email/"{emailAddress}":
     get:
@@ -1599,11 +1599,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/securablePrincipal"
+                type: array
+                items:
+                  $ref: "#/components/securablePrincipal"
 
-  #########################
-  ## AUTHORIZATION API"s ##
-  #########################
+  ########################
+  ## AUTHORIZATION APIs ##
+  ########################
 
   /datastore/permissions:
     post: #lattice-js l.29
@@ -1715,9 +1717,9 @@ paths:
                 $ref: "#/components/AuthorizedObjectsSearchResult"
 
 
-  #########################
-  ## ORGANISATIONS API"s ##
-  #########################
+  ########################
+  ## ORGANISATIONS APIs ##
+  ########################
 
   /datastore/organizations:
     get:
@@ -2212,7 +2214,7 @@ paths:
         "200":
           description: Success
   /datastore/organizations/{organizationId}/principals/roles/{roleId}/title:
-    post:
+    put:
       summary: Update role title for an organization from a roleId
       operationId: updateRoleTitle
       tags:
