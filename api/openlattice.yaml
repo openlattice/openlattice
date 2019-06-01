@@ -1338,7 +1338,7 @@ paths:
                 $ref: "#/components/integrationResults"
   /datastore/integration/entityKeyIds:
     post:
-      summary: Get entity key ID's
+      summary: Get entity key IDs
       operationId: getEntityKeyIds
       requestBody:
         required: true
