@@ -222,19 +222,15 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
         final var dstAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-dst
 
         final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
-        final SetMultimap<UUID, UUID> keyPropertiesOfAssociations = HashMultimap.create();
         edges.forEach(
                 association -> {
                     final var edgeEntitySetId = association.getEdge().getEntitySetId();
                     final var srcEntitySetId = association.getSrc().getEntitySetId();
                     final var dstEntitySetId = association.getDst().getEntitySetId();
 
-                    entitySetIdChecks.put( new AclKey( edgeEntitySetId ), READ_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( srcEntitySetId ), READ_PERMISSION );
-                    entitySetIdChecks.put( new AclKey( dstEntitySetId ), READ_PERMISSION );
-
-                    final var keyPropertyTypes = dms.getEntityTypeByEntitySetId( edgeEntitySetId ).getKey();
-                    keyPropertiesOfAssociations.putAll( edgeEntitySetId, keyPropertyTypes );
+                    entitySetIdChecks.put( new AclKey( edgeEntitySetId ), WRITE_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( srcEntitySetId ), WRITE_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( dstEntitySetId ), WRITE_PERMISSION );
 
                     if ( srcAssociationEntitySetIds
                             .putIfAbsent( edgeEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
@@ -248,11 +244,8 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                 }
         );
 
-        //Ensure that we have read access to entity set metadata.
+        //Ensure that we have read access to entity sets.
         accessCheck( entitySetIdChecks );
-
-        //Ensure that we can read key properties on association.
-        accessCheck( aclKeysForAccessCheck( keyPropertiesOfAssociations, READ_PERMISSION ) );
 
         return dgm.createAssociations( edges, srcAssociationEntitySetIds, dstAssociationEntitySetIds ).getNumUpdates();
     }
