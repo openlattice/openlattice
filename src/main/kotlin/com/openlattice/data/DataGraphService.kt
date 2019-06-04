@@ -441,7 +441,7 @@ open class DataGraphService(
 
     override fun integrateAssociations(
             associations: Set<Association>,
-            authorizedPropertiesByEntitySetId: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertiesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Map<String, UUID>> {
         val associationsByEntitySet = associations.groupBy { it.key.entitySetId }
         val entityKeys = HashSet<EntityKey>(3 * associations.size)
@@ -450,6 +450,43 @@ open class DataGraphService(
         //Create graph structure and check entity types
         val srcAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-src
         val dstAssociationEntitySetIds = mutableMapOf<UUID, MutableSet<UUID>>() // edge-dst
+        associations
+                .asSequence()
+                .forEach { association ->
+                    val srcEsId = association.src.entitySetId
+                    val dstEsId = association.dst.entitySetId
+                    val edgeEsId = association.key.entitySetId
+
+                    if(srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
+                        srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
+                    }
+
+                    if(dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
+                        dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
+                    }
+                }
+        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
+
+        //Create the entities for the association and build list of required entity keys
+        val integrationResults = associationsByEntitySet
+                .asSequence()
+                .map {
+                    val entitySetId = it.key
+                    val entities = it.value.asSequence()
+                            .map { association ->
+                                entityKeys.add(association.src)
+                                entityKeys.add(association.dst)
+                                association.key.entityId to association.details
+                            }.toMap()
+                    val ids = doIntegrateEntities(
+                            entitySetId, entities, authorizedPropertiesByEntitySet.getValue(entitySetId))
+                    entityKeyIds.putAll(ids)
+                    entitySetId to ids.asSequence().map { it.key.entityId to it.value }.toMap()
+                }.toMap()
+
+        // Retrieve the src/dst keys (it adds all entitykeyids to mutable entityKeyIds)
+        idService.getEntityKeyIds(entityKeys, entityKeyIds)
+
         val edges = associations
                 .asSequence()
                 .map { association ->
@@ -465,38 +502,9 @@ open class DataGraphService(
                     val dst = EntityDataKey(dstEsId, dstId)
                     val edge = EntityDataKey(edgeEsId, edgeId)
 
-                    if(srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
-                        srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
-                    }
-
-                    if(dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
-                        dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
-                    }
-
                     DataEdgeKey(src, dst, edge)
                 }
                 .toSet()
-        checkAssociationEntityTypes(srcAssociationEntitySetIds, dstAssociationEntitySetIds)
-
-        //Create the entities for the association and build list of required entity keys
-        val integrationResults = associationsByEntitySet
-                .asSequence()
-                .map {
-                    val entitySetId = it.key
-                    val entities = it.value.asSequence()
-                            .map { association ->
-                                entityKeys.add(association.src)
-                                entityKeys.add(association.dst)
-                                association.key.entityId to association.details
-                            }.toMap()
-                    val ids = doIntegrateEntities(
-                            entitySetId, entities, authorizedPropertiesByEntitySetId.getValue(entitySetId))
-                    entityKeyIds.putAll(ids)
-                    entitySetId to ids.asSequence().map { it.key.entityId to it.value }.toMap()
-                }.toMap()
-        //Retrieve the src/dst keys
-        idService.getEntityKeyIds(entityKeys, entityKeyIds)
-
         graphService.createEdges(edges)
 
         return integrationResults
