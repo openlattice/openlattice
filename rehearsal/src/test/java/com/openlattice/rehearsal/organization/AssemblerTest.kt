@@ -57,6 +57,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val esDst = createEntitySet(dst)
         val esEdge = createEntitySet(edge)
 
+        // create association type with defining src and dst entity types
+        createAssociationType(edge, setOf(src), setOf(dst))
+
         val testDataSrc = TestDataFactory.randomStringEntityData(numberOfEntities, src.properties)
         val testDataDst = TestDataFactory.randomStringEntityData(numberOfEntities, dst.properties)
         val testDataEdge = TestDataFactory.randomStringEntityData(numberOfEntities, edge.properties)
@@ -291,6 +294,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val esDst = createEntitySet(dst)
         val esEdge = createEntitySet(edge)
 
+        // create association type with defining src and dst entity types
+        createAssociationType(edge, setOf(src), setOf(dst))
 
         // grant permissions to materialize
         grantMaterializePermissions(organization, esSrc, src.properties)
@@ -348,7 +353,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     index++
                 } while (rs.next())
 
-                Assert.assertEquals(numberOfEntities, index)
+                Assert.assertEquals(numberOfEntities * 3, index)
             }
         }
 
@@ -370,7 +375,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                     index++
                 } while (rs.next())
 
-                Assert.assertEquals(numberOfEntities, index)
+                Assert.assertEquals(numberOfEntities * 3, index)
             }
         }
 

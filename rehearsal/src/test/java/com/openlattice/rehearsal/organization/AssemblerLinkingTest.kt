@@ -521,6 +521,9 @@ class AssemblerLinkingTest : SetupTestData() {
         val esDst = createEntitySet(dst)
         val esEdge = createEntitySet(edge)
 
+        // create association type with defining src and dst entity types
+        createAssociationType(edge, setOf(personEt), setOf(dst))
+
         // materialize linking entity set
         grantMaterializePermissions(organization, esLinking, personEt.properties)
         organizationsApi.assembleEntitySets(organizationID, setOf(esLinking.id))
