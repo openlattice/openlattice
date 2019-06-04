@@ -469,8 +469,8 @@ open class DataGraphService(
                         srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
                     }
 
-                    if(srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
-                        srcAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
+                    if(dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
+                        dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
                     }
 
                     DataEdgeKey(src, dst, edge)
