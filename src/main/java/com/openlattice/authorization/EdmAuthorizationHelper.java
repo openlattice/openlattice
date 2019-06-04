@@ -326,7 +326,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                     // authorized properties should be the same within 1 linking entity set for each normal entity set
                     authorizedPropertyTypesByEntitySet.put(
                             linkingEntitySetId,
-                            getAuthorizedPropertyTypes( linkingEntitySetId, requiredPermissions ) );
+                            getAuthorizedPropertyTypes( linkingEntitySetId, requiredPermissions, principals ) );
                 }
         );
 

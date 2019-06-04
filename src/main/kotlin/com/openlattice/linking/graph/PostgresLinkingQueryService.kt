@@ -33,6 +33,7 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
+import java.sql.Connection
 import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
@@ -49,16 +50,18 @@ private const val AVG_SCORE_FIELD = "avg_score"
 class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQueryService {
 
 
-    override fun lockClustersForUpdates(
-            clusters: Set<UUID>
-    ): StatementHolder {
+    override fun lockClustersForUpdates(clusters: Set<UUID>): Connection {
         val connection = hds.connection
         connection.autoCommit = false
-        val ps = connection.prepareStatement(LOCK_CLUSTERS_SQL)
-        val arr = PostgresArrays.createUuidArray(connection, clusters)
-        ps.setArray(1, arr)
-        val rs = ps.executeQuery()
-        return StatementHolder(connection, ps, rs)
+
+        val psLocks = connection.prepareStatement(LOCK_CLUSTERS_SQL)
+        clusters.forEach {
+            psLocks.setObject(1, it)
+            psLocks.addBatch()
+        }
+        psLocks.executeBatch()
+
+        return connection
     }
 
     override fun getLinkableEntitySets(
@@ -218,9 +221,13 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                 }).toMap()
     }
 
-    override fun insertMatchScores(clusterId: UUID, scores: Map<EntityDataKey, Map<EntityDataKey, Double>>): Int {
-        hds.connection.use {
-            it.prepareStatement(INSERT_SQL).use {
+    override fun insertMatchScores(
+            connection: Connection,
+            clusterId: UUID,
+            scores: Map<EntityDataKey, Map<EntityDataKey, Double>>
+    ): Int {
+        connection.use { conn ->
+            conn.prepareStatement(INSERT_SQL).use {
                 val ps = it
                 scores.forEach {
                     val srcEntityDataKey = it.key
@@ -236,23 +243,9 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
                         ps.addBatch()
                     }
                 }
-                return ps.executeBatch().sum()
-            }
-        }
-    }
-
-    override fun insertMatchScore(
-            clusterId: UUID, blockKey: EntityDataKey, blockElement: EntityDataKey, score: Double
-    ): Int {
-        hds.connection.use {
-            it.prepareStatement(INSERT_SQL).use {
-                it.setObject(1, clusterId)
-                it.setObject(2, blockKey.entitySetId)
-                it.setObject(3, blockKey.entityKeyId)
-                it.setObject(4, blockElement.entitySetId)
-                it.setObject(5, blockElement.entityKeyId)
-                it.setObject(6, score)
-                return it.executeUpdate()
+                val insertCount = ps.executeBatch().sum()
+                conn.commit()
+                return insertCount
             }
         }
     }
@@ -271,7 +264,7 @@ class PostgresLinkingQueryService(private val hds: HikariDataSource) : LinkingQu
 
     override fun deleteNeighborhood(entity: EntityDataKey, positiveFeedbacks: List<EntityKeyPair>): Int {
         val deleteNeighborHoodSql = DELETE_NEIGHBORHOOD_SQL +
-                if (!positiveFeedbacks.isEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(positiveFeedbacks)} )" else ""
+                if (positiveFeedbacks.isNotEmpty()) " AND NOT ( ${buildFilterEntityKeyPairs(positiveFeedbacks)} )" else ""
         hds.connection.use {
             it.prepareStatement(deleteNeighborHoodSql).use {
                 it.setObject(1, entity.entitySetId)
@@ -400,4 +393,4 @@ private val LINKABLE_ENTITY_SET_IDS = "SELECT ${ID.name} " +
         "FROM ${ENTITY_SETS.name} " +
         "WHERE ${ENTITY_TYPE_ID.name} = ANY(?) AND NOT ${ID.name} = ANY(?) AND ${ID.name} = ANY(?) "
 
-private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE linking_id = ANY(?) FOR UPDATE"
+private val LOCK_CLUSTERS_SQL = "SELECT 1 FROM ${MATCHED_ENTITIES.name} WHERE linking_id = ? FOR UPDATE"

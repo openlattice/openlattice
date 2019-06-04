@@ -981,7 +981,7 @@ fun selectEntitySetWithPropertyTypes(
     val entityKeyIdsClause = entityKeyIds.map { "AND ${entityKeyIdsClause(it)} " }.orElse(" ")
     //@formatter:off
     val columns = setOf(ID_VALUE.name) +
-            metadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it).name } +
+            metadataOptions.map { ResultSetAdapters.mapMetadataOptionToPostgresColumn(it) } +
             authorizedPropertyTypes.values.map(::quote)
 
     return "SELECT ${columns.filter(String::isNotBlank).joinToString(",")} FROM (SELECT * \n" +
@@ -1084,8 +1084,9 @@ internal fun getLinkingEntitySetIdsOfLinkingIdQuery(linkingId: UUID): String {
             "SELECT DISTINCT ${ENTITY_SET_ID.name} " +
                     "FROM ${IDS.name} " +
                     "WHERE ${LINKING_ID.name} = '$linkingId'"
+    val wrapLocalTable = "SELECT ${ID.name}, ${LINKED_ENTITY_SETS.name} from ${ENTITY_SETS.name}"
     return "SELECT ${ID.name} " +
-            "FROM ${ENTITY_SETS.name} " +
+            "FROM ( $wrapLocalTable ) as entity_set_ids " +
             "INNER JOIN ( $selectEntitySetIdOfLinkingId ) as linked_es " +
             "ON ( ${ENTITY_SET_ID.name}= ANY( ${LINKED_ENTITY_SETS.name} ) )"
 }
