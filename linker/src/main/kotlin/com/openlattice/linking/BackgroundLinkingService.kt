@@ -128,8 +128,8 @@ class BackgroundLinkingService
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
                 val clusters = getClusters(setOf(candidate))
-                val clusterId = clusters.keys.first()
                 val cluster = clusters.entries.first()
+                val clusterId = cluster.key
 
                 gqs.lockClustersForUpdates(setOf(clusterId)).use {
                     val scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
