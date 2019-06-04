@@ -21,6 +21,8 @@
 
 package com.openlattice.rehearsal.edm
 
+import com.openlattice.data.requests.EntitySetSelection
+import com.openlattice.data.requests.FileType
 import com.openlattice.edm.type.AssociationType
 import com.openlattice.rehearsal.authentication.MultipleAuthenticatedUsersBase
 import org.apache.commons.lang.RandomStringUtils
@@ -144,7 +146,8 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
                 .map { mapOf(personGivenNamePropertyId to setOf(RandomStringUtils.randomAscii(5))) }.toList()
         dataApi.createEntities(es1.id, entries)
 
-        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es1.id))
+        val ess = EntitySetSelection(Optional.of(EdmTestConstants.personEt.properties))
+        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es1.id, ess, FileType.json).toList().size)
 
         edmApi.deleteEntitySet(es1.id)
 
