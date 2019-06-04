@@ -15,7 +15,8 @@ hazelcast:
         - "localhost"
 
 postgres:
-    initialize-indices: false
+    citus: false
+    initialize-indices: true
     hikari:
         jdbcUrl: jdbc:postgresql://localhost:5432/openlattice
         username: "oltest"

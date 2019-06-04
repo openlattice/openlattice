@@ -72,6 +72,7 @@ import java.util.stream.Stream;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Maps.transformValues;
 import static com.openlattice.authorization.EdmAuthorizationHelper.*;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @RestController
 @RequestMapping( DataApi.CONTROLLER )
@@ -309,24 +310,37 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
     @Timed
     @PutMapping( value = "/" + ASSOCIATION, consumes = MediaType.APPLICATION_JSON_VALUE )
     public Integer createAssociations( @RequestBody Set<DataEdgeKey> associations ) {
+        final var srcAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-src
+        final var dstAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-dst
+
+        final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
         associations.forEach(
                 association -> {
-                    UUID associationEntitySetId = association.getEdge().getEntitySetId();
+                    final var edgeEntitySetId = association.getEdge().getEntitySetId();
+                    final var srcEntitySetId = association.getSrc().getEntitySetId();
+                    final var dstEntitySetId = association.getDst().getEntitySetId();
 
-                    //Ensure that we have read access to entity set metadata.
-                    ensureReadAccess( new AclKey( association.getSrc().getEntitySetId() ) );
-                    ensureReadAccess( new AclKey( association.getDst().getEntitySetId() ) );
-                    ensureReadAccess( new AclKey( associationEntitySetId ) );
+                    entitySetIdChecks.put( new AclKey( edgeEntitySetId ), WRITE_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( srcEntitySetId ), WRITE_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( dstEntitySetId ), WRITE_PERMISSION );
 
-                    //Ensure that we can read key properties.
-                    Set<UUID> keyPropertyTypes = edmService
-                            .getEntityTypeByEntitySetId( associationEntitySetId ).getKey();
-                    keyPropertyTypes.forEach( propertyType ->
-                            accessCheck( new AclKey( associationEntitySetId, propertyType ), READ_PERMISSION ) );
+                    if ( srcAssociationEntitySetIds
+                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
+                        srcAssociationEntitySetIds.get( edgeEntitySetId ).add( srcEntitySetId );
+                    }
+
+                    if ( dstAssociationEntitySetIds
+                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
+                        dstAssociationEntitySetIds.get( edgeEntitySetId ).add( dstEntitySetId );
+                    }
                 }
         );
 
-        WriteEvent writeEvent = dgm.createAssociations( associations );
+        //Ensure that we have write access to entity sets.
+        accessCheck( entitySetIdChecks );
+
+        WriteEvent writeEvent = dgm
+                .createAssociations( associations, srcAssociationEntitySetIds, dstAssociationEntitySetIds );
 
         Stream<Pair<EntityDataKey, Map<String, Object>>> neighborMappingsCreated = associations.stream()
                 .flatMap( dataEdgeKey -> Stream.of(
