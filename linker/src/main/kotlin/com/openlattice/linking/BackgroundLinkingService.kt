@@ -39,6 +39,7 @@ import com.openlattice.rhizome.hazelcast.DelegatedUUIDSet
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import java.sql.Connection
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -126,21 +127,25 @@ class BackgroundLinkingService
             try {
                 // only linking id of entity should remain, since we cleared neighborhood, except the ones
                 // with positive feedback
-                val cluster = getClusters(setOf(candidate)).entries.first()
+                val clusters = getClusters(setOf(candidate))
+                val cluster = clusters.entries.first()
+                val clusterId = cluster.key
 
-                val scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
-                if (scoredCluster.score <= MINIMUM_SCORE) {
-                    logger.error(
-                            "Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
-                            scoredCluster.score,
-                            cluster.key,
-                            MINIMUM_SCORE
-                    )
+                gqs.lockClustersForUpdates(setOf(clusterId)).use {
+                    val scoredCluster = cluster(candidate, cluster, ::completeLinkCluster)
+                    if (scoredCluster.score <= MINIMUM_SCORE) {
+                        logger.error(
+                                "Recalculated score {} of linking id {} with positives feedbacks did not pass minimum score {}",
+                                scoredCluster.score,
+                                cluster.key,
+                                MINIMUM_SCORE
+                        )
+                    }
+
+                    val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, candidate, scoredCluster.cluster)
+
+                    insertMatches(clusterUpdate, it)
                 }
-
-                val clusterUpdate = ClusterUpdate(scoredCluster.clusterId, candidate, scoredCluster.cluster)
-
-                insertMatches(clusterUpdate)
             } catch (ex: Exception) {
                 logger.error("An error occurred while performing linking.", ex)
                 throw IllegalStateException("Error occured while performing linking.", ex)
@@ -193,7 +198,7 @@ class BackgroundLinkingService
                         ClusterUpdate(bestCluster.clusterId, candidate, bestCluster.cluster)
                     }
 
-                    insertMatches(clusterUpdate)
+                    insertMatches(clusterUpdate, it)
                 }
 
             } catch (ex: Exception) {
@@ -252,8 +257,8 @@ class BackgroundLinkingService
         return gqs.getClusters(gqs.getIdsOfClustersContaining(dataKeys).toList())
     }
 
-    private fun insertMatches(clusterUpdate: ClusterUpdate) {
-        gqs.insertMatchScores(clusterUpdate.clusterId, clusterUpdate.scores)
+    private fun insertMatches(clusterUpdate: ClusterUpdate, connection: Connection) {
+        gqs.insertMatchScores(connection, clusterUpdate.clusterId, clusterUpdate.scores)
         gqs.updateLinkingTable(clusterUpdate.clusterId, clusterUpdate.newMember)
     }
 
@@ -271,6 +276,7 @@ class BackgroundLinkingService
     @Timed
     @Scheduled(fixedRate = 30000)
     fun updateCandidateList() {
+        logger.info("Updating linking candidates list.")
         if (running.tryLock()) {
             try {
                 pgEdmManager.allEntitySets.asSequence()
