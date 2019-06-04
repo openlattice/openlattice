@@ -25,6 +25,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.AuthorizationManager;
 import com.openlattice.authorization.AuthorizingComponent;
@@ -50,6 +51,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
+
+import static com.openlattice.authorization.EdmAuthorizationHelper.READ_PERMISSION;
+import static com.openlattice.authorization.EdmAuthorizationHelper.aclKeysForAccessCheck;
 
 @RestController
 @RequestMapping( DataIntegrationApi.CONTROLLER )
@@ -166,9 +170,7 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
                                 entitySetId -> authzHelper
                                         .getAuthorizedPropertyTypes( entitySetId, WRITE_PERMISSION ) ) );
 
-        return dgm.integrateEntitiesAndAssociations( data.getEntities(),
-                data.getAssociations(),
-                authorizedPropertyTypesByEntitySet );
+        return dgm.integrateEntitiesAndAssociations( entities, associations, authorizedPropertyTypesByEntitySet );
     }
 
     @Override public List<String> generatePresignedUrls( Collection<S3EntityData> data ) {
@@ -216,7 +218,36 @@ public class DataIntegrationController implements DataIntegrationApi, Authorizin
     @Override
     @PutMapping( "/" + EDGES )
     public int createEdges( @RequestBody Set<DataEdgeKey> edges ) {
-        return dgm.createAssociations( edges ).getNumUpdates();
+        final var srcAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-src
+        final var dstAssociationEntitySetIds = new HashMap<UUID, Set<UUID>>(); // edge-dst
+
+        final var entitySetIdChecks = new HashMap<AclKey, EnumSet<Permission>>();
+        edges.forEach(
+                association -> {
+                    final var edgeEntitySetId = association.getEdge().getEntitySetId();
+                    final var srcEntitySetId = association.getSrc().getEntitySetId();
+                    final var dstEntitySetId = association.getDst().getEntitySetId();
+
+                    entitySetIdChecks.put( new AclKey( edgeEntitySetId ), WRITE_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( srcEntitySetId ), WRITE_PERMISSION );
+                    entitySetIdChecks.put( new AclKey( dstEntitySetId ), WRITE_PERMISSION );
+
+                    if ( srcAssociationEntitySetIds
+                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( srcEntitySetId ) ) != null ) {
+                        srcAssociationEntitySetIds.get( edgeEntitySetId ).add( srcEntitySetId );
+                    }
+
+                    if ( dstAssociationEntitySetIds
+                            .putIfAbsent( edgeEntitySetId, Sets.newHashSet( dstEntitySetId ) ) != null ) {
+                        dstAssociationEntitySetIds.get( edgeEntitySetId ).add( dstEntitySetId );
+                    }
+                }
+        );
+
+        //Ensure that we have read access to entity sets.
+        accessCheck( entitySetIdChecks );
+
+        return dgm.createAssociations( edges, srcAssociationEntitySetIds, dstAssociationEntitySetIds ).getNumUpdates();
     }
 
     private static SetMultimap<UUID, UUID> requiredAssociationPropertyTypes( Set<Association> associations ) {

@@ -321,6 +321,7 @@ public class DatastoreServicesPod {
                 graphApi(),
                 idService(),
                 entityDatastore(),
+                dataModelService(),
                 postgresEntitySetSizeCacheManager() );
     }
 
