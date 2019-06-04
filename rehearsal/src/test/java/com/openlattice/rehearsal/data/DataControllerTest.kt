@@ -932,17 +932,20 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
                 .map { mapOf(EdmTestConstants.personGivenNameId to setOf(RandomStringUtils.randomAscii(5))) }
         val newEntityIds = dataApi.createEntities(es.id, entries)
 
-        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
+        val ess = EntitySetSelection(Optional.of(personEt.properties))
+        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
 
         dataApi.deleteEntities(es.id, setOf(newEntityIds[0]), DeleteType.Hard)
 
-        val ess = EntitySetSelection(Optional.of(personEt.properties))
         val loadedEntries = dataApi.loadEntitySetData(es.id, ess, FileType.json).toList()
 
         Assert.assertEquals(numberOfEntries - 1, loadedEntries.size)
         Assert.assertTrue(loadedEntries.none {
             it[EdmTestConstants.personGivenNameFqn] == entries.first().values
         })
+
+        dataApi.deleteEntities(es.id, newEntityIds.drop(1).toSet(), DeleteType.Hard)
+        Assert.assertEquals(0, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
     }
 
     @Test
@@ -1141,14 +1144,15 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
 
         val newEntityIds = dataApi.createEntities(es.id, people)
 
-        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
+        val ess = EntitySetSelection(Optional.of(personEt.properties))
+        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
 
         val entityId = newEntityIds[0]
         dataApi.deleteEntityProperties(es.id, entityId, setOf(EdmTestConstants.personGivenNameId), DeleteType.Hard)
 
         val loadedEntity = dataApi.getEntity(es.id, entityId)
 
-        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
+        Assert.assertEquals(numberOfEntries, dataApi.loadEntitySetData(es.id, ess, FileType.json).toList().size)
         Assert.assertFalse(loadedEntity.keySet().contains(EdmTestConstants.personGivenNameFqn))
     }
 
@@ -1313,5 +1317,22 @@ class DataControllerTest : MultipleAuthenticatedUsersBase() {
         val essEdgeDst2 = EntitySetSelection(Optional.of(edgeDst2.properties))
         val loadedEdgeDstEntities2 = dataApi.loadEntitySetData(esEdgeDst2.id, essEdgeDst2, FileType.json).toList()
         Assert.assertEquals(0, loadedEdgeDstEntities2.size)
+    }
+
+    @Test
+    fun testGetEntitySetSize() {
+        val et = createEntityType()
+        val es = createEntitySet(et)
+
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntries, et.properties)
+
+        val entries = ImmutableList.copyOf(testData.values)
+        val ids = dataApi.createEntities(es.id, entries)
+
+        Assert.assertEquals(0L, dataApi.getEntitySetSize(es.id))
+
+        Thread.sleep(300_000)
+
+        Assert.assertEquals(numberOfEntries.toLong(), dataApi.getEntitySetSize(es.id))
     }
 }
