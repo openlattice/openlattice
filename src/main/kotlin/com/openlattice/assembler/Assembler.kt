@@ -241,6 +241,8 @@ class Assembler(
             organizationId: UUID,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
+        logger.info("Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys}")
+
         // check if organization is initialized
         ensureAssemblyInitialized(organizationId)
 
@@ -356,7 +358,7 @@ class Assembler(
                 authorizedPropertyTypes.values.map(PropertyType::getId),
                 entitySetIds.associateWith { authorizedPropertyTypes.keys },
                 mapOf(),
-                EnumSet.allOf(MetadataOption::class.java),
+                EnumSet.of(MetadataOption.ENTITY_KEY_IDS),
                 authorizedPropertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 entitySet.isLinking,
                 false //Always provide entity set id
