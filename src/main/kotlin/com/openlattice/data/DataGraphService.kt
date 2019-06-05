@@ -564,7 +564,7 @@ open class DataGraphService(
             }
 
             if (!edgeAssociationType.dst.containsAll(dstEntityTypes)) {
-                throw IllegalArgumentException("One or more entity types of src entity sets $dstEntitySetIds differs " +
+                throw IllegalArgumentException("One or more entity types of dst entity sets $dstEntitySetIds differs " +
                         "from allowed entity types (${edgeAssociationType.dst}) in association type of entity set " +
                         edgeEntitySetId)
             }
