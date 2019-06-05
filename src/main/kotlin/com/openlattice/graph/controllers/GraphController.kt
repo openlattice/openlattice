@@ -46,10 +46,14 @@ constructor(
         private val authorizationManager: AuthorizationManager
 //        private val filteredAggregation
 ) : GraphApi, AuthorizingComponent {
+    @Timed
     override fun neighborhoodQuery(
-            entitySetId: UUID, query: NeighborhoodQuery
+            entitySetId: UUID,
+            query: NeighborhoodQuery
     ): Map<UUID, List<NeighborEntityDetails>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        //authorize(query)
+        graphQueryService.submitQuery(query)
+        return mapOf()
     }
 
 
