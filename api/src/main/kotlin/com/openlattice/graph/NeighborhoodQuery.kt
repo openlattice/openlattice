@@ -28,6 +28,7 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class NeighborhoodQuery(
+        val ids: Set<UUID>,
         val incomingFilters: Set<NeighborhoodFilter>,
         val outgoingFilters: Set<NeighborhoodFilter>
 )
