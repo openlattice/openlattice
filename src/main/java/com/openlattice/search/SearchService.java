@@ -27,7 +27,6 @@ import com.google.common.collect.*;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.openlattice.apps.App;
-import com.openlattice.apps.AppType;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.conductor.rpc.ConductorElasticsearchApi;
@@ -408,12 +407,6 @@ public class SearchService {
     }
 
     @Subscribe
-    public void createAppType( AppTypeCreatedEvent event ) {
-        AppType appType = event.getAppType();
-        elasticsearchApi.saveSecurableObjectToElasticsearch( SecurableObjectType.AppType, appType );
-    }
-
-    @Subscribe
     public void deleteEntityType( EntityTypeDeletedEvent event ) {
         UUID entityTypeId = event.getEntityTypeId();
         elasticsearchApi.deleteSecurableObjectFromElasticsearch( SecurableObjectType.EntityType, entityTypeId );
@@ -474,12 +467,6 @@ public class SearchService {
         elasticsearchApi.deleteSecurableObjectFromElasticsearch( SecurableObjectType.App, appId );
     }
 
-    @Subscribe
-    public void deleteAppType( AppTypeDeletedEvent event ) {
-        UUID appTypeId = event.getAppTypeId();
-        elasticsearchApi.deleteSecurableObjectFromElasticsearch( SecurableObjectType.AppType, appTypeId );
-    }
-
     public SearchResult executeEntityTypeSearch( String searchTerm, int start, int maxHits ) {
         return elasticsearchApi
                 .executeSecurableObjectSearch( SecurableObjectType.EntityType, searchTerm, start, maxHits );
@@ -499,10 +486,6 @@ public class SearchService {
 
     public SearchResult executeAppSearch( String searchTerm, int start, int maxHits ) {
         return elasticsearchApi.executeSecurableObjectSearch( SecurableObjectType.App, searchTerm, start, maxHits );
-    }
-
-    public SearchResult executeAppTypeSearch( String searchTerm, int start, int maxHits ) {
-        return elasticsearchApi.executeSecurableObjectSearch( SecurableObjectType.AppType, searchTerm, start, maxHits );
     }
 
     public SearchResult executeEntityTypeCollectionSearch( String searchTerm, int start, int maxHits ) {
@@ -938,10 +921,6 @@ public class SearchService {
 
     public void triggerAppIndex( List<App> apps ) {
         elasticsearchApi.triggerSecurableObjectIndex( SecurableObjectType.App, apps );
-    }
-
-    public void triggerAppTypeIndex( List<AppType> appTypes ) {
-        elasticsearchApi.triggerSecurableObjectIndex( SecurableObjectType.AppType, appTypes );
     }
 
     public void triggerAllOrganizationsIndex( List<Organization> allOrganizations ) {

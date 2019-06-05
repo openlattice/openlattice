@@ -28,7 +28,6 @@ import com.kryptnostic.rhizome.mapstores.SelfRegisteringMapStore;
 import com.kryptnostic.rhizome.pods.hazelcast.QueueConfigurer;
 import com.openlattice.apps.App;
 import com.openlattice.apps.AppConfigKey;
-import com.openlattice.apps.AppType;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
@@ -247,11 +246,6 @@ public class MapstoresPod {
     @Bean
     public SelfRegisteringMapStore<UUID, App> appMapstore() {
         return new AppMapstore( hikariDataSource );
-    }
-
-    @Bean
-    public SelfRegisteringMapStore<UUID, AppType> appTypeMapstore() {
-        return new AppTypeMapstore( hikariDataSource );
     }
 
     @Bean

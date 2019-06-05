@@ -38,14 +38,12 @@ public class AppConfigKeyStreamSerializer implements SelfRegisteringStreamSerial
     @Override public void write( ObjectDataOutput out, AppConfigKey object ) throws IOException {
         UUIDStreamSerializer.serialize( out, object.getAppId() );
         UUIDStreamSerializer.serialize( out, object.getOrganizationId() );
-        UUIDStreamSerializer.serialize( out, object.getAppTypeId() );
     }
 
     @Override public AppConfigKey read( ObjectDataInput in ) throws IOException {
         UUID appId = UUIDStreamSerializer.deserialize( in );
         UUID organizationId = UUIDStreamSerializer.deserialize( in );
-        UUID appTypeId = UUIDStreamSerializer.deserialize( in );
-        return new AppConfigKey( appId, organizationId, appTypeId );
+        return new AppConfigKey( appId, organizationId );
     }
 
     @Override public int getTypeId() {

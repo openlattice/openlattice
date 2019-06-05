@@ -107,10 +107,6 @@ public interface ConductorElasticsearchApi {
     String APP_INDEX = "app_index";
     String APP       = "app";
 
-    // app_type_index setup consts
-    String APP_TYPE_INDEX = "app_type_index";
-    String APP_TYPE       = "app_type";
-
     // entity set field consts
     String ENTITY_SET     = "entitySet";
     String PROPERTY_TYPES = "propertyTypes";

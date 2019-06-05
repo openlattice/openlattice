@@ -102,6 +102,8 @@ public interface SecurePrincipalsManager {
 
     AclKey lookup( Principal p );
 
+    Map<Principal, AclKey> lookup( Set<Principal> principals );
+
     Role lookupRole( Principal principal );
 
     Collection<Principal> getPrincipals( Predicate<AclKey, SecurablePrincipal> p );

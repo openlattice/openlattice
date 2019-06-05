@@ -20,32 +20,63 @@
 
 package com.openlattice.hazelcast.serializers;
 
-import com.openlattice.hazelcast.StreamSerializerTypeIds;
+import com.dataloom.mappers.ObjectMappers;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.kryptnostic.rhizome.pods.hazelcast.SelfRegisteringStreamSerializer;
 import com.openlattice.apps.AppTypeSetting;
-import com.openlattice.authorization.Permission;
-import java.io.IOException;
-import java.util.EnumSet;
-import java.util.UUID;
+import com.openlattice.authorization.AclKey;
+import com.openlattice.authorization.Principal;
+import com.openlattice.hazelcast.StreamSerializerTypeIds;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class AppTypeSettingStreamSerializer implements SelfRegisteringStreamSerializer<AppTypeSetting> {
+
+    private static ObjectMapper mapper = ObjectMappers.getJsonMapper();
+    private static TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
+    };
+
     @Override public Class<? extends AppTypeSetting> getClazz() {
         return AppTypeSetting.class;
     }
 
     @Override public void write( ObjectDataOutput out, AppTypeSetting object ) throws IOException {
-        UUIDStreamSerializer.serialize( out, object.getEntitySetId() );
-        DelegatedPermissionEnumSetStreamSerializer.serialize( out, object.getPermissions() );
+        UUIDStreamSerializer.serialize( out, object.getId() );
+        UUIDStreamSerializer.serialize( out, object.getEntitySetCollectionId() );
+
+        out.writeInt( object.getRoles().size() );
+        for ( Map.Entry<UUID, AclKey> entry : object.getRoles().entrySet() ) {
+            UUIDStreamSerializer.serialize( out, entry.getKey() );
+            AclKeyStreamSerializer.serialize( out, entry.getValue() );
+        }
+        out.writeByteArray( mapper.writeValueAsBytes( object.getSettings() ) );
     }
 
     @Override public AppTypeSetting read( ObjectDataInput in ) throws IOException {
-        UUID entitySetId = UUIDStreamSerializer.deserialize( in );
-        EnumSet<Permission> permissions = DelegatedPermissionEnumSetStreamSerializer.deserialize( in );
-        return new AppTypeSetting( entitySetId, permissions );
+        UUID id = UUIDStreamSerializer.deserialize( in );
+        UUID entitySetCollectionId = UUIDStreamSerializer.deserialize( in );
+
+        int roleMapSize = in.readInt();
+        Map<UUID, AclKey> roleMap = new HashMap<>( roleMapSize );
+
+        for ( int i = 0; i < roleMapSize; i++ ) {
+            UUID roleId = UUIDStreamSerializer.deserialize( in );
+            AclKey roleAclKey = AclKeyStreamSerializer.deserialize( in );
+
+            roleMap.put( roleId, roleAclKey );
+        }
+
+        Map<String, Object> settings = mapper.readValue( in.readByteArray(), typeRef );
+
+        return new AppTypeSetting( id, entitySetCollectionId, roleMap, settings );
     }
 
     @Override public int getTypeId() {

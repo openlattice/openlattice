@@ -24,10 +24,7 @@ import com.dataloom.mappers.ObjectMappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.*;
-import com.openlattice.apps.App;
-import com.openlattice.apps.AppConfigKey;
-import com.openlattice.apps.AppType;
-import com.openlattice.apps.AppTypeSetting;
+import com.openlattice.apps.*;
 import com.openlattice.assembler.EntitySetAssemblyKey;
 import com.openlattice.assembler.MaterializedEntitySet;
 import com.openlattice.auditing.AuditRecordEntitySetConfiguration;
@@ -98,7 +95,13 @@ public final class ResultSetAdapters {
             .newJsonMapper();
     private static final TypeReference<Map<String, Object>>                   alertMetadataTypeRef = new TypeReference<Map<String, Object>>() {
     };
+    private static final TypeReference<Map<String, Object>>                   appSettingsTypeRef   = new TypeReference<Map<String, Object>>() {
+    };
     private static final TypeReference<LinkedHashSet<CollectionTemplateType>> templateTypeRef      = new TypeReference<LinkedHashSet<CollectionTemplateType>>() {
+    };
+    private static final TypeReference<Set<AppRole>>                          appRoleTypeRef       = new TypeReference<Set<AppRole>>() {
+    };
+    private static final TypeReference<Map<UUID, AclKey>>                     rolesTypeRef         = new TypeReference<Map<UUID, AclKey>>() {
     };
     private static final ComponentType[]                                      componentTypes       = ComponentType
             .values();
@@ -445,14 +448,6 @@ public final class ResultSetAdapters {
         return rs.getObject( APP_ID.getName(), UUID.class );
     }
 
-    public static UUID appTypeId( ResultSet rs ) throws SQLException {
-        return rs.getObject( CONFIG_TYPE_ID.getName(), UUID.class );
-    }
-
-    public static LinkedHashSet<UUID> appTypeIds( ResultSet rs ) throws SQLException {
-        return linkedHashSetUUID( rs, CONFIG_TYPE_IDS.getName() );
-    }
-
     public static double diameter( ResultSet rs ) throws SQLException {
         return rs.getDouble( GRAPH_DIAMETER.getName() );
     }
@@ -653,33 +648,39 @@ public final class ResultSetAdapters {
     public static AppConfigKey appConfigKey( ResultSet rs ) throws SQLException {
         UUID appId = appId( rs );
         UUID organizationId = organizationId( rs );
-        UUID appTypeId = appTypeId( rs );
-        return new AppConfigKey( appId, organizationId, appTypeId );
+        return new AppConfigKey( appId, organizationId );
     }
 
-    public static AppTypeSetting appTypeSetting( ResultSet rs ) throws SQLException {
-        UUID entitySetId = entitySetId( rs );
-        EnumSet<Permission> permissions = permissions( rs );
-        return new AppTypeSetting( entitySetId, permissions );
-    }
-
-    public static App app( ResultSet rs ) throws SQLException {
+    public static AppTypeSetting appTypeSetting( ResultSet rs ) throws SQLException, IOException {
         UUID id = id( rs );
+        UUID entitySetCollectionId = entitySetCollectionId( rs );
+        Map<UUID, AclKey> roles = roles( rs );
+        Map<String, Object> settings = appSettings( rs );
+        return new AppTypeSetting( id, entitySetCollectionId, roles, settings );
+    }
+
+    public static Set<AppRole> appRoles( ResultSet rs ) throws SQLException, IOException {
+        return mapper.readValue( rs.getString( PostgresColumn.ROLES.getName() ), appRoleTypeRef );
+    }
+
+    public static Map<UUID, AclKey> roles( ResultSet rs ) throws SQLException, IOException {
+        return mapper.readValue( rs.getString( PostgresColumn.ROLES.getName() ), rolesTypeRef );
+    }
+
+    public static Map<String, Object> appSettings( ResultSet rs ) throws SQLException, IOException {
+        return mapper.readValue( rs.getString( PostgresColumn.SETTINGS.getName() ), appSettingsTypeRef );
+    }
+
+    public static App app( ResultSet rs ) throws SQLException, IOException {
+        Optional<UUID> id = Optional.of( id( rs ) );
         String name = name( rs );
         String title = title( rs );
         Optional<String> description = Optional.ofNullable( description( rs ) );
-        LinkedHashSet<UUID> appTypeIds = appTypeIds( rs );
+        UUID entityTypeCollectionId = entityTypeCollectionId( rs );
         String url = url( rs );
-        return new App( id, name, title, description, appTypeIds, url );
-    }
-
-    public static AppType appType( ResultSet rs ) throws SQLException {
-        UUID id = id( rs );
-        FullQualifiedName type = fqn( rs );
-        String title = title( rs );
-        Optional<String> description = Optional.ofNullable( description( rs ) );
-        UUID entityTypeId = entityTypeId( rs );
-        return new AppType( id, type, title, description, entityTypeId );
+        Set<AppRole> appRoles = appRoles( rs );
+        Optional<Map<String, Object>> settings = Optional.of( appSettings( rs ) );
+        return new App( id, name, title, description, url, entityTypeCollectionId, appRoles, settings );
     }
 
     private static List<?> propertyValue( ResultSet rs, PropertyType propertyType ) throws SQLException {

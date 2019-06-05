@@ -56,6 +56,7 @@ import com.openlattice.organizations.roles.processors.PrincipalDescriptionUpdate
 import com.openlattice.organizations.roles.processors.PrincipalTitleUpdater;
 import com.openlattice.principals.RoleCreatedEvent;
 import com.openlattice.principals.UserCreatedEvent;
+
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -67,6 +68,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,6 +167,12 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
     @Override
     public AclKey lookup( Principal p ) {
         return principals.values( findPrincipal( p ) ).stream().map( SecurablePrincipal::getAclKey ).findFirst().get();
+    }
+
+    @Override
+    public Map<Principal, AclKey> lookup( Set<Principal> p ) {
+        return principals.values( findPrincipals( p ) ).stream()
+                .collect( Collectors.toMap( SecurablePrincipal::getPrincipal, SecurablePrincipal::getAclKey ) );
     }
 
     @Override
@@ -373,6 +381,10 @@ public class HazelcastPrincipalService implements SecurePrincipalsManager, Autho
 
     private static Predicate findPrincipal( Principal p ) {
         return Predicates.equal( "principal", p );
+    }
+
+    private static Predicate findPrincipals( Set<Principal> p ) {
+        return Predicates.in( "principal", p.toArray( new Principal[] {} ) );
     }
 
     private static Predicate hasSecurablePrincipal( AclKey principalAclKey ) {

@@ -1,5 +1,8 @@
 package com.openlattice.postgres.mapstores;
 
+import com.dataloom.mappers.ObjectMappers;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.apps.AppConfigKey;
 import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.Permission;
@@ -7,11 +10,13 @@ import com.openlattice.hazelcast.HazelcastMap;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
+import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.postgres.PostgresArrays;
 import com.openlattice.postgres.PostgresTable;
 import com.openlattice.postgres.ResultSetAdapters;
 import com.zaxxer.hikari.HikariDataSource;
 
+import java.io.IOException;
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,36 +25,55 @@ import java.util.EnumSet;
 import java.util.UUID;
 
 public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey, AppTypeSetting> {
-    public static final String APP_ID = "__key#appId";
+    public static final String APP_ID          = "__key#appId";
     public static final String ORGANIZATION_ID = "__key#organizationId";
+
+    private static final ObjectMapper mapper = ObjectMappers.getJsonMapper();
 
     public AppConfigMapstore( HikariDataSource hds ) {
         super( HazelcastMap.APP_CONFIGS.name(), PostgresTable.APP_CONFIGS, hds );
     }
 
     @Override protected void bind( PreparedStatement ps, AppConfigKey key, AppTypeSetting value ) throws SQLException {
-        bind( ps, key, 1 );
+        int index = bind( ps, key, 1 );
 
-        Array permissions = PostgresArrays.createTextArray( ps.getConnection(),
-                value.getPermissions().stream().map( permission -> permission.toString() ) );
+        String rolesAsString = "[]";
+        String settingsAsString = "{}";
+        try {
+            rolesAsString = mapper.writeValueAsString( value.getRoles() );
+            settingsAsString = mapper.writeValueAsString( value.getSettings() );
+        } catch ( JsonProcessingException e ) {
+            logger.error( "Unable to write roles as string for AppConfigKey {} with roles {}",
+                    key,
+                    value.getRoles(),
+                    e );
+        }
 
-        ps.setArray( 4, permissions );
-        ps.setObject( 5, value.getEntitySetId() );
+        ps.setObject( index++, value.getId() );
+        ps.setObject( index++, value.getEntitySetCollectionId() );
+        ps.setString( index++, rolesAsString );
+        ps.setString( index++, settingsAsString );
 
         // UPDATE
-        ps.setArray( 6, permissions );
-        ps.setObject( 7, value.getEntitySetId() );
+        ps.setObject( index++, value.getId() );
+        ps.setObject( index++, value.getEntitySetCollectionId() );
+        ps.setString( index++, rolesAsString );
+        ps.setString( index++, settingsAsString );
     }
 
     @Override protected int bind( PreparedStatement ps, AppConfigKey key, int parameterIndex ) throws SQLException {
         ps.setObject( parameterIndex++, key.getAppId() );
         ps.setObject( parameterIndex++, key.getOrganizationId() );
-        ps.setObject( parameterIndex++, key.getAppTypeId() );
         return parameterIndex;
     }
 
     @Override protected AppTypeSetting mapToValue( ResultSet rs ) throws SQLException {
-        return ResultSetAdapters.appTypeSetting( rs );
+        try {
+            return ResultSetAdapters.appTypeSetting( rs );
+        } catch ( IOException e ) {
+            logger.error( "Unable to deserialize AppConfigSetting", e );
+            return null;
+        }
     }
 
     @Override protected AppConfigKey mapToKey( ResultSet rs ) throws SQLException {
@@ -68,10 +92,10 @@ public class AppConfigMapstore extends AbstractBasePostgresMapstore<AppConfigKey
     }
 
     @Override public AppConfigKey generateTestKey() {
-        return new AppConfigKey( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() );
+        return TestDataFactory.appConfigKey();
     }
 
     @Override public AppTypeSetting generateTestValue() {
-        return new AppTypeSetting( UUID.randomUUID(), EnumSet.of( Permission.READ, Permission.WRITE ) );
+        return TestDataFactory.appConfigSetting();
     }
 }
