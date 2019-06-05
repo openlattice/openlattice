@@ -4,11 +4,10 @@ package com.openlattice.subscriptions.controllers
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.data.EntityDataKey
+import com.openlattice.graph.NeighborhoodFilter
 import com.openlattice.subscriptions.SubscriptionApi
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+import java.util.*
 import javax.inject.Inject
 
 @RestController
@@ -21,25 +20,33 @@ constructor(
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.PUT])
-    override fun addSubscription(entity: EntityDataKey): Int {
+    override fun addSubscription(@RequestBody subscription: NeighborhoodFilter): UUID {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.POST])
-    override fun updateSubscription(entity: EntityDataKey): Int {
+    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.SUB_ID_PATH], method = [RequestMethod.POST])
+    override fun updateSubscription(@PathVariable(SubscriptionApi.SUB_ID) subscriptionId: UUID,
+                                    @RequestBody subscription: NeighborhoodFilter): UUID {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.DELETE])
-    override fun deleteSubscription(entity: EntityDataKey): Int {
+    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.SUB_ID_PATH], method = [RequestMethod.DELETE])
+    override fun deleteSubscription(@PathVariable(SubscriptionApi.SUB_ID) subscriptionId: UUID) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
-    override fun getAllSubscriptions(): Iterable<Int> {
+    override fun getAllSubscriptions(): Iterable<NeighborhoodFilter> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    @Timed
+    @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
+    override fun getSubscriptions(
+            @RequestParam(SubscriptionApi.SUB_IDS) subscriptionIds: List<UUID>): Iterable<NeighborhoodFilter> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
