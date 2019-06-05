@@ -204,7 +204,11 @@ public final class PostgresTable {
 
     public static final PostgresTableDefinition MATERIALIZED_ENTITY_SETS =
             new PostgresTableDefinition( "materialized_entity_sets" )
-                    .addColumns( ENTITY_SET_ID, ORGANIZATION_ID, ENTITY_SET_FLAGS )
+                    .addColumns( ENTITY_SET_ID,
+                            ORGANIZATION_ID,
+                            ENTITY_SET_FLAGS,
+                            REFRESH_RATE,
+                            LAST_REFRESH )
                     .primaryKey( ENTITY_SET_ID, ORGANIZATION_ID );
     public static final PostgresTableDefinition NAMES                    =
             new PostgresTableDefinition( "names" )
@@ -216,9 +220,8 @@ public final class PostgresTable {
     //.setUnique( NAME );
     public static final PostgresTableDefinition ORGANIZATION_ASSEMBLIES  =
             new PostgresTableDefinition( "organization_assemblies" )
-                    .addColumns( ORGANIZATION_ID, DB_NAME, INITIALIZED )
-                    .primaryKey( ORGANIZATION_ID )
-                    .setUnique( DB_NAME ); //We may have to delete for citus
+                    .addColumns( ORGANIZATION_ID, INITIALIZED )
+                    .primaryKey( ORGANIZATION_ID );
 
     public static final PostgresTableDefinition PERMISSIONS =
             new PostgresTableDefinition( "permissions" )
@@ -454,6 +457,13 @@ public final class PostgresTable {
         MATERIALIZED_ENTITY_SETS.addIndexes(
                 new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ORGANIZATION_ID )
                         .name( "materialized_entity_sets_organization_id_idx" )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, ENTITY_SET_FLAGS )
+                        .name( "materialized_entity_sets_entity_set_flags_idx" )
+                        .method( IndexType.GIN )
+                        .ifNotExists(),
+                new PostgresColumnsIndexDefinition( MATERIALIZED_ENTITY_SETS, LAST_REFRESH )
+                        .name( "materialized_entity_sets_last_refresh_idx" )
                         .ifNotExists() );
     }
 

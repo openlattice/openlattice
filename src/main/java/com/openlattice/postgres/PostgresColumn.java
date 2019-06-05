@@ -103,9 +103,6 @@ public final class PostgresColumn {
     public static final String                   DATA_ID_FIELD                     = "data_id";
     public static final PostgresColumnDefinition DATA_ID                           =
             new PostgresColumnDefinition( DATA_ID_FIELD, UUID );
-    public static final String                   DB_NAME_FIELD                     = "db_name";
-    public static final PostgresColumnDefinition DB_NAME                           =
-            new PostgresColumnDefinition( DB_NAME_FIELD, TEXT );
     public static final String                   DESCRIPTION_FIELD                 = "description";
     public static final PostgresColumnDefinition DESCRIPTION                       =
             new PostgresColumnDefinition( DESCRIPTION_FIELD, TEXT );
@@ -236,6 +233,12 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
+    public static final String LAST_REFRESH_FIELD                                  = "last_refresh";
+    public static final PostgresColumnDefinition LAST_REFRESH                      = new PostgresColumnDefinition(
+            LAST_REFRESH_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
     public static final String                   LAST_WRITE_FIELD                  = "last_write";
     public static final String                   LINKED_ENTITY_SETS_FIELD          = "linked_entity_sets";
     public static final PostgresColumnDefinition LINKED_ENTITY_SETS                =
@@ -326,6 +329,9 @@ public final class PostgresColumn {
     public static final String                   REASON_FIELD                      = "reason";
     public static final PostgresColumnDefinition REASON                            =
             new PostgresColumnDefinition( REASON_FIELD, TEXT );
+    public static final String REFRESH_RATE_FIELD                                  = "refresh_rate";
+    public static final PostgresColumnDefinition REFRESH_RATE                      =
+            new PostgresColumnDefinition( REFRESH_RATE_FIELD, BIGINT );
     public static final String                   ROLE_ID_FIELD                     = "role_id";
     public static final PostgresColumnDefinition ROLE_ID                           =
             new PostgresColumnDefinition( ROLE_ID_FIELD, UUID ).notNull();
