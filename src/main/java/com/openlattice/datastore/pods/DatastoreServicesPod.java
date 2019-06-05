@@ -339,7 +339,8 @@ public class DatastoreServicesPod {
                 authorizationQueryService(),
                 authorizationManager(),
                 principalService(),
-                aclKeyReservationService() ), "Checkpoint app service" );
+                aclKeyReservationService(),
+                collectionsManager() ), "Checkpoint app service" );
     }
 
     @Bean

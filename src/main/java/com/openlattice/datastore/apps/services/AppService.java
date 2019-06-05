@@ -20,12 +20,11 @@
 
 package com.openlattice.datastore.apps.services;
 
-import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 import com.google.common.eventbus.EventBus;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
@@ -33,37 +32,34 @@ import com.hazelcast.query.Predicates;
 import com.openlattice.apps.*;
 import com.openlattice.apps.processors.*;
 import com.openlattice.authorization.*;
-import com.openlattice.authorization.securable.SecurableObjectType;
-import com.openlattice.authorization.util.AuthorizationUtils;
-import com.openlattice.controllers.exceptions.BadRequestException;
+import com.openlattice.collections.CollectionsManager;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.datastore.util.Util;
 import com.openlattice.edm.EntitySet;
+import com.openlattice.edm.collection.CollectionTemplateType;
+import com.openlattice.edm.collection.EntitySetCollection;
+import com.openlattice.edm.collection.EntityTypeCollection;
 import com.openlattice.edm.events.AppCreatedEvent;
 import com.openlattice.edm.events.AppDeletedEvent;
-import com.openlattice.edm.events.AppTypeCreatedEvent;
-import com.openlattice.edm.events.AppTypeDeletedEvent;
 import com.openlattice.edm.requests.MetadataUpdate;
-import com.openlattice.edm.set.EntitySetFlag;
+import com.openlattice.edm.type.EntityType;
 import com.openlattice.hazelcast.HazelcastMap;
-import com.openlattice.organization.Organization;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
 import com.openlattice.postgres.mapstores.AppConfigMapstore;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 import javax.inject.Inject;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class AppService {
     private final IMap<UUID, App>                    apps;
-    private final IMap<UUID, AppType>                appTypes;
     private final IMap<AppConfigKey, AppTypeSetting> appConfigs;
     private final IMap<String, UUID>                 aclKeys;
+    private final IMap<UUID, EntityTypeCollection>   entityTypeCollections;
+    private final IMap<UUID, EntitySetCollection>    entitySetCollections;
 
     private final EdmManager                        edmService;
     private final HazelcastOrganizationService      organizationService;
@@ -71,6 +67,7 @@ public class AppService {
     private final AuthorizationManager              authorizationService;
     private final SecurePrincipalsManager           principalsService;
     private final HazelcastAclKeyReservationService reservations;
+    private final CollectionsManager                collectionsManager;
 
     @Inject
     private EventBus eventBus;
@@ -82,26 +79,26 @@ public class AppService {
             AuthorizationQueryService authorizations,
             AuthorizationManager authorizationService,
             SecurePrincipalsManager principalsService,
-            HazelcastAclKeyReservationService reservations
+            HazelcastAclKeyReservationService reservations,
+            CollectionsManager collectionsManager
     ) {
         this.apps = hazelcast.getMap( HazelcastMap.APPS.name() );
-        this.appTypes = hazelcast.getMap( HazelcastMap.APP_TYPES.name() );
         this.appConfigs = hazelcast.getMap( HazelcastMap.APP_CONFIGS.name() );
         this.aclKeys = hazelcast.getMap( HazelcastMap.ACL_KEYS.name() );
+        this.entityTypeCollections = hazelcast.getMap( HazelcastMap.ENTITY_TYPE_COLLECTIONS.name() );
+        this.entitySetCollections = hazelcast.getMap( HazelcastMap.ENTITY_SET_COLLECTIONS.name() );
+
         this.edmService = edmService;
         this.organizationService = organizationService;
         this.authorizations = authorizations;
         this.authorizationService = authorizationService;
         this.principalsService = principalsService;
         this.reservations = reservations;
+        this.collectionsManager = collectionsManager;
     }
 
     public Iterable<App> getApps() {
         return apps.values();
-    }
-
-    public Iterable<AppType> getAppTypes() {
-        return appTypes.values();
     }
 
     public UUID createApp( App app ) {
@@ -112,13 +109,17 @@ public class AppService {
     }
 
     public void deleteApp( UUID appId ) {
+        appConfigs.keySet( Predicates.equal( AppConfigMapstore.APP_ID, appId ) )
+                .forEach( ack -> uninstallApp( ack.getAppId(), ack.getOrganizationId() ) );
         apps.delete( appId );
         reservations.release( appId );
         eventBus.post( new AppDeletedEvent( appId ) );
     }
 
     public App getApp( UUID appId ) {
-        return apps.get( appId );
+        App app = apps.get( appId );
+        Preconditions.checkNotNull( app, "App with id {} does not exist.", appId );
+        return app;
     }
 
     public App getApp( String name ) {
@@ -126,309 +127,279 @@ public class AppService {
         return getApp( id );
     }
 
-    private String getNextAvailableName( String name ) {
-        String nameAttempt = name;
-        int counter = 1;
-        while ( reservations.isReserved( nameAttempt ) ) {
-            nameAttempt = name + "_" + String.valueOf( counter );
-            counter++;
-        }
-        return nameAttempt;
+    public UUID createNewAppRole( UUID appId, AppRole role ) {
+        App app = getApp( appId );
+
+        apps.executeOnKey( appId, new AddRoleToAppProcessor( role ) );
     }
 
-    private String formatEntitySetName( String prefix, FullQualifiedName appTypeFqn ) {
-        String name = prefix + "_" + appTypeFqn.getNamespace() + "_" + appTypeFqn.getName();
-        name = name.toLowerCase().replaceAll( "[^a-z0-9_]", "" );
-        return getNextAvailableName( name );
+    public void deleteRoleFromApp( UUID appId, UUID roleId ) {
+        App app = getApp( appId );
+        appConfigs.executeOnKeys( getAppConfigKeysForApp(appId ), new RemoveRoleFromAppConfigProcessor( roleId ) );
+        apps.executeOnKey( appId, new RemoveRoleFromAppProcessor( roleId ) );
     }
 
-    private UUID generateEntitySet( UUID organizationId, UUID appTypeId, String prefix, Principal principal ) {
-        AppType appType = getAppType( appTypeId );
-        String name = formatEntitySetName( prefix, appType.getType() );
-        String title = appType.getTitle() + " (" + prefix + ")";
-        String description =
-                "Auto-generated for organization" + organizationId.toString() + "\n\n" + appType.getDescription();
-        EnumSet<EntitySetFlag> flags = EnumSet.noneOf( EntitySetFlag.class );
-
-        EntitySet entitySet = new EntitySet( Optional.empty(),
-                appType.getEntityTypeId(),
-                name,
-                title,
-                Optional.of( description ),
-                ImmutableSet.of(),
-                Optional.empty(),
-                Optional.of( organizationId ),
-                Optional.of( flags ) );
-        edmService.createEntitySet( principal, entitySet );
-        return entitySet.getId();
+    private Set<AppConfigKey> getAppConfigKeysForApp( UUID appId ) {
+        return appConfigs.keySet( Predicates.equal( AppConfigMapstore.APP_ID, appId ) );
     }
 
-    private Map<Permission, Principal> getOrCreateRolesForAppPermission(
-            App app,
+    private Map<UUID, AclKey> createRolesForApp(
+            Set<AppRole> appRoles,
             UUID organizationId,
-            EnumSet<Permission> permissions,
-            Principal user ) {
-        Map<Permission, Principal> result = Maps.newHashMap();
-        permissions.forEach( permission -> {
-            String title = app.getTitle().concat( " - " ).concat( permission.name() );
-            Principal principal = new Principal( PrincipalType.ROLE,
-                    organizationId.toString().concat( "|" ).concat( title ) );
-            String description = permission.name().concat( " permission for the " ).concat( app.getTitle() )
-                    .concat( " app" );
-            Role role = new Role( Optional.empty(),
-                    organizationId,
-                    principal,
-                    title,
-                    Optional.of( description ) );
-            try {
-                principalsService.createSecurablePrincipalIfNotExists( user, role );
-                result.put( permission, principal );
-            } catch ( Exception e ) {
-                throw new BadRequestException( "The requested app has already been installed for this organization" );
-            }
-        } );
-        return result;
+            UUID entitySetCollectionId,
+            Principal appPrincipal,
+            Principal userPrincipal ) {
+        Map<AceKey, EnumSet<Permission>> permissionsToGrant = Maps.newHashMap();
+
+        EntitySetCollection entitySetCollection = collectionsManager.getEntitySetCollection( entitySetCollectionId );
+        EntityTypeCollection entityTypeCollection = collectionsManager
+                .getEntityTypeCollection( entitySetCollection.getEntityTypeCollectionId() );
+        Map<UUID, EntityType> entityTypesById = edmService
+                .getEntityTypesAsMap( entityTypeCollection.getTemplate().stream()
+                        .map( CollectionTemplateType::getEntityTypeId ).collect(
+                                Collectors.toSet() ) );
+        Map<UUID, EntitySet> entitySetsById = edmService
+                .getEntitySetsAsMap( Sets.newHashSet( entitySetCollection.getTemplate().values() ) );
+
+        Map<UUID, AclKey> roles = appRoles.stream().collect( Collectors.toMap( AppRole::getId, appRole -> {
+
+            /* Create the role if it doesn't already exist */
+            String title = appRole.getTitle();
+            Principal rolePrincipal = new Principal( PrincipalType.ROLE, organizationId.toString() + "|" + title );
+            String description = appRole.getDescription();
+            Role role = new Role( Optional.empty(), organizationId, rolePrincipal, title, Optional.of( description ) );
+
+            AclKey aclKey = principalsService.createSecurablePrincipalIfNotExists( userPrincipal, role ) ?
+                    role.getAclKey() :
+                    principalsService.lookup( rolePrincipal );
+
+            /* Track permissions that need to be granted to the role */
+            permissionsToGrant
+                    .put( new AceKey( new AclKey( entitySetCollectionId ), rolePrincipal ),
+                            EnumSet.of( Permission.READ ) );
+            permissionsToGrant
+                    .put( new AceKey( new AclKey( entitySetCollectionId ), appPrincipal ),
+                            EnumSet.of( Permission.READ ) );
+            appRole.getPermissions().entrySet().forEach( entry -> {
+                Permission permission = entry.getKey();
+                entry.getValue().entrySet().forEach( entitySetEntry -> {
+                    UUID entitySetId = entitySetEntry.getKey();
+                    Set<UUID> propertyTypeIds = entitySetEntry.getValue()
+                            .orElse( entityTypesById.get( entitySetsById.get( entitySetId ).getEntityTypeId() )
+                                    .getProperties() );
+                    Streams.concat( Stream.of( new AclKey( entitySetId ) ),
+                            propertyTypeIds.stream().map( id -> new AclKey( entitySetId, id ) ) ).forEach( ak -> {
+                        AceKey aceKey = new AceKey( ak, rolePrincipal );
+                        EnumSet<Permission> permissionEnumSet = permissionsToGrant
+                                .getOrDefault( aceKey, EnumSet.noneOf( Permission.class ) );
+                        permissionEnumSet.add( permission );
+                        permissionsToGrant.put( aceKey, permissionEnumSet );
+                        permissionsToGrant.put( new AceKey( ak, appPrincipal ), EnumSet.of( Permission.READ ) );
+                    } );
+
+                } );
+            } );
+
+            return aclKey;
+
+        } ) );
+
+        /* Grant the required permissions to app roles */
+        authorizationService.setPermissions( permissionsToGrant );
+
+        return roles;
     }
 
-    public void installApp( UUID appId, UUID organizationId, String prefix, Principal principal ) {
+    public void installAppAndCreateEntitySetCollection(
+            UUID appId,
+            UUID organizationId,
+            AppInstallation appInstallation,
+            Principal principal ) {
         App app = getApp( appId );
         Preconditions.checkNotNull( app, "The requested app with id %s does not exists.", appId.toString() );
 
-        Map<Permission, Principal> appRoles = getOrCreateRolesForAppPermission( app,
+        UUID entitySetCollectionId = appInstallation.getEntitySetCollectionId()
+                .orElse( collectionsManager.createEntitySetCollection( new EntitySetCollection(
+                        Optional.empty(),
+                        app.getName(),
+                        app.getTitle(),
+                        Optional.of( app.getDescription() ),
+                        app.getEntityTypeCollectionId(),
+                        appInstallation.getTemplate().get(),
+                        ImmutableSet.of(),
+                        Optional.of( organizationId )
+                ), true ) );
+
+        Map<String, Object> settings = appInstallation.getSettings().orElse( app.getDefaultSettings() );
+
+        installApp( app, organizationId, entitySetCollectionId, principal, settings );
+    }
+
+    public void installApp(
+            App app,
+            UUID organizationId,
+            UUID entitySetCollectionId,
+            Principal principal,
+            Map<String, Object> settings ) {
+
+        UUID appId = app.getId();
+
+        AppConfigKey appConfigKey = new AppConfigKey( appId, organizationId );
+        Preconditions.checkArgument( !appConfigs.containsKey( appConfigKey ),
+                "App {} is already installed for organization {}",
+                appId,
+                organizationId );
+
+        Set<String> nonexistentKeys = Sets.difference( settings.keySet(), app.getDefaultSettings().keySet() );
+        Preconditions.checkArgument( nonexistentKeys.isEmpty(),
+                "Cannot create app {} in organization {} with settings containing keys that do not exist: {}",
+                appId,
                 organizationId,
-                EnumSet.of( Permission.READ, Permission.WRITE, Permission.OWNER ),
+                nonexistentKeys );
+
+        Principal appPrincipal = getAppPrincipal( appConfigKey );
+
+        principalsService.createSecurablePrincipalIfNotExists( principal, new SecurablePrincipal(
+                Optional.empty(),
+                appPrincipal,
+                app.getTitle(),
+                Optional.of( app.getDescription() ) ) );
+
+        Map<UUID, AclKey> appRoles = createRolesForApp( app.getAppRoles(),
+                organizationId,
+                entitySetCollectionId,
+                appPrincipal,
                 principal );
 
-        Principal appPrincipal = new Principal( PrincipalType.APP,
-                AppConfig.getAppPrincipalId( appId, organizationId ) );
+        appConfigs.put( appConfigKey,
+                new AppTypeSetting( principalsService.lookup( appPrincipal ).get( 0 ),
+                        entitySetCollectionId,
+                        appRoles,
+                        settings ) );
 
-        Set<Principal> ownerPrincipals = Sets
-                .newHashSet( authorizations.getOwnersForSecurableObject( new AclKey( organizationId ) ) );
-
-        app.getAppTypeIds().stream().forEach( appTypeId -> {
-            createEntitySetForApp( new AppConfigKey( appId, organizationId, appTypeId ),
-                    prefix,
-                    principal,
-                    appPrincipal,
-                    appRoles,
-                    ownerPrincipals );
-        } );
         organizationService.addAppToOrg( organizationId, appId );
     }
 
-    public UUID createAppType( AppType appType ) {
-        reservations.reserveIdAndValidateType( appType );
-        appTypes.putIfAbsent( appType.getId(), appType );
-        eventBus.post( new AppTypeCreatedEvent( appType ) );
-        return appType.getId();
+    private Principal getAppPrincipal( AppConfigKey appConfigKey ) {
+        return new Principal( PrincipalType.APP,
+                AppConfig.getAppPrincipalId( appConfigKey.getAppId(), appConfigKey.getOrganizationId() ) );
     }
 
-    public void deleteAppType( UUID id ) {
-        appTypes.delete( id );
-        reservations.release( id );
-        eventBus.post( new AppTypeDeletedEvent( id ) );
+    public void uninstallApp( UUID appId, UUID organizationId ) {
+        AppConfigKey appConfigKey = new AppConfigKey( appId, organizationId );
+
+        organizationService.removeAppFromOrg( organizationId, appId );
+        deleteAppPrincipal( appConfigKey );
+        appConfigs.delete( appConfigKey );
     }
 
-    public AppType getAppType( UUID id ) {
-        return appTypes.get( id );
+    private void deleteAppPrincipal( AppConfigKey appConfigKey ) {
+        principalsService.deletePrincipal( principalsService.lookup( getAppPrincipal( appConfigKey ) ) );
     }
 
-    public AppType getAppType( FullQualifiedName fqn ) {
-        UUID id = Util.getSafely( aclKeys, Util.fqnToString( fqn ) );
-        return getAppType( id );
+    public List<UserAppConfig> getAvailableConfigs( UUID appId, Set<Principal> principals ) {
+
+        Map<Principal, AclKey> principalAclKeys = principalsService.lookup( principals );
+
+        Map<PrincipalType, Set<AclKey>> aclKeysByPrincipalType = principalAclKeys.entrySet().stream()
+                .collect( Collectors.groupingBy( entry -> entry.getKey().getType(),
+                        Collectors.mapping( entry -> entry.getValue(), Collectors.toSet() ) ) );
+
+        return appConfigs.entrySet( Predicates.and(
+                Predicates.equal( AppConfigMapstore.APP_ID, appId ),
+                Predicates.in( AppConfigMapstore.ORGANIZATION_ID,
+                        aclKeysByPrincipalType.getOrDefault( PrincipalType.ORGANIZATION, ImmutableSet.of() )
+                                .toArray( new UUID[] {} ) ) ) )
+                .stream().map( entry -> {
+
+                    UUID organizationId = entry.getKey().getOrganizationId();
+                    AppTypeSetting setting = entry.getValue();
+
+                    UUID entitySetCollectionId = setting.getEntitySetCollectionId();
+
+                    Set<UUID> availableRoles = setting.getRoles().entrySet().stream()
+                            .filter( roleEntry -> aclKeysByPrincipalType
+                                    .getOrDefault( PrincipalType.ROLE, ImmutableSet.of() )
+                                    .contains( roleEntry.getValue() ) )
+                            .map( Map.Entry::getKey )
+                            .collect( Collectors.toSet() );
+
+                    return new UserAppConfig( organizationId, entitySetCollectionId, availableRoles );
+                } ).filter( uac -> !uac.getRoles().isEmpty() )
+                .collect( Collectors.toList() );
     }
 
-    public Map<UUID, AppType> getAppTypes( Set<UUID> appTypeIds ) {
-        return appTypes.getAll( appTypeIds );
-    }
-
-    public List<AppConfig> getAvailableConfigs(
+    public void updateAppRolePermissions(
             UUID appId,
-            Set<Principal> principals,
-            Iterable<Organization> organizations ) {
+            UUID roleId,
+            Map<Permission, Map<UUID, Optional<Set<UUID>>>> permissions ) {
 
-        List<AppConfig> availableConfigs = Lists.newArrayList();
-        App app = apps.get( appId );
+        App app = getApp( appId );
 
-        Map<UUID, Organization> orgsById = StreamUtil.stream( organizations )
-                .collect( Collectors.toMap( org -> org.getId(), Function.identity() ) );
+        Preconditions.checkState( app.getAppRoles().stream().anyMatch( r -> r.getId().equals( roleId ) ),
+                "App {} does not contain a role with id {}.",
+                appId,
+                roleId );
+        Set<UUID> templateTypeIds = permissions.values().stream().flatMap( map -> map.keySet().stream() ).collect(
+                Collectors.toSet() );
+        Set<UUID> nonexistentTemplateTypeIds = Sets.difference( templateTypeIds,
+                entityTypeCollections.get( app.getEntityTypeCollectionId() ).getTemplate().stream()
+                        .map( CollectionTemplateType::getId ).collect( Collectors.toSet() ) );
+        Preconditions.checkState( nonexistentTemplateTypeIds.isEmpty(),
+                "Could not update role {} permissions for app {} because the following templateTypeIds are not present in the EntityTypeCollection: ",
+                roleId,
+                appId,
+                nonexistentTemplateTypeIds );
 
-        Map<UUID, Map<AppConfigKey, AppTypeSetting>> orgsToSettings = orgsById.keySet().stream()
-                .filter( orgId -> organizationService.getOrganizationApps( orgId ).contains( appId ) )
-                .collect( Collectors
-                        .toMap( Function.identity(), orgId -> appConfigs.getAll( app.getAppTypeIds().stream()
-                                .map( id -> new AppConfigKey( appId, orgId, id ) ).collect(
-                                        Collectors.toSet() ) ) ) );
-
-        Set<AccessCheck> accessChecks = orgsToSettings.values().stream().flatMap( map -> map.values().stream() )
-                .map( setting -> new AccessCheck( new AclKey( setting.getEntitySetId() ),
-                        setting.getPermissions() ) ).collect( Collectors.toSet() );
-
-        Set<Principal> allAppPrincipals = orgsToSettings.keySet().stream()
-                .map( orgId -> new Principal( PrincipalType.APP,
-                        AppConfig.getAppPrincipalId( app.getId(), orgId ) ) ).collect( Collectors.toSet() );
-
-        Map<UUID, Boolean> entitySetIsAuthorized = Maps.newHashMap();
-
-        // User permissions and app permissions must be evaluated separately, since both must have permissions
-        Stream.concat( authorizationService.accessChecksForPrincipals( accessChecks, principals ),
-                authorizationService.accessChecksForPrincipals( accessChecks, allAppPrincipals ) )
-                .forEach( authorization -> {
-                    UUID entitySetId = AuthorizationUtils.getLastAclKeySafely( authorization.getAclKey() );
-                    boolean isAuthorized = !authorization.getPermissions().containsValue( false );
-
-                    if ( !isAuthorized ) {
-                        entitySetIsAuthorized.put( entitySetId, false );
-                    } else if ( !entitySetIsAuthorized.containsKey( entitySetId ) ) {
-                        entitySetIsAuthorized.put( entitySetId, true );
-                    }
-                } );
-
-        orgsToSettings.entrySet().stream().filter( entry -> {
-            for ( AppTypeSetting setting : orgsToSettings.get( entry.getKey() ).values() ) {
-                if ( !entitySetIsAuthorized.get( setting.getEntitySetId() ) ) {
-                    return false;
-                }
-            }
-            return true;
-        } ).forEach( entry -> {
-            Map<String, AppTypeSetting> config = entry.getValue().entrySet().stream()
-                    .collect( Collectors
-                            .toMap( settingEntry -> appTypes.get( settingEntry.getKey().getAppTypeId() ).getType()
-                                    .getFullQualifiedNameAsString(), settingEntry -> settingEntry.getValue() ) );
-            AppConfig appConfig = new AppConfig( Optional.of( app.getId() ),
-                    new Principal( PrincipalType.APP,
-                            AppConfig.getAppPrincipalId( app.getId(), entry.getKey() ) ),
-                    app.getTitle(),
-                    Optional.of( app.getDescription() ),
-                    app.getId(),
-                    orgsById.get( entry.getKey() ),
-                    config );
-            availableConfigs.add( appConfig );
-        } );
-
-        return availableConfigs;
-    }
-
-    public void addAppTypesToApp( UUID appId, Set<UUID> appTypeIds ) {
-        apps.executeOnKey( appId, new AddAppTypesToAppProcessor( appTypeIds ) );
-        updateAppConfigsForNewAppType( appId, appTypeIds );
-        eventBus.post( new AppCreatedEvent( apps.get( appId ) ) );
-    }
-
-    public void removeAppTypesFromApp( UUID appId, Set<UUID> appTypeIds ) {
-        apps.executeOnKey( appId, new RemoveAppTypesFromAppProcessor( appTypeIds ) );
-        eventBus.post( new AppCreatedEvent( apps.get( appId ) ) );
-    }
-
-    public void updateAppConfigEntitySetId( UUID organizationId, UUID appId, UUID appTypeId, UUID entitySetId ) {
-        AppConfigKey key = new AppConfigKey( appId, organizationId, appTypeId );
-        appConfigs.executeOnKey( key, new UpdateAppConfigEntitySetProcessor( entitySetId ) );
-
-        Principal appPrincipal = new Principal( PrincipalType.APP,
-                AppConfig.getAppPrincipalId( appId, organizationId ) );
-        EnumSet<Permission> permissions = appConfigs.get( key ).getPermissions();
-        authorizationService.addPermission( new AclKey( entitySetId ), appPrincipal, permissions );
-    }
-
-    public void updateAppConfigPermissions(
-            UUID organizationId,
-            UUID appId,
-            UUID appTypeId,
-            EnumSet<Permission> permissions ) {
-        AppConfigKey key = new AppConfigKey( appId, organizationId, appTypeId );
-        appConfigs.executeOnKey( key, new UpdateAppConfigPermissionsProcessor( permissions ) );
-
-        Principal appPrincipal = new Principal( PrincipalType.APP,
-                AppConfig.getAppPrincipalId( appId, organizationId ) );
-        UUID entitySetId = appConfigs.get( key ).getEntitySetId();
-        authorizationService.addPermission( new AclKey( entitySetId ), appPrincipal, permissions );
+        apps.executeOnKey( appId, new UpdateAppRolePermissionsProcessor( roleId, permissions ) );
     }
 
     public void updateAppMetadata( UUID appId, MetadataUpdate metadataUpdate ) {
         apps.executeOnKey( appId, new UpdateAppMetadataProcessor( metadataUpdate ) );
-        eventBus.post( new AppCreatedEvent( apps.get( appId ) ) );
+        eventBus.post( new AppCreatedEvent( getApp( appId ) ) );
     }
 
-    public void updateAppTypeMetadata( UUID appTypeId, MetadataUpdate metadataUpdate ) {
-        appTypes.executeOnKey( appTypeId, new UpdateAppTypeMetadataProcessor( metadataUpdate ) );
-        eventBus.post( new AppTypeCreatedEvent( appTypes.get( appTypeId ) ) );
+    public void updateDefaultAppSettings( UUID appId, Map<String, Object> defaultSettings ) {
+
+        App app = getApp( appId );
+        Map<String, Object> oldSettings = app.getDefaultSettings();
+
+        Set<String> newKeys = Sets.difference( oldSettings.keySet(), defaultSettings.keySet() );
+        Set<String> deletedKeys = Sets.difference( defaultSettings.keySet(), oldSettings.keySet() );
+
+        Map<String, Object> settingsToAdd = defaultSettings.entrySet().stream()
+                .filter( e -> newKeys.contains( e.getKey() ) )
+                .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
+
+        Set<AppConfigKey> appConfigKeysToUpdate = appConfigs
+                .keySet( Predicates.equal( AppConfigMapstore.APP_ID, appId ) );
+
+        appConfigs.executeOnKeys( appConfigKeysToUpdate,
+                new UpdateAppConfigSettingsProcessor( settingsToAdd, deletedKeys ) );
+
+        apps.executeOnKey( appId, new UpdateDefaultAppSettingsProcessor( defaultSettings ) );
     }
 
-    private void createEntitySetForApp(
-            AppConfigKey key,
-            String prefix,
-            Principal userPrincipal,
-            Principal appPrincipal,
-            Map<Permission, Principal> appRoles,
-            Set<Principal> owners ) {
+    public void updateAppConfigSettings( UUID appId, UUID organizationId, Map<String, Object> newAppSettings ) {
 
-        EnumSet<Permission> allPermissions = EnumSet
-                .of( Permission.DISCOVER, Permission.LINK, Permission.READ, Permission.WRITE, Permission.OWNER );
+        App app = getApp( appId );
 
-        UUID entitySetId = generateEntitySet( key.getOrganizationId(), key.getAppTypeId(), prefix, userPrincipal );
-        appConfigs.put( key, new AppTypeSetting( entitySetId, EnumSet.of( Permission.READ, Permission.WRITE ) ) );
-        authorizationService.addPermission( new AclKey( entitySetId ), appPrincipal, allPermissions );
-        owners.forEach( owner -> {
-            authorizationService.addPermission( new AclKey( entitySetId ), owner, allPermissions );
-        } );
+        AppConfigKey appConfigKey = new AppConfigKey( appId, organizationId );
+        Preconditions.checkArgument( appConfigs.containsKey( appConfigKey ),
+                "App {} is not installed for organization {}.",
+                appId,
+                organizationId );
 
-        edmService.getEntityType( appTypes.get( key.getAppTypeId() ).getEntityTypeId() ).getProperties()
-                .forEach( propertyTypeId -> {
-                    AclKey aclKeys = new AclKey( entitySetId, propertyTypeId );
-                    appRoles.entrySet().forEach( entry -> {
-                        Permission permission = entry.getKey();
-                        Principal rolePrincipal = entry.getValue();
-                        authorizationService.addPermission( aclKeys, rolePrincipal, EnumSet.of( permission ) );
-                    } );
+        Set<String> nonexistentKeys = Sets.difference( newAppSettings.keySet(), app.getDefaultSettings().keySet() );
+        Preconditions.checkArgument( nonexistentKeys.isEmpty(),
+                "Cannot update app {} in organization {} with settings containing keys that do not exist: {}",
+                appId,
+                organizationId,
+                nonexistentKeys );
 
-                    owners.forEach( owner -> {
-                        authorizationService.addPermission( aclKeys, owner, allPermissions );
-                    } );
+        appConfigs.executeOnKey( appConfigKey,
+                new UpdateAppConfigSettingsProcessor( newAppSettings, ImmutableSet.of() ) );
 
-                    authorizationService.addPermission( aclKeys, appPrincipal, allPermissions );
-                } );
-
-        appRoles.entrySet().forEach( entry -> {
-            Permission permission = entry.getKey();
-            Principal rolePrincipal = entry.getValue();
-            authorizationService
-                    .addPermission( new AclKey( entitySetId ), rolePrincipal, EnumSet.of( permission ) );
-            edmService.getEntityType( appTypes.get( key.getAppTypeId() ).getEntityTypeId() ).getProperties()
-                    .forEach( propertyTypeId -> {
-                        AclKey aclKeys = new AclKey( entitySetId, propertyTypeId );
-                        authorizationService.addPermission( aclKeys, appPrincipal, allPermissions );
-                        authorizationService.addPermission( aclKeys, rolePrincipal, EnumSet.of( permission ) );
-                    } );
-        } );
     }
 
-    private void updateAppConfigsForNewAppType( UUID appId, Set<UUID> appTypeIds ) {
-        Set<AppConfigKey> appConfigKeys = appConfigs.keySet( Predicates.equal( AppConfigMapstore.APP_ID, appId ) );
-        appConfigKeys.stream().map( key -> key.getOrganizationId() ).distinct().forEach( organizationId -> {
-            Set<Principal> ownerPrincipals = Sets
-                    .newHashSet( authorizations.getOwnersForSecurableObject( new AclKey( organizationId ) ) );
-            Principal appPrincipal = new Principal( PrincipalType.APP,
-                    AppConfig.getAppPrincipalId( appId, organizationId ) );
-            Organization org = organizationService.getOrganization( organizationId );
-            Map<Permission, Principal> appRoles = getOrCreateRolesForAppPermission( getApp( appId ),
-                    organizationId,
-                    EnumSet.of( Permission.READ, Permission.WRITE, Permission.OWNER ),
-                    ownerPrincipals.iterator().next() );
-
-            appTypeIds.forEach( appTypeId -> {
-                AppConfigKey appConfigKey = new AppConfigKey( appId, organizationId, appTypeId );
-                if ( !appConfigKeys.contains( appConfigKey ) ) {
-                    createEntitySetForApp( appConfigKey,
-                            org.getTitle(),
-                            ownerPrincipals.stream()
-                                    .filter( principal -> principal.getType().equals( PrincipalType.USER ) ).iterator()
-                                    .next(),
-                            appPrincipal,
-                            appRoles,
-                            ownerPrincipals );
-                }
-            } );
-        } );
-    }
 }

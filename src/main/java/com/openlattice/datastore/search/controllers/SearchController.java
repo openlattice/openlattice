@@ -282,18 +282,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
     }
 
     @RequestMapping(
-            path = { APP_TYPES },
-            method = RequestMethod.POST,
-            produces = { MediaType.APPLICATION_JSON_VALUE } )
-    @Override
-    @Timed
-    public SearchResult executeAppTypeSearch( @RequestBody SearchTerm searchTerm ) {
-        return searchService.executeAppTypeSearch( searchTerm.getSearchTerm(),
-                searchTerm.getStart(),
-                searchTerm.getMaxHits() );
-    }
-
-    @RequestMapping(
             path = { ENTITY_TYPES + COLLECTIONS },
             method = RequestMethod.POST,
             produces = { MediaType.APPLICATION_JSON_VALUE } )
@@ -647,7 +635,6 @@ public class SearchController implements SearchApi, AuthorizingComponent, Auditi
         searchService.triggerAssociationTypeIndex( Lists.newArrayList( edm.getAssociationTypes() ) );
         searchService.triggerEntitySetIndex();
         searchService.triggerAppIndex( Lists.newArrayList( appService.getApps() ) );
-        searchService.triggerAppTypeIndex( Lists.newArrayList( appService.getAppTypes() ) );
         return null;
     }
 
