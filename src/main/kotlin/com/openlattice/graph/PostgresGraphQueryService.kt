@@ -45,15 +45,25 @@ class PostgresGraphQueryService(
         private val byteBlobDataManager: ByteBlobDataManager,
         private val mapper: ObjectMapper
 ) : GraphQueryService {
+    override fun submitQuery(query: NeighborhoodQuery) {
+
+        /*
+         * While it would be more efficient to group by entity set type and query all at once, filters can vary
+         * by element so instead we
+         */
+        TODO("hackathon")
+    }
+
     override fun getQuery(queryId: UUID): GraphQuery {
-        val conn = hds.connection
-        conn.use {
-            val ps = conn.prepareStatement(getQuerySql)
-            ps.setObject(1, queryId)
-            val rs = ps.executeQuery()
-            val json = rs.getString(QUERY.name)
-            return mapper.readValue(json, GraphQuery::class.java)
-        }
+        TODO("hackathon")
+//        val conn = hds.connection
+//        conn.use {
+//            val ps = conn.prepareStatement(getQuerySql)
+//            ps.setObject(1, queryId)
+//            val rs = ps.executeQuery()
+//            val json = rs.getString(QUERY.name)
+//            return mapper.readValue(json, GraphQuery::class.java)
+//        }
     }
 
     override fun getQueryState(queryId: UUID, options: Set<GraphQueryState.Option>): GraphQueryState {
@@ -90,21 +100,22 @@ class PostgresGraphQueryService(
     }
 
     private fun saveQuery(queryId: UUID, query: GraphQuery): Long {
-        val startTime = System.currentTimeMillis()
-        val queryJson = mapper.writeValueAsString(query);
-        val conn = hds.connection
-
-        conn.use {
-            val ps = conn.prepareStatement(insertGraphQuery)
-            ps.setObject(1, queryId)
-            ps.setString(2, queryJson)
-            ps.setString(3, GraphQueryState.State.RUNNING.name)
-            ps.setLong(4, startTime)
-            //TODO: Consider checking to make sure value was inserted.
-            ps.executeUpdate()
-        }
-
-        return startTime
+        TODO("hackathon")
+//        val startTime = System.currentTimeMillis()
+//        val queryJson = mapper.writeValueAsString(query);
+//        val conn = hds.connection
+//
+//        conn.use {
+//            val ps = conn.prepareStatement(insertGraphQuery)
+//            ps.setObject(1, queryId)
+//            ps.setString(2, queryJson)
+//            ps.setString(3, GraphQueryState.State.RUNNING.name)
+//            ps.setLong(4, startTime)
+//            //TODO: Consider checking to make sure value was inserted.
+//            ps.executeUpdate()
+//        }
+//
+//        return startTime
     }
 
 
@@ -144,8 +155,8 @@ class PostgresGraphQueryService(
 }
 
 const val TTL_MILLIS = 10 * 60 * 1000
-private val getQuerySql = "SELECT ${QUERY.name} FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"
+//private val getQuerySql = "SELECT ${QUERY.name} FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"
 private val readGraphQueryState = "SELECT * FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"
-private val insertGraphQuery =
-        "INSERT INTO ${GRAPH_QUERIES.name} (${QUERY_ID.name},${QUERY.name},${STATE.name},${START_TIME.name}) " +
-                "VALUES (?,?,?,?)"
+//private val insertGraphQuery =
+//        "INSERT INTO ${GRAPH_QUERIES.name} (${QUERY_ID.name},${QUERY.name},${STATE.name},${START_TIME.name}) " +
+//                "VALUES (?,?,?,?)"

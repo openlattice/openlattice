@@ -36,5 +36,6 @@ interface GraphQueryService {
     fun getQueryState(queryId: UUID, options: Set<Option> = setOf()): GraphQueryState
     fun abortQuery(queryId: UUID)
     fun getResult(queryId: UUID): Optional<SubGraph>
+    fun submitQuery(query: NeighborhoodQuery)
 
 }
