@@ -47,21 +47,35 @@ class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<Ma
     override fun write(out: ObjectDataOutput, obj: MaterializedEntitySet) {
         EntitySetAssemblyKeyStreamSerializer().write(out, obj.assemblyKey)
 
+        out.writeBoolean(obj.refreshRate != null)
+        if (obj.refreshRate != null) {
+            out.writeLong(obj.refreshRate)
+        }
+
         out.writeInt(obj.flags.size)
         obj.flags.forEach {
             out.writeInt(it.ordinal)
         }
+
+        OffsetDateTimeStreamSerializer.serialize(out, obj.lastRefresh)
     }
 
     override fun read(input: ObjectDataInput): MaterializedEntitySet {
         val key = EntitySetAssemblyKeyStreamSerializer().read(input)
 
-        val refreshRate = Random.nextLong()
+        val refreshRate = if (input.readBoolean()) {
+            input.readLong()
+        } else {
+            null
+        }
+
         val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
         (0 until input.readInt()).forEach { _ ->
             flags.add(entitySetFlags[input.readInt()])
         }
-        val lastRefresh = OffsetDateTime.MIN.plus(Random.nextLong(), ChronoUnit.MILLIS)
+
+        val lastRefresh = OffsetDateTimeStreamSerializer.deserialize(input)
+
 
         return MaterializedEntitySet(key, refreshRate, flags, lastRefresh)
     }

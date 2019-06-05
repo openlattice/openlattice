@@ -134,7 +134,7 @@ open class MaterializedEntitySetMapStore(
             (0 until Random.nextInt(2, organizationEntitySetFlags.size))
                     .forEach { flags.add(organizationEntitySetFlags[it]) }
         }
-        val lastRefresh = OffsetDateTime.MIN.plus(Random.nextLong(), ChronoUnit.MILLIS)
+        val lastRefresh = OffsetDateTime.MIN.plus(Random.nextLong(0L, 90000000000000000L), ChronoUnit.MILLIS)
 
         return MaterializedEntitySet(testKey, refreshRate, flags, lastRefresh)
     }
