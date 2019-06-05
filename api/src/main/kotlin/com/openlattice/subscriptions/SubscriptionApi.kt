@@ -21,8 +21,9 @@
 
 package com.openlattice.subscriptions
 
-import com.openlattice.data.EntityDataKey
+import com.openlattice.graph.NeighborhoodQuery
 import retrofit2.http.*
+import java.util.*
 
 /**
  * This API is for managing Subscriptions on entities
@@ -32,29 +33,42 @@ interface SubscriptionApi {
         const val SERVICE = "/datastore"
         const val CONTROLLER = "/subscriptions"
         const val BASE = SERVICE + CONTROLLER
+
+        const val SUB_ID = "subscriptionId"
+        const val SUB_ID_PATH = "/{$SUB_ID}"
+
+        const val SUB_IDS = "subscriptionIds"
     }
 
     /**
      * Creates a subscription
      */
     @PUT(BASE)
-    fun addSubscription(@Body entity: EntityDataKey): Int
+    fun addSubscription(@Body subscription: NeighborhoodQuery): UUID
 
     /**
      * Updates a subscription
      */
-    @POST(BASE )
-    fun updateSubscription(@Body entity: EntityDataKey): Int
+    @POST(BASE + SUB_ID_PATH)
+    fun updateSubscription(@Path(SUB_ID) subscriptionId: UUID,
+                           @Body subscription: NeighborhoodQuery): UUID
 
     /**
      * Removes a subscription
      */
-    @HTTP(method = "DELETE", path = BASE, hasBody = true)
-    fun deleteSubscription(@Body entity: EntityDataKey): Int
+    @DELETE(BASE + SUB_ID_PATH)
+    fun deleteSubscription(@Path(SUB_ID) subscriptionId: UUID)
 
     /**
      * Returns all subscriptions
      */
     @GET(BASE)
-    fun getAllSubscriptions(): Iterable<Int>
+    fun getAllSubscriptions(): Iterable<NeighborhoodQuery>
+
+    /**
+     * Returns subscription information for provided subscription ids
+     */
+    @GET(BASE)
+    fun getSubscriptions(@Query(SUB_IDS) subscriptionIds: List<UUID>): Iterable<NeighborhoodQuery>
+
 }
