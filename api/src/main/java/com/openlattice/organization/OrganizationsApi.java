@@ -118,12 +118,13 @@ public interface OrganizationsApi {
     /**
      * Materializes entity sets into the organization database.
      *
-     * @param entitySetIds The ids of the entity sets which to assemble into materialized views.
+     * @param refreshRatesOfEntitySets The refresh rate of each entity set to assemble into materialized views mapped
+     *                                 by their ids.
      */
     @POST( BASE + ID_PATH + ENTITY_SETS + ASSEMBLE )
     Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @Path( ID ) UUID organizationId,
-            @Body Set<UUID> entitySetIds );
+            @Body Map<UUID, Integer> refreshRatesOfEntitySets );
 
     /**
      * Synchronizes EDM changes to the requested materialized entity set in the organization.
