@@ -119,7 +119,15 @@ class Assembler(
                 .isNotEmpty()
     }
 
-    fun flagMaterializedEntitySet(entitySetId: UUID, flag: OrganizationEntitySetFlag) {
+    fun flagMaterializedEntitySetDataUnsynch(entitySetId: UUID) {
+        flagMaterializedEntitySet(entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED)
+    }
+
+    fun flagMaterializedEntitySetEdmUnsynch(entitySetId: UUID) {
+        flagMaterializedEntitySet(entitySetId, OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED)
+    }
+
+    private fun flagMaterializedEntitySet(entitySetId: UUID, flag: OrganizationEntitySetFlag) {
         if (isEntitySetMaterialized(entitySetId)) {
             materializedEntitySets.executeOnEntries(
                     AddFlagsToMaterializedEntitySetProcessor(setOf(flag)),
@@ -202,12 +210,12 @@ class Assembler(
 
 
     fun createOrganization(organization: Organization) {
-        createOrganization(organization.id, organization.principal.id)
+        createOrganization(organization.id)
     }
 
-    fun createOrganization(organizationId: UUID, dbname: String) {
+    fun createOrganization(organizationId: UUID) {
         createOrganizationTimer.time().use {
-            assemblies.set(organizationId, OrganizationAssembly(organizationId, dbname))
+            assemblies.set(organizationId, OrganizationAssembly(organizationId))
             assemblies.executeOnKey(organizationId, InitializeOrganizationAssemblyProcessor().init(acm))
             return@use
         }
@@ -239,7 +247,8 @@ class Assembler(
 
     fun materializeEntitySets(
             organizationId: UUID,
-            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>,
+            refreshRatesOfEntitySets: Map<UUID, Long>
     ): Map<UUID, Set<OrganizationEntitySetFlag>> {
         logger.info("Materializing entity sets ${authorizedPropertyTypesByEntitySet.keys}")
 
@@ -252,7 +261,9 @@ class Assembler(
             val materializedEntitySetKey = EntitySetAssemblyKey(entitySetId, organizationId)
             val entitySet = entitySets.getValue(entitySetId)
 
-            materializedEntitySets.set(materializedEntitySetKey, MaterializedEntitySet(materializedEntitySetKey))
+            materializedEntitySets.set(
+                    materializedEntitySetKey,
+                    MaterializedEntitySet(materializedEntitySetKey, refreshRatesOfEntitySets.getValue(entitySetId) ))
             materializedEntitySets.executeOnKey(
                     materializedEntitySetKey,
                     MaterializeEntitySetProcessor(entitySet, authorizedPropertyTypes).init(acm)
@@ -487,9 +498,7 @@ class Assembler(
                     )
                 } else {
                     logger.info("Initializing database for organization {}", organizationId)
-                    dependencies.createOrganization(
-                            organizationId, PostgresDatabases.buildOrganizationDatabaseName(organizationId)
-                    )
+                    dependencies.createOrganization(organizationId)
                 }
             }
         }

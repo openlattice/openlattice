@@ -36,7 +36,6 @@ import com.openlattice.edm.set.EntitySetFlag;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.linking.LinkingQueryService;
 import com.openlattice.linking.PostgresLinkingFeedbackService;
-import com.openlattice.organization.OrganizationEntitySetFlag;
 import com.openlattice.postgres.streams.PostgresIterable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
@@ -308,7 +307,7 @@ public class HazelcastEntityDatastore implements EntityDatastore {
     }
 
     private void markMaterializedEntitySetDirty( UUID entitySetId ) {
-        assembler.flagMaterializedEntitySet( entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED );
+        assembler.flagMaterializedEntitySetDataUnsynch( entitySetId );
     }
 
     @Timed

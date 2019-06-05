@@ -24,6 +24,8 @@ import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTes
 import com.openlattice.assembler.EntitySetAssemblyKey
 import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.organization.OrganizationEntitySetFlag
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import java.util.EnumSet
 import java.util.UUID
 import kotlin.random.Random
@@ -39,12 +41,14 @@ class MaterializedEntitySetStreamSerializerTest
         val key = EntitySetAssemblyKey(UUID.randomUUID(), UUID.randomUUID())
 
         val organizationEntitySetFlags = OrganizationEntitySetFlag.values()
+        val refreshRate = Random.nextLong()
         val flags = EnumSet.noneOf(OrganizationEntitySetFlag::class.java)
         if (Random.nextBoolean()) {
             (0 until Random.nextInt(2, organizationEntitySetFlags.size))
                     .forEach { flags.add(organizationEntitySetFlags[it]) }
         }
+        val lastRefresh = OffsetDateTime.MIN.plus(Random.nextLong(), ChronoUnit.MILLIS)
 
-        return MaterializedEntitySet(key, flags)
+        return MaterializedEntitySet(key, refreshRate, flags, lastRefresh)
     }
 }

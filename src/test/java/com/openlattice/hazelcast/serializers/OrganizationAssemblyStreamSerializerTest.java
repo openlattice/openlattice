@@ -43,7 +43,6 @@ public class OrganizationAssemblyStreamSerializerTest
     @Override protected OrganizationAssembly createInput() {
         return new OrganizationAssembly(
                 UUID.randomUUID(),
-                RandomStringUtils.randomAlphanumeric( 10 ),
                 false,
                 Map.of( UUID.randomUUID(), EnumSet.noneOf( OrganizationEntitySetFlag.class ) ) );
     }

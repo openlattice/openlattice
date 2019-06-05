@@ -980,15 +980,11 @@ public class EdmService implements EdmManager {
     }
 
     private void markMaterializedEntitySetDirtyWithEdmChanges( UUID entitySetId ) {
-        markMaterializedEntitySetDirty( entitySetId, OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED );
+        assembler.flagMaterializedEntitySetEdmUnsynch( entitySetId );
     }
 
     private void markMaterializedEntitySetDirtyWithDataChanges( UUID entitySetId ) {
-        markMaterializedEntitySetDirty( entitySetId, OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED );
-    }
-
-    private void markMaterializedEntitySetDirty( UUID entitySetId, OrganizationEntitySetFlag flag ) {
-        assembler.flagMaterializedEntitySet( entitySetId, flag );
+        assembler.flagMaterializedEntitySetDataUnsynch( entitySetId );
     }
 
     /**************

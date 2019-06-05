@@ -1010,11 +1010,15 @@ public final class ResultSetAdapters {
         final EntitySetAssemblyKey entitySetAssemblyKey = entitySetAssemblyKey( rs );
         final EnumSet<OrganizationEntitySetFlag> organizationEntitySetFlags = organizationEntitySetFlags( rs );
 
-        return new MaterializedEntitySet( entitySetAssemblyKey, organizationEntitySetFlags );
-    }
+        final var refreshRate = rs.getLong( REFRESH_RATE.getName() );
+        // default value is -infinity, which is adapted to OffsetDateTime.MIN
+        final var lastRefresh = rs.getObject( LAST_REFRESH.getName(), OffsetDateTime.class );
 
-    public static String dbName( ResultSet rs ) throws SQLException {
-        return rs.getString( DB_NAME.getName() );
+        return new MaterializedEntitySet(
+                entitySetAssemblyKey,
+                refreshRate,
+                organizationEntitySetFlags,
+                lastRefresh );
     }
 
     public static Boolean initialized( ResultSet rs ) throws SQLException {

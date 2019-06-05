@@ -20,16 +20,16 @@
  */
 package com.openlattice.assembler
 
-import com.openlattice.organization.OrganizationEntitySetFlag
-import java.time.OffsetDateTime
-import java.util.EnumSet
+import com.hazelcast.core.IMap
+import com.openlattice.authorization.EdmAuthorizationHelper
+import com.openlattice.datastore.services.EdmManager
+import com.openlattice.organizations.HazelcastOrganizationService
+import com.openlattice.tasks.HazelcastTaskDependencies
 
-data class MaterializedEntitySet(
-        val assemblyKey: EntitySetAssemblyKey,
-        /**
-         * Holds the user set refresh rate in milliseconds.
-         * If it's null, that means, that it should NOT be refreshed automatically.
-         */
-        val refreshRate: Long?,
-        val flags: EnumSet<OrganizationEntitySetFlag> = EnumSet.noneOf(OrganizationEntitySetFlag::class.java),
-        var lastRefresh: OffsetDateTime = OffsetDateTime.now())
+data class MaterializedEntitySetsDependencies(
+        val assembler: Assembler,
+        val materializedEntitySets: IMap<EntitySetAssemblyKey, MaterializedEntitySet>,
+        val organizations: HazelcastOrganizationService,
+        val edm: EdmManager,
+        val authzHelper: EdmAuthorizationHelper
+) : HazelcastTaskDependencies
