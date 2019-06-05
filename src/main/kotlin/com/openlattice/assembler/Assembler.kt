@@ -496,7 +496,7 @@ class Assembler(
 
         override fun after(): Set<Class<out HazelcastInitializationTask<*>>> {
             return setOf(
-                    EntitySetViewsInitializerTask::class.java,
+//                    EntitySetViewsInitializerTask::class.java,
                     PostConstructInitializerTask::class.java
             )
         }
