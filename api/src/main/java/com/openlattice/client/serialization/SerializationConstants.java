@@ -107,6 +107,7 @@ public final class SerializationConstants {
     public static final String ENTITY_SET_FIELD                 = "entitySet";
     public static final String ENTITY_SET_ID                    = "entitySetId";
     public static final String ENTITY_SET_IDS                   = "entitySetIds";
+    public static final String ENTITY_SET_COLLECTION_ID         = "entitySetCollectionId";
     public static final String ENTITY_SET_NAME                  = "entitySetName";
     public static final String ENTITY_TYPE                      = "entityType";
     public static final String ENTITY_TYPES                     = "entityTypes";
@@ -177,6 +178,7 @@ public final class SerializationConstants {
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
     public static final String PII_FIELD                        = "pii";
+    public static final String PREFIX                           = "prefix";
     public static final String PRESENT                          = "present";
     public static final String PRINCIPAL                        = "principal";
     public static final String PRINCIPAL_PATHS                  = "principalPaths";
@@ -201,6 +203,7 @@ public final class SerializationConstants {
     public static final String RESULT                           = "result";
     public static final String RESULT_SUMMARY                   = "resultSummary";
     public static final String ROLES                            = "roles";
+    public static final String SETTINGS                         = "settings";
     public static final String SCHEMA                           = "schema";
     public static final String SCHEMAS                          = "schemas";
     public static final String SEARCH_FIELDS                    = "searchFields";

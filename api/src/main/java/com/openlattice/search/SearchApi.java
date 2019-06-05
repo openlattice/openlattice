@@ -51,7 +51,6 @@ public interface SearchApi {
     String ASSOCIATION_TYPES = "/association_types";
     String PROPERTY_TYPES    = "/property_types";
     String APP               = "/app";
-    String APP_TYPES         = "/app_types";
     String ADVANCED          = "/advanced";
     String HOME              = "/home";
     String FQN               = "/fqn";
@@ -206,17 +205,6 @@ public interface SearchApi {
      */
     @POST( BASE + APP )
     SearchResult executeAppSearch( @Body SearchTerm searchTerm );
-
-    /**
-     * Executes a search over all app types to find ones that match the given search term
-     *
-     * @param searchTerm A JSON object that contains three parameters: "start", which specifies the hit number to start
-     *                   returning results on for paging, "maxHits", which specifies the maximum number of hits to return, and
-     *                   "searchTerm", which is the search term results will match on.
-     * @return A search result object, containing the total number of hits for the given query, and the hits themselves
-     */
-    @POST( BASE + APP_TYPES )
-    SearchResult executeAppTypeSearch( @Body SearchTerm searchTerm );
 
     /**
      * Executes a search over all EntityTypeCollections to find ones that match the given search term

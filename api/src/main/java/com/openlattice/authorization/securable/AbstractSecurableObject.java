@@ -129,6 +129,7 @@ public abstract class AbstractSecurableObject {
         return idPresent;
     }
 
+    @JsonIgnore
     public abstract SecurableObjectType getCategory();
 
     @Override

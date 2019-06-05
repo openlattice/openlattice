@@ -4,10 +4,7 @@ import com.openlattice.authorization.Permission;
 import com.openlattice.edm.requests.MetadataUpdate;
 import retrofit2.http.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public interface AppApi {
 
@@ -16,41 +13,42 @@ public interface AppApi {
     String BASE       = SERVICE + CONTROLLER;
 
     String INSTALL_PATH = "/install";
-    String TYPE_PATH    = "/type";
     String CONFIG_PATH  = "/config";
     String BULK_PATH    = "/bulk";
     String LOOKUP_PATH  = "/lookup";
     String UPDATE_PATH  = "/update";
+    String ROLE_PATH    = "/role";
 
-    String ID              = "id";
-    String ORGANIZATION_ID = "organizationId";
-    String PREFIX          = "prefix";
-    String NAME            = "name";
-    String NAMESPACE       = "namespace";
-    String APP_ID          = "appId";
-    String APP_TYPE_ID     = "appTypeId";
-    String ENTITY_SET_ID   = "entitySetId";
+    String ENTITY_SET_COLLECTION_ID = "entitySetCollectionId";
+    String ID                       = "id";
+    String ORGANIZATION_ID          = "organizationId";
+    String PREFIX                   = "prefix";
+    String NAME                     = "name";
+    String NAMESPACE                = "namespace";
+    String APP_ID                   = "appId";
+    String ROLE_ID                  = "roleId";
 
-    String ID_PATH              = "/{" + ID + "}";
-    String ORGANIZATION_ID_PATH = "/{" + ORGANIZATION_ID + "}";
-    String PREFIX_PATH          = "/{" + PREFIX + "}";
-    String NAME_PATH            = "/{" + NAME + "}";
-    String NAMESPACE_PATH       = "/{" + NAMESPACE + "}";
-    String APP_ID_PATH          = "/{" + APP_ID + "}";
-    String APP_TYPE_ID_PATH     = "/{" + APP_TYPE_ID + "}";
-    String ENTITY_SET_ID_PATH   = "/{" + ENTITY_SET_ID + "}";
+    String ENTITY_SET_COLLECTION_ID_PATH = "/{" + ENTITY_SET_COLLECTION_ID + "}";
+    String ID_PATH                       = "/{" + ID + "}";
+    String ORGANIZATION_ID_PATH          = "/{" + ORGANIZATION_ID + "}";
+    String PREFIX_PATH                   = "/{" + PREFIX + "}";
+    String NAME_PATH                     = "/{" + NAME + "}";
+    String NAMESPACE_PATH                = "/{" + NAMESPACE + "}";
+    String APP_ID_PATH                   = "/{" + APP_ID + "}";
+    String ROLE_ID_PATH                  = "/{" + ROLE_ID + "}";
+
+    /**
+     * App CRUD
+     **/
 
     @GET( BASE )
     Iterable<App> getApps();
 
-    @GET( BASE + TYPE_PATH )
-    Iterable<AppType> getAppTypes();
-
     @POST( BASE )
     UUID createApp( @Body App app );
 
-    @POST( BASE + TYPE_PATH )
-    UUID createAppType( @Body AppType appType );
+    @POST( BASE )
+    List<UUID> createApps( @Body List<App> app );
 
     @GET( BASE + ID_PATH )
     App getApp( @Path( ID ) UUID id );
@@ -58,54 +56,46 @@ public interface AppApi {
     @GET( BASE + LOOKUP_PATH + NAME_PATH )
     App getApp( @Path( NAME ) String name );
 
-    @GET( BASE + TYPE_PATH + ID_PATH )
-    AppType getAppType( @Path( ID ) UUID id );
-
-    @GET( BASE + TYPE_PATH + LOOKUP_PATH + NAMESPACE_PATH + NAME_PATH )
-    AppType getAppType( @Path( NAMESPACE ) String namespace, @Path( NAME ) String name );
-
-    @POST( BASE + TYPE_PATH + BULK_PATH )
-    Map<UUID, AppType> getAppTypes( @Body Set<UUID> appTypeIds );
-
     @DELETE( BASE + ID_PATH )
     void deleteApp( @Path( ID ) UUID id );
 
-    @DELETE( BASE + TYPE_PATH + ID_PATH )
-    void deleteAppType( @Path( ID ) UUID id );
+    @POST( BASE + UPDATE_PATH + ID_PATH + ROLE_PATH )
+    UUID createAppRole( @Path( ID ) UUID appId, @Body AppRole role );
 
-    @GET( BASE + INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH + PREFIX_PATH )
-    void installApp(
-            @Path( ID ) UUID appId,
-            @Path( ORGANIZATION_ID ) UUID organizationId,
-            @Path( PREFIX ) String prefix );
+    @DELETE( BASE + UPDATE_PATH + ID_PATH + ROLE_PATH + ROLE_ID_PATH )
+    void deleteRoleFromApp( @Path( ID ) UUID appId, @Path( ROLE_ID ) UUID roleId );
 
-    @GET( BASE + CONFIG_PATH + ID_PATH )
-    List<AppConfig> getAvailableAppConfigs( @Path( ID ) UUID appId );
-
-    @POST( BASE + UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH )
-    void addAppTypeToApp( @Path( ID ) UUID appId, @Path( APP_TYPE_ID ) UUID appTypeId );
-
-    @DELETE( BASE + UPDATE_PATH + ID_PATH + APP_TYPE_ID_PATH )
-    void removeAppTypeFromApp( @Path( ID ) UUID appId, @Path( APP_TYPE_ID ) UUID appTypeId );
-
-    @GET( BASE + UPDATE_PATH + ID_PATH + APP_ID_PATH + APP_TYPE_ID_PATH + ENTITY_SET_ID_PATH )
-    void updateAppEntitySetConfig(
-            @Path( ID ) UUID organizationId,
-            @Path( APP_ID ) UUID appId,
-            @Path( APP_TYPE_ID ) UUID appTypeId,
-            @Path( ENTITY_SET_ID ) UUID entitySetId );
-
-    @POST( BASE + UPDATE_PATH + ID_PATH + APP_ID_PATH + APP_TYPE_ID_PATH )
+    @POST( BASE + UPDATE_PATH + ID_PATH + ROLE_ID_PATH )
     void updateAppEntitySetPermissionsConfig(
-            @Path( ID ) UUID organizationId,
-            @Path( APP_ID ) UUID appId,
-            @Path( APP_TYPE_ID ) UUID appTypeId,
-            @Body Set<Permission> permissions );
+            @Path( ID ) UUID appId,
+            @Path( ROLE_ID ) UUID roleId,
+            @Body Map<Permission, Map<UUID, Optional<Set<UUID>>>> requiredPermissions );
 
     @POST( BASE + UPDATE_PATH + ID_PATH )
     void updateAppMetadata( @Path( ID ) UUID appId, @Body MetadataUpdate metadataUpdate );
 
-    @POST( BASE + TYPE_PATH + UPDATE_PATH + ID_PATH )
-    void updateAppTypeMetadata( @Path( ID ) UUID appTypeId, @Body MetadataUpdate metadataUpdate );
+    @PATCH( BASE + UPDATE_PATH + ID_PATH )
+    void updateDefaultAppSettings( @Path( ID ) UUID appId, @Body Map<String, Object> defaultSettings );
 
+    /**
+     * App Installation CRUD
+     **/
+
+    @POST( BASE + INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH + PREFIX_PATH )
+    void installApp(
+            @Path( ID ) UUID appId,
+            @Path( ORGANIZATION_ID ) UUID organizationId,
+            @Body AppInstallation appInstallation );
+
+    @DELETE( BASE + INSTALL_PATH + ID_PATH + ORGANIZATION_ID_PATH )
+    void uninstallApp( @Path( ID ) UUID appId, @Path( ORGANIZATION_ID ) UUID organizationId );
+
+    @GET( BASE + CONFIG_PATH + ID_PATH )
+    List<UserAppConfig> getAvailableAppConfigs( @Path( ID ) UUID appId );
+
+    @POST( BASE + CONFIG_PATH + UPDATE_PATH + ID_PATH + ORGANIZATION_ID_PATH )
+    void updateAppConfigSettings(
+            @Path( ID ) UUID appId,
+            @Path( ORGANIZATION_ID ) UUID organizationId,
+            @Body Map<String, Object> newSettings );
 }

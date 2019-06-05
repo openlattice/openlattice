@@ -1,5 +1,6 @@
 package com.openlattice.apps;
 
+import com.openlattice.authorization.AclKey;
 import com.openlattice.authorization.Principal;
 import com.openlattice.authorization.PrincipalType;
 import com.openlattice.client.serialization.SerializationConstants;
@@ -9,14 +10,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.openlattice.authorization.SecurablePrincipal;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 public class AppConfig extends SecurablePrincipal {
 
-    private final UUID                        appId;
-    private final Organization                organization;
-    private final Map<String, AppTypeSetting> config;
+    private final UUID              appId;
+    private final UUID              organizationId;
+    private final UUID              entitySetCollectionId;
+    private final Map<UUID, AclKey> roles;
 
     @JsonCreator
     public AppConfig(
@@ -25,12 +28,14 @@ public class AppConfig extends SecurablePrincipal {
             @JsonProperty( SerializationConstants.TITLE_FIELD ) String title,
             @JsonProperty( SerializationConstants.DESCRIPTION_FIELD ) Optional<String> description,
             @JsonProperty( SerializationConstants.APP_ID ) UUID appId,
-            @JsonProperty( SerializationConstants.ORGANIZATION ) Organization organization,
-            @JsonProperty( SerializationConstants.CONFIG ) Map<String, AppTypeSetting> config ) {
+            @JsonProperty( SerializationConstants.ORGANIZATION_ID ) UUID organizationId,
+            @JsonProperty( SerializationConstants.ENTITY_SET_COLLECTION_ID ) UUID entitySetCollectionId,
+            @JsonProperty( SerializationConstants.ROLES ) Map<UUID, AclKey> roles ) {
         super( id, principal, title, description );
         this.appId = appId;
-        this.organization = organization;
-        this.config = config;
+        this.organizationId = organizationId;
+        this.entitySetCollectionId = entitySetCollectionId;
+        this.roles = roles;
     }
 
     public AppConfig(
@@ -38,15 +43,17 @@ public class AppConfig extends SecurablePrincipal {
             String title,
             Optional<String> description,
             UUID appId,
-            Organization organization,
-            Map<String, AppTypeSetting> config ) {
+            UUID organizationId,
+            UUID entitySetCollectionId,
+            Map<UUID, AclKey> roles ) {
         this( id,
-                new Principal( PrincipalType.APP, getAppPrincipalId( appId, organization.getId() ) ),
+                new Principal( PrincipalType.APP, getAppPrincipalId( appId, organizationId ) ),
                 title,
                 description,
                 appId,
-                organization,
-                config );
+                organizationId,
+                entitySetCollectionId,
+                roles );
     }
 
     @JsonProperty( SerializationConstants.APP_ID )
@@ -54,14 +61,23 @@ public class AppConfig extends SecurablePrincipal {
         return appId;
     }
 
-    @JsonProperty( SerializationConstants.ORGANIZATION )
-    public Organization getOrganization() {
-        return organization;
+    @JsonProperty( SerializationConstants.ORGANIZATION_ID )
+    public UUID getOrganizationId() {
+        return organizationId;
     }
 
-    @JsonProperty( SerializationConstants.CONFIG )
-    public Map<String, AppTypeSetting> getConfig() {
-        return config;
+    @JsonProperty( SerializationConstants.ENTITY_SET_COLLECTION_ID )
+    public UUID getEntitySetCollectionId() {
+        return entitySetCollectionId;
+    }
+
+    @JsonProperty( SerializationConstants.ROLES )
+    public Map<UUID, AclKey> getRoles() {
+        return roles;
+    }
+
+    public static String getAppPrincipalId( UUID appId, UUID organizationId ) {
+        return appId.toString().concat( "|" ).concat( organizationId.toString() );
     }
 
     @Override public boolean equals( Object o ) {
@@ -69,21 +85,28 @@ public class AppConfig extends SecurablePrincipal {
             return true;
         if ( o == null || getClass() != o.getClass() )
             return false;
-
-        AppConfig appConfig = (AppConfig) o;
-
-        if ( !organization.equals( appConfig.organization ) )
+        if ( !super.equals( o ) )
             return false;
-        return config.equals( appConfig.config );
+        AppConfig appConfig = (AppConfig) o;
+        return Objects.equals( appId, appConfig.appId ) &&
+                Objects.equals( organizationId, appConfig.organizationId ) &&
+                Objects.equals( entitySetCollectionId, appConfig.entitySetCollectionId ) &&
+                Objects.equals( roles, appConfig.roles );
     }
 
     @Override public int hashCode() {
-        int result = organization.hashCode();
-        result = 31 * result + config.hashCode();
-        return result;
+        return Objects.hash( super.hashCode(), appId, organizationId, entitySetCollectionId, roles );
     }
 
-    public static String getAppPrincipalId( UUID appId, UUID organizationId ) {
-        return appId.toString().concat( "|" ).concat( organizationId.toString() );
+    @Override public String toString() {
+        return "AppConfig{" +
+                "appId=" + appId +
+                ", organizationId=" + organizationId +
+                ", entitySetCollectionId=" + entitySetCollectionId +
+                ", roles=" + roles +
+                ", id=" + id +
+                ", title='" + title + '\'' +
+                ", description='" + description + '\'' +
+                '}';
     }
 }

@@ -19,6 +19,10 @@
 package com.openlattice.mapstores;
 
 import com.google.common.collect.*;
+import com.openlattice.apps.App;
+import com.openlattice.apps.AppConfigKey;
+import com.openlattice.apps.AppRole;
+import com.openlattice.apps.AppTypeSetting;
 import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.AbstractSecurableObject;
 import com.openlattice.authorization.securable.AbstractSecurableType;
@@ -555,19 +559,61 @@ public final class TestDataFactory {
     public static CollectionTemplates collectionTemplates() {
         Map<UUID, Map<UUID, UUID>> templates = Maps.newHashMap();
 
-        for (int i = 0; i < 5; i++) {
+        for ( int i = 0; i < 5; i++ ) {
 
             int size = RandomUtils.nextInt( 1, 5 );
             Map<UUID, UUID> map = Maps.newHashMap();
 
-            for (int j = 0; j < size; j++) {
+            for ( int j = 0; j < size; j++ ) {
                 map.put( UUID.randomUUID(), UUID.randomUUID() );
             }
 
-            templates.put(UUID.randomUUID(), map);
+            templates.put( UUID.randomUUID(), map );
         }
 
         return new CollectionTemplates( templates );
+    }
+
+    public static AppRole appRole() {
+        return new AppRole( Optional.empty(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                ImmutableMap.of( Permission.READ,
+                        ImmutableMap.of( UUID.randomUUID(),
+                                Optional.of( ImmutableSet
+                                        .of( UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() ) ) ),
+                        Permission.WRITE,
+                        ImmutableMap.of( UUID.randomUUID(), Optional.empty() ) ) );
+    }
+
+    public static App app() {
+        return new App(
+                Optional.empty(),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                Optional.of( RandomStringUtils.randomAlphanumeric( 5 ) ),
+                RandomStringUtils.randomAlphanumeric( 5 ),
+                UUID.randomUUID(),
+                ImmutableSet.of( appRole(), appRole(), appRole() ),
+                Optional.of( ImmutableMap.of( RandomStringUtils.randomAlphanumeric( 5 ),
+                        RandomStringUtils.randomAlphanumeric( 5 ),
+                        RandomStringUtils.randomAlphanumeric( 5 ),
+                        false,
+                        RandomStringUtils.randomAlphanumeric( 5 ),
+                        RandomUtils.nextInt( 0, 10000 ) ) ) );
+    }
+
+    public static AppConfigKey appConfigKey() {
+        return new AppConfigKey( UUID.randomUUID(), UUID.randomUUID() );
+    }
+
+    public static AppTypeSetting appConfigSetting() {
+        return new AppTypeSetting( UUID.randomUUID(),
+                UUID.randomUUID(),
+                ImmutableMap
+                        .of( UUID.randomUUID(), aclKey(), UUID.randomUUID(), aclKey(), UUID.randomUUID(), aclKey() ),
+                app().getDefaultSettings());
     }
 
 }
