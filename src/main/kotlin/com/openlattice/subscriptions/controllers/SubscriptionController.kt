@@ -4,7 +4,7 @@ package com.openlattice.subscriptions.controllers
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.graph.NeighborhoodFilter
+import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.subscriptions.SubscriptionApi
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -20,14 +20,14 @@ constructor(
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.PUT])
-    override fun addSubscription(@RequestBody subscription: NeighborhoodFilter): UUID {
+    override fun addSubscription(@RequestBody subscription: NeighborhoodQuery): UUID {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.SUB_ID_PATH], method = [RequestMethod.POST])
     override fun updateSubscription(@PathVariable(SubscriptionApi.SUB_ID) subscriptionId: UUID,
-                                    @RequestBody subscription: NeighborhoodFilter): UUID {
+                                    @RequestBody subscription: NeighborhoodQuery): UUID {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
@@ -39,14 +39,14 @@ constructor(
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
-    override fun getAllSubscriptions(): Iterable<NeighborhoodFilter> {
+    override fun getAllSubscriptions(): Iterable<NeighborhoodQuery> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
     override fun getSubscriptions(
-            @RequestParam(SubscriptionApi.SUB_IDS) subscriptionIds: List<UUID>): Iterable<NeighborhoodFilter> {
+            @RequestParam(SubscriptionApi.SUB_IDS) subscriptionIds: List<UUID>): Iterable<NeighborhoodQuery> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
