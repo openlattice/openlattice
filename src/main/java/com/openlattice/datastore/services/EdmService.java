@@ -417,7 +417,7 @@ public class EdmService implements EdmManager {
     public int addLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> newLinkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new AddEntitySetsToLinkingEntitySetProcessor( newLinkedEntitySets ) );
         markMaterializedEntitySetDirtyWithDataChanges( linkingEntitySet.getId() );
 
@@ -430,7 +430,7 @@ public class EdmService implements EdmManager {
     public int removeLinkedEntitySets( UUID linkingEntitySetId, Set<UUID> linkedEntitySets ) {
         final EntitySet linkingEntitySet = Util.getSafely( entitySets, linkingEntitySetId );
         final int startSize = linkingEntitySet.getLinkedEntitySets().size();
-        final EntitySet updatedLinkingEntitySet = ( EntitySet ) entitySets.executeOnKey(
+        final EntitySet updatedLinkingEntitySet = (EntitySet) entitySets.executeOnKey(
                 linkingEntitySetId, new RemoveEntitySetsFromLinkingEntitySetProcessor( linkedEntitySets ) );
 
         Set<UUID> removedLinkingIds = edmManager.getLinkingIdsByEntitySetIds( linkedEntitySets )
@@ -1133,10 +1133,9 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Set<UUID> getEntityTypeIdsByEntitySetIds( Set<UUID> entitySetIds ) {
-        return entitySets.getAll( entitySetIds ).values().stream()
-                .map( EntitySet::getEntityTypeId )
-                .collect( Collectors.toSet() );
+    public Map<UUID, UUID> getEntityTypeIdsByEntitySetIds( Set<UUID> entitySetIds ) {
+        return entitySets.getAll( entitySetIds ).entrySet().stream()
+                .collect( Collectors.toMap( Map.Entry::getKey, entry -> entry.getValue().getEntityTypeId() ) );
     }
 
     @Override
@@ -1185,7 +1184,6 @@ public class EdmService implements EdmManager {
                 associationDetails.get().isBidirectional() );
     }
 
-
     @Override
     public AssociationType getAssociationTypeByEntitySetId( UUID entitySetId ) {
         final var entityTypeId = getEntitySet( entitySetId ).getEntityTypeId();
@@ -1193,9 +1191,14 @@ public class EdmService implements EdmManager {
     }
 
     @Override
-    public Iterable<AssociationType> getAssociationTypeDetailsByEntitySetIds( Set<UUID> entitySetIds ) {
-        final var entityTypeIds = getEntityTypeIdsByEntitySetIds( entitySetIds );
-        return associationTypes.getAll( entityTypeIds ).values();
+    public Map<UUID, AssociationType> getAssociationTypeDetailsByEntitySetIds( Set<UUID> entitySetIds ) {
+        final var entityTypeIdsByEntitySetId = getEntityTypeIdsByEntitySetIds( entitySetIds );
+
+        Map<UUID, AssociationType> associationTypesByEntityTypeId = associationTypes
+                .getAll( Sets.newHashSet( entityTypeIdsByEntitySetId.values() ) );
+
+        return entitySetIds.stream().collect( Collectors.toMap( Function.identity(),
+                entitySetId -> associationTypesByEntityTypeId.get( entityTypeIdsByEntitySetId.get( entitySetId ) ) ) );
     }
 
     @Override
