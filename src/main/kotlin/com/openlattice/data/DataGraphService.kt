@@ -288,7 +288,7 @@ open class DataGraphService(
         val writeEvents = ArrayList<WriteEvent>()
 
         associationsEdgeKeys.asSequence().chunked(ASSOCIATION_SIZE).forEach { dataEdgeKeys ->
-           val entityKeyIds =  groupEdges(dataEdgeKeys)
+            val entityKeyIds = groupEdges(dataEdgeKeys)
             entityKeyIds.entries.forEach {
                 val writeEvent = deleteEntityDataAndVerticesOfAssociations(
                         dataEdgeKeys, it.key, it.value, authorizedPropertyTypes.getValue(it.key))
@@ -457,11 +457,11 @@ open class DataGraphService(
                     val dstEsId = association.dst.entitySetId
                     val edgeEsId = association.key.entitySetId
 
-                    if(srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
+                    if (srcAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(srcEsId)) != null) {
                         srcAssociationEntitySetIds.getValue(edgeEsId).add(srcEsId)
                     }
 
-                    if(dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
+                    if (dstAssociationEntitySetIds.putIfAbsent(edgeEsId, mutableSetOf(dstEsId)) != null) {
                         dstAssociationEntitySetIds.getValue(edgeEsId).add(dstEsId)
                     }
                 }
@@ -544,17 +544,15 @@ open class DataGraphService(
             srcAssociationEntitySetIds: Map<UUID, Set<UUID>>, dstAssociationEntitySetIds: Map<UUID, Set<UUID>>
     ) {
         val edgeEntitySetIds = srcAssociationEntitySetIds.keys
-        val associationTypeDetails = edgeEntitySetIds
-                .zip(edmManager.getAssociationTypeDetailsByEntitySetIds(srcAssociationEntitySetIds.keys))
-                .toMap()
+        val associationTypeDetails = edmManager.getAssociationTypeDetailsByEntitySetIds(edgeEntitySetIds)
 
-        edgeEntitySetIds.forEach {edgeEntitySetId ->
+        edgeEntitySetIds.forEach { edgeEntitySetId ->
             val srcEntitySetIds = srcAssociationEntitySetIds.getValue(edgeEntitySetId)
             val dstEntitySetIds = dstAssociationEntitySetIds.getValue(edgeEntitySetId)
 
             val edgeAssociationType = associationTypeDetails.getValue(edgeEntitySetId)
-            val srcEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(srcEntitySetIds)
-            val dstEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(dstEntitySetIds)
+            val srcEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(srcEntitySetIds).values
+            val dstEntityTypes = edmManager.getEntityTypeIdsByEntitySetIds(dstEntitySetIds).values
 
             // ensure, that src and dst entity types are part of src and dst entity types of AssociationType
             if (!edgeAssociationType.src.containsAll(srcEntityTypes)) {
@@ -572,16 +570,16 @@ open class DataGraphService(
     }
 
     private fun checkAssociationEntityTypes(associationEntitySetId: UUID, associations: List<DataEdge>) {
-        val associationType = edmManager.getAssociationTypeByEntitySetId( associationEntitySetId )
+        val associationType = edmManager.getAssociationTypeByEntitySetId(associationEntitySetId)
         associations.forEach {
             // ensure, that DataEdge src and dst entity types are part of src and dst entity types of AssociationType
-            val srcEntityType = edmManager.getEntityTypeByEntitySetId( it.src.entitySetId )
-            val dstEntityType = edmManager.getEntityTypeByEntitySetId( it.dst.entitySetId )
-            if ( !( associationType.src.contains( srcEntityType.id )
-                            && associationType.dst.contains( dstEntityType.id ) ) ) {
-                throw IllegalArgumentException( "Entity type of src/dst entity set in data keys {src(${it.src}), " +
+            val srcEntityType = edmManager.getEntityTypeByEntitySetId(it.src.entitySetId)
+            val dstEntityType = edmManager.getEntityTypeByEntitySetId(it.dst.entitySetId)
+            if (!(associationType.src.contains(srcEntityType.id)
+                            && associationType.dst.contains(dstEntityType.id))) {
+                throw IllegalArgumentException("Entity type of src/dst entity set in data keys {src(${it.src}), " +
                         "dst(${it.dst})} differs from allowed entity types in association type " +
-                        associationType.associationEntityType.id )
+                        associationType.associationEntityType.id)
             }
         }
     }
