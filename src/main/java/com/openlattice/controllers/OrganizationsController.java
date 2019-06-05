@@ -24,7 +24,6 @@ import com.codahale.metrics.annotation.Timed;
 import com.dataloom.streams.StreamUtil;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.openlattice.assembler.Assembler;
 import com.openlattice.authorization.SecurableObjectResolveTypeService;
@@ -43,7 +42,6 @@ import com.openlattice.controllers.exceptions.ForbiddenException;
 import com.openlattice.controllers.exceptions.ResourceNotFoundException;
 import com.openlattice.datastore.services.EdmManager;
 import com.openlattice.directory.pojo.Auth0UserBasic;
-import com.openlattice.edm.EntitySet;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
@@ -244,10 +242,26 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             produces = MediaType.APPLICATION_JSON_VALUE )
     public Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
             @PathVariable( ID ) UUID organizationId,
-            @RequestBody Set<UUID> entitySetIds ) {
+            @RequestBody Map<UUID, Integer> refreshRatesOfEntitySets ) {
         final var authorizedPropertyTypesByEntitySet =
-                getAuthorizedPropertiesForMaterialization( organizationId, entitySetIds );
-        return assembler.materializeEntitySets( organizationId, authorizedPropertyTypesByEntitySet );
+                getAuthorizedPropertiesForMaterialization( organizationId, refreshRatesOfEntitySets.keySet() );
+
+        // convert mins to millisecs
+        var refreshRatesInMilliSecsOfEntitySets = refreshRatesOfEntitySets.entrySet().stream()
+                .collect( Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> {
+                            if ( entry.getValue() < 1 ) {
+                                throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
+                            }
+                            return entry.getValue().longValue() * 3600L;
+                        }
+                ) );
+
+        return assembler.materializeEntitySets(
+                organizationId,
+                authorizedPropertyTypesByEntitySet,
+                refreshRatesInMilliSecsOfEntitySets );
     }
 
     @Timed
@@ -597,13 +611,11 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return aclKey;
     }
 
-    private AclKey ensureRead( UUID organizationId ) {
-        AclKey aclKey = new AclKey( organizationId );
-        accessCheck( aclKey, EnumSet.of( Permission.READ ) );
-        return aclKey;
+    private void ensureRead( UUID organizationId ) {
+        ensureReadAccess( new AclKey( organizationId ) );
     }
 
-    private AclKey ensureMaterialize ( UUID entitySetId, OrganizationPrincipal principal ) {
+    private void ensureMaterialize ( UUID entitySetId, OrganizationPrincipal principal ) {
         AclKey aclKey = new AclKey( entitySetId );
 
         if ( !getAuthorizationManager().checkIfHasPermissions(
@@ -613,8 +625,6 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             throw new ForbiddenException( "EntitySet " + aclKey.toString() + " is not accessible by organization " +
                     "principal " + principal.getPrincipal().getId()  + " ." );
         }
-
-        return aclKey;
     }
 
 }
