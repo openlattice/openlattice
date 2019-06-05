@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,17 +19,15 @@
  *
  */
 
-package com.openlattice.data
+package com.openlattice.graph
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.openlattice.client.serialization.SerializationConstants
-import java.time.OffsetDateTime
 import java.util.*
 
-data class PropertyMetadata(
-        @JsonProperty(SerializationConstants.HASH)  val hash: Optional<ByteArray>,
-        @JsonProperty(SerializationConstants.VERSION)  val version: Optional<Long>,
-        @JsonProperty(SerializationConstants.VERSIONS) val versions: Optional<LongArray>,
-        @JsonProperty(SerializationConstants.ENTITY_SET_IDS)  val entitySetIds: Optional<Set<UUID>>,
-        @JsonProperty(SerializationConstants.LAST_WRITE) val lastWrite: Optional<OffsetDateTime>
+/**
+ *
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
+ */
+data class NeighborIds(
+        val associationEntityKeyId : UUID,
+        val neighborEntityKeyId : UUID
 )
