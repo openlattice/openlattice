@@ -26,11 +26,9 @@ import com.google.common.collect.ListMultimap
 import com.google.common.collect.SetMultimap
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.graph.GraphApi
+import com.openlattice.data.requests.NeighborEntityDetails
+import com.openlattice.graph.*
 import com.openlattice.graph.GraphApi.ID
-import com.openlattice.graph.GraphQueryService
-import com.openlattice.graph.SimpleGraphQuery
-import com.openlattice.graph.SubGraph
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
 import org.springframework.web.bind.annotation.*
@@ -41,7 +39,7 @@ import javax.inject.Inject
  *
  */
 @RestController
-@RequestMapping(GraphApi.CONTROLLER)
+@RequestMapping(CONTROLLER)
 class GraphController
 @Inject
 constructor(
@@ -49,7 +47,11 @@ constructor(
         private val authorizationManager: AuthorizationManager
 //        private val filteredAggregation
 ) : GraphApi, AuthorizingComponent {
-
+    override fun neighborhoodQuery(
+            entitySetId: UUID, query: NeighborhoodQuery
+    ): Map<UUID, List<NeighborEntityDetails>> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
 
     @Timed
