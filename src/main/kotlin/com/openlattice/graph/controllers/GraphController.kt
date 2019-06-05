@@ -28,7 +28,6 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.graph.*
-import com.openlattice.graph.GraphApi.ID
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
 import org.springframework.web.bind.annotation.*
