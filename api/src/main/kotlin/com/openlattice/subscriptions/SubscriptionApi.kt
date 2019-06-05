@@ -21,7 +21,7 @@
 
 package com.openlattice.subscriptions
 
-import com.openlattice.graph.NeighborhoodFilter
+import com.openlattice.graph.NeighborhoodQuery
 import retrofit2.http.*
 import java.util.*
 
@@ -44,14 +44,14 @@ interface SubscriptionApi {
      * Creates a subscription
      */
     @PUT(BASE)
-    fun addSubscription(@Body subscription: NeighborhoodFilter): UUID
+    fun addSubscription(@Body subscription: NeighborhoodQuery): UUID
 
     /**
      * Updates a subscription
      */
     @POST(BASE + SUB_ID_PATH)
     fun updateSubscription(@Path(SUB_ID) subscriptionId: UUID,
-            @Body subscription: NeighborhoodFilter): UUID
+                           @Body subscription: NeighborhoodQuery): UUID
 
     /**
      * Removes a subscription
@@ -63,12 +63,12 @@ interface SubscriptionApi {
      * Returns all subscriptions
      */
     @GET(BASE)
-    fun getAllSubscriptions(): Iterable<NeighborhoodFilter>
+    fun getAllSubscriptions(): Iterable<NeighborhoodQuery>
 
     /**
      * Returns subscription information for provided subscription ids
      */
     @GET(BASE)
-    fun getSubscriptions(@Query(SUB_IDS) subscriptionIds: List<UUID>): Iterable<NeighborhoodFilter>
+    fun getSubscriptions(@Query(SUB_IDS) subscriptionIds: List<UUID>): Iterable<NeighborhoodQuery>
 
 }
