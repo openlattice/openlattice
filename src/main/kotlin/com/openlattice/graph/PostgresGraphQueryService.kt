@@ -31,15 +31,21 @@ import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.postgres.DataTables.quote
+import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
+import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.PostgresTable.EDGES
 import com.openlattice.postgres.PostgresTable.GRAPH_QUERIES
+import com.openlattice.postgres.streams.PostgresIterable
+import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.sql.Connection
 import java.sql.Statement
 import java.util.*
+import java.util.function.Function
+import java.util.function.Supplier
 
 /**
  *
@@ -53,7 +59,22 @@ class PostgresGraphQueryService(
         private val mapper: ObjectMapper
 ) : GraphQueryService {
     override fun getEntitySetForIds(ids: Set<UUID>): Map<UUID, UUID> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return PostgresIterable<Pair<UUID, UUID>>(
+                Supplier {
+                    val connection = hds.connection
+                    val ps = connection.prepareStatement(
+                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},$ID_VALUE.name FROM ${PostgresTable.IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
+                    )
+                    val arr = PostgresArrays.createUuidArray(connection, ids)
+                    ps.setArray(1, arr)
+
+                    StatementHolder(connection, ps, ps.executeQuery())
+                },
+                Function {
+                    return@Function it.getObject(PostgresColumn.ID_VALUE.name, UUID::class.java) to
+                            it.getObject(PostgresColumn.ENTITY_SET_ID.name, UUID::class.java)
+                }
+        ).toMap()
     }
 
     override fun submitQuery(
@@ -104,7 +125,7 @@ class PostgresGraphQueryService(
             val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
             val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
-            createEdgesView(index, connection, ids, entitySetIds, associationEntitySetIds)
+            val srcEdgeView = createSrcEdgesView(index, connection, ids, entitySetIds, associationEntitySetIds)
             val srcFilteringViews = createSrcFilteringViews(
                     index,
                     connection,
@@ -120,6 +141,7 @@ class PostgresGraphQueryService(
 
             // EdgesView INNER JOIN EdgeFilteringView USING (id) INNER JOIN SrcFilteringView USING (id)
             val srcJoinSql = buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
+
         }
 
         query.dstSelections.forEachIndexed { index, selection ->
@@ -163,17 +185,56 @@ class PostgresGraphQueryService(
         TODO("hackathon")
     }
 
-    private fun createEdgesView(
-            index: Int, connection: Connection, ids: Set<UUID>, entitySetIds: Set<UUID>,
+    private fun createDstEdgeFilteringViews(
+            index: Int,
+            connection: Connection,
+            associationFilterDefinitions: List<AssociationFilterDefinition>,
+            propertyTypes: Map<UUID, PropertyType>,
+            authorizedPropertyTypes: Map<UUID, Set<UUID>>,
+            propertyTypeFqns: Map<UUID, String>
+    ) {
+
+    }
+
+    private fun createDstFilteringViews(
+            index: Int,
+            connection: Connection,
+            entityFilterDefinitions: List<AssociationFilterDefinition>,
+            propertyTypes: Map<UUID, PropertyType>,
+            authorizedPropertyTypes: Map<UUID, Set<UUID>>,
+            propertyTypeFqns: Map<UUID, String>
+    ) {
+
+    }
+
+    private fun createDstEdgesView(
+            index: Int,
+            connection: Connection,
+            ids: Set<UUID>,
+            entitySetIds: Set<UUID>,
+            associationEntitySetIds: Set<UUID>
+    ): Pair<String, Statement> {
+        val tableName = "tmp_src_edges$index"
+        val tableSql = buildEdgesOutgoingJoinSql(ids, entitySetIds, associationEntitySetIds)
+
+        val stmt = connection.createStatement()
+        stmt.executeQuery(tableSql)
+
+        return tableName to stmt
+    }
+
+    private fun createSrcEdgesView(
+            index: Int,
+            connection: Connection,
+            ids: Set<UUID>,
+            entitySetIds: Set<UUID>,
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_src_edges$index"
         val tableSql = buildEdgesIncomingJoinSql(ids, entitySetIds, associationEntitySetIds)
 
-
         val stmt = connection.createStatement()
         stmt.executeQuery(tableSql)
-
 
         return tableName to stmt
     }
@@ -380,30 +441,6 @@ class PostgresGraphQueryService(
 
 private val idsClause = "${PostgresColumn.ID_VALUE.name} IN ("
 private val entitySetIdsClause = "${PostgresColumn.ENTITY_SET_ID.name} IN ("
-
-
-internal fun buildTemporaryViewSql(
-        tableId: Int,
-        entitySetIds: Set<UUID>,
-        propertyTypeFqns: Map<UUID, String>,
-        propertyTypes: Map<UUID, PropertyType>,
-        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-        propertyTypeFilters:
-): String {
-    val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-            entitySetIds.associateWith { Optional.empty<Set<UUID>>() },
-            propertyTypeFqns,
-            setOf(),
-            authorizedPropertyTypes.mapValues { it.value.keys },
-            propertyTypeFilters,
-            EnumSet.noneOf(MetadataOption::class.java),
-            propertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
-            linking = false,
-            omitEntitySetId = true
-    )
-
-    return "CREATE TEMPORARY VIEW temp_$tableId AS $sql"
-}
 
 const val TTL_MILLIS = 10 * 60 * 1000
 //private val getQuerySql = "SELECT ${QUERY.name} FROM ${GRAPH_QUERIES.name} WHERE ${QUERY_ID.name} = ?"

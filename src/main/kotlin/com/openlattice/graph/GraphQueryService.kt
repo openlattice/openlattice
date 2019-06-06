@@ -38,6 +38,11 @@ interface GraphQueryService {
             authorizedPropertyTypes: Map<UUID, Set<UUID>>
     )
 
+    /**
+     * Looks up the entity sets of a set of entity key ids.
+     * @param ids The entity key ids to lookup
+     * @return Returns a map of entity key id to entity set id.
+     */
     fun getEntitySetForIds(ids: Set<UUID>): Map<UUID, UUID>
 
     fun getEntitySets(entityTypeIds: Optional<Set<UUID>>): List<UUID>
