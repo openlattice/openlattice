@@ -53,32 +53,6 @@ const val RESULT = "/result"
  */
 interface GraphApi {
 
-    @POST(BASE + QUERY)
-    fun submit(query: SimpleGraphQuery): GraphQueryState
-
-    @POST(BASE + QUERY + ID_PATH)
-    fun getQueryState(@Path(ID) queryId: UUID, @Body options: Set<GraphQueryState.Option>): GraphQueryState
-
-    /**
-     * Retrieves the graph query state with any additional options. Equivalent to `getQueryState(queryId, Collections.EMPTY_SET) `
-     */
-    @GET(BASE + QUERY + ID_PATH)
-    fun getQueryState(@Path(ID) queryId: UUID): GraphQueryState
-
-    @GET(BASE + QUERY + ID_PATH + RESULT)
-    fun getResults(queryId: UUID): SubGraph
-
-    /**
-     *
-     * @param ops
-     * @return
-     */
-    fun graphQuery(
-            ops: GraphQuery
-    ): ListMultimap<UUID, SetMultimap<UUID, SetMultimap<UUID, Any>>>  // Entity Key Id -> Property Type Id -> Entity Set Id
-    //That is a list of entities along with properties annotated with which entity set they came from.
-
-
     /**
      * Executes a search for all neighbors of multiple entities of the same entity set that are connected by an
      * association

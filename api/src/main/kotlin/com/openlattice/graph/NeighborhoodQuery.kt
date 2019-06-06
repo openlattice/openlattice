@@ -24,11 +24,14 @@ package com.openlattice.graph
 import java.util.*
 
 /**
- *
+ * @param ids The entity key ids for which to build the neighborhood
+ * @param srcSelections The list of neighborhood selections where the ids are the destination. (src + filter > edge + filter > ids)
+ * @param dstSelections The list of neighborhood selections where the ids are the source. (ids > edge + filter > dst + filter)
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class NeighborhoodQuery(
         val ids: Set<UUID>,
-        val selections: List<NeighborhoodSelection>
+        val srcSelections: List<NeighborhoodSelection>,
+        val dstSelections: List<NeighborhoodSelection>
 )
 
