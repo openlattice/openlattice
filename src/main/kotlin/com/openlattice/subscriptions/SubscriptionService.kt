@@ -2,18 +2,20 @@ package com.openlattice.subscriptions
 
 import com.openlattice.graph.NeighborhoodQuery
 import java.util.*
-import java.util.stream.Stream
 
+/**
+ * This service is for managing Subscriptions on entities
+ */
 interface SubscriptionService {
 
-    fun addSubscription( subscription: NeighborhoodQuery )
+    fun addSubscription( subscription: NeighborhoodQuery ): UUID
 
     fun updateSubscription( subscription: Subscription )
 
     fun deleteSubscription( subId: UUID )
 
-    fun getAllSubscriptions(): Stream<Subscription>
+    fun getAllSubscriptions(): Iterable<Subscription>
 
-    fun getSubscription( subIds: List<UUID> ): Subscription
+    fun getSubscriptions( subIds: List<UUID> ): Iterable<Subscription>
 
 }

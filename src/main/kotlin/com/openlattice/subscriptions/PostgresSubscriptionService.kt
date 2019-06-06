@@ -11,11 +11,12 @@ import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
+import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
-import java.util.stream.Stream
 
 class PostgresSubscriptionService(
         private val hds: HikariDataSource,
@@ -23,15 +24,17 @@ class PostgresSubscriptionService(
         private val byteBlobDataManager: ByteBlobDataManager,
         private val mapper: ObjectMapper
 ) : SubscriptionService {
-    override fun addSubscription(subscription: NeighborhoodQuery) {
+    override fun addSubscription(subscription: NeighborhoodQuery): UUID {
+        val newSubId = UUID.randomUUID()
         hds.connection.use { conn ->
             val ps = conn.prepareStatement(addSubscriptionSQL)
-//            ps.setObject(1, )
+            ps.setObject(1, newSubId)
             ps.setObject(2, PostgresArrays.createUuidArray( conn, subscription.ids ) )
             ps.setObject(3, mapper.writeValueAsString(subscription.incomingSelections))
             ps.setObject(4, mapper.writeValueAsString(subscription.outgoingSelections))
             ps.executeUpdate()
         }
+        return newSubId
     }
 
     override fun updateSubscription(subscription: Subscription) {
@@ -46,27 +49,35 @@ class PostgresSubscriptionService(
         }
     }
 
-    override fun getAllSubscriptions(): Stream<Subscription> {
+    override fun getAllSubscriptions(): Iterable<Subscription> {
+        return execSqlReturningIterable(getAllSubscriptionsSQL,
+            { ps: PreparedStatement, conn: Connection -> ps },
+            { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) })
+    }
+
+    override fun getSubscriptions(subIds: List<UUID>): Iterable<Subscription> {
+        return execSqlReturningIterable(getSubscriptionSQL,
+                { ps: PreparedStatement, conn: Connection ->
+                    val arr = PostgresArrays.createUuidArray( conn, subIds )
+                    ps.setObject(1, arr)
+                    ps
+                },
+                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) })
+    }
+
+    fun <T> execSqlReturningIterable( sql: String, statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement, resultMappingFunc: (rs: ResultSet) -> T) : Iterable<T>{
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
                     connection.autoCommit = false
-                    val ps = connection.prepareStatement(getAllSubscriptionsSQL)
+                    val ps = statementFunction( connection.prepareStatement(sql), connection)
                     val rs = ps.executeQuery()
                     StatementHolder(connection, ps, rs)
                 },
-                Function<ResultSet, Subscription> { rs -> ResultSetAdapters.subscription( rs ) }
-        ).stream()
+                Function<ResultSet, T> { rs -> resultMappingFunc(rs) }
+        )
     }
 
-    override fun getSubscription(subIds: List<UUID>): Subscription {
-        hds.connection.use { conn ->
-            val ps = conn.prepareStatement( getSubscriptionSQL )
-            val arr = PostgresArrays.createUuidArray( conn, subIds )
-            ps.setObject( 1, arr )
-            return ResultSetAdapters.subscription( ps.executeQuery() )
-        }
-    }
 }
 
 private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
