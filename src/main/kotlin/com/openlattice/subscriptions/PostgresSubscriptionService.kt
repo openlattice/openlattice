@@ -51,21 +51,26 @@ class PostgresSubscriptionService(
 
     override fun getAllSubscriptions(): Iterable<Subscription> {
         return execSqlReturningIterable(getAllSubscriptionsSQL,
-            { ps: PreparedStatement, conn: Connection -> ps },
-            { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) })
+                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) }
+        )
     }
 
     override fun getSubscriptions(subIds: List<UUID>): Iterable<Subscription> {
         return execSqlReturningIterable(getSubscriptionSQL,
+                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) },
                 { ps: PreparedStatement, conn: Connection ->
                     val arr = PostgresArrays.createUuidArray( conn, subIds )
                     ps.setObject(1, arr)
                     ps
-                },
-                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) })
+                }
+        )
     }
 
-    fun <T> execSqlReturningIterable( sql: String, statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement, resultMappingFunc: (rs: ResultSet) -> T) : Iterable<T>{
+    fun <T> execSqlReturningIterable(
+            sql: String,
+            resultMappingFunc: (rs: ResultSet) -> T,
+            statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement = { ps: PreparedStatement, conn: Connection -> ps }
+    ) : Iterable<T>{
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
