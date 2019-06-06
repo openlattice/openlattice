@@ -207,16 +207,6 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
 
-    public static final String                   INCOMING_NEIGHBORHOOD_SELECTS_FIELD  = "incoming_neighborhood_selections";
-    public static final PostgresColumnDefinition INCOMING_NEIGHBORHOOD_SELECTS     = new PostgresColumnDefinition(
-            INCOMING_NEIGHBORHOOD_SELECTS_FIELD,
-            JSONB );
-
-    public static final String                   OUTGOING_NEIGHBORHOOD_SELECTS_FIELD  = "outgoing_neighborhood_selections";
-    public static final PostgresColumnDefinition OUTGOING_NEIGHBORHOOD_SELECTS     = new PostgresColumnDefinition(
-            OUTGOING_NEIGHBORHOOD_SELECTS_FIELD,
-            JSONB );
-
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
     public static final PostgresColumnDefinition INDEX_TYPE                        = new PostgresColumnDefinition(
             INDEX_TYPE_FIELD,
@@ -287,6 +277,12 @@ public final class PostgresColumn {
     public static final String                   NAME_SET_FIELD                    = "name_set";
     public static final PostgresColumnDefinition NAME_SET                          =
             new PostgresColumnDefinition( NAME_SET_FIELD, TEXT_ARRAY ).notNull();
+
+    public static final String                   NEIGHBORHOOD_SELECTS_FIELD  = "neighborhood_selections";
+    public static final PostgresColumnDefinition NEIGHBORHOOD_SELECTS     = new PostgresColumnDefinition(
+            NEIGHBORHOOD_SELECTS_FIELD,
+            JSONB );
+
     public static final String                   NEW_VERTEX_ID_FIELD               = "new_vertex_id";
     public static final PostgresColumnDefinition NEW_VERTEX_ID                     =
             new PostgresColumnDefinition( NEW_VERTEX_ID_FIELD, UUID ).notNull();

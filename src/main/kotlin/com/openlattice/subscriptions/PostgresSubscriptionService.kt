@@ -1,8 +1,7 @@
 package com.openlattice.subscriptions
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.data.storage.ByteBlobDataManager
+import com.openlattice.authorization.Principal
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
@@ -20,52 +19,70 @@ import java.util.function.Supplier
 
 class PostgresSubscriptionService(
         private val hds: HikariDataSource,
-        private val authorizationManager: AuthorizationManager,
-        private val byteBlobDataManager: ByteBlobDataManager,
         private val mapper: ObjectMapper
 ) : SubscriptionService {
-    override fun addSubscription(subscription: NeighborhoodQuery): UUID {
-        val newSubId = UUID.randomUUID()
+    override fun addSubscription(subscription: NeighborhoodQuery, user: Principal) {
         hds.connection.use { conn ->
-            val ps = conn.prepareStatement(addSubscriptionSQL)
-            ps.setObject(1, newSubId)
-            ps.setObject(2, PostgresArrays.createUuidArray( conn, subscription.ids ) )
-            ps.setObject(3, mapper.writeValueAsString(subscription.incomingSelections))
-            ps.setObject(4, mapper.writeValueAsString(subscription.outgoingSelections))
-            ps.executeUpdate()
+            subscription.ids.map { ekid ->
+                conn.prepareStatement(addSubscriptionSQL).use {ps ->
+                    ps.setObject(1, user.id)
+                    ps.setObject(2, ekid)
+                    ps.setObject(3, mapper.writeValueAsString(subscription.selections))
+                    ps.executeUpdate()
+                }
+            }
         }
-        return newSubId
     }
 
-    override fun updateSubscription(subscription: Subscription) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun updateSubscription(subscription: NeighborhoodQuery, user: Principal){
+        hds.connection.use { conn ->
+            subscription.ids.map { ekid ->
+                conn.prepareStatement(updateSubscriptionSQL).use {ps ->
+                    ps.setObject(1, subscription.selections)
+                    ps.setObject(2, user.id)
+                    ps.setObject(3, ekid)
+                    ps.executeUpdate()
+                }
+            }
+        }
     }
 
-    override fun deleteSubscription(subId: UUID) {
+    override fun deleteSubscription(ekId: UUID, user: Principal) {
         hds.connection.use { conn ->
             val ps = conn.prepareStatement( deleteSubscriptionSQL )
-            ps.setObject(1, subId )
+            ps.setObject(1, user.id)
+            ps.setObject(2, ekId )
             ps.executeUpdate()
         }
     }
 
-    override fun getAllSubscriptions(): Iterable<Subscription> {
-        return execSqlReturningIterable(getAllSubscriptionsSQL,
-            { ps: PreparedStatement, conn: Connection -> ps },
-            { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) })
-    }
-
-    override fun getSubscriptions(subIds: List<UUID>): Iterable<Subscription> {
-        return execSqlReturningIterable(getSubscriptionSQL,
+    override fun getAllSubscriptions(user: Principal): Iterable<NeighborhoodQuery> {
+        return execSqlSelectReturningIterable(getAllSubscriptionsSQL,
+                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) },
                 { ps: PreparedStatement, conn: Connection ->
-                    val arr = PostgresArrays.createUuidArray( conn, subIds )
-                    ps.setObject(1, arr)
+                    ps.setObject(1, user.id)
                     ps
-                },
-                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) })
+                }
+        )
     }
 
-    fun <T> execSqlReturningIterable( sql: String, statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement, resultMappingFunc: (rs: ResultSet) -> T) : Iterable<T>{
+    override fun getSubscriptions(ekIds: List<UUID>, user: Principal): Iterable<NeighborhoodQuery> {
+        return execSqlSelectReturningIterable(getSubscriptionSQL,
+                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) },
+                { ps: PreparedStatement, conn: Connection ->
+                    val arr = PostgresArrays.createUuidArray( conn, ekIds )
+                    ps.setObject(1, user.id)
+                    ps.setObject(2, arr)
+                    ps
+                }
+        )
+    }
+
+    fun <T> execSqlSelectReturningIterable(
+            sql: String,
+            resultMappingFunc: (rs: ResultSet) -> T,
+            statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement = { ps: PreparedStatement, conn: Connection -> ps }
+    ) : Iterable<T>{
         return PostgresIterable(
                 Supplier {
                     val connection = hds.connection
@@ -77,13 +94,12 @@ class PostgresSubscriptionService(
                 Function<ResultSet, T> { rs -> resultMappingFunc(rs) }
         )
     }
-
 }
 
 private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
-        "(${ID.name}, ${ENTITY_KEY_IDS.name}, ${INCOMING_NEIGHBORHOOD_SELECTS.name}, ${OUTGOING_NEIGHBORHOOD_SELECTS.name})" +
-        " VALUES (?,?,?,?)"
-private val updateSubscriptionSQL = ""
-private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ?"
-private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ANY(?)"
-private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name}"
+        "(${PRINCIPAL_ID.name}, ${ID.name}, ${NEIGHBORHOOD_SELECTS.name})" +
+        " VALUES (?::uuid,?,?)"
+private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${NEIGHBORHOOD_SELECTS.name} = ?, WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
+private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
+private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
+private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ?"

@@ -1,5 +1,6 @@
 package com.openlattice.subscriptions
 
+import com.openlattice.authorization.Principal
 import com.openlattice.graph.NeighborhoodQuery
 import java.util.*
 
@@ -8,14 +9,13 @@ import java.util.*
  */
 interface SubscriptionService {
 
-    fun addSubscription( subscription: NeighborhoodQuery ): UUID
+    fun addSubscription( subscription: NeighborhoodQuery, user: Principal )
 
-    fun updateSubscription( subscription: Subscription )
+    fun updateSubscription( subscription: NeighborhoodQuery, user: Principal )
 
-    fun deleteSubscription( subId: UUID )
+    fun deleteSubscription( ekId: UUID, user: Principal )
 
-    fun getAllSubscriptions(): Iterable<Subscription>
+    fun getAllSubscriptions( user: Principal): Iterable<NeighborhoodQuery>
 
-    fun getSubscriptions( subIds: List<UUID> ): Iterable<Subscription>
-
+    fun getSubscriptions( ekIds: List<UUID>, user: Principal ): Iterable<NeighborhoodQuery>
 }
