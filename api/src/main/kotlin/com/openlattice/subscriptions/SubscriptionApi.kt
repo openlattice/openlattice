@@ -63,12 +63,12 @@ interface SubscriptionApi {
      * Returns all subscriptions
      */
     @GET(BASE)
-    fun getAllSubscriptions(): Iterable<NeighborhoodQuery>
+    fun getAllSubscriptions(): Iterable<Subscription>
 
     /**
      * Returns subscription information for provided subscription ids
      */
     @GET(BASE)
-    fun getSubscriptions(@Query(SUB_IDS) subscriptionIds: List<UUID>): Iterable<NeighborhoodQuery>
+    fun getSubscriptions(@Query(SUB_IDS) subscriptionIds: List<UUID>): Iterable<Subscription>
 
 }
