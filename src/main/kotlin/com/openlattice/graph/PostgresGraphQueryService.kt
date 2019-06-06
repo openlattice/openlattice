@@ -27,6 +27,8 @@ import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.EntitySet
+import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
 import com.openlattice.graph.query.ResultSummary
@@ -36,6 +38,7 @@ import com.openlattice.postgres.PostgresTable.EDGES
 import com.openlattice.postgres.PostgresTable.GRAPH_QUERIES
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
+import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.security.InvalidParameterException
 import java.util.*
 
@@ -50,24 +53,25 @@ class PostgresGraphQueryService(
         private val byteBlobDataManager: ByteBlobDataManager,
         private val mapper: ObjectMapper
 ) : GraphQueryService {
-    override fun submitQuery(query: NeighborhoodQuery) {
-
+    override fun submitQuery(query: NeighborhoodQuery, authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>) {
+        val selectionIndexes = mutableMapOf<NeighborhoodSelection, Int>()
         /*
          * While it would be more efficient to group by entity set type and query all at once, filters can vary
          * by element so instead we
          *
          * (1) Create an unlogged table that's trimmed down to the relevant edges.
-         * (2) For each neighborhood selection we suffer
+         * (2) For each neighborhood selection we build out the intermediate join tables
+         * (3) Inner join intermediate join tables on initial pool of ids
          *
          * We can join to table :)
          *
          */
 
         // Join A to B
-        // We need a mechanism for building out the queries and the inner join is easiest to implement sucks
+        // How do you achieve computing intersections that matter
         val connection = hds.connection
 
-        query.incomingSelections.forEach {
+        query.selections.forEach {
 
         }
 
@@ -76,14 +80,7 @@ class PostgresGraphQueryService(
 
     override fun getQuery(queryId: UUID): GraphQuery {
         TODO("hackathon")
-//        val conn = hds.connection
-//        conn.use {
-//            val ps = conn.prepareStatement(getQuerySql)
-//            ps.setObject(1, queryId)
-//            val rs = ps.executeQuery()
-//            val json = rs.getString(QUERY.name)
-//            return mapper.readValue(json, GraphQuery::class.java)
-//        }
+
     }
 
     override fun getQueryState(queryId: UUID, options: Set<GraphQueryState.Option>): GraphQueryState {
@@ -121,21 +118,7 @@ class PostgresGraphQueryService(
 
     private fun saveQuery(queryId: UUID, query: GraphQuery): Long {
         TODO("hackathon")
-//        val startTime = System.currentTimeMillis()
-//        val queryJson = mapper.writeValueAsString(query);
-//        val conn = hds.connection
-//
-//        conn.use {
-//            val ps = conn.prepareStatement(insertGraphQuery)
-//            ps.setObject(1, queryId)
-//            ps.setString(2, queryJson)
-//            ps.setString(3, GraphQueryState.State.RUNNING.name)
-//            ps.setLong(4, startTime)
-//            //TODO: Consider checking to make sure value was inserted.
-//            ps.executeUpdate()
-//        }
-//
-//        return startTime
+
     }
 
 
@@ -172,39 +155,108 @@ class PostgresGraphQueryService(
     private fun discard(queryId: UUID, clauseIds: List<Int>) {
 
     }
+
+    private fun buildSrcJoinSql(
+            incomingEntitySetIds: Set<UUID>,
+            outgoingEntitySetIds: Set<UUID>,
+            associationEntitySetIds: Set<UUID>
+    ): String {
+        val idsClause = "${EDGE_COMP_1.name} = ANY(?)"
+
+        val srcEntitySetIdsClause = if (incomingEntitySetIds.isEmpty()) {
+            ""
+        } else {
+            " AND ${SRC_ENTITY_SET_ID.name} IN (" + incomingEntitySetIds.joinToString(",") { id -> "'$id'" } + ")"
+        }
+
+        val edgeEntitySetIdsClause = if (associationEntitySetIds.isEmpty()) {
+            ""
+        } else {
+            " AND ${EDGE_ENTITY_SET_ID.name} IN (" + associationEntitySetIds.joinToString(",") { id -> "'$id'" } + ")"
+        }
+
+        //For this there is no dstEntitySet clause since the target is self.
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $srcEntitySetIdsClause AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
+    }
+
+    private fun buildDstJoinSql(
+            incomingEntitySetIds: Set<UUID>,
+            outgoingEntitySetIds: Set<UUID>,
+            associationEntitySetIds: Set<UUID>
+    ): String {
+        val idsClause = "${EDGE_COMP_2.name} = ANY(?)"
+
+        val dstEntitySetIdsClause = if (outgoingEntitySetIds.isEmpty()) {
+            ""
+        } else {
+            " AND ${DST_ENTITY_SET_ID.name} = (" + outgoingEntitySetIds.joinToString(",") { id -> "'$id'" } + ")"
+        }
+
+        val edgeEntitySetIdsClause = if (associationEntitySetIds.isEmpty()) {
+            ""
+        } else {
+            " AND ${EDGE_COMP_2.name} IN (" + associationEntitySetIds.joinToString(",") { id -> "'$id'" } + ")"
+        }
+        
+
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
+    }
+
+    private fun buildEdgeJoinSql(
+            incomingEntitySetIds: Set<UUID>,
+            outgoingEntitySetIds: Set<UUID>,
+            associationEntitySetIds: Set<UUID>
+    ): String {
+        val idsClause = "${EDGE_COMP_1.name} = ANY(?) OR ${EDGE_COMP_2.name} = ANY(?)"
+        val edgeEntitySetIdsClause = if (associationEntitySetIds.isEmpty()) {
+            ""
+        } else {
+            " AND ${SRC_ENTITY_SET_ID.name} IN (" + associationEntitySetIds.joinToString(",") { id -> "'$id'" } + ")"
+        }
+
+        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $edgeEntitySetIdsClause AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
+    }
+
+    private fun buildWithClause(selection: NeighborhoodSelection): String {
+        val incomingEntitySetIds = selection.incomingEntitySetIds.orElse(emptySet()) +
+                getEntitySets((selection.incomingEntityTypeIds))
+        val outgoingEntitySetIds = selection.outgingEntitySetIds.orElse(emptySet()) +
+                getEntitySets(selection.outgingEntityTypeIds)
+    }
+
+
+    private fun getEntitySets(entityTypeIds: Optional<Set<UUID>>): List<UUID> {
+        return entityTypeIds
+                .map(edm::getEntitySetsOfType)
+                .orElseGet { emptyList() }
+                .map(EntitySet::getId)
+    }
 }
 
 private val idsClause = "${PostgresColumn.ID_VALUE.name} IN ("
 private val entitySetIdsClause = "${PostgresColumn.ENTITY_SET_ID.name} IN ("
 
-internal fun createTemporaryTableSql( entitySetIds : Set<UUID> ) :String {
+internal fun createTemporaryTableSql(
+        tableId: Int,
+        entitySetIds: Set<UUID>,
+        propertyTypeFqns: Map<UUID, String>,
+        propertyTypes: Map<UUID, PropertyType>,
+        authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+        propertyTypeFilters:
+): String {
     val sql = selectEntitySetWithCurrentVersionOfPropertyTypes(
-            entitySetIds.associate { Optional.empty<>() },
+            entitySetIds.associateWith { Optional.empty<Set<UUID>>() },
             propertyTypeFqns,
             setOf(),
-            authorizedPropertyTypes,
+            authorizedPropertyTypes.mapValues { it.value.keys },
             propertyTypeFilters,
             EnumSet.noneOf(MetadataOption::class.java),
-
+            propertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
+            linking = false,
+            omitEntitySetId = true
     )
-return "CREATE TEMPORARY VIEW AS "
-}
-internal fun buildIncomingFragmentSql( neighborhoodSelection: NeighborhoodSelection ) : String {
-    neighborhoodSelection.
-    "SELECT * FROM ${EDGES.name} WHERE $DST_ENTITY_SET_ID = ANY(?) AND "
-}
 
-internal fun buildEdgesFragmentSql(maybeIds: Optional<Set<UUID>>, maybeEntitySetIds: Optional<Set<UUID>>): String {
-
-    val nonEmptyClauses = listOf(
-            maybeIds.map { ids -> idsClause + ids.joinToString(",") { id -> "'$id'" } + ")" }.orElse(""),
-            maybeEntitySetIds.map { ids -> entitySetIdsClause + ids.joinToString(",") { id -> "'$id'" } }.orElse("")
-    ).filter { it.isNotBlank() }
-
-
-    check(nonEmptyClauses.isEmpty()) { "Ids or entity set ids must be specified." }
-
-    return "SELECT * FROM ${EDGES.name} = " + nonEmptyClauses.joinToString(" AND ")
+    return "CREATE TEMPORARY VIEW temp_$tableId AS $sql"
 }
 
 const val TTL_MILLIS = 10 * 60 * 1000
