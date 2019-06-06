@@ -34,10 +34,9 @@ interface SubscriptionApi {
         const val CONTROLLER = "/subscriptions"
         const val BASE = SERVICE + CONTROLLER
 
-        const val SUB_ID = "subscriptionId"
-        const val SUB_ID_PATH = "/{$SUB_ID}"
-
-        const val SUB_IDS = "subscriptionIds"
+        const val ENTITY_KEY_IDS = "entityKeyIds"
+        const val ENTITY_KEY_ID = "entityKeyId"
+        const val ENTITY_KEY_ID_PATH = "/{$ENTITY_KEY_ID}"
     }
 
     /**
@@ -49,26 +48,25 @@ interface SubscriptionApi {
     /**
      * Updates a subscription
      */
-    @POST(BASE + SUB_ID_PATH)
-    fun updateSubscription(@Path(SUB_ID) subscriptionId: UUID,
-                           @Body subscription: NeighborhoodQuery): UUID
+    @POST(BASE + ENTITY_KEY_ID_PATH)
+    fun updateSubscription( @Body subscription: NeighborhoodQuery ): UUID
 
     /**
      * Removes a subscription
      */
-    @DELETE(BASE + SUB_ID_PATH)
-    fun deleteSubscription(@Path(SUB_ID) subscriptionId: UUID)
+    @DELETE(BASE + ENTITY_KEY_ID_PATH)
+    fun deleteSubscription(@Path(ENTITY_KEY_ID) subscriptionId: UUID)
 
     /**
      * Returns all subscriptions
      */
     @GET(BASE)
-    fun getAllSubscriptions(): Iterable<Subscription>
+    fun getAllSubscriptions(): Iterable<NeighborhoodQuery>
 
     /**
      * Returns subscription information for provided subscription ids
      */
     @GET(BASE)
-    fun getSubscriptions(@Query(SUB_IDS) subscriptionIds: List<UUID>): Iterable<Subscription>
+    fun getSubscriptions(@Query(ENTITY_KEY_IDS) entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery>
 
 }
