@@ -13,9 +13,9 @@ interface SubscriptionService {
 
     fun updateSubscription( subscription: NeighborhoodQuery, user: Principal )
 
-    fun deleteSubscription( subId: UUID, user: Principal )
+    fun deleteSubscription( ekId: UUID, user: Principal )
 
     fun getAllSubscriptions( user: Principal): Iterable<NeighborhoodQuery>
 
-    fun getSubscriptions( subIds: List<UUID>, user: Principal ): Iterable<NeighborhoodQuery>
+    fun getSubscriptions( ekIds: List<UUID>, user: Principal ): Iterable<NeighborhoodQuery>
 }

@@ -23,44 +23,56 @@ class PostgresSubscriptionService(
 ) : SubscriptionService {
     override fun addSubscription(subscription: NeighborhoodQuery, user: Principal) {
         hds.connection.use { conn ->
-            val ps = conn.prepareStatement(addSubscriptionSQL)
-            ps.setObject(1, )
-            ps.setObject(2, user)
-            ps.setObject(3, mapper.writeValueAsString(subscription.selections))
-            ps.executeUpdate()
+            subscription.ids.map { ekid ->
+                conn.prepareStatement(addSubscriptionSQL).use {ps ->
+                    ps.setObject(1, user.id)
+                    ps.setObject(2, ekid)
+                    ps.setObject(3, mapper.writeValueAsString(subscription.selections))
+                    ps.executeUpdate()
+                }
+            }
         }
-        return newSubId
     }
 
     override fun updateSubscription(subscription: NeighborhoodQuery, user: Principal){
         hds.connection.use { conn ->
-            val ps = conn.prepareStatement(updateSubscriptionSQL)
-            ps.setObject(1, user)
-            ps.setObject(2, subscription.selections)
-            ps.executeUpdate()
+            subscription.ids.map { ekid ->
+                conn.prepareStatement(updateSubscriptionSQL).use {ps ->
+                    ps.setObject(1, subscription.selections)
+                    ps.setObject(2, user.id)
+                    ps.setObject(3, ekid)
+                    ps.executeUpdate()
+                }
+            }
         }
     }
 
-    override fun deleteSubscription(subId: UUID, user: Principal) {
+    override fun deleteSubscription(ekId: UUID, user: Principal) {
         hds.connection.use { conn ->
             val ps = conn.prepareStatement( deleteSubscriptionSQL )
-            ps.setObject(1, subId )
+            ps.setObject(1, user.id)
+            ps.setObject(2, ekId )
             ps.executeUpdate()
         }
     }
 
     override fun getAllSubscriptions(user: Principal): Iterable<NeighborhoodQuery> {
         return execSqlSelectReturningIterable(getAllSubscriptionsSQL,
-                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) }
+                { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) },
+                { ps: PreparedStatement, conn: Connection ->
+                    ps.setObject(1, user.id)
+                    ps
+                }
         )
     }
 
-    override fun getSubscriptions(subIds: List<UUID>, user: Principal): Iterable<NeighborhoodQuery> {
+    override fun getSubscriptions(ekIds: List<UUID>, user: Principal): Iterable<NeighborhoodQuery> {
         return execSqlSelectReturningIterable(getSubscriptionSQL,
                 { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) },
                 { ps: PreparedStatement, conn: Connection ->
-                    val arr = PostgresArrays.createUuidArray( conn, subIds )
-                    ps.setObject(1, arr)
+                    val arr = PostgresArrays.createUuidArray( conn, ekIds )
+                    ps.setObject(1, user.id)
+                    ps.setObject(2, arr)
                     ps
                 }
         )
@@ -85,9 +97,9 @@ class PostgresSubscriptionService(
 }
 
 private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
-        "(${ID.name}, ${PRINCIPAL_ID.name}, ${NEIGHBORHOOD_SELECTS.name})" +
-        " VALUES (?,?,?)"
-private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${NEIGHBORHOOD_SELECTS.name} = ?, WHERE ${ID.name} = ?"
-private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ?"
-private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ANY(?)"
-private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name}"
+        "(${PRINCIPAL_ID.name}, ${ID.name}, ${NEIGHBORHOOD_SELECTS.name})" +
+        " VALUES (?::uuid,?,?)"
+private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${NEIGHBORHOOD_SELECTS.name} = ?, WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
+private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
+private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
+private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ?"
