@@ -206,6 +206,17 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
+
+    public static final String                   INCOMING_NEIGHBORHOOD_SELECTS_FIELD  = "incoming_neighborhood_selections";
+    public static final PostgresColumnDefinition INCOMING_NEIGHBORHOOD_SELECTS     = new PostgresColumnDefinition(
+            INCOMING_NEIGHBORHOOD_SELECTS_FIELD,
+            JSONB );
+
+    public static final String                   OUTGOING_NEIGHBORHOOD_SELECTS_FIELD  = "outgoing_neighborhood_selections";
+    public static final PostgresColumnDefinition OUTGOING_NEIGHBORHOOD_SELECTS     = new PostgresColumnDefinition(
+            OUTGOING_NEIGHBORHOOD_SELECTS_FIELD,
+            JSONB );
+
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
     public static final PostgresColumnDefinition INDEX_TYPE                        = new PostgresColumnDefinition(
             INDEX_TYPE_FIELD,

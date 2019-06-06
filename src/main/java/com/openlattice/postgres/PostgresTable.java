@@ -20,12 +20,12 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.DataTables.*;
-import static com.openlattice.postgres.PostgresColumn.*;
-
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;
+
+import static com.openlattice.postgres.DataTables.*;
+import static com.openlattice.postgres.PostgresColumn.*;
 
 /**
  * Tables definitions for all tables used in the OpenLattice platform.
@@ -294,6 +294,14 @@ public final class PostgresTable {
             new PostgresTableDefinition( "securable_objects" )
                     .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
                     .primaryKey( ACL_KEY );
+    public static final PostgresTableDefinition SUBSCRIPTIONS            =
+            new PostgresTableDefinition( "subscriptions" )
+                    .addColumns( ID,
+                            ENTITY_KEY_IDS,
+                            INCOMING_NEIGHBORHOOD_SELECTS,
+                            OUTGOING_NEIGHBORHOOD_SELECTS)
+                    .primaryKey( ID );
+
     public static final PostgresTableDefinition SYNC_IDS                 =
             new CitusDistributedTableDefinition( "sync_ids" )
                     .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
