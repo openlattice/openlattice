@@ -32,7 +32,7 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.POST])
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
     override fun updateSubscription( @RequestBody subscription: NeighborhoodQuery) {
         subscriptionService.updateSubscription( subscription, Principals.getCurrentUser())
     }
