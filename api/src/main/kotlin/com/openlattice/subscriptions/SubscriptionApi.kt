@@ -43,13 +43,13 @@ interface SubscriptionApi {
      * Creates a subscription
      */
     @PUT(BASE)
-    fun addSubscription(@Body subscription: NeighborhoodQuery): UUID
+    fun addSubscription(@Body subscription: NeighborhoodQuery)
 
     /**
      * Updates a subscription
      */
     @POST(BASE + ENTITY_KEY_ID_PATH)
-    fun updateSubscription( @Body subscription: NeighborhoodQuery ): UUID
+    fun updateSubscription( @Body subscription: NeighborhoodQuery )
 
     /**
      * Removes a subscription
