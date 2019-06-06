@@ -310,28 +310,12 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions,
             Set<Principal> principals ) {
-        final var entitySets = edm.getEntitySetsAsMap( entitySetIds ).values();
-
-        final var groupedEntitySets = entitySets.stream()
-                .collect( Collectors.groupingBy( EntitySet::isLinking ) );
-
-        final Map<UUID, Map<UUID, PropertyType>> authorizedPropertyTypesByEntitySet =
-                getAuthorizedPropertiesOnNormalEntitySets(
-                        groupedEntitySets.getOrDefault( false, Lists.newArrayList() ).stream()
-                                .map( EntitySet::getId ).collect( Collectors.toSet() ),
-                        requiredPermissions,
-                        principals );
-
-        groupedEntitySets.getOrDefault( true, Lists.newArrayList() ).forEach( linkingEntitySet -> {
-                    final var linkingEntitySetId = linkingEntitySet.getId();
-                    // authorized properties should be the same within 1 linking entity set for each normal entity set
-                    authorizedPropertyTypesByEntitySet.put(
-                            linkingEntitySetId,
-                            getAuthorizedPropertyTypes( linkingEntitySetId, requiredPermissions, principals ) );
-                }
-        );
-
-        return authorizedPropertyTypesByEntitySet;
+        return ( entitySetIds.isEmpty() )
+                ? Maps.newHashMap()
+                : entitySetIds.stream().collect( Collectors.toMap(
+                Function.identity(),
+                entitySetId -> getAuthorizedPropertyTypes( entitySetId, requiredPermissions, principals )
+        ) );
     }
 
     public Set<UUID> getAuthorizedEntitySetsForPrincipals(
