@@ -175,8 +175,8 @@ public final class ResultSetAdapters {
     }
 
     public static NeighborhoodQuery subscription( ResultSet rs ) throws SQLException, IOException {
-        UUID subscriptionId = rs.getObject( ID.getName(), UUID.class );
-        LinkedHashSet<UUID> ekIds = linkedHashSetUUID( rs, ENTITY_KEY_IDS.getName() );
+        LinkedHashSet<UUID> ekIds = new LinkedHashSet<>(1);
+        ekIds.add( rs.getObject( ID_VALUE.getName(), UUID.class) );
         List<NeighborhoodSelection> srcSelections = Arrays.asList( neighborhoodSelections( rs, SRC_SELECTS.getName() ) );
         List<NeighborhoodSelection> dstSelections = Arrays.asList( neighborhoodSelections( rs, DST_SELECTS.getName() ) );
         return  new NeighborhoodQuery( ekIds , srcSelections, dstSelections);
