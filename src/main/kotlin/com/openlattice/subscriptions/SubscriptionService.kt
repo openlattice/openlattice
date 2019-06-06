@@ -10,7 +10,7 @@ interface SubscriptionService {
 
     fun addSubscription( subscription: NeighborhoodQuery ): UUID
 
-    fun updateSubscription( subscription: Subscription )
+    fun updateSubscription( subscription: Subscription ): UUID
 
     fun deleteSubscription( subId: UUID )
 

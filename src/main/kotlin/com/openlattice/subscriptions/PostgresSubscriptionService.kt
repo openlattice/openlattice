@@ -1,8 +1,6 @@
 package com.openlattice.subscriptions
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
@@ -20,8 +18,6 @@ import java.util.function.Supplier
 
 class PostgresSubscriptionService(
         private val hds: HikariDataSource,
-        private val authorizationManager: AuthorizationManager,
-        private val byteBlobDataManager: ByteBlobDataManager,
         private val mapper: ObjectMapper
 ) : SubscriptionService {
     override fun addSubscription(subscription: NeighborhoodQuery): UUID {
@@ -37,8 +33,16 @@ class PostgresSubscriptionService(
         return newSubId
     }
 
-    override fun updateSubscription(subscription: Subscription) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun updateSubscription(subscription: Subscription): UUID {
+        hds.connection.use { conn ->
+            val ps = conn.prepareStatement(updateSubscriptionSQL)
+            ps.setObject(1, subscription.query.ids)
+            ps.setObject(2, subscription.query.incomingSelections)
+            ps.setObject(3, subscription.query.outgoingSelections)
+            ps.setObject(4, subscription.id)
+            ps.executeUpdate()
+        }
+        return subscription.id
     }
 
     override fun deleteSubscription(subId: UUID) {
@@ -82,13 +86,12 @@ class PostgresSubscriptionService(
                 Function<ResultSet, T> { rs -> resultMappingFunc(rs) }
         )
     }
-
 }
 
 private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
         "(${ID.name}, ${ENTITY_KEY_IDS.name}, ${INCOMING_NEIGHBORHOOD_SELECTS.name}, ${OUTGOING_NEIGHBORHOOD_SELECTS.name})" +
         " VALUES (?,?,?,?)"
-private val updateSubscriptionSQL = ""
+private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${ENTITY_KEY_IDS.name} = ?, ${INCOMING_NEIGHBORHOOD_SELECTS.name} = ?, ${OUTGOING_NEIGHBORHOOD_SELECTS.name} = ? WHERE ${ID.name} = ?"
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ANY(?)"
 private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name}"
