@@ -46,6 +46,8 @@ import com.openlattice.edm.type.AssociationType;
 import com.openlattice.edm.type.EntityType;
 import com.openlattice.edm.type.PropertyType;
 import com.openlattice.graph.ComponentType;
+import com.openlattice.graph.NeighborhoodQuery;
+import com.openlattice.graph.NeighborhoodSelection;
 import com.openlattice.graph.edge.Edge;
 import com.openlattice.graph.query.GraphQueryState;
 import com.openlattice.graph.query.GraphQueryState.State;
@@ -61,6 +63,7 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.subscriptions.Subscription;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -74,6 +77,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.Base64.Decoder;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -159,7 +163,28 @@ public final class ResultSetAdapters {
         return ImmutableSet.copyOf( PostgresArrays.getUuidArray( rs, LINKING_ID.getName() ) );
     }
 
-    public static Edge edge( ResultSet rs ) throws SQLException {
+    public static NeighborhoodSelection neighborhoodSelection(ResultSet rs, String colName )
+            throws SQLException, IOException {
+        String neighborhoodSelectionJson = rs.getString( colName );
+        return mapper.readValue( neighborhoodSelectionJson , NeighborhoodSelection.class );
+    }
+
+    public static NeighborhoodSelection[] neighborhoodSelections(ResultSet rs, String colName )
+            throws SQLException, IOException {
+        String neighborhoodSelectionJson = rs.getString( colName );
+        return mapper.readValue( neighborhoodSelectionJson , NeighborhoodSelection[].class );
+    }
+
+    public static Subscription subscription( ResultSet rs ) throws SQLException, IOException {
+        UUID subscriptionId = rs.getObject( ID.getName(), UUID.class );
+        LinkedHashSet<UUID> ekIds = linkedHashSetUUID( rs, ENTITY_KEY_IDS.getName() );
+        Set<NeighborhoodSelection> incomingSelections = new LinkedHashSet<>( Arrays.asList( neighborhoodSelections( rs, INCOMING_NEIGHBORHOOD_SELECTS.getName() ) ) );
+        Set<NeighborhoodSelection> outgoingSelections = new LinkedHashSet<>( Arrays.asList( neighborhoodSelections( rs, OUTGOING_NEIGHBORHOOD_SELECTS.getName() ) ) );
+        NeighborhoodQuery query = new NeighborhoodQuery( ekIds , incomingSelections, outgoingSelections);
+        return new Subscription( subscriptionId, query );
+    }
+
+   public static Edge edge( ResultSet rs ) throws SQLException {
         DataEdgeKey key = edgeKey( rs );
         long version = rs.getLong( VERSION.getName() );
         List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
@@ -359,6 +384,11 @@ public final class ResultSetAdapters {
         AclKey aclKey = aclKey( rs );
         Principal principal = principal( rs );
         return new AceKey( aclKey, principal );
+    }
+
+    public static <R> LinkedHashSet<R> linkedHashSetOfType( ResultSet rs, String colName, Function<Object, R[]> arrayCastFunction ) throws SQLException {
+        return Arrays.stream( arrayCastFunction.apply( rs.getArray( colName ).getArray() ) )
+                .collect( Collectors.toCollection( LinkedHashSet::new ));
     }
 
     public static LinkedHashSet<UUID> linkedHashSetUUID( ResultSet rs, String colName ) throws SQLException {
