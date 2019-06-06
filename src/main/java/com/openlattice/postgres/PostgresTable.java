@@ -298,7 +298,8 @@ public final class PostgresTable {
             new PostgresTableDefinition( "subscriptions" )
                     .addColumns( ID_VALUE,
                             PRINCIPAL_ID,
-                            NEIGHBORHOOD_SELECTS)
+                            SRC_SELECTS,
+                            DST_SELECTS)
                     .primaryKey( ID, PRINCIPAL_ID );
 
 
