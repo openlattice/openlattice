@@ -23,14 +23,14 @@ constructor(
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.PUT])
-    override fun addSubscription(@RequestBody subscription: NeighborhoodQuery): UUID {
-        return subscriptionService.addSubscription( subscription, Principals.getCurrentUser())
+    override fun addSubscription(@RequestBody subscription: NeighborhoodQuery) {
+        subscriptionService.addSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.POST])
-    override fun updateSubscription( @RequestBody subscription: NeighborhoodQuery): UUID {
-        return subscriptionService.updateSubscription( subscription, Principals.getCurrentUser())
+    override fun updateSubscription( @RequestBody subscription: NeighborhoodQuery) {
+        subscriptionService.updateSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
@@ -49,7 +49,7 @@ constructor(
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
     override fun getSubscriptions(
             @RequestParam(SubscriptionApi.ENTITY_KEY_IDS) entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery> {
-        return subscriptionService.getSubscriptions(subscriptionIds, Principals.getCurrentUser())
+        return subscriptionService.getSubscriptions(entityKeyIds, Principals.getCurrentUser())
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
