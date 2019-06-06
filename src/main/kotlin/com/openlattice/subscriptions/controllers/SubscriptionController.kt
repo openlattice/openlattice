@@ -4,8 +4,10 @@ package com.openlattice.subscriptions.controllers
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
+import com.openlattice.authorization.Principals
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.subscriptions.SubscriptionApi
+import com.openlattice.subscriptions.SubscriptionService
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
@@ -15,39 +17,39 @@ import javax.inject.Inject
 class SubscriptionController
 @Inject
 constructor(
-        private val authorizationManager: AuthorizationManager
+        private val authorizationManager: AuthorizationManager,
+        private val subscriptionService: SubscriptionService
 ) : SubscriptionApi, AuthorizingComponent {
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.PUT])
-    override fun addSubscription(@RequestBody subscription: NeighborhoodQuery): UUID {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun addSubscription(@RequestBody subscription: NeighborhoodQuery) {
+        subscriptionService.addSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.SUB_ID_PATH], method = [RequestMethod.POST])
-    override fun updateSubscription(@PathVariable(SubscriptionApi.SUB_ID) subscriptionId: UUID,
-                                    @RequestBody subscription: NeighborhoodQuery): UUID {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.POST])
+    override fun updateSubscription( @RequestBody subscription: NeighborhoodQuery) {
+        subscriptionService.updateSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.SUB_ID_PATH], method = [RequestMethod.DELETE])
-    override fun deleteSubscription(@PathVariable(SubscriptionApi.SUB_ID) subscriptionId: UUID) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.DELETE])
+    override fun deleteSubscription(@PathVariable(SubscriptionApi.ENTITY_KEY_ID) subscriptionId: UUID) {
+        subscriptionService.deleteSubscription( subscriptionId, Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
+    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ALL], method = [RequestMethod.GET])
     override fun getAllSubscriptions(): Iterable<NeighborhoodQuery> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return subscriptionService.getAllSubscriptions(Principals.getCurrentUser())
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
     override fun getSubscriptions(
-            @RequestParam(SubscriptionApi.SUB_IDS) subscriptionIds: List<UUID>): Iterable<NeighborhoodQuery> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            @RequestParam(SubscriptionApi.ENTITY_KEY_IDS) entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery> {
+        return subscriptionService.getSubscriptions(entityKeyIds, Principals.getCurrentUser())
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

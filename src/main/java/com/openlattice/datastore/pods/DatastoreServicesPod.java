@@ -74,6 +74,8 @@ import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
+import com.openlattice.subscriptions.PostgresSubscriptionService;
+import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
 import com.zaxxer.hikari.HikariDataSource;
@@ -151,6 +153,14 @@ public class DatastoreServicesPod {
                 dataModelService(),
                 authorizationManager(),
                 byteBlobDataManager,
+                defaultObjectMapper()
+        );
+    }
+
+    @Bean
+    public SubscriptionService subscriptionService() {
+        return new PostgresSubscriptionService(
+                hikariDataSource,
                 defaultObjectMapper()
         );
     }
