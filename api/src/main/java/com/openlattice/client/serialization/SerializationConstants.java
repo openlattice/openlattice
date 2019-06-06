@@ -62,6 +62,7 @@ public final class SerializationConstants {
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
     public static final String BLOCK_ID                         = "blockId";
+    public static final String CALCULATIONS                     = "calculations";
     public static final String CATEGORY                         = "category";
     public static final String CHILD_CLAUSES                    = "childClauses";
     public static final String CHILD_QUERIES                    = "childQueries";
