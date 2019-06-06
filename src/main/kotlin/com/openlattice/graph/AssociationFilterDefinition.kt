@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,24 +21,15 @@
 
 package com.openlattice.graph
 
-import com.openlattice.edm.type.PropertyType
-import com.openlattice.graph.query.GraphQuery
-import com.openlattice.graph.query.GraphQueryState
-import com.openlattice.graph.query.GraphQueryState.Option
+import com.openlattice.analysis.requests.Filter
 import java.util.*
 
 /**
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-interface GraphQueryService {
-    fun submitQuery(
-            query: NeighborhoodQuery,
-            propertyTypes: Map<UUID, PropertyType>,
-            authorizedPropertyTypes: Map<UUID, Set<UUID>>
-    )
-
-    fun getEntitySetForIds(ids: Set<UUID>): Map<UUID, UUID>
-
-    fun getEntitySets(entityTypeIds: Optional<Set<UUID>>): List<UUID>
-}
+data class AssociationFilterDefinition(
+        val entityTypeId: UUID,
+        val entitySetIds: Set<UUID>,
+        val filters: Map<UUID, Set<Filter>>
+)
