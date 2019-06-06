@@ -4,8 +4,8 @@ package com.openlattice.subscriptions.controllers
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
+import com.openlattice.authorization.Principals
 import com.openlattice.graph.NeighborhoodQuery
-import com.openlattice.subscriptions.Subscription
 import com.openlattice.subscriptions.SubscriptionApi
 import com.openlattice.subscriptions.SubscriptionService
 import org.springframework.web.bind.annotation.*
@@ -24,33 +24,32 @@ constructor(
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.PUT])
     override fun addSubscription(@RequestBody subscription: NeighborhoodQuery): UUID {
-        return subscriptionService.addSubscription( subscription )
+        return subscriptionService.addSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.SUB_ID_PATH], method = [RequestMethod.POST])
-    override fun updateSubscription(@PathVariable(SubscriptionApi.SUB_ID) subscriptionId: UUID,
-                                    @RequestBody subscription: NeighborhoodQuery): UUID {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.POST])
+    override fun updateSubscription( @RequestBody subscription: NeighborhoodQuery): UUID {
+        return subscriptionService.updateSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.SUB_ID_PATH], method = [RequestMethod.DELETE])
-    override fun deleteSubscription(@PathVariable(SubscriptionApi.SUB_ID) subscriptionId: UUID) {
-        subscriptionService.deleteSubscription( subscriptionId )
+    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.DELETE])
+    override fun deleteSubscription(@PathVariable(SubscriptionApi.ENTITY_KEY_ID) subscriptionId: UUID) {
+        subscriptionService.deleteSubscription( subscriptionId, Principals.getCurrentUser())
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
-    override fun getAllSubscriptions(): Iterable<Subscription> {
-        return subscriptionService.getAllSubscriptions()
+    override fun getAllSubscriptions(): Iterable<NeighborhoodQuery> {
+        return subscriptionService.getAllSubscriptions(Principals.getCurrentUser())
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
     override fun getSubscriptions(
-            @RequestParam(SubscriptionApi.SUB_IDS) subscriptionIds: List<UUID>): Iterable<Subscription> {
-        return subscriptionService.getSubscriptions(subscriptionIds)
+            @RequestParam(SubscriptionApi.ENTITY_KEY_IDS) entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery> {
+        return subscriptionService.getSubscriptions(subscriptionIds, Principals.getCurrentUser())
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
