@@ -38,14 +38,4 @@ data class NeighborhoodSelection(
         val outgoingEntityFilters: Optional<Map<UUID, Map<UUID, Filter>>>,
         val incomingEntityFilters: Optional<Map<UUID, Map<UUID, Filter>>>,
         val associationFilters: Optional<Map<UUID, Map<UUID, Filter>>>
-) {
-//    init{
-//        check( entityTypeIds.isPresent xor entitySetIds.isPresent ) {
-//            "Either entity entity type id or entity set ids must be present."
-//        }
-//
-//        check( associationTypeIds.isPresent xor associationEntitySetIds.isPresent ) {
-//            "Either asssociation entity type id or entity set ids must be present."
-//     o           }
-//    }
-}
+)
