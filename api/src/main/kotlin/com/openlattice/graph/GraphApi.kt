@@ -26,7 +26,6 @@ import com.google.common.collect.SetMultimap
 import com.openlattice.data.requests.NeighborEntityDetails
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
-import com.openlattice.search.requests.EntityNeighborsFilter
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST

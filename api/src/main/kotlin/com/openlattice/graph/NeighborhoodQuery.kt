@@ -29,7 +29,6 @@ import java.util.*
  */
 data class NeighborhoodQuery(
         val ids: Set<UUID>,
-        val incomingSelections: Set<NeighborhoodSelection>,
-        val outgoingSelections: Set<NeighborhoodSelection>
+        val selections: Set<NeighborhoodSelection>
 )
 

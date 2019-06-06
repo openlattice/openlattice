@@ -29,20 +29,23 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class NeighborhoodSelection(
-        val entityTypeId: Optional<Set<UUID>>,
-        val entitySetIds: Optional<Set<UUID>>,
-        val associationTypeId: Optional<Set<UUID>>,
+        val outgingEntityTypeIds: Optional<Set<UUID>>,
+        val outgingEntitySetIds: Optional<Set<UUID>>,
+        val incomingEntityTypeIds: Optional<Set<UUID>>,
+        val incomingEntitySetIds: Optional<Set<UUID>>,
+        val associationTypeIds: Optional<Set<UUID>>,
         val associationEntitySetIds: Optional<Set<UUID>>,
-        val entityFilters: Optional<Map<UUID,Map<UUID,Filter>>>,
-        val associationFilters: Optional<Map<UUID, Map<UUID,Filter>>>
+        val outgoingEntityFilters: Optional<Map<UUID, Map<UUID, Filter>>>,
+        val incomingEntityFilters: Optional<Map<UUID, Map<UUID, Filter>>>,
+        val associationFilters: Optional<Map<UUID, Map<UUID, Filter>>>
 ) {
-    init{
-        check( entityTypeId.isPresent xor entitySetIds.isPresent ) {
-            "Either entity entity type id or entity set ids must be present."
-        }
-
-        check( associationTypeId.isPresent xor associationEntitySetIds.isPresent ) {
-            "Either asssociation entity type id or entity set ids must be present."
-        }
-    }
+//    init{
+//        check( entityTypeIds.isPresent xor entitySetIds.isPresent ) {
+//            "Either entity entity type id or entity set ids must be present."
+//        }
+//
+//        check( associationTypeIds.isPresent xor associationEntitySetIds.isPresent ) {
+//            "Either asssociation entity type id or entity set ids must be present."
+//     o           }
+//    }
 }
