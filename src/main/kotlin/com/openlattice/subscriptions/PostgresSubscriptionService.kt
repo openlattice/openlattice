@@ -21,7 +21,7 @@ class PostgresSubscriptionService(
         private val hds: HikariDataSource,
         private val mapper: ObjectMapper
 ) : SubscriptionService {
-    override fun addSubscription(subscription: NeighborhoodQuery, user: Principal): UUID {
+    override fun addSubscription(subscription: NeighborhoodQuery, user: Principal) {
         hds.connection.use { conn ->
             val ps = conn.prepareStatement(addSubscriptionSQL)
             ps.setObject(1, )
@@ -32,14 +32,13 @@ class PostgresSubscriptionService(
         return newSubId
     }
 
-    override fun updateSubscription(subscription: NeighborhoodQuery, user: Principal): UUID {
+    override fun updateSubscription(subscription: NeighborhoodQuery, user: Principal){
         hds.connection.use { conn ->
             val ps = conn.prepareStatement(updateSubscriptionSQL)
             ps.setObject(1, user)
             ps.setObject(2, subscription.selections)
             ps.executeUpdate()
         }
-        return subscription
     }
 
     override fun deleteSubscription(subId: UUID, user: Principal) {
@@ -88,7 +87,7 @@ class PostgresSubscriptionService(
 private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
         "(${ID.name}, ${PRINCIPAL_ID.name}, ${NEIGHBORHOOD_SELECTS.name})" +
         " VALUES (?,?,?)"
-private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${PRINCIPAL_ID.name} = ?, ${NEIGHBORHOOD_SELECTS.name} = ?, WHERE ${ID.name} = ?"
+private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${NEIGHBORHOOD_SELECTS.name} = ?, WHERE ${ID.name} = ?"
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ANY(?)"
 private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name}"
