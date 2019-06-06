@@ -218,6 +218,8 @@ public interface EdmManager {
 
     void setEntityDataModel( EntityDataModel edm );
 
+    Collection<EntitySet> getEntitySetsOfType( Set<UUID> entityTypeIds );
+
     Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId );
 
     Set<UUID> getEntitySetsForOrganization( UUID organizationId );
