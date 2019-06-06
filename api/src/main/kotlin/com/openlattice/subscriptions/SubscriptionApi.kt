@@ -34,9 +34,10 @@ interface SubscriptionApi {
         const val CONTROLLER = "/subscriptions"
         const val BASE = SERVICE + CONTROLLER
 
-        const val ENTITY_KEY_IDS = "entityKeyIds"
         const val ENTITY_KEY_ID = "entityKeyId"
         const val ENTITY_KEY_ID_PATH = "/{$ENTITY_KEY_ID}"
+
+        const val ENTITY_KEY_IDS = "entityKeyIds"
     }
 
     /**
@@ -48,7 +49,7 @@ interface SubscriptionApi {
     /**
      * Updates a subscription
      */
-    @POST(BASE + ENTITY_KEY_ID_PATH)
+    @POST(BASE)
     fun updateSubscription( @Body subscription: NeighborhoodQuery )
 
     /**
