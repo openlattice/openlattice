@@ -31,8 +31,8 @@ import java.util.*
 data class NeighborhoodSelection(
         val entityTypeIds: Optional<Set<UUID>>,
         val entitySetIds: Optional<Set<UUID>>,
-        val entityFilters: Optional<Map<UUID, Map<UUID, Filter>>>,
+        val entityFilters: Optional<Map<UUID, Map<UUID, Set<Filter>>>>,
         val associationTypeIds: Optional<Set<UUID>>,
         val associationEntitySetIds: Optional<Set<UUID>>,
-        val associationFilters: Optional<Map<UUID, Map<UUID, Filter>>>
+        val associationFilters: Optional<Map<UUID, Map<UUID, Set<Filter>>>>
 )
