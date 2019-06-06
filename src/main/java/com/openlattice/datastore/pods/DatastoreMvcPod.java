@@ -22,6 +22,7 @@ package com.openlattice.datastore.pods;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.admin.AdminController;
+import com.openlattice.analysis.assembler.AssemblyAnalyzationController;
 import com.openlattice.controllers.OrganizationsController;
 import com.openlattice.data.DataApi;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
@@ -65,7 +66,7 @@ import java.util.List;
                 EdmController.class, OrganizationsController.class,
                 DataStoreExceptionHandler.class, EntitySetsController.class, AnalysisController.class,
                 RequestsController.class, AppController.class, GraphController.class,
-                PersistentSearchController.class, AdminController.class
+                PersistentSearchController.class, AdminController.class, AssemblyAnalyzationController.class
         },
         includeFilters = @ComponentScan.Filter(
                 value = { org.springframework.stereotype.Controller.class,

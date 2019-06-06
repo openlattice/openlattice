@@ -29,10 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.hazelcast.core.HazelcastInstance;
 import com.kryptnostic.rhizome.configuration.amazon.AmazonLaunchConfiguration;
 import com.openlattice.analysis.AnalysisService;
-import com.openlattice.assembler.Assembler;
-import com.openlattice.assembler.AssemblerConfiguration;
-import com.openlattice.assembler.AssemblerConnectionManager;
-import com.openlattice.assembler.AssemblerDependencies;
+import com.openlattice.assembler.*;
 import com.openlattice.assembler.pods.AssemblerConfigurationPod;
 import com.openlattice.assembler.tasks.UserCredentialSyncTask;
 import com.openlattice.auditing.AuditRecordEntitySetsManager;
@@ -379,6 +376,12 @@ public class DatastoreServicesPod {
                 dcs(),
                 eventBus,
                 metricRegistry );
+    }
+
+
+    @Bean
+    public AssemblerQueryService assemblerQueryService() {
+        return new AssemblerQueryService();
     }
 
     @Bean
