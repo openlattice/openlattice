@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,16 +18,21 @@
  *
  *
  */
+package com.openlattice.analysis.assembler
 
-package com.openlattice.analysis.requests;
+import retrofit2.http.Body
+import retrofit2.http.POST
 
-/**
- * Types of supported aggregations
- */
-public enum AggregationType {
-    SUM,
-    AVG,
-    MIN,
-    MAX,
-    COUNT
+
+const val SERVICE = "/datastore"
+const val CONTROLLER = "/assembly-analysis"
+const val BASE = SERVICE + CONTROLLER
+
+const val SIMPLE_AGGREGATION = "/simple-aggregation"
+
+interface AssemblyAnalyzationApi {
+
+    @POST(BASE + SIMPLE_AGGREGATION)
+    fun getSimpleAssemblyAggregates(@Body assemblyAggregationFilter: AssemblyAggregationFilter): Iterable<Map<String, Any>>
+
 }
