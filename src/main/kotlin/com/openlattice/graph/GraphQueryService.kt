@@ -37,5 +37,6 @@ interface GraphQueryService {
     fun abortQuery(queryId: UUID)
     fun getResult(queryId: UUID): Optional<SubGraph>
     fun submitQuery(query: NeighborhoodQuery)
+    fun getEntitySetForIds( ids: Set<UUID>) : Map<UUID, UUID>
 
 }

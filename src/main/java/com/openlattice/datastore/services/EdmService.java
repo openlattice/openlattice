@@ -1717,8 +1717,14 @@ public class EdmService implements EdmManager {
         } );
     }
 
+    @Override
+    public Collection<EntitySet> getEntitySetsOfType( Set<UUID> entityTypeIds ) {
+        return entitySets.values( Predicates
+                .in( EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeIds.toArray( new UUID[ 0 ] ) ) );
+    }
+
     @Override public Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId ) {
-        return entitySets.values( Predicates.equal( "entityTypeId", entityTypeId ) );
+        return entitySets.values( Predicates.equal( EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId ) );
     }
 
     @Override public Set<UUID> getEntitySetsForOrganization( UUID organizationId ) {

@@ -653,7 +653,7 @@ open class DataGraphService(
 //            val srcPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
 //            val dstPropertyTypeFilters = HashMultimap.create<UUID, Optional<SetMultimap<UUID, RangeFilter<Comparable<Any>>>>>()
 //            filteredNeighborsRankingList.forEach { details ->
-//                val associationSets = edm.getEntitySetsOfType(details.associationTypeId).map { it.id }
+//                val associationSets = edm.getEntitySetsOfType(details.associationTypeIds).map { it.id }
 //                val neighborSets = edm.getEntitySetsOfType(details.neighborTypeId).map { it.id }
 //
 //                associationSets.forEach {
