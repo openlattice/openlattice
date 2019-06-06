@@ -34,6 +34,7 @@ interface SubscriptionApi {
         const val CONTROLLER = "/subscriptions"
         const val BASE = SERVICE + CONTROLLER
 
+        const val ALL = "/all"
         const val ENTITY_KEY_ID = "entityKeyId"
         const val ENTITY_KEY_ID_PATH = "/{$ENTITY_KEY_ID}"
 
@@ -61,7 +62,7 @@ interface SubscriptionApi {
     /**
      * Returns all subscriptions
      */
-    @GET(BASE)
+    @GET(BASE + ALL)
     fun getAllSubscriptions(): Iterable<NeighborhoodQuery>
 
     /**
