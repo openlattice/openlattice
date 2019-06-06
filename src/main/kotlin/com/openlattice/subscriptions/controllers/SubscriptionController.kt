@@ -40,7 +40,7 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
+    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ALL], method = [RequestMethod.GET])
     override fun getAllSubscriptions(): Iterable<NeighborhoodQuery> {
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser())
     }
