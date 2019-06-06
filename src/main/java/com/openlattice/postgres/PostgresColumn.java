@@ -278,9 +278,16 @@ public final class PostgresColumn {
     public static final PostgresColumnDefinition NAME_SET                          =
             new PostgresColumnDefinition( NAME_SET_FIELD, TEXT_ARRAY ).notNull();
 
-    public static final String                   NEIGHBORHOOD_SELECTS_FIELD  = "neighborhood_selections";
-    public static final PostgresColumnDefinition NEIGHBORHOOD_SELECTS     = new PostgresColumnDefinition(
-            NEIGHBORHOOD_SELECTS_FIELD,
+    // filters applied to incoming edges
+    public static final String                   SRC_SELECTS_FIELD  = "src_selections";
+    public static final PostgresColumnDefinition SRC_SELECTS     = new PostgresColumnDefinition(
+            SRC_SELECTS_FIELD,
+            JSONB );
+
+    // filters applied to outgoing edges
+    public static final String                   DST_SELECTS_FIELD  = "dst_selections";
+    public static final PostgresColumnDefinition DST_SELECTS     = new PostgresColumnDefinition(
+            DST_SELECTS_FIELD,
             JSONB );
 
     public static final String                   NEW_VERTEX_ID_FIELD               = "new_vertex_id";
