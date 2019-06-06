@@ -297,10 +297,10 @@ public final class PostgresTable {
     public static final PostgresTableDefinition SUBSCRIPTIONS            =
             new PostgresTableDefinition( "subscriptions" )
                     .addColumns( ID,
-                            ENTITY_KEY_IDS,
-                            INCOMING_NEIGHBORHOOD_SELECTS,
-                            OUTGOING_NEIGHBORHOOD_SELECTS)
-                    .primaryKey( ID );
+                            PRINCIPAL_ID,
+                            NEIGHBORHOOD_SELECTS)
+                    .primaryKey( ID, PRINCIPAL_ID );
+
 
     public static final PostgresTableDefinition SYNC_IDS                 =
             new CitusDistributedTableDefinition( "sync_ids" )

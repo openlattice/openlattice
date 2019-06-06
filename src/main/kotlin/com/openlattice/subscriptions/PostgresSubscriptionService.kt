@@ -1,6 +1,7 @@
 package com.openlattice.subscriptions
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.openlattice.authorization.Principal
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
@@ -20,32 +21,28 @@ class PostgresSubscriptionService(
         private val hds: HikariDataSource,
         private val mapper: ObjectMapper
 ) : SubscriptionService {
-    override fun addSubscription(subscription: NeighborhoodQuery): UUID {
-        val newSubId = UUID.randomUUID()
+    override fun addSubscription(subscription: NeighborhoodQuery, user: Principal): UUID {
         hds.connection.use { conn ->
             val ps = conn.prepareStatement(addSubscriptionSQL)
-            ps.setObject(1, newSubId)
-            ps.setObject(2, PostgresArrays.createUuidArray( conn, subscription.ids ) )
-            ps.setObject(3, mapper.writeValueAsString(subscription.incomingSelections))
-            ps.setObject(4, mapper.writeValueAsString(subscription.outgoingSelections))
+            ps.setObject(1, )
+            ps.setObject(2, user)
+            ps.setObject(3, mapper.writeValueAsString(subscription.selections))
             ps.executeUpdate()
         }
         return newSubId
     }
 
-    override fun updateSubscription(subscription: Subscription): UUID {
+    override fun updateSubscription(subscription: NeighborhoodQuery, user: Principal): UUID {
         hds.connection.use { conn ->
             val ps = conn.prepareStatement(updateSubscriptionSQL)
-            ps.setObject(1, subscription.query.ids)
-            ps.setObject(2, subscription.query.incomingSelections)
-            ps.setObject(3, subscription.query.outgoingSelections)
-            ps.setObject(4, subscription.id)
+            ps.setObject(1, user)
+            ps.setObject(2, subscription.selections)
             ps.executeUpdate()
         }
-        return subscription.id
+        return subscription
     }
 
-    override fun deleteSubscription(subId: UUID) {
+    override fun deleteSubscription(subId: UUID, user: Principal) {
         hds.connection.use { conn ->
             val ps = conn.prepareStatement( deleteSubscriptionSQL )
             ps.setObject(1, subId )
@@ -53,14 +50,14 @@ class PostgresSubscriptionService(
         }
     }
 
-    override fun getAllSubscriptions(): Iterable<Subscription> {
-        return execSqlReturningIterable(getAllSubscriptionsSQL,
+    override fun getAllSubscriptions(user: Principal): Iterable<NeighborhoodQuery> {
+        return execSqlSelectReturningIterable(getAllSubscriptionsSQL,
                 { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) }
         )
     }
 
-    override fun getSubscriptions(subIds: List<UUID>): Iterable<Subscription> {
-        return execSqlReturningIterable(getSubscriptionSQL,
+    override fun getSubscriptions(subIds: List<UUID>, user: Principal): Iterable<NeighborhoodQuery> {
+        return execSqlSelectReturningIterable(getSubscriptionSQL,
                 { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) },
                 { ps: PreparedStatement, conn: Connection ->
                     val arr = PostgresArrays.createUuidArray( conn, subIds )
@@ -70,7 +67,7 @@ class PostgresSubscriptionService(
         )
     }
 
-    fun <T> execSqlReturningIterable(
+    fun <T> execSqlSelectReturningIterable(
             sql: String,
             resultMappingFunc: (rs: ResultSet) -> T,
             statementFunction: (ps: PreparedStatement, conn: Connection) -> PreparedStatement = { ps: PreparedStatement, conn: Connection -> ps }
@@ -89,9 +86,9 @@ class PostgresSubscriptionService(
 }
 
 private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
-        "(${ID.name}, ${ENTITY_KEY_IDS.name}, ${INCOMING_NEIGHBORHOOD_SELECTS.name}, ${OUTGOING_NEIGHBORHOOD_SELECTS.name})" +
-        " VALUES (?,?,?,?)"
-private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${ENTITY_KEY_IDS.name} = ?, ${INCOMING_NEIGHBORHOOD_SELECTS.name} = ?, ${OUTGOING_NEIGHBORHOOD_SELECTS.name} = ? WHERE ${ID.name} = ?"
+        "(${ID.name}, ${PRINCIPAL_ID.name}, ${NEIGHBORHOOD_SELECTS.name})" +
+        " VALUES (?,?,?)"
+private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${PRINCIPAL_ID.name} = ?, ${NEIGHBORHOOD_SELECTS.name} = ?, WHERE ${ID.name} = ?"
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${ID.name} = ANY(?)"
 private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name}"

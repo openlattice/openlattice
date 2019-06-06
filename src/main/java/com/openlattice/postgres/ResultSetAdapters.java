@@ -63,7 +63,6 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
-import com.openlattice.subscriptions.Subscription;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -175,13 +174,11 @@ public final class ResultSetAdapters {
         return mapper.readValue( neighborhoodSelectionJson , NeighborhoodSelection[].class );
     }
 
-    public static Subscription subscription( ResultSet rs ) throws SQLException, IOException {
+    public static NeighborhoodQuery subscription( ResultSet rs ) throws SQLException, IOException {
         UUID subscriptionId = rs.getObject( ID.getName(), UUID.class );
         LinkedHashSet<UUID> ekIds = linkedHashSetUUID( rs, ENTITY_KEY_IDS.getName() );
-        Set<NeighborhoodSelection> incomingSelections = new LinkedHashSet<>( Arrays.asList( neighborhoodSelections( rs, INCOMING_NEIGHBORHOOD_SELECTS.getName() ) ) );
-        Set<NeighborhoodSelection> outgoingSelections = new LinkedHashSet<>( Arrays.asList( neighborhoodSelections( rs, OUTGOING_NEIGHBORHOOD_SELECTS.getName() ) ) );
-        NeighborhoodQuery query = new NeighborhoodQuery( ekIds , incomingSelections, outgoingSelections);
-        return new Subscription( subscriptionId, query );
+        Set<NeighborhoodSelection> selections = new LinkedHashSet<>( Arrays.asList( neighborhoodSelections( rs, NEIGHBORHOOD_SELECTS.getName() ) ) );
+        return  new NeighborhoodQuery( ekIds , selections);
     }
 
    public static Edge edge( ResultSet rs ) throws SQLException {
