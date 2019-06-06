@@ -71,9 +71,9 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
         val srcGroupColumns = edmService.getPropertyTypes(assemblyAggregationFilter.srcGroupProperties).map { it.type.fullQualifiedNameAsString }
         val edgeGroupColumns = edmService.getPropertyTypes(assemblyAggregationFilter.edgeGroupProperties).map { it.type.fullQualifiedNameAsString }
         val dstGroupColumns = edmService.getPropertyTypes(assemblyAggregationFilter.dstGroupProperties).map { it.type.fullQualifiedNameAsString }
-        val srcAggregates = assemblyAggregationFilter.srcAggregations.mapKeys { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString }
-        val edgeAggregates = assemblyAggregationFilter.edgeAggregations.mapKeys { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString }
-        val dstAggregates = assemblyAggregationFilter.dstAggregations.mapKeys { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString }
+        val srcAggregates = assemblyAggregationFilter.srcAggregations.groupBy { it.propertyTypeId }.map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }.toMap()
+        val edgeAggregates = assemblyAggregationFilter.edgeAggregations.groupBy { it.propertyTypeId }.map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }.toMap()
+        val dstAggregates = assemblyAggregationFilter.dstAggregations.groupBy { it.propertyTypeId }.map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }.toMap()
 
         val connection = assemblerConnectionManager.connect(dbName, account).connection
         val asd = assemblerQueryService.simpleAggregation(
