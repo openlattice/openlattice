@@ -43,8 +43,10 @@ class AssemblerQueryService {
     fun simpleAggregation(connection: Connection,
                           srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
                           srcGroupColumns: List<String>, edgeGroupColumns: List<String>, dstGroupColumns: List<String>,
-                          srcAggregates: Map<String, Set<AggregationType>>, edgeAggregates: Map<String, Set<AggregationType>>, dstAggregates: Map<String, Set<AggregationType>>
-    ): Iterable<Map<String, Array<Any>>> {
+                          srcAggregates: Map<String, List<AggregationType>>, edgeAggregates: Map<String, List<AggregationType>>, dstAggregates: Map<String, List<AggregationType>>
+    ): Iterable<Map<String, Any>> {
+
+        // Groupings
 
         val srcGroupColAliases = mutableListOf<String>()
         val edgeGroupColAliases = mutableListOf<String>()
@@ -69,6 +71,9 @@ class AssemblerQueryService {
         val cols = (srcGroupCols + edgeGroupCols + dstGroupCols).joinToString(", ")
         val colAliases = (srcGroupColAliases + edgeGroupColAliases + dstGroupColAliases)
                 .joinToString(", ") { DataTables.quote(it) }
+
+
+        // Aggregations
 
         val srcAggregateAliases = mutableListOf<String>()
         val srcAggregateCols = srcAggregates.flatMap { aggregate ->
@@ -103,8 +108,13 @@ class AssemblerQueryService {
 
         val aggregateCols = (srcAggregateCols + edgeAggregateCols + dstAggregateCols).joinToString(", ")
 
-        val returnColumns = srcGroupColAliases + edgeGroupColAliases + dstGroupColAliases +
-                srcAggregateAliases + edgeAggregateAliases + dstAggregateAliases
+
+        // Calculations
+
+        val calcualtionAliases = mutableListOf<String>()
+
+
+        // The query
 
         val simpleSql = simpleAggregationJoinSql(srcEntitySetName, edgeEntitySetName, dstEntitySetName, cols, colAliases, aggregateCols)
 
@@ -119,12 +129,14 @@ class AssemblerQueryService {
             return@Function ((srcGroupColAliases + edgeGroupColAliases + dstGroupColAliases).map { col ->
                 val arrayVal = rs.getArray(col)
                 col to if (arrayVal == null) {
-                    arrayOf()
+                    null
                 } else {
-                    arrayVal.array as Array<Any>
+                    (rs.getArray(col).array as Array<Any>)[0]
                 }
             } + (srcAggregateAliases + edgeAggregateAliases + dstAggregateAliases).map { col ->
-                col to arrayOf(rs.getObject(col))
+                col to rs.getObject(col)
+            } + (calcualtionAliases).map { col ->
+                col to rs.getObject(col)
             }).toMap()
         })
     }
@@ -138,4 +150,31 @@ class AssemblerQueryService {
                 "WHERE ${PostgresColumn.COMPONENT_TYPES.name} = 0 " +
                 "GROUP BY ($colAliases)"
     }
+
+    class DurationCalculator(val endColumn: String, val startColumn: String) {
+        fun firstStart(): String {
+            return "(SELECT unnest($startColumn) ORDER BY 1 LIMIT 1)"
+        }
+
+        fun lastEnd(): String {
+            return "(SELECT unnest($endColumn)) ORDER BY 1 DESC LIMIT 1)"
+        }
+
+        fun numberOfYears(): String {
+            return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600/24/365)"
+        }
+
+        fun numberOfDays(): String {
+            return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600/24)"
+        }
+
+        fun numberOfHours(): String {
+            return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600)"
+        }
+
+        fun numberOfMinutes(): String {
+            return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/60)"
+        }
+    }
 }
+
