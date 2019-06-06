@@ -5,6 +5,7 @@ import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principals
+import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.subscriptions.SubscriptionApi
 import com.openlattice.subscriptions.SubscriptionService
@@ -22,31 +23,34 @@ constructor(
 ) : SubscriptionApi, AuthorizingComponent {
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.PUT])
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.PUT])
     override fun addSubscription(@RequestBody subscription: NeighborhoodQuery) {
+        if ( subscription.ids.isEmpty() ){
+            throw BadRequestException("Must specify entity key ids to subscribe to")
+        }
         subscriptionService.addSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.POST])
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
     override fun updateSubscription( @RequestBody subscription: NeighborhoodQuery) {
         subscriptionService.updateSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.DELETE])
+    @RequestMapping(path = [SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteSubscription(@PathVariable(SubscriptionApi.ENTITY_KEY_ID) subscriptionId: UUID) {
         subscriptionService.deleteSubscription( subscriptionId, Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE + SubscriptionApi.ALL], method = [RequestMethod.GET])
+    @RequestMapping(path = [SubscriptionApi.ALL], method = [RequestMethod.GET])
     override fun getAllSubscriptions(): Iterable<NeighborhoodQuery> {
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.BASE], method = [RequestMethod.GET])
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
     override fun getSubscriptions(
             @RequestParam(SubscriptionApi.ENTITY_KEY_IDS) entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery> {
         return subscriptionService.getSubscriptions(entityKeyIds, Principals.getCurrentUser())
