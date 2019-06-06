@@ -5,6 +5,7 @@ import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.Principals
+import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.subscriptions.SubscriptionApi
 import com.openlattice.subscriptions.SubscriptionService
@@ -24,6 +25,9 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.PUT])
     override fun addSubscription(@RequestBody subscription: NeighborhoodQuery) {
+        if ( subscription.ids.isEmpty() ){
+            throw BadRequestException("Must specify entity key ids to subscribe to")
+        }
         subscriptionService.addSubscription( subscription, Principals.getCurrentUser())
     }
 
