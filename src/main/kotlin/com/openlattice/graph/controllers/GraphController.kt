@@ -45,7 +45,6 @@ constructor(
         private val authorizationManager: AuthorizationManager,
         private val edm: EdmManager,
         private val edmAuthorizationHelper: EdmAuthorizationHelper
-//        private val filteredAggregation
 ) : GraphApi, AuthorizingComponent {
     @Timed
     @PostMapping(
@@ -53,10 +52,9 @@ constructor(
             consumes = [MediaType.APPLICATION_JSON_VALUE],
             produces = [MediaType.APPLICATION_JSON_VALUE]
     )
-
     override fun neighborhoodQuery(
-            entitySetId: UUID,
-            query: NeighborhoodQuery
+            @PathVariable(ENTITY_SET_ID) entitySetId: UUID,
+            @RequestBody query: NeighborhoodQuery
     ): Neighborhood {
         val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
         val (allEntitySetIds, requiredPropertyTypes) = resolveEntitySetIdsAndRequiredAuthorizations(
