@@ -29,10 +29,10 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class NeighborhoodSelection(
-        val entityTypeIds: Optional<Set<UUID>>,
-        val entitySetIds: Optional<Set<UUID>>,
-        val entityFilters: Optional<Map<UUID, Map<UUID, Set<Filter>>>>,
-        val associationTypeIds: Optional<Set<UUID>>,
-        val associationEntitySetIds: Optional<Set<UUID>>,
-        val associationFilters: Optional<Map<UUID, Map<UUID, Set<Filter>>>>
+        val entityTypeIds: Optional<Set<UUID>> = Optional.empty(),
+        val entitySetIds: Optional<Set<UUID>> = Optional.empty(),
+        val entityFilters: Optional<Map<UUID, Map<UUID, Set<Filter>>>> = Optional.empty(),
+        val associationTypeIds: Optional<Set<UUID>> = Optional.empty(),
+        val associationEntitySetIds: Optional<Set<UUID>> = Optional.empty(),
+        val associationFilters: Optional<Map<UUID, Map<UUID, Set<Filter>>>> = Optional.empty()
 )
