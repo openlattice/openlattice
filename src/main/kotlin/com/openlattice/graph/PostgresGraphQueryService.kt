@@ -283,7 +283,7 @@ class PostgresGraphQueryService(
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_dst_edge_${index}_$filterIndex"
             val stmt = connection.createStatement()
-            stmt.executeQuery(
+            stmt.execute(
                     createFilteringView(
                             tableName,
                             filterDefinition,
@@ -308,7 +308,7 @@ class PostgresGraphQueryService(
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_dst_${index}_$filterIndex"
             val stmt = connection.createStatement()
-            stmt.executeQuery(
+            stmt.execute(
                     createFilteringView(
                             tableName,
                             filterDefinition,
@@ -365,7 +365,7 @@ class PostgresGraphQueryService(
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_src_edge_${index}_$filterIndex"
             val stmt = connection.createStatement()
-            stmt.executeQuery(
+            stmt.execute(
                     createFilteringView(
                             tableName,
                             filterDefinition,
@@ -423,7 +423,7 @@ class PostgresGraphQueryService(
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_src_${index}_$filterIndex"
             val stmt = connection.createStatement()
-            stmt.executeQuery(
+            stmt.execute(
                     createFilteringView(
                             tableName,
                             filterDefinition,
