@@ -37,11 +37,14 @@ public class AuditRecordEntitySetConfigurationMapstore
         final Array arr = PostgresArrays.createUuidArray( ps.getConnection(), value.getAuditRecordEntitySetIds() );
         final Array arrEdge = PostgresArrays.createUuidArray( ps.getConnection(), value.getAuditEdgeEntitySetIds() );
         ps.setObject( offset++, value.getActiveAuditRecordEntitySetId() );
+        ps.setObject( offset++, value.getActiveAuditEdgeEntitySetId() );
         ps.setObject( offset++, arr );
         ps.setObject( offset++, arrEdge );
 
         //Handle update clause.
         ps.setObject( offset++, value.getActiveAuditRecordEntitySetId() );
+        ps.setObject( offset++, value.getActiveAuditEdgeEntitySetId() );
+        ps.setObject( offset++, arr );
         ps.setObject( offset++, arrEdge );
     }
 

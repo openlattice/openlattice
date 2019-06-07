@@ -77,7 +77,7 @@ interface AuditingComponent {
                                     val entityKeyIds = ae.entities.get()
                                     entityKeyIds.forEach { id ->
                                         lm.put(
-                                                auditEntitySet,
+                                                auditEntitySetConfiguration.auditEdgeEntitySet,
                                                 DataEdge(
                                                         EntityDataKey(entitySetId, id),
                                                         EntityDataKey(auditEntitySet, auditEntityKeyId),
