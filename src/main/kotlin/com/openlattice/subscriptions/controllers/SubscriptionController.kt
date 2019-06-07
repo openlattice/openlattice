@@ -1,4 +1,3 @@
-
 package com.openlattice.subscriptions.controllers
 
 import com.codahale.metrics.annotation.Timed
@@ -32,9 +31,15 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
-    override fun createOrUpdateSubscription(@RequestBody subscription: NeighborhoodQuery) {
-        if ( subscription.ids.isEmpty() ){
+    @RequestMapping(
+            path = [SubscriptionApi.ORGANIZATION_PATH + SubscriptionApi.ORGANIZATIION_ID_PATH],
+            method = [RequestMethod.POST]
+    )
+    override fun createOrUpdateSubscription(
+            @PathVariable(SubscriptionApi.ORGANIZATION) organizationId: UUID,
+            @RequestBody subscription: NeighborhoodQuery
+    ) {
+        if (subscription.ids.isEmpty()) {
             throw BadRequestException("Must specify entity key ids to subscribe to")
         }
 
@@ -52,19 +57,19 @@ constructor(
 
         ensureReadOnRequired(authorizedPropertyTypes, requiredPropertyTypes)
 
-        subscriptionService.createOrUpdateSubscription( subscription, Principals.getCurrentUser())
+        subscriptionService.createOrUpdateSubscription(subscription, organizationId, Principals.getCurrentUser())
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.CONTACT_INFO_PATH], method = [RequestMethod.POST])
     override fun createOrUpdateSubscriptionContactInfo(@RequestBody contactInfo: SubscriptionContact) {
-        subscriptionService.createOrUpdateSubscriptionContact( contactInfo, Principals.getCurrentUser())
+        subscriptionService.createOrUpdateSubscriptionContact(contactInfo, Principals.getCurrentUser())
     }
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.ENTITY_KEY_ID_PATH], method = [RequestMethod.DELETE])
     override fun deleteSubscription(@PathVariable(SubscriptionApi.ENTITY_KEY_ID) subscriptionId: UUID) {
-        subscriptionService.deleteSubscription( subscriptionId, Principals.getCurrentUser())
+        subscriptionService.deleteSubscription(subscriptionId, Principals.getCurrentUser())
     }
 
     @Timed
