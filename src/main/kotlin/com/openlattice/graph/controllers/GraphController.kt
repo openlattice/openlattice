@@ -57,7 +57,7 @@ constructor(
     override fun neighborhoodQuery(
             entitySetId: UUID,
             query: NeighborhoodQuery
-    ): Map<UUID, List<NeighborEntityDetails>> {
+    ): Neighborhood {
         val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
         val (allEntitySetIds, requiredPropertyTypes) = resolveEntitySetIdsAndRequiredAuthorizations(
                 query,
@@ -77,8 +77,8 @@ constructor(
         ensureReadOnRequired(authorizedPropertyTypes, requiredPropertyTypes)
 
         val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
-        graphQueryService.submitQuery(query, propertyTypes, authorizedPropertyTypes.mapValues { it.value.keys })
-        return mapOf()
+        return graphQueryService.submitQuery(query, propertyTypes, authorizedPropertyTypes)
+
     }
 
     private fun getRequiredAuthorizations(selection: NeighborhoodSelection): Map<UUID, Set<UUID>> {
