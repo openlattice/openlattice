@@ -181,7 +181,7 @@ public final class ResultSetAdapters {
         return new SubscriptionContact( ResultSetAdapters.subscription( rs ),
                 mapper.readValue(
                         rs.getString( CONTACT_INFO.getName() ),
-                        new TypeReference<Map<SubscriptionContactType, SubscriptionContact>>() {
+                        new TypeReference<Map<SubscriptionContactType, String>>() {
                         }
                 ),
                 ResultSetAdapters.organizationId( rs ),
