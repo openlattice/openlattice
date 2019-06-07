@@ -365,7 +365,7 @@ class PostgresGraphQueryService(
     ): MutableMap<UUID, MutableSet<Filter>> {
         val mergedFilters = mutableMapOf<UUID, MutableSet<Filter>>()
         entitySetIds.map { entitySetId ->
-            filters.getValue(entitySetId).forEach { propertyTypeId, filter ->
+            filters[entitySetId]?.forEach { propertyTypeId, filter ->
                 mergedFilters.getOrPut(propertyTypeId) { mutableSetOf() }.addAll(filter)
             }
         }
