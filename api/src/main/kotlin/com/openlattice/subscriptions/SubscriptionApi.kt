@@ -40,13 +40,16 @@ interface SubscriptionApi {
 
         const val CONTACT = "contact"
         const val CONTACT_INFO_PATH = "/{$CONTACT}"
+        const val ORGANIZATION = "organization"
+        const val ORGANIZATION_PATH = "/$ORGANIZATION"
+        const val ORGANIZATIION_ID_PATH = "/{$ORGANIZATION}"
     }
 
     /**
      * Creates a subscription
      */
-    @POST(BASE)
-    fun createOrUpdateSubscription(@Body subscription: NeighborhoodQuery)
+    @POST(BASE + ORGANIZATION_PATH + ORGANIZATIION_ID_PATH)
+    fun createOrUpdateSubscription(@Path(ORGANIZATION) organizationId: UUID, @Body subscription: NeighborhoodQuery)
 
     /**
      * Removes a subscription
@@ -57,7 +60,7 @@ interface SubscriptionApi {
     /**
      * Create or Update Subscription contact info
      */
-    @POST(BASE + CONTACT_INFO_PATH )
+    @POST(BASE + CONTACT_INFO_PATH)
     fun createOrUpdateSubscriptionContactInfo(@Body contactInfo: SubscriptionContact)
 
     /**
