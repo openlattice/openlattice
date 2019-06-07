@@ -63,6 +63,8 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
+import com.openlattice.subscriptions.SubscriptionContact;
+import com.openlattice.subscriptions.SubscriptionContactType;
 import javax.annotation.Nullable;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
@@ -173,6 +175,18 @@ public final class ResultSetAdapters {
             throws SQLException, IOException {
         String neighborhoodSelectionJson = rs.getString( colName );
         return mapper.readValue( neighborhoodSelectionJson, NeighborhoodSelection[].class );
+    }
+
+    public static SubscriptionContact subscriptionContact( ResultSet rs ) throws SQLException, IOException {
+        return new SubscriptionContact( ResultSetAdapters.subscription( rs ),
+                mapper.readValue(
+                        rs.getString( CONTACT_INFO.getName() ),
+                        new TypeReference<Map<SubscriptionContactType, SubscriptionContact>>() {
+                        }
+                ),
+                ResultSetAdapters.organizationId( rs ),
+                rs.getObject( LAST_NOTIFIED_FIELD, OffsetDateTime.class )
+        );
     }
 
     public static NeighborhoodQuery subscription( ResultSet rs ) throws SQLException, IOException {

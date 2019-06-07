@@ -13,9 +13,9 @@ interface SubscriptionService {
 
     fun deleteSubscription( ekId: UUID, user: Principal )
 
-    fun getAllSubscriptions( user: Principal): Iterable<NeighborhoodQuery>
+    fun getAllSubscriptions( user: Principal): Iterable<SubscriptionContact>
 
-    fun getSubscriptions( ekIds: List<UUID>, user: Principal ): Iterable<NeighborhoodQuery>
+    fun getSubscriptions( ekIds: List<UUID>, user: Principal ): Iterable<SubscriptionContact>
 
     fun getAllSubscriptions():Iterable<Pair<Principal,SubscriptionContact>>
 

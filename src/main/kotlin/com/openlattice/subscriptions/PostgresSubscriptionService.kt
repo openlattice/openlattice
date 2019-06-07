@@ -88,21 +88,13 @@ class PostgresSubscriptionService(
                                                   Principal(
                                                           PrincipalType.USER,
                                                           rs.getString(PRINCIPAL_ID.name)
-                                                  ) to SubscriptionContact(
-                                                          ResultSetAdapters.subscription(rs),
-                                                          mapper.readValue(
-                                                                  rs.getString(CONTACT_INFO.name),
-                                                                  object : TypeReference<Map<SubscriptionContactType, SubscriptionContact>>() {}
-                                                          ),
-                                                          ResultSetAdapters.organizationId(rs),
-                                                          rs.getObject(LAST_NOTIFIED_FIELD, OffsetDateTime::class.java)
-                                                  )
+                                                  ) to ResultSetAdapters.subscriptionContact(rs)
                                               }, { ps: PreparedStatement, _: Connection -> ps })
     }
 
-    override fun getAllSubscriptions(user: Principal): Iterable<NeighborhoodQuery> {
+    override fun getAllSubscriptions(user: Principal): Iterable<SubscriptionContact> {
         return execSqlSelectReturningIterable(getAllSubscriptionsSQL,
-                                              { rs: ResultSet -> ResultSetAdapters.subscription(rs) },
+                                              { rs: ResultSet -> ResultSetAdapters.subscriptionContact(rs) },
                                               { ps: PreparedStatement, _: Connection ->
                                                   ps.setObject(1, user.id)
                                                   print(ps.toString())
@@ -111,9 +103,9 @@ class PostgresSubscriptionService(
         )
     }
 
-    override fun getSubscriptions(ekIds: List<UUID>, user: Principal): Iterable<NeighborhoodQuery> {
+    override fun getSubscriptions(ekIds: List<UUID>, user: Principal): Iterable<SubscriptionContact> {
         return execSqlSelectReturningIterable(getSubscriptionSQL,
-                                              { rs: ResultSet -> ResultSetAdapters.subscription(rs) },
+                                              { rs: ResultSet -> ResultSetAdapters.subscriptionContact(rs) },
                                               { ps: PreparedStatement, conn: Connection ->
                                                   val arr = PostgresArrays.createUuidArray(conn, ekIds)
                                                   ps.setObject(1, user.id)
