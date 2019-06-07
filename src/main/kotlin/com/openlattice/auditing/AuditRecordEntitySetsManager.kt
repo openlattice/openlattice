@@ -169,6 +169,9 @@ class AuditRecordEntitySetsManager(
     }
 
     fun initializeAuditEdgeEntitySet(aclKey: AclKey) {
+        if( !auditingTypes.isAuditingInitialized() ) {
+            return
+        }
         val aclKeyRoot = aclKey.first()
 
         if (auditRecordEntitySetConfigurations.keySet(notAnAuditEntitySetPredicate(aclKeyRoot)).isEmpty()) {
