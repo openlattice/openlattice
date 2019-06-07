@@ -69,7 +69,7 @@ class PostgresGraphQueryService(
                 Supplier {
                     val connection = hds.connection
                     val ps = connection.prepareStatement(
-                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},$ID_VALUE.name FROM ${PostgresTable.IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
+                            "SELECT ${PostgresColumn.ENTITY_SET_ID.name},${ID_VALUE.name} FROM ${PostgresTable.IDS.name} WHERE ${ID_VALUE.name} = ANY(?)"
                     )
                     val arr = PostgresArrays.createUuidArray(connection, ids)
                     ps.setArray(1, arr)
