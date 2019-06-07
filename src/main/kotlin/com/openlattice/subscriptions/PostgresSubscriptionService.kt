@@ -154,7 +154,7 @@ private val markLastNotifiedSQL = "UPDATE ${SUBSCRIPTIONS.name}" +
         " SET ${LAST_NOTIFIED.name} = now()" +
         " WHERE ${ID.name} = ? AND ${PRINCIPAL_ID.name} = ?"
 
-private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} INNER JOIN ${SUBSCRIPTION_CONTACTS.name} USING( ${ID.name}, ${PRINCIPAL_ID.name} ) WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
+private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} INNER JOIN ${SUBSCRIPTION_CONTACTS.name} USING( ${ID.name}, ${PRINCIPAL_ID.name} ) WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
 private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} INNER JOIN ${SUBSCRIPTION_CONTACTS.name} USING( ${ID.name}, ${PRINCIPAL_ID.name} ) WHERE ${PRINCIPAL_ID.name} = ?"
 private val getAllSubscriptionsUnfilteredSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} INNER JOIN ${SUBSCRIPTION_CONTACTS.name} USING( ${ID.name}, ${PRINCIPAL_ID.name} )"
