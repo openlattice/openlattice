@@ -20,6 +20,7 @@
  */
 package com.openlattice.analysis.assembler
 
+import com.openlattice.analysis.requests.Orientation
 import com.openlattice.assembler.AssemblerConnectionManager
 import com.openlattice.assembler.AssemblerQueryService
 import com.openlattice.assembler.PostgresDatabases
@@ -68,12 +69,33 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
         val edgeEntitySetName = edmService.getEntitySet(assemblyAggregationFilter.edgeEntitySetId).name
         val dstEntitySetName = edmService.getEntitySet(assemblyAggregationFilter.dstEntitySetId).name
 
-        val srcGroupColumns = edmService.getPropertyTypes(assemblyAggregationFilter.srcGroupProperties).map { it.type.fullQualifiedNameAsString }
-        val edgeGroupColumns = edmService.getPropertyTypes(assemblyAggregationFilter.edgeGroupProperties).map { it.type.fullQualifiedNameAsString }
-        val dstGroupColumns = edmService.getPropertyTypes(assemblyAggregationFilter.dstGroupProperties).map { it.type.fullQualifiedNameAsString }
-        val srcAggregates = assemblyAggregationFilter.srcAggregations.groupBy { it.propertyTypeId }.map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }.toMap()
-        val edgeAggregates = assemblyAggregationFilter.edgeAggregations.groupBy { it.propertyTypeId }.map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }.toMap()
-        val dstAggregates = assemblyAggregationFilter.dstAggregations.groupBy { it.propertyTypeId }.map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }.toMap()
+
+        val groupedGroupings = assemblyAggregationFilter.groupProperties.groupBy { it.orientation }
+        val srcGroupColumns = edmService.getPropertyTypes(
+                groupedGroupings.getOrDefault(Orientation.SRC, listOf()).map { it.propertyTypeId }.toSet()
+        ).map { it.type.fullQualifiedNameAsString }
+        val edgeGroupColumns = edmService.getPropertyTypes(
+                groupedGroupings.getOrDefault(Orientation.EDGE, listOf()).map { it.propertyTypeId }.toSet()
+        ).map { it.type.fullQualifiedNameAsString }
+        val dstGroupColumns = edmService.getPropertyTypes(
+                groupedGroupings.getOrDefault(Orientation.DST, listOf()).map { it.propertyTypeId }.toSet()
+        ).map { it.type.fullQualifiedNameAsString }
+
+        val groupedAggregations = assemblyAggregationFilter.aggregations.groupBy { it.orientedProperty.orientation }
+        val srcAggregates = groupedAggregations.getOrDefault(Orientation.SRC, listOf())
+                .groupBy { it.orientedProperty.propertyTypeId }
+                .map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }
+                .toMap()
+        val edgeAggregates = groupedAggregations.getOrDefault(Orientation.EDGE, listOf())
+                .groupBy { it.orientedProperty.propertyTypeId }
+                .map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }
+                .toMap()
+        val dstAggregates = groupedAggregations.getOrDefault(Orientation.DST, listOf())
+                .groupBy { it.orientedProperty.propertyTypeId }
+                .map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }
+                .toMap()
+
+
 
         val connection = assemblerConnectionManager.connect(dbName, account).connection
         val asd = assemblerQueryService.simpleAggregation(
