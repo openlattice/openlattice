@@ -49,10 +49,19 @@ constructor(
     }
 
     fun insertRecencyFilter( filtersMap: Optional<Map<UUID, Map<UUID, Set<Filter>>>> ) : Optional<Map<UUID, Map<UUID, Set<Filter>>>> {
-        val newEntityFilterMap = mutableMapOf<UUID, Map<UUID, Set<Filter>>>()
         if (filtersMap.isEmpty){
-            return Optional.of(mapOf())
+            return Optional.empty()
         }
+//        val newEntityFilterMap =  filtersMap.get().mapValues {
+//            val newFilterMap = mutableMapOf<UUID, Set<Filter>>()
+//            it.value.forEach {
+//                val newFilterSet = setOf(WrittenTwoWeeksFilter()).plus(it.value)
+//                newFilterMap.put(it.key, newFilterSet)
+//            }
+//            return@mapValues newFilterMap
+//        }
+
+        val newEntityFilterMap =  mutableMapOf<UUID, Map<UUID, Set<Filter>>>()
         filtersMap.get().forEach {
             val newFilterMap = mutableMapOf<UUID, Set<Filter>>()
             it.value.forEach {
@@ -67,8 +76,15 @@ constructor(
     fun rebuildSelectionList( targetList: List<NeighborhoodSelection>) : List<NeighborhoodSelection> {
         val newList = mutableListOf<NeighborhoodSelection>()
         targetList.forEachIndexed { index, neighborhoodSelection ->
-            val newEntityFilterMap = insertRecencyFilter(neighborhoodSelection.entityFilters)
-            val newAssociationFilterMap = insertRecencyFilter(neighborhoodSelection.associationFilters)
+            var newEntityFilterMap = insertRecencyFilter(neighborhoodSelection.entityFilters)
+            if ( newEntityFilterMap.isEmpty ){
+                newEntityFilterMap = buildMapWithRecencyFilter(Pair(neighborhoodSelection.entitySetIds.get(), neighborhoodSelection.entityTypeIds.get() ))
+            }
+
+            var newAssociationFilterMap = insertRecencyFilter(neighborhoodSelection.associationFilters)
+            if ( newAssociationFilterMap.isEmpty ){
+                newAssociationFilterMap = buildMapWithRecencyFilter( Pair(neighborhoodSelection.associationEntitySetIds.get(), neighborhoodSelection.associationTypeIds.get() ))
+            }
 
             newList.add( NeighborhoodSelection(
                     neighborhoodSelection.entityTypeIds,
@@ -79,6 +95,18 @@ constructor(
                     newAssociationFilterMap))
         }
         return newList
+    }
+
+    private fun buildMapWithRecencyFilter( setTypeIdsPair: Pair<Set<UUID>, Set<UUID>>): Optional<Map<UUID, Map<UUID, Set<Filter>>>> {
+        val esidMap = mutableMapOf<UUID, Map<UUID, Set<Filter>>>()
+        setTypeIdsPair.first.forEach { esid ->
+            val typeMap = mutableMapOf<UUID, Set<Filter>>()
+            setTypeIdsPair.second.forEach {etid ->
+                typeMap.put(etid, setOf(WrittenTwoWeeksFilter()))
+            }
+            esidMap.put(esid, typeMap)
+        }
+        return Optional.of(esidMap)
     }
 
 }
