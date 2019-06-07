@@ -34,7 +34,6 @@ import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyT
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
@@ -109,24 +108,28 @@ class PostgresGraphQueryService(
         val neighborhood = Neighborhood(ids, entities, associations)
         val propertyTypeFqns = propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
         query.srcSelections.forEachIndexed { index, selection ->
+            val entityFilterDefinitions = getFilterDefinitions(
+                    selection.entityTypeIds,
+                    selection.entitySetIds,
+                    selection.entityFilters
+            )
+
+            val associationFilterDefinitions = getFilterDefinitions(
+                    selection.associationTypeIds,
+                    selection.associationEntitySetIds,
+                    selection.associationFilters
+            )
+            val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+            val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+
+            if ( entitySetIds.isEmpty() || associationEntitySetIds.isEmpty() ){
+                return@forEachIndexed
+            }
+
             PostgresIterable<DataEdgeKey>(
                     Supplier {
                         val connection = hds.connection
                         val stmt = connection.createStatement()
-                        val entityFilterDefinitions = getFilterDefinitions(
-                                selection.entityTypeIds,
-                                selection.entitySetIds,
-                                selection.entityFilters
-                        )
-
-                        val associationFilterDefinitions = getFilterDefinitions(
-                                selection.associationTypeIds,
-                                selection.associationEntitySetIds,
-                                selection.associationFilters
-                        )
-
-                        val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
-                        val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
                         val srcEdgeView = createSrcEdgesView(
                                 index, connection, ids, entitySetIds, associationEntitySetIds
@@ -460,8 +463,8 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): String {
         val idsClause = "${EDGE_COMP_2.name} ${inClause(ids)}"
-        val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val srcEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
+        val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
+        val srcEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
         val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.EDGE.ordinal}"
 
         return "SELECT * FROM ${EDGES.name} WHERE $idsClause $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"

@@ -21,21 +21,10 @@ class PostgresSubscriptionService(
         private val hds: HikariDataSource,
         private val mapper: ObjectMapper
 ) : SubscriptionService {
-    override fun addSubscription(subscription: NeighborhoodQuery, user: Principal) {
-        hds.connection.use { conn ->
-            subscription.ids.map { ekid ->
-                conn.prepareStatement(addSubscriptionSQL).use {ps ->
-                    ps.setObject(1, user.id)
-                    ps.setObject(2, ekid)
-                    ps.setObject(3, mapper.writeValueAsString(subscription.srcSelections))
-                    ps.setObject(4, mapper.writeValueAsString(subscription.dstSelections))
-                    ps.executeUpdate()
-                }
-            }
-        }
-    }
 
-    override fun updateSubscription(subscription: NeighborhoodQuery, user: Principal){
+    // v code v
+
+    override fun createOrUpdateSubscription(subscription: NeighborhoodQuery, user: Principal) {
         hds.connection.use { conn ->
             subscription.ids.map { ekid ->
                 conn.prepareStatement(updateSubscriptionSQL).use {ps ->
@@ -80,6 +69,9 @@ class PostgresSubscriptionService(
         )
     }
 
+    // ^ code ^
+    // v util v
+
     fun <T> execSqlSelectReturningIterable(
             sql: String,
             resultMappingFunc: (rs: ResultSet) -> T,
@@ -96,12 +88,15 @@ class PostgresSubscriptionService(
                 Function<ResultSet, T> { rs -> resultMappingFunc(rs) }
         )
     }
+
 }
 
-private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
-        "(${PRINCIPAL_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name})" +
-        " VALUES (?,?::uuid,?::jsonb,?::jsonb)"
-private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${SRC_SELECTS.name} = ?, ${DST_SELECTS.name} = ?, WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
+
+//private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
+//        "(${PRINCIPAL_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name})" +
+//        " VALUES (?,?::uuid,?::jsonb,?::jsonb)"
+private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${SRC_SELECTS.name} = ?::jsonb, ${DST_SELECTS.name} = ?::jsonb, WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?::uuid"
+private val createOrUpdateSubscriptionSQL = updateSubscriptionSQL
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
 private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ?"
