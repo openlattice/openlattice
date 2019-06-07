@@ -39,12 +39,7 @@ constructor(
     override fun getLatestFeed(): Iterator<Neighborhood> {
 
 
-        return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { neighborhoodQuery ->
-//            val newSrcList = rebuildSelectionList( neighborhoodQuery.srcSelections )
-//            val newDstList = rebuildSelectionList( neighborhoodQuery.dstSelections )
-//            val query = NeighborhoodQuery(neighborhoodQuery.ids, newSrcList, newDstList)
-            val query = neighborhoodQuery
-
+        return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { query: NeighborhoodQuery ->
             val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
             val (allEntitySetIds, _) = resolveEntitySetIdsAndRequiredAuthorizations(
                     query,
@@ -59,7 +54,10 @@ constructor(
 
             val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
 
-            return@map graphQueryService.submitQuery(query, propertyTypes, authorizedPropertyTypes)
+            val submitQuery = graphQueryService.submitQuery(query, propertyTypes, authorizedPropertyTypes)
+
+            subscriptionService.markLastNotified(query.ids, Principals.getCurrentUser());
+            return@map submitQuery
         }.listIterator()
     }
 
