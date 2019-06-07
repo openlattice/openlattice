@@ -122,6 +122,7 @@ public final class SerializationConstants {
     public static final String EXPLANATION                      = "explanation";
     public static final String EXTERNAL                         = "external";
     public static final String FEATURES                         = "features";
+    public static final String FILTER                           = "filter";
     public static final String FILTERS                          = "filters";
     public static final String FIRST                            = "first";
     public static final String FLAGS_FIELD                      = "flags";
@@ -234,6 +235,7 @@ public final class SerializationConstants {
     public static final String URL                              = "url";
     public static final String USER_ID                          = "userId";
     public static final String VALUE_FIELD                      = "value";
+    public static final String VALUES                           = "values";
     public static final String VALUE_MAPPER                     = "valueMapper";
     public static final String VERSION                          = "version";
     public static final String VERSIONS                         = "versions";

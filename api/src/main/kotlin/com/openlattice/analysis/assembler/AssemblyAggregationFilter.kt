@@ -22,6 +22,7 @@ package com.openlattice.analysis.assembler
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.analysis.requests.Calculation
+import com.openlattice.analysis.requests.OrientedPropertyFilter
 import com.openlattice.client.serialization.SerializationConstants
 import java.util.*
 
@@ -32,4 +33,5 @@ data class AssemblyAggregationFilter(
         @JsonProperty(SerializationConstants.DST_ENTITY_SET_ID) val dstEntitySetId: UUID,
         @JsonProperty(SerializationConstants.GROUPINGS) val groupProperties: List<OrientedPropertyTypeId>,
         @JsonProperty(SerializationConstants.AGGREGATIONS) val aggregations: List<Aggregation>,
-        @JsonProperty(SerializationConstants.CALCULATIONS) val customCalculations: Set<Calculation>)
+        @JsonProperty(SerializationConstants.CALCULATIONS) val customCalculations: Set<Calculation>,
+        @JsonProperty(SerializationConstants.FILTERS) val filters: List<OrientedPropertyFilter>)

@@ -1,5 +1,3 @@
-
-
 /*
  * Copyright (C) 2019. OpenLattice, Inc.
  *
@@ -20,14 +18,9 @@
  *
  *
  */
-package com.openlattice.analysis.assembler
+package com.openlattice.analysis.requests
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.openlattice.analysis.requests.Orientation
 import com.openlattice.client.serialization.SerializationConstants
-import java.util.*
 
-data class OrientedPropertyTypeId(
-        @JsonProperty(SerializationConstants.PROPERTY_TYPE_ID) val propertyTypeId: UUID,
-        @JsonProperty(SerializationConstants.ORIENTATION) val orientation: Orientation
-)
+data class StringValueFilter(@JsonProperty(SerializationConstants.VALUES) private val values: Set<String>) : ValueFilter<String>(values)
