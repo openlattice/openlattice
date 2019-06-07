@@ -30,6 +30,7 @@ import java.util.*
  */
 
 data class Neighborhood (
+        val ids: Set<UUID>,
         // entity set id -> entity key id -> property, only issue is that this doesn't reflect the fact that property values are unique
         // issue that property values may not all be valid keys in json map (in particular location data)
         val entities: Map<UUID, Map<UUID, Map<UUID,List<Property>>>>,

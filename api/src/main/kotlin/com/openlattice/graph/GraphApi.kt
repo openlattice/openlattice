@@ -66,5 +66,5 @@ interface GraphApi {
     fun neighborhoodQuery(
             @Path(ENTITY_SET_ID) entitySetId: UUID,
             @Body query: NeighborhoodQuery
-    ): Map<UUID, List<NeighborEntityDetails>>
+    ): Neighborhood
 }
