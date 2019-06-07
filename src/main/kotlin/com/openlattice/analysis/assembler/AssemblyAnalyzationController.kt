@@ -29,6 +29,7 @@ import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
 import com.openlattice.authorization.DbCredentialService
 import com.openlattice.authorization.Principals
+import com.openlattice.datastore.services.EdmManager
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.directory.MaterializedViewAccount
 import org.springframework.http.MediaType
@@ -55,7 +56,7 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
     private lateinit var dbCredService: DbCredentialService
 
     @Inject
-    private lateinit var edmService: EdmService
+    private lateinit var edmService: EdmManager
 
     @PostMapping(value = [SIMPLE_AGGREGATION], produces = [MediaType.APPLICATION_JSON_VALUE])
     override fun getSimpleAssemblyAggregates(
@@ -95,13 +96,32 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                 .map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }
                 .toMap()
 
+        val groupedFilters = assemblyAggregationFilter.filters.groupBy { it.orientedPropertyTypeId.orientation }
+        val srcFilters = groupedFilters.getOrDefault(Orientation.SRC, listOf())
+                .groupBy { it.orientedPropertyTypeId.propertyTypeId }
+                .map {
+                    edmService.getPropertyTypeFqn(it.key).fullQualifiedNameAsString to it.value.map { it.filter }
+                }.toMap()
+        val edgeFilters = groupedFilters.getOrDefault(Orientation.EDGE, listOf())
+                .groupBy { it.orientedPropertyTypeId.propertyTypeId }
+                .map {
+                    edmService.getPropertyTypeFqn(it.key).fullQualifiedNameAsString to it.value.map { it.filter }
+                }.toMap()
+        val dstFilters = groupedFilters.getOrDefault(Orientation.DST, listOf())
+                .groupBy { it.orientedPropertyTypeId.propertyTypeId }
+                .map {
+                    edmService.getPropertyTypeFqn(it.key).fullQualifiedNameAsString to it.value.map { it.filter }
+                }.toMap()
+
+
         val connection = assemblerConnectionManager.connect(dbName, account).connection
         val asd = assemblerQueryService.simpleAggregation(
                 connection,
                 srcEntitySetName, edgeEntitySetName, dstEntitySetName,
                 srcGroupColumns, edgeGroupColumns, dstGroupColumns,
                 srcAggregates, edgeAggregates, dstAggregates,
-                assemblyAggregationFilter.customCalculations)
+                assemblyAggregationFilter.customCalculations,
+                srcFilters, edgeFilters, dstFilters)
 
         return asd
 
