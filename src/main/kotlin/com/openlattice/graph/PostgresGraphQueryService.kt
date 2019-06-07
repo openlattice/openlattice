@@ -158,7 +158,7 @@ class PostgresGraphQueryService(
                         val edgeJoins = srcEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_2.name} FROM $it) as $it " }
                         val sql = "SELECT * FROM ${srcEdgeView.first} INNER JOIN " + srcEntityFilteringViews.keys.joinToString(
                                 " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING(${ID_VALUE.name}) +" +
+                        ) + " USING(${ID_VALUE.name}) " +
                                 " INNER JOIN " + edgeJoins.joinToString(
                                 " USING (${EDGE_COMP_2.name}) INNER JOIN "
                         ) + " USING (${EDGE_COMP_2.name}) "
