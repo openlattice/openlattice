@@ -26,11 +26,16 @@ constructor(
         private val configuration: TwilioConfiguration
 ) : CodexApi, AuthorizingComponent {
 
+//    companion object {
+//        val deliveryStatus = mutableMapOf<UUID, Pair<MessageRequest, Message>>()
+//    }
+
     init {
         Twilio.init( configuration.sid, configuration.token)
     }
 
-    override fun receiveIncomingText() {
+    override fun receiveIncomingText( @RequestBody message: Message  ) {
+
     }
 
     @Timed
@@ -41,15 +46,17 @@ constructor(
              throw BadRequestException("No phone number set for organization!")
         }
 
-        Message.creator( PhoneNumber( contents.phoneNumber ), organization.phoneNumber, contents.messageContents )
+        Message.creator( PhoneNumber( contents.phoneNumber ), PhoneNumber( organization.phoneNumber ), contents.messageContents )
                 .setStatusCallback( URI.create( "https://api.openlattice.com/datastore/kodex/status" ) )
                 .create()
     }
 
     @Timed
-    @RequestMapping(path = [CodexApi.STATUS], method = [RequestMethod.GET])
-    override fun listenForTextStatus() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    @RequestMapping(path = [CodexApi.STATUS], method = [RequestMethod.POST])
+    override fun listenForTextStatus( @RequestBody message: Message ) {
+        if ( message.status == Message.Status.FAILED || message.status == Message.Status.UNDELIVERED ){
+            println( "Message not received or even failed to send!!! ")
+        }
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {

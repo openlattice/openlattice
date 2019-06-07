@@ -22,6 +22,7 @@ package com.openlattice.datastore.pods;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openlattice.admin.AdminController;
+import com.openlattice.codex.controllers.CodexController;
 import com.openlattice.controllers.OrganizationsController;
 import com.openlattice.data.DataApi;
 import com.openlattice.datastore.analysis.controllers.AnalysisController;
@@ -37,7 +38,6 @@ import com.openlattice.datastore.search.controllers.SearchController;
 import com.openlattice.datastore.util.DataStoreExceptionHandler;
 import com.openlattice.entitysets.controllers.EntitySetsController;
 import com.openlattice.graph.controllers.GraphController;
-import com.openlattice.kodex.controllers.CodexController;
 import com.openlattice.subscriptions.controllers.FeedsController;
 import com.openlattice.subscriptions.controllers.SubscriptionController;
 import com.openlattice.web.converters.CsvHttpMessageConverter;
