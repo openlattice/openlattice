@@ -229,7 +229,7 @@ class PostgresGraphQueryService(
                         )
 
                         val dstEntityFilteringViews = createDstFilteringViews(
-                                queryId,,
+                                queryId,
                                 index,
                                 connection,
                                 entityFilterDefinitions,
