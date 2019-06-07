@@ -302,6 +302,7 @@ public final class PostgresTable {
             new PostgresTableDefinition( "subscriptions" )
                     .addColumns( ID_VALUE,
                             PRINCIPAL_ID,
+                            LAST_NOTIFIED,
                             SRC_SELECTS,
                             DST_SELECTS )
                     .primaryKey( ID, PRINCIPAL_ID );

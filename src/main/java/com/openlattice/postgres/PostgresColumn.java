@@ -241,6 +241,14 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
+
+    public static final String                   LAST_NOTIFIED_FIELD               = "last_notified";
+    public static final PostgresColumnDefinition LAST_NOTIFIED                     = new PostgresColumnDefinition(
+            LAST_NOTIFIED_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
+
     public static final String                   LAST_PROPAGATE_FIELD              = "last_propagate";
     public static final PostgresColumnDefinition LAST_PROPAGATE                    = new PostgresColumnDefinition(
             LAST_PROPAGATE_FIELD,

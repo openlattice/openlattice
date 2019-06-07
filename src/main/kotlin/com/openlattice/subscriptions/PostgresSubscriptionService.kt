@@ -57,6 +57,18 @@ class PostgresSubscriptionService(
         }
     }
 
+    override fun markLastNotified(ekIds: Set<UUID>, user: Principal ) {
+        hds.connection.use { conn ->
+            ekIds.forEach { id ->
+                conn.prepareStatement(markLastNotifiedSQL).use { ps ->
+                    ps.setObject(1, id)
+                    ps.setObject(2, user.id)
+                    ps.executeUpdate()
+                }
+            }
+        }
+    }
+
     override fun deleteSubscription(ekId: UUID, user: Principal) {
         hds.connection.use { conn ->
             val ps = conn.prepareStatement( deleteSubscriptionSQL )
@@ -124,6 +136,10 @@ private val createOrUpdateSubscriptionContactSQL = "INSERT INTO ${SUBSCRIPTION_C
         " VALUES (?,?::uuid,?,?)" +
         " ON CONFLICT ( ${PRINCIPAL_ID.name}, ${ID.name} ) DO UPDATE " +
         " SET ${CONTACT_TYPE.name} = EXCLUDED.${CONTACT_TYPE.name}, ${CONTACT_INFO.name} = EXCLUDED.${CONTACT_INFO.name}"
+
+private val markLastNotifiedSQL = "UPDATE ${SUBSCRIPTIONS.name}" +
+        " SET ${LAST_NOTIFIED.name} = now()" +
+        " WHERE ${ID.name} = ? AND ${PRINCIPAL_ID.name} = ?"
 
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
