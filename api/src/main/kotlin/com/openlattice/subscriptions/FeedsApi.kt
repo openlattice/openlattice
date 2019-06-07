@@ -21,6 +21,7 @@
 
 package com.openlattice.subscriptions
 
+import com.openlattice.graph.Neighborhood
 import retrofit2.http.GET
 
 /**
@@ -39,6 +40,6 @@ interface FeedsApi {
     }
 
     @GET(BASE)
-    fun getLatestFeed() : Iterator<FeedEntry>
+    fun getLatestFeed() : Iterator<Neighborhood>
 
 }
