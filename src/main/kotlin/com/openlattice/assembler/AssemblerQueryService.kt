@@ -20,7 +20,8 @@
  */
 package com.openlattice.assembler
 
-import com.openlattice.analysis.requests.AggregationType
+import com.openlattice.analysis.requests.*
+import com.openlattice.datastore.services.EdmManager
 import com.openlattice.postgres.DataTables
 import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresTable
@@ -34,7 +35,7 @@ const val SRC_TABLE_ALIAS = "SRC_TABLE"
 const val EDGE_TABLE_ALIAS = "EDGE_TABLE"
 const val DST_TABLE_ALIAS = "DST_TABLE"
 
-class AssemblerQueryService {
+class AssemblerQueryService(private val edmService: EdmManager) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(AssemblerQueryService::class.java)
@@ -43,7 +44,8 @@ class AssemblerQueryService {
     fun simpleAggregation(connection: Connection,
                           srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String,
                           srcGroupColumns: List<String>, edgeGroupColumns: List<String>, dstGroupColumns: List<String>,
-                          srcAggregates: Map<String, List<AggregationType>>, edgeAggregates: Map<String, List<AggregationType>>, dstAggregates: Map<String, List<AggregationType>>
+                          srcAggregates: Map<String, List<AggregationType>>, edgeAggregates: Map<String, List<AggregationType>>, dstAggregates: Map<String, List<AggregationType>>,
+                          calculations: Set<Calculation>
     ): Iterable<Map<String, Any>> {
 
         // Groupings
@@ -69,8 +71,6 @@ class AssemblerQueryService {
         }
 
         val cols = (srcGroupCols + edgeGroupCols + dstGroupCols).joinToString(", ")
-        val colAliases = (srcGroupColAliases + edgeGroupColAliases + dstGroupColAliases)
-                .joinToString(", ") { DataTables.quote(it) }
 
 
         // Aggregations
@@ -106,17 +106,37 @@ class AssemblerQueryService {
             }
         }
 
-        val aggregateCols = (srcAggregateCols + edgeAggregateCols + dstAggregateCols).joinToString(", ")
-
 
         // Calculations
 
-        val calcualtionAliases = mutableListOf<String>()
-
-
+        val calculationAliases = mutableListOf<String>()
+        val calculationGroupCols = mutableListOf<String>()
+        val calculationSqls = calculations
+                .filter { it.calculationType.basseType == BaseCalculationTypes.DURATION }
+                .map {
+                    val firstPropertyType = edmService.getPropertyTypeFqn(it.firstPropertyId.propertyTypeId).fullQualifiedNameAsString
+                    val firstPropertyCol = mapOrientationToTableAlias(it.firstPropertyId.orientation) + "." + DataTables.quote(firstPropertyType)
+                    val secondPropertyType = edmService.getPropertyTypeFqn(it.secondPropertyId.propertyTypeId).fullQualifiedNameAsString
+                    val secondPropertyCol = mapOrientationToTableAlias(it.secondPropertyId.orientation) + "." + DataTables.quote(secondPropertyType)
+                    calculationGroupCols.add(firstPropertyCol)
+                    calculationGroupCols.add(secondPropertyCol)
+                    val calculator = DurationCalculator(firstPropertyCol, secondPropertyCol)
+                    val alias = "${it.calculationType}_${firstPropertyType}_$secondPropertyType"
+                    calculationAliases.add(alias)
+                    mapDurationCalcualtionsToSql(calculator, it.calculationType) + " AS ${DataTables.quote(alias)}"
+                }
         // The query
 
-        val simpleSql = simpleAggregationJoinSql(srcEntitySetName, edgeEntitySetName, dstEntitySetName, cols, colAliases, aggregateCols)
+        val groupingColAliases = (srcGroupColAliases + edgeGroupColAliases + dstGroupColAliases)
+                .joinToString(", ") { DataTables.quote(it) } + if (calculationGroupCols.isNotEmpty()) {
+            calculationGroupCols.joinToString(", ", ", ", "")
+        } else {
+            ""
+        }
+
+        val aggregateCols = (srcAggregateCols + edgeAggregateCols + dstAggregateCols).joinToString(", ")
+        val calculationCols = calculationSqls.joinToString(", ")
+        val simpleSql = simpleAggregationJoinSql(srcEntitySetName, edgeEntitySetName, dstEntitySetName, cols, groupingColAliases, aggregateCols, calculationCols)
 
         logger.info("Simple assembly aggregate query:\n$simpleSql")
 
@@ -135,29 +155,45 @@ class AssemblerQueryService {
                 }
             } + (srcAggregateAliases + edgeAggregateAliases + dstAggregateAliases).map { col ->
                 col to rs.getObject(col)
-            } + (calcualtionAliases).map { col ->
+            } + (calculationAliases).map { col ->
                 col to rs.getObject(col)
             }).toMap()
         })
     }
 
 
-    fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String, cols: String, colAliases: String, aggregateCols: String): String {
-        return "SELECT $cols, $aggregateCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name} " +
+    fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String, cols: String, groupingColAliases: String, aggregateCols: String, calculationCols: String): String {
+        return "SELECT $cols, $aggregateCols, $calculationCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name} " +
                 "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$srcEntitySetName\" AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$edgeEntitySetName\" AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$dstEntitySetName\" AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +
                 "WHERE ${PostgresColumn.COMPONENT_TYPES.name} = 0 " +
-                "GROUP BY ($colAliases)"
+                "GROUP BY ($groupingColAliases)"
     }
 
-    class DurationCalculator(val endColumn: String, val startColumn: String) {
+    private fun mapOrientationToTableAlias(orientation: Orientation): String {
+        return when (orientation) {
+            Orientation.SRC -> SRC_TABLE_ALIAS
+            Orientation.EDGE -> EDGE_TABLE_ALIAS
+            Orientation.DST -> DST_TABLE_ALIAS
+        }
+    }
+
+    private fun mapDurationCalcualtionsToSql(durationCalculation: DurationCalculator, calculationType: CalculationType): String {
+        return when (calculationType) {
+            CalculationType.DURATION_YEAR -> durationCalculation.numberOfYears()
+            CalculationType.DURATION_DAY -> durationCalculation.numberOfDays()
+            CalculationType.DURATION_HOUR -> durationCalculation.numberOfHours()
+        }
+    }
+
+    class DurationCalculator(private val endColumn: String, private val startColumn: String) {
         fun firstStart(): String {
             return "(SELECT unnest($startColumn) ORDER BY 1 LIMIT 1)"
         }
 
         fun lastEnd(): String {
-            return "(SELECT unnest($endColumn)) ORDER BY 1 DESC LIMIT 1)"
+            return "(SELECT unnest($endColumn) ORDER BY 1 DESC LIMIT 1)"
         }
 
         fun numberOfYears(): String {
