@@ -2,7 +2,7 @@ package com.openlattice.analysis.requests
 
 import java.time.OffsetDateTime
 
-class WrittenTwoWeeksFilter: AbstractRangeFilter<OffsetDateTime>( OffsetDateTime.now().minusDays(14), true, OffsetDateTime.MAX.minusYears(1L), true) {
+class WrittenTwoWeeksFilter: AbstractRangeFilter<OffsetDateTime>( OffsetDateTime.now().minusDays(14), true, OffsetDateTime.now().plusYears(100L), true) {
     override fun getLowerboundSql(): String {
         return "'$lowerbound'"
     }
@@ -19,4 +19,7 @@ class WrittenTwoWeeksFilter: AbstractRangeFilter<OffsetDateTime>( OffsetDateTime
         return OffsetDateTime.MIN
     }
 
+    override fun asSql(field: String?): String {
+        return super.asSql("last_write")
+    }
 }
