@@ -39,8 +39,8 @@ class PostgresSubscriptionService(
         hds.connection.use { conn ->
             subscription.ids.map { ekid ->
                 conn.prepareStatement(updateSubscriptionSQL).use {ps ->
-                    ps.setObject(1, subscription.srcSelections)
-                    ps.setObject(2, subscription.dstSelections)
+                    ps.setObject(1, mapper.writeValueAsString(subscription.srcSelections))
+                    ps.setObject(2, mapper.writeValueAsString(subscription.dstSelections))
                     ps.setObject(3, user.id)
                     ps.setObject(4, ekid)
                     ps.executeUpdate()
