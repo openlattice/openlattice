@@ -28,7 +28,7 @@ class PostgresSubscriptionService(
 
     // v code v
 
-    override fun createOrUpdateSubscription(subscription: NeighborhoodQuery, user: Principal) {
+    override fun createOrUpdateSubscription(subscription: NeighborhoodQuery, organizationId: UUID, user: Principal) {
         hds.connection.use { conn ->
             subscription.ids.map { ekid ->
                 conn.prepareStatement(createOrUpdateSubscriptionSQL).use { ps ->
@@ -38,6 +38,7 @@ class PostgresSubscriptionService(
                     ps.setObject(2, ekid)
                     ps.setObject(3, srcString)
                     ps.setObject(4, dstString)
+                    ps.setObject(5, organizationId)
                     print(ps.toString())
                     ps.executeUpdate()
                 }
@@ -93,6 +94,7 @@ class PostgresSubscriptionService(
                                                                   rs.getString(CONTACT_INFO.name),
                                                                   object : TypeReference<Map<SubscriptionContactType, SubscriptionContact>>() {}
                                                           ),
+                                                          ResultSetAdapters.organizationId(rs),
                                                           rs.getObject(LAST_NOTIFIED_FIELD, OffsetDateTime::class.java)
                                                   )
                                               }, { ps: PreparedStatement, _: Connection -> ps })
@@ -145,10 +147,10 @@ class PostgresSubscriptionService(
 }
 
 private val createOrUpdateSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
-        "(${PRINCIPAL_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name})" +
-        " VALUES (?,?::uuid,?::jsonb,?::jsonb)" +
+        "(${PRINCIPAL_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name}, ${ORGANIZATION_ID.name})" +
+        " VALUES (?,?::uuid,?::jsonb,?::jsonb,?::uuid)" +
         " ON CONFLICT ( ${PRINCIPAL_ID.name}, ${ID.name} ) DO UPDATE " +
-        " SET ${SRC_SELECTS.name} = EXCLUDED.${SRC_SELECTS.name}, ${DST_SELECTS.name} = EXCLUDED.${DST_SELECTS.name}"
+        " SET ${SRC_SELECTS.name} = EXCLUDED.${SRC_SELECTS.name}, ${DST_SELECTS.name} = EXCLUDED.${DST_SELECTS.name}, ${ORGANIZATION_ID.name} = EXCLUDED.${ORGANIZATION_ID.name}"
 
 private val createOrUpdateSubscriptionContactSQL = "INSERT INTO ${SUBSCRIPTION_CONTACTS.name} " +
         "(${PRINCIPAL_ID.name}, ${ID.name}, ${CONTACT_INFO.name})" +

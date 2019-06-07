@@ -304,7 +304,8 @@ public final class PostgresTable {
                             PRINCIPAL_ID,
                             LAST_NOTIFIED,
                             SRC_SELECTS,
-                            DST_SELECTS )
+                            DST_SELECTS,
+                            ORGANIZATION_ID)
                     .primaryKey( ID, PRINCIPAL_ID );
 
     public static final PostgresTableDefinition SUBSCRIPTION_CONTACTS =

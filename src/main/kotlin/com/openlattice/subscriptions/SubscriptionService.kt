@@ -9,7 +9,7 @@ import java.util.*
  */
 interface SubscriptionService {
 
-    fun createOrUpdateSubscription( subscription: NeighborhoodQuery, user: Principal )
+    fun createOrUpdateSubscription( subscription: NeighborhoodQuery, organizationId:UUID, user: Principal )
 
     fun deleteSubscription( ekId: UUID, user: Principal )
 
