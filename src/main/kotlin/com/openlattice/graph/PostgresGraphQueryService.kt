@@ -87,7 +87,7 @@ class PostgresGraphQueryService(
             query: NeighborhoodQuery,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>,
-            additionalFilters: String
+            filter: Optional<Filter>
     ): Neighborhood {
         /*
          * While it would be more efficient to group by entity set type and query all at once, filters can vary
@@ -147,7 +147,8 @@ class PostgresGraphQueryService(
                                 entityFilterDefinitions,
                                 propertyTypes,
                                 authorizedPropertyTypes,
-                                propertyTypeFqns
+                                propertyTypeFqns,
+                                filter
                         )
                         val srcEdgeFilteringView = createSrcEdgeFilteringViews(
                                 index,
@@ -155,7 +156,8 @@ class PostgresGraphQueryService(
                                 associationFilterDefinitions,
                                 propertyTypes,
                                 authorizedPropertyTypes,
-                                propertyTypeFqns
+                                propertyTypeFqns,
+                                filter
                         )
                         val edgeJoins = srcEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_2.name} FROM $it) as $it " }
                         val sql = "SELECT * FROM ${srcEdgeView.first} INNER JOIN " + srcEntityFilteringViews.keys.joinToString(
@@ -229,7 +231,8 @@ class PostgresGraphQueryService(
                                 entityFilterDefinitions,
                                 propertyTypes,
                                 authorizedPropertyTypes,
-                                propertyTypeFqns
+                                propertyTypeFqns,
+                                filter
                         )
 
                         val dstEdgeFilteringView = createDstEdgeFilteringViews(
@@ -238,7 +241,8 @@ class PostgresGraphQueryService(
                                 associationFilterDefinitions,
                                 propertyTypes,
                                 authorizedPropertyTypes,
-                                propertyTypeFqns
+                                propertyTypeFqns,
+                                filter
                         )
 
                         val edgeJoins = dstEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_1.name} FROM $it) as $it " }
@@ -295,7 +299,8 @@ class PostgresGraphQueryService(
             filterDefinitions: List<AssociationFilterDefinition>,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-            propertyTypeFqns: Map<UUID, String>
+            propertyTypeFqns: Map<UUID, String>,
+            filter: Optional<Filter>
     ): Map<String, Statement> {
         //We're able to re-use SrcFiltering views with a simple table name change because it's just entity tables.
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
@@ -307,7 +312,8 @@ class PostgresGraphQueryService(
                             filterDefinition,
                             propertyTypes,
                             authorizedPropertyTypes,
-                            propertyTypeFqns
+                            propertyTypeFqns,
+                            filter
                     )
             )
             return@mapIndexed tableName to stmt
@@ -321,7 +327,8 @@ class PostgresGraphQueryService(
             filterDefinitions: List<AssociationFilterDefinition>,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-            propertyTypeFqns: Map<UUID, String>
+            propertyTypeFqns: Map<UUID, String>,
+            filter: Optional<Filter>
     ): Map<String, Statement> {
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_dst_${index}_$filterIndex"
@@ -332,7 +339,8 @@ class PostgresGraphQueryService(
                             filterDefinition,
                             propertyTypes,
                             authorizedPropertyTypes,
-                            propertyTypeFqns
+                            propertyTypeFqns,
+                            filter
                     )
             )
             return@mapIndexed tableName to stmt
@@ -381,7 +389,8 @@ class PostgresGraphQueryService(
             filterDefinitions: List<AssociationFilterDefinition>,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-            propertyTypeFqns: Map<UUID, String>
+            propertyTypeFqns: Map<UUID, String>,
+            filter: Optional<Filter>
     ): Map<String, Statement> {
         //We're able to re-use SrcFiltering views with a simple table name change because it's just entity tables.
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
@@ -393,7 +402,8 @@ class PostgresGraphQueryService(
                             filterDefinition,
                             propertyTypes,
                             authorizedPropertyTypes,
-                            propertyTypeFqns
+                            propertyTypeFqns,
+                            filter
                     )
             )
             return@mapIndexed tableName to stmt
@@ -443,7 +453,8 @@ class PostgresGraphQueryService(
             filterDefinitions: List<AssociationFilterDefinition>,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-            propertyTypeFqns: Map<UUID, String>
+            propertyTypeFqns: Map<UUID, String>,
+            filter: Optional<Filter>
     ): Map<String, Statement> {
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_src_${index}_$filterIndex"
@@ -454,7 +465,8 @@ class PostgresGraphQueryService(
                             filterDefinition,
                             propertyTypes,
                             authorizedPropertyTypes,
-                            propertyTypeFqns
+                            propertyTypeFqns,
+                            filter
                     )
             )
             return@mapIndexed tableName to stmt
@@ -466,7 +478,8 @@ class PostgresGraphQueryService(
             filterDefinition: AssociationFilterDefinition,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
-            propertyTypeFqns: Map<UUID, String>
+            propertyTypeFqns: Map<UUID, String>,
+            filter: Optional<Filter>
     ): String {
         val tableSql = selectEntitySetWithCurrentVersionOfPropertyTypes(
                 filterDefinition.entitySetIds.associateWith { Optional.empty<Set<UUID>>() },
@@ -482,7 +495,7 @@ class PostgresGraphQueryService(
 
         val lowerbound = OffsetDateTime.now().minusDays(14)
         val upperbound = OffsetDateTime.now().plusYears(100)
-        return "CREATE TEMPORARY VIEW $tableName AS $tableSql WHERE last_write >= '$lowerbound' AND last_write <= '$upperbound'"
+        return "CREATE TEMPORARY VIEW $tableName AS $tableSql " + filter.map { "WHERE ${it.asSql("")}" }.orElse("")
     }
 
     /**

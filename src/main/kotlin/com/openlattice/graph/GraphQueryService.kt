@@ -21,6 +21,7 @@
 
 package com.openlattice.graph
 
+import com.openlattice.analysis.requests.Filter
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.query.GraphQuery
 import com.openlattice.graph.query.GraphQueryState
@@ -36,7 +37,7 @@ interface GraphQueryService {
             query: NeighborhoodQuery,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
-            additionalFilters: String = ""
+            filter: Optional<Filter> = Optional.empty()
     ): Neighborhood
 
     /**
