@@ -306,6 +306,14 @@ public final class PostgresTable {
                             DST_SELECTS )
                     .primaryKey( ID, PRINCIPAL_ID );
 
+    public static final PostgresTableDefinition SUBSCRIPTION_CONTACTS =
+            new PostgresTableDefinition( "subscription_contacts" )
+                    .addColumns( ID_VALUE,
+                            PRINCIPAL_ID,
+                            CONTACT_TYPE,
+                            CONTACT_INFO )
+                    .primaryKey( ID, PRINCIPAL_ID );
+
     public static final PostgresTableDefinition SYNC_IDS                 =
             new CitusDistributedTableDefinition( "sync_ids" )
                     .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
