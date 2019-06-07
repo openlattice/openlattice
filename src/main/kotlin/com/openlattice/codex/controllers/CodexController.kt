@@ -2,7 +2,7 @@ package com.openlattice.codex.controllers
 
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.Maps
-import com.google.common.collect.Queues
+import com.hazelcast.core.HazelcastInstance
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -12,6 +12,7 @@ import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.DataApi
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.datastore.apps.services.AppService
+import com.openlattice.hazelcast.HazelcastQueue
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.postgres.mapstores.AppConfigMapstore
 import com.openlattice.twilio.TwilioConfiguration
@@ -38,11 +39,12 @@ constructor(
         private val dataApi: DataApi,
         private val appService: AppService,
         private val appConfigMS: AppConfigMapstore,
+        private val hazelcastInstance: HazelcastInstance,
         private val configuration: TwilioConfiguration
 ) : CodexApi, AuthorizingComponent {
 
     private val textingExecutor = Executors.newSingleThreadExecutor()
-    val unSentTexts = Queues.newArrayBlockingQueue<MessageRequest>( 4 )
+    private val twilioQueue = hazelcastInstance.getQueue<MessageRequest>(HazelcastQueue.TWILIO.name)
     val pendingTexts = Maps.newConcurrentMap<String, Message>()
 
     companion object {
@@ -64,7 +66,7 @@ constructor(
         Twilio.init( configuration.sid, configuration.token)
 
         textingExecutor.execute {
-            Stream.generate { unSentTexts.take() }.forEach { (organizationId, messageContents, toPhoneNumber) ->
+            Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageContents, toPhoneNumber) ->
 //                val phone = organizations.getOrganization(organizationId).phoneNumber
                 val phone = "2403033965"
                 if ( phone == "" ){
@@ -81,7 +83,7 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
     override fun sendOutgoingText(@RequestBody contents: MessageRequest) {
-        unSentTexts.put( contents )
+        twilioQueue.put( contents )
     }
 
     override fun receiveIncomingText( @RequestBody message: Message  ) {
