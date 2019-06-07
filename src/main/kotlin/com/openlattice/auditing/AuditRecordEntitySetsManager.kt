@@ -233,7 +233,7 @@ class AuditRecordEntitySetsManager(
         } else {
             AuditEntitySetsConfiguration(
                     auditEntitySetConfiguration?.activeAuditRecordEntitySetId,
-                    auditEntitySetConfiguration?.activeAuditRecordEntitySetId
+                    auditEntitySetConfiguration?.activeAuditEdgeEntitySetId
             )
         }
 
@@ -330,10 +330,10 @@ class AuditRecordEntitySetsManager(
             name: String, aclKey: AclKey, contacts: Set<String>, organizationId: Optional<UUID>
     ): EntitySet {
         val entitySetName = buildName(aclKey)
-        val auditingEntityTypeId = auditingTypes.auditingEdgeEntityTypeId
+        val auditingEdgeEntityTypeId = auditingTypes.auditingEdgeEntityTypeId
 
         return EntitySet(
-                auditingEntityTypeId,
+                auditingEdgeEntityTypeId,
                 entitySetName,
                 "Audit edge entity set for $name ($aclKey)",
                 Optional.of("This is an automatically generated auditing entity set."),
