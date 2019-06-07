@@ -40,9 +40,10 @@ constructor(
 
 
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { neighborhoodQuery ->
-            val newSrcList = rebuildSelectionList( neighborhoodQuery.srcSelections )
-            val newDstList = rebuildSelectionList( neighborhoodQuery.dstSelections )
-            val query = NeighborhoodQuery(neighborhoodQuery.ids, newSrcList, newDstList)
+//            val newSrcList = rebuildSelectionList( neighborhoodQuery.srcSelections )
+//            val newDstList = rebuildSelectionList( neighborhoodQuery.dstSelections )
+//            val query = NeighborhoodQuery(neighborhoodQuery.ids, newSrcList, newDstList)
+            val query = neighborhoodQuery
 
             val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
             val (allEntitySetIds, _) = resolveEntitySetIdsAndRequiredAuthorizations(
