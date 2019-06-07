@@ -17,7 +17,7 @@ interface SubscriptionService {
 
     fun getSubscriptions( ekIds: List<UUID>, user: Principal ): Iterable<NeighborhoodQuery>
 
-    fun createOrUpdateSubscriptionContact(contactInfo: SubscriptionContact, currentUser: Principal)
+    fun createOrUpdateSubscriptionContact(contactInfo: SubscriptionContact, user: Principal)
 
     fun markLastNotified(ekIds: Set<UUID>, user: Principal )
 
