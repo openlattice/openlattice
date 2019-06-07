@@ -103,7 +103,7 @@ constructor(
         val etidMap = mutableMapOf<UUID, Map<UUID, Set<Filter>>>()
         typeIds.forEach {
             val typeMap = mutableMapOf<UUID, Set<Filter>>()
-            val propertyTypesForEntitySet = edmService.getPropertyTypesForEntitySet(it)
+            val propertyTypesForEntitySet = edmService.getPropertyTypesOfEntityType(it)
             propertyTypesForEntitySet.keys.forEach {
                 typeMap.put(it, setOf(WrittenTwoWeeksFilter()))
             }
