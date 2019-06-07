@@ -12,6 +12,7 @@ import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.graph.NeighborhoodSelection
 import com.openlattice.subscriptions.FeedsApi
 import com.openlattice.subscriptions.SubscriptionService
+import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RestController
@@ -27,6 +28,9 @@ constructor(
         private val subscriptionService: SubscriptionService,
         private val graphApi: GraphApi
 ) : FeedsApi, AuthorizingComponent {
+    companion object {
+        private val logger = LoggerFactory.getLogger(FeedsController::class.java)!!
+    }
 
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])

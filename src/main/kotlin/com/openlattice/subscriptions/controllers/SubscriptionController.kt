@@ -9,6 +9,7 @@ import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.subscriptions.SubscriptionApi
 import com.openlattice.subscriptions.SubscriptionService
+import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
@@ -21,6 +22,9 @@ constructor(
         private val authorizationManager: AuthorizationManager,
         private val subscriptionService: SubscriptionService
 ) : SubscriptionApi, AuthorizingComponent {
+    companion object {
+        private val logger = LoggerFactory.getLogger(SubscriptionController::class.java)!!
+    }
 
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.PUT])
