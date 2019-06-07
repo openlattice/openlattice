@@ -44,6 +44,7 @@ class AuditInitializationTask(
         logger.info("Creating any missing audit entity sets")
         ensureEdmEntitySetExists(dependencies)
         ensureAllEntitySetsHaveAuditEntitySets(dependencies)
+        ensureAllEntitySetsHaveAuditEdgeEntitySets(dependencies)
         ensureAllOrganizationsHaveAuditEntitySets(dependencies)
     }
 
