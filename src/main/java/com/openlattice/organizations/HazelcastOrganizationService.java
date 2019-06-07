@@ -188,6 +188,11 @@ public class HazelcastOrganizationService {
         phoneNumbers.put( organizationId, organization.getPhoneNumber() );
     }
 
+    public void setPhoneNumber( UUID organizationId, String phoneNumber ) {
+        phoneNumbers.put( organizationId, phoneNumber );
+    }
+
+
     public Organization getOrganization( UUID organizationId ) {
         Future<PrincipalSet> members = membersOf.getAsync( organizationId );
         Future<DelegatedStringSet> autoApprovedEmailDomains = autoApprovedEmailDomainsOf.getAsync( organizationId );
