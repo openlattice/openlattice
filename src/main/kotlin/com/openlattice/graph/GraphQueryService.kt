@@ -35,8 +35,8 @@ interface GraphQueryService {
     fun submitQuery(
             query: NeighborhoodQuery,
             propertyTypes: Map<UUID, PropertyType>,
-            authorizedPropertyTypes: Map<UUID, Set<UUID>>
-    )
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+    ): Neighborhood
 
     /**
      * Looks up the entity sets of a set of entity key ids.

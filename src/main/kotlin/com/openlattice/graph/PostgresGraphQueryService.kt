@@ -24,12 +24,17 @@ package com.openlattice.graph
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.authorization.AuthorizationManager
+import com.openlattice.data.DataEdgeKey
+import com.openlattice.data.EntityDataKey
+import com.openlattice.data.Property
 import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
+import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
 import com.openlattice.datastore.services.EdmManager
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn
@@ -54,6 +59,7 @@ import java.util.function.Supplier
 class PostgresGraphQueryService(
         private val hds: HikariDataSource,
         private val edm: EdmManager,
+        private val pgDataService: PostgresEntityDataQueryService,
         private val authorizationManager: AuthorizationManager,
         private val byteBlobDataManager: ByteBlobDataManager,
         private val mapper: ObjectMapper
@@ -80,8 +86,8 @@ class PostgresGraphQueryService(
     override fun submitQuery(
             query: NeighborhoodQuery,
             propertyTypes: Map<UUID, PropertyType>,
-            authorizedPropertyTypes: Map<UUID, Set<UUID>>
-    ) {
+            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
+    ): Neighborhood {
         /*
          * While it would be more efficient to group by entity set type and query all at once, filters can vary
          * by element so instead we
@@ -94,95 +100,158 @@ class PostgresGraphQueryService(
          *
          */
 
-        // Join A to B
-        // How do you achieve computing intersections that matter?
-        val connection = hds.connection
-
+        val authorizedPropertyTypes = authorizedPropertyTypesByEntitySet.mapValues { it.value.keys }
         val ids = query.ids
 
-
-        //Right now all the results of these queries will be joined.
-        /*
-         * This operates under the assumption that it is safe to join entity filters even there exists an
-         * entity set - filter pair and entity type id - filter pair such that an entity set is of type entity type id.
-         *
-         */
-
+        val entitiesWithoutData = mutableMapOf<UUID, MutableSet<UUID>>()
+        val entities = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, List<Property>>>>()
+        val associations = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, NeighborIds>>>()
+        val neighborhood = Neighborhood(ids, entities, associations)
         val propertyTypeFqns = propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
         query.srcSelections.forEachIndexed { index, selection ->
-            val entityFilterDefinitions = getFilterDefinitions(
-                    selection.entityTypeIds,
-                    selection.entitySetIds,
-                    selection.entityFilters
-            )
+            PostgresIterable<DataEdgeKey>(
+                    Supplier {
+                        val connection = hds.connection
+                        val stmt = connection.createStatement()
+                        val entityFilterDefinitions = getFilterDefinitions(
+                                selection.entityTypeIds,
+                                selection.entitySetIds,
+                                selection.entityFilters
+                        )
 
-            val associationFilterDefinitions = getFilterDefinitions(
-                    selection.associationTypeIds,
-                    selection.associationEntitySetIds,
-                    selection.associationFilters
-            )
+                        val associationFilterDefinitions = getFilterDefinitions(
+                                selection.associationTypeIds,
+                                selection.associationEntitySetIds,
+                                selection.associationFilters
+                        )
 
-            val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
-            val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+                        val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+                        val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
-            val srcEdgeView = createSrcEdgesView(index, connection, ids, entitySetIds, associationEntitySetIds)
-            val srcFilteringViews = createSrcFilteringViews(
-                    index,
-                    connection,
-                    entityFilterDefinitions,
-                    propertyTypes,
-                    authorizedPropertyTypes,
-                    propertyTypeFqns
-            )
-            createSrcEdgeFilteringViews(
-                    index, connection, associationFilterDefinitions, propertyTypes, authorizedPropertyTypes,
-                    propertyTypeFqns
-            )
+                        val srcEdgeView = createSrcEdgesView(
+                                index, connection, ids, entitySetIds, associationEntitySetIds
+                        )
 
-            // EdgesView INNER JOIN EdgeFilteringView USING (id) INNER JOIN SrcFilteringView USING (id)
-            val srcJoinSql = buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
-
+                        val srcEntityFilteringViews = createSrcFilteringViews(
+                                index,
+                                connection,
+                                entityFilterDefinitions,
+                                propertyTypes,
+                                authorizedPropertyTypes,
+                                propertyTypeFqns
+                        )
+                        val srcEdgeFilteringView = createSrcEdgeFilteringViews(
+                                index,
+                                connection,
+                                associationFilterDefinitions,
+                                propertyTypes,
+                                authorizedPropertyTypes,
+                                propertyTypeFqns
+                        )
+                        val edgeJoins = srcEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_2.name} FROM $it) as $it " }
+                        val sql = "SELECT * FROM ${srcEdgeView.first} INNER JOIN " + srcEntityFilteringViews.keys.joinToString(
+                                " USING (${ID_VALUE.name}) INNER JOIN "
+                        ) + " USING(${ID_VALUE.name}) +" +
+                                " INNER JOIN " + edgeJoins.joinToString(
+                                " USING (${ID_VALUE.name}) INNER JOIN "
+                        ) + " USING (${ID_VALUE.name}) "
+                        val rs = stmt.executeQuery(sql)
+                        StatementHolder(connection, stmt, rs)
+                    }, Function {
+                val srcEs = it.getObject(SRC_ENTITY_SET_ID_FIELD, UUID::class.java)
+                val srcId = it.getObject(ID_VALUE.name, UUID::class.java)
+                val dstEs = it.getObject(DST_ENTITY_SET_ID_FIELD, UUID::class.java)
+                val dstId = it.getObject(EDGE_COMP_1_FIELD, UUID::class.java)
+                val edgeEs = it.getObject(EDGE_ENTITY_SET_ID_FIELD, UUID::class.java)
+                val edgeId = it.getObject(EDGE_COMP_2.name, UUID::class.java)
+                DataEdgeKey(EntityDataKey(srcEs, srcId), EntityDataKey(dstId, dstEs), EntityDataKey(edgeEs, edgeId))
+            }).forEach {
+                entitiesWithoutData.getOrPut(it.src.entitySetId) { mutableSetOf() }.add(it.src.entityKeyId)
+                entitiesWithoutData.getOrPut(it.dst.entitySetId) { mutableSetOf() }.add(it.dst.entityKeyId)
+                entitiesWithoutData.getOrPut(it.edge.entitySetId) { mutableSetOf() }.add(it.edge.entityKeyId)
+                associations
+                        .getOrPut(it.dst.entityKeyId) { mutableMapOf() }
+                        .getOrPut(it.edge.entitySetId) { mutableMapOf() }[it.src.entitySetId] = NeighborIds(
+                        it.edge.entityKeyId,
+                        it.src.entityKeyId
+                )
+            }
         }
 
         query.dstSelections.forEachIndexed { index, selection ->
-            val entityFilterDefinitions = getFilterDefinitions(
-                    selection.entityTypeIds,
-                    selection.entitySetIds,
-                    selection.entityFilters
-            )
+            PostgresIterable<DataEdgeKey>(
+                    Supplier {
+                        val connection = hds.connection
+                        val stmt = connection.createStatement()
+                        val entityFilterDefinitions = getFilterDefinitions(
+                                selection.entityTypeIds,
+                                selection.entitySetIds,
+                                selection.entityFilters
+                        )
 
-            val associationFilterDefinitions = getFilterDefinitions(
-                    selection.associationTypeIds,
-                    selection.associationEntitySetIds,
-                    selection.associationFilters
-            )
+                        val associationFilterDefinitions = getFilterDefinitions(
+                                selection.associationTypeIds,
+                                selection.associationEntitySetIds,
+                                selection.associationFilters
+                        )
 
-            val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
-            val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+                        val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+                        val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
-            createDstEdgesView(index, connection, ids, entitySetIds, associationEntitySetIds)
-            createDstFilteringViews(
-                    index,
-                    connection,
-                    entityFilterDefinitions,
-                    propertyTypes,
-                    authorizedPropertyTypes,
-                    propertyTypeFqns
-            )
-            createDstEdgeFilteringViews(
-                    index, connection, associationFilterDefinitions, propertyTypes, authorizedPropertyTypes,
-                    propertyTypeFqns
-            )
+                        val dstEdgeView = createDstEdgesView(
+                                index, connection, ids, entitySetIds, associationEntitySetIds
+                        )
+                        val dstEntityFilteringViews = createDstFilteringViews(
+                                index,
+                                connection,
+                                entityFilterDefinitions,
+                                propertyTypes,
+                                authorizedPropertyTypes,
+                                propertyTypeFqns
+                        )
+                        val dstEdgeFilteringView = createDstEdgeFilteringViews(
+                                index,
+                                connection,
+                                associationFilterDefinitions,
+                                propertyTypes,
+                                authorizedPropertyTypes,
+                                propertyTypeFqns
+                        )
+                        val edgeJoins = dstEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_2.name} FROM $it) as $it " }
+                        val sql = "SELECT * FROM ${dstEdgeView.first} INNER JOIN " + dstEntityFilteringViews.keys.joinToString(
+                                " USING (${ID_VALUE.name}) INNER JOIN "
+                        ) + " USING(${ID_VALUE.name}) +" +
+                                " INNER JOIN " + edgeJoins.joinToString(
+                                " USING (${ID_VALUE.name}) INNER JOIN "
+                        ) + " USING (${ID_VALUE.name}) "
+                        val rs = stmt.executeQuery(sql)
+                        StatementHolder(connection, stmt, rs)
+                    }, Function {
+                val srcEs = it.getObject(SRC_ENTITY_SET_ID_FIELD, UUID::class.java)
+                val srcId = it.getObject(EDGE_COMP_2_FIELD, UUID::class.java)
+                val dstEs = it.getObject(DST_ENTITY_SET_ID_FIELD, UUID::class.java)
+                val dstId = it.getObject(ID_VALUE.name, UUID::class.java)
+                val edgeEs = it.getObject(EDGE_ENTITY_SET_ID_FIELD, UUID::class.java)
+                val edgeId = it.getObject(EDGE_COMP_1_FIELD, UUID::class.java)
+                DataEdgeKey(EntityDataKey(srcEs, srcId), EntityDataKey(dstId, dstEs), EntityDataKey(edgeEs, edgeId))
+            }).forEach {
+                entitiesWithoutData.getOrPut(it.src.entitySetId) { mutableSetOf() }.add(it.src.entityKeyId)
+                entitiesWithoutData.getOrPut(it.dst.entitySetId) { mutableSetOf() }.add(it.dst.entityKeyId)
+                entitiesWithoutData.getOrPut(it.edge.entitySetId) { mutableSetOf() }.add(it.edge.entityKeyId)
+                associations
+                        .getOrPut(it.src.entityKeyId) { mutableMapOf() }
+                        .getOrPut(it.edge.entitySetId) { mutableMapOf() }[it.dst.entitySetId] = NeighborIds(
+                        it.edge.entityKeyId,
+                        it.dst.entityKeyId
+                )
+            }
 
-
-            // EdgesView INNER JOIN EdgeFilteringView USING (id) INNER JOIN SrcFilteringView USING (id)
-            val srcJoinSql = buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
         }
         //Now just need to return the union of both these selections
 
 //        check( entitySetIds.isNotEmpty() ) {"Entity set ids cannot be empty."}
 //        check( associationEntitySetIds.isNotEmpty() ) {"Association entity set ids cannot be empty."}
-        TODO("hackathon")
+        return neighborhood
     }
 
     private fun createDstEdgeFilteringViews(
@@ -192,8 +261,9 @@ class PostgresGraphQueryService(
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
             propertyTypeFqns: Map<UUID, String>
-    ) {
+    ): Map<String, Statement> {
 
+        return mapOf()
     }
 
     private fun createDstFilteringViews(
@@ -203,8 +273,9 @@ class PostgresGraphQueryService(
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
             propertyTypeFqns: Map<UUID, String>
-    ) {
+    ): Map<String, Statement> {
 
+        return mapOf()
     }
 
     private fun createDstEdgesView(
@@ -230,7 +301,7 @@ class PostgresGraphQueryService(
             entitySetIds: Set<UUID>,
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
-        val tableName = "tmp_src_edges$index"
+        val tableName = "tmp_src_edges_$index"
         val tableSql = buildEdgesIncomingJoinSql(ids, entitySetIds, associationEntitySetIds)
 
         val stmt = connection.createStatement()
@@ -247,6 +318,7 @@ class PostgresGraphQueryService(
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
             propertyTypeFqns: Map<UUID, String>
     ): Map<String, Statement> {
+        //We're able to re-use SrcFiltering views with a simple table name change because it's just entity tables.
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_src_edge_${index}_$filterIndex"
             val stmt = connection.createStatement()
