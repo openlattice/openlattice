@@ -102,7 +102,7 @@ class PostgresGraphQueryService(
 
         val authorizedPropertyTypes = authorizedPropertyTypesByEntitySet.mapValues { it.value.keys }
         val ids = query.ids
-        val queryId = UUID.randomUUID().toString().filter { it.isLetterOrDigit() }
+        val queryId = UUID.randomUUID().toString().replace("-","")
 
         val entities = mutableMapOf<UUID, MutableMap<UUID, Map<UUID, Set<Any>>>>()
         val associations = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, NeighborIds>>>()
