@@ -123,7 +123,7 @@ class AuditInitializationTask(
     }
 
     private fun ensureAllEntitySetsHaveAuditEdgeEntitySets(dependencies: AuditTaskDependencies) {
-        val missingAuditRecordEntitySets = auditRecordEntitySetConfigurations.entries
+        auditRecordEntitySetConfigurations.entries
                 .filter { it.value.activeAuditEdgeEntitySetId == null }
                 .forEach { (entitySetId, _) ->
                     logger.info("Creating missing audit edge entity set for entity set {}", entitySetId)

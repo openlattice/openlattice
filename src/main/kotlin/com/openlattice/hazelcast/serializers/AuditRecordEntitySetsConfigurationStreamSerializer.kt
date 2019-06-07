@@ -68,7 +68,7 @@ class AuditRecordEntitySetsConfigurationStreamSerializer : SelfRegisteringStream
 
         return AuditRecordEntitySetConfiguration(
                 activeAuditRecordEntitySetId,
-                activeAuditRecordEntitySetId,
+                activeAuditEdgeEntitySetId,
                 auditRecordEntitySetIds,
                 auditEdgeEntitySetIds
         )
