@@ -4,11 +4,11 @@ import java.time.OffsetDateTime
 
 class WrittenTwoWeeksFilter: AbstractRangeFilter<OffsetDateTime>( OffsetDateTime.now().minusDays(14), true, OffsetDateTime.MAX, true) {
     override fun getLowerboundSql(): String {
-        return lowerbound.toString()
+        return "'$lowerbound'"
     }
 
     override fun getUpperboundSql(): String {
-        return upperbound.toString()
+        return "'$upperbound'"
     }
 
     override fun getMaxValue(): OffsetDateTime {
