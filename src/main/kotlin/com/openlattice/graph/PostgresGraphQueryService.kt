@@ -132,7 +132,11 @@ class PostgresGraphQueryService(
                         val stmt = connection.createStatement()
 
                         val srcEdgeView = createSrcEdgesView(
-                                index, connection, ids, entitySetIds, associationEntitySetIds
+                                index,
+                                connection,
+                                ids,
+                                entitySetIds,
+                                associationEntitySetIds
                         )
 
                         val srcEntityFilteringViews = createSrcFilteringViews(
@@ -156,8 +160,8 @@ class PostgresGraphQueryService(
                                 " USING (${ID_VALUE.name}) INNER JOIN "
                         ) + " USING(${ID_VALUE.name}) +" +
                                 " INNER JOIN " + edgeJoins.joinToString(
-                                " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING (${ID_VALUE.name}) "
+                                " USING (${EDGE_COMP_2.name}) INNER JOIN "
+                        ) + " USING (${EDGE_COMP_2.name}) "
                         val rs = stmt.executeQuery(sql)
                         StatementHolder(connection, stmt, rs)
                     }, Function {
@@ -208,8 +212,13 @@ class PostgresGraphQueryService(
                         val stmt = connection.createStatement()
 
                         val dstEdgeView = createDstEdgesView(
-                                index, connection, ids, entitySetIds, associationEntitySetIds
+                                index,
+                                connection,
+                                ids,
+                                entitySetIds,
+                                associationEntitySetIds
                         )
+
                         val dstEntityFilteringViews = createDstFilteringViews(
                                 index,
                                 connection,
@@ -218,6 +227,7 @@ class PostgresGraphQueryService(
                                 authorizedPropertyTypes,
                                 propertyTypeFqns
                         )
+
                         val dstEdgeFilteringView = createDstEdgeFilteringViews(
                                 index,
                                 connection,
@@ -226,13 +236,14 @@ class PostgresGraphQueryService(
                                 authorizedPropertyTypes,
                                 propertyTypeFqns
                         )
-                        val edgeJoins = dstEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_2.name} FROM $it) as $it " }
+
+                        val edgeJoins = dstEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_1.name} FROM $it) as $it " }
                         val sql = "SELECT * FROM ${dstEdgeView.first} INNER JOIN " + dstEntityFilteringViews.keys.joinToString(
                                 " USING (${ID_VALUE.name}) INNER JOIN "
                         ) + " USING(${ID_VALUE.name}) +" +
                                 " INNER JOIN " + edgeJoins.joinToString(
-                                " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING (${ID_VALUE.name}) "
+                                " USING (${EDGE_COMP_1.name}) INNER JOIN "
+                        ) + " USING (${EDGE_COMP_1.name}) "
                         val rs = stmt.executeQuery(sql)
                         StatementHolder(connection, stmt, rs)
                     }, Function {
@@ -256,35 +267,58 @@ class PostgresGraphQueryService(
             }
 
         }
-        //Now just need to return the union of both these selections
 
-//        check( entitySetIds.isNotEmpty() ) {"Entity set ids cannot be empty."}
-//        check( associationEntitySetIds.isNotEmpty() ) {"Association entity set ids cannot be empty."}
         return neighborhood
     }
 
     private fun createDstEdgeFilteringViews(
             index: Int,
             connection: Connection,
-            associationFilterDefinitions: List<AssociationFilterDefinition>,
+            filterDefinitions: List<AssociationFilterDefinition>,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
             propertyTypeFqns: Map<UUID, String>
     ): Map<String, Statement> {
-
+        //We're able to re-use SrcFiltering views with a simple table name change because it's just entity tables.
+        return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
+            val tableName = "tmp_dst_edge_${index}_$filterIndex"
+            val stmt = connection.createStatement()
+            stmt.executeQuery(
+                    createFilteringView(
+                            tableName,
+                            filterDefinition,
+                            propertyTypes,
+                            authorizedPropertyTypes,
+                            propertyTypeFqns
+                    )
+            )
+            return@mapIndexed tableName to stmt
+        }.toMap()
         return mapOf()
     }
 
     private fun createDstFilteringViews(
             index: Int,
             connection: Connection,
-            entityFilterDefinitions: List<AssociationFilterDefinition>,
+            filterDefinitions: List<AssociationFilterDefinition>,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypes: Map<UUID, Set<UUID>>,
             propertyTypeFqns: Map<UUID, String>
     ): Map<String, Statement> {
-
-        return mapOf()
+        return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
+            val tableName = "tmp_dst_${index}_$filterIndex"
+            val stmt = connection.createStatement()
+            stmt.executeQuery(
+                    createFilteringView(
+                            tableName,
+                            filterDefinition,
+                            propertyTypes,
+                            authorizedPropertyTypes,
+                            propertyTypeFqns
+                    )
+            )
+            return@mapIndexed tableName to stmt
+        }.toMap()
     }
 
     private fun createDstEdgesView(
@@ -294,8 +328,8 @@ class PostgresGraphQueryService(
             entitySetIds: Set<UUID>,
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
-        val tableName = "tmp_src_edges$index"
-        val tableSql = buildEdgesOutgoingJoinSql(ids, entitySetIds, associationEntitySetIds)
+        val tableName = "tmp_dst_edges_$index"
+        val tableSql = buildDstJoinSql(ids, entitySetIds, associationEntitySetIds)
 
         val stmt = connection.createStatement()
         stmt.executeQuery(tableSql)
@@ -311,7 +345,7 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_src_edges_$index"
-        val tableSql = buildEdgesIncomingJoinSql(ids, entitySetIds, associationEntitySetIds)
+        val tableSql = buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
 
         val stmt = connection.createStatement()
         stmt.executeQuery(tableSql)
@@ -332,7 +366,7 @@ class PostgresGraphQueryService(
             val tableName = "tmp_src_edge_${index}_$filterIndex"
             val stmt = connection.createStatement()
             stmt.executeQuery(
-                    createSrcFilteringViews(
+                    createFilteringView(
                             tableName,
                             filterDefinition,
                             propertyTypes,
@@ -390,7 +424,7 @@ class PostgresGraphQueryService(
             val tableName = "tmp_src_${index}_$filterIndex"
             val stmt = connection.createStatement()
             stmt.executeQuery(
-                    createSrcFilteringViews(
+                    createFilteringView(
                             tableName,
                             filterDefinition,
                             propertyTypes,
@@ -402,7 +436,7 @@ class PostgresGraphQueryService(
         }.toMap()
     }
 
-    private fun createSrcFilteringViews(
+    private fun createFilteringView(
             tableName: String,
             filterDefinition: AssociationFilterDefinition,
             propertyTypes: Map<UUID, PropertyType>,
@@ -451,8 +485,8 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): String {
         val idsClause = "${EDGE_COMP_2.name} ${inClause(ids)}"
-        val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
-        val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
+        val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
+        val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
         val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
 
         return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
