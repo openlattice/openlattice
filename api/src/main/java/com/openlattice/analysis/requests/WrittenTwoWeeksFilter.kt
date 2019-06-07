@@ -19,4 +19,7 @@ class WrittenTwoWeeksFilter: AbstractRangeFilter<OffsetDateTime>( OffsetDateTime
         return OffsetDateTime.MIN
     }
 
+    override fun asSql(field: String?): String {
+        return super.asSql("last_write")
+    }
 }
