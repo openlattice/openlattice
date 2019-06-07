@@ -63,6 +63,7 @@ interface AuditingComponent {
                     .filter { (auditEntitySetConfiguration, entities) -> auditEntitySetConfiguration.auditRecordEntitySet != null }
                     .map { (auditEntitySetConfiguration, entities) ->
                         val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
+                        val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
                         val (entityKeyIds, _) = getDataGraphService().createEntities(
                                 auditEntitySet!!,
                                 toMap(entities),
@@ -77,11 +78,11 @@ interface AuditingComponent {
                                     val entityKeyIds = ae.entities.get()
                                     entityKeyIds.forEach { id ->
                                         lm.put(
-                                                auditEntitySetConfiguration.auditEdgeEntitySet,
+                                                auditEdgeEntitySet,
                                                 DataEdge(
                                                         EntityDataKey(entitySetId, id),
                                                         EntityDataKey(auditEntitySet, auditEntityKeyId),
-                                                        ImmutableMap.of(auditEntitySet, emptySet())
+                                                        ImmutableMap.of(auditEdgeEntitySet, emptySet())
                                                 )
                                         )
                                         return@forEach
