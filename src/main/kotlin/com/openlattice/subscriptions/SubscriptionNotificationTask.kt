@@ -79,6 +79,7 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
                         }
                     }
                 }
+                dependencies.subscriptionService.markLastNotified(neighborhood.entities.values.flatMap { it.keys }.toSet(),principal )
             }
         }
     }
