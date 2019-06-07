@@ -3,7 +3,7 @@ package com.openlattice.subscriptions
 import com.openlattice.analysis.requests.AbstractRangeFilter
 import java.time.OffsetDateTime
 
-class LastWriteRangeFilter( lastNotify : OffsetDateTime ): AbstractRangeFilter<OffsetDateTime>(lastNotify, true, OffsetDateTime.now().plusYears(100L), true) {
+class LastWriteRangeFilter( lastNotify : OffsetDateTime ): AbstractRangeFilter<OffsetDateTime>(lastNotify, false, OffsetDateTime.now().plusYears(100L), true) {
     override fun getLowerboundSql(): String {
         return "'$lowerbound'"
     }

@@ -505,7 +505,7 @@ class PostgresGraphQueryService(
 
         val lowerbound = OffsetDateTime.now().minusDays(14)
         val upperbound = OffsetDateTime.now().plusYears(100)
-        val sql = "CREATE TEMPORARY VIEW $tableName AS $tableSql " + filter.map { "WHERE ${it.asSql("")}" }.orElse("")
+        val sql = "CREATE TEMPORARY VIEW $tableName AS $tableSql " + filter.map { "WHERE " + it.asSql("") }.orElse("")
         return sql
     }
 
