@@ -63,7 +63,9 @@ constructor(
     @Timed
     @RequestMapping(path = [SubscriptionApi.CONTACT_INFO_PATH], method = [RequestMethod.POST])
     override fun createOrUpdateSubscriptionContactInfo(@RequestBody contactInfo: SubscriptionContact) {
-        subscriptionService.createOrUpdateSubscriptionContact(contactInfo, Principals.getCurrentUser())
+        val user = Principals.getCurrentUser()
+        subscriptionService.createOrUpdateSubscriptionContact(contactInfo, user)
+        subscriptionService.createOrUpdateSubscription(contactInfo.subscription, contactInfo.organizationId, user)
     }
 
     @Timed
