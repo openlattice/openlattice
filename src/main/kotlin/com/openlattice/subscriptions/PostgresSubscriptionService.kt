@@ -27,11 +27,14 @@ class PostgresSubscriptionService(
     override fun createOrUpdateSubscription(subscription: NeighborhoodQuery, user: Principal) {
         hds.connection.use { conn ->
             subscription.ids.map { ekid ->
-                conn.prepareStatement(updateSubscriptionSQL).use {ps ->
-                    ps.setObject(1, mapper.writeValueAsString(subscription.srcSelections))
-                    ps.setObject(2, mapper.writeValueAsString(subscription.dstSelections))
-                    ps.setObject(3, user.id)
-                    ps.setObject(4, ekid)
+                conn.prepareStatement(createOrUpdateSubscriptionSQL).use {ps ->
+                    val srcString = mapper.writeValueAsString(subscription.srcSelections)
+                    val dstString = mapper.writeValueAsString(subscription.dstSelections)
+                    ps.setObject(1, user.id)
+                    ps.setObject(2, ekid)
+                    ps.setObject(3, srcString)
+                    ps.setObject(4, dstString)
+                    print( ps.toString())
                     ps.executeUpdate()
                 }
             }
@@ -43,6 +46,7 @@ class PostgresSubscriptionService(
             val ps = conn.prepareStatement( deleteSubscriptionSQL )
             ps.setObject(1, user.id)
             ps.setObject(2, ekId )
+            print( ps.toString())
             ps.executeUpdate()
         }
     }
@@ -50,8 +54,9 @@ class PostgresSubscriptionService(
     override fun getAllSubscriptions(user: Principal): Iterable<NeighborhoodQuery> {
         return execSqlSelectReturningIterable(getAllSubscriptionsSQL,
                 { rs: ResultSet ->  ResultSetAdapters.subscription( rs ) },
-                { ps: PreparedStatement, conn: Connection ->
+                { ps: PreparedStatement, _: Connection ->
                     ps.setObject(1, user.id)
+                    print( ps.toString())
                     ps
                 }
         )
@@ -64,6 +69,7 @@ class PostgresSubscriptionService(
                     val arr = PostgresArrays.createUuidArray( conn, ekIds )
                     ps.setObject(1, user.id)
                     ps.setObject(2, arr)
+                    print( ps.toString())
                     ps
                 }
         )
@@ -91,12 +97,12 @@ class PostgresSubscriptionService(
 
 }
 
+private val createOrUpdateSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
+        "(${PRINCIPAL_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name})" +
+        " VALUES (?,?::uuid,?::jsonb,?::jsonb)" +
+        " ON CONFLICT ( ${PRINCIPAL_ID.name}, ${ID.name} ) DO UPDATE " +
+        " SET ${SRC_SELECTS.name} = EXCLUDED.${SRC_SELECTS.name}, ${DST_SELECTS.name} = EXCLUDED.${DST_SELECTS.name}"
 
-//private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
-//        "(${PRINCIPAL_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name})" +
-//        " VALUES (?,?::uuid,?::jsonb,?::jsonb)"
-private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${SRC_SELECTS.name} = ?::jsonb, ${DST_SELECTS.name} = ?::jsonb WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?::uuid"
-private val createOrUpdateSubscriptionSQL = updateSubscriptionSQL
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
 private val getAllSubscriptionsSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ?"
