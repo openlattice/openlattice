@@ -135,7 +135,7 @@ class AssemblerQueryService(private val edmService: EdmManager) {
         }
 
         val aggregateCols = (srcAggregateCols + edgeAggregateCols + dstAggregateCols).joinToString(", ")
-        val calculationCols = calculationSqls.joinToString(", ")
+        val calculationCols = if(calculationSqls.isNotEmpty()) ", " + calculationSqls.joinToString(", ") else ""
         val simpleSql = simpleAggregationJoinSql(srcEntitySetName, edgeEntitySetName, dstEntitySetName, cols, groupingColAliases, aggregateCols, calculationCols)
 
         logger.info("Simple assembly aggregate query:\n$simpleSql")
@@ -163,7 +163,7 @@ class AssemblerQueryService(private val edmService: EdmManager) {
 
 
     fun simpleAggregationJoinSql(srcEntitySetName: String, edgeEntitySetName: String, dstEntitySetName: String, cols: String, groupingColAliases: String, aggregateCols: String, calculationCols: String): String {
-        return "SELECT $cols, $aggregateCols, $calculationCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name} " +
+        return "SELECT $cols, $aggregateCols $calculationCols FROM ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.${PostgresTable.EDGES.name} " +
                 "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$srcEntitySetName\" AS $SRC_TABLE_ALIAS USING( ${PostgresColumn.ID.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$edgeEntitySetName\" AS $EDGE_TABLE_ALIAS ON( $EDGE_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_2.name} ) " +
                 "INNER JOIN ${AssemblerConnectionManager.MATERIALIZED_VIEWS_SCHEMA}.\"$dstEntitySetName\" AS $DST_TABLE_ALIAS ON( $DST_TABLE_ALIAS.${PostgresColumn.ID.name} = ${PostgresColumn.EDGE_COMP_1.name} ) " +
