@@ -51,8 +51,7 @@ constructor(
 
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
-    override fun getSubscriptions(
-            @RequestParam(SubscriptionApi.ENTITY_KEY_IDS) entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery> {
+    override fun getSubscriptions(@RequestBody entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery> {
         return subscriptionService.getSubscriptions(entityKeyIds, Principals.getCurrentUser())
     }
 
