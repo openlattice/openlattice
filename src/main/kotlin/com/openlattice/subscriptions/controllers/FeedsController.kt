@@ -5,9 +5,11 @@ import com.openlattice.analysis.requests.Filter
 import com.openlattice.analysis.requests.WrittenTwoWeeksFilter
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.authorization.EdmAuthorizationHelper
 import com.openlattice.authorization.Principals
-import com.openlattice.graph.*
+import com.openlattice.graph.GraphApi
+import com.openlattice.graph.Neighborhood
+import com.openlattice.graph.NeighborhoodQuery
+import com.openlattice.graph.NeighborhoodSelection
 import com.openlattice.subscriptions.FeedsApi
 import com.openlattice.subscriptions.SubscriptionService
 import org.springframework.web.bind.annotation.RequestMapping
@@ -22,10 +24,8 @@ class FeedsController
 @Inject
 constructor(
         private val authorizationManager: AuthorizationManager,
-        private val authzHelper: EdmAuthorizationHelper,
         private val subscriptionService: SubscriptionService,
-        private val graphApi: GraphApi,
-        private val graphQueryService: GraphQueryService
+        private val graphApi: GraphApi
 ) : FeedsApi, AuthorizingComponent {
 
     @Timed
