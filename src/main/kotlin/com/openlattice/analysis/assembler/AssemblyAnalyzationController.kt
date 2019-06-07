@@ -95,14 +95,13 @@ class AssemblyAnalyzationController : AssemblyAnalyzationApi, AuthorizingCompone
                 .map { edmService.getPropertyType(it.key).type.fullQualifiedNameAsString to it.value.map { it.aggregationType } }
                 .toMap()
 
-
-
         val connection = assemblerConnectionManager.connect(dbName, account).connection
         val asd = assemblerQueryService.simpleAggregation(
                 connection,
                 srcEntitySetName, edgeEntitySetName, dstEntitySetName,
                 srcGroupColumns, edgeGroupColumns, dstGroupColumns,
-                srcAggregates, edgeAggregates, dstAggregates)
+                srcAggregates, edgeAggregates, dstAggregates,
+                assemblyAggregationFilter.customCalculations)
 
         return asd
 

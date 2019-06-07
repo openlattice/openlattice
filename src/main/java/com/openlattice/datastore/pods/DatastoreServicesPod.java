@@ -381,7 +381,7 @@ public class DatastoreServicesPod {
 
     @Bean
     public AssemblerQueryService assemblerQueryService() {
-        return new AssemblerQueryService();
+        return new AssemblerQueryService( dataModelService() );
     }
 
     @Bean
