@@ -135,6 +135,7 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
             value = OrganizationsApi.SET_PHONE_PATH,
             consumes = MediaType.APPLICATION_JSON_VALUE )
     public Void setOrganizationPhoneNumber( UUID organizationId, String phoneNumber ) {
+        organizations.setPhoneNumber( organizationId, phoneNumber );
         return null;
     }
 
