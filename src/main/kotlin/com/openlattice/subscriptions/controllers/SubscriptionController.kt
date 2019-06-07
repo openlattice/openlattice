@@ -10,6 +10,7 @@ import com.openlattice.graph.GraphQueryService
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.graph.NeighborhoodSelection
 import com.openlattice.subscriptions.SubscriptionApi
+import com.openlattice.subscriptions.SubscriptionContact
 import com.openlattice.subscriptions.SubscriptionService
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
@@ -52,6 +53,12 @@ constructor(
         ensureReadOnRequired(authorizedPropertyTypes, requiredPropertyTypes)
 
         subscriptionService.createOrUpdateSubscription( subscription, Principals.getCurrentUser())
+    }
+
+    @Timed
+    @RequestMapping(path = [SubscriptionApi.CONTACT_INFO_PATH], method = [RequestMethod.POST])
+    override fun createOrUpdateSubscriptionContactInfo(@RequestBody contactInfo: SubscriptionContact) {
+        subscriptionService.createOrUpdateSubscriptionContact( contactInfo, Principals.getCurrentUser())
     }
 
     @Timed
