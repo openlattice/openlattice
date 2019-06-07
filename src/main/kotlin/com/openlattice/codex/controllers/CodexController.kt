@@ -3,7 +3,6 @@ package com.openlattice.codex.controllers
 import com.codahale.metrics.annotation.Timed
 import com.google.common.collect.Maps
 import com.google.common.collect.Queues
-import com.openlattice.apps.AppApi
 import com.openlattice.apps.AppConfigKey
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
@@ -12,14 +11,17 @@ import com.openlattice.codex.MessageRequest
 import com.openlattice.controllers.exceptions.BadRequestException
 import com.openlattice.data.DataApi
 import com.openlattice.data.DataEdgeKey
+import com.openlattice.datastore.apps.services.AppService
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.postgres.mapstores.AppConfigMapstore
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
 import com.twilio.rest.api.v2010.account.Message
-import com.twilio.rest.api.v2010.account.MessageCreator
 import com.twilio.type.PhoneNumber
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestMethod
+import org.springframework.web.bind.annotation.RestController
 import java.net.URI
 import java.util.*
 import java.util.concurrent.Executors
@@ -34,13 +36,14 @@ constructor(
         private val authorizationManager: AuthorizationManager,
         private val organizations: HazelcastOrganizationService,
         private val dataApi: DataApi,
-        private val appApi: AppApi,
+        private val appService: AppService,
         private val appConfigMS: AppConfigMapstore,
         private val configuration: TwilioConfiguration
 ) : CodexApi, AuthorizingComponent {
 
-    // Codex App
-    private val app = appApi.getApp("codex")
+    private val textingExecutor = Executors.newSingleThreadExecutor()
+    val unSentTexts = Queues.newArrayBlockingQueue<MessageRequest>( 4 )
+    val pendingTexts = Maps.newConcurrentMap<String, Message>()
 
     companion object {
         // People
@@ -55,37 +58,30 @@ constructor(
         private val toUUID = UUID.fromString("3ddfe8d0-0b73-4097-b737-e969b64b4f64")
         // From
         private val fromUUID = UUID.fromString("2d2509ea-51f7-4663-a3a8-42d8036e2e04")
-
-        private val textingExecutor = Executors.newSingleThreadExecutor()
-
-        val unSentTexts = Queues.newArrayBlockingQueue<MessageCreator>( 2 )
-        val pendingTexts = Maps.newConcurrentMap<String, Message>()
     }
 
     init {
         Twilio.init( configuration.sid, configuration.token)
 
         textingExecutor.execute {
-            Stream.generate { unSentTexts.take() }.map {
-                val message = it.create()
+            Stream.generate { unSentTexts.take() }.forEach { (organizationId, messageContents, toPhoneNumber) ->
+//                val phone = organizations.getOrganization(organizationId).phoneNumber
+                val phone = "2403033965"
+                if ( phone == "" ){
+                    throw BadRequestException("No source phone number set for organization!")
+                }
+                val message = Message.creator(PhoneNumber(toPhoneNumber), PhoneNumber( phone ), messageContents)
+                        .setStatusCallback(URI.create("https://api.openlattice.com/datastore/kodex/status")).create()
                 pendingTexts.put(message.sid, message)
+                processQueueEntry(message, organizationId )
             }
         }
     }
 
     @Timed
-    @RequestMapping(path = [CodexApi.ORG_ID_PATH], method = [RequestMethod.POST])
-    override fun sendOutgoingText(@PathVariable(CodexApi.ORG_ID) organizationId: UUID, @RequestBody contents: MessageRequest) {
-        val organization = organizations.getOrganization(organizationId)
-        val phoneNumber = organization.phoneNumber
-//        val phoneNumber = "2403033965"
-        if ( organization.phoneNumber == "" ){
-             throw BadRequestException("No phone number set for organization!")
-        }
-
-        val statusCallback = Message.creator(PhoneNumber(contents.phoneNumber), PhoneNumber( phoneNumber ), contents.messageContents)
-                .setStatusCallback(URI.create("https://api.openlattice.com/datastore/kodex/status"))
-        unSentTexts.put(statusCallback)
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
+    override fun sendOutgoingText(@RequestBody contents: MessageRequest) {
+        unSentTexts.put( contents )
     }
 
     override fun receiveIncomingText( @RequestBody message: Message  ) {
@@ -112,21 +108,13 @@ constructor(
         createAssociationsFromMessage()
     }
 
-    fun createEntitiesFromMessage( msg: Message, organizationId: UUID, appTypeId: UUID ) : List<Map<UUID, Set<Any>>> {
+    fun createEntitiesFromMessage( msg: Message, organizationId: UUID, appTypeId: UUID ) {
         val entities = mutableListOf<Map<UUID, Set<Any>>>()
-
+        val app = appService.getApp("codex")
         val ack = AppConfigKey(app.id, organizationId, appTypeId)
-
         val esid = appConfigMS.load(ack).entitySetId
 
-        val createEntities = dataApi.createEntities(
-                esid,
-                listOf(
-                        mapOf<UUID, Set<Any>>( Pair( UUID.randomUUID() , setOf<Any>()) )
-                )
-        )
-
-        return listOf()
+        val createEntities = dataApi.createEntities( esid, entities )
     }
 
     fun createAssociationsFromMessage() {
