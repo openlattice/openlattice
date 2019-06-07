@@ -44,14 +44,8 @@ interface SubscriptionApi {
     /**
      * Creates a subscription
      */
-    @PUT(BASE)
-    fun addSubscription(@Body subscription: NeighborhoodQuery)
-
-    /**
-     * Updates a subscription
-     */
     @POST(BASE)
-    fun updateSubscription( @Body subscription: NeighborhoodQuery )
+    fun createOrUpdateSubscription(@Body subscription: NeighborhoodQuery)
 
     /**
      * Removes a subscription
