@@ -21,6 +21,8 @@
 
 package com.openlattice.subscriptions
 
+import retrofit2.http.GET
+
 /**
  * This API is for managing Subscriptions on entities
  */
@@ -35,4 +37,8 @@ interface FeedsApi {
 
         const val FEED_IDS = "feedIds"
     }
+
+    @GET(BASE)
+    fun getLatestFeed() : Iterator<FeedEntry>
+
 }

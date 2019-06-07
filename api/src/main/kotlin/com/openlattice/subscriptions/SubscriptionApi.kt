@@ -69,6 +69,6 @@ interface SubscriptionApi {
      * Returns subscription information for provided subscription ids
      */
     @GET(BASE)
-    fun getSubscriptions(@Query(ENTITY_KEY_IDS) entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery>
+    fun getSubscriptions(@Body entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery>
 
 }
