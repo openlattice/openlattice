@@ -172,9 +172,6 @@ class AssemblerQueryService {
             return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/3600)"
         }
 
-        fun numberOfMinutes(): String {
-            return "SUM(EXTRACT(epoch FROM (${lastEnd()} - ${firstStart()}))/60)"
-        }
     }
 }
 
