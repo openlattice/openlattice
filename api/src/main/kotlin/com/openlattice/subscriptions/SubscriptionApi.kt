@@ -39,7 +39,7 @@ interface SubscriptionApi {
         const val ENTITY_KEY_ID_PATH = "/{$ENTITY_KEY_ID}"
 
         const val CONTACT = "contact"
-        const val CONTACT_INFO_PATH = "/{$CONTACT}"
+        const val CONTACT_INFO_PATH = "/$CONTACT"
         const val ORGANIZATION = "organization"
         const val ORGANIZATION_PATH = "/$ORGANIZATION"
         const val ORGANIZATIION_ID_PATH = "/{$ORGANIZATION}"
