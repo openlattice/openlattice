@@ -157,10 +157,7 @@ public class DatastoreServicesPod {
         return new PostgresGraphQueryService(
                 hikariDataSource,
                 dataModelService(),
-                dataQueryService(),
-                authorizationManager(),
-                byteBlobDataManager,
-                defaultObjectMapper()
+                dataQueryService()
         );
     }
 
