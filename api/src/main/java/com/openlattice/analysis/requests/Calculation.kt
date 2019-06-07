@@ -20,6 +20,11 @@
  */
 package com.openlattice.analysis.requests
 
-import java.util.*
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.openlattice.analysis.assembler.OrientedPropertyTypeId
+import com.openlattice.client.serialization.SerializationConstants
 
-data class Calculation(val calculationType: CalculationType, val firstPropertyId: UUID, val secondPropertyId: UUID)
+data class Calculation(
+        @JsonProperty(SerializationConstants.CALCULATION_TYPE) val calculationType: CalculationType,
+        @JsonProperty(SerializationConstants.FIRST) val firstPropertyId: OrientedPropertyTypeId,
+        @JsonProperty(SerializationConstants.SECOND) val secondPropertyId: OrientedPropertyTypeId)

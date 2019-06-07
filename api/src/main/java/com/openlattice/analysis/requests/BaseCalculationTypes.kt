@@ -1,3 +1,5 @@
+
+
 /*
  * Copyright (C) 2019. OpenLattice, Inc.
  *
@@ -19,11 +21,6 @@
  *
  */
 package com.openlattice.analysis.requests
-
-import com.openlattice.analysis.requests.BaseCalculationTypes.DURATION
-
-enum class CalculationType(val basseType: BaseCalculationTypes) {
-    DURATION_YEAR(DURATION),
-    DURATION_DAY(DURATION),
-    DURATION_HOUR(DURATION)
+enum class BaseCalculationTypes {
+    DURATION
 }

@@ -1,3 +1,5 @@
+
+
 /*
  * Copyright (C) 2019. OpenLattice, Inc.
  *
@@ -21,15 +23,11 @@
 package com.openlattice.analysis.assembler
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.openlattice.analysis.requests.Calculation
+import com.openlattice.analysis.requests.Orientation
 import com.openlattice.client.serialization.SerializationConstants
 import java.util.*
 
-data class AssemblyAggregationFilter(
-        @JsonProperty(SerializationConstants.ORGANIZATION_ID) val organizationId: UUID,
-        @JsonProperty(SerializationConstants.SRC_ENTITY_SET_ID) val srcEntitySetId: UUID,
-        @JsonProperty(SerializationConstants.EDGE_ENTITY_SET_ID) val edgeEntitySetId: UUID,
-        @JsonProperty(SerializationConstants.DST_ENTITY_SET_ID) val dstEntitySetId: UUID,
-        @JsonProperty(SerializationConstants.GROUPINGS) val groupProperties: List<OrientedPropertyTypeId>,
-        @JsonProperty(SerializationConstants.AGGREGATIONS) val aggregations: List<Aggregation>,
-        @JsonProperty(SerializationConstants.CALCULATIONS) val customCalculations: Set<Calculation>)
+data class OrientedPropertyTypeId(
+        @JsonProperty(SerializationConstants.PROPERTY_TYPE_ID) val propertyTypeId: UUID,
+        @JsonProperty(SerializationConstants.ORIENTATION) val orientation: Orientation
+)

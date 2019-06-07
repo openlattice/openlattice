@@ -62,6 +62,7 @@ public final class SerializationConstants {
     public static final String BASE_TYPE_FIELD                  = "baseType";
     public static final String BIDIRECTIONAL                    = "bidirectional";
     public static final String BLOCK_ID                         = "blockId";
+    public static final String CALCULATION_TYPE                 = "calculationType";
     public static final String CALCULATIONS                     = "calculations";
     public static final String CATEGORY                         = "category";
     public static final String CHILD_CLAUSES                    = "childClauses";
@@ -84,16 +85,12 @@ public final class SerializationConstants {
     public static final String DETAILS_FIELD                    = "details";
     public static final String DIFF                             = "diff";
     public static final String DST                              = "dst";
-    public static final String DST_AGGREGATIONS                 = "dstAggregations";
     public static final String DST_ENTITY_INDEX                 = "dstEntityIndex";
     public static final String DST_ENTITY_KEY_ID                = "dstEntityKeyId";
     public static final String DST_ENTITY_SET_ID                = "dstEntitySetId";
-    public static final String DST_GROUP_PROPERTIES             = "dstGroupProperties";
     public static final String EDGE                             = "edge";
-    public static final String EDGE_AGGREGATIONS                = "edgeAggregations";
     public static final String EDGE_COUNT                       = "edgeCount";
     public static final String EDGE_ENTITY_SET_ID               = "edgeEntitySetId";
-    public static final String EDGE_GROUP_PROPERTIES            = "edgeGroupProperties";
     public static final String EDM_TEMPLATES_FIELD              = "edmTemplates";
     public static final String ELAPSED_MILLIS                   = "elapsedMillis";
     public static final String EMAILS_FIELD                     = "emails";
@@ -130,6 +127,7 @@ public final class SerializationConstants {
     public static final String FLAGS_FIELD                      = "flags";
     public static final String FQN                              = "fqn";
     public static final String FUZZY                            = "fuzzy";
+    public static final String GROUPINGS                        = "groupings";
     public static final String GTE                              = "gte";
     public static final String HASH                             = "hash";
     public static final String HITS                             = "hits";
@@ -177,6 +175,7 @@ public final class SerializationConstants {
     public static final String NUM_HITS                         = "numHits";
     public static final String ORGANIZATION                     = "organization";
     public static final String ORGANIZATION_ID                  = "organizationId";
+    public static final String ORIENTATION                      = "orientation";
     public static final String PAGING_TOKEN                     = "pagingToken";
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PERMISSIONS                      = "permissions";
@@ -214,11 +213,9 @@ public final class SerializationConstants {
     public static final String SELF_AGGREGATIONS                = "selfAggregations";
     public static final String SHARDS                           = "shards";
     public static final String SRC                              = "src";
-    public static final String SRC_AGGREGATIONS                 = "srcAggregations";
     public static final String SRC_ENTITY_INDEX                 = "srcEntityIndex";
     public static final String SRC_ENTITY_KEY_ID                = "srcEntityKeyId";
     public static final String SRC_ENTITY_SET_ID                = "srcEntitySetId";
-    public static final String SRC_GROUP_PROPERTIES             = "srcGroupProperties";
     public static final String START                            = "start";
     public static final String STATE                            = "state";
     public static final String STATUS                           = "status";

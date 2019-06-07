@@ -25,9 +25,8 @@ package com.openlattice.analysis.assembler
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.openlattice.analysis.requests.AggregationType
 import com.openlattice.client.serialization.SerializationConstants
-import java.util.*
 
 data class Aggregation(
-        @JsonProperty(SerializationConstants.PROPERTY_FIELD) val propertyTypeId: UUID,
+        @JsonProperty(SerializationConstants.PROPERTY_FIELD) val orientedProperty: OrientedPropertyTypeId,
         @JsonProperty(SerializationConstants.AGGREGATION_TYPE) val aggregationType: AggregationType
 )
