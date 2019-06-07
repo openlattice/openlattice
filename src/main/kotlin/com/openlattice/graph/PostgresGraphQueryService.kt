@@ -87,7 +87,7 @@ class PostgresGraphQueryService(
             query: NeighborhoodQuery,
             propertyTypes: Map<UUID, PropertyType>,
             authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>,
-            additionalFilters : String 
+            additionalFilters: String
     ): Neighborhood {
         /*
          * While it would be more efficient to group by entity set type and query all at once, filters can vary
@@ -105,7 +105,7 @@ class PostgresGraphQueryService(
         val ids = query.ids
 
 
-        val entities = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, List<Property>>>>()
+        val entities = mutableMapOf<UUID, MutableMap<UUID, Map<UUID, Set<Any>>>>()
         val associations = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, NeighborIds>>>()
         val neighborhood = Neighborhood(ids, entities, associations)
         val propertyTypeFqns = propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
@@ -124,7 +124,7 @@ class PostgresGraphQueryService(
             val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
             val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
-            if ( entitySetIds.isEmpty() || associationEntitySetIds.isEmpty() ){
+            if (entitySetIds.isEmpty() || associationEntitySetIds.isEmpty()) {
                 return@forEachIndexed
             }
 
@@ -175,9 +175,11 @@ class PostgresGraphQueryService(
                 val edgeId = it.getObject(EDGE_COMP_2.name, UUID::class.java)
                 DataEdgeKey(EntityDataKey(srcEs, srcId), EntityDataKey(dstEs, dstId), EntityDataKey(edgeEs, edgeId))
             }).forEach {
-                entities.getOrPut(it.src.entitySetId) { mutableMapOf() }.getOrPut(it.src.entityKeyId) { mutableMapOf()}
-                entities.getOrPut(it.dst.entitySetId) { mutableMapOf() }.getOrPut(it.dst.entityKeyId) { mutableMapOf()}
-                entities.getOrPut(it.edge.entitySetId) { mutableMapOf() }.getOrPut(it.edge.entityKeyId) { mutableMapOf()}
+                entities.getOrPut(it.src.entitySetId) { mutableMapOf() }.getOrPut(it.src.entityKeyId) { mutableMapOf() }
+                entities.getOrPut(it.dst.entitySetId) { mutableMapOf() }.getOrPut(it.dst.entityKeyId) { mutableMapOf() }
+                entities.getOrPut(it.edge.entitySetId) { mutableMapOf() }.getOrPut(
+                        it.edge.entityKeyId
+                ) { mutableMapOf() }
                 associations
                         .getOrPut(it.dst.entityKeyId) { mutableMapOf() }
                         .getOrPut(it.edge.entitySetId) { mutableMapOf() }[it.src.entitySetId] = NeighborIds(
@@ -204,7 +206,7 @@ class PostgresGraphQueryService(
             val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
             val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
-            if ( entitySetIds.isEmpty() || associationEntitySetIds.isEmpty() ){
+            if (entitySetIds.isEmpty() || associationEntitySetIds.isEmpty()) {
                 return@forEachIndexed
             }
 
@@ -259,7 +261,9 @@ class PostgresGraphQueryService(
             }).forEach {
                 entities.getOrPut(it.src.entitySetId) { mutableMapOf() }.getOrPut(it.src.entityKeyId) { mutableMapOf() }
                 entities.getOrPut(it.dst.entitySetId) { mutableMapOf() }.getOrPut(it.dst.entityKeyId) { mutableMapOf() }
-                entities.getOrPut(it.edge.entitySetId) { mutableMapOf() }.getOrPut(it.edge.entityKeyId) { mutableMapOf() }
+                entities.getOrPut(it.edge.entitySetId) { mutableMapOf() }.getOrPut(
+                        it.edge.entityKeyId
+                ) { mutableMapOf() }
                 associations
                         .getOrPut(it.src.entityKeyId) { mutableMapOf() }
                         .getOrPut(it.edge.entitySetId) { mutableMapOf() }[it.dst.entitySetId] = NeighborIds(
@@ -267,7 +271,19 @@ class PostgresGraphQueryService(
                         it.dst.entityKeyId
                 )
             }
+        }
 
+        entities.forEach { (entitySetId, data) ->
+            val apt = authorizedPropertyTypes
+                    .filter { it.value.contains(entitySetId) }
+                    .keys
+                    .associateWith { propertyTypes.getValue(it) }
+            pgDataService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
+                    entitySetId,
+                    Optional.of(data.keys),
+                    apt,
+                    EnumSet.of(MetadataOption.LAST_WRITE)
+            ).forEach { data[it.first] = it.second }
         }
 
         return neighborhood
@@ -331,7 +347,9 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_dst_edges_$index"
-        val tableSql = "CREATE TEMPORARY VIEW $tableName AS " + buildDstJoinSql(ids, entitySetIds, associationEntitySetIds)
+        val tableSql = "CREATE TEMPORARY VIEW $tableName AS " + buildDstJoinSql(
+                ids, entitySetIds, associationEntitySetIds
+        )
 
         val stmt = connection.createStatement()
         stmt.execute(tableSql)
@@ -347,7 +365,9 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_src_edges_$index"
-        val tableSql = "CREATE TEMPORARY VIEW $tableName AS " + buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
+        val tableSql = "CREATE TEMPORARY VIEW $tableName AS " + buildSrcJoinSql(
+                ids, entitySetIds, associationEntitySetIds
+        )
 
         val stmt = connection.createStatement()
         stmt.execute(tableSql)
@@ -391,11 +411,15 @@ class PostgresGraphQueryService(
         }.orElse(emptyMap())
 
         return entitySetsByType.map { (entityTypeId, entitySetIds) ->
-                AssociationFilterDefinition(entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap())))
-            } + entitySetsWithType.map { (entitySetId, entityTypeId) ->
-                val entitySetIds = setOf(entitySetId)
-                AssociationFilterDefinition(entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap())))
-            }
+            AssociationFilterDefinition(
+                    entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap()))
+            )
+        } + entitySetsWithType.map { (entitySetId, entityTypeId) ->
+            val entitySetIds = setOf(entitySetId)
+            AssociationFilterDefinition(
+                    entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap()))
+            )
+        }
 
 
     }
