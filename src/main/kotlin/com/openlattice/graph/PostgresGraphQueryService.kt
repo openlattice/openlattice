@@ -240,7 +240,7 @@ class PostgresGraphQueryService(
                         val edgeJoins = dstEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_1.name} FROM $it) as $it " }
                         val sql = "SELECT * FROM ${dstEdgeView.first} INNER JOIN " + dstEntityFilteringViews.keys.joinToString(
                                 " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING(${ID_VALUE.name}) +" +
+                        ) + " USING(${ID_VALUE.name}) " +
                                 " INNER JOIN " + edgeJoins.joinToString(
                                 " USING (${EDGE_COMP_1.name}) INNER JOIN "
                         ) + " USING (${EDGE_COMP_1.name}) "
@@ -329,10 +329,10 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_dst_edges_$index"
-        val tableSql = buildDstJoinSql(ids, entitySetIds, associationEntitySetIds)
+        val tableSql = "CREATE TEMPORARY TABLE $tableName AS " + buildDstJoinSql(ids, entitySetIds, associationEntitySetIds)
 
         val stmt = connection.createStatement()
-        stmt.executeQuery(tableSql)
+        stmt.execute(tableSql)
 
         return tableName to stmt
     }
@@ -345,10 +345,10 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_src_edges_$index"
-        val tableSql = buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
+        val tableSql = "CREATE TEMPORARY TABLE $tableName AS " + buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
 
         val stmt = connection.createStatement()
-        stmt.executeQuery(tableSql)
+        stmt.execute(tableSql)
 
         return tableName to stmt
     }
