@@ -74,13 +74,13 @@ constructor(
 
     @Timed
     @RequestMapping(path = [SubscriptionApi.ALL], method = [RequestMethod.GET])
-    override fun getAllSubscriptions(): Iterable<NeighborhoodQuery> {
+    override fun getAllSubscriptions(): Iterable<SubscriptionContact> {
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser())
     }
 
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
-    override fun getSubscriptions(@RequestBody entityKeyIds: List<UUID>): Iterable<NeighborhoodQuery> {
+    override fun getSubscriptions(@RequestBody entityKeyIds: List<UUID>): Iterable<SubscriptionContact> {
         return subscriptionService.getSubscriptions(entityKeyIds, Principals.getCurrentUser())
     }
 

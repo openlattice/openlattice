@@ -37,7 +37,8 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
     override fun getLatestFeed(): Iterator<Neighborhood> {
-        return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { query: NeighborhoodQuery ->
+        return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { subscriptionContact ->
+            val query = subscriptionContact.subscription
             val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
             val (allEntitySetIds, _) = resolveEntitySetIdsAndRequiredAuthorizations(
                     query,
