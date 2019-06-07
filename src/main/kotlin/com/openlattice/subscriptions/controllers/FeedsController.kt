@@ -3,12 +3,10 @@ package com.openlattice.subscriptions.controllers
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.analysis.requests.WrittenTwoWeeksFilter
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.authorization.Principals
+import com.openlattice.authorization.*
 import com.openlattice.datastore.services.EdmService
 import com.openlattice.edm.type.PropertyType
-import com.openlattice.graph.GraphApi
+import com.openlattice.graph.GraphQueryService
 import com.openlattice.graph.Neighborhood
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.graph.NeighborhoodSelection
@@ -28,8 +26,9 @@ class FeedsController
 constructor(
         private val authorizationManager: AuthorizationManager,
         private val subscriptionService: SubscriptionService,
+        private val graphQueryService: GraphQueryService,
         private val edmService : EdmService,
-        private val graphApi: GraphApi
+        private val edmAuthorizationHelper: EdmAuthorizationHelper
 ) : FeedsApi, AuthorizingComponent {
     companion object {
         private val logger = LoggerFactory.getLogger(FeedsController::class.java)!!
@@ -38,13 +37,53 @@ constructor(
     @Timed
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
     override fun getLatestFeed(): Iterator<Neighborhood> {
+
+
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { neighborhoodQuery ->
             val newSrcList = rebuildSelectionList( neighborhoodQuery.srcSelections )
             val newDstList = rebuildSelectionList( neighborhoodQuery.dstSelections )
-            graphApi.neighborhoodQuery(
-                    UUID.randomUUID(),
-                    NeighborhoodQuery(neighborhoodQuery.ids, newSrcList, newDstList))
+            val query = NeighborhoodQuery(neighborhoodQuery.ids, newSrcList, newDstList)
+
+            val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
+            val (allEntitySetIds, _) = resolveEntitySetIdsAndRequiredAuthorizations(
+                    query,
+                    entitySetsById.values
+            )
+
+            val authorizedPropertyTypes = edmAuthorizationHelper.getAuthorizedPropertiesOnEntitySets(
+                    allEntitySetIds,
+                    EnumSet.of(Permission.READ),
+                    Principals.getCurrentPrincipals()
+            )
+
+            val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
+
+            return@map graphQueryService.submitQuery(query, propertyTypes, authorizedPropertyTypes)
         }.listIterator()
+    }
+
+    private fun resolveEntitySetIdsAndRequiredAuthorizations(
+            query: NeighborhoodQuery, baseEntitySetIds: Collection<UUID>
+    ): Pair<Set<UUID>, Map<UUID, Set<UUID>>> {
+        val requiredAuthorizations: MutableMap<UUID, MutableSet<UUID>> = mutableMapOf()
+        val allEntitySetIds = baseEntitySetIds.asSequence() +
+                (query.srcSelections.asSequence() + query.dstSelections.asSequence()).flatMap { selection ->
+                    getRequiredAuthorizations(selection).forEach { entitySetId, requiredPropertyTypeIds ->
+                        requiredAuthorizations
+                                .getOrPut(entitySetId) { mutableSetOf() }
+                                .addAll(requiredPropertyTypeIds)
+                    }
+                    //
+                    graphQueryService.getEntitySets(selection.entityTypeIds).asSequence() +
+                            graphQueryService.getEntitySets(selection.associationTypeIds).asSequence()
+                }
+
+        return allEntitySetIds.toSet() to requiredAuthorizations
+    }
+
+    private fun getRequiredAuthorizations(selection: NeighborhoodSelection): Map<UUID, Set<UUID>> {
+        return selection.entityFilters.map { filters -> filters.mapValues { it.value.keys } }.orElseGet { emptyMap() } +
+                selection.associationFilters.map { filters -> filters.mapValues { it.value.keys } }.orElseGet { emptyMap() }
     }
 
     override fun getAuthorizationManager(): AuthorizationManager {
