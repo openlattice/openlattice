@@ -35,7 +35,8 @@ interface GraphQueryService {
     fun submitQuery(
             query: NeighborhoodQuery,
             propertyTypes: Map<UUID, PropertyType>,
-            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>,
+            additionalFilters: String = ""
     ): Neighborhood
 
     /**

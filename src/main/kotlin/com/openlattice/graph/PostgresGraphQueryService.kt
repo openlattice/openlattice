@@ -85,7 +85,8 @@ class PostgresGraphQueryService(
     override fun submitQuery(
             query: NeighborhoodQuery,
             propertyTypes: Map<UUID, PropertyType>,
-            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>
+            authorizedPropertyTypesByEntitySet: Map<UUID, Map<UUID, PropertyType>>,
+            additionalFilters : String 
     ): Neighborhood {
         /*
          * While it would be more efficient to group by entity set type and query all at once, filters can vary
@@ -102,7 +103,7 @@ class PostgresGraphQueryService(
         val authorizedPropertyTypes = authorizedPropertyTypesByEntitySet.mapValues { it.value.keys }
         val ids = query.ids
 
-        val entitiesWithoutData = mutableMapOf<UUID, MutableSet<UUID>>()
+
         val entities = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, List<Property>>>>()
         val associations = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, NeighborIds>>>()
         val neighborhood = Neighborhood(ids, entities, associations)
