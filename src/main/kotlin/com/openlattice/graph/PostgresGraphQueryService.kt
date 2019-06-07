@@ -21,12 +21,9 @@
 
 package com.openlattice.graph
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.openlattice.analysis.requests.Filter
-import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
-import com.openlattice.data.storage.ByteBlobDataManager
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.PostgresEntityDataQueryService
 import com.openlattice.data.storage.selectEntitySetWithCurrentVersionOfPropertyTypes
@@ -58,10 +55,7 @@ import java.util.function.Supplier
 class PostgresGraphQueryService(
         private val hds: HikariDataSource,
         private val edm: EdmManager,
-        private val pgDataService: PostgresEntityDataQueryService,
-        private val authorizationManager: AuthorizationManager,
-        private val byteBlobDataManager: ByteBlobDataManager,
-        private val mapper: ObjectMapper
+        private val pgDataService: PostgresEntityDataQueryService
 ) : GraphQueryService {
     override fun getEntitySetForIds(ids: Set<UUID>): Map<UUID, UUID> {
         return PostgresIterable<Pair<UUID, UUID>>(
