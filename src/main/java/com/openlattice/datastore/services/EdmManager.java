@@ -158,6 +158,8 @@ public interface EdmManager {
 
     Set<UUID> getPropertyTypeUuids( Set<FullQualifiedName> fqns );
 
+    AssociationType getAssociationType( FullQualifiedName typeFqn );
+
     EntityType getEntityType( FullQualifiedName type );
 
     EntitySet getEntitySet( String entitySetName );

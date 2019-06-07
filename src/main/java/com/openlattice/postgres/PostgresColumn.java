@@ -51,6 +51,12 @@ public final class PostgresColumn {
     public static final String                   APP_ID_FIELD                      = "app_id";
     public static final PostgresColumnDefinition APP_ID                            =
             new PostgresColumnDefinition( APP_ID_FIELD, UUID );
+    public static final String                   AUDIT_EDGE_ENTITY_SET_IDS_FIELD   = "audit_edge_entity_set_ids";
+    public static final PostgresColumnDefinition AUDIT_EDGE_ENTITY_SET_IDS         =
+            new PostgresColumnDefinition( AUDIT_EDGE_ENTITY_SET_IDS_FIELD, UUID_ARRAY );
+    public static final String                   AUDIT_EDGE_ENTITY_SET_ID_FIELD    = "audit_edge_entity_set_id";
+    public static final PostgresColumnDefinition AUDIT_EDGE_ENTITY_SET_ID          =
+            new PostgresColumnDefinition( AUDIT_EDGE_ENTITY_SET_ID_FIELD, PostgresDatatype.UUID );
     public static final String                   AUDIT_ID_FIELD                    = "audit_id";
     public static final PostgresColumnDefinition AUDIT_ID                          =
             new PostgresColumnDefinition( AUDIT_ID_FIELD, UUID );
@@ -121,6 +127,11 @@ public final class PostgresColumn {
     public static final String                   DST_LINKING_VERTEX_ID_FIELD       = "dst_linking_vertex_id";
     public static final PostgresColumnDefinition DST_LINKING_VERTEX_ID             =
             new PostgresColumnDefinition( DST_LINKING_VERTEX_ID_FIELD, UUID );
+    // filters applied to outgoing edges
+    public static final String                   DST_SELECTS_FIELD                 = "dst_selections";
+    public static final PostgresColumnDefinition DST_SELECTS                       = new PostgresColumnDefinition(
+            DST_SELECTS_FIELD,
+            JSONB );
     public static final String                   DST_SYNC_ID_FIELD                 = "dst_sync_id";
     public static final PostgresColumnDefinition DST_SYNC_ID                       =
             new PostgresColumnDefinition( DST_SYNC_ID_FIELD, UUID );
@@ -206,7 +217,6 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( ID_FIELD, UUID ).primaryKey().notNull();
     public static final PostgresColumnDefinition ID_VALUE                          =
             new PostgresColumnDefinition( ID_FIELD, UUID );
-
     public static final String                   INDEX_TYPE_FIELD                  = "index_type";
     public static final PostgresColumnDefinition INDEX_TYPE                        = new PostgresColumnDefinition(
             INDEX_TYPE_FIELD,
@@ -277,19 +287,6 @@ public final class PostgresColumn {
     public static final String                   NAME_SET_FIELD                    = "name_set";
     public static final PostgresColumnDefinition NAME_SET                          =
             new PostgresColumnDefinition( NAME_SET_FIELD, TEXT_ARRAY ).notNull();
-
-    // filters applied to incoming edges
-    public static final String                   SRC_SELECTS_FIELD  = "src_selections";
-    public static final PostgresColumnDefinition SRC_SELECTS     = new PostgresColumnDefinition(
-            SRC_SELECTS_FIELD,
-            JSONB );
-
-    // filters applied to outgoing edges
-    public static final String                   DST_SELECTS_FIELD  = "dst_selections";
-    public static final PostgresColumnDefinition DST_SELECTS     = new PostgresColumnDefinition(
-            DST_SELECTS_FIELD,
-            JSONB );
-
     public static final String                   NEW_VERTEX_ID_FIELD               = "new_vertex_id";
     public static final PostgresColumnDefinition NEW_VERTEX_ID                     =
             new PostgresColumnDefinition( NEW_VERTEX_ID_FIELD, UUID ).notNull();
@@ -380,6 +377,11 @@ public final class PostgresColumn {
             new PostgresColumnDefinition( SRC_LINKING_VERTEX_ID_FIELD, UUID );
     public static final PostgresColumnDefinition SRC_PROPERTY_TYPE_ID              =
             new PostgresColumnDefinition( PROPERTY_TYPE_ID_FIELD, UUID ).notNull();
+    // filters applied to incoming edges
+    public static final String                   SRC_SELECTS_FIELD                 = "src_selections";
+    public static final PostgresColumnDefinition SRC_SELECTS                       = new PostgresColumnDefinition(
+            SRC_SELECTS_FIELD,
+            JSONB );
     public static final String                   SRC_SYNC_ID_FIELD                 = "src_sync_id";
     public static final PostgresColumnDefinition SRC_SYNC_ID                       =
             new PostgresColumnDefinition( SRC_SYNC_ID_FIELD, UUID );

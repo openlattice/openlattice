@@ -30,5 +30,6 @@ import com.kryptnostic.rhizome.configuration.annotation.ReloadableConfiguration
 @ReloadableConfiguration(uri = "auditing.yaml")
 data class AuditingConfiguration(
         @JsonProperty("entity-type") val entityTypeFqn: String,
+        @JsonProperty("edge-entity-type") val edgeEntityTypeFqn: String,
         @JsonProperty("fqns") val fqns: Map<AuditProperty, String>
 )

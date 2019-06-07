@@ -617,6 +617,15 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public AssociationType getAssociationType( FullQualifiedName typeFqn ) {
+        UUID entityTypeId = getTypeAclKey( typeFqn );
+        checkNotNull( entityTypeId,
+                "Entity type %s does not exists.",
+                typeFqn.getFullQualifiedNameAsString() );
+        return getAssociationType( entityTypeId );
+    }
+
+    @Override
     public EntityType getEntityType( FullQualifiedName typeFqn ) {
         UUID entityTypeId = getTypeAclKey( typeFqn );
         checkNotNull( entityTypeId,

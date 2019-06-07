@@ -63,6 +63,7 @@ import com.openlattice.requests.Status;
 import com.openlattice.search.PersistentSearchNotificationType;
 import com.openlattice.search.requests.PersistentSearch;
 import com.openlattice.search.requests.SearchConstraints;
+import javax.annotation.Nullable;
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.slf4j.Logger;
@@ -162,27 +163,29 @@ public final class ResultSetAdapters {
         return ImmutableSet.copyOf( PostgresArrays.getUuidArray( rs, LINKING_ID.getName() ) );
     }
 
-    public static NeighborhoodSelection neighborhoodSelection(ResultSet rs, String colName )
+    public static NeighborhoodSelection neighborhoodSelection( ResultSet rs, String colName )
             throws SQLException, IOException {
         String neighborhoodSelectionJson = rs.getString( colName );
-        return mapper.readValue( neighborhoodSelectionJson , NeighborhoodSelection.class );
+        return mapper.readValue( neighborhoodSelectionJson, NeighborhoodSelection.class );
     }
 
-    public static NeighborhoodSelection[] neighborhoodSelections(ResultSet rs, String colName )
+    public static NeighborhoodSelection[] neighborhoodSelections( ResultSet rs, String colName )
             throws SQLException, IOException {
         String neighborhoodSelectionJson = rs.getString( colName );
-        return mapper.readValue( neighborhoodSelectionJson , NeighborhoodSelection[].class );
+        return mapper.readValue( neighborhoodSelectionJson, NeighborhoodSelection[].class );
     }
 
     public static NeighborhoodQuery subscription( ResultSet rs ) throws SQLException, IOException {
-        LinkedHashSet<UUID> ekIds = new LinkedHashSet<>(1);
-        ekIds.add( rs.getObject( ID_VALUE.getName(), UUID.class) );
-        List<NeighborhoodSelection> srcSelections = Arrays.asList( neighborhoodSelections( rs, SRC_SELECTS.getName() ) );
-        List<NeighborhoodSelection> dstSelections = Arrays.asList( neighborhoodSelections( rs, DST_SELECTS.getName() ) );
-        return  new NeighborhoodQuery( ekIds , srcSelections, dstSelections);
+        LinkedHashSet<UUID> ekIds = new LinkedHashSet<>( 1 );
+        ekIds.add( rs.getObject( ID_VALUE.getName(), UUID.class ) );
+        List<NeighborhoodSelection> srcSelections = Arrays
+                .asList( neighborhoodSelections( rs, SRC_SELECTS.getName() ) );
+        List<NeighborhoodSelection> dstSelections = Arrays
+                .asList( neighborhoodSelections( rs, DST_SELECTS.getName() ) );
+        return new NeighborhoodQuery( ekIds, srcSelections, dstSelections );
     }
 
-   public static Edge edge( ResultSet rs ) throws SQLException {
+    public static Edge edge( ResultSet rs ) throws SQLException {
         DataEdgeKey key = edgeKey( rs );
         long version = rs.getLong( VERSION.getName() );
         List<Long> versions = Arrays.asList( (Long[]) rs.getArray( VERSIONS.getName() ).getArray() );
@@ -384,9 +387,12 @@ public final class ResultSetAdapters {
         return new AceKey( aclKey, principal );
     }
 
-    public static <R> LinkedHashSet<R> linkedHashSetOfType( ResultSet rs, String colName, Function<Object, R[]> arrayCastFunction ) throws SQLException {
+    public static <R> LinkedHashSet<R> linkedHashSetOfType(
+            ResultSet rs,
+            String colName,
+            Function<Object, R[]> arrayCastFunction ) throws SQLException {
         return Arrays.stream( arrayCastFunction.apply( rs.getArray( colName ).getArray() ) )
-                .collect( Collectors.toCollection( LinkedHashSet::new ));
+                .collect( Collectors.toCollection( LinkedHashSet::new ) );
     }
 
     public static LinkedHashSet<UUID> linkedHashSetUUID( ResultSet rs, String colName ) throws SQLException {
@@ -1013,14 +1019,30 @@ public final class ResultSetAdapters {
         }
     }
 
-    public static UUID auditRecordEntitySetId( ResultSet rs ) throws SQLException {
+    public static @Nullable UUID auditRecordEntitySetId( ResultSet rs ) throws SQLException {
         return rs.getObject( AUDIT_RECORD_ENTITY_SET_ID_FIELD, UUID.class );
     }
 
     public static AuditRecordEntitySetConfiguration auditRecordEntitySetConfiguration( ResultSet rs )
             throws SQLException {
         return new AuditRecordEntitySetConfiguration( auditRecordEntitySetId( rs ),
-                Sets.newHashSet( PostgresArrays.getUuidArray( rs, AUDIT_RECORD_ENTITY_SET_IDS_FIELD ) ) );
+                auditEdgeEntitySetId( rs ),
+                Lists.newArrayList( readNullableUuidArray( PostgresArrays
+                        .getUuidArray( rs, AUDIT_RECORD_ENTITY_SET_IDS_FIELD ) ) ),
+                Lists.newArrayList( readNullableUuidArray( PostgresArrays
+                        .getUuidArray( rs, AUDIT_EDGE_ENTITY_SET_IDS_FIELD ) ) ) );
+    }
+
+    private static UUID[] readNullableUuidArray( UUID[] nullable ) {
+        if ( nullable == null ) {
+            return new UUID[ 0 ];
+        } else {
+            return nullable;
+        }
+    }
+
+    public static UUID auditEdgeEntitySetId( ResultSet rs ) throws SQLException {
+        return rs.getObject( AUDIT_EDGE_ENTITY_SET_ID_FIELD, UUID.class );
     }
 
     public static Boolean exists( ResultSet rs ) throws SQLException {

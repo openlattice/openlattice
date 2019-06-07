@@ -85,32 +85,61 @@ class AuditInitializationTask(
                         ImmutableSet.of(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT)))
+                        Optional.of(EnumSet.of(EntitySetFlag.AUDIT))
+                )
 
                 dependencies.edmService.createEntitySet(admins.first(), edmAuditEntitySet)
             }
 
-            val edmAuditAclKeys = dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.propertyTypeIds.values.map { AclKey(edmAuditEntitySet.id, it) }.toMutableSet()
+            val edmAuditAclKeys = dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.propertyTypeIds.values.map {
+                AclKey(
+                        edmAuditEntitySet.id, it
+                )
+            }.toMutableSet()
             edmAuditAclKeys.add(AclKey(edmAuditEntitySet.id))
 
             dependencies.authorizationManager.setPermission(
                     edmAuditAclKeys,
                     setOf(SystemRole.ADMIN.principal),
-                    EnumSet.allOf(Permission::class.java))
+                    EnumSet.allOf(Permission::class.java)
+            )
 
         }
     }
 
     private fun ensureAllEntitySetsHaveAuditEntitySets(dependencies: AuditTaskDependencies) {
         entitySets.entries
-                .filter { !auditRecordEntitySetConfigurations.keys.contains(AclKey(it.key)) && !it.value.flags.contains(EntitySetFlag.AUDIT) }
-                .forEach { dependencies.edmService.auditRecordEntitySetsManager.createAuditEntitySetForEntitySet(it.value) }
+                .filter {
+                    !auditRecordEntitySetConfigurations.keys.contains(AclKey(it.key)) && !it.value.flags.contains(
+                            EntitySetFlag.AUDIT
+                    )
+                }
+                .forEach {
+                    dependencies.edmService.auditRecordEntitySetsManager.createAuditEntitySetForEntitySet(
+                            it.value
+                    )
+                }
+    }
+
+    private fun ensureAllEntitySetsHaveAuditEdgeEntitySets(dependencies: AuditTaskDependencies) {
+        val missingAuditRecordEntitySets = auditRecordEntitySetConfigurations.entries
+                .filter { it.value.activeAuditEdgeEntitySetId == null }
+                .forEach { (entitySetId, _) ->
+                    logger.info("Creating missing audit edge entity set for entity set {}", entitySetId)
+                    dependencies.edmService.auditRecordEntitySetsManager.initializeAuditEdgeEntitySet( entitySetId )
+
+                }
+
     }
 
     private fun ensureAllOrganizationsHaveAuditEntitySets(dependencies: AuditTaskDependencies) {
         organizations.keys
                 .filter { !auditRecordEntitySetConfigurations.keys.contains(AclKey(it)) }
-                .forEach { dependencies.edmService.auditRecordEntitySetsManager.createAuditEntitySetForOrganization(it) }
+                .forEach {
+                    dependencies.edmService.auditRecordEntitySetsManager.createAuditEntitySetForOrganization(
+                            it
+                    )
+                }
     }
 
 }

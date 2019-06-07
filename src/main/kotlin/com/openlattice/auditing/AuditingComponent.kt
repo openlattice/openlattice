@@ -22,7 +22,11 @@
 package com.openlattice.auditing
 
 import com.dataloom.mappers.ObjectMappers
+import com.google.common.collect.*
+import com.openlattice.data.DataEdge
+import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.DataGraphManager
+import com.openlattice.data.EntityDataKey
 import java.util.*
 
 private val mapper = ObjectMappers.newJsonMapper()
@@ -55,14 +59,36 @@ interface AuditingComponent {
 
         return if (auditingConfiguration.isAuditingInitialized()) {
             events
-                    .groupBy { ares.getActiveAuditRecordEntitySetId(it.aclKey, it.eventType) }
-                    .filter { (auditEntitySet, entities) -> auditEntitySet != null }
-                    .map { (auditEntitySet, entities) ->
-                        getDataGraphService().createEntities(
+                    .groupBy { ares.getActiveAuditEntitySetIds(it.aclKey, it.eventType) }
+                    .filter { (auditEntitySetConfiguration, entities) -> auditEntitySetConfiguration.auditRecordEntitySet != null }
+                    .map { (auditEntitySetConfiguration, entities) ->
+                        val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
+                        val (entityKeyIds, _) = getDataGraphService().createEntities(
                                 auditEntitySet!!,
                                 toMap(entities),
                                 auditingConfiguration.propertyTypes
-                        ).key.size
+                        )
+
+                        val lm = ArrayListMultimap.create<UUID, DataEdge>()
+                        entityKeyIds.asSequence().zip(entities.asSequence())
+                                .filter { it.second.entities.isPresent }
+                                .forEach { (auditEntityKeyId, ae) ->
+                                    val entitySetId = ae.aclKey[0]
+                                    val entityKeyIds = ae.entities.get()
+                                    entityKeyIds.forEach { id ->
+                                        lm.put(
+                                                auditEntitySet,
+                                                DataEdge(
+                                                        EntityDataKey(entitySetId, id),
+                                                        EntityDataKey(auditEntitySet, auditEntityKeyId),
+                                                        ImmutableMap.of(auditEntitySet, emptySet())
+                                                )
+                                        )
+                                        return@forEach
+                                    }
+                                }
+                        getDataGraphService().createAssociations(lm, ImmutableMap.of())
+                        entityKeyIds.size
                     }.sum()
         } else {
             0
@@ -86,11 +112,17 @@ interface AuditingComponent {
                 eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.OPERATION_ID)] = setOf(it)
             }
 
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(event.aclKey.last().toString()) //ID of securable object
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(event.principal.toString())
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.ID)] = setOf(
+                    event.aclKey.last().toString()
+            ) //ID of securable object
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.PRINCIPAL)] = setOf(
+                    event.principal.toString()
+            )
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.EVENT_TYPE)] = setOf(event.eventType.name)
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DESCRIPTION)] = setOf(event.description)
-            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DATA)] = setOf(mapper.writeValueAsString(event.data))
+            eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.DATA)] = setOf(
+                    mapper.writeValueAsString(event.data)
+            )
             eventEntity[auditingConfiguration.getPropertyTypeId(AuditProperty.TIMESTAMP)] = setOf(event.timestamp)
 
             return@map eventEntity
