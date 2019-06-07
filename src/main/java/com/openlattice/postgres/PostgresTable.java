@@ -302,8 +302,17 @@ public final class PostgresTable {
             new PostgresTableDefinition( "subscriptions" )
                     .addColumns( ID_VALUE,
                             PRINCIPAL_ID,
+                            LAST_NOTIFIED,
                             SRC_SELECTS,
                             DST_SELECTS )
+                    .primaryKey( ID, PRINCIPAL_ID );
+
+    public static final PostgresTableDefinition SUBSCRIPTION_CONTACTS =
+            new PostgresTableDefinition( "subscription_contacts" )
+                    .addColumns( ID_VALUE,
+                            PRINCIPAL_ID,
+                            CONTACT_TYPE,
+                            CONTACT_INFO )
                     .primaryKey( ID, PRINCIPAL_ID );
 
     public static final PostgresTableDefinition SYNC_IDS                 =

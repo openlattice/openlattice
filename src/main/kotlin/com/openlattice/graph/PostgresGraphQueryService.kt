@@ -47,6 +47,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
 import java.sql.Connection
 import java.sql.Statement
+import java.time.OffsetDateTime
 import java.util.*
 import java.util.function.Function
 import java.util.function.Supplier
@@ -159,7 +160,7 @@ class PostgresGraphQueryService(
                         val edgeJoins = srcEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_2.name} FROM $it) as $it " }
                         val sql = "SELECT * FROM ${srcEdgeView.first} INNER JOIN " + srcEntityFilteringViews.keys.joinToString(
                                 " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING(${ID_VALUE.name}) +" +
+                        ) + " USING(${ID_VALUE.name}) " +
                                 " INNER JOIN " + edgeJoins.joinToString(
                                 " USING (${EDGE_COMP_2.name}) INNER JOIN "
                         ) + " USING (${EDGE_COMP_2.name}) "
@@ -172,11 +173,11 @@ class PostgresGraphQueryService(
                 val dstId = it.getObject(EDGE_COMP_1_FIELD, UUID::class.java)
                 val edgeEs = it.getObject(EDGE_ENTITY_SET_ID_FIELD, UUID::class.java)
                 val edgeId = it.getObject(EDGE_COMP_2.name, UUID::class.java)
-                DataEdgeKey(EntityDataKey(srcEs, srcId), EntityDataKey(dstId, dstEs), EntityDataKey(edgeEs, edgeId))
+                DataEdgeKey(EntityDataKey(srcEs, srcId), EntityDataKey(dstEs, dstId), EntityDataKey(edgeEs, edgeId))
             }).forEach {
-                entitiesWithoutData.getOrPut(it.src.entitySetId) { mutableSetOf() }.add(it.src.entityKeyId)
-                entitiesWithoutData.getOrPut(it.dst.entitySetId) { mutableSetOf() }.add(it.dst.entityKeyId)
-                entitiesWithoutData.getOrPut(it.edge.entitySetId) { mutableSetOf() }.add(it.edge.entityKeyId)
+                entities.getOrPut(it.src.entitySetId) { mutableMapOf() }.getOrPut(it.src.entityKeyId) { mutableMapOf()}
+                entities.getOrPut(it.dst.entitySetId) { mutableMapOf() }.getOrPut(it.dst.entityKeyId) { mutableMapOf()}
+                entities.getOrPut(it.edge.entitySetId) { mutableMapOf() }.getOrPut(it.edge.entityKeyId) { mutableMapOf()}
                 associations
                         .getOrPut(it.dst.entityKeyId) { mutableMapOf() }
                         .getOrPut(it.edge.entitySetId) { mutableMapOf() }[it.src.entitySetId] = NeighborIds(
@@ -241,7 +242,7 @@ class PostgresGraphQueryService(
                         val edgeJoins = dstEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_1.name} FROM $it) as $it " }
                         val sql = "SELECT * FROM ${dstEdgeView.first} INNER JOIN " + dstEntityFilteringViews.keys.joinToString(
                                 " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING(${ID_VALUE.name}) +" +
+                        ) + " USING(${ID_VALUE.name}) " +
                                 " INNER JOIN " + edgeJoins.joinToString(
                                 " USING (${EDGE_COMP_1.name}) INNER JOIN "
                         ) + " USING (${EDGE_COMP_1.name}) "
@@ -254,11 +255,11 @@ class PostgresGraphQueryService(
                 val dstId = it.getObject(ID_VALUE.name, UUID::class.java)
                 val edgeEs = it.getObject(EDGE_ENTITY_SET_ID_FIELD, UUID::class.java)
                 val edgeId = it.getObject(EDGE_COMP_1_FIELD, UUID::class.java)
-                DataEdgeKey(EntityDataKey(srcEs, srcId), EntityDataKey(dstId, dstEs), EntityDataKey(edgeEs, edgeId))
+                DataEdgeKey(EntityDataKey(srcEs, srcId), EntityDataKey(dstEs, dstId), EntityDataKey(edgeEs, edgeId))
             }).forEach {
-                entitiesWithoutData.getOrPut(it.src.entitySetId) { mutableSetOf() }.add(it.src.entityKeyId)
-                entitiesWithoutData.getOrPut(it.dst.entitySetId) { mutableSetOf() }.add(it.dst.entityKeyId)
-                entitiesWithoutData.getOrPut(it.edge.entitySetId) { mutableSetOf() }.add(it.edge.entityKeyId)
+                entities.getOrPut(it.src.entitySetId) { mutableMapOf() }.getOrPut(it.src.entityKeyId) { mutableMapOf() }
+                entities.getOrPut(it.dst.entitySetId) { mutableMapOf() }.getOrPut(it.dst.entityKeyId) { mutableMapOf() }
+                entities.getOrPut(it.edge.entitySetId) { mutableMapOf() }.getOrPut(it.edge.entityKeyId) { mutableMapOf() }
                 associations
                         .getOrPut(it.src.entityKeyId) { mutableMapOf() }
                         .getOrPut(it.edge.entitySetId) { mutableMapOf() }[it.dst.entitySetId] = NeighborIds(
@@ -284,7 +285,7 @@ class PostgresGraphQueryService(
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_dst_edge_${index}_$filterIndex"
             val stmt = connection.createStatement()
-            stmt.executeQuery(
+            stmt.execute(
                     createFilteringView(
                             tableName,
                             filterDefinition,
@@ -309,7 +310,7 @@ class PostgresGraphQueryService(
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_dst_${index}_$filterIndex"
             val stmt = connection.createStatement()
-            stmt.executeQuery(
+            stmt.execute(
                     createFilteringView(
                             tableName,
                             filterDefinition,
@@ -330,10 +331,10 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_dst_edges_$index"
-        val tableSql = buildDstJoinSql(ids, entitySetIds, associationEntitySetIds)
+        val tableSql = "CREATE TEMPORARY VIEW $tableName AS " + buildDstJoinSql(ids, entitySetIds, associationEntitySetIds)
 
         val stmt = connection.createStatement()
-        stmt.executeQuery(tableSql)
+        stmt.execute(tableSql)
 
         return tableName to stmt
     }
@@ -346,10 +347,10 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_src_edges_$index"
-        val tableSql = buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
+        val tableSql = "CREATE TEMPORARY VIEW $tableName AS " + buildSrcJoinSql(ids, entitySetIds, associationEntitySetIds)
 
         val stmt = connection.createStatement()
-        stmt.executeQuery(tableSql)
+        stmt.execute(tableSql)
 
         return tableName to stmt
     }
@@ -366,7 +367,7 @@ class PostgresGraphQueryService(
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_src_edge_${index}_$filterIndex"
             val stmt = connection.createStatement()
-            stmt.executeQuery(
+            stmt.execute(
                     createFilteringView(
                             tableName,
                             filterDefinition,
@@ -389,14 +390,13 @@ class PostgresGraphQueryService(
             edm.getEntityTypeIdsByEntitySetIds(entitySetIds)
         }.orElse(emptyMap())
 
-        return maybeFilters.map { filters ->
-            entitySetsByType.map { (entityTypeId, entitySetIds) ->
-                AssociationFilterDefinition(entityTypeId, entitySetIds, getFilters(entitySetIds, filters))
+        return entitySetsByType.map { (entityTypeId, entitySetIds) ->
+                AssociationFilterDefinition(entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap())))
             } + entitySetsWithType.map { (entitySetId, entityTypeId) ->
                 val entitySetIds = setOf(entitySetId)
-                AssociationFilterDefinition(entityTypeId, entitySetIds, getFilters(entitySetIds, filters))
+                AssociationFilterDefinition(entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap())))
             }
-        }.orElse(emptyList())
+
 
     }
 
@@ -424,7 +424,7 @@ class PostgresGraphQueryService(
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_src_${index}_$filterIndex"
             val stmt = connection.createStatement()
-            stmt.executeQuery(
+            stmt.execute(
                     createFilteringView(
                             tableName,
                             filterDefinition,
@@ -450,12 +450,15 @@ class PostgresGraphQueryService(
                 setOf(),
                 authorizedPropertyTypes,
                 filterDefinition.filters,
-                EnumSet.noneOf(MetadataOption::class.java),
+                EnumSet.of(MetadataOption.LAST_WRITE),
                 propertyTypes.mapValues { it.value.datatype == EdmPrimitiveTypeKind.Binary },
                 linking = false,
                 omitEntitySetId = true
         )
-        return "CREATE TEMPORARY VIEW $tableName AS $tableSql"
+
+        val lowerbound = OffsetDateTime.now().minusDays(14)
+        val upperbound = OffsetDateTime.now().plusYears(100)
+        return "CREATE TEMPORARY VIEW $tableName AS $tableSql WHERE last_write >= '$lowerbound' AND last_write <= '$upperbound'"
     }
 
     /**

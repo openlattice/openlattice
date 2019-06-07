@@ -6,6 +6,7 @@ import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.postgres.PostgresArrays
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.SUBSCRIPTIONS
+import com.openlattice.postgres.PostgresTable.SUBSCRIPTION_CONTACTS
 import com.openlattice.postgres.ResultSetAdapters
 import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
@@ -35,6 +36,33 @@ class PostgresSubscriptionService(
                     ps.setObject(3, srcString)
                     ps.setObject(4, dstString)
                     print( ps.toString())
+                    ps.executeUpdate()
+                }
+            }
+        }
+    }
+
+    override fun createOrUpdateSubscriptionContact(contactInfo: SubscriptionContact, user: Principal) {
+        hds.connection.use { conn ->
+            contactInfo.subscription.ids.map{ id ->
+                conn.prepareStatement(createOrUpdateSubscriptionContactSQL).use {ps ->
+                    ps.setObject(1, user.id)
+                    ps.setObject(2, id)
+                    ps.setObject(3, contactInfo.type)
+                    ps.setObject(4, contactInfo.contact)
+                    print( ps.toString())
+                    ps.executeUpdate()
+                }
+            }
+        }
+    }
+
+    override fun markLastNotified(ekIds: Set<UUID>, user: Principal ) {
+        hds.connection.use { conn ->
+            ekIds.forEach { id ->
+                conn.prepareStatement(markLastNotifiedSQL).use { ps ->
+                    ps.setObject(1, id)
+                    ps.setObject(2, user.id)
                     ps.executeUpdate()
                 }
             }
@@ -102,6 +130,16 @@ private val createOrUpdateSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} "
         " VALUES (?,?::uuid,?::jsonb,?::jsonb)" +
         " ON CONFLICT ( ${PRINCIPAL_ID.name}, ${ID.name} ) DO UPDATE " +
         " SET ${SRC_SELECTS.name} = EXCLUDED.${SRC_SELECTS.name}, ${DST_SELECTS.name} = EXCLUDED.${DST_SELECTS.name}"
+
+private val createOrUpdateSubscriptionContactSQL = "INSERT INTO ${SUBSCRIPTION_CONTACTS.name} " +
+        "(${PRINCIPAL_ID.name}, ${ID.name}, ${CONTACT_TYPE.name}, ${CONTACT_INFO.name})" +
+        " VALUES (?,?::uuid,?,?)" +
+        " ON CONFLICT ( ${PRINCIPAL_ID.name}, ${ID.name} ) DO UPDATE " +
+        " SET ${CONTACT_TYPE.name} = EXCLUDED.${CONTACT_TYPE.name}, ${CONTACT_INFO.name} = EXCLUDED.${CONTACT_INFO.name}"
+
+private val markLastNotifiedSQL = "UPDATE ${SUBSCRIPTIONS.name}" +
+        " SET ${LAST_NOTIFIED.name} = now()" +
+        " WHERE ${ID.name} = ? AND ${PRINCIPAL_ID.name} = ?"
 
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"

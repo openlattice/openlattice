@@ -93,6 +93,12 @@ public final class PostgresColumn {
     public static final String                   CONFIG_TYPE_ID_FIELD              = "config_type_id";
     public static final PostgresColumnDefinition CONFIG_TYPE_ID                    =
             new PostgresColumnDefinition( CONFIG_TYPE_ID_FIELD, UUID );
+    public static final String                   CONTACT_TYPE_FIELD                = "contact_type";
+    public static final PostgresColumnDefinition CONTACT_TYPE                      =
+            new PostgresColumnDefinition( CONTACT_TYPE_FIELD, TEXT );
+    public static final String                   CONTACT_INFO_FIELD                = "contact_info";
+    public static final PostgresColumnDefinition CONTACT_INFO                      =
+            new PostgresColumnDefinition( CONTACT_INFO_FIELD, TEXT);
     public static final String                   CONTACTS_FIELD                    = "contacts";
     public static final PostgresColumnDefinition CONTACTS                          =
             new PostgresColumnDefinition( CONTACTS_FIELD, TEXT_ARRAY );
@@ -235,6 +241,14 @@ public final class PostgresColumn {
             TIMESTAMPTZ )
             .withDefault( "'-infinity'" )
             .notNull();
+
+    public static final String                   LAST_NOTIFIED_FIELD               = "last_notified";
+    public static final PostgresColumnDefinition LAST_NOTIFIED                     = new PostgresColumnDefinition(
+            LAST_NOTIFIED_FIELD,
+            TIMESTAMPTZ )
+            .withDefault( "'-infinity'" )
+            .notNull();
+
     public static final String                   LAST_PROPAGATE_FIELD              = "last_propagate";
     public static final PostgresColumnDefinition LAST_PROPAGATE                    = new PostgresColumnDefinition(
             LAST_PROPAGATE_FIELD,
