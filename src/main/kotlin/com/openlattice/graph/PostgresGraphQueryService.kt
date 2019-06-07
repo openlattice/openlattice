@@ -304,6 +304,7 @@ class PostgresGraphQueryService(
         //We're able to re-use SrcFiltering views with a simple table name change because it's just entity tables.
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_dst_edge_${index}_$filterIndex"
+            dropFilteringViewIfExists(connection, tableName)
             val stmt = connection.createStatement()
             stmt.execute(
                     createFilteringView(
@@ -331,6 +332,7 @@ class PostgresGraphQueryService(
     ): Map<String, Statement> {
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_dst_${index}_$filterIndex"
+            dropFilteringViewIfExists(connection, tableName)
             val stmt = connection.createStatement()
             stmt.execute(
                     createFilteringView(
@@ -394,6 +396,7 @@ class PostgresGraphQueryService(
         //We're able to re-use SrcFiltering views with a simple table name change because it's just entity tables.
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_src_edge_${index}_$filterIndex"
+            dropFilteringViewIfExists(connection, tableName)
             val stmt = connection.createStatement()
             stmt.execute(
                     createFilteringView(
@@ -457,6 +460,7 @@ class PostgresGraphQueryService(
     ): Map<String, Statement> {
         return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
             val tableName = "tmp_src_${index}_$filterIndex"
+            dropFilteringViewIfExists(connection, tableName)
             val stmt = connection.createStatement()
             stmt.execute(
                     createFilteringView(
@@ -497,6 +501,13 @@ class PostgresGraphQueryService(
         return "CREATE TEMPORARY VIEW $tableName AS $tableSql " + filter.map { "WHERE ${it.asSql("")}" }.orElse("")
     }
 
+
+    private fun dropFilteringViewIfExists(
+            connection: Connection,
+            tableName: String
+    ) {
+        connection.createStatement().execute("DROP VIEW IF EXISTS $tableName")
+    }
     /**
      * Used to create unbound prepared statement for generating a edge table fragment useful for joining to source
      * constraints.
