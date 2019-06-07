@@ -46,6 +46,9 @@ constructor(
 
     fun insertRecencyFilter( filtersMap: Optional<Map<UUID, Map<UUID, Set<Filter>>>> ) : Optional<Map<UUID, Map<UUID, Set<Filter>>>> {
         val newEntityFilterMap = mutableMapOf<UUID, Map<UUID, Set<Filter>>>()
+        if (filtersMap.isEmpty){
+            return Optional.of(mapOf())
+        }
         filtersMap.get().forEach {
             val newFilterMap = mutableMapOf<UUID, Set<Filter>>()
             it.value.forEach {
