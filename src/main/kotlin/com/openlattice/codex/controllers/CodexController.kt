@@ -88,8 +88,6 @@ constructor(
         unSentTexts.put(statusCallback)
     }
 
-    @Timed
-    @RequestMapping(path = [CodexApi.STATUS], method = [RequestMethod.POST])
     override fun receiveIncomingText( @RequestBody message: Message  ) {
 
     }
