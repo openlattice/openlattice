@@ -332,7 +332,7 @@ class AuditRecordEntitySetsManager(
     private fun buildAuditEdgeEntitySet(
             name: String, aclKey: AclKey, contacts: Set<String>, organizationId: Optional<UUID>
     ): EntitySet {
-        val entitySetName = buildName(aclKey)
+        val entitySetName = buildName(aclKey) + "_edges"
         val auditingEdgeEntityTypeId = auditingTypes.auditingEdgeEntityTypeId
 
         return EntitySet(
