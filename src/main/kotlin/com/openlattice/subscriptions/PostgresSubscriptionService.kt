@@ -95,7 +95,7 @@ class PostgresSubscriptionService(
 //private val addSubscriptionSQL = "INSERT INTO ${SUBSCRIPTIONS.name} " +
 //        "(${PRINCIPAL_ID.name}, ${ID.name}, ${SRC_SELECTS.name}, ${DST_SELECTS.name})" +
 //        " VALUES (?,?::uuid,?::jsonb,?::jsonb)"
-private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${SRC_SELECTS.name} = ?::jsonb, ${DST_SELECTS.name} = ?::jsonb, WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?::uuid"
+private val updateSubscriptionSQL = "UPDATE ${SUBSCRIPTIONS.name} SET ${SRC_SELECTS.name} = ?::jsonb, ${DST_SELECTS.name} = ?::jsonb WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?::uuid"
 private val createOrUpdateSubscriptionSQL = updateSubscriptionSQL
 private val deleteSubscriptionSQL = "DELETE FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ?"
 private val getSubscriptionSQL = "SELECT * FROM ${SUBSCRIPTIONS.name} WHERE ${PRINCIPAL_ID.name} = ? AND ${ID.name} = ANY(?)"
