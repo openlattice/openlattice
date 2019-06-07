@@ -27,18 +27,12 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = ["", "/"], method = [RequestMethod.PUT])
-    override fun addSubscription(@RequestBody subscription: NeighborhoodQuery) {
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
+    override fun createOrUpdateSubscription(@RequestBody subscription: NeighborhoodQuery) {
         if ( subscription.ids.isEmpty() ){
             throw BadRequestException("Must specify entity key ids to subscribe to")
         }
-        subscriptionService.addSubscription( subscription, Principals.getCurrentUser())
-    }
-
-    @Timed
-    @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
-    override fun updateSubscription( @RequestBody subscription: NeighborhoodQuery) {
-        subscriptionService.updateSubscription( subscription, Principals.getCurrentUser())
+        subscriptionService.createOrUpdateSubscription( subscription, Principals.getCurrentUser())
     }
 
     @Timed
