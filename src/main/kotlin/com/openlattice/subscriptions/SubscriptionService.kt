@@ -19,4 +19,6 @@ interface SubscriptionService {
 
     fun createOrUpdateSubscriptionContact(contactInfo: SubscriptionContact, currentUser: Principal)
 
+    fun markLastNotified(ekIds: Set<UUID>, user: Principal )
+
 }
