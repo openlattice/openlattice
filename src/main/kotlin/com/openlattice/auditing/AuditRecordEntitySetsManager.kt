@@ -155,7 +155,7 @@ class AuditRecordEntitySetsManager(
          */
 
         val aclKeyRoot = aclKey.first()
-        if (auditRecordEntitySetConfigurations.keySet(notAnAuditEntitySetPredicate(aclKeyRoot)).isEmpty()) {
+        if (auditRecordEntitySetConfigurations.keySet(isAnAuditEntitySetPredicate(aclKeyRoot)).isEmpty()) {
             auditRecordEntitySetConfigurations
                     .executeOnKey(aclKey, CreateOrUpdateAuditRecordEntitySetsProcessor(entitySet.id, edgeEntitySet.id))
             edm.createEntitySet(firstUserPrincipal, entitySet)
@@ -174,7 +174,7 @@ class AuditRecordEntitySetsManager(
         }
         val aclKeyRoot = aclKey.first()
 
-        if (auditRecordEntitySetConfigurations.keySet(notAnAuditEntitySetPredicate(aclKeyRoot)).isEmpty()) {
+        if (auditRecordEntitySetConfigurations.keySet(isAnAuditEntitySetPredicate(aclKeyRoot)).isEmpty()) {
 
             val auditEntitySetId = auditRecordEntitySetConfigurations.getValue(aclKey).activeAuditRecordEntitySetId
             val auditEntitySet = edm.getEntitySet(auditEntitySetId)
@@ -217,20 +217,25 @@ class AuditRecordEntitySetsManager(
     }
 
     fun getActiveAuditEntitySetIds(aclKey: AclKey, eventType: AuditEventType): AuditEntitySetsConfiguration {
-        if (edmAuditTypes.contains(eventType)) {
+        val aclKeyRoot = aclKey.first() // TODO do we always only care about the base id?
+
+        if (edmAuditTypes.contains(eventType) || aclKeyRoot == getEdmAuditEntitySetId()) {
             return AuditEntitySetsConfiguration(getEdmAuditEntitySetId(), null)
         }
 
-        val aclKeyRoot = aclKey.first() // TODO do we always only care about the base id?
-
         val auditEntitySetConfiguration = auditRecordEntitySetConfigurations[AclKey(aclKeyRoot)]
-        if (aclKeyRoot == getEdmAuditEntitySetId() || auditRecordEntitySetConfigurations.keySet(
-                        Predicates.equal(ANY_AUDITING_ENTITY_SETS, aclKeyRoot)
-                ).isNotEmpty()) {
-            return AuditEntitySetsConfiguration(aclKeyRoot, auditEntitySetConfiguration?.activeAuditRecordEntitySetId)
-        }
 
         return if (auditEntitySetConfiguration == null) {
+
+            val auditSets = auditRecordEntitySetConfigurations.values(Predicates.equal(ANY_AUDITING_ENTITY_SETS, aclKeyRoot))
+            val auditEdgeSets = auditRecordEntitySetConfigurations.values(Predicates.equal(ANY_EDGE_AUDITING_ENTITY_SETS, aclKeyRoot))
+
+            if (auditSets.isNotEmpty()) {
+                return AuditEntitySetsConfiguration(aclKeyRoot, auditSets.first().activeAuditEdgeEntitySetId)
+            }
+            if (auditEdgeSets.isNotEmpty()) {
+                return AuditEntitySetsConfiguration(auditEdgeSets.first().activeAuditRecordEntitySetId, aclKeyRoot)
+            }
             logger.error("Missing audit entity set id for aclKey {}", aclKey)
             AuditEntitySetsConfiguration(null, null)
         } else {
@@ -381,7 +386,7 @@ class AuditRecordEntitySetsManager(
 
 }
 
-private fun notAnAuditEntitySetPredicate(entitySetId: UUID): Predicate<*, *> {
+private fun isAnAuditEntitySetPredicate(entitySetId: UUID): Predicate<*, *> {
     return Predicates.or(
             Predicates.equal(ANY_AUDITING_ENTITY_SETS, entitySetId),
             Predicates.equal(ANY_EDGE_AUDITING_ENTITY_SETS, entitySetId)
