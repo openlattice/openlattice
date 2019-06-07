@@ -182,24 +182,30 @@ class PostgresGraphQueryService(
         }
 
         query.dstSelections.forEachIndexed { index, selection ->
+
+            val entityFilterDefinitions = getFilterDefinitions(
+                    selection.entityTypeIds,
+                    selection.entitySetIds,
+                    selection.entityFilters
+            )
+
+            val associationFilterDefinitions = getFilterDefinitions(
+                    selection.associationTypeIds,
+                    selection.associationEntitySetIds,
+                    selection.associationFilters
+            )
+
+            val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+            val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+
+            if ( entitySetIds.isEmpty() || associationEntitySetIds.isEmpty() ){
+                return@forEachIndexed
+            }
+
             PostgresIterable<DataEdgeKey>(
                     Supplier {
                         val connection = hds.connection
                         val stmt = connection.createStatement()
-                        val entityFilterDefinitions = getFilterDefinitions(
-                                selection.entityTypeIds,
-                                selection.entitySetIds,
-                                selection.entityFilters
-                        )
-
-                        val associationFilterDefinitions = getFilterDefinitions(
-                                selection.associationTypeIds,
-                                selection.associationEntitySetIds,
-                                selection.associationFilters
-                        )
-
-                        val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
-                        val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
                         val dstEdgeView = createDstEdgesView(
                                 index, connection, ids, entitySetIds, associationEntitySetIds
