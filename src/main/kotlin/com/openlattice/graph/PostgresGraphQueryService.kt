@@ -356,6 +356,7 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_dst_edges_$index"
+        dropFilteringViewIfExists(connection, tableName)
         val tableSql = "CREATE TEMPORARY VIEW $tableName AS " + buildDstJoinSql(
                 ids, entitySetIds, associationEntitySetIds
         )
@@ -374,6 +375,7 @@ class PostgresGraphQueryService(
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
         val tableName = "tmp_src_edges_$index"
+        dropFilteringViewIfExists(connection, tableName)
         val tableSql = "CREATE TEMPORARY VIEW $tableName AS " + buildSrcJoinSql(
                 ids, entitySetIds, associationEntitySetIds
         )
