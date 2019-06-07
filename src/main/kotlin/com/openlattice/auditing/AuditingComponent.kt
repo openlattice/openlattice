@@ -82,13 +82,13 @@ interface AuditingComponent {
                                                 DataEdge(
                                                         EntityDataKey(entitySetId, id),
                                                         EntityDataKey(auditEntitySet, auditEntityKeyId),
-                                                        ImmutableMap.of(auditEdgeEntitySet, emptySet())
+                                                        ImmutableMap.of()
                                                 )
                                         )
                                         return@forEach
                                     }
                                 }
-                        getDataGraphService().createAssociations(lm, ImmutableMap.of())
+                        getDataGraphService().createAssociations(lm, ImmutableMap.of(auditEdgeEntitySet, emptyMap()))
                         entityKeyIds.size
                     }.sum()
         } else {
