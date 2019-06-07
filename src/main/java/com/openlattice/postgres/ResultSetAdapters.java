@@ -815,7 +815,7 @@ public final class ResultSetAdapters {
             }
         }
 
-        data.put( ConductorElasticsearchApi.LAST_WRITE, ImmutableSet.of( lastWrite( rs ) ) );
+        data.put( DataTables.LAST_WRITE_ID, ImmutableSet.of( lastWrite( rs ) ) );
         return data;
     }
 

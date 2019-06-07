@@ -275,8 +275,7 @@ class PostgresGraphQueryService(
 
         entities.forEach { (entitySetId, data) ->
             val apt = authorizedPropertyTypes
-                    .filter { it.value.contains(entitySetId) }
-                    .keys
+                    .getValue(entitySetId)
                     .associateWith { propertyTypes.getValue(it) }
             pgDataService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
                     entitySetId,
