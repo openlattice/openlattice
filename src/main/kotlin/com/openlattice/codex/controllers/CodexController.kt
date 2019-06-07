@@ -3,9 +3,9 @@ package com.openlattice.codex.controllers
 import com.codahale.metrics.annotation.Timed
 import com.openlattice.authorization.AuthorizationManager
 import com.openlattice.authorization.AuthorizingComponent
+import com.openlattice.codex.CodexApi
+import com.openlattice.codex.MessageRequest
 import com.openlattice.controllers.exceptions.BadRequestException
-import com.openlattice.kodex.CodexApi
-import com.openlattice.kodex.MessageRequest
 import com.openlattice.organizations.HazelcastOrganizationService
 import com.openlattice.twilio.TwilioConfiguration
 import com.twilio.Twilio
