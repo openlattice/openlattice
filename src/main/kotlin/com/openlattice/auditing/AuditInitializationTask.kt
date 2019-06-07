@@ -41,6 +41,7 @@ class AuditInitializationTask(
             logger.info("EDM not yet initialized -- skipping audit initialization.")
             return
         }
+        dependencies.edmService.auditRecordEntitySetsManager.auditingTypes.intialize()
         logger.info("Creating any missing audit entity sets")
         ensureEdmEntitySetExists(dependencies)
         ensureAllEntitySetsHaveAuditEntitySets(dependencies)
