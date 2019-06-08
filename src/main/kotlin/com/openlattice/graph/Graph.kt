@@ -41,6 +41,7 @@ import com.openlattice.graph.core.NeighborSets
 import com.openlattice.graph.edge.Edge
 import com.openlattice.postgres.DataTables.quote
 import com.openlattice.postgres.PostgresArrays
+import com.openlattice.postgres.PostgresColumn
 import com.openlattice.postgres.PostgresColumn.*
 import com.openlattice.postgres.PostgresTable.EDGES
 import com.openlattice.postgres.PostgresTable.IDS
@@ -831,10 +832,10 @@ internal fun getTopUtilizersSql(
         top: Int = 100
 ): String {
 
-    return "SELECT ${ENTITY_SET_ID.name}, ${ID_VALUE.name}, (COALESCE(src_count,0) + COALESCE(dst_count,0)) as total_count " +
+    return "SELECT ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name}, (COALESCE(src_count,0) + COALESCE(dst_count,0)) as total_count " +
             "FROM (${getTopUtilizersFromSrc(entitySetId, srcFilters)}) as src_counts " +
             "FULL OUTER JOIN (${getTopUtilizersFromDst(entitySetId, dstFilters)}) as dst_counts " +
-            "USING(${ENTITY_SET_ID.name}, ${ID_VALUE.name}) " +
+            "USING(${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name}) " +
 //            "WHERE total_count IS NOT NULL " +
             "ORDER BY total_count DESC " +
             "LIMIT $top"
@@ -844,17 +845,17 @@ internal fun getTopUtilizersSql(
 @Deprecated("Edges table queries need update")
 internal fun getTopUtilizersFromSrc(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "src_count"
-    return "SELECT ${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
+    return "SELECT ${SRC_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${SRC_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
             "FROM ${EDGES.name} WHERE ${srcClauses(entitySetId, filters)} " +
-            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
+            "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
 @Deprecated("Edges table queries need update")
 internal fun getTopUtilizersFromDst(entitySetId: UUID, filters: SetMultimap<UUID, UUID>): String {
     val countColumn = "dst_count"
-    return "SELECT ${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
+    return "SELECT ${DST_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${DST_ENTITY_KEY_ID.name} as ${ID_VALUE.name}, count(*) as $countColumn " +
             "FROM ${EDGES.name} WHERE ${dstClauses(entitySetId, filters)} " +
-            "GROUP BY (${ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
+            "GROUP BY (${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name}) "
 }
 
 
@@ -1027,25 +1028,25 @@ private fun buildSpineSql(
         // Order on which we select is {edge, src, dst}, EDGE ComponentType
         if (isDst) { // select src and edge
             "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_1.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+                    "${EDGE_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
         } else { // select dst and edge
             "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_2.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${EDGE_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+                    "${EDGE_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
         }
     } else {
         // Order on which we select is {src, dst, edge}, DST ComponentType
         if (isDst) { // select src and dst
             "${SRC_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_2.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${DST_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+                    "${DST_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
         } else { // Order on which we select is {src, dst, edge}, SRC ComponentType
             // select dst and src
             "${DST_ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${EDGE_COMP_1.name} as $SELF_ENTITY_KEY_ID, " +
-                    "${SRC_ENTITY_SET_ID.name} as ${ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
+                    "${SRC_ENTITY_SET_ID.name} as ${PostgresColumn.ENTITY_SET_ID.name}, ${ID_VALUE.name} as ${ID_VALUE.name}"
         }
     }
 
     val edgeClause = buildEdgeFilteringClause(selfEntitySetIds, authorizedFilteredRanking, association, isDst)
-    val idSql = "SELECT ${ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
+    val idSql = "SELECT ${PostgresColumn.ENTITY_SET_ID.name} as $SELF_ENTITY_SET_ID, ${PostgresColumn.ID.name} as $SELF_ENTITY_KEY_ID, ${LINKING_ID.name} FROM ${IDS.name}"
     val spineSql = if (linked) {
         "SELECT edges.*, ${LINKING_ID.name} FROM (SELECT DISTINCT $baseEntityColumnsSql FROM edges WHERE $edgeClause) as edges " +
                 "LEFT JOIN ($idSql) as ${IDS.name} USING ($SELF_ENTITY_SET_ID,$SELF_ENTITY_KEY_ID)"

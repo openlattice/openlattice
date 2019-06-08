@@ -62,7 +62,9 @@ public class IdCatchupEntryProcessor extends AbstractRhizomeEntryProcessor<Integ
             }
 
             entry.setValue( range );
-            logger.info( "Caught up range with base {} by {} increments", range.getBase(), counter );
+            if( counter > 0 ) {
+                logger.warn( "Caught up range with base {} by {} increments", range.getBase(), counter );
+            }
         } catch ( SQLException e ) {
             logger.error( "Error catching up ranges.", e );
         }

@@ -158,6 +158,8 @@ public interface EdmManager {
 
     Set<UUID> getPropertyTypeUuids( Set<FullQualifiedName> fqns );
 
+    AssociationType getAssociationType( FullQualifiedName typeFqn );
+
     EntityType getEntityType( FullQualifiedName type );
 
     EntitySet getEntitySet( String entitySetName );
@@ -217,6 +219,8 @@ public interface EdmManager {
     EntityDataModel getEntityDataModel();
 
     void setEntityDataModel( EntityDataModel edm );
+
+    Collection<EntitySet> getEntitySetsOfType( Set<UUID> entityTypeIds );
 
     Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId );
 

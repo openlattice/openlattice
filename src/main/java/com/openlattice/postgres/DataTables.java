@@ -60,6 +60,7 @@ public class DataTables {
 
     public static final  FullQualifiedName        LAST_WRITE_FQN = new FullQualifiedName( "openlattice",
             "@lastWrite" );
+    public static final  UUID                     LAST_WRITE_ID  = new UUID( 0, 0 );
     public static final  PostgresColumnDefinition OWNERS         = new PostgresColumnDefinition(
             "owners",
             PostgresDatatype.UUID );

@@ -276,7 +276,8 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 .map( ptId -> new AccessCheck( new AclKey( entitySetId, ptId ), requiredPermissions ) ).collect(
                         Collectors.toSet() ), Principals.getCurrentPrincipals() )
                 .filter( authorization -> authorization.getPermissions().values().stream().allMatch( val -> val ) )
-                .map( authorization -> authorization.getAclKey().get( 1 ) ).collect( Collectors.toSet() );
+                .map( authorization -> authorization.getAclKey().get( 1 ) )
+                .collect( Collectors.toSet() );
     }
 
     private Set<UUID> getAuthorizedPropertyTypeIdsOnLinkingEntitySet(

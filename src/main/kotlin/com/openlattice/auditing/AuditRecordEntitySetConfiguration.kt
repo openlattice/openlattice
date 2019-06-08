@@ -31,5 +31,7 @@ import java.util.*
  */
 data class AuditRecordEntitySetConfiguration(
         var activeAuditRecordEntitySetId: UUID,
-        val auditRecordEntitySetIds: MutableSet<UUID> = mutableSetOf(activeAuditRecordEntitySetId)
+        var activeAuditEdgeEntitySetId: UUID?,
+        val auditRecordEntitySetIds: MutableList<UUID> = mutableListOf(activeAuditRecordEntitySetId),
+        val auditEdgeEntitySetIds: MutableList<UUID> = if( activeAuditEdgeEntitySetId == null ) mutableListOf() else mutableListOf(activeAuditEdgeEntitySetId)
 )
