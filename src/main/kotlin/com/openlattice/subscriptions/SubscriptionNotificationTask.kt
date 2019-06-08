@@ -86,7 +86,7 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
 
     private fun getAllEntitySetIds(query: NeighborhoodQuery): Set<UUID> {
         val dependencies = getDependency()
-        return query.ids +
+        return dependencies.graphQueryService.getEntitySetForIds(query.ids).values.toSet() +
                 (query.srcSelections + query.dstSelections).flatMap { selection ->
                     dependencies.graphQueryService.getEntitySets(selection.entityTypeIds) +
                             dependencies.graphQueryService.getEntitySets(selection.associationTypeIds)
