@@ -226,6 +226,11 @@ public class MapstoresPod {
     }
 
     @Bean
+    public QueueConfigurer twilioQueueConfigurer() {
+        return config -> config.setName( HazelcastQueue.TWILIO.name() ).setMaxSize( 100000 ).setBackupCount( 1 );
+    }
+
+    @Bean
     public QueueConfigurer indexingQueueConfigurer() {
         return config -> config.setName( HazelcastQueue.INDEXING.name() ).setMaxSize( 100000 ).setBackupCount( 1 );
     }

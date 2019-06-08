@@ -21,6 +21,7 @@
 
 package com.openlattice.postgres.mapstores;
 
+import static com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID;
 import static com.openlattice.postgres.PostgresTable.ORGANIZATION_ASSEMBLIES;
 
 import com.hazelcast.config.InMemoryFormat;
@@ -40,9 +41,9 @@ import java.util.UUID;
 import org.apache.commons.lang3.RandomStringUtils;
 
 public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<UUID, OrganizationAssembly> {
-    public static final String INITIALIZED_INDEX = "initialized";
+    public static final String INITIALIZED_INDEX                 = "initialized";
     public static final String MATERIALIZED_ENTITY_SETS_ID_INDEX = "materializedEntitySets.keySet[any]";
-    private final       UUID   testKey           = UUID.randomUUID();
+    private final       UUID   testKey                           = UUID.randomUUID();
 
     private final MaterializedEntitySetMapStore materializedEntitySetsMapStore;
 
@@ -70,12 +71,13 @@ public class OrganizationAssemblyMapstore extends AbstractBasePostgresMapstore<U
     @Override protected OrganizationAssembly mapToValue( ResultSet rs ) throws SQLException {
         final UUID organizationId = ResultSetAdapters.organizationId( rs );
         final String dbName = ResultSetAdapters.dbName( rs );
-        final boolean initialized = ResultSetAdapters.initialized(rs);
+        final boolean initialized = ResultSetAdapters.initialized( rs );
 
         final Map<UUID, EnumSet<OrganizationEntitySetFlag>> materializedEntitySets =
-                materializedEntitySetsMapStore.loadMaterializedEntitySetsForOrganization( organizationId );
+                materializedEntitySetsMapStore
+                        .loadMaterializedEntitySetsForOrganization( rs.getStatement().getConnection(), organizationId );
 
-        return new OrganizationAssembly(organizationId, dbName, initialized, materializedEntitySets);
+        return new OrganizationAssembly( organizationId, dbName, initialized, materializedEntitySets );
     }
 
     @Override protected UUID mapToKey( ResultSet rs ) throws SQLException {

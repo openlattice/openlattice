@@ -20,12 +20,12 @@
 
 package com.openlattice.postgres;
 
-import static com.openlattice.postgres.DataTables.*;
-import static com.openlattice.postgres.PostgresColumn.*;
-
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;
+
+import static com.openlattice.postgres.DataTables.*;
+import static com.openlattice.postgres.PostgresColumn.*;
 
 /**
  * Tables definitions for all tables used in the OpenLattice platform.
@@ -64,7 +64,11 @@ public final class PostgresTable {
                     .setUnique( ACL_KEY, EVENT_TYPE, PRINCIPAL_TYPE, PRINCIPAL_ID, TIME_UUID );
     public static final PostgresTableDefinition AUDIT_RECORD_ENTITY_SET_IDS =
             new PostgresTableDefinition( "audit_record_entity_set_ids" )
-                    .addColumns( ACL_KEY, AUDIT_RECORD_ENTITY_SET_ID, PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS )
+                    .addColumns( ACL_KEY,
+                            AUDIT_RECORD_ENTITY_SET_ID,
+                            AUDIT_EDGE_ENTITY_SET_ID,
+                            PostgresColumn.AUDIT_RECORD_ENTITY_SET_IDS,
+                            AUDIT_EDGE_ENTITY_SET_IDS )
                     .primaryKey( ACL_KEY );
 
     public static final PostgresTableDefinition DB_CREDS = new PostgresTableDefinition( "db_creds" )
@@ -282,18 +286,36 @@ public final class PostgresTable {
                     .distributionColumn( ID_VALUE )
                     .unlogged();
 
-    public static final PostgresTableDefinition REQUESTS                 =
+    public static final PostgresTableDefinition REQUESTS          =
             new PostgresTableDefinition( "requests" )
                     .addColumns( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID, PostgresColumn.PERMISSIONS, REASON, STATUS )
                     .primaryKey( ACL_KEY, PRINCIPAL_TYPE, PRINCIPAL_ID );
-    public static final PostgresTableDefinition SCHEMA                   =
+    public static final PostgresTableDefinition SCHEMA            =
             new PostgresTableDefinition( "schemas" )
                     .addColumns( NAMESPACE, NAME_SET )
                     .primaryKey( NAMESPACE );
-    public static final PostgresTableDefinition SECURABLE_OBJECTS        =
+    public static final PostgresTableDefinition SECURABLE_OBJECTS =
             new PostgresTableDefinition( "securable_objects" )
                     .addColumns( ACL_KEY, SECURABLE_OBJECT_TYPE )
                     .primaryKey( ACL_KEY );
+    public static final PostgresTableDefinition SUBSCRIPTIONS     =
+            new PostgresTableDefinition( "subscriptions" )
+                    .addColumns( ID_VALUE,
+                            PRINCIPAL_ID,
+                            LAST_NOTIFIED,
+                            SRC_SELECTS,
+                            DST_SELECTS,
+                            ORGANIZATION_ID)
+                    .primaryKey( ID, PRINCIPAL_ID );
+
+    public static final PostgresTableDefinition SUBSCRIPTION_CONTACTS =
+            new PostgresTableDefinition( "subscription_contacts" )
+                    .addColumns( ID_VALUE,
+                            PRINCIPAL_ID,
+                            CONTACT_TYPE,
+                            CONTACT_INFO )
+                    .primaryKey( ID, PRINCIPAL_ID );
+
     public static final PostgresTableDefinition SYNC_IDS                 =
             new CitusDistributedTableDefinition( "sync_ids" )
                     .addColumns( ENTITY_SET_ID, ENTITY_ID, ID_VALUE )
