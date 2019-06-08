@@ -22,17 +22,13 @@
 package com.openlattice.graph.controllers
 
 import com.codahale.metrics.annotation.Timed
-import com.google.common.collect.ListMultimap
-import com.google.common.collect.SetMultimap
-import com.openlattice.authorization.AuthorizationManager
-import com.openlattice.authorization.AuthorizingComponent
-import com.openlattice.graph.GraphApi
-import com.openlattice.graph.GraphApi.ID
-import com.openlattice.graph.GraphQueryService
-import com.openlattice.graph.SimpleGraphQuery
-import com.openlattice.graph.SubGraph
-import com.openlattice.graph.query.GraphQuery
-import com.openlattice.graph.query.GraphQueryState
+import com.openlattice.authorization.*
+import com.openlattice.controllers.exceptions.ForbiddenException
+import com.openlattice.data.requests.NeighborEntityDetails
+import com.openlattice.datastore.services.EdmManager
+import com.openlattice.edm.type.PropertyType
+import com.openlattice.graph.*
+import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import javax.inject.Inject
@@ -41,57 +37,85 @@ import javax.inject.Inject
  *
  */
 @RestController
-@RequestMapping(GraphApi.CONTROLLER)
+@RequestMapping(CONTROLLER)
 class GraphController
 @Inject
 constructor(
         private val graphQueryService: GraphQueryService,
-        private val authorizationManager: AuthorizationManager
-//        private val filteredAggregation
+        private val authorizationManager: AuthorizationManager,
+        private val edm: EdmManager,
+        private val edmAuthorizationHelper: EdmAuthorizationHelper
 ) : GraphApi, AuthorizingComponent {
-
-
-
     @Timed
-//    @PostMapping(
-//            value = QUERY,
-//            consumes = [MediaType.APPLICATION_JSON_VALUE],
-//            produces = [MediaType.APPLICATION_JSON_VALUE]
-//    )
-    override fun submit(query: SimpleGraphQuery): GraphQueryState {
-        //Collect the data to authorize
+    @PostMapping(
+            value = [NEIGHBORS + ENTITY_SET_ID_PATH],
+            consumes = [MediaType.APPLICATION_JSON_VALUE],
+            produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    override fun neighborhoodQuery(
+            @PathVariable(ENTITY_SET_ID) entitySetId: UUID,
+            @RequestBody query: NeighborhoodQuery
+    ): Neighborhood {
+        val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
+        val (allEntitySetIds, requiredPropertyTypes) = resolveEntitySetIdsAndRequiredAuthorizations(
+                query,
+                entitySetsById.values
+        )
 
-        //Collect the things to perserve
-//        return graphQueryService.submitQuery(query);
-        TODO("Not implemented")
+        /*
+         * We need to figure out what property types are authorized for all entity sets
+         */
+
+        val authorizedPropertyTypes = edmAuthorizationHelper.getAuthorizedPropertiesOnEntitySets(
+                allEntitySetIds,
+                EnumSet.of(Permission.READ),
+                Principals.getCurrentPrincipals()
+        )
+
+        ensureReadOnRequired(authorizedPropertyTypes, requiredPropertyTypes)
+
+        val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
+        return graphQueryService.submitQuery(query, propertyTypes, authorizedPropertyTypes)
+
     }
 
-    @Timed
-//    @PostMapping(
-//            value = QUERY + ID_PATH,
-//            consumes = [MediaType.APPLICATION_JSON_VALUE],
-//            produces = [MediaType.APPLICATION_JSON_VALUE]
-//    )
-    override fun getQueryState(
-            @PathVariable(ID) queryId: UUID,
-            @RequestBody options: Set<GraphQueryState.Option>
-    ): GraphQueryState {
-        return graphQueryService.getQueryState(queryId, options)
+    private fun getRequiredAuthorizations(selection: NeighborhoodSelection): Map<UUID, Set<UUID>> {
+        return selection.entityFilters.map { filters -> filters.mapValues { it.value.keys } }.orElseGet { emptyMap() } +
+                selection.associationFilters.map { filters -> filters.mapValues { it.value.keys } }.orElseGet { emptyMap() }
     }
 
-    override fun getQueryState(queryId: UUID): GraphQueryState {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun resolveEntitySetIdsAndRequiredAuthorizations(
+            query: NeighborhoodQuery, baseEntitySetIds: Collection<UUID>
+    ): Pair<Set<UUID>, Map<UUID, Set<UUID>>> {
+        val requiredAuthorizations: MutableMap<UUID, MutableSet<UUID>> = mutableMapOf()
+        val allEntitySetIds = baseEntitySetIds.asSequence() +
+                (query.srcSelections.asSequence() + query.dstSelections.asSequence()).flatMap { selection ->
+                    getRequiredAuthorizations(selection).forEach { entitySetId, requiredPropertyTypeIds ->
+                        requiredAuthorizations
+                                .getOrPut(entitySetId) { mutableSetOf() }
+                                .addAll(requiredPropertyTypeIds)
+                    }
+                    //
+                    graphQueryService.getEntitySets(selection.entityTypeIds).asSequence() +
+                            graphQueryService.getEntitySets(selection.associationTypeIds).asSequence()
+                }
+
+        return allEntitySetIds.toSet() to requiredAuthorizations
     }
 
-    @Timed
-    override fun getResults(queryId: UUID): SubGraph {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun ensureReadOnRequired(
+            authorizedPropertyTypes: Map<UUID, MutableMap<UUID, PropertyType>>,
+            requiredPropertyTypes: Map<UUID, Set<UUID>>
+    ) {
+        if (!requiredPropertyTypes.all { (entitySetId, propertyTypeIds) ->
+                    authorizedPropertyTypes.containsKey(entitySetId) && authorizedPropertyTypes.getValue(
+                            entitySetId
+                    ).keys.containsAll(propertyTypeIds)
+                }) {
+            throw ForbiddenException("Not authorized to perform this operation!")
+        }
     }
 
-    @Timed
-    override fun graphQuery(ops: GraphQuery): ListMultimap<UUID, SetMultimap<UUID, SetMultimap<UUID, Any>>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
 
     override fun getAuthorizationManager(): AuthorizationManager {
         return authorizationManager
