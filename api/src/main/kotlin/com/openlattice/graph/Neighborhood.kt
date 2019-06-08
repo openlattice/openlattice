@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,22 +21,19 @@
 
 package com.openlattice.graph
 
-import com.google.common.base.Preconditions.checkState
+import com.openlattice.data.Property
+import java.util.*
 
 /**
- * This class is a simple filter based graph query data class. The current limitation of this class is that it doesn't
- * operate on entity types. The caller is responsible for specifying the entity sets to operate on.
  *
- * @param vertexFilters Defines constraints on vertices in the graph. A list of maps from entity set to property type id.
- * @param edgeFilters
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class SimpleGraphQuery(
-        val entityConstraints: List<GraphEntityConstraint>,
-        val associationConstraints: List<SimpleAssociationConstraint>
-) {
-    init {
-        checkState(entityConstraints.isNotEmpty(), "At least one entity constraint must be specified.")
-    }
-}
 
-
+data class Neighborhood (
+        val ids: Set<UUID>,
+        // entity set id -> entity key id -> property, only issue is that this doesn't reflect the fact that property values are unique
+        // issue that property values may not all be valid keys in json map (in particular location data)
+        val entities: Map<UUID, Map<UUID, Map<UUID,Set<Any>>>>,
+        //self -> association entity set id -> neighbor entity setid -> Pair(association ek id, neighbor ek id)
+        val associations: Map<UUID, Map<UUID, Map<UUID, NeighborIds>>>
+)
