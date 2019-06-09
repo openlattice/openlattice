@@ -22,6 +22,9 @@
 package com.openlattice.authorization.mapstores
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheLoader
+import com.google.common.cache.LoadingCache
 import com.google.common.collect.ImmutableList
 import com.hazelcast.config.MapConfig
 import com.hazelcast.config.MapIndexConfig
@@ -41,6 +44,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.ResultSet
+import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
 
@@ -53,26 +57,68 @@ private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
 class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisteringMapStore<AclKey, AclKeySet> {
+    private val refreshLimiter: LoadingCache<AclKey, AclKeySet?> = CacheBuilder.newBuilder()
+            .expireAfterWrite(60000, TimeUnit.MILLISECONDS)
+            .build(object : CacheLoader<AclKey, AclKeySet>() {
+                override fun loadAll(keys: MutableIterable<AclKey>): MutableMap<AclKey, AclKeySet> {
+                    val data = PostgresIterable<Pair<AclKey, AclKey>>(
+                            Supplier {
+                                val connection = hds.connection
+                                val stmt = connection.createStatement()
+
+                                val sql = "SELECT * from ${PRINCIPAL_TREES.name} " +
+                                        "WHERE ${ACL_KEY.name} " +
+                                        "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
+
+                                StatementHolder(connection, stmt, stmt.executeQuery(sql))
+                            },
+
+                            Function<ResultSet, Pair<AclKey, AclKey>> {
+                                ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
+                            }
+                    )
+                    val map: MutableMap<AclKey, AclKeySet> = mutableMapOf()
+                    data.forEach { map.getOrPut(it.first) { AclKeySet() }.add(it.second) }
+                    (map.keys - keys).forEach { map.putIfAbsent(it,AclKeySet()) }
+                    return map
+                }
+
+                override fun load(key: AclKey): AclKeySet? {
+                    val loaded = loadAll(listOf(key))
+                    return loaded[key]
+
+                }
+
+            })
+
     @Timed
     override fun storeAll(map: Map<AclKey, AclKeySet>) {
+        refreshLimiter.putAll(map)
         hds.connection.use {
             val connection = it
             val stmt = connection.createStatement()
 
             stmt.use {
-                map.forEach {
-                    val aclKey = it.key
-                    val filterPrincipal = if (it.value.isEmpty()) {
+                map.forEach { entry ->
+                    val aclKey = entry.key
+                    val filterPrincipal = if (entry.value.isEmpty()) {
                         ""
                     } else {
-                        " AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (" + it.value.joinToString(",") { toPostgres(it) } + ")"
+                        " AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (" + entry.value.joinToString(",") {
+                            toPostgres(
+                                    it
+                            )
+                        } + ")"
                     }
                     val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
-                            "WHERE ${ACL_KEY.name} = ${toPostgres(it.key)} $filterPrincipal"
+                            "WHERE ${ACL_KEY.name} = ${toPostgres(entry.key)} $filterPrincipal"
                     stmt.addBatch(sql)
-                    it.value.forEach {
-                        stmt.addBatch("INSERT INTO ${PRINCIPAL_TREES.name} " +
-                                "VALUES (${toPostgres(aclKey)}, ${toPostgres(it)}) ON CONFLICT DO NOTHING"
+                    entry.value.forEach {
+                        stmt.addBatch(
+                                "INSERT INTO ${PRINCIPAL_TREES.name} " +
+                                        "VALUES (${toPostgres(aclKey)}, ${toPostgres(
+                                                it
+                                        )}) ON CONFLICT DO NOTHING"
                         )
                     }
                 }
@@ -103,47 +149,27 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     @Timed
-    override fun loadAll(keys: Collection<AclKey>): MutableMap<AclKey, AclKeySet> {
-//        val keyMap = keys.groupBy { it.size }
-
-        val data = PostgresIterable<Pair<AclKey, AclKey>>(
-                Supplier {
-                    val connection = hds.connection
-                    val stmt = connection.createStatement()
-
-                    val sql = "SELECT * from ${PRINCIPAL_TREES.name} " +
-                            "WHERE ${ACL_KEY.name} " +
-                            "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
-
-                    StatementHolder(connection, stmt, stmt.executeQuery(sql))
-                },
-
-                Function<ResultSet, Pair<AclKey, AclKey>> {
-                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
-                }
-        )
-        val map: MutableMap<AclKey, AclKeySet> = mutableMapOf()
-        data.forEach { map.getOrPut(it.first) { AclKeySet() }.add(it.second) }
-        return map
+    override fun loadAll(keys: Collection<AclKey>): Map<AclKey, AclKeySet?> {
+        return refreshLimiter.getAll(keys)
     }
 
     @Timed
     override fun deleteAll(keys: Collection<AclKey>) {
-        hds.connection.use {
-            it.createStatement().use {
+        refreshLimiter.invalidateAll(keys)
+        hds.connection.use { connection ->
+            connection.createStatement().use { stmt ->
                 val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
                         "WHERE ${ACL_KEY.name} " +
                         "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
 
-                it.executeUpdate(sql)
+                stmt.executeUpdate(sql)
             }
         }
     }
 
     @Timed
     override fun load(key: AclKey): AclKeySet? {
-        val loaded = loadAll(listOf(key))
-        return loaded[key]
+        return refreshLimiter[key]
     }
 
     @Timed
