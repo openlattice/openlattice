@@ -57,43 +57,8 @@ private val logger = LoggerFactory.getLogger(PrincipalTreesMapstore::class.java)
 
 @Service //This is here to allow this class to be automatically open for @Timed to work correctly
 class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisteringMapStore<AclKey, AclKeySet> {
-    private val refreshLimiter: LoadingCache<AclKey, AclKeySet?> = CacheBuilder.newBuilder()
-            .expireAfterWrite(60000, TimeUnit.MILLISECONDS)
-            .build(object : CacheLoader<AclKey, AclKeySet>() {
-                override fun loadAll(keys: MutableIterable<AclKey>): MutableMap<AclKey, AclKeySet> {
-                    val data = PostgresIterable<Pair<AclKey, AclKey>>(
-                            Supplier {
-                                val connection = hds.connection
-                                val stmt = connection.createStatement()
-
-                                val sql = "SELECT * from ${PRINCIPAL_TREES.name} " +
-                                        "WHERE ${ACL_KEY.name} " +
-                                        "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
-
-                                StatementHolder(connection, stmt, stmt.executeQuery(sql))
-                            },
-
-                            Function<ResultSet, Pair<AclKey, AclKey>> {
-                                ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
-                            }
-                    )
-                    val map: MutableMap<AclKey, AclKeySet> = mutableMapOf()
-                    data.forEach { map.getOrPut(it.first) { AclKeySet() }.add(it.second) }
-                    (map.keys - keys).forEach { map.putIfAbsent(it,AclKeySet()) }
-                    return map
-                }
-
-                override fun load(key: AclKey): AclKeySet? {
-                    val loaded = loadAll(listOf(key))
-                    return loaded[key]
-
-                }
-
-            })
-
     @Timed
     override fun storeAll(map: Map<AclKey, AclKeySet>) {
-        refreshLimiter.putAll(map)
         hds.connection.use {
             val connection = it
             val stmt = connection.createStatement()
@@ -150,12 +115,30 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     @Timed
     override fun loadAll(keys: Collection<AclKey>): Map<AclKey, AclKeySet?> {
-        return refreshLimiter.getAll(keys)
+        val data = PostgresIterable<Pair<AclKey, AclKey>>(
+                Supplier {
+                    val connection = hds.connection
+                    val stmt = connection.createStatement()
+
+                    val sql = "SELECT * from ${PRINCIPAL_TREES.name} " +
+                            "WHERE ${ACL_KEY.name} " +
+                            "IN (" + keys.joinToString(",") { toPostgres(it) } + ")"
+
+                    StatementHolder(connection, stmt, stmt.executeQuery(sql))
+                },
+
+                Function<ResultSet, Pair<AclKey, AclKey>> {
+                    ResultSetAdapters.aclKey(it) to ResultSetAdapters.principalOfAclKey(it)
+                }
+        )
+        val map: MutableMap<AclKey, AclKeySet> = mutableMapOf()
+        data.forEach { map.getOrPut(it.first) { AclKeySet() }.add(it.second) }
+        (map.keys - keys).forEach { map.putIfAbsent(it, AclKeySet()) }
+        return map
     }
 
     @Timed
     override fun deleteAll(keys: Collection<AclKey>) {
-        refreshLimiter.invalidateAll(keys)
         hds.connection.use { connection ->
             connection.createStatement().use { stmt ->
                 val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
@@ -169,7 +152,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
 
     @Timed
     override fun load(key: AclKey): AclKeySet? {
-        return refreshLimiter[key]
+        val loaded = loadAll(listOf(key))
+        return loaded[key]
     }
 
     @Timed
