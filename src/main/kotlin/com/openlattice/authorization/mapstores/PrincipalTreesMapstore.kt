@@ -69,10 +69,8 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
                     val filterPrincipal = if (entry.value.isEmpty()) {
                         ""
                     } else {
-                        " AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (" + entry.value.joinToString(",") {
-                            toPostgres(
-                                    it
-                            )
+                        " AND ${PRINCIPAL_OF_ACL_KEY.name} NOT IN (" + entry.value.joinToString(",") { key ->
+                            toPostgres(key)
                         } + ")"
                     }
                     val sql = "DELETE from ${PRINCIPAL_TREES.name} " +
