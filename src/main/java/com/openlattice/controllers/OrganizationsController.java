@@ -26,16 +26,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.openlattice.assembler.Assembler;
-import com.openlattice.authorization.SecurableObjectResolveTypeService;
-import com.openlattice.authorization.AclKey;
-import com.openlattice.authorization.AuthorizationManager;
-import com.openlattice.authorization.AuthorizingComponent;
-import com.openlattice.authorization.EdmAuthorizationHelper;
-import com.openlattice.authorization.Permission;
-import com.openlattice.authorization.Principal;
-import com.openlattice.authorization.PrincipalType;
-import com.openlattice.authorization.Principals;
-import com.openlattice.authorization.SecurablePrincipal;
+import com.openlattice.authorization.*;
 import com.openlattice.authorization.securable.SecurableObjectType;
 import com.openlattice.authorization.util.AuthorizationUtils;
 import com.openlattice.controllers.exceptions.ForbiddenException;
@@ -47,25 +38,13 @@ import com.openlattice.organization.*;
 import com.openlattice.organization.roles.Role;
 import com.openlattice.organizations.HazelcastOrganizationService;
 import com.openlattice.organizations.roles.SecurePrincipalsManager;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.inject.Inject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.inject.Inject;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping( OrganizationsApi.CONTROLLER )
@@ -133,7 +112,8 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 org.getAutoApprovedEmails(),
                 org.getMembers(),
                 authorizedRoles,
-                org.getApps() );
+                org.getApps(),
+                org.getPhoneNumber());
     }
 
     @Timed
@@ -146,6 +126,18 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         organizations.destroyOrganization( organizationId );
         authorizations.deletePermissions( aclKey );
         securableObjectTypes.deleteSecurableObjectType( new AclKey( organizationId ) );
+        return null;
+    }
+
+    @Timed
+    @Override
+    @PostMapping(
+            value = OrganizationsApi.SET_PHONE_PATH,
+            consumes = MediaType.APPLICATION_JSON_VALUE )
+    public Void setOrganizationPhoneNumber( UUID organizationId, String phoneNumber ) {
+        ensureAdminAccess();
+
+        organizations.setPhoneNumber( organizationId, phoneNumber );
         return null;
     }
 
