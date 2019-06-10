@@ -65,6 +65,7 @@ public interface OrganizationsApi {
 
     String SYNCHRONIZE       = "/synchronize";
     String REFRESH           = "/refresh";
+    String REFRESH_RATE      = "/refresh-rate";
     String SET_ID            = "setId";
     String SET_ID_PATH       = "/{" + SET_ID + "}";
 
@@ -117,8 +118,8 @@ public interface OrganizationsApi {
     /**
      * Materializes entity sets into the organization database.
      *
-     * @param refreshRatesOfEntitySets The refresh rate of each entity set to assemble into materialized views mapped
-     *                                 by their ids.
+     * @param refreshRatesOfEntitySets The refresh rate in minutes of each entity set to assemble into materialized
+     *                                 views mapped by their ids.
      */
     @POST( BASE + ID_PATH + ENTITY_SETS + ASSEMBLE )
     Map<UUID, Set<OrganizationEntitySetFlag>> assembleEntitySets(
@@ -142,6 +143,19 @@ public interface OrganizationsApi {
      */
     @POST( BASE + ID_PATH + SET_ID_PATH + REFRESH )
     Void refreshDataChanges( @Path( ID ) UUID organizationId, @Path( SET_ID ) UUID entitySetId );
+
+    /**
+     * Changes the refresh rate of a materialized entity set in the requested organization.
+     * @param organizationId The id of the organization in which to change the refresh rate of the materialized entity
+     *                       set.
+     * @param entitySetId The id of the entity set, whose refresh rate to change.
+     * @param refreshRate The new refresh rate in minutes.
+     */
+    @PUT( BASE + ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    Void updateRefreshRate(
+            @Path( ID ) UUID organizationId,
+            @Path( SET_ID ) UUID entitySetId,
+            @Body Integer refreshRate );
 
     @PUT( BASE + ID_PATH + TITLE )
     Void updateTitle( @Path( ID ) UUID organziationId, @Body String title );
