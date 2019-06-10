@@ -22,18 +22,17 @@
 
 package com.openlattice.datastore.cassandra;
 
-import java.util.Arrays;
-
+import com.kryptnostic.rhizome.configuration.cassandra.TableDefSource;
 import com.openlattice.conductor.codecs.odata.Table;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.kryptnostic.rhizome.configuration.cassandra.TableDefSource;
+import java.util.Arrays;
 
 @Configuration
 public class CassandraTablesPod {
     @Bean
     public TableDefSource loomTables() {
-        return () -> Arrays.asList( Table.values() ).stream().map( Table::asTableDef );
+        return () -> Arrays.stream( Table.values() ).map( Table::asTableDef );
     }
 }
