@@ -112,7 +112,7 @@ class PrincipalTreesMapstore(val hds: HikariDataSource) : TestableSelfRegisterin
     }
 
     @Timed
-    override fun loadAll(keys: Collection<AclKey>): Map<AclKey, AclKeySet?> {
+    override fun loadAll(keys: Collection<AclKey>): Map<AclKey, AclKeySet> {
         val data = PostgresIterable<Pair<AclKey, AclKey>>(
                 Supplier {
                     val connection = hds.connection
