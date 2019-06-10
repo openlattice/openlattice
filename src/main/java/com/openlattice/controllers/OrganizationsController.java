@@ -291,6 +291,24 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
         return null;
     }
 
+    @Override
+    @PutMapping( ID_PATH + SET_ID_PATH + REFRESH_RATE )
+    public Void updateRefreshRate(
+            @PathVariable( ID ) UUID organizationId,
+            @PathVariable( SET_ID ) UUID entitySetId,
+            @RequestBody Integer refreshRate ) {
+        ensureOwner( organizationId );
+
+        if ( refreshRate < 1 ) {
+            throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
+        }
+
+        // convert mins to millisecs
+        final var refreshRateInMilliSecs = refreshRate.longValue() * 3600L;
+        assembler.updateRefreshRate( organizationId, entitySetId, refreshRateInMilliSecs );
+        return null;
+    }
+
     private Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesForMaterialization(
             UUID organizationId,
             Set<UUID> entitySetIds ) {
