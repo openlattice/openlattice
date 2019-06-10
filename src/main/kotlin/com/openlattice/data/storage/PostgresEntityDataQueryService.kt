@@ -172,8 +172,8 @@ class PostgresEntityDataQueryService(
     ): PostgresIterable<Pair<UUID, Map<UUID, Set<Any>>>> {
         val adapter = Function<ResultSet, Pair<UUID, Map<UUID, Set<Any>>>> {
             ResultSetAdapters.id(it) to
-                    ResultSetAdapters.implicitEntityValuesById(
-                            it, mapOf(entitySetId to authorizedPropertyTypes), byteBlobDataManager
+                    ResultSetAdapters.implicitEntityValuesByIdWithLastWrite(
+                            it, authorizedPropertyTypes, byteBlobDataManager
                     )
         }
         return streamableEntitySet(

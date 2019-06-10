@@ -33,6 +33,7 @@ import com.openlattice.postgres.PostgresColumn.ORGANIZATION_ID
 import com.openlattice.postgres.PostgresTable
 import com.openlattice.postgres.ResultSetAdapters
 import com.zaxxer.hikari.HikariDataSource
+import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.time.OffsetDateTime
@@ -45,7 +46,8 @@ open class MaterializedEntitySetMapStore(
 ) : AbstractBasePostgresMapstore<EntitySetAssemblyKey, MaterializedEntitySet>(
         HazelcastMap.MATERIALIZED_ENTITY_SETS.name,
         PostgresTable.MATERIALIZED_ENTITY_SETS,
-        hds) {
+        hds
+) {
 
     companion object {
         @JvmStatic
@@ -104,18 +106,19 @@ open class MaterializedEntitySetMapStore(
                 .setInMemoryFormat(InMemoryFormat.OBJECT)
     }
 
-    fun loadMaterializedEntitySetsForOrganization(organizationId: UUID): Map<UUID, EnumSet<OrganizationEntitySetFlag>> {
+    fun loadMaterializedEntitySetsForOrganization(
+            connection: Connection,
+            organizationId: UUID
+    ): Map<UUID, EnumSet<OrganizationEntitySetFlag>> {
         val result = MapMaker().makeMap<UUID, EnumSet<OrganizationEntitySetFlag>>()
 
-        hds.connection.use { connection ->
-            val selectInQuery = table.selectInQuery(listOf(), listOf(ORGANIZATION_ID), 1)
-            connection.prepareStatement(selectInQuery).use { selectIn ->
-                selectIn.setObject(1, organizationId)
-                val results = selectIn.executeQuery()
-                while (results.next()) {
-                    val materializedEntitySet = mapToValue(results)
-                    result[materializedEntitySet.assemblyKey.entitySetId] = materializedEntitySet.flags
-                }
+        val selectInQuery = table.selectInQuery(listOf(), listOf(ORGANIZATION_ID), 1)
+        connection.prepareStatement(selectInQuery).use { selectIn ->
+            selectIn.setObject(1, organizationId)
+            val results = selectIn.executeQuery()
+            while (results.next()) {
+                val materializedEntitySet = mapToValue(results)
+                result[materializedEntitySet.assemblyKey.entitySetId] = materializedEntitySet.flags
             }
         }
 

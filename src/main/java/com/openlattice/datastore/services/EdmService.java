@@ -617,6 +617,15 @@ public class EdmService implements EdmManager {
     }
 
     @Override
+    public AssociationType getAssociationType( FullQualifiedName typeFqn ) {
+        UUID entityTypeId = getTypeAclKey( typeFqn );
+        checkNotNull( entityTypeId,
+                "Entity type %s does not exists.",
+                typeFqn.getFullQualifiedNameAsString() );
+        return getAssociationType( entityTypeId );
+    }
+
+    @Override
     public EntityType getEntityType( FullQualifiedName typeFqn ) {
         UUID entityTypeId = getTypeAclKey( typeFqn );
         checkNotNull( entityTypeId,
@@ -1713,8 +1722,14 @@ public class EdmService implements EdmManager {
         } );
     }
 
+    @Override
+    public Collection<EntitySet> getEntitySetsOfType( Set<UUID> entityTypeIds ) {
+        return entitySets.values( Predicates
+                .in( EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeIds.toArray( new UUID[ 0 ] ) ) );
+    }
+
     @Override public Collection<EntitySet> getEntitySetsOfType( UUID entityTypeId ) {
-        return entitySets.values( Predicates.equal( "entityTypeId", entityTypeId ) );
+        return entitySets.values( Predicates.equal( EntitySetMapstore.ENTITY_TYPE_ID_INDEX, entityTypeId ) );
     }
 
     @Override public Set<UUID> getEntitySetsForOrganization( UUID organizationId ) {
