@@ -181,6 +181,7 @@ public final class SerializationConstants {
     public static final String PARENT_TYPE_FIELD                = "parentType";
     public static final String PERMISSIONS                      = "permissions";
     public static final String PERMISSIONS_MAP                  = "permissionsMap";
+    public static final String PHONE_NUMBER                     = "phoneNumber";
     public static final String PII_FIELD                        = "pii";
     public static final String PRESENT                          = "present";
     public static final String PRINCIPAL                        = "principal";
