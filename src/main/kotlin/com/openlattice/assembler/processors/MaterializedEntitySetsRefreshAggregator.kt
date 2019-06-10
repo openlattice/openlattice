@@ -31,6 +31,7 @@ class MaterializedEntitySetsRefreshAggregator
     private val refreshableEntitySets = mutableSetOf<EntitySetAssemblyKey>()
 
     override fun accumulate(input: Map.Entry<EntitySetAssemblyKey, MaterializedEntitySet>) {
+        // the processor expects MaterializedEntitySets, where refreshRate is not null
         if (input.value.lastRefresh.toInstant().plusMillis(input.value.refreshRate!!)
                         .isBefore(OffsetDateTime.now().toInstant())) {
             refreshableEntitySets.add(input.key)

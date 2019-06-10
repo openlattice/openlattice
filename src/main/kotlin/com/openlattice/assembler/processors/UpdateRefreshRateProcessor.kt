@@ -18,18 +18,21 @@
  *
  *
  */
-package com.openlattice.assembler
+package com.openlattice.assembler.processors
 
-import com.openlattice.organization.OrganizationEntitySetFlag
-import java.time.OffsetDateTime
-import java.util.EnumSet
+import com.kryptnostic.rhizome.hazelcast.processors.AbstractRhizomeEntryProcessor
+import com.openlattice.assembler.EntitySetAssemblyKey
+import com.openlattice.assembler.MaterializedEntitySet
 
-data class MaterializedEntitySet(
-        val assemblyKey: EntitySetAssemblyKey,
-        /**
-         * Holds the user set refresh rate in milliseconds.
-         * If it's null, that means, that it should NOT be refreshed automatically.
-         */
-        var refreshRate: Long?,
-        val flags: EnumSet<OrganizationEntitySetFlag> = EnumSet.noneOf(OrganizationEntitySetFlag::class.java),
-        var lastRefresh: OffsetDateTime = OffsetDateTime.now())
+data class UpdateRefreshRateProcessor(
+        val refreshRate: Long
+) : AbstractRhizomeEntryProcessor<EntitySetAssemblyKey, MaterializedEntitySet, Void?>() {
+
+    override fun process(entry: MutableMap.MutableEntry<EntitySetAssemblyKey, MaterializedEntitySet>?): Void? {
+        val materializedEntitySet = entry!!.value
+        materializedEntitySet.refreshRate = refreshRate
+        entry.setValue(materializedEntitySet)
+
+        return null
+    }
+}

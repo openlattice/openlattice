@@ -27,10 +27,7 @@ import com.openlattice.assembler.MaterializedEntitySet
 import com.openlattice.hazelcast.StreamSerializerTypeIds
 import com.openlattice.organization.OrganizationEntitySetFlag
 import org.springframework.stereotype.Component
-import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
 import java.util.EnumSet
-import kotlin.random.Random
 
 @Component
 class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<MaterializedEntitySet> {
@@ -49,7 +46,7 @@ class MaterializedEntitySetStreamSerializer : SelfRegisteringStreamSerializer<Ma
 
         out.writeBoolean(obj.refreshRate != null)
         if (obj.refreshRate != null) {
-            out.writeLong(obj.refreshRate)
+            out.writeLong(obj.refreshRate!!)
         }
 
         out.writeInt(obj.flags.size)

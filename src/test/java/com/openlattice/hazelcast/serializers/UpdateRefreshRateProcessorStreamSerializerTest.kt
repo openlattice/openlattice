@@ -18,18 +18,19 @@
  *
  *
  */
-package com.openlattice.assembler
+package com.openlattice.hazelcast.serializers
 
-import com.openlattice.organization.OrganizationEntitySetFlag
-import java.time.OffsetDateTime
-import java.util.EnumSet
+import com.kryptnostic.rhizome.hazelcast.serializers.AbstractStreamSerializerTest
+import com.openlattice.assembler.processors.UpdateRefreshRateProcessor
+import kotlin.random.Random
 
-data class MaterializedEntitySet(
-        val assemblyKey: EntitySetAssemblyKey,
-        /**
-         * Holds the user set refresh rate in milliseconds.
-         * If it's null, that means, that it should NOT be refreshed automatically.
-         */
-        var refreshRate: Long?,
-        val flags: EnumSet<OrganizationEntitySetFlag> = EnumSet.noneOf(OrganizationEntitySetFlag::class.java),
-        var lastRefresh: OffsetDateTime = OffsetDateTime.now())
+class UpdateRefreshRateProcessorStreamSerializerTest :
+        AbstractStreamSerializerTest<UpdateRefreshRateProcessorStreamSerializer, UpdateRefreshRateProcessor>() {
+    override fun createSerializer(): UpdateRefreshRateProcessorStreamSerializer {
+        return UpdateRefreshRateProcessorStreamSerializer()
+    }
+
+    override fun createInput(): UpdateRefreshRateProcessor {
+        return UpdateRefreshRateProcessor(Random.nextLong())
+    }
+}

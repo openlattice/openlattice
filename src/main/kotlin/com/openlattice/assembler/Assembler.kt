@@ -140,6 +140,16 @@ class Assembler(
         }
     }
 
+    /**
+     * Updates the refresh rate for a materialized entity set.
+     */
+    fun updateRefreshRate(organizationId: UUID, entitySetId: UUID, refreshRate: Long) {
+        ensureEntitySetIsMaterialized(organizationId, entitySetId)
+
+        val entitySetAssemblyKey = EntitySetAssemblyKey(entitySetId, organizationId)
+        materializedEntitySets.executeOnKey(entitySetAssemblyKey, UpdateRefreshRateProcessor(refreshRate))
+    }
+
     @Subscribe
     fun handleEntitySetCreated(entitySetCreatedEvent: EntitySetCreatedEvent) {
         createOrUpdateProductionViewOfEntitySet(entitySetCreatedEvent.entitySet.id)
