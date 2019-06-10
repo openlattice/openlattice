@@ -71,8 +71,12 @@ import com.openlattice.requests.HazelcastRequestsManager;
 import com.openlattice.requests.RequestQueryService;
 import com.openlattice.search.PersistentSearchService;
 import com.openlattice.search.SearchService;
+import com.openlattice.subscriptions.PostgresSubscriptionService;
+import com.openlattice.subscriptions.SubscriptionService;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies;
 import com.openlattice.tasks.PostConstructInitializerTaskDependencies.PostConstructInitializerTask;
+import com.openlattice.twilio.TwilioConfiguration;
+import com.openlattice.twilio.pods.TwilioConfigurationPod;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,6 +94,7 @@ import static com.openlattice.datastore.util.Util.returnAndLog;
         Auth0Pod.class,
         ByteBlobServicePod.class,
         AssemblerConfigurationPod.class,
+        TwilioConfigurationPod.class
 } )
 public class DatastoreServicesPod {
 
@@ -121,6 +126,9 @@ public class DatastoreServicesPod {
     private AssemblerConfiguration assemblerConfiguration;
 
     @Inject
+    private TwilioConfiguration twilioConfiguration;
+
+    @Inject
     private MetricRegistry metricRegistry;
 
     @Bean
@@ -146,8 +154,14 @@ public class DatastoreServicesPod {
         return new PostgresGraphQueryService(
                 hikariDataSource,
                 dataModelService(),
-                authorizationManager(),
-                byteBlobDataManager,
+                dataQueryService()
+        );
+    }
+
+    @Bean
+    public SubscriptionService subscriptionService() {
+        return new PostgresSubscriptionService(
+                hikariDataSource,
                 defaultObjectMapper()
         );
     }
