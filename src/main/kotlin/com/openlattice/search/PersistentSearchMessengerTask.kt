@@ -141,10 +141,13 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
 
         val entitySetIds = persistentSearch.searchConstraints.entitySetIds.toSet()
         val authorizedEntitySetIds = dependencies.authorizationHelper
-                .getAuthorizedEntitySetsForPrincipals(entitySetIds, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals)
+                .getAuthorizedEntitySetsForPrincipals(
+                        entitySetIds, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals
+                )
 
         val authorizedPropertyTypesByEntitySet = dependencies.authorizationHelper.getAuthorizedPropertiesOnEntitySets(
-                dependencies.entitySets.keys, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals)
+                dependencies.entitySets.keys, EdmAuthorizationHelper.READ_PERMISSION, allUserPrincipals
+        )
 
         val constraints = getUpdatedConstraints(persistentSearch)
         var results = DataSearchResult(0, listOf())
@@ -167,7 +170,8 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             val lastReadDateTime = getLatestRead(results.hits)
             logger.info(
                     "Last read date time {} for alert {} with {} hits", lastReadDateTime, persistentSearch.id,
-                    results.numHits)
+                    results.numHits
+            )
             return lastReadDateTime
         }
 
@@ -175,6 +179,9 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
     }
 
     override fun runTask() {
+    }
+
+    private fun doTask() {
         logger.info("Loading new writes for persistent searches and sending alerts")
 
         val dependencies = getDependency()
@@ -182,8 +189,11 @@ class PersistentSearchMessengerTask : HazelcastFixedRateTask<PersistentSearchMes
             outConnection.prepareStatement(updateLastReadSql()).use { ps ->
                 PostgresIterable(Supplier<StatementHolder> {
                     val connection = dependencies.hds.connection
+                    connection.autoCommit = false
                     val stmt = connection.createStatement()
+                    stmt.fetchSize = 32000
                     val rs = stmt.executeQuery(LOAD_ACTIVE_ALERTS_SQL)
+                    connection.autoCommit = true
                     StatementHolder(connection, stmt, rs)
                 }, Function<ResultSet, Pair<AclKey, PersistentSearch>> {
                     ResultSetAdapters.aclKey(it) to ResultSetAdapters.persistentSearch(it)

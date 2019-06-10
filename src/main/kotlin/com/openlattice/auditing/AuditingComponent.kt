@@ -21,6 +21,7 @@
 
 package com.openlattice.auditing
 
+import com.codahale.metrics.annotation.Timed
 import com.dataloom.mappers.ObjectMappers
 import com.google.common.collect.*
 import com.openlattice.data.DataEdge
@@ -46,11 +47,13 @@ interface AuditingComponent {
     fun getAuditRecordEntitySetsManager(): AuditRecordEntitySetsManager
     fun getDataGraphService(): DataGraphManager
 
+    @Timed
     @JvmDefault
     fun recordEvent(event: AuditableEvent): Int {
         return recordEvents(listOf(event))
     }
 
+    @Timed
     @JvmDefault
     fun recordEvents(events: List<AuditableEvent>): Int {
 

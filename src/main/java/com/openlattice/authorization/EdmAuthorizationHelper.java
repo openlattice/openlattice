@@ -22,6 +22,7 @@
 
 package com.openlattice.authorization;
 
+import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
@@ -35,7 +36,9 @@ import com.openlattice.edm.type.PropertyType;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Component;
 
+@Component
 public class EdmAuthorizationHelper implements AuthorizingComponent {
     public static final EnumSet<Permission> WRITE_PERMISSION = EnumSet.of( Permission.WRITE );
     public static final EnumSet<Permission> READ_PERMISSION  = EnumSet.of( Permission.READ );
@@ -48,12 +51,14 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         this.authz = Preconditions.checkNotNull( authz );
     }
 
+    @Timed
     public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions ) {
         return getAuthorizedPropertyTypes( entitySetId, requiredPermissions, Principals.getCurrentPrincipals() );
     }
 
+    @Timed
     public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions,
@@ -63,6 +68,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         return getAuthorizedPropertyTypes( entitySetId, requiredPermissions, propertyTypes, principals );
     }
 
+    @Timed
     public Map<UUID, PropertyType> getAuthorizedPropertyTypes(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions,
@@ -119,6 +125,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     /**
      * Note: entitysets are assumed to have same entity type
      */
+    @Timed
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypes(
             Set<UUID> entitySetIds,
             Set<UUID> selectedProperties,
@@ -148,6 +155,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     /**
      * @see EdmAuthorizationHelper#getAuthorizedPropertiesByNormalEntitySets(EntitySet, EnumSet, Set)
      */
+    @Timed
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesByNormalEntitySets(
             EntitySet linkingEntitySet,
             EnumSet<Permission> requiredPermissions ) {
@@ -164,6 +172,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * @param principals          the principals to check against
      * @return Map of authorized property types by normal entity sets
      */
+    @Timed
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesByNormalEntitySets(
             EntitySet linkingEntitySet,
             EnumSet<Permission> requiredPermissions,
@@ -194,6 +203,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
     /**
      * Note: entitysets are assumed to have same entity type
      */
+    @Timed
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertyTypesByNormalEntitySet(
             EntitySet linkingEntitySet,
             Set<UUID> selectedProperties,
@@ -244,6 +254,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * @param principals          the principals to check against
      * @return Map of authorized property types by entity set ids
      */
+    @Timed
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnNormalEntitySets(
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions,
@@ -257,6 +268,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 principals );
     }
 
+    @Timed
     public Set<UUID> getAuthorizedPropertyTypeIds(
             UUID entitySetId,
             EnumSet<Permission> requiredPermissions ) {
@@ -306,6 +318,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * @return A Map with keys for each of the requested entity set id and values of authorized property types by their
      * id.
      */
+    @Timed
     public Map<UUID, Map<UUID, PropertyType>> getAuthorizedPropertiesOnEntitySets(
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions,
@@ -318,6 +331,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         ) );
     }
 
+    @Timed
     public Set<UUID> getAuthorizedEntitySetsForPrincipals(
             Set<UUID> entitySetIds,
             EnumSet<Permission> requiredPermissions,
@@ -338,6 +352,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
                 .collect( Collectors.toSet() );
     }
 
+    @Timed
     public Set<UUID> getAuthorizedEntitySets( Set<UUID> entitySetIds, EnumSet<Permission> requiredPermissions ) {
         return getAuthorizedEntitySetsForPrincipals( entitySetIds,
                 requiredPermissions,
@@ -350,6 +365,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
      * @param entitySetId the id of the entity set
      * @return all the property type ids on the entity type of the entity set
      */
+    @Timed
     public Set<UUID> getAllPropertiesOnEntitySet( UUID entitySetId ) {
         EntityType et = edm.getEntityTypeByEntitySetId( entitySetId );
         return et.getProperties();
@@ -359,6 +375,7 @@ public class EdmAuthorizationHelper implements AuthorizingComponent {
         return authz;
     }
 
+    @Timed
     public static Map<AclKey, EnumSet<Permission>> aclKeysForAccessCheck(
             SetMultimap<UUID, UUID> rawAclKeys,
             EnumSet<Permission> requiredPermission ) {
