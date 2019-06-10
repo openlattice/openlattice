@@ -1,3 +1,4 @@
 entity-type: "ol.audit"
+edge-entity-type: "ol.audited"
 fqns:
   ID: "ol.id"
