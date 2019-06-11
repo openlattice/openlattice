@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,22 +21,17 @@
 
 package com.openlattice.graph
 
-import com.google.common.base.Preconditions.checkState
+import java.util.*
 
 /**
- * This class is a simple filter based graph query data class. The current limitation of this class is that it doesn't
- * operate on entity types. The caller is responsible for specifying the entity sets to operate on.
- *
- * @param vertexFilters Defines constraints on vertices in the graph. A list of maps from entity set to property type id.
- * @param edgeFilters
+ * @param ids The entity key ids for which to build the neighborhood
+ * @param srcSelections The list of neighborhood selections where the ids are the destination. (src + filter > edge + filter > ids)
+ * @param dstSelections The list of neighborhood selections where the ids are the source. (ids > edge + filter > dst + filter)
+ * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
-data class SimpleGraphQuery(
-        val entityConstraints: List<GraphEntityConstraint>,
-        val associationConstraints: List<SimpleAssociationConstraint>
-) {
-    init {
-        checkState(entityConstraints.isNotEmpty(), "At least one entity constraint must be specified.")
-    }
-}
-
+data class NeighborhoodQuery(
+        val ids: Set<UUID>,
+        val srcSelections: List<NeighborhoodSelection>,
+        val dstSelections: List<NeighborhoodSelection>
+)
 
