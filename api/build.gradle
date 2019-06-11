@@ -20,7 +20,7 @@ plugins {
     id 'checkstyle'
     id "maven-publish"
     id "signing"
-    id 'com.github.spotbugs' version '1.6.6'
+    id 'com.github.spotbugs' version '3.1.12'
     id 'org.jetbrains.kotlin.jvm' version '1.3.21'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.3.21'
     id 'org.hidetake.swagger.generator' version '2.16.0'
@@ -55,7 +55,7 @@ checkstyle {
 }
 
 spotbugs {
-    toolVersion = '3.1.9'
+    toolVersion = '3.1.12'
 }
 
 jacoco {
@@ -132,11 +132,11 @@ clean.doFirst {
 }
 
 dependencies {
-    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.9.0'
     compileOnly 'net.jcip:jcip-annotations:1.0'
-    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.12'
     testCompileOnly 'net.jcip:jcip-annotations:1.0'
-    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.12'
 
     swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.4'
     swaggerUI 'org.webjars:swagger-ui:3.20.5'
