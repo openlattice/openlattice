@@ -4,7 +4,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "org.openapitools:openapi-generator-gradle-plugin:3.3.4"
+        classpath "org.openapitools:openapi-generator-gradle-plugin:4.0.1"
     }
 
     configurations.classpath {
@@ -20,10 +20,10 @@ plugins {
     id 'checkstyle'
     id "maven-publish"
     id "signing"
-    id 'com.github.spotbugs' version '1.6.6'
-    id 'org.jetbrains.kotlin.jvm' version '1.3.21'
-    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.21'
-    id 'org.hidetake.swagger.generator' version '2.16.0'
+    id 'com.github.spotbugs' version '2.0.0'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.31'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.3.31'
+    id 'org.hidetake.swagger.generator' version '2.18.1'
 }
 
 description = "OpenLattice REST APIs"
@@ -55,7 +55,7 @@ checkstyle {
 }
 
 spotbugs {
-    toolVersion = '3.1.9'
+    toolVersion = '3.1.12'
 }
 
 jacoco {
@@ -98,6 +98,7 @@ task generateConfluenceDocs(type: org.openapitools.generator.gradle.plugin.tasks
     generatorName = "cwiki"
     inputSpec = file("openlattice.yaml").getAbsolutePath()
     outputDir = file("build/openapi/cwiki").getAbsolutePath()
+    validateSpec = false
 }
 
 task generatePythonClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
@@ -105,6 +106,7 @@ task generatePythonClient(type: org.openapitools.generator.gradle.plugin.tasks.G
     inputSpec = file("openlattice.yaml").getAbsolutePath()
     outputDir = file("build/openapi/python").getAbsolutePath()
     configFile = file("oas-config.json").getAbsolutePath()
+    validateSpec = false
 }
 
 task generateRClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
@@ -112,6 +114,7 @@ task generateRClient(type: org.openapitools.generator.gradle.plugin.tasks.Genera
     inputSpec = file("openlattice.yaml").getAbsolutePath()
     outputDir = file("build/openapi/r").getAbsolutePath()
     configFile = file("oas-config.json").getAbsolutePath()
+    validateSpec = false
 }
 
 task generateKotlinClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
@@ -124,6 +127,7 @@ task generateKotlinClient(type: org.openapitools.generator.gradle.plugin.tasks.G
     configOptions = [
             dateLibrary: "java8"
     ]
+    validateSpec = false
 }
 
 clean.doFirst {
@@ -132,14 +136,14 @@ clean.doFirst {
 }
 
 dependencies {
-    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.7.1'
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.9.0'
     compileOnly 'net.jcip:jcip-annotations:1.0'
-    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.12'
     testCompileOnly 'net.jcip:jcip-annotations:1.0'
-    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.3'
+    testCompileOnly 'com.github.spotbugs:spotbugs-annotations:3.1.12'
 
-    swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.4'
-    swaggerUI 'org.webjars:swagger-ui:3.20.5'
+    swaggerCodegen 'io.swagger.codegen.v3:swagger-codegen-cli:3.0.8'
+    swaggerUI 'org.webjars:swagger-ui:3.22.2'
 
     /*
      * SL4J
