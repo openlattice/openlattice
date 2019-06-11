@@ -45,6 +45,8 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             organizationID = organizationsApi.createOrganizationIfNotExists(organization)
         }
     }
+    // todo: test for changing refresh rate
+    // todo: test for automatic refresh
 
 
     @Test
@@ -88,7 +90,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         grantMaterializePermissions(organization, esSrc, src.properties)
 
         // materialize src entity set
-        organizationsApi.assembleEntitySets(organizationID, setOf(esSrc.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to 1))
 
         Assert.assertTrue(organizationsApi
                 .getOrganizationEntitySets(organizationID, EnumSet.of(OrganizationEntitySetFlag.MATERIALIZED))
@@ -100,9 +102,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val et = createEntityType()
         val es1 = createEntitySet(et)
 
-        // materialize entity set
+        // materialize entity set, no automatic refresh
         grantMaterializePermissions(organization, es1, setOf())
-        organizationsApi.assembleEntitySets(organizationID, setOf(es1.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es1.id to null))
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
 
@@ -112,6 +114,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
         grantMaterializePermissions(organization, es1, setOf(pt.id))
+        // sync edm changes
         organizationsApi.synchronizeEdmChanges(organizationID, es1.id)
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es1.id]!!
                 .contains(OrganizationEntitySetFlag.EDM_UNSYNCHRONIZED))
@@ -125,9 +128,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
 
         val es2 = createEntitySet(et)
-        // materialize entity set
+        // materialize entity set, no automatic refresh
         grantMaterializePermissions(organization, es2, et.properties)
-        organizationsApi.assembleEntitySets(organizationID, setOf(es2.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es2.id to null))
 
 
         Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es2.id]!!
@@ -170,9 +173,9 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val propertyFqns = edmApi.getPropertyTypesForEntitySet(es.id)
                 .map { it.key to it.value.type.fullQualifiedNameAsString }.toMap()
 
-        // materialize entity set with all it's properties
+        // materialize entity set with all it's properties and no automatic refresh
         grantMaterializePermissions(organization, es, et.properties)
-        organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to null))
         // data is not supposed to be there, only the columns
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -303,7 +306,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         grantMaterializePermissions(organization, esEdge, edge.properties)
 
         // materialize src entity set
-        organizationsApi.assembleEntitySets(organizationID, setOf(esSrc.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to null))
 
         // edges should be there but empty
         organizationDataSource.connection.use { connection ->
@@ -338,7 +341,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         dataApi.createAssociations(edges)
 
         // re-materialize src entity set
-        organizationsApi.assembleEntitySets(organizationID, setOf(esSrc.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esSrc.id to null))
 
         // edges should contain all ids
         organizationDataSource.connection.use { connection ->
@@ -359,7 +362,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }
 
         // materialize other entity set too
-        organizationsApi.assembleEntitySets(organizationID, setOf(esEdge.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(esEdge.id to null))
 
         // edges should contain same ids as before
         organizationDataSource.connection.use { connection ->
@@ -403,7 +406,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         // user is not owner of organization
         try {
             loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+            organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!.contains(
@@ -421,7 +424,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
 
         try {
             loginAs("user1")
-            organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+            organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
             Assert.fail("Should have thrown Exception but did not!")
         } catch (e: UndeclaredThrowableException) {
             Assert.assertTrue(e.undeclaredThrowable.message!!.contains(
@@ -439,7 +442,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(esMaterializationAcl, Action.ADD))
 
         loginAs("user1")
-        organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
 
 
         loginAs("admin")
@@ -453,7 +456,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         permissionsApi.updateAcl(AclData(ptMaterializationAcl, Action.ADD))
 
         loginAs("user1")
-        organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
 
         val organizationDataSource = TestAssemblerConnectionManager.connect(organizationID)
         organizationDataSource.connection.use { connection ->
@@ -479,7 +482,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         }
 
         loginAs("user1")
-        organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
 
         organizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
@@ -532,7 +535,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val esReadAcl = Acl(AclKey(es.id), setOf(Ace(user1, readPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(esReadAcl, Action.ADD))
 
-        organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
 
         // try to select all columns
         user1OrganizationDataSource.connection.use { connection ->
@@ -553,7 +556,13 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
                 //  user1 can access edges, since it has permission to 1 entityset
                 stmt.executeQuery(TestAssemblerConnectionManager.selectEdgesOfEntitySetsSql())
                 val rs = stmt.executeQuery(TestAssemblerConnectionManager
-                        .selectFromEntitySetSql(es, setOf(PostgresColumn.ENTITY_SET_ID.name, PostgresColumn.ID.name)))
+                        .selectFromEntitySetSql(
+                                es,
+                                setOf(
+                                        PostgresColumn.ENTITY_SET_ID.name,
+                                        PostgresColumn.ID.name,
+                                        ResultSetAdapters.mapMetadataOptionToPostgresColumn(
+                                                MetadataOption.ENTITY_KEY_IDS))))
                 Assert.assertEquals(PostgresColumn.ENTITY_SET_ID.name, rs.metaData.getColumnName(1))
                 Assert.assertEquals(PostgresColumn.ID.name, rs.metaData.getColumnName(2))
                 Assert.assertEquals(
@@ -567,7 +576,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         val ptReadAcl = Acl(AclKey(es.id, propertyTypeId), setOf(Ace(user1, readPermissions, OffsetDateTime.MAX)))
         permissionsApi.updateAcl(AclData(ptReadAcl, Action.ADD))
 
-        organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
 
         // try to select all columns
         user1OrganizationDataSource.connection.use { connection ->
@@ -606,7 +615,7 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
             permissionsApi.updateAcl(AclData(acl, Action.ADD))
         }
 
-        organizationsApi.assembleEntitySets(organizationID, setOf(es.id))
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 100))
 
         user1OrganizationDataSource.connection.use { connection ->
             connection.createStatement().use { stmt ->
