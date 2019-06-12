@@ -239,16 +239,20 @@ public class OrganizationsController implements AuthorizingComponent, Organizati
                 getAuthorizedPropertiesForMaterialization( organizationId, refreshRatesOfEntitySets.keySet() );
 
         // convert mins to millisecs
-        var refreshRatesInMilliSecsOfEntitySets = refreshRatesOfEntitySets.entrySet().stream()
-                .collect( Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> {
-                            if ( entry.getValue() < 1 ) {
-                                throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
-                            }
-                            return entry.getValue().longValue() * 3600L;
+        final Map<UUID, Long> refreshRatesInMilliSecsOfEntitySets = new HashMap<>( refreshRatesOfEntitySets.size() );
+        refreshRatesOfEntitySets.forEach(
+                ( entitySetId, refreshRateInMins ) -> {
+                    Long value = null;
+                    if ( refreshRateInMins != null ) {
+                        if ( refreshRateInMins < 1 ) {
+                            throw new IllegalArgumentException( "Minimum refresh rate is 1 minute." );
                         }
-                ) );
+                        value = refreshRateInMins.longValue() * 3600L;
+                    }
+
+                    refreshRatesInMilliSecsOfEntitySets.put( entitySetId, value );
+                }
+        );
 
         return assembler.materializeEntitySets(
                 organizationId,
