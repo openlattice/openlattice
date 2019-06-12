@@ -47,6 +47,7 @@ import com.openlattice.linking.LinkingFeedbackApi;
 import com.openlattice.linking.RealtimeLinkingApi;
 import com.openlattice.mapstores.TestDataFactory;
 import com.openlattice.organization.OrganizationsApi;
+import com.openlattice.postgres.IndexType;
 import com.openlattice.rehearsal.GeneralException;
 import com.openlattice.rehearsal.SetupEnvironment;
 import com.openlattice.requests.RequestsApi;
@@ -232,7 +233,7 @@ public class MultipleAuthenticatedUsersBase extends SetupEnvironment {
     }
 
     public static PropertyType createPropertyType() {
-        PropertyType pt = TestDataFactory.propertyType();
+        PropertyType pt = TestDataFactory.propertyType( IndexType.BTREE );
         UUID propertyTypeId = edmApi.createPropertyType( pt );
 
         Assert.assertNotNull( "Property type creation returned null value.", propertyTypeId );
