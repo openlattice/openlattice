@@ -113,6 +113,7 @@ class PostgresGraphQueryService(
         val neighborhood = Neighborhood(ids, entities, associations)
         val propertyTypeFqns = propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
         query.srcSelections.forEachIndexed { index, selection ->
+            val ssw = Stopwatch.createStarted()
             val entityFilterDefinitions = getFilterDefinitions(
                     selection.entityTypeIds,
                     selection.entitySetIds,
@@ -127,10 +128,13 @@ class PostgresGraphQueryService(
             val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
             val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
+            logger.info(
+                    "Neighborhood src query filter definition prep took {} ms for {}",
+                    ssw.elapsed(TimeUnit.MILLISECONDS)
+            )
             if (entitySetIds.isEmpty() || associationEntitySetIds.isEmpty()) {
                 return@forEachIndexed
             }
-
             PostgresIterable<DataEdgeKey>(
                     Supplier {
                         val connection = hds.connection
@@ -210,10 +214,12 @@ class PostgresGraphQueryService(
                         it.src.entityKeyId
                 )
             }
+
+            logger.info("Neighborhood src selection took {} ms for {}", ssw.elapsed(TimeUnit.MILLISECONDS), selection)
         }
 
         query.dstSelections.forEachIndexed { index, selection ->
-
+            val ssw = Stopwatch.createStarted()
             val entityFilterDefinitions = getFilterDefinitions(
                     selection.entityTypeIds,
                     selection.entitySetIds,
@@ -230,9 +236,14 @@ class PostgresGraphQueryService(
             val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
             val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
+            logger.info(
+                    "Neighborhood query filter definition prep took {} ms for {}", ssw.elapsed(TimeUnit.MILLISECONDS)
+            )
+
             if (entitySetIds.isEmpty() || associationEntitySetIds.isEmpty()) {
                 return@forEachIndexed
             }
+
 
             PostgresIterable<DataEdgeKey>(
                     Supplier {
@@ -314,18 +325,23 @@ class PostgresGraphQueryService(
                         it.dst.entityKeyId
                 )
             }
+            logger.info("Neighborhood dst selection took {} ms for {}", ssw.elapsed(TimeUnit.MILLISECONDS), selection)
         }
+
+
 
         entities.forEach { (entitySetId, data) ->
             val apt = authorizedPropertyTypes
                     .getValue(entitySetId)
                     .associateWith { propertyTypes.getValue(it) }
+            val sw = Stopwatch.createStarted()
             pgDataService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
                     entitySetId,
                     Optional.of(data.keys),
                     apt,
                     EnumSet.of(MetadataOption.LAST_WRITE)
             ).forEach { data[it.first] = it.second }
+            logger.info("Loading data for entity set {} took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
         }
 
         return neighborhood
