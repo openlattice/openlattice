@@ -341,7 +341,7 @@ class PostgresGraphQueryService(
                     apt,
                     EnumSet.of(MetadataOption.LAST_WRITE)
             ).forEach { data[it.first] = it.second }
-            logger.info("Loading data for entity set {} took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
+            logger.info("Loading data for entity set {} took {} ms", entitySetId, sw.elapsed(TimeUnit.MILLISECONDS))
         }
 
         return neighborhood
