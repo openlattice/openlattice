@@ -67,8 +67,7 @@ constructor(
 
         textingExecutor.execute {
             Stream.generate { twilioQueue.take() }.forEach { (organizationId, messageContents, toPhoneNumber) ->
-//                val phone = organizations.getOrganization(organizationId).phoneNumber
-                val phone = "2403033965"
+                val phone = organizations.getOrganization(organizationId).phoneNumber
                 if ( phone == "" ){
                     throw BadRequestException("No source phone number set for organization!")
                 }
