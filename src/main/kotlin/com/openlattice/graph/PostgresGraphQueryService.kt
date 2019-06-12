@@ -101,7 +101,7 @@ class PostgresGraphQueryService(
 
         val authorizedPropertyTypes = authorizedPropertyTypesByEntitySet.mapValues { it.value.keys }
         val ids = query.ids
-        val queryId = "a" + UUID.randomUUID().toString().filter{ it.isLetterOrDigit() }
+        val queryId = "a" + UUID.randomUUID().toString().filter { it.isLetterOrDigit() }
 
         val entities = mutableMapOf<UUID, MutableMap<UUID, Map<UUID, Set<Any>>>>()
         val associations = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, NeighborIds>>>()
@@ -144,7 +144,7 @@ class PostgresGraphQueryService(
                                 queryId,
                                 index,
                                 connection,
-                                entityFilterDefinitions,
+                                entityFilterDefinitions.filter { it.filters.isNotEmpty() },
                                 propertyTypes,
                                 authorizedPropertyTypes,
                                 propertyTypeFqns,
@@ -154,19 +154,31 @@ class PostgresGraphQueryService(
                                 queryId,
                                 index,
                                 connection,
-                                associationFilterDefinitions,
+                                associationFilterDefinitions.filter { it.filters.isNotEmpty() },
                                 propertyTypes,
                                 authorizedPropertyTypes,
                                 propertyTypeFqns,
                                 filter
                         )
                         val edgeJoins = srcEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_2.name} FROM $it) as $it " }
-                        val sql = "SELECT * FROM ${srcEdgeView.first} INNER JOIN " + srcEntityFilteringViews.keys.joinToString(
-                                " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING(${ID_VALUE.name}) " +
-                                " INNER JOIN " + edgeJoins.joinToString(
-                                " USING (${EDGE_COMP_2.name}) INNER JOIN "
-                        ) + " USING (${EDGE_COMP_2.name}) "
+
+                        val srcEntityJoins = if (srcEntityFilteringViews.isEmpty()) {
+                            ""
+                        } else {
+                            "INNER JOIN " + srcEntityFilteringViews.keys.joinToString(
+                                    " USING (${ID_VALUE.name}) INNER JOIN "
+                            ) + " USING(${ID_VALUE.name}) "
+                        }
+
+                        val edgeJoinsSql = if (edgeJoins.isEmpty()) {
+                            ""
+                        } else {
+                            " INNER JOIN " + edgeJoins.joinToString(
+                                    " USING (${EDGE_COMP_2.name}) INNER JOIN "
+                            ) + " USING (${EDGE_COMP_2.name}) "
+                        }
+
+                        val sql = "SELECT * FROM ${srcEdgeView.first} $srcEntityJoins $edgeJoinsSql"
                         val rs = stmt.executeQuery(sql)
                         StatementHolder(connection, stmt, rs)
                     }, Function {
@@ -206,6 +218,7 @@ class PostgresGraphQueryService(
                     selection.associationFilters
             )
 
+
             val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
             val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
@@ -231,7 +244,7 @@ class PostgresGraphQueryService(
                                 queryId,
                                 index,
                                 connection,
-                                entityFilterDefinitions,
+                                entityFilterDefinitions.filter { it.filters.isNotEmpty() },
                                 propertyTypes,
                                 authorizedPropertyTypes,
                                 propertyTypeFqns,
@@ -242,7 +255,7 @@ class PostgresGraphQueryService(
                                 queryId,
                                 index,
                                 connection,
-                                associationFilterDefinitions,
+                                associationFilterDefinitions.filter { it.filters.isNotEmpty() },
                                 propertyTypes,
                                 authorizedPropertyTypes,
                                 propertyTypeFqns,
@@ -250,12 +263,22 @@ class PostgresGraphQueryService(
                         )
 
                         val edgeJoins = dstEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_1.name} FROM $it) as $it " }
-                        val sql = "SELECT * FROM ${dstEdgeView.first} INNER JOIN " + dstEntityFilteringViews.keys.joinToString(
-                                " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING(${ID_VALUE.name}) " +
-                                " INNER JOIN " + edgeJoins.joinToString(
-                                " USING (${EDGE_COMP_1.name}) INNER JOIN "
-                        ) + " USING (${EDGE_COMP_1.name}) "
+                        val dstEntityJoins = if (dstEntityFilteringViews.isEmpty()) {
+                            ""
+                        } else {
+                            " INNER JOIN " + dstEntityFilteringViews.keys.joinToString(
+                                    " USING (${ID_VALUE.name}) INNER JOIN "
+                            ) + " USING(${ID_VALUE.name}) "
+                        }
+                        val edgeJoinsSql = if (edgeJoins.isEmpty()) {
+                            ""
+                        } else {
+                            " INNER JOIN " + edgeJoins.joinToString(
+                                    " USING (${EDGE_COMP_1.name}) INNER JOIN "
+                            ) + " USING (${EDGE_COMP_1.name}) "
+                        }
+
+                        val sql = "SELECT * FROM ${dstEdgeView.first} $dstEntityJoins $edgeJoinsSql"
                         val rs = stmt.executeQuery(sql)
                         StatementHolder(connection, stmt, rs)
                     }, Function {
@@ -442,7 +465,7 @@ class PostgresGraphQueryService(
             AssociationFilterDefinition(
                     entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap()))
             )
-        }).filter { it.filters.isNotEmpty() }
+        })
 
 
     }
@@ -472,21 +495,21 @@ class PostgresGraphQueryService(
     ): Map<String, Statement> {
         return filterDefinitions
                 .mapIndexed { filterIndex, filterDefinition ->
-            val tableName = "${queryId}_src_${index}_$filterIndex"
-            dropViewIfExists(connection, tableName)
-            val stmt = connection.createStatement()
-            stmt.execute(
-                    createFilteringView(
-                            tableName,
-                            filterDefinition,
-                            propertyTypes,
-                            authorizedPropertyTypes,
-                            propertyTypeFqns,
-                            filter
+                    val tableName = "${queryId}_src_${index}_$filterIndex"
+                    dropViewIfExists(connection, tableName)
+                    val stmt = connection.createStatement()
+                    stmt.execute(
+                            createFilteringView(
+                                    tableName,
+                                    filterDefinition,
+                                    propertyTypes,
+                                    authorizedPropertyTypes,
+                                    propertyTypeFqns,
+                                    filter
+                            )
                     )
-            )
-            return@mapIndexed tableName to stmt
-        }.toMap()
+                    return@mapIndexed tableName to stmt
+                }.toMap()
     }
 
     private fun createFilteringView(
@@ -522,6 +545,7 @@ class PostgresGraphQueryService(
     ) {
         connection.createStatement().execute("DROP VIEW IF EXISTS $tableName")
     }
+
     /**
      * Used to create unbound prepared statement for generating a edge table fragment useful for joining to source
      * constraints.
