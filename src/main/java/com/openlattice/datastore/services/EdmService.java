@@ -274,6 +274,8 @@ public class EdmService implements EdmManager {
 
         propertyTypes.delete( propertyTypeId );
         aclKeyReservations.release( propertyTypeId );
+        // TODO flag materialized entity set edm unsynch
+
         eventBus.post( new PropertyTypeDeletedEvent( propertyTypeId ) );
     }
 
