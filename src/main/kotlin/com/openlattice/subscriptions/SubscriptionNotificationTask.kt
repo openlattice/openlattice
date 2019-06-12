@@ -30,6 +30,9 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
     }
 
     override fun runTask() {
+    }
+
+    private fun doTask() {
         val dependencies = getDependency()
         dependencies.subscriptionService.getAllSubscriptions().forEach { (principal, subscriptionContact) ->
             val allEntitySetIds = getAllEntitySetIds(subscriptionContact.subscription)

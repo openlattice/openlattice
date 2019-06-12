@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.RandomStringUtils;
 
 /**
- *  There is currently an implication in the codebase that all Principals in this Mapstore are of type PrincipalType.USER
+ * There is currently an implication in the codebase that all Principals in this Mapstore are of type PrincipalType.USER
  */
 public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UUID, PrincipalSet> {
 
@@ -45,7 +45,7 @@ public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UU
     public MapConfig getMapConfig() {
         return super
                 .getMapConfig()
-                .addMapIndexConfig( new MapIndexConfig(ANY_PRINCIPAL_SET, false) );
+                .addMapIndexConfig( new MapIndexConfig( ANY_PRINCIPAL_SET, false ) );
     }
 
     @Override
@@ -76,7 +76,8 @@ public class OrganizationMembersMapstore extends AbstractBasePostgresMapstore<UU
             String[] value = (String[]) arr.getArray();
             if ( value != null ) {
                 return PrincipalSet
-                        .wrap( Arrays.stream( value ).map( user -> new Principal( PrincipalType.USER, user ) )
+                        .wrap( Arrays.stream( value )
+                                .map( user -> new Principal( PrincipalType.USER, user ) )
                                 .collect( Collectors.toSet() ) );
             }
         }
