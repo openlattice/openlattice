@@ -22,6 +22,7 @@
 package com.openlattice.graph
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.base.Stopwatch
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
@@ -42,13 +43,17 @@ import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.Connection
 import java.sql.Statement
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
+
+private val logger = LoggerFactory.getLogger(PostgresGraphQueryService::class.java)
 
 /**
  *
@@ -179,7 +184,10 @@ class PostgresGraphQueryService(
                         }
 
                         val sql = "SELECT * FROM ${srcEdgeView.first} $srcEntityJoins $edgeJoinsSql"
+                        logger.info("src filter sql: {} \nNeighborhood sql: {}", srcEdgeView.first, sql)
+                        val sw = Stopwatch.createStarted()
                         val rs = stmt.executeQuery(sql)
+                        logger.info("Neighborhood query took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
                         StatementHolder(connection, stmt, rs)
                     }, Function {
                 val srcEs = it.getObject(SRC_ENTITY_SET_ID_FIELD, UUID::class.java)
@@ -279,7 +287,11 @@ class PostgresGraphQueryService(
                         }
 
                         val sql = "SELECT * FROM ${dstEdgeView.first} $dstEntityJoins $edgeJoinsSql"
+
+                        logger.info("dst filter sql: {} \nNeighborhood sql: {}", dstEdgeView.first, sql)
+                        val sw = Stopwatch.createStarted()
                         val rs = stmt.executeQuery(sql)
+                        logger.info("Neighborhood query took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
                         StatementHolder(connection, stmt, rs)
                     }, Function {
                 val srcEs = it.getObject(SRC_ENTITY_SET_ID_FIELD, UUID::class.java)
