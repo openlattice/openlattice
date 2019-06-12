@@ -21,6 +21,7 @@
 
 package com.openlattice.graph
 
+import com.codahale.metrics.annotation.Timed
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
@@ -41,6 +42,7 @@ import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.springframework.stereotype.Service
 import java.sql.Connection
 import java.sql.Statement
 import java.time.OffsetDateTime
@@ -52,11 +54,13 @@ import java.util.function.Supplier
  *
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
+@Service
 class PostgresGraphQueryService(
         private val hds: HikariDataSource,
         private val edm: EdmManager,
         private val pgDataService: PostgresEntityDataQueryService
 ) : GraphQueryService {
+    @Timed
     override fun getEntitySetForIds(ids: Set<UUID>): Map<UUID, UUID> {
         return PostgresIterable<Pair<UUID, UUID>>(
                 Supplier {
@@ -76,6 +80,7 @@ class PostgresGraphQueryService(
         ).toMap()
     }
 
+    @Timed
     override fun submitQuery(
             query: NeighborhoodQuery,
             propertyTypes: Map<UUID, PropertyType>,
@@ -428,7 +433,7 @@ class PostgresGraphQueryService(
             edm.getEntityTypeIdsByEntitySetIds(entitySetIds)
         }.orElse(emptyMap())
 
-        return entitySetsByType.map { (entityTypeId, entitySetIds) ->
+        return (entitySetsByType.map { (entityTypeId, entitySetIds) ->
             AssociationFilterDefinition(
                     entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap()))
             )
@@ -437,7 +442,7 @@ class PostgresGraphQueryService(
             AssociationFilterDefinition(
                     entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap()))
             )
-        }
+        }).filter { it.filters.isNotEmpty() }
 
 
     }
@@ -465,7 +470,8 @@ class PostgresGraphQueryService(
             propertyTypeFqns: Map<UUID, String>,
             filter: Optional<Filter>
     ): Map<String, Statement> {
-        return filterDefinitions.mapIndexed { filterIndex, filterDefinition ->
+        return filterDefinitions
+                .mapIndexed { filterIndex, filterDefinition ->
             val tableName = "${queryId}_src_${index}_$filterIndex"
             dropViewIfExists(connection, tableName)
             val stmt = connection.createStatement()
