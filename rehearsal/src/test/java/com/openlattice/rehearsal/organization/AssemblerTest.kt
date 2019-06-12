@@ -635,6 +635,92 @@ class AssemblerTest : MultipleAuthenticatedUsersBase() {
         loginAs("admin")
     }
 
+    @Test
+    fun testRefreshRate() {
+        val et = createEntityType()
+        val es = createEntitySet(et)
+        val propertyFqns = edmApi.getPropertyTypesForEntitySet(es.id)
+                .map { it.key to it.value.type.fullQualifiedNameAsString }.toMap()
+        // grant materialize to org principal
+        grantMaterializePermissions(organization, es, et.properties)
+
+        // try to add < 1 refresh rates
+        try {
+            organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to 0))
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!.contains(
+                    "Minimum refresh rate is 1 minute.", true))
+        }
+
+        try {
+            organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to -12))
+            Assert.fail("Should have thrown Exception but did not!")
+        } catch (e: UndeclaredThrowableException) {
+            Assert.assertTrue(e.undeclaredThrowable.message!!.contains(
+                    "Minimum refresh rate is 1 minute.", true))
+        }
+
+        // materialize with 3 min refresh rate
+        val refreshRate = 3
+        organizationsApi.assembleEntitySets(organizationID, mapOf(es.id to refreshRate))
+
+        // add data
+        Assert.assertFalse(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+        val testData = TestDataFactory.randomStringEntityData(numberOfEntities, et.properties).values.toList()
+        val ids = dataApi.createEntities(es.id, testData)
+        val testDataWithIds = ids.zip(testData).toMap()
+
+        Assert.assertTrue(organizationsApi.getOrganizationEntitySets(organizationID)[es.id]!!
+                .contains(OrganizationEntitySetFlag.DATA_UNSYNCHRONIZED))
+
+        // data is not supposed to be there, only the columns until automatic refresh
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+                // all columns are there
+                (1..rs.metaData.columnCount).forEach {
+                    val columnName = rs.metaData.getColumnName(it)
+                    if (columnName != PostgresColumn.ID.name && columnName != PostgresColumn.ENTITY_SET_ID.name) {
+                        Assert.assertTrue(propertyFqns.values.contains(columnName))
+                    }
+                }
+                // no data is there yet
+                Assert.assertFalse(rs.next())
+            }
+        }
+
+
+        // wait until automatic refresh
+        Thread.sleep(refreshRate.toLong()*60*1000)
+
+
+        // check if data is in org database
+        organizationDataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                val rs = stmt.executeQuery(TestAssemblerConnectionManager.selectFromEntitySetSql(es))
+
+                var index = 0
+                Assert.assertTrue(rs.next())
+                Assert.assertEquals(es.id, ResultSetAdapters.entitySetId(rs))
+                do {
+                    val id = ResultSetAdapters.id(rs)
+                    Assert.assertTrue(ids.contains(id))
+                    propertyFqns.forEach { propertyId, fqn ->
+                        Assert.assertEquals(
+                                testDataWithIds.getValue(id).getValue(propertyId).first(),
+                                getStringResult(rs, fqn))
+                    }
+                    index++
+
+                } while (rs.next())
+
+                Assert.assertEquals(numberOfEntities, index)
+            }
+        }
+    }
+
 
     /**
      * Add permission to materialize entity set and it's properties to organization principal
