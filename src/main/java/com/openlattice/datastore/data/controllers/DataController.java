@@ -1091,6 +1091,8 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
         int numUpdates = 0;
         long maxVersion = Long.MIN_VALUE;
 
+        final var isAssociationEntitySet = edmService.isAssociationEntitySet( entitySetId );
+
         // access checks for entity set and properties
         final Map<UUID, PropertyType> authorizedPropertyTypes =
                 getAuthorizedPropertyTypesForDelete( entitySetId, Optional.empty(), deleteType );
@@ -1102,13 +1104,17 @@ public class DataController implements DataApi, AuthorizingComponent, AuditingCo
             WriteEvent writeEvent;
 
             if ( deleteType == DeleteType.Hard ) {
-                deleteAssociations( entitySetId, Optional.of( chunk ) );
+                if ( !isAssociationEntitySet ) {
+                    deleteAssociations( entitySetId, Optional.of( chunk ) );
+                }
                 writeEvent = dgm.deleteEntities(
                         entitySetId,
                         chunk,
                         authorizedPropertyTypes );
             } else {
-                clearAssociations( entitySetId, Optional.of( chunk ) );
+                if ( !isAssociationEntitySet ) {
+                    clearAssociations( entitySetId, Optional.of( chunk ) );
+                }
                 writeEvent = dgm.clearEntities(
                         entitySetId,
                         chunk,

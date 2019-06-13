@@ -22,6 +22,7 @@
 package com.openlattice.graph.controllers
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.base.Preconditions.checkArgument
 import com.openlattice.authorization.*
 import com.openlattice.controllers.exceptions.ForbiddenException
 import com.openlattice.data.requests.NeighborEntityDetails
@@ -56,7 +57,35 @@ constructor(
             @PathVariable(ENTITY_SET_ID) entitySetId: UUID,
             @RequestBody query: NeighborhoodQuery
     ): Neighborhood {
-        val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
+        checkArgument(
+                query.ids.values.all { maybeIds -> maybeIds.map { ids -> ids.isNotEmpty() }.orElse(true) },
+                "Cannot specify an empty set of entity key ids."
+        )
+
+        val entitySetsById = graphQueryService.getEntitySetForIds(
+                query.ids.values.flatMap { it.orElse(emptySet()) }.toSet()
+        )
+
+        entitySetsById.asSequence()
+                .groupBy({ it.value }, { it.key })
+                .mapValues { it.value.toSet() }
+                .forEach { (entitySetId, ids) ->
+                    check(query.ids.containsKey(entitySetId)) {
+                        "Entity set id ($entitySetId) / entity key ids ($ids) mismatch."
+                    }
+                    val maybeIds = query.ids.getValue(entitySetId)
+                    check(maybeIds.isPresent) {
+                        "Entity set id ($entitySetId) expected to have entity key ids ($ids), instead found none."
+                    }
+
+                    val missing = maybeIds.get() - ids
+                    val additional = ids - maybeIds.get()
+
+                    check(missing.isEmpty() && additional.isEmpty()) {
+                        "Missing keys ($missing) and additional keys ($additional) are incorrectly specified."
+                    }
+                }
+
         val (allEntitySetIds, requiredPropertyTypes) = resolveEntitySetIdsAndRequiredAuthorizations(
                 query,
                 entitySetsById.values
