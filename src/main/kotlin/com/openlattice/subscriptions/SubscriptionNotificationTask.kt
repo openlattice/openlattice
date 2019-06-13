@@ -1,6 +1,5 @@
 package com.openlattice.subscriptions
 
-import com.openlattice.analysis.requests.WrittenTwoWeeksFilter
 import com.openlattice.authorization.Permission
 import com.openlattice.authorization.Principals
 import com.openlattice.codex.MessageRequest
@@ -35,7 +34,7 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
     private fun doTask() {
         val dependencies = getDependency()
         dependencies.subscriptionService.getAllSubscriptions().forEach { (principal, subscriptionContact) ->
-            val allEntitySetIds = getAllEntitySetIds(subscriptionContact.subscription)
+            val allEntitySetIds = getAllEntitySetIds(subscriptionContact.query)
             val authorizedPropertyTypes = dependencies.authorizationHelper.getAuthorizedPropertiesOnEntitySets(
                     allEntitySetIds,
                     EnumSet.of(Permission.READ),
@@ -43,7 +42,7 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
             )
             val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
             val neighborhood = dependencies.graphQueryService.submitQuery(
-                    subscriptionContact.subscription,
+                    subscriptionContact.query,
                     propertyTypes,
                     authorizedPropertyTypes,
                     Optional.of(LastWriteRangeFilter(subscriptionContact.lastNotify))
@@ -82,14 +81,18 @@ class SubscriptionNotificationTask : HazelcastFixedRateTask<SubscriptionNotifica
                         }
                     }
                 }
-                dependencies.subscriptionService.markLastNotified(neighborhood.entities.values.flatMap { it.keys }.toSet(),principal )
+                dependencies.subscriptionService.markLastNotified(
+                        neighborhood.entities.values.flatMap { it.keys }.toSet(), principal
+                )
             }
         }
     }
 
     private fun getAllEntitySetIds(query: NeighborhoodQuery): Set<UUID> {
         val dependencies = getDependency()
-        return dependencies.graphQueryService.getEntitySetForIds(query.ids).values.toSet() +
+        return dependencies.graphQueryService
+                .getEntitySetForIds(query.ids.flatMap { it.value.orElse(emptySet()) }.toSet())
+                .values.toSet() +
                 (query.srcSelections + query.dstSelections).flatMap { selection ->
                     dependencies.graphQueryService.getEntitySets(selection.entityTypeIds) +
                             dependencies.graphQueryService.getEntitySets(selection.associationTypeIds)

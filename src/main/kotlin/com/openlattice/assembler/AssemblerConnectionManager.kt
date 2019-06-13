@@ -27,6 +27,7 @@ import com.codahale.metrics.Timer
 import com.google.common.collect.Sets
 import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
+import com.openlattice.analysis.requests.AggregationType
 import com.openlattice.assembler.PostgresDatabases.Companion.buildOrganizationDatabaseName
 import com.openlattice.assembler.PostgresRoles.Companion.buildOrganizationUserId
 import com.openlattice.assembler.PostgresRoles.Companion.buildPostgresRoleName
@@ -35,6 +36,7 @@ import com.openlattice.authorization.*
 import com.openlattice.data.storage.MetadataOption
 import com.openlattice.data.storage.entityKeyIdColumnsList
 import com.openlattice.data.storage.linkingEntityKeyIdColumnsList
+import com.openlattice.directory.MaterializedViewAccount
 import com.openlattice.edm.EntitySet
 import com.openlattice.edm.type.PropertyType
 import com.openlattice.organization.OrganizationEntitySetFlag
@@ -105,7 +107,18 @@ class AssemblerConnectionManager(
     }
 
     fun connect(dbname: String): HikariDataSource {
+        return connect(dbname, assemblerConfiguration.server.clone() as Properties)
+    }
+
+    fun connect(dbname: String, account: MaterializedViewAccount): HikariDataSource {
         val config = assemblerConfiguration.server.clone() as Properties
+        config["username"] = account.username
+        config["password"] = account.credential
+
+        return connect(dbname, config)
+    }
+
+    fun connect(dbname: String, config: Properties): HikariDataSource {
         config.computeIfPresent("jdbcUrl") { _, jdbcUrl ->
             "${(jdbcUrl as String).removeSuffix(
                     "/"
@@ -818,6 +831,5 @@ internal fun dropUserIfExistsSql(dbUser: String): String {
             "END\n" +
             "\$do\$;"
 }
-
 
 
