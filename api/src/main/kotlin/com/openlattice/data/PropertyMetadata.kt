@@ -30,7 +30,6 @@ data class PropertyMetadata(
         @JsonProperty(SerializationConstants.HASH)  val hash: Optional<ByteArray>,
         @JsonProperty(SerializationConstants.VERSION)  val version: Optional<Long>,
         @JsonProperty(SerializationConstants.VERSIONS) val versions: Optional<LongArray>,
-        @JsonProperty(SerializationConstants.ENTITY_SET_ID)  val entitySetIds: Optional<Set<UUID>>,
-        @JsonProperty(SerializationConstants.DATASOURCE_IDS) val datasourceIds: Optional<Set<UUID>>,
+        @JsonProperty(SerializationConstants.ENTITY_SET_IDS)  val entitySetIds: Optional<Set<UUID>>,
         @JsonProperty(SerializationConstants.LAST_WRITE) val lastWrite: Optional<OffsetDateTime>
 )

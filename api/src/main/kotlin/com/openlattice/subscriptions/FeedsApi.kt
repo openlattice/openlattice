@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018. OpenLattice, Inc.
+ * Copyright (C) 2019. OpenLattice, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,27 @@
  *
  */
 
-package com.openlattice.graph
+package com.openlattice.subscriptions
 
-import com.openlattice.data.EntityDataKey
-import java.util.*
-import kotlin.collections.LinkedHashSet
+import com.openlattice.graph.Neighborhood
+import retrofit2.http.GET
 
-data class FilteredSubGraph (
-        val ids: LinkedHashSet<EntityDataKey>,
-        val entities: List<Map<UUID, Set<Any>>>,
-        val edges : Map<UUID, List<AssociationReference>>
-)
+/**
+ * This API is for managing Subscriptions on entities
+ */
+interface FeedsApi {
+    companion object {
+        const val SERVICE = "/datastore"
+        const val CONTROLLER = "/feeds"
+        const val BASE = SERVICE + CONTROLLER
+
+        const val FEED_ID = "feedId"
+        const val FEED_ID_PATH = "/{$FEED_ID}"
+
+        const val FEED_IDS = "feedIds"
+    }
+
+    @GET(BASE)
+    fun getLatestFeed() : Iterator<Neighborhood>
+
+}

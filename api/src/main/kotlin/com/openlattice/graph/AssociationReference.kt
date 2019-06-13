@@ -21,22 +21,8 @@
 
 package com.openlattice.graph
 
-import com.google.common.base.Preconditions.checkState
-
-/**
- * This class is a simple filter based graph query data class. The current limitation of this class is that it doesn't
- * operate on entity types. The caller is responsible for specifying the entity sets to operate on.
- *
- * @param vertexFilters Defines constraints on vertices in the graph. A list of maps from entity set to property type id.
- * @param edgeFilters
- */
-data class SimpleGraphQuery(
-        val entityConstraints: List<GraphEntityConstraint>,
-        val associationConstraints: List<SimpleAssociationConstraint>
-) {
-    init {
-        checkState(entityConstraints.isNotEmpty(), "At least one entity constraint must be specified.")
-    }
-}
-
-
+data class AssociationReference(
+        val srcIndex: Int,
+        val dstIndex: Int,
+        val edgeIndexL: Int
+)

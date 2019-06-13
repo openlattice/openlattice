@@ -18,21 +18,14 @@
 
 package com.openlattice.organization;
 
-import java.util.EnumSet;
+import com.openlattice.directory.pojo.Auth0UserBasic;
 import com.openlattice.organization.roles.Role;
+import retrofit2.http.*;
+
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import com.openlattice.directory.pojo.Auth0UserBasic;
-
-import retrofit2.http.Body;
-import retrofit2.http.DELETE;
-import retrofit2.http.GET;
-import retrofit2.http.HTTP;
-import retrofit2.http.POST;
-import retrofit2.http.PUT;
-import retrofit2.http.Path;
 
 public interface OrganizationsApi {
     /*
@@ -75,6 +68,9 @@ public interface OrganizationsApi {
     String SET_ID            = "setId";
     String SET_ID_PATH       = "/{" + SET_ID + "}";
 
+    String SET_PHONE         = "setPhone";
+    String SET_PHONE_PATH    = "/{" + SET_PHONE + "}";
+
 
     @GET( BASE )
     Iterable<Organization> getOrganizations();
@@ -87,6 +83,9 @@ public interface OrganizationsApi {
 
     @DELETE( BASE + ID_PATH )
     Void destroyOrganization( @Path( ID ) UUID organizationId );
+
+    @POST( BASE + ID_PATH + SET_PHONE_PATH )
+    Void setOrganizationPhoneNumber( @Path( ID ) UUID organizationId, @Path( SET_PHONE ) String phoneNumber );
 
     @GET( BASE + ID_PATH + INTEGRATION )
     OrganizationIntegrationAccount getOrganizationIntegrationAccount(@Path(ID) UUID organizationId );
