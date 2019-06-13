@@ -110,7 +110,7 @@ class PostgresGraphQueryService(
 
         val entities = mutableMapOf<UUID, MutableMap<UUID, Map<UUID, Set<Any>>>>()
         val associations = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, NeighborIds>>>()
-        val neighborhood = Neighborhood(ids, entities, associations)
+        val neighborhood = Neighborhood(entities, associations)
         val propertyTypeFqns = propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
         query.srcSelections.forEachIndexed { index, selection ->
             val ssw = Stopwatch.createStarted()
@@ -409,7 +409,7 @@ class PostgresGraphQueryService(
             queryId: String,
             index: Int,
             connection: Connection,
-            ids: Set<UUID>,
+            ids: Map<UUID, Optional<Set<UUID>>>,
             entitySetIds: Set<UUID>,
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
@@ -429,7 +429,7 @@ class PostgresGraphQueryService(
             queryId: String,
             index: Int,
             connection: Connection,
-            ids: Set<UUID>,
+            ids: Map<UUID, Optional<Set<UUID>>>,
             entitySetIds: Set<UUID>,
             associationEntitySetIds: Set<UUID>
     ): Pair<String, Statement> {
@@ -579,17 +579,17 @@ class PostgresGraphQueryService(
      * constraints.
      */
     private fun buildSrcJoinSql(
-            ids: Set<UUID>,
+            dataKeys: Map<UUID, Optional<Set<UUID>>>,
             entitySetIds: Set<UUID>,
             associationEntitySetIds: Set<UUID>
     ): String {
-        val idsClause = "${EDGE_COMP_1.name} ${inClause(ids)}"
+        val dataKeys = dataKeysClause(dataKeys, EDGE_COMP_1.name, DST_ENTITY_SET_ID.name)
         val srcEntitySetIdsClause = "AND ${SRC_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.SRC.ordinal}"
 
         //For this there is no dstEntitySet clause since the target is self.
-        return "SELECT * FROM ${EDGES.name} WHERE $idsClause $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
+        return "SELECT * FROM ${EDGES.name} WHERE $dataKeys $srcEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
     }
 
     /**
@@ -597,11 +597,11 @@ class PostgresGraphQueryService(
      * constraints.
      */
     private fun buildDstJoinSql(
-            ids: Set<UUID>,
+            ids: Map<UUID, Optional<Set<UUID>>>,
             entitySetIds: Set<UUID>,
             associationEntitySetIds: Set<UUID>
     ): String {
-        val idsClause = "${EDGE_COMP_2.name} ${inClause(ids)}"
+        val idsClause = dataKeysClause(ids, EDGE_COMP_2.name, SRC_ENTITY_SET_ID.name)
         val associationEntitySetIdsClause = "AND ${EDGE_ENTITY_SET_ID.name} ${inClause(associationEntitySetIds)}"
         val dstEntitySetIdsClause = "AND ${DST_ENTITY_SET_ID.name} ${inClause(entitySetIds)}"
         val componentTypeClause = "AND ${COMPONENT_TYPES.name} = ${ComponentType.DST.ordinal}"
@@ -645,9 +645,20 @@ class PostgresGraphQueryService(
         return "SELECT * FROM ${EDGES.name} WHERE $idsClause $dstEntitySetIdsClause $associationEntitySetIdsClause $componentTypeClause"
     }
 
-    private fun inClause(uuids: Set<UUID>): String {
-        check(uuids.isNotEmpty()) { "Ids must be provided." }
-        return "IN (" + uuids.joinToString(",") { id -> "'$id'" } + ")"
+    private fun inClause(ids: Set<UUID>): String {
+        return "IN (" + ids.joinToString(",") { "'$it'" } + ")"
+    }
+
+    private fun dataKeysClause(
+            dataKeys: Map<UUID, Optional<Set<UUID>>>, idColumn: String, entitySetColumn: String
+    ): String {
+        check(dataKeys.isNotEmpty()) { "Ids must be provided." }
+
+        return "(" + dataKeys.map { (entitySetId, maybeIds) ->
+            "(" + maybeIds.map { ids -> "$idColumn IN (" + ids.joinToString(",") { "'$it'" } + ")" }
+                    .orElse("") + " $entitySetColumn = '$entitySetId')"
+        }.joinToString(" OR ") + ")"
+
     }
 
     private fun getEntitySetsByEntityTypeIds(
