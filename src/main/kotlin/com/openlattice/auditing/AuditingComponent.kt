@@ -63,7 +63,9 @@ interface AuditingComponent {
         return if (auditingConfiguration.isAuditingInitialized()) {
             events
                     .groupBy { ares.getActiveAuditEntitySetIds(it.aclKey, it.eventType) }
-                    .filter { (auditEntitySetConfiguration, entities) -> auditEntitySetConfiguration.auditRecordEntitySet != null }
+                    .filter { (auditEntitySetConfiguration, entities) ->
+                        auditEntitySetConfiguration.auditRecordEntitySet != null &&
+                                auditEntitySetConfiguration.auditEdgeEntitySet != null }
                     .map { (auditEntitySetConfiguration, entities) ->
                         val auditEntitySet = auditEntitySetConfiguration.auditRecordEntitySet
                         val auditEdgeEntitySet = auditEntitySetConfiguration.auditEdgeEntitySet
