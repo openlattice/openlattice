@@ -36,7 +36,30 @@ constructor(
     override fun getLatestFeed(): Iterator<Neighborhood> {
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { subscriptionContact ->
             val query = subscriptionContact.query
-            val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
+            val ids = query.ids.values.flatMap { it.orElse(emptySet()) }.toSet()
+            val entitySetsById = graphQueryService.getEntitySetForIds(ids)
+
+
+            entitySetsById.asSequence()
+                    .groupBy({ it.value }, { it.key })
+                    .mapValues { it.value.toSet() }
+                    .forEach { (entitySetId, ids) ->
+                        check(query.ids.containsKey(entitySetId)) {
+                            "Entity set id ($entitySetId) / entity key ids ($ids) mismatch."
+                        }
+                        val maybeIds = query.ids.getValue(entitySetId)
+                        check(maybeIds.isPresent) {
+                            "Entity set id ($entitySetId) expected to have entity key ids ($ids), instead found none."
+                        }
+
+                        val missing = maybeIds.get() - ids
+                        val additional = ids - maybeIds.get()
+
+                        check(missing.isEmpty() && additional.isEmpty()) {
+                            "Missing keys ($missing) and additional keys ($additional) are incorrectly specified."
+                        }
+                    }
+
             val (allEntitySetIds, _) = resolveEntitySetIdsAndRequiredAuthorizations(
                     query,
                     entitySetsById.values
@@ -55,7 +78,7 @@ constructor(
                     Optional.of(LastWriteRangeFilter(subscriptionContact.lastNotify))
             )
 
-            subscriptionService.markLastNotified(query.ids, Principals.getCurrentUser());
+            subscriptionService.markLastNotified(ids, Principals.getCurrentUser())
             return@map submitQuery
         }.listIterator()
     }
