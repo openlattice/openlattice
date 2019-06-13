@@ -30,7 +30,7 @@ import java.util.*
  * @author Matthew Tamayo-Rios &lt;matthew@openlattice.com&gt;
  */
 data class NeighborhoodQuery(
-        val ids: Set<UUID>,
+        val ids: Map<UUID, Optional<Set<UUID>>>,
         val srcSelections: List<NeighborhoodSelection>,
         val dstSelections: List<NeighborhoodSelection>
 )

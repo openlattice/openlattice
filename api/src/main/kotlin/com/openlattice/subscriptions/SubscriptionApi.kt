@@ -21,7 +21,6 @@
 
 package com.openlattice.subscriptions
 
-import com.openlattice.graph.NeighborhoodQuery
 import retrofit2.http.*
 import java.util.*
 
@@ -37,22 +36,10 @@ interface SubscriptionApi {
         const val ALL = "/all"
         const val ENTITY_KEY_ID = "entityKeyId"
         const val ENTITY_KEY_ID_PATH = "/{$ENTITY_KEY_ID}"
-
-        const val CONTACT = "contact"
-        const val CONTACT_INFO_PATH = "/$CONTACT"
-        const val ORGANIZATION = "organization"
-        const val ORGANIZATION_PATH = "/$ORGANIZATION"
-        const val ORGANIZATIION_ID_PATH = "/{$ORGANIZATION}"
     }
 
     /**
-     * Creates a subscription
-     */
-    @POST(BASE + ORGANIZATION_PATH + ORGANIZATIION_ID_PATH)
-    fun createOrUpdateSubscription(@Path(ORGANIZATION) organizationId: UUID, @Body subscription: NeighborhoodQuery)
-
-    /**
-     * Removes a subscription
+     * Removes a query
      */
     @DELETE(BASE + ENTITY_KEY_ID_PATH)
     fun deleteSubscription(@Path(ENTITY_KEY_ID) subscriptionId: UUID)
@@ -60,19 +47,18 @@ interface SubscriptionApi {
     /**
      * Create or Update Subscription contact info
      */
-    @POST(BASE + CONTACT_INFO_PATH)
-    fun createOrUpdateSubscriptionContactInfo(@Body contactInfo: SubscriptionContact)
+    @PUT(BASE )
+    fun createOrUpdateSubscriptionContactInfo(@Body contactInfo: Subscription)
 
     /**
      * Returns all subscriptions
      */
-    @GET(BASE + ALL)
-    fun getAllSubscriptions(): Iterable<SubscriptionContact>
+    @GET(BASE)
+    fun getAllSubscriptions(): Iterable<Subscription>
 
     /**
-     * Returns subscription information for provided subscription ids
+     * Returns query information for provided query ids
      */
-    @GET(BASE)
-    fun getSubscriptions(@Body entityKeyIds: List<UUID>): Iterable<SubscriptionContact>
-
+    @POST(BASE)
+    fun getSubscriptions(@Body entityKeyIds: List<UUID>): Iterable<Subscription>
 }
