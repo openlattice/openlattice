@@ -19,3 +19,4 @@ target/
 *.csv
 out/
 src/main/resources/auth0.yaml
+src/main/resources/twilio.yaml
