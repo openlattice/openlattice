@@ -8,6 +8,7 @@ import com.openlattice.graph.Neighborhood
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.graph.NeighborhoodSelection
 import com.openlattice.subscriptions.FeedsApi
+import com.openlattice.subscriptions.LastWriteRangeFilter
 import com.openlattice.subscriptions.SubscriptionService
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.RequestMapping
@@ -34,7 +35,7 @@ constructor(
     @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
     override fun getLatestFeed(): Iterator<Neighborhood> {
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser()).map { subscriptionContact ->
-            val query = subscriptionContact.subscription
+            val query = subscriptionContact.query
             val entitySetsById = graphQueryService.getEntitySetForIds(query.ids)
             val (allEntitySetIds, _) = resolveEntitySetIdsAndRequiredAuthorizations(
                     query,
@@ -50,7 +51,8 @@ constructor(
             val propertyTypes = authorizedPropertyTypes.values.flatMap { it.values }.associateBy { it.id }
 
             val submitQuery = graphQueryService.submitQuery(
-                    query, propertyTypes, authorizedPropertyTypes, Optional.of(WrittenTwoWeeksFilter())
+                    query, propertyTypes, authorizedPropertyTypes,
+                    Optional.of(LastWriteRangeFilter(subscriptionContact.lastNotify))
             )
 
             subscriptionService.markLastNotified(query.ids, Principals.getCurrentUser());

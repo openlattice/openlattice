@@ -8,8 +8,8 @@ import com.openlattice.edm.type.PropertyType
 import com.openlattice.graph.GraphQueryService
 import com.openlattice.graph.NeighborhoodQuery
 import com.openlattice.graph.NeighborhoodSelection
+import com.openlattice.subscriptions.Subscription
 import com.openlattice.subscriptions.SubscriptionApi
-import com.openlattice.subscriptions.SubscriptionContact
 import com.openlattice.subscriptions.SubscriptionService
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
@@ -31,21 +31,39 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(
-            path = [SubscriptionApi.ORGANIZATION_PATH + SubscriptionApi.ORGANIZATIION_ID_PATH],
-            method = [RequestMethod.POST]
-    )
-    override fun createOrUpdateSubscription(
-            @PathVariable(SubscriptionApi.ORGANIZATION) organizationId: UUID,
-            @RequestBody subscription: NeighborhoodQuery
-    ) {
-        if (subscription.ids.isEmpty()) {
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.PUT])
+    override fun createOrUpdateSubscriptionContactInfo(@RequestBody subscription: Subscription) {
+        val query = subscription.query
+        if (query.ids.isEmpty()) {
             throw BadRequestException("Must specify entity key ids to subscribe to")
         }
 
-        val entitySetsById = graphQueryService.getEntitySetForIds(subscription.ids)
+        val entitySetsById = graphQueryService.getEntitySetForIds(
+                query.ids.values.flatMap { it.orElse(emptySet()) }.toSet()
+        )
+
+        entitySetsById.asSequence()
+                .groupBy({ it.value }, { it.key })
+                .mapValues { it.value.toSet() }
+                .forEach { (entitySetId, ids) ->
+                    check(query.ids.containsKey(entitySetId)) {
+                        "Entity set id ($entitySetId) / entity key ids ($ids) mismatch."
+                    }
+                    val maybeIds = query.ids.getValue(entitySetId)
+                    check(maybeIds.isPresent) {
+                        "Entity set id ($entitySetId) expected to have entity key ids ($ids), instead found none."
+                    }
+
+                    val missing = maybeIds.get() - ids
+                    val additional = ids - maybeIds.get()
+
+                    check(missing.isEmpty() && additional.isEmpty()) {
+                        "Missing keys ($missing) and additional keys ($additional) are incorrectly specified."
+                    }
+                }
+
         val (allEntitySetIds, requiredPropertyTypes) = resolveEntitySetIdsAndRequiredAuthorizations(
-                subscription,
+                query,
                 entitySetsById.values
         )
 
@@ -56,16 +74,7 @@ constructor(
         )
 
         ensureReadOnRequired(authorizedPropertyTypes, requiredPropertyTypes)
-
-        subscriptionService.createOrUpdateSubscription(subscription, organizationId, Principals.getCurrentUser())
-    }
-
-    @Timed
-    @RequestMapping(path = [SubscriptionApi.CONTACT_INFO_PATH], method = [RequestMethod.POST])
-    override fun createOrUpdateSubscriptionContactInfo(@RequestBody contactInfo: SubscriptionContact) {
-        val user = Principals.getCurrentUser()
-        subscriptionService.createOrUpdateSubscriptionContact(contactInfo, user)
-        subscriptionService.createOrUpdateSubscription(contactInfo.subscription, contactInfo.organizationId, user)
+        subscriptionService.createOrUpdateSubscription(subscription, Principals.getCurrentUser())
     }
 
     @Timed
@@ -75,14 +84,14 @@ constructor(
     }
 
     @Timed
-    @RequestMapping(path = [SubscriptionApi.ALL], method = [RequestMethod.GET])
-    override fun getAllSubscriptions(): Iterable<SubscriptionContact> {
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
+    override fun getAllSubscriptions(): Iterable<Subscription> {
         return subscriptionService.getAllSubscriptions(Principals.getCurrentUser())
     }
 
     @Timed
-    @RequestMapping(path = ["", "/"], method = [RequestMethod.GET])
-    override fun getSubscriptions(@RequestBody entityKeyIds: List<UUID>): Iterable<SubscriptionContact> {
+    @RequestMapping(path = ["", "/"], method = [RequestMethod.POST])
+    override fun getSubscriptions(@RequestBody entityKeyIds: List<UUID>): Iterable<Subscription> {
         return subscriptionService.getSubscriptions(entityKeyIds, Principals.getCurrentUser())
     }
 
