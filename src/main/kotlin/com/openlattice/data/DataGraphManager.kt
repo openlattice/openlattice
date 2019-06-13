@@ -85,7 +85,7 @@ interface DataGraphManager {
      */
     fun clearAssociationsBatch(
             entitySetId: UUID,
-            associationsEdgeKeys: PostgresIterable<DataEdgeKey>,
+            associationsEdgeKeys: Iterable<DataEdgeKey>,
             authorizedPropertyTypes: Map<UUID, Map<UUID, PropertyType>>
     ): List<WriteEvent>
 
