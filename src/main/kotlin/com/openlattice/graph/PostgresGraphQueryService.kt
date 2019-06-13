@@ -22,6 +22,7 @@
 package com.openlattice.graph
 
 import com.codahale.metrics.annotation.Timed
+import com.google.common.base.Stopwatch
 import com.openlattice.analysis.requests.Filter
 import com.openlattice.data.DataEdgeKey
 import com.openlattice.data.EntityDataKey
@@ -42,13 +43,17 @@ import com.openlattice.postgres.streams.PostgresIterable
 import com.openlattice.postgres.streams.StatementHolder
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.sql.Connection
 import java.sql.Statement
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.function.Function
 import java.util.function.Supplier
+
+private val logger = LoggerFactory.getLogger(PostgresGraphQueryService::class.java)
 
 /**
  *
@@ -101,13 +106,14 @@ class PostgresGraphQueryService(
 
         val authorizedPropertyTypes = authorizedPropertyTypesByEntitySet.mapValues { it.value.keys }
         val ids = query.ids
-        val queryId = "a" + UUID.randomUUID().toString().filter{ it.isLetterOrDigit() }
+        val queryId = "a" + UUID.randomUUID().toString().filter { it.isLetterOrDigit() }
 
         val entities = mutableMapOf<UUID, MutableMap<UUID, Map<UUID, Set<Any>>>>()
         val associations = mutableMapOf<UUID, MutableMap<UUID, MutableMap<UUID, NeighborIds>>>()
         val neighborhood = Neighborhood(ids, entities, associations)
         val propertyTypeFqns = propertyTypes.mapValues { quote(it.value.type.fullQualifiedNameAsString) }
         query.srcSelections.forEachIndexed { index, selection ->
+            val ssw = Stopwatch.createStarted()
             val entityFilterDefinitions = getFilterDefinitions(
                     selection.entityTypeIds,
                     selection.entitySetIds,
@@ -122,10 +128,13 @@ class PostgresGraphQueryService(
             val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
             val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
 
+            logger.info(
+                    "Neighborhood src query filter definition prep took {} ms for {}",
+                    ssw.elapsed(TimeUnit.MILLISECONDS)
+            )
             if (entitySetIds.isEmpty() || associationEntitySetIds.isEmpty()) {
                 return@forEachIndexed
             }
-
             PostgresIterable<DataEdgeKey>(
                     Supplier {
                         val connection = hds.connection
@@ -144,7 +153,7 @@ class PostgresGraphQueryService(
                                 queryId,
                                 index,
                                 connection,
-                                entityFilterDefinitions,
+                                entityFilterDefinitions.filter { it.filters.isNotEmpty() },
                                 propertyTypes,
                                 authorizedPropertyTypes,
                                 propertyTypeFqns,
@@ -154,20 +163,35 @@ class PostgresGraphQueryService(
                                 queryId,
                                 index,
                                 connection,
-                                associationFilterDefinitions,
+                                associationFilterDefinitions.filter { it.filters.isNotEmpty() },
                                 propertyTypes,
                                 authorizedPropertyTypes,
                                 propertyTypeFqns,
                                 filter
                         )
                         val edgeJoins = srcEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_2.name} FROM $it) as $it " }
-                        val sql = "SELECT * FROM ${srcEdgeView.first} INNER JOIN " + srcEntityFilteringViews.keys.joinToString(
-                                " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING(${ID_VALUE.name}) " +
-                                " INNER JOIN " + edgeJoins.joinToString(
-                                " USING (${EDGE_COMP_2.name}) INNER JOIN "
-                        ) + " USING (${EDGE_COMP_2.name}) "
+
+                        val srcEntityJoins = if (srcEntityFilteringViews.isEmpty()) {
+                            ""
+                        } else {
+                            "INNER JOIN " + srcEntityFilteringViews.keys.joinToString(
+                                    " USING (${ID_VALUE.name}) INNER JOIN "
+                            ) + " USING(${ID_VALUE.name}) "
+                        }
+
+                        val edgeJoinsSql = if (edgeJoins.isEmpty()) {
+                            ""
+                        } else {
+                            " INNER JOIN " + edgeJoins.joinToString(
+                                    " USING (${EDGE_COMP_2.name}) INNER JOIN "
+                            ) + " USING (${EDGE_COMP_2.name}) "
+                        }
+
+                        val sql = "SELECT * FROM ${srcEdgeView.first} $srcEntityJoins $edgeJoinsSql"
+                        logger.info("src filter sql: {} \nNeighborhood sql: {}", srcEdgeView.first, sql)
+                        val sw = Stopwatch.createStarted()
                         val rs = stmt.executeQuery(sql)
+                        logger.info("Neighborhood query took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
                         StatementHolder(connection, stmt, rs)
                     }, Function {
                 val srcEs = it.getObject(SRC_ENTITY_SET_ID_FIELD, UUID::class.java)
@@ -190,10 +214,12 @@ class PostgresGraphQueryService(
                         it.src.entityKeyId
                 )
             }
+
+            logger.info("Neighborhood src selection took {} ms for {}", ssw.elapsed(TimeUnit.MILLISECONDS), selection)
         }
 
         query.dstSelections.forEachIndexed { index, selection ->
-
+            val ssw = Stopwatch.createStarted()
             val entityFilterDefinitions = getFilterDefinitions(
                     selection.entityTypeIds,
                     selection.entitySetIds,
@@ -206,12 +232,18 @@ class PostgresGraphQueryService(
                     selection.associationFilters
             )
 
+
             val entitySetIds = entityFilterDefinitions.flatMap { it.entitySetIds }.toSet()
             val associationEntitySetIds = associationFilterDefinitions.flatMap { it.entitySetIds }.toSet()
+
+            logger.info(
+                    "Neighborhood query filter definition prep took {} ms for {}", ssw.elapsed(TimeUnit.MILLISECONDS)
+            )
 
             if (entitySetIds.isEmpty() || associationEntitySetIds.isEmpty()) {
                 return@forEachIndexed
             }
+
 
             PostgresIterable<DataEdgeKey>(
                     Supplier {
@@ -231,7 +263,7 @@ class PostgresGraphQueryService(
                                 queryId,
                                 index,
                                 connection,
-                                entityFilterDefinitions,
+                                entityFilterDefinitions.filter { it.filters.isNotEmpty() },
                                 propertyTypes,
                                 authorizedPropertyTypes,
                                 propertyTypeFqns,
@@ -242,7 +274,7 @@ class PostgresGraphQueryService(
                                 queryId,
                                 index,
                                 connection,
-                                associationFilterDefinitions,
+                                associationFilterDefinitions.filter { it.filters.isNotEmpty() },
                                 propertyTypes,
                                 authorizedPropertyTypes,
                                 propertyTypeFqns,
@@ -250,13 +282,27 @@ class PostgresGraphQueryService(
                         )
 
                         val edgeJoins = dstEdgeFilteringView.keys.map { " (SELECT id as ${EDGE_COMP_1.name} FROM $it) as $it " }
-                        val sql = "SELECT * FROM ${dstEdgeView.first} INNER JOIN " + dstEntityFilteringViews.keys.joinToString(
-                                " USING (${ID_VALUE.name}) INNER JOIN "
-                        ) + " USING(${ID_VALUE.name}) " +
-                                " INNER JOIN " + edgeJoins.joinToString(
-                                " USING (${EDGE_COMP_1.name}) INNER JOIN "
-                        ) + " USING (${EDGE_COMP_1.name}) "
+                        val dstEntityJoins = if (dstEntityFilteringViews.isEmpty()) {
+                            ""
+                        } else {
+                            " INNER JOIN " + dstEntityFilteringViews.keys.joinToString(
+                                    " USING (${ID_VALUE.name}) INNER JOIN "
+                            ) + " USING(${ID_VALUE.name}) "
+                        }
+                        val edgeJoinsSql = if (edgeJoins.isEmpty()) {
+                            ""
+                        } else {
+                            " INNER JOIN " + edgeJoins.joinToString(
+                                    " USING (${EDGE_COMP_1.name}) INNER JOIN "
+                            ) + " USING (${EDGE_COMP_1.name}) "
+                        }
+
+                        val sql = "SELECT * FROM ${dstEdgeView.first} $dstEntityJoins $edgeJoinsSql"
+
+                        logger.info("dst filter sql: {} \nNeighborhood sql: {}", dstEdgeView.first, sql)
+                        val sw = Stopwatch.createStarted()
                         val rs = stmt.executeQuery(sql)
+                        logger.info("Neighborhood query took {} ms", sw.elapsed(TimeUnit.MILLISECONDS))
                         StatementHolder(connection, stmt, rs)
                     }, Function {
                 val srcEs = it.getObject(SRC_ENTITY_SET_ID_FIELD, UUID::class.java)
@@ -279,18 +325,23 @@ class PostgresGraphQueryService(
                         it.dst.entityKeyId
                 )
             }
+            logger.info("Neighborhood dst selection took {} ms for {}", ssw.elapsed(TimeUnit.MILLISECONDS), selection)
         }
+
+
 
         entities.forEach { (entitySetId, data) ->
             val apt = authorizedPropertyTypes
                     .getValue(entitySetId)
                     .associateWith { propertyTypes.getValue(it) }
+            val sw = Stopwatch.createStarted()
             pgDataService.streamableEntitySetWithEntityKeyIdsAndPropertyTypeIds(
                     entitySetId,
                     Optional.of(data.keys),
                     apt,
                     EnumSet.of(MetadataOption.LAST_WRITE)
             ).forEach { data[it.first] = it.second }
+            logger.info("Loading data for entity set {} took {} ms", entitySetId, sw.elapsed(TimeUnit.MILLISECONDS))
         }
 
         return neighborhood
@@ -442,7 +493,7 @@ class PostgresGraphQueryService(
             AssociationFilterDefinition(
                     entityTypeId, entitySetIds, getFilters(entitySetIds, maybeFilters.orElse(emptyMap()))
             )
-        }).filter { it.filters.isNotEmpty() }
+        })
 
 
     }
@@ -472,21 +523,21 @@ class PostgresGraphQueryService(
     ): Map<String, Statement> {
         return filterDefinitions
                 .mapIndexed { filterIndex, filterDefinition ->
-            val tableName = "${queryId}_src_${index}_$filterIndex"
-            dropViewIfExists(connection, tableName)
-            val stmt = connection.createStatement()
-            stmt.execute(
-                    createFilteringView(
-                            tableName,
-                            filterDefinition,
-                            propertyTypes,
-                            authorizedPropertyTypes,
-                            propertyTypeFqns,
-                            filter
+                    val tableName = "${queryId}_src_${index}_$filterIndex"
+                    dropViewIfExists(connection, tableName)
+                    val stmt = connection.createStatement()
+                    stmt.execute(
+                            createFilteringView(
+                                    tableName,
+                                    filterDefinition,
+                                    propertyTypes,
+                                    authorizedPropertyTypes,
+                                    propertyTypeFqns,
+                                    filter
+                            )
                     )
-            )
-            return@mapIndexed tableName to stmt
-        }.toMap()
+                    return@mapIndexed tableName to stmt
+                }.toMap()
     }
 
     private fun createFilteringView(
@@ -522,6 +573,7 @@ class PostgresGraphQueryService(
     ) {
         connection.createStatement().execute("DROP VIEW IF EXISTS $tableName")
     }
+
     /**
      * Used to create unbound prepared statement for generating a edge table fragment useful for joining to source
      * constraints.
