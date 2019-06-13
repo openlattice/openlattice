@@ -107,7 +107,7 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
 
     @Test
     fun testAssociationTypeCreationWrongCategory() {
-        val et = MultipleAuthenticatedUsersBase.createEntityType()
+        val et = createEntityType()
         val at = AssociationType(Optional.of(et), LinkedHashSet(), LinkedHashSet(), false)
 
         try {
@@ -177,5 +177,16 @@ class EdmTest : MultipleAuthenticatedUsersBase() {
                 mapOf(es1.name to es1.id, es2.name to es2.id, es3.name to es3.id),
                 edmApi.getEntitySetIds(setOf(es1.name, es2.name, es3.name))
         )
+    }
+
+    @Test
+    fun testEdmChangesToEntityTypeTables() {
+        val et = createEntityType()
+        val pt = createPropertyType()
+
+        edmApi.addPropertyTypeToEntityType(et.id, pt.id)
+        edmApi.forceRemovePropertyTypeFromEntityType(et.id, pt.id)
+
+        edmApi.deleteEntityType(et.id)
     }
 }
