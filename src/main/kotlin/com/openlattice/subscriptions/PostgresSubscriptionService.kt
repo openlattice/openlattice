@@ -21,9 +21,7 @@ class PostgresSubscriptionService(
         private val hds: HikariDataSource,
         private val mapper: ObjectMapper
 ) : SubscriptionService {
-
     // v code v
-
     override fun createOrUpdateSubscription(subscription: Subscription, user: Principal) {
         hds.connection.use { conn ->
 
